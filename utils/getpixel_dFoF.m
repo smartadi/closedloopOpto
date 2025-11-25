@@ -1,15 +1,15 @@
-function data = getpixel_dFoF(d,mode,pixel,r);
+function [data,dFk] = getpixel_dFoF(d,mode,pixel,r);
 
 
 % GETPIXEL_DFOF Summary of this function goes here
 %   Detailed explanation goes here
 
 
-% mode = 0; % from images
+mode = 0; % from images
 % mode = 1; % from svd
 
 %read from
-r=1
+r = 1
 
 serverRoot = expPath(d.mn, d.td, d.en);
 % pathData = append('pixel',d.td(6:7),d.td(9:10),int2str(d.en),'.mat');
@@ -17,7 +17,10 @@ serverRoot = expPath(d.mn, d.td, d.en);
 
 
 pathData = append(d.mn,'pixel',d.td(6:7),d.td(9:10),int2str(d.en),'.mat');
+dFk=[];
 
+
+exist(pathData)
 
 if (exist(pathData) == 0) | (r == 0)
     F = [];
@@ -26,13 +29,14 @@ if (exist(pathData) == 0) | (r == 0)
     display('computing pixel val')
 
     if mode==0
-        source_dir ='/mnt/data/brain/';
-        source_dir = append(source_dir,d.mn,'/',d.td,'/',num2str(d.en));
-        a=dir([source_dir '/*']);
+        % source_dir ='/mnt/data/brain/';
+        source_dir = 'C:\Users\adity\Documents\opto_project\';
+        source_dir = append(source_dir,d.mn,'\',d.td,'\',num2str(d.en));
+        a=dir([source_dir '\*'])
         out=size(a,1);
 
         out=out-2;
-        path = append(source_dir,'/frame-');
+        path = append(source_dir,'\frame-');
     
         for i=1:2:out
             pathim=append(path,num2str(i-1));
@@ -41,8 +45,10 @@ if (exist(pathData) == 0) | (r == 0)
             % j=length(pixel);
             j=1;
             G = mean(A(pixel(j,2)-k:pixel(j,2)+k,pixel(j,1)-k:pixel(j,1)+k),'all');
+            i
     
             F = [F,G];
+            fclose(fileID);
             
     
         end

@@ -16,6 +16,9 @@ ti = d.inpTime;
 % Trial Average
 
 mv1 = d.motion.motSVD_0(1:2:end,1);
+
+% mv1 = data.dFk;
+
 ncDfk=[];
 ncInp=[];
 ncmotion=[];
@@ -32,7 +35,7 @@ for j = 1: length(nc)
     
     ncInp = [ncInp; d.inpVals(i2:i2+dur*2000)'];
 
-    % ncmotion = [ncmotion; mv1(i-(35*5):i+35*(d.params.dur+2))'];
+
     ncmotion = [ncmotion; mv1(i-(35*10):i+35*(d.params.dur+2))'];
 
     
@@ -55,7 +58,6 @@ for j = 1: length(wc)
     
     wcInp = [wcInp; d.inpVals(i2:i2+dur*2000)'];
 
-    % wcmotion = [wcmotion;  mv1(i-(35*5):i+35*(d.params.dur+2))'];
     wcmotion = [wcmotion;  mv1(i-(35*10):i+35*(d.params.dur+2))'];
 end
 
@@ -92,7 +94,7 @@ er_ncDfk=[];
 vr_ncDfk=[];
 for j = 1: length(nc)
     [a i] = min(abs(t - d.stimStarts(nc(j))));
-    er_ncDfk = [er_ncDfk; norm(dFk(i:i+35*(dur))+5)];
+    er_ncDfk = [er_ncDfk; norm(dFk(i:i+35*(dur))-d.ref)];
     vr_ncDfk = [vr_ncDfk; var(dFk(i:i+35*(dur)))];
 end
 
@@ -103,7 +105,7 @@ er_wcDfk=[];
 vr_wcDfk=[];
 for j = 1: length(wc)
     [a i] = min(abs(t - d.stimStarts(wc(j))));
-    er_wcDfk = [er_wcDfk; norm(dFk(i:i+35*(dur))+5)];
+    er_wcDfk = [er_wcDfk; norm(dFk(i:i+35*(dur))-d.ref)];
     vr_wcDfk = [vr_wcDfk; var(dFk(i:i+35*(dur)))];
 end
 

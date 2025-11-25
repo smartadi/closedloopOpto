@@ -24,6 +24,9 @@ function d = initialize_data(mn,en,td)
     d = findStims(d,mode);
     
     %% motion
+
+
+
     d.motion = load(append(serverRoot,'/face_proc.mat'));
 
 

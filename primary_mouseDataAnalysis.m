@@ -55,8 +55,8 @@ clear all;
 % mn = 'AL_0033'; td = '2025-04-20'; 
 % en = 2;
 % 
-mn = 'AL_0039'; td = '2025-04-19'; 
-en = 1;
+% mn = 'AL_0039'; td = '2025-04-19'; 
+% en = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % No Reward, high controller delay
@@ -128,8 +128,8 @@ en = 1;
 
 
 % NEW LASER
-% mn = 'AL_0039'; td = '2025-04-19'; 
-% en = 1;
+mn = 'AL_0039'; td = '2025-04-19'; 
+en = 1;
 % 
 % mn = 'AL_0039'; td = '2025-04-20'; 
 % en = 1;
@@ -148,7 +148,7 @@ en = 1;
 % mn = 'AL_0033'; td = '2025-04-20'; 
 % en = 2;
 
-
+     
 % mn = 'AL_0033'; td = '2025-03-20'; 
 % en = 4;
 
@@ -158,6 +158,12 @@ en = 1;
 
 % mn = 'AL_0033'; td = '2025-02-24'; 
 % en = 2;
+
+% mn = 'AL_0041'; td = '2025-11-05'; 
+% en = 3;
+% 
+% mn = 'AL_0041'; td = '2025-11-12'; 
+% en = 1;
 %% get data
 pathString = genpath('utils');
     addpath(pathString);
@@ -186,6 +192,8 @@ traces(tInd).lims = [0 5];
 nSV = 500;
 
 [U, V, t, mimg] = loadUVt(serverRoot, nSV);
+%%
+
 movieWithTracesSVD(U, V, t, traces, [], []);
 
 %% display image
@@ -196,20 +204,24 @@ displayFrame(mn, td, en, d, d.params.pixels);
 
 mode = 0  % from binary image
 % mode = 1 ; % from SVD
-
+%
 % r = 0; % dont read file
 r = 1; % read file
-data = getpixel_dFoF(d,mode,d.params.pixel,r);
+[data,dFk_temp] = getpixel_dFoF(d,mode,d.params.pixel,r);
 dFk = data.dFk;
-
+%%
 data_pix = getpixels_dFoF(d);
 dFkp = data_pix.dFk;
 
 %% Trial Samples
+% d.mv = d.motion.motion_1;
+d.mv = d.motion.motSVD_0(1:2:end,1);
+
+
 dur = d.params.dur;
 t = d.timeBlue;
 close all
-j=3;
+j=6;
 [a i] = min(abs(t - d.stimStarts(j)));
 [a i2] = min(abs(t - d.stimEnds(j)));
 
@@ -257,6 +269,8 @@ sgtitle('trial sample')
 %% Feedforward vs Feedback 
 
 trials = 100;
+
+d.ref=-2.5;
 
 data = controllerData(data,d,trials);
 
@@ -1605,8 +1619,6 @@ if ~isempty(testSegs)
 end
 
 
-
-%%
 %% Test
 
 
@@ -1794,7 +1806,7 @@ title('motion')
 
 % Test
 
-
+%%
 startIdx = 2000
 Train_length = length(d.timeBlue) - startIdx;
 endIdx = startIdx + Train_length
@@ -1803,7 +1815,12 @@ T = Train_length;
 
 
 % DataX = [dFk_inv(:,startIdx:endIdx)', inputs(startIdx:endIdx)];
-DataX = [dFk_inv(:,startIdx:endIdx)',inputs_ff(startIdx:endIdx)];
+
+
+
+% DataX = [dFk_inv(:,startIdx:endIdx)',inputs_ff(startIdx:endIdx)];
+
+DataX = [dFk_inv(:,startIdx:endIdx)'];
 
 % DataX = [dFkp(2:end,startIdx:endIdx)',d.mv(startIdx:endIdx),inputs_ff(startIdx:endIdx)];
 pY = 0;
@@ -1940,3 +1957,278 @@ xlim([-3,6])
 xline(0)
 xline(3)
 title('motion')
+%%
+
+figure()
+plot(data.wcmotion')
+
+
+anc = mean(data.pncDfk(:,10*35:13*35),1);
+awc = mean(data.pncDfk(:,10*35:13*35),1);
+
+avg_nc = zeros(1,316);
+avg_wc = zeros(1,316);
+
+avg_nc(3*35:6*35) = anc;
+avg_wc(3*35:6*35) = awc;
+
+figure()
+plot(data.ncDfk');hold on;
+plot(avg_nc,'k','LineWidth',3);
+% dFkp_contra = 
+%% Motion vs error grid
+
+
+% during trial motion content
+motion_metric_wc = sum(data.wcmotion(:,9*35:13*35),2);
+motion_metric_nc = sum(data.ncmotion(:,9*35:14*35),2);
+
+
+% prediction difference
+
+
+
+dur = d.params.dur
+t = d.timeBlue;
+j=9;
+
+j = wc(j);
+
+[a i] = min(abs(t - d.stimStarts(j)));
+[a i2] = min(abs(t - d.stimEnds(j)));
+
+
+tt = d.inpTime;
+v = d.inpVals;
+
+[a k] = min(abs(tt - d.stimStarts(j)));
+[a k2] = min(abs(tt - d.stimEnds(j)));
+
+
+
+% Tin = 0:0.0005:stimDur(j);
+Tout = -3:0.0285:dur+3;
+figure()
+subplot(3,1,1)
+plot(Tout,dFk((i-(3*35)):(i+35*(dur+3))),'g');hold on
+% plot(Tout,reg.dFk((i-(3*35)):(i+35*(dur+3))),'r');hold on
+plot(Tout,reg_test.dFk((i-(3*35)):(i+35*(dur+3))) + avg_nc','k');hold on
+% plot(Tout,reg_test.dFk((i-(3*35)):(i+35*(dur+3))),'k');hold on
+
+
+plot(Tout,-5*ones(1,length(Tout)))
+legend('primary','recon')
+xlim([-3,6])
+xline(0)
+xline(3)
+title('trial')
+
+subplot(3,1,2)
+% plot(tt(k:k2)-tt(k),v(k:k2));
+plot(tt(k:k2)-tt(k),v(k:k2))
+
+xlim([-3,6])
+xline(0)
+xline(3)
+title('input')
+
+subplot(3,1,3)
+plot(Tout,d.mv((i-(3*35)):(i+35*(dur+3))));hold on
+plot(Tout,5*ones(1,length(Tout)))
+xlim([-3,6])
+xline(0)
+xline(3)
+title('motion')
+
+%%
+pdiff_nc=[];
+for j = 1: length(nc)
+    [a i] = min(abs(d.timeBlue - d.stimStarts(nc(j))));
+
+    % prediction difference
+    er = norm(dFk(i:i+35*(dur))' - reg_test.dFk(i:(i+35*(dur))) + avg_nc(3*35:6*35)')
+        % er = norm(dFk(i:i+35*(dur))' - reg_test.dFk(i:(i+35*(dur))) )
+
+    pdiff_nc=[pdiff_nc;er];
+
+   
+    
+end
+
+pdiff_wc=[];
+for j = 1: length(wc)
+    [a i] = min(abs(d.timeBlue - d.stimStarts(wc(j))));
+
+    er = norm(dFk(i:i+35*(dur))' - reg_test.dFk(i:(i+35*(dur))) + avg_wc(3*35:6*35)')
+        % er = norm(dFk(i:i+35*(dur))' - reg_test.dFk(i:(i+35*(dur))))
+
+    pdiff_wc=[pdiff_wc;er];
+    
+end
+
+
+%%
+
+figure()
+plot(motion_metric_nc,pdiff_nc,'or','Linewidth',2);hold on
+plot(motion_metric_wc,pdiff_wc,'og','Linewidth',2);
+
+%%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%%
+
+
+startIdx = 2000
+Train_length = length(d.timeBlue) - startIdx;
+endIdx = startIdx + Train_length
+
+T = Train_length;
+
+
+% DataX = [dFk_inv(:,startIdx:endIdx)', inputs(startIdx:endIdx)];
+pDiff_nc = pdiff_nc;
+pDiff_wc = pdiff_wc;
+for s = 1:7
+
+% DataX = [dFk_inv(:,startIdx:endIdx)',inputs_ff(startIdx:endIdx)];
+
+% DataX = [dFkp_contra(s,startIdx:endIdx)',inputs_ff(startIdx:endIdx)];
+
+
+DataX = [dFkp_contra(s,startIdx:endIdx)'];
+
+
+% DataX = [dFk_inv(:,startIdx:endIdx)'];
+
+% DataX = [dFkp(2:end,startIdx:endIdx)',d.mv(startIdx:endIdx),inputs_ff(startIdx:endIdx)];
+pY = 0;
+pX = 70;
+
+X_te = DataX;
+y_te = Datay;
+X_te_z = (X_te - muX) ./ sdX;
+y_te_z = (y_te - muy) ./ sdy;
+
+[Phi_te, y_te_aligned,maxLag] = buildLagMatrix(y_te_z, X_te_z, pY, pX);
+
+% --- Fit & predict (scaled space) ---
+beta         = Phi_te \ y_te_aligned;
+yhat_te_scal = Phi_te  * beta;
+
+  
+% --- Invert y scaling & align ---
+yhat_te = yhat_te_scal * sdy + muy;
+y_te_raw_aligned = y_te((maxLag+1):end);
+
+% Put back onto original time axis (NaNs for first maxLag of each split)
+yhat_te_full = NaN(T+1,1);           
+yhat_te_full((maxLag+1):end) = yhat_te;
+yhat_all_full = [yhat_te_full];
+
+
+
+dFk_reg = [zeros(length(data.dFk) - length(yhat_all_full),1);yhat_all_full];
+reg.dFk = dFk_reg;
+time_reg = d.timeBlue(startIdx:endIdx);
+reg.t = time_reg;
+reg.dFk = dFk_reg;
+reg.t = time_reg;
+reg = regData(reg,d,data);
+
+
+dFk_reg_test = [zeros(length(data.dFk) - length(yhat_te),1);yhat_te];
+reg_test.dFk = dFk_reg_test;
+
+
+time_reg = d.timeBlue(startIdx:endIdx);
+reg_test.t = time_reg;
+
+reg_test.dFk = dFk_reg_test;
+reg_test.t = time_reg;
+% 
+% 
+% %
+% 
+reg_test = regData(reg_test,d,data);
+
+
+
+
+pdiff_nc=[];
+for j = 1: length(nc)
+    [a i] = min(abs(d.timeBlue - d.stimStarts(nc(j))));
+
+    % prediction difference
+    er = norm(dFk(i:i+35*(dur))' - reg_test.dFk(i:(i+35*(dur))) + avg_nc(3*35:6*35)')
+        % er = norm(dFk(i:i+35*(dur))' - reg_test.dFk(i:(i+35*(dur))) )
+
+    pdiff_nc=[pdiff_nc;er];
+
+   
+    
+end
+
+pdiff_wc=[];
+for j = 1: length(wc)
+    [a i] = min(abs(d.timeBlue - d.stimStarts(wc(j))));
+
+    er = norm(dFk(i:i+35*(dur))' - reg_test.dFk(i:(i+35*(dur))) + avg_wc(3*35:6*35)')
+        % er = norm(dFk(i:i+35*(dur))' - reg_test.dFk(i:(i+35*(dur))))
+
+    pdiff_wc=[pdiff_wc;er];
+    
+end
+
+
+pDiff_nc=[pDiff_nc,pdiff_nc];
+pDiff_wc=[pDiff_wc,pdiff_wc];
+end
+
+
+%%
+close all;
+
+figure()
+subplot(2,2,1)
+imagesc(pDiff_wc');
+colorbar;
+caxis([50 100]);
+colormap(parula)
+% axis equal tight;
+title('closed loop')
+
+subplot(2,2,3)
+imagesc(motion_metric_wc');
+colorbar;
+caxis([0 4e8]);
+% axis equal tight;
+% plot(motion_metric_wc);
+
+0
+subplot(2,2,2)
+imagesc(pDiff_nc');
+colorbar;
+caxis([50 100]);
+% axis equal tight;
+title('open loop')
+
+subplot(2,2,4)
+imagesc(motion_metric_nc');
+colormap(hot)
+colorbar;
+caxis([0 4e8]);
+% axis equal tight;

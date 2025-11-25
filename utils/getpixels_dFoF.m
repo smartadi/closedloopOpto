@@ -38,8 +38,8 @@ if exist(pathData) == 0
     dFk=[];
 
     
-    % pixel = d.params.pixels;
-    pixel = d.params.pixels_contra;
+    pixel = d.params.pixels;
+    % pixel = d.params.pixels_contra;
 
 
     for j= 1:length(pixel)
@@ -72,7 +72,7 @@ if exist(pathData) == 0
     for i = 1:length(Fsvd)
     
         Fkmean = [Fkmean,mean(Fk(i:i+w))];
-        dFsvd = [dFsvd,(Fk(i+w)+-Fkmean(i))/Fkmean(i)*100];
+        dFsvd = [dFsvd,(Fk(i+w)-Fkmean(i))/Fkmean(i)*100];
 
     end
 

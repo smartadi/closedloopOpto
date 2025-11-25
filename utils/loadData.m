@@ -17,13 +17,25 @@ d.td = td;
 
 %% Load Timeline Data
 
+try
 sigName = 'lightCommand';
 [tt, v] = getTLanalog(mn, td, en, sigName);
+    
+catch 
+sigName = 'lightCommand638';
+[tt, v] = getTLanalog(mn, td, en, sigName);    
+end
+
 d.inpTime = tt;
 d.inpVals  = v;
+
+try
 d.lightRaw = readNPY(append(serverRoot,'/lightCommand.raw.npy'));
 d.lightTime = readNPY(append(serverRoot,'/lightCommand.timestamps_Timeline.npy'));
-
+catch
+d.lightRaw = readNPY(append(serverRoot,'/lightCommand638.raw.npy'));
+d.lightTime = readNPY(append(serverRoot,'/lightCommand638.timestamps_Timeline.npy'));
+end
 d.wfExp = readNPY(append(serverRoot,'/widefieldExposure.timestamps_Timeline.npy'));
 d.wfTime = readNPY(append(serverRoot,'/widefieldExposure.raw.npy'));
 

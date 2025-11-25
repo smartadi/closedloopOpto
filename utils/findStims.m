@@ -18,6 +18,9 @@ if mode == 0
 else
     a1 = input_params(:,2) - double(horizon)*ones(length(input_params),1);
     a2 = input_params(:,2) - double(horizon) + double(dur)*35;
+
+    % a1 = input_params(:,2);% - double(horizon)*ones(length(input_params),1);
+    % a2 = input_params(:,2)+double(dur)*35;% - double(horizon) + double(dur)*35;
     
     d.stimStarts = t(a1);
     d.stimEnds = t(a2);

@@ -161,299 +161,265 @@ en = 1;
 % mn = 'AL_0033'; td = '2025-02-24'; 
 % en = 2;
 %% get data
-pathString = genpath('utils');
-    addpath(pathString);
-    % %%
-    % addpath('utils')
-d = initialize_data(mn,en,td);
-
-d.params.pix_ids = [2,4,5,8,9,12,13];
-d.params.pix_inv = [170,320];
-%% Run Movie
-sigName = 'lightCommand';
-[tt, v] = getTLanalog(mn, td, en, sigName);
-    serverRoot = expPath(mn, td, en);
-
-tInd = 1;
-traces(tInd).t = tt;
-traces(tInd).v = v;
-traces(tInd).name = sigName;
-traces(tInd).lims = [0 5];
-
-% tInd = 2;
+% pathString = genpath('utils');
+%     addpath(pathString);
+%     % %%
+%     % addpath('utils')
+% d = initialize_data(mn,en,td);
+% 
+% d.params.pix_ids = [2,4,5,8,9,12,13];
+% d.params.pix_inv = [170,320];
+% %% Run Movie
+% sigName = 'lightCommand';
+% [tt, v] = getTLanalog(mn, td, en, sigName);
+%     serverRoot = expPath(mn, td, en);
+% 
+% tInd = 1;
 % traces(tInd).t = tt;
-% traces(tInd).v = vel;
-% traces(tInd).name = 'wheelVelocity';
-% traces(tInd).lims = [-3000 3000];
-nSV = 500;
-
-[U, V, t, mimg] = loadUVt(serverRoot, nSV);
-movieWithTracesSVD(U, V, t, traces, [], []);
+% traces(tInd).v = v;
+% traces(tInd).name = sigName;
+% traces(tInd).lims = [0 5];
+% 
+% % tInd = 2;
+% % traces(tInd).t = tt;
+% % traces(tInd).v = vel;
+% % traces(tInd).name = 'wheelVelocity';
+% % traces(tInd).lims = [-3000 3000];
+% nSV = 500;
+% 
+% [U, V, t, mimg] = loadUVt(serverRoot, nSV);
+% movieWithTracesSVD(U, V, t, traces, [], []);
 
 %% display image
 % if image has been extracted on the local PC
-displayFrame(mn, td, en, d, d.params.pixels);
+
 
 %% Load or save from image data
-
-mode = 0  % from binary image
-% mode = 1 ; % from SVD
-
-% r = 0; % dont read file
-r = 1; % read file
-data = getpixel_dFoF(d,mode,d.params.pixel,r);
-dFk = data.dFk;
-
-data_pix = getpixels_dFoF(d);
-dFkp = data_pix.dFk;
-
-%% Trial Samples
-dur = d.params.dur;
-t = d.timeBlue;
-close all
-j=3;
-[a i] = min(abs(t - d.stimStarts(j)));
-[a i2] = min(abs(t - d.stimEnds(j)));
+% 
+% mode = 0  % from binary image
+% % mode = 1 ; % from SVD
+% 
+% % r = 0; % dont read file
+% r = 1; % read file
+% data = getpixel_dFoF(d,mode,d.params.pixel,r);
+% dFk = data.dFk;
+% 
+% % data_pix = getpixels_dFoF(d);
+% % dFkp = data_pix.dFk;
 
 
-tt = d.inpTime;
-v = d.inpVals;
+%%  save data as npy
 
-[a k] = min(abs(tt - d.stimStarts(j)));
-[a k2] = min(abs(tt - d.stimEnds(j)));
+mouse.m1.mn = 'AL_0033'; mouse.m1.td = '2025-01-20'; 
+mouse.m1.en = 3;
+mouse.m1.trials = 120;
+
+mouse.m2.mn = 'AL_0033'; mouse.m2.td = '2025-02-12'; 
+mouse.m2.en = 2;
+mouse.m2.trials = 200;
+
+mouse.m3.mn = 'AL_0033'; mouse.m3.td = '2025-02-24'; 
+mouse.m3.en = 2;
+mouse.m3.trials = 200;
+
+mouse.m4.mn = 'AL_0033'; mouse.m4.td = '2025-02-26'; 
+mouse.m4.en = 2;
+mouse.m4.trials = 200;
+
+mouse.m5.mn = 'AL_0033'; mouse.m5.td = '2025-03-04'; 
+mouse.m5.en = 1;
+mouse.m5.trials = 60;
+
+
+mouse.m6.mn = 'AL_0033'; mouse.m6.td = '2025-03-05'; 
+mouse.m6.en = 2;
+mouse.m6.trials = 30;
+
+mouse.m7.mn = 'AL_0033'; mouse.m7.td = '2025-03-20'; 
+mouse.m7.en = 4;
+mouse.m7.trials = 100;
+
+mouse.m8.mn = 'AL_0033'; mouse.m8.td = '2025-04-15'; 
+mouse.m8.en = 2;
+mouse.m8.trials = 60;
+
+
+mouse.m9.mn = 'AL_0039'; mouse.m9.td = '2025-04-20'; 
+mouse.m9.en = 1;
+mouse.m9.trials = 100;
+
+
+mouse.m10.mn = 'AL_0039'; mouse.m10.td = '2025-04-19'; 
+mouse.m10.en = 1;
+mouse.m10.trials = 100;
+
+mouse.m11.mn = 'AL_0039'; mouse.m11.td = '2025-04-30'; 
+mouse.m11.en = 3;
+mouse.m11.trials = 100;
+
+
+mouse.m12.mn = 'AL_0033'; mouse.m12.td = '2025-04-19'; 
+mouse.m12.en = 1;
+mouse.m12.trials = 100;
+
+mouse.m13.mn = 'AL_0039'; mouse.m13.td = '2025-04-20'; 
+mouse.m13.en = 2;
+mouse.m13.trials = 100;
 
 
 
-% Tin = 0:0.0005:stimDur(j);
-Tout = -3:0.0285:dur+3;
-close all
+
+%%
+% d = initialize_data(mouse.m9.mn,mouse.m9.en,mouse.m9.td);
+
+
+% %
+% mode = 0  % from binary image
+% % mode = 1 ; % from SVD
+% 
+% % r = 0; % dont read file
+% r = 1; % read file
+% mouse.m1.data = getpixel_dFoF(d,mode,d.params.pixel,r);
+% dFk = mouse.m1.data.dFk;
+% trials = 100;
+% 
+% mouse.m1.data = controllerData(mouse.m1.data,d,trials);
+% 
+% % Plots for interleaved trials, 1 = save as pdf
+% analysisPlots(mouse.m1.data,d,0);
+
+%% Feedforward vs Feedback
+
+fields = fieldnames(mouse);
+for k = 1:length(fields)
+    mouse.(fields{k}).d = initialize_data(mouse.(fields{k}).mn, mouse.(fields{k}).en, mouse.(fields{k}).td);
+    
+    %
+    mode = 0;  % from binary image
+    % mode = 1; % from SVD
+
+    % r = 0; % dont read file
+    r = 1; % read file
+    mouse.(fields{k}).data = getpixel_dFoF(mouse.(fields{k}).d, mode, mouse.(fields{k}).d.params.pixel, r);
+    dFk = mouse.(fields{k}).data.dFk;
+    trials = 100;
+
+    mouse.(fields{k}).data = controllerData(mouse.(fields{k}).data, mouse.(fields{k}).d, mouse.(fields{k}).trials);
+
+    % Plots for interleaved trials, 1 = save as pdf
+    % analysisPlots(mouse.(fields{k}).data, d, 0);
+end
+%% save data to npy
+
+%%
+Mvarnc = [];
+Mvarwc = [];
+for k = 1:length(fields)
+    mouse.(fields{k}).d = initialize_data(mouse.(fields{k}).mn, mouse.(fields{k}).en, mouse.(fields{k}).td);
+    
+    %
+    
+nc =  mouse.(fields{k}).data.nc;
+wc =  mouse.(fields{k}).data.wc;
+
+    dFk = mouse.(fields{k}).data.dFk;
+dur =3;
+er_ncDfk=[];
+vr_ncDfk=[];
+pncDfk = [];
+t = mouse.(fields{k}).d.timeBlue;
+for j = 1: length(nc)
+    [a i] = min(abs(t - mouse.(fields{k}).d.stimStarts(nc(j))));
+    er_ncDfk = [er_ncDfk; norm(dFk(i:i+35*(dur))+5)];
+    
+    pncDfk = [pncDfk; dFk(i-35*3:i+35*(dur+3))];
+end
+
+
+
+
+er_wcDfk=[];
+vr_wcDfk=[];
+pwcDfk = [];
+for j = 1: length(wc)
+    [a i] = min(abs(t - mouse.(fields{k}).d.stimStarts(wc(j))));
+    er_wcDfk = [er_wcDfk; norm(dFk(i:i+35*(dur))+5)];
+    
+    pwcDfk = [pwcDfk; dFk(i-35*3:i+35*(dur+3))];
+end
+
+mouse.(fields{k}).data.er_wcDfk_l = er_wcDfk;
+mouse.(fields{k}).data.er_ncDfk_l = er_ncDfk;
+mouse.(fields{k}).data.pwcDfk_l = pwcDfk;
+
+mouse.(fields{k}).data.vr_wcDfk_l = var(pwcDfk);
+mouse.(fields{k}).data.vr_ncDfk_l = var(pncDfk);
+mouse.(fields{k}).data.pncDfk_l = pncDfk;
+
+Mvarnc = [Mvarnc;mouse.(fields{k}).data.vr_ncDfk_l];
+Mvarwc = [Mvarwc;mouse.(fields{k}).data.vr_wcDfk_l];
+end
+
+
+%%
+
 figure()
-subplot(3,1,1)
-plot(Tout,dFk((i-(3*35)):(i+35*(dur+3))));hold on
-plot(Tout,-5*ones(1,length(Tout)))
-xlim([-3,6])
-xline(0)
-xline(3)
-ylabel('dF/F trace')
+plot(mouse.m1.data.vr_wcDfk,'g','LineWidth',2);hold on
+plot(mouse.m1.data.vr_ncDfk,'g','LineWidth',2);hold on
 
-subplot(3,1,2)
-% plot(tt(k:k2)-tt(k),v(k:k2));
-plot(tt(k:k2)-tt(k),v(k:k2))
-xlim([-3,6])
-xline(0)
-xline(3)
-ylabel('Input Values');
-
-
-subplot(3,1,3)
-plot(Tout,d.mv((i-(3*35)):(i+35*(dur+3))));hold on
-plot(Tout,5*ones(1,length(Tout)))
-xlim([-3,6])
-xline(0)
-xline(3)
-ylabel('motion')
-xlabel('Time (s)');
-sgtitle('trial sample')
-
-
-%% Feedforward vs Feedback 
-
-trials = 100;
-
-data = controllerData(data,d,trials);
-
-% Plots for interleaved trials, 1 = save as pdf
-analysisPlots(data,d,0);
-
-%% get trail stamps
-nc = data.nc;
-wc = data.wc;
-%% Invariance tests
-invarianceAnalysis(data,d);
 %%
 
-
-features = feature_analysis(data,d);
-
-mf = features.mf;
-v1 = features.v1;
-v2 = features.v2;
-v3 = features.v3;
-
-%% Classify initial condition
-
-X0_wc = zeros(length(wc), 1); % Preallocate for efficiency
-for j = 1:length(wc)
-    [~, i] = min(abs(t - d.stimStarts(wc(j))));
-    X0_wc(j) = dFk(i);
-end
-
-X0_nc = zeros(length(nc), 1); % Preallocate for efficiency
-for j = 1:length(nc)
-    [~, i] = min(abs(t - d.stimStarts(nc(j))));
-    X0_nc(j) = dFk(i);
-end
-
-X0 = zeros(length(d.stimStarts), 1); % Preallocate for efficiency
-for j = 1:length(d.stimStarts)
-    [~, i] = min(abs(t - d.stimStarts(j)));
-    X0(j) = dFk(i);
-end
+figure()
+plot(Mvarnc','r','LineWidth',2);hold on
+plot(Mvarwc','g','LineWidth',2);hold on
 
 
-
-%% Analysis based on H2 
-pixel_test(d,data,dFkp);
 %%
-dataPixel = pixelAnalysis(d,data,dFkp);
+Mean_var_wc = mean(Mvarwc);
+Mean_var_nc = mean(Mvarnc);
+
+
+figure()
+plot(Mean_var_nc,'r','LineWidth',2);hold on
+plot(Mean_var_wc,'g','LineWidth',2);hold on
+
+
 %%
 close all;
+ tp = -3:1/35:6;
+ ref = -5*ones(length(tp),1);
 
-er_wcDfk = data.er_wcDfk;
-er_ncDfk = data.er_ncDfk;
-
-pwcDfk = data.pwcDfk;
-pncDfk = data.pncDfk;
-
-er = sort(er_wcDfk);
-ner = sort(er_ncDfk);
-
-%% Analyzer
-close all;
-i = 5;
-motionPlotter(i,d,data)
-
-%%
+ tpr = 0:1/35:3;
+ la = -7*ones(length(tpr),1);
 
 
 
-%%
 
-ncmotion_pre = sum(data.ncmotion(:,1:35*1),2);
-wcmotion_pre = sum(data.wcmotion(:,1:35*1),2);
-
-
-ncmotion_during = sum(data.ncmotion(:,35:(dur+1)*35),2);
-wcmotion_during = sum(data.wcmotion(:,35:(dur+1)*35),2);
-
-
-
-%% Thresholding
-close all
 figure()
-subplot(1,2,1)
-s = scatter3(X0_wc,wcmotion_pre,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,ncmotion_pre,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('motion')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% % colorbar
-% % zlim([0,100])
-% % clim([0,80])
-title('regularizability dependece on motion pre trial')
+set(gcf, 'Renderer', 'opengl')
+plot(tp,mouse.m13.data.pncDfk_l','m','LineWidth',0.3);hold on
+plot(tp,mean(mouse.m13.data.pncDfk_l),'k','LineWidth',3)
+plot(tp,ref,'--g','LineWidth',3)
+plot(tpr,la,'r','LineWidth',4)
+xline(0,'k','LineWidth',0.2);
+xline(3,'k','LineWidth',0.2);
+exportgraphics(gcf, 'figure_nc.svg', 'ContentType', 'vector');
 
 
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-% 
-subplot(1,2,2)
-s = scatter3(X0_wc,wcmotion_during,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,ncmotion_during,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('motion')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on motion during trial')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-% 
-% 
-% subplot(1,3,3)
-% s = scatter3(X0,f3_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-% s = scatter3(XX0,f3_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-% xlabel('x_0 df/F')
-% ylabel('freq marker')
-% zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% % colorbar
-% % zlim([0,100])
-% % clim([0,80])
-% title('regularizability dependece on state and parameters')
-
-%%
-dur = d.params.dur
-t = d.timeBlue;
-close all
-j=20;
-[a i] = min(abs(t - d.stimStarts(j)));
-[a i2] = min(abs(t - d.stimEnds(j)));
-
-
-tt = d.inpTime;
-v = d.inpVals;
-
-[a k] = min(abs(tt - d.stimStarts(j)));
-[a k2] = min(abs(tt - d.stimEnds(j)));
-
-
-
-% Tin = 0:0.0005:stimDur(j);
-Tout = -3:0.0285:dur+3;
-close all
 figure()
-subplot(3,1,1)
-plot(Tout,dFk((i-(3*35)):(i+35*(dur+3))));hold on
-plot(Tout,-5*ones(1,length(Tout)))
-xlim([-3,6])
-xline(0)
-xline(3)
-title('analysis')
+set(gcf, 'Renderer', 'opengl')
+plot(tp,mouse.m13.data.pwcDfk_l','b','LineWidth',0.3);hold on
+plot(tp,mean(mouse.m13.data.pwcDfk_l),'k','LineWidth',3)
+plot(tp,ref,'--g','LineWidth',3)
+xline(0,'k','LineWidth',0.2);
+xline(3,'k','LineWidth',0.2);
+exportgraphics(gcf, 'figure_wc.svg', 'ContentType', 'vector');
 
-subplot(3,1,2)
-% plot(tt(k:k2)-tt(k),v(k:k2));
-plot(tt(k:k2)-tt(k),v(k:k2))
-xlim([-3,6])
-xline(0)
-xline(3)
 
-subplot(3,1,3)
-plot(Tout,d.mv((i-(3*35)):(i+35*(dur+3))));hold on
-plot(Tout,5*ones(1,length(Tout)))
-xlim([-3,6])
-xline(0)
-xline(3)
-title('analysis')
+figure()
+set(gcf, 'Renderer', 'opengl')
+plot(tp,Mean_var_nc,'m','LineWidth',2);hold on
+plot(tp,Mean_var_wc,'b','LineWidth',2);hold on
+xline(0,'k','LineWidth',0.2);
+xline(3,'k','LineWidth',0.2);
+exportgraphics(gcf, 'figure_var.svg', 'ContentType', 'vector');
