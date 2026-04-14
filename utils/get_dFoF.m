@@ -65,7 +65,7 @@ t = d.svd.t;
     for i = 1:length(Fsvd)
     
         Fkmean = [Fkmean,mean(Fk(i:i+w))];
-        dFsvd = [dFsvd,(Fk(i+w)+-Fkmean(i))/Fkmean(i)*100];
+        dFsvd = [dFsvd,(Fk(i+w)-Fkmean(i))/Fkmean(i)*100];
 
     end
 

@@ -1,5 +1,5 @@
-function motionPlotter(i,d,data)
-mv = d.mv; % motion
+function motionPlotter(i,d,data,features)
+mv = data.mv; % motion
 tt = d.inpTime;
 v = d.inpVals;
 
@@ -22,6 +22,11 @@ t = d.timeBlue;
 [m2,i2] = min(er_wcDfk);
 
 
+mf = features.mf;
+v1 = features.v1;
+v2 = features.v2;
+v3 = features.v3;
+
 a1 = find(er_wcDfk == (er(i)), 1, 'first'); % Optimize to find first occurrence
 a2 = find(er_wcDfk == (er(end - i)), 1, 'first'); % Optimize to find first occurrence
 
@@ -37,8 +42,8 @@ j2 = wc(m2);
 ref = -5 * ones(1, 3 * 35 + 1);
 Tref = 0:0.0285:dur;
 
-Tp = -10:0.0285:dur + 3;
-Tp2 = -5:0.0285:dur + 1;
+Tp = -10:1/35:dur + 3;
+Tp2 = -5:1/35:dur + 1;
 
 
 close all
@@ -137,7 +142,7 @@ k2
 ref = -5 * ones(1, 3 * 35 + 1);
 Tref = 0:0.0285:dur;
 
-Tp = -10:0.0285:dur + 3;
+Tp = -10:1/35:dur + 3;
 Tp2 = -5:0.0285:dur + 1;
 
 figure()

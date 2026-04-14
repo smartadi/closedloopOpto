@@ -1,26 +1,20 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 from scipy.io import loadmat
 
 
 mat_data = loadmat(r".\AL_0033pixel03041.mat")
 
+# Extract dFk data
+dFk = mat_data['dFk'].ravel()
 
-
-num_items = len(mat_data)
-print(f"The number of key-value pairs is: {num_items}")
-
-
-# print keys and brief summaries
-for key, val in mat_data.items():
-    print(f"Key: {key!r}")
-    print(f"  Type: {type(val)}")
-    if isinstance(val, np.ndarray):
-        print(f"  Shape: {val.shape}")
-        flat = val.ravel()
-        preview = flat[:10] if flat.size > 0 else flat
-        print(f"  Preview (first up to 10 elements): {preview}")
-    else:
-        print(f"  Value (repr, trimmed): {repr(val)[:200]}")
-    print()
+# Plot dFk
+plt.figure(figsize=(12, 6))
+plt.plot(dFk)
+plt.xlabel('Sample Index')
+plt.ylabel('dFk')
+plt.title('dFk Signal')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
 

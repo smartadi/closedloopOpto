@@ -71,6 +71,14 @@ pre_f_ff = zeros(length(data.nc), 3);
 post_v_ff = zeros(length(data.nc), 3);
 post_f_ff = zeros(length(data.nc), 3);
 
+total_v_ff = zeros(length(data.nc), 3);
+total_f_ff = zeros(length(data.nc), 3);
+
+total_v_fb = zeros(length(data.wc), 3);
+total_f_fb = zeros(length(data.wc), 3);
+
+
+
 for i = 1:length(data.wc)
     j = wc(i);
     [a, k] = min(abs(t - d.stimStarts(j)));
@@ -88,7 +96,13 @@ for i = 1:length(data.wc)
 
     post_v_fb(i, :) = [sum(features.v1(k:k+35*3)), sum(features.v2(k:k+35*3)), sum(features.v3(k:k+35*3))];
     post_f_fb(i, :) = [sum(features.mf(k:k+35*3, 1)), sum(features.mf(k:k+35*3, 2)), sum(features.mf(k:k+35*3, 3))];
+
+
+    total_v_fb(i, :) = [sum(features.v1(k-3*35:k+35*3)), sum(features.v2(k-3*35:k+35*3)), sum(features.v3(k-3*35:k+35*3))];
+    total_f_fb(i, :) = [sum(features.mf(k-3*35:k+35*3, 1)), sum(features.mf(k-3*35:k+35*3, 2)), sum(features.mf(k-3*35:k+35*3, 3))];
 end
+
+
 
 for i = 1:length(data.nc)
     j = nc(i);
@@ -106,6 +120,9 @@ for i = 1:length(data.nc)
 
     post_v_ff(i, :) = [sum(features.v1(k:k+35*3)), sum(features.v2(k:k+35*3)), sum(features.v3(k:k+35*3))];
     post_f_ff(i, :) = [sum(features.mf(k:k+35*3, 1)), sum(features.mf(k:k+35*3, 2)), sum(features.mf(k:k+35*3, 3))];
+
+    total_v_ff(i, :) = [sum(features.v1(k-3*35:k+35*3)), sum(features.v2(k-3*35:k+35*3)), sum(features.v3(k-3*35:k+35*3))];
+    total_f_ff(i, :) = [sum(features.mf(k-3*35:k+35*3, 1)), sum(features.mf(k-3*35:k+35*3, 2)), sum(features.mf(k-3*35:k+35*3, 3))];
 end
 
 %% Sort error vs parameter 
@@ -559,6 +576,101 @@ zlim([0 50])
 % zlim([0,100])
 % clim([0,80])
 title('regularizability dependece on state and parameters')
+
+
+threshold = 30; 
+
+xp = get(gca,'Xlim');
+yp = get(gca,'Ylim');
+% Use the axes x and Y limits to find the co-ordinates for the patch
+x1 = [ xp(1) xp(2) xp(2) xp(1)];
+y1 = [ yp(1) yp(1) yp(2) yp(2)];
+z1 = ones(1,numel(y1))* threshold; 
+v = patch(x1,y1,z1, 'g');
+set(v,'facealpha',0.1);
+set(v,'edgealpha',0.5);
+set(gcf,'renderer','opengl') ;
+hold on;
+
+
+%%
+
+
+%%
+
+figure()
+subplot(1,3,1)
+s = scatter3(X0_wc,total_f_fb(:,1),er_wcDfk,[],er_wcDfk,'filled','g');hold on
+s = scatter3(X0_nc,total_f_ff(:,1),er_ncDfk,[],er_ncDfk,'filled','r');
+xlabel('x_0 df/F')
+ylabel('freq marker')
+zlabel('Tracking error norm')
+% xlim([-10 10])
+% ylim([0 20])
+% zlim([0 50])
+% colorbar
+% zlim([0,100])
+% clim([0,80])
+title('f1')
+
+
+threshold = 30; 
+
+xp = get(gca,'Xlim');
+yp = get(gca,'Ylim');
+% Use the axes x and Y limits to find the co-ordinates for the patch
+x1 = [ xp(1) xp(2) xp(2) xp(1)];
+y1 = [ yp(1) yp(1) yp(2) yp(2)];
+z1 = ones(1,numel(y1))* threshold; 
+v = patch(x1,y1,z1, 'g');
+set(v,'facealpha',0.1);
+set(v,'edgealpha',0.5);
+set(gcf,'renderer','opengl') ;
+hold on;
+
+subplot(1,3,2)
+s = scatter3(X0_wc,total_f_fb(:,2),er_wcDfk,[],er_wcDfk,'filled','g');hold on
+s = scatter3(X0_nc,total_f_ff(:,2),er_ncDfk,[],er_ncDfk,'filled','r');
+xlabel('x_0 df/F')
+ylabel('freq marker')
+zlabel('Tracking error norm')
+% xlim([-10 10])
+% ylim([0 20])
+% zlim([0 50])
+% colorbar
+% zlim([0,100])
+% clim([0,80])
+title('f2')
+
+
+threshold = 30; 
+
+xp = get(gca,'Xlim');
+yp = get(gca,'Ylim');
+% Use the axes x and Y limits to find the co-ordinates for the patch
+x1 = [ xp(1) xp(2) xp(2) xp(1)];
+y1 = [ yp(1) yp(1) yp(2) yp(2)];
+z1 = ones(1,numel(y1))* threshold; 
+v = patch(x1,y1,z1, 'g');
+set(v,'facealpha',0.1);
+set(v,'edgealpha',0.5);
+set(gcf,'renderer','opengl') ;
+hold on;
+
+
+subplot(1,3,3)
+s = scatter3(X0_wc,total_f_fb(:,3),er_wcDfk,[],er_wcDfk,'filled','g');hold on
+s = scatter3(X0_nc,total_f_ff(:,3),er_ncDfk,[],er_ncDfk,'filled','r');
+xlabel('x_0 df/F')
+ylabel('freq marker')
+zlabel('Tracking error norm')
+% xlim([-10 10])
+% ylim([0 20])
+% zlim([0 50])
+% colorbar
+% zlim([0,100])
+% clim([0,80])
+title('f3')
 
 
 threshold = 30; 

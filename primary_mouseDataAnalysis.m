@@ -13,7 +13,7 @@ clear all;
 % en = 1;
 % mn = 'AL_0033'; td = '2025-03-04'; 
 % en = 2;
-% 
+   
 % mn = 'AL_0033'; td = '2025-03-05'; 
 % en = 2;
 
@@ -72,8 +72,8 @@ clear all;
 % mn = 'AL_0033'; td = '2025-02-26'; 
 % en = 2;
 % 
-% mn = 'AL_0033'; td = '2025-02-24'; 
-% en = 2;
+mn = 'AL_0033'; td = '2025-02-24'; 
+en = 2;
 
 % mn = 'AL_0033'; td = '2025-02-21'; 
 % en = 2;
@@ -128,25 +128,20 @@ clear all;
 
 
 % NEW LASER
-mn = 'AL_0039'; td = '2025-04-19'; 
-en = 1;
-% 
-% mn = 'AL_0039'; td = '2025-04-20'; 
-% en = 1;
-% mn = 'AL_0039'; td = '2025-04-20'; 
-% en = 1;
-% mn = 'AL_0033'; td = '2025-04-19'; 
-% en = 1;
-% 
 % mn = 'AL_0039'; td = '2025-04-19'; 
 % en = 1;
+% 
+% mn = 'AL_0039'; td = '2025-04-20'; 
+% en = 1;
+
+
+
 % mn = 'AL_0039'; td = '2025-04-30'; 
 % en = 3;
 
-% mn = 'AL_0033'; td = '2025-04-19'; 
-% en = 1;
-% mn = 'AL_0033'; td = '2025-04-20'; 
-% en = 2;
+
+mn = 'AL_0033'; td = '2025-04-20'; 
+en = 2;
 
      
 % mn = 'AL_0033'; td = '2025-03-20'; 
@@ -164,6 +159,9 @@ en = 1;
 % 
 % mn = 'AL_0041'; td = '2025-11-12'; 
 % en = 1;
+
+% mn = 'AL_0041'; td = '2025-12-10'; 
+% en = 1;
 %% get data
 pathString = genpath('utils');
     addpath(pathString);
@@ -174,6 +172,7 @@ d = initialize_data(mn,en,td);
 d.params.pix_ids = [2,4,5,8,9,12,13];
 d.params.pix_inv = [170,320];
 %% Run Movie
+sigName = 'lightCommand638';
 sigName = 'lightCommand';
 [tt, v] = getTLanalog(mn, td, en, sigName);
     serverRoot = expPath(mn, td, en);
@@ -215,7 +214,7 @@ dFkp = data_pix.dFk;
 
 %% Trial Samples
 % d.mv = d.motion.motion_1;
-d.mv = d.motion.motSVD_0(1:2:end,1);
+% d.mv = d.motion.motion_1(1:2:end,1);
 
 
 dur = d.params.dur;
@@ -255,27 +254,29 @@ xline(3)
 ylabel('Input Values');
 
 
-subplot(3,1,3)
-plot(Tout,d.mv((i-(3*35)):(i+35*(dur+3))));hold on
-plot(Tout,5*ones(1,length(Tout)))
-xlim([-3,6])
-xline(0)
-xline(3)
-ylabel('motion')
-xlabel('Time (s)');
-sgtitle('trial sample')
+% subplot(3,1,3)
+% plot(Tout,d.mv((i-(3*35)):(i+35*(dur+3))));hold on
+% plot(Tout,5*ones(1,length(Tout)))
+% xlim([-3,6])
+% xline(0)
+% xline(3)
+% ylabel('motion')
+% xlabel('Time (s)');
+% sgtitle('trial sample')
 
 
 %% Feedforward vs Feedback 
 
 trials = 100;
 
-d.ref=-2.5;
+d.ref=-5;
 
 data = controllerData(data,d,trials);
-
+%%
 % Plots for interleaved trials, 1 = save as pdf
 analysisPlots(data,d,0);
+%%
+analysisPlots_paper(data,d,0);
 
 %% get trail stamps
 nc = data.nc;
@@ -311,6 +312,12 @@ for j = 1:length(d.stimStarts)
     [~, i] = min(abs(t - d.stimStarts(j)));
     X0(j) = dFk(i);
 end
+%% MSE wrt initial condition
+figure()
+plot(data.er_ncDfk,abs(X0_nc+5),'or','LineWidth',3);hold on;
+plot(data.er_wcDfk,abs(X0_wc+5),'og','LineWidth',3);
+yline(0)
+shortCornerAxes_plot(gca,'Frac',0.10,'XLabel','MSE','YLabel','|y_0 - y_{ref}|','LineWidth',5)
 
 
 
@@ -332,8 +339,8 @@ ner = sort(er_ncDfk);
 
 %% Analyzer
 close all;
-i = 5;
-motionPlotter(i,d,data)
+i = 15;
+motionPlotter(i,d,data,features)
 
 %%
 
@@ -345,8 +352,8 @@ ncmotion_pre = sum(data.ncmotion(:,1:35*1),2);
 wcmotion_pre = sum(data.wcmotion(:,1:35*1),2);
 
 
-ncmotion_during = sum(data.ncmotion(:,35:(dur+1)*35),2);
-wcmotion_during = sum(data.wcmotion(:,35:(dur+1)*35),2);
+ncmotion_during = sum(data.ncmotion(:,35:(dur)*35),2);
+wcmotion_during = sum(data.wcmotion(:,35:(dur)*35),2);
 
 
 
@@ -430,7 +437,7 @@ hold on;
 dur = d.params.dur
 t = d.timeBlue;
 close all
-j=20;
+j=50;
 [a i] = min(abs(t - d.stimStarts(j)));
 [a i2] = min(abs(t - d.stimEnds(j)));
 
@@ -1631,7 +1638,7 @@ T = Train_length;
 
 % DataX = [dFk_inv(:,startIdx:endIdx)', inputs(startIdx:endIdx)];
 DataX = [dFk_inv(:,startIdx:endIdx)'];
-
+DataY = dFk(startIdx:endIdx)';
 % DataX = [dFkp(2:end,startIdx:endIdx)',d.mv(startIdx:endIdx),inputs_ff(startIdx:endIdx)];
 pY = 0;
 pX = 70;
@@ -2232,3 +2239,94 @@ colormap(hot)
 colorbar;
 caxis([0 4e8]);
 % axis equal tight;
+
+%% Variance Plot
+
+
+wcvar=[];
+
+for j = 1: length(data.wc)
+    [a i] = min(abs(d.timeBlue - d.stimStarts(data.wc(j))));
+    wcvar = [wcvar; dFk(i:i+35*(d.params.dur)) + 5];
+
+end
+wcvar = [wcvar; dFk(i:i+35*(d.params.dur))];
+
+
+Wcerr=[];
+Wcvar=[];
+for i = 10:10:10
+    wwc = wcvar(randi([1 100], i, 1),:);
+    WCerr = vecnorm(wwc,1,2);
+    Wcvar = var(wwc')
+end
+%%
+
+%% -------------------------
+% Build wcvar (trials x time)
+%% -------------------------
+wcvar = [];
+
+for j = 1:length(data.wc)
+    [~, idx] = min(abs(d.timeBlue - d.stimStarts(data.wc(j))));
+    wcvar = [wcvar; dFk(idx:idx + 35*(d.params.dur)) + 5];
+end
+
+% NOTE: Your original code had this extra append line:
+% wcvar = [wcvar; dFk(i:i+35*(d.params.dur))];
+% It uses "i" from later / wrong scope. Likely a bug, so I'm leaving it out.
+
+nTrials = size(wcvar, 1);
+
+%% -----------------------------------------
+% Bootstrap sizes and store variable-length outputs
+%% -----------------------------------------
+sizes = 10:10:100;
+
+Wcerr_cell = cell(numel(sizes), 1);
+Wcvar_cell = cell(numel(sizes), 1);
+
+% For boxplots: collect all values + group labels
+allErr  = [];
+grpErr  = [];
+
+allVar  = [];
+grpVar  = [];
+
+for k = 1:numel(sizes)
+    n = sizes(k);
+
+    % sample n rows (with replacement) from wcvar
+    pick = randi([1 100], n, 1);
+    wwc  = wcvar(pick, :);
+
+    % per-trial L1 norm across time (n x 1)
+    WCerr = vecnorm(wwc, 2, 2);
+
+    % per-trial variance across time (1 x n) -> make it (n x 1)
+    Wcvar = var(wwc, 0, 2);   % variance across columns (time), returns (n x 1)
+
+    % save (variable length each iteration)
+    Wcerr_cell{k} = WCerr;
+    Wcvar_cell{k} = Wcvar;
+
+    % accumulate for boxplots
+    allErr = [allErr; WCerr];
+    grpErr = [grpErr; repmat(n, n, 1)];
+
+    allVar = [allVar; Wcvar];
+    grpVar = [grpVar; repmat(n, n, 1)];
+end
+
+
+figure;
+boxplot(allErr, grpErr);
+xlabel('n (rows sampled)');
+ylabel('WCerr = L1 norm per trial');
+title('WCerr across bootstrap sizes');
+
+figure;
+boxplot(allVar, grpVar);
+xlabel('n (rows sampled)');
+ylabel('Wcvar = variance across time per trial');
+title('Wcvar across bootstrap sizes');

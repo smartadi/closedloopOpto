@@ -1,11 +1,21 @@
+# Data files
 *.png
 *.mat
 *.pdf
-data/
-images/
 *.npy
 *.asv
+
+# Directories
+data/
+images/
 .venv/
+
+# Utils subdirectories
 utils/npy-matlab/
 utils/Pipelines/
+utils/Rigbox/
 utils/widefield/
+
+# VS Code
+.vscode/
+*.code-workspace

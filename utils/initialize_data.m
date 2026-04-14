@@ -27,7 +27,7 @@ function d = initialize_data(mn,en,td)
 
 
 
-    d.motion = load(append(serverRoot,'/face_proc.mat'));
+    % d.motion = load(append(serverRoot,'/face_proc.mat'));
 
 
     % pixel frame

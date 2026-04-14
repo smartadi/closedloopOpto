@@ -15,9 +15,16 @@ t = d.timeBlue;
 ti = d.inpTime;
 % Trial Average
 
-mv1 = d.motion.motSVD_0(1:2:end,1);
+% mv1 = d.motion.motSVD_0(1:2:end,1);
+try
+    mv1 = d.motion.motion_1(1:2:end);
+    
+catch
+    mv1 = zeros(1,length(t));
+    
+end
 
-% mv1 = data.dFk;
+data.mv = mv1;
 
 ncDfk=[];
 ncInp=[];
@@ -35,8 +42,8 @@ for j = 1: length(nc)
     
     ncInp = [ncInp; d.inpVals(i2:i2+dur*2000)'];
 
-
-    ncmotion = [ncmotion; mv1(i-(35*10):i+35*(d.params.dur+2))'];
+    
+    ncmotion = [ncmotion; mv1(i-(35*10):i+35*(d.params.dur+2))];
 
     
 end
@@ -58,7 +65,7 @@ for j = 1: length(wc)
     
     wcInp = [wcInp; d.inpVals(i2:i2+dur*2000)'];
 
-    wcmotion = [wcmotion;  mv1(i-(35*10):i+35*(d.params.dur+2))'];
+    wcmotion = [wcmotion;  mv1(i-(35*10):i+35*(d.params.dur+2))];
 end
 
 

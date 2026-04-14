@@ -5,8 +5,8 @@ function [data,dFk] = getpixel_dFoF(d,mode,pixel,r);
 %   Detailed explanation goes here
 
 
-mode = 0; % from images
-% mode = 1; % from svd
+% mode = 0; % from images
+mode = 1; % from svd
 
 %read from
 r = 1
@@ -30,7 +30,7 @@ if (exist(pathData) == 0) | (r == 0)
 
     if mode==0
         % source_dir ='/mnt/data/brain/';
-        source_dir = 'C:\Users\adity\Documents\opto_project\';
+        source_dir = 'C:\Users\aditya\Documents\projects\data\';
         source_dir = append(source_dir,d.mn,'\',d.td,'\',num2str(d.en));
         a=dir([source_dir '\*'])
         out=size(a,1);
@@ -53,9 +53,22 @@ if (exist(pathData) == 0) | (r == 0)
     
         end
     else
-        nSV = 500;
-        [U, V, t, mimg] = loadUVt(serverRoot, nSV);
-        mimg = mimg';
+
+        expRoot = serverRoot;
+movieSuffix = 'blue';
+nSV = 2000;
+U = readUfromNPY(fullfile(expRoot, movieSuffix, ['svdSpatialComponents.npy']), nSV);
+mimg = readNPY(fullfile(expRoot, movieSuffix, ['meanImage.npy']));
+
+%
+    fprintf(1, 'corrected file not found; loading uncorrected temporal components\n');
+    V = readVfromNPY(fullfile(expRoot, movieSuffix, ['svdTemporalComponents.npy']), nSV);
+    t = readNPY(fullfile(expRoot, movieSuffix, ['svdTemporalComponents.timestamps.npy']));
+
+
+        % nSV = 2000;
+        % [U, V, t, mimg] = loadUVt(serverRoot, nSV);
+        % mimg = mimg';
         j=1;
         mI = [];
         for i = 1:length(V)
@@ -65,7 +78,7 @@ if (exist(pathData) == 0) | (r == 0)
             % size(imkernel)
             imstack = mean(imkernel,[1,2]);
             % size(imstack)   
-            F = [F,reshape(imstack,[1,500])*V(:,i)];
+            F = [F,reshape(imstack,[1,2000])*V(:,i)];
         end
 
 

@@ -1,0 +1,11 @@
+*.png
+*.mat
+*.pdf
+data/
+images/
+*.npy
+*.asv
+.venv/
+.vscode/
+*.svg
+paper/

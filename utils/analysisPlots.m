@@ -38,7 +38,7 @@ Tout = 0:0.0285:dur;
 k = figure()
 subplot(1,2,1)
 plot(T,ncDfk);hold on
-plot(T,-5*ones(1,length(T)),'--r','Linewidth',3);hold on
+plot(T,d.ref*ones(1,length(T)),'--r','Linewidth',3);hold on
 plot(T,nc_avg,'k','Linewidth',3);
 xline(0)
 xline(dur)
@@ -50,7 +50,7 @@ title('Open Loop')
 
 subplot(1,2,2)
 plot(T,wcDfk);hold on
-plot(T,-5*ones(1,length(T)),'--r','Linewidth',3);hold on
+plot(T,d.ref*ones(1,length(T)),'--r','Linewidth',3);hold on
 plot(T,wc_avg,'k','Linewidth',3);
 xline(0)
 xline(dur)
@@ -101,8 +101,8 @@ end
 % wc_var = var(wcDfk - wc_avg);
 
 
-nc_er = mean(ncDfk)+5;
-wc_er = mean(wcDfk)+5;
+nc_er = mean(ncDfk) - d.ref;
+wc_er = mean(wcDfk) - d.ref;
 % nc_var = mean(ncDfk);
 % wc_var = mean(wcDfk);
 

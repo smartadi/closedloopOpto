@@ -1,6 +1,6 @@
 function displayFrame(mn, td, en, d, frame)
     % source_dir = '/mnt/data/brain/';
-    source_dir = 'C:\Users\adity\Documents\opto_project\'
+    source_dir = 'C:\Users\aditya\Documents\projects\data\';
     source_dir = append(source_dir, mn, '\', td, '\', num2str(en))
     a = dir([source_dir '/*']);
     out = size(a, 1);

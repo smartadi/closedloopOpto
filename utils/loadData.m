@@ -1,4 +1,4 @@
-function d = loadData(serverRoot,mn,td,en)
+   function d = loadData(serverRoot,mn,td,en)
 %LOADDATA Summary of this function goes here
 %   Detailed explanation goes here
 % d.input_params = readmatrix(append(serverRoot,"/data/input_params.csv"));
@@ -22,7 +22,7 @@ sigName = 'lightCommand';
 [tt, v] = getTLanalog(mn, td, en, sigName);
     
 catch 
-sigName = 'lightCommand638';
+sigName = 'lightCommand594';
 [tt, v] = getTLanalog(mn, td, en, sigName);    
 end
 
@@ -47,7 +47,12 @@ d.timeBlue = wf_times(1:2:end);
 
 
 %% load motion
-d.motion = load(append(serverRoot,'/face_proc.mat'));
-d.mv = d.motion.motSVD_0(1:2:end,1);
+
+try
+    d.motion = load(append(serverRoot,'/face_proc.mat'));
+    d.mv = d.motion.motSVD_0(1:2:end,1);
+catch
+end
+
 end
 

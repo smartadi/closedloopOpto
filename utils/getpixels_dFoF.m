@@ -38,7 +38,7 @@ if exist(pathData) == 0
     dFk=[];
 
     
-    pixel = d.params.pixels;
+    pixel = d.params.pixels
     % pixel = d.params.pixels_contra;
 
 

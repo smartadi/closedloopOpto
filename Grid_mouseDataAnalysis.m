@@ -19,110 +19,57 @@ addpath('utils')
 % en = 2;
 
 
-mn = 'AL_0033'; td = '2025-04-15'; 
-en = 2;
+% mn = 'AL_0033'; td = '2025-04-15'; 
+% en = 2;
+
+mn = 'AL_0041'; td = '2026-02-10'; 
+en = 1;
 %%%%%%%%% with rewards %%%%%%%%%%%%%
 % mn = 'AL_0033'; td = '2025-03-05'; 
 % en = 1;
 
 % mn = 'AL_0033'; td = '2025-03-18'; 
 % en = 1;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-serverRoot = expPath(mn, td, en);
 
-d = loadData(serverRoot,mn,td,en);
+%% get data
+pathString = genpath('utils');
+    addpath(pathString);
+    % %%
+    % addpath('utils')
+d = initialize_data(mn,en,td);
 
-%% Stim Times
-% mode = 0 % from stim search
-mode = 1; % from param data
+d.params.pix_ids = [2,4,5,8,9,12,13];
+d.params.pix_inv = [170,320];
+% get inputs
+sigName = 'lightCommand638';
+% sigName = 'lightCommand';
+[tt, v] = getTLanalog(mn, td, en, sigName);
+    serverRoot = expPath(mn, td, en);
 
-d = findStims(d,mode);
-% d = findStims(d);
-
-
-% % Alternate( if input params follows old data format)
-% stimTimes = d.inpTime(d.inpVals(2:end)>0.1 & d.inpVals(1:end-1)<=0.1);
-% ds = find(diff([0;stimTimes])>2);
-% d.stimStarts = stimTimes(ds);
-% d.stimEnds = stimTimes(ds(2:end)-1);
-% % 
-% % % Amps
-% % amps=[];
-% % for i = 1:length(d.stimStarts)-1
-% %     amps = [amps,max(d.inpVals(find(d.inpTime == d.stimStarts(i)):find(d.inpTime == d.stimEnds(i))))];
-% % end
-% 
-% wd.stimDur = d.stimEnds-d.stimStarts(1:end-1);
-
-%%
-
-offsetx = 0;
-offsety = 0;
-% 
-% px = [200,300,150,200,300,350,100,200,300,400,100,200,300,400];%+offsetx;
-% py = [150,150,225,225,225,225,325,325,325,325,425,425,425,425];%+offsety;
-px=[];
-py=[];
-% d.params.pixel = [380,325]
-frame= double([px,d.params.pixel(1);py,d.params.pixel(2)]) + [offsetx;offsety]
-
-
-
-source_dir ='/mnt/data/brain/';
-source_dir = append(source_dir,mn,'/',td,'/',num2str(en))
-a=dir([source_dir '/*'])
-out=size(a,1)
-
-out=out-2;
-
-% pixel=[163,300]
-
-path = append(source_dir,'/frame-')
-i=5004;
-pathim=append(path,num2str(i-1));
-fileID = fopen(pathim,'r');
-A = fread(fileID,[560,560],'uint16')';
-close all;
-figure()
-imagesc(A);hold on
-plot(d.params.pixel(:,1),d.params.pixel(:,2),'or');hold on
-plot(frame(1,:),frame(2,:)','ok','LineWidth',2)
-clim([0 4000]);
-colorbar
-impixelinfo
-
-d.params.pixel = frame';
-
-
+tInd = 1;
+traces(tInd).t = tt;
+traces(tInd).v = v;
+traces(tInd).name = sigName;
+traces(tInd).lims = [0 5];
 %% Load or save from image data
+
 mode = 0  % from binary image
 % mode = 1 ; % from SVD
-
+%
 % r = 0; % dont read file
 r = 1; % read file
-
-data = getpixel_dFoF(d,mode,d.params.pixel,r);
-% 
+[data,dFk_temp] = getpixel_dFoF(d,mode,d.params.pixel,r);
 dFk = data.dFk;
 
-
-%% capture dF/F from state
-
-% dFk = d.states(d.params.horizon+2:d.params.horizon+1+length(d.timeBlue))';
-% 
-% data.dFk = dFk;
-%%
-mData = markeranalysis(d,data);
-
-% data = getpixels_dFoF(d);
-
-
 %% Trial Samples
+% d.mv = d.motion.motion_1;
+% d.mv = d.motion.motion_1(1:2:end,1);
 
-dur = d.params.dur
+
+dur = d.params.dur;
 t = d.timeBlue;
 close all
-j=100;
+j=6;
 [a i] = min(abs(t - d.stimStarts(j)));
 [a i2] = min(abs(t - d.stimEnds(j)));
 
@@ -136,22 +83,37 @@ v = d.inpVals;
 
 
 % Tin = 0:0.0005:stimDur(j);
-Tout = 0:0.0285:dur;
+Tout = -3:0.0285:dur+3;
 close all
 figure()
-subplot(2,1,1)
-plot(Tout,dFk(i:i+35*dur));hold on
-plot(Tout,5*ones(1,length(Tout)))
-xlim([0,dur])
-title('analysis')
+subplot(3,1,1)
+plot(Tout,dFk((i-(3*35)):(i+35*(dur+3))));hold on
+plot(Tout,-5*ones(1,length(Tout)))
+xlim([-3,6])
+xline(0)
+xline(3)
+ylabel('dF/F trace')
 
-subplot(2,1,2)
+subplot(3,1,2)
 % plot(tt(k:k2)-tt(k),v(k:k2));
 plot(tt(k:k2)-tt(k),v(k:k2))
-ylim([0,5])
+xlim([-3,6])
+xline(0)
+xline(3)
+ylabel('Input Values');
 
 
-%%
+% subplot(3,1,3)
+% plot(Tout,d.mv((i-(3*35)):(i+35*(dur+3))));hold on
+% plot(Tout,5*ones(1,length(Tout)))
+% xlim([-3,6])
+% xline(0)
+% xline(3)
+% ylabel('motion')
+% xlabel('Time (s)');
+% sgtitle('trial sample')
+
+
 
 %% Grid Experiment
 close all;
@@ -189,8 +151,8 @@ ff = Fs/L*(0:(L/2));
 figure()
 for j =1:length(ic)
     k = numel(find(ic==ic(j)));
-    % [a i] = min(abs(t - d.stimStarts(j)));
-    i = d.input_params(j,2) - d.params.horizon;
+    [a i] = min(abs(t - d.stimStarts(j)));
+    %i = d.input_params(j,2) - d.params.horizon;
 
     
     
@@ -198,7 +160,7 @@ for j =1:length(ic)
 
 
     % pcDfk = [pcDfk;  dFk((i-35*(5)): (i+35*(5)) )];
-    traj = norm(dFk(i:(i+35*(dur)))+5)/k;
+    traj = norm(dFk(i:(i+35*(dur)))+2)/k;
     Er_k = [Er_k,traj];
     J_val(ic(j)) = J_val(ic(j)) + traj;
 
@@ -224,15 +186,15 @@ for j =1:length(ic)
 
     
  
-    subplot(2,7,ic(j))
+    subplot(2,9,ic(j))
     % plot(ts,dFk((i-35*(5)): (i+35*(5)) ));hold on
     plot(ts,dFk((i-35*(0.5)): (i+35*(3.5)) ));hold on
     title(append('(',num2str(C(ic(j),1)),',',num2str(C(ic(j),2)),')', 'J = ',num2str(J_val(ic(j)))))
     xline(0,'LineWidth',3)
     xline(3,'LineWidth',3)
     xlim([-0.5 3.5])
-    ylim([-10 10])
-    yline(-5,'--r','LineWidth',3)
+    ylim([-6 6])
+    yline(-2,'--r','LineWidth',3)
 
     end
 
@@ -244,15 +206,15 @@ Kvv=[];
 KFF = [];
 for j = 1:length(C)
 
-    Km = [Km;norm(mean(K_val.(fk{j}),1)+5)];
+    Km = [Km;norm(mean(K_val.(fk{j}),1)+2)];
     
-    Kmm = [Kmm;mean(vecnorm(K_val.(fk{j})+5,2,2))];
+    Kmm = [Kmm;mean(vecnorm(K_val.(fk{j})+2,2,2))];
 
 
-    Kvv = [Kvv;vecnorm(K_val.(fk{j})+5,2,2)];
+    Kvv = [Kvv;vecnorm(K_val.(fk{j})+2,2,2)];
     
     Kv = [Kv;var(K_plot.(fk{j}))];
-    subplot(2,7,j)
+    subplot(2,9,j)
     plot(ts,mean(K_plot.(fk{j}),1),'--k','LineWidth',2)
 
 
@@ -263,7 +225,7 @@ end
 close all;
 figure()
 for j=1:length(C)
-subplot(2,7,j)
+subplot(2,9,j)
 plot(ts,Kv(j,:),'g','LineWidth',2);hold on
 plot(ts,Kv(1,:),'r','LineWidth',2);hold on
     xline(0,'LineWidth',3)
@@ -306,7 +268,7 @@ figure_property.Height= '9'; % Figure height on canvas
 
 figure()
 for i = 1:length(C)
-    subplot(2,5,i)
+    subplot(2,9,i)
     plot(ff,K_fft.(fk{i}));hold on
     ylim([0,7])
     xlabel('freq')
