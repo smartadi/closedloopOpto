@@ -8,9 +8,13 @@ clear all;
 
 %% experiment name
 
+% mn = 'AL_0041'; td = '2026-04-13';   
+% en = 2;
+
+
 % With rewards %%%%%%%%%%%%%%%%%%%
-% mn = 'AL_0033'; td = '2025-03-04'; 
-% en = 1;
+mn = 'AL_0033'; td = '2025-03-04'; 
+en = 1;
 % mn = 'AL_0033'; td = '2025-03-04'; 
 % en = 2;
    
@@ -72,8 +76,8 @@ clear all;
 % mn = 'AL_0033'; td = '2025-02-26'; 
 % en = 2;
 % 
-mn = 'AL_0033'; td = '2025-02-24'; 
-en = 2;
+% mn = 'AL_0033'; td = '2025-02-24'; 
+% en = 2;
 
 % mn = 'AL_0033'; td = '2025-02-21'; 
 % en = 2;
@@ -140,8 +144,8 @@ en = 2;
 % en = 3;
 
 
-mn = 'AL_0033'; td = '2025-04-20'; 
-en = 2;
+% mn = 'AL_0033'; td = '2025-04-20'; 
+% en = 2;
 
      
 % mn = 'AL_0033'; td = '2025-03-20'; 
@@ -481,272 +485,94 @@ title('analysis')
 %%
 
 inputs = d.iputs(d.params.horizon:d.params.horizon+length(d.timeBlue));
-%% Linear Regression
+%% Linear Regression: predict primary pixel from pixel inputs + task signals
 
-Train_length = 35*20*60;
-% indices
-startIdx = 10000;
-endIdx = startIdx + Train_length;
-DataX = [];
-
-%% --- USER INPUTS ---
-% Replace with your own data (same length T)
-% T = 500;
-
-T = Train_length;
-rng(0);
-
-% n-dimensional X (here n = 3)
-n = 10;
-% DataX = [dFkp(2:end,startIdx:endIdx)',1e-6*d.mv(startIdx:endIdx),2*inputs(startIdx:endIdx),];
-
-DataX = [dFkp(2,startIdx:endIdx)',10*inputs(startIdx:endIdx)];
-DataX = [dFkp(5,startIdx:endIdx)',d.mv(startIdx:endIdx),inputs(startIdx:endIdx),];
-
-Datay = dFk(startIdx:endIdx)';
-
-
-train_ratio = 0.7;
-
-% --- BUILD LAGGED DESIGN MATRIX ---
-pY = 5;
-pX = 5;
-[Phi, y_aligned, maxLag] = buildLagMatrix(Datay, DataX, pY, pX);
-
-% Split train/test
-N   = size(Phi,1);
-Ntr = floor(train_ratio * N);
-Phi_tr = Phi(1:Ntr, :);         y_tr = y_aligned(1:Ntr);
-Phi_te = Phi(Ntr+1:end, :);     y_te = y_aligned(Ntr+1:end);
-
-% --- FIT (Option 1: OLS with backslash) ---
-beta    = Phi_tr \ y_tr;            % coefficients incl. intercept
-yhat_tr = Phi_tr * beta;
-yhat_te = Phi_te * beta;
-
-% Reconstruct predictions aligned to original time base (NaN for first maxLag)
-t_idx = (maxLag+1):T+1;               % indices where predictions exist
-yhat_all_aligned = Phi * beta;      % all aligned preds (train+test)
-yhat_full = NaN(T+1,1);
-yhat_full(t_idx) = yhat_all_aligned;
-
-% --- METRICS ---
-rmse_tr = sqrt(mean((y_tr - yhat_tr).^2));
-rmse_te = sqrt(mean((y_te - yhat_te).^2));
-fprintf('Train RMSE: %.4f | Test RMSE: %.4f\n', rmse_tr, rmse_te);
-
-% %% --- PLOTS: RECONSTRUCTION ---
-% % 1) Full-series reconstruction (with NaNs up front)
-%
-% close all;
-figure('Name','Full Reconstruction','NumberTitle','off');
-plot(1:T+1, Datay, 'LineWidth', 1); hold on;
-plot(1:T+1, yhat_full, 'LineWidth', 1);
-xlabel('t'); ylabel('y');
-title('Actual vs Predicted (Full Series)');
-legend('Actual y','Predicted \hat{y}','Location','best'); grid on;
-
-% 2) Test-slice reconstruction only
-figure('Name','Test Reconstruction','NumberTitle','off');
-t_test = t_idx(Ntr+1:end);  % original-time indices for test region
-plot(t_test, Datay(t_test), 'LineWidth', 1); hold on;
-plot(t_test, yhat_te, 'LineWidth', 1);
-xlabel('t'); ylabel('y');
-title('Actual vs Predicted (Test Segment)');
-legend('Actual y (test)','Predicted \hat{y} (test)','Location','best'); grid on;
-
-% 3) Test residuals
-figure('Name','Test Residuals','NumberTitle','off');
-plot(t_test, Datay(t_test) - yhat_te, 'LineWidth', 1);
-xlabel('t'); ylabel('Residual'); grid on;
-title('Residuals on Test Segment');
-
-
-
-%%
-Train_length = 35*30*60
-% indices
-startIdx = 10000
-endIdx = startIdx + Train_length
-%% --- USER INPUTS --- NO motion
-% Replace with your own data (same length T)
-% T = 500;
-close all;
-
-T = Train_length;
-rng(0);
-
-% rnd pixels
-a = 2; b = 15; n = 1;                              % require n <= b-a+1
-k = a - 1 + randperm(b - a + 1, n);                % 1×n row vector
-k = k(:); 
-k=[6,10]
-% n-dimensional X (here n = 3)
-n = 1;
-DataX = [dFkp(k,startIdx:endIdx)'];
-Datay = dFk(startIdx:endIdx)';
-
-
-train_ratio = 0.7;
-
-% --- BUILD LAGGED DESIGN MATRIX ---
-pY = 0;
-pX = 5;
-[Phi, y_aligned, maxLag] = buildLagMatrix(Datay, DataX, pY, pX);
-
-% Split train/test
-N   = size(Phi,1);
-Ntr = floor(train_ratio * N);
-Phi_tr = Phi(1:Ntr, :);         y_tr = y_aligned(1:Ntr);
-Phi_te = Phi(Ntr+1:end, :);     y_te = y_aligned(Ntr+1:end);
-
-% --- FIT (Option 1: OLS with backslash) ---
-beta    = Phi_tr \ y_tr;            % coefficients incl. intercept
-yhat_tr = Phi_tr * beta;
-yhat_te = Phi_te * beta;
-
-% Reconstruct predictions aligned to original time base (NaN for first maxLag)
-t_idx = (maxLag+1):T+1;               % indices where predictions exist
-yhat_all_aligned = Phi * beta;      % all aligned preds (train+test)
-yhat_full = NaN(T+1,1);
-yhat_full(t_idx) = yhat_all_aligned;
-
-% --- METRICS ---
-rmse_tr = sqrt(mean((y_tr - yhat_tr).^2));
-rmse_te = sqrt(mean((y_te - yhat_te).^2));
-fprintf('Train RMSE: %.4f | Test RMSE: %.4f\n', rmse_tr, rmse_te);
-
-% %% --- PLOTS: RECONSTRUCTION ---
-% % 1) Full-series reconstruction (with NaNs up front)
-%
-figure('Name','Full Reconstruction','NumberTitle','off');
-plot(1:T+1, Datay, 'LineWidth', 1); hold on;
-plot(1:T+1, yhat_full, 'LineWidth', 1);
-xlabel('t'); ylabel('y');
-title('Actual vs Predicted (Full Series)');
-legend('Actual y','Predicted \hat{y}','Location','best'); grid on;
-
-% 2) Test-slice reconstruction only
-figure('Name','Test Reconstruction','NumberTitle','off');
-t_test = t_idx(Ntr+1:end);  % original-time indices for test region
-plot(t_test, Datay(t_test), 'LineWidth', 1); hold on;
-plot(t_test, yhat_te, 'LineWidth', 1);
-xlabel('t'); ylabel('y');
-title('Actual vs Predicted (Test Segment)');
-legend('Actual y (test)','Predicted \hat{y} (test)','Location','best'); grid on;
-
-% 3) Test residuals
-figure('Name','Test Residuals','NumberTitle','off');
-plot(t_test, Datay(t_test) - yhat_te, 'LineWidth', 1);
-xlabel('t'); ylabel('Residual'); grid on;
-title('Residuals on Test Segment');
-%%
-
-%% --- USER INPUTS --- NO motion
-% Replace with your own data (same length T)
-% T = 500;
-close all;
-
-
-
-% indices
-startIdx = 2000
+% --- USER CONFIGURATION ---
+startIdx    = 2000;
 Train_length = length(d.timeBlue) - startIdx;
-endIdx = startIdx + Train_length
+endIdx      = startIdx + Train_length - 1;
+train_ratio = 0.7;
+
+pixelIdx    = [5, 6, 10];          % which peripheral pixels to include as regressors
+useMotion   = true;                % include d.mv (motion)
+useInputs   = true;                % include controller inputs
+
+pY = 1;                            % AR lags of primary pixel
+pX = 2;                            % lags of each X column
+
+% -----------------------------------------------------------------------
 
 T = Train_length;
 rng(0);
+close all;
 
-% rnd pixels
-% a = 2; b = 15; n = 5;                              % require n <= b-a+1
-% k = a - 1 + randperm(b - a + 1, n);                % 1×n row vector
-k = k(:); 
-% k=[6,10]
-% n-dimensional X (here n = 3)
-n = 1;
+% --- Build X matrix ---
+DataX = dFkp(pixelIdx, startIdx:endIdx)';           % T x nPixels
+if useMotion,  DataX = [DataX, d.mv(startIdx:endIdx)];         end
+if useInputs,  DataX = [DataX, inputs(startIdx:endIdx)];       end
 
+Datay = dFk(startIdx:endIdx)';                      % T x 1
 
-% DataX = [dFkp(k,startIdx:endIdx)'];
+% --- Train/test split ---
+Ntr    = floor(train_ratio * T);
+idx_tr = 1:Ntr;
+idx_te = (Ntr+1):T;
+X_tr = DataX(idx_tr,:);   X_te = DataX(idx_te,:);
+y_tr = Datay(idx_tr);     y_te = Datay(idx_te);
 
-% DataX = [dFkp(k,startIdx:endIdx)',inputs(startIdx:endIdx)];
-% DataX = [dFkp(5,startIdx:endIdx)',d.mv(startIdx:endIdx),inputs(startIdx:endIdx),];
-
-
-DataX = [d.mv(startIdx:endIdx),inputs(startIdx:endIdx),];
-
-Datay = dFk(startIdx:endIdx)';
-
-
-pY = 1;
-pX = 2;
-
-
-% --- Split ---
-train_ratio = 0.7;
-Ntr = floor(train_ratio*T);
-idx_tr = 1:Ntr; idx_te = (Ntr+1):T;
-X_tr = DataX(idx_tr,:);  X_te = DataX(idx_te,:);
-y_tr = Datay(idx_tr);    y_te = Datay(idx_te);
-
-% --- Train-only zscore ---
-[X_tr_z, muX, sdX] = zscore(X_tr); sdX(sdX<eps)=1;
+% --- Z-score using train statistics only ---
+[X_tr_z, muX, sdX] = zscore(X_tr);  sdX(sdX < eps) = 1;
 X_te_z = (X_te - muX) ./ sdX;
-[y_tr_z, muy, sdy] = zscore(y_tr); sdy = max(sdy, eps);
+[y_tr_z, muy, sdy] = zscore(y_tr);  sdy = max(sdy, eps);
 y_te_z = (y_te - muy) ./ sdy;
 
-% --- Build lagged design (no leakage) ---
-[Phi_tr, y_tr_aligned,maxLag] = buildLagMatrix(y_tr_z, X_tr_z, pY, pX);
-[Phi_te, y_te_aligned,maxLag] = buildLagMatrix(y_te_z, X_te_z, pY, pX);
+% --- Lagged design matrices (no leakage across split) ---
+[Phi_tr, y_tr_aligned, maxLag] = buildLagMatrix(y_tr_z, X_tr_z, pY, pX);
+[Phi_te, y_te_aligned, ~     ] = buildLagMatrix(y_te_z, X_te_z, pY, pX);
 
-% --- Fit & predict (scaled space) ---
+% --- OLS fit ---
 beta         = Phi_tr \ y_tr_aligned;
 yhat_tr_scal = Phi_tr * beta;
-yhat_te_scal = Phi_te  * beta;
+yhat_te_scal = Phi_te * beta;
 
-% --- Invert y scaling & align ---
+% --- Invert z-score to original units ---
 yhat_tr = yhat_tr_scal * sdy + muy;
 yhat_te = yhat_te_scal * sdy + muy;
-y_tr_raw_aligned = y_tr((maxLag+1):end);
-y_te_raw_aligned = y_te((maxLag+1):end);
+y_tr_raw = y_tr((maxLag+1):end);
+y_te_raw = y_te((maxLag+1):end);
 
-% Put back onto original time axis (NaNs for first maxLag of each split)
-yhat_tr_full = NaN(Ntr,1);           yhat_tr_full((maxLag+1):end) = yhat_tr;
-yhat_te_full = NaN(T-Ntr,1);         yhat_te_full((maxLag+1):end) = yhat_te;
+% Pad NaNs to align with original time axis
+yhat_tr_full                   = NaN(Ntr, 1);
+yhat_tr_full((maxLag+1):end)   = yhat_tr;
+yhat_te_full                   = NaN(T - Ntr, 1);
+yhat_te_full((maxLag+1):end)   = yhat_te;
 yhat_all_full = [yhat_tr_full; yhat_te_full];
 
-% --- METRICS ---
-rmse_tr = sqrt(mean((y_tr_raw_aligned - yhat_tr).^2));
-rmse_te = sqrt(mean((y_te_raw_aligned - yhat_te).^2));
-fprintf('maxLag=%d | RMSE Train=%.6f  Test=%.6f\n', maxLag, rmse_tr, rmse_te);
+% --- Metrics ---
+rmse_tr = sqrt(mean((y_tr_raw - yhat_tr).^2));
+rmse_te = sqrt(mean((y_te_raw - yhat_te).^2));
+r2_tr   = 1 - sum((y_tr_raw - yhat_tr).^2) / sum((y_tr_raw - mean(y_tr_raw)).^2);
+r2_te   = 1 - sum((y_te_raw - yhat_te).^2) / sum((y_te_raw - mean(y_te_raw)).^2);
+fprintf('maxLag=%d | Train: RMSE=%.6f  R²=%.4f | Test: RMSE=%.6f  R²=%.4f\n', ...
+        maxLag, rmse_tr, r2_tr, rmse_te, r2_te);
 
-% %% --- PLOTS: RECONSTRUCTION ---
-% % 1) Full-series reconstruction (with NaNs up front)
-%
+% --- Plots ---
 figure('Name','Full Reconstruction','NumberTitle','off');
-plot(1:T+1, Datay, 'LineWidth', 1); hold on;
+plot(1:T, Datay, 'LineWidth', 1); hold on;
 plot(1:T, yhat_all_full, 'LineWidth', 1);
-xlabel('t'); ylabel('y');
-title('Actual vs Predicted (Full Series)');
-legend('Actual y','Predicted \hat{y}','Location','best'); grid on;
-%
-% 2) Test-slice reconstruction only
+xlabel('t'); ylabel('dF/F'); title('Actual vs Predicted (Full Series)');
+legend('Actual','Predicted','Location','best'); grid on;
+
 figure('Name','Test Reconstruction','NumberTitle','off');
-t_test = (Ntr+1):T;  % original-time indices for test region
-plot(t_test, Datay(t_test), 'LineWidth', 1); hold on;
-plot(t_test, yhat_te_full, 'LineWidth', 1);
-xlabel('t'); ylabel('y');
-title('Actual vs Predicted (Test Segment)');
-legend('Actual y (test)','Predicted \hat{y} (test)','Location','best'); grid on;
+t_te_ax = (Ntr+1):T;
+plot(t_te_ax, Datay(t_te_ax), 'LineWidth', 1); hold on;
+plot(t_te_ax, yhat_te_full, 'LineWidth', 1);
+xlabel('t'); ylabel('dF/F'); title('Actual vs Predicted (Test)');
+legend('Actual','Predicted','Location','best'); grid on;
 
-% 3) Test residuals
 figure('Name','Test Residuals','NumberTitle','off');
-plot(t_test, Datay(t_test) - yhat_te_full, 'LineWidth', 1);
-xlabel('t'); ylabel('Residual'); grid on;
-title('Residuals on Test Segment');
-
-
-
-% filler data
+plot(t_te_ax, Datay(t_te_ax) - yhat_te_full, 'LineWidth', 1);
+xlabel('t'); ylabel('Residual'); title('Residuals (Test)'); grid on;
 
 dFk_reg = [zeros(length(data.dFk) - length(yhat_all_full),1);yhat_all_full];
 

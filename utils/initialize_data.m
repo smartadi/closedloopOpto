@@ -22,6 +22,7 @@ function d = initialize_data(mn,en,td)
     mode = 1; % from param data
     
     d = findStims(d,mode);
+   
     
     %% motion
 

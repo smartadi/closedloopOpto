@@ -6,12 +6,16 @@ close all;
 clear all;
 
 %%
-mn = 'AL_0041'; td = '2026-02-17'; 
-en = 1;
+% mn = 'AL_0041'; td = '2026-02-17'; 
+% en = 1;
+% 
+% 
+% mn = 'AL_0041'; td = '2026-04-07'; 
+% en = 4;
 
 
-mn = 'AL_0041'; td = '2026-04-07'; 
-en = 4;
+mn = 'AL_0041'; td = '2026-04-13'; 
+en = 5;
 % %%
 
     % sigName = 'lightCommand638';
@@ -95,6 +99,31 @@ stimTimes = tt(v(2:end) > 0.1 & v(1:end-1) <= 0.1);
 ds = find(diff([0; stimTimes]) > 2);
 stimStarts = stimTimes(ds);
 
+%%
+
+
+
+horizon = 40;
+dur = params.dur;
+
+
+
+    a1 = input_params(:,2);% - double(horizon)*ones(length(input_params),1);
+    a2 = input_params(:,2)+double(dur)*35;% - double(horizon) + double(dur)*35;
+
+nn =100;
+
+trials = ones(nn,1);
+trials = [zeros(length(input_params)-nn,1);trials];
+nc = find(input_params(:,3)==0 & trials == 1);
+wc = find(input_params(:,3)==1 & trials == 1);
+
+
+ stimStarts = t(a1);
+ stimEnds = t(a2);
+
+
+
 % %%
 % path = append(serverRoot,'\594laserOnTimes.npy')
 % lstart = readNPY(path);
@@ -121,10 +150,10 @@ stimStarts = stimTimes(ds);
 
 %%
 close all;
-k =  3
+k =  1
 coordinate= unique_xy(k,:)
 idx = pair_idx{k};
-pixelTuningCurveViewerSVD(U, V(:,1:end-1), t, stimStarts(idx), ones(size(stimStarts(idx))), [-2 3])
+pixelTuningCurveViewerSVD(U, V(:,1:end-1), t, stimStarts(nc), ones(size(stimStarts(nc))), [-2 3])
 
 %%
 

@@ -25,7 +25,12 @@ exist(pathData)
 if (exist(pathData) == 0) | (r == 0)
     F = [];
 
-    k=d.params.kernel;
+    try
+        k=d.params.kernel;
+    catch 
+        k=10;
+    end
+    % k=d.params.kernel;
     display('computing pixel val')
 
     if mode==0
@@ -84,7 +89,13 @@ mimg = readNPY(fullfile(expRoot, movieSuffix, ['meanImage.npy']));
 
     end
     display('computing df/F')
+    % w=d.params.horizon-1;
+
+    try
     w=d.params.horizon-1;
+    catch
+    w = 40*35-1
+    end
     Fk  = [ones(1,w),F];
     dF=[];
     Fmean=[];
@@ -120,7 +131,12 @@ if isfield(data,'dFk')== 0
 
     F = data.F;
     display('computing df/F')
+
+    try
     w=d.params.horizon-1;
+    catch
+    w=40*35-1
+    end;
     Fk  = [ones(1,w),F];
     dF=[];
     Fmean=[];

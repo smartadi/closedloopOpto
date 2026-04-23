@@ -3,7 +3,12 @@ function d = findStims(d,mode)
 %   Detailed explanation goes here
 
 input_params = d.input_params;
-horizon = d.params.horizon;
+
+try
+    horizon = d.params.horizon;
+catch
+    horizon  = 40*35;
+end
 dur = d.params.dur;
 t = d.timeBlue;
 
@@ -18,7 +23,7 @@ if mode == 0
 else
     a1 = input_params(:,2) - double(horizon)*ones(length(input_params),1);
     a2 = input_params(:,2) - double(horizon) + double(dur)*35;
-
+    
     % a1 = input_params(:,2);% - double(horizon)*ones(length(input_params),1);
     % a2 = input_params(:,2)+double(dur)*35;% - double(horizon) + double(dur)*35;
 

@@ -1,689 +1,92 @@
-function features = feature_analysis(data,d)
+function features = feature_analysis(dFk, d, data)
+% Computes sliding variance and band-power features over the full session,
+% then extracts per-trial summaries for wc (closed-loop) and nc (open-loop) trials.
+%
+% Inputs:
+%   dFk  — 1xT primary pixel dF/F trace
+%   d    — experiment struct (d.timeBlue, d.stimStarts)
+%   data — trial struct (data.wc, data.nc, data.er_wcDfk, data.er_ncDfk)
+%
+% Returned fields:
+%   features.v1/v2/v3     — full-session causal variance (1xT), windows 1/2/3 s
+%   features.mf           — full-session band-power ratios (Tx3), 2 s window
+%   features.wc / .nc     — per-trial structs with:
+%       .onset_var   [nTrials x 3]  variance at stimulus onset
+%       .onset_freq  [nTrials x 3]  band power at stimulus onset
+%       .pre_var     [nTrials x 3]  sum of variance over 2 s pre-trial
+%       .pre_freq    [nTrials x 3]  sum of band power over 2 s pre-trial
+%       .post_var    [nTrials x 3]  sum of variance over 3 s post-trial
+%       .post_freq   [nTrials x 3]  sum of band power over 3 s post-trial
+%       .total_var   [nTrials x 3]  sum over [-3 s, +3 s] window
+%       .total_freq  [nTrials x 3]  sum over [-3 s, +3 s] window
+
     Fs = 35;
-    win_len_sec = 2;
-    features.mf = compute_bandpower_sliding(data.dFk, Fs, win_len_sec);
-    win_len_sec = 1;
-    features.v1 = compute_past_variance(data.dFk, Fs, win_len_sec);
-    win_len_sec = 2;
-    features.v2 = compute_past_variance(data.dFk, Fs, win_len_sec);
-    win_len_sec = 3;
-    features.v3 = compute_past_variance(data.dFk, Fs, win_len_sec);
+    t  = d.timeBlue;
 
-wc=data.wc;
-nc=data.nc;
-tt = d.inpTime;
-v = d.inpVals;
+    % --- Full-session sliding features (computed once, indexed per trial) ---
+    features.v1 = compute_past_variance(dFk, Fs, 1);
+    features.v2 = compute_past_variance(dFk, Fs, 2);
+    features.v3 = compute_past_variance(dFk, Fs, 3);
+    features.mf = compute_bandpower_sliding(dFk, Fs, 2);
 
-er_wcDfk = data.er_wcDfk;
-er_ncDfk = data.er_ncDfk;
-
-pwcDfk = data.pwcDfk;
-pncDfk = data.pncDfk;
-
-er = sort(er_wcDfk);
-ner = sort(er_ncDfk);
-dur = d.params.dur
-t = d.timeBlue;
-dFk = data.dFk;
-
-wc_pval1 = zeros(length(data.wc), 1);
-nc_pval1 = zeros(length(data.nc), 1);
-
-wc_pval2 = zeros(length(data.wc), 1);
-nc_pval2 = zeros(length(data.nc), 1);
-
-wc_pval3 = zeros(length(data.wc), 1);
-nc_pval3 = zeros(length(data.nc), 1);
-
-wc_pval4 = zeros(length(data.wc), 1);
-nc_pval4 = zeros(length(data.nc), 1);
-
-v_val_fb = zeros(length(data.wc), 3);
-f_val_fb = zeros(length(data.wc), 3);
-
-v_val_ff = zeros(length(data.nc), 3);
-f_val_ff = zeros(length(data.nc), 3);
-
-
-wcfeature.variance.v1 = zeros(length(data.wc), 1);
-wcfeature.variance.v2 = zeros(length(data.wc), 1);
-wcfeature.variance.v3 = zeros(length(data.wc), 1);
-wcfeature.freq.f1 = zeros(length(data.wc), 1);
-wcfeature.freq.f2 = zeros(length(data.wc), 1);
-wcfeature.freq.f3 = zeros(length(data.wc), 1);
-
-ncfeature.variance.v1 = zeros(length(data.nc), 1);
-ncfeature.variance.v2 = zeros(length(data.nc), 1);
-ncfeature.variance.v3 = zeros(length(data.nc), 1);
-ncfeature.freq.f1 = zeros(length(data.nc), 1);
-ncfeature.freq.f2 = zeros(length(data.nc), 1);
-ncfeature.freq.f3 = zeros(length(data.nc), 1);
-
-pre_v_fb = zeros(length(data.wc), 3);
-pre_f_fb = zeros(length(data.wc), 3);
-
-post_v_fb = zeros(length(data.wc), 3);
-post_f_fb = zeros(length(data.wc), 3);
-
-pre_v_ff = zeros(length(data.nc), 3);
-pre_f_ff = zeros(length(data.nc), 3);
-
-post_v_ff = zeros(length(data.nc), 3);
-post_f_ff = zeros(length(data.nc), 3);
-
-total_v_ff = zeros(length(data.nc), 3);
-total_f_ff = zeros(length(data.nc), 3);
-
-total_v_fb = zeros(length(data.wc), 3);
-total_f_fb = zeros(length(data.wc), 3);
-
-
-
-for i = 1:length(data.wc)
-    j = wc(i);
-    [a, k] = min(abs(t - d.stimStarts(j)));
-
-    wcfeature.variance.v1(i) = features.v1(k);
-    wcfeature.variance.v2(i) = features.v2(k);
-    wcfeature.variance.v3(i) = features.v3(k);
-    wcfeature.freq.f1 = features.mf(k, 1);
-    wcfeature.freq.f2 = features.mf(k, 2);
-    wcfeature.freq.f3 = features.mf(k, 3);
-    
-
-    pre_v_fb(i, :) = [sum(features.v1(k-35*2:k)), sum(features.v2(k-35*2:k)), sum(features.v3(k-35*2:k))];
-    pre_f_fb(i, :) = [sum(features.mf(k-35*2:k, 1)), sum(features.mf(k-35*2:k, 2)), sum(features.mf(k-35*2:k, 3))];
-
-    post_v_fb(i, :) = [sum(features.v1(k:k+35*3)), sum(features.v2(k:k+35*3)), sum(features.v3(k:k+35*3))];
-    post_f_fb(i, :) = [sum(features.mf(k:k+35*3, 1)), sum(features.mf(k:k+35*3, 2)), sum(features.mf(k:k+35*3, 3))];
-
-
-    total_v_fb(i, :) = [sum(features.v1(k-3*35:k+35*3)), sum(features.v2(k-3*35:k+35*3)), sum(features.v3(k-3*35:k+35*3))];
-    total_f_fb(i, :) = [sum(features.mf(k-3*35:k+35*3, 1)), sum(features.mf(k-3*35:k+35*3, 2)), sum(features.mf(k-3*35:k+35*3, 3))];
+    % --- Per-trial extraction ---
+    features.wc = extractTrialFeatures(features, data.wc, d.stimStarts, t, Fs);
+    features.nc = extractTrialFeatures(features, data.nc, d.stimStarts, t, Fs);
 end
 
 
-
-for i = 1:length(data.nc)
-    j = nc(i);
-    [a, k] = min(abs(t - d.stimStarts(j)));
-
-    ncfeature.variance.v1(i) = features.v1(k);
-    ncfeature.variance.v2(i) = features.v2(k);
-    ncfeature.variance.v3(i) = features.v3(k);
-    ncfeature.freq.f1 = features.mf(k, 1);
-    ncfeature.freq.f2 = features.mf(k, 2);
-    ncfeature.freq.f3 = features.mf(k, 3);
-
-    pre_v_ff(i, :) = [sum(features.v1(k-35*2:k)), sum(features.v2(k-35*2:k)), sum(features.v3(k-35*2:k))];
-    pre_f_ff(i, :) = [sum(features.mf(k-35*2:k, 1)), sum(features.mf(k-35*2:k, 2)), sum(features.mf(k-35*2:k, 3))];
-
-    post_v_ff(i, :) = [sum(features.v1(k:k+35*3)), sum(features.v2(k:k+35*3)), sum(features.v3(k:k+35*3))];
-    post_f_ff(i, :) = [sum(features.mf(k:k+35*3, 1)), sum(features.mf(k:k+35*3, 2)), sum(features.mf(k:k+35*3, 3))];
-
-    total_v_ff(i, :) = [sum(features.v1(k-3*35:k+35*3)), sum(features.v2(k-3*35:k+35*3)), sum(features.v3(k-3*35:k+35*3))];
-    total_f_ff(i, :) = [sum(features.mf(k-3*35:k+35*3, 1)), sum(features.mf(k-3*35:k+35*3, 2)), sum(features.mf(k-3*35:k+35*3, 3))];
-end
-
-%% Sort error vs parameter 
-wc_pval1 = zeros(length(data.wc), 1);
-nc_pval1 = zeros(length(data.nc), 1);
-
-wc_pval2 = zeros(length(data.wc), 1);
-nc_pval2 = zeros(length(data.nc), 1);
-
-wc_pval3 = zeros(length(data.wc), 1);
-nc_pval3 = zeros(length(data.nc), 1);
-
-wc_pval4 = zeros(length(data.wc), 1);
-nc_pval4 = zeros(length(data.nc), 1);
-
-v_val_fb = zeros(length(data.wc), 3);
-f_val_fb = zeros(length(data.wc), 3);
-
-v_val_ff = zeros(length(data.nc), 3);
-f_val_ff = zeros(length(data.nc), 3);
-
-v1_fb = zeros(length(data.wc), 1);
-v2_fb = zeros(length(data.wc), 1);
-v3_fb = zeros(length(data.wc), 1);
-f1_fb = zeros(length(data.wc), 1);
-f2_fb = zeros(length(data.wc), 1);
-f3_fb = zeros(length(data.wc), 1);
-
-v1_ff = zeros(length(data.nc), 1);
-v2_ff = zeros(length(data.nc), 1);
-v3_ff = zeros(length(data.nc), 1);
-f1_ff = zeros(length(data.nc), 1);
-f2_ff = zeros(length(data.nc), 1);
-f3_ff = zeros(length(data.nc), 1);
-
-pre_v_fb = zeros(length(data.wc), 3);
-pre_f_fb = zeros(length(data.wc), 3);
-
-post_v_fb = zeros(length(data.wc), 3);
-post_f_fb = zeros(length(data.wc), 3);
-
-pre_v_ff = zeros(length(data.nc), 3);
-pre_f_ff = zeros(length(data.nc), 3);
-
-post_v_ff = zeros(length(data.nc), 3);
-post_f_ff = zeros(length(data.nc), 3);
-
-for i = 1:length(data.wc)
-    j = wc(i);
-    [a, k] = min(abs(t - d.stimStarts(j)));
-
-    v1_fb(i) = features.v1(k);
-    v2_fb(i) = features.v2(k);
-    v3_fb(i) = features.v3(k);
-
-    f1_fb(i) = features.mf(k, 1);
-    f2_fb(i) = features.mf(k, 2);
-    f3_fb(i) = features.mf(k, 3);
-
-    pre_v_fb(i, :) = [sum(features.v1(k-35*2:k)), sum(features.v2(k-35*2:k)), sum(features.v3(k-35*2:k))];
-    pre_f_fb(i, :) = [sum(features.mf(k-35*2:k, 1)), sum(features.mf(k-35*2:k, 2)), sum(features.mf(k-35*2:k, 3))];
-
-    post_v_fb(i, :) = [sum(features.v1(k:k+35*3)), sum(features.v2(k:k+35*3)), sum(features.v3(k:k+35*3))];
-    post_f_fb(i, :) = [sum(features.mf(k:k+35*3, 1)), sum(features.mf(k:k+35*3, 2)), sum(features.mf(k:k+35*3, 3))];
-end
-
-for i = 1:length(data.nc)
-    j = nc(i);
-    [a, k] = min(abs(t - d.stimStarts(j)));
-
-    v1_ff(i) = features.v1(k);
-    v2_ff(i) = features.v2(k);
-    v3_ff(i) = features.v3(k);
-
-    f1_ff(i) = features.mf(k, 1);
-    f2_ff(i) = features.mf(k, 2);
-    f3_ff(i) = features.mf(k, 3);
-
-    pre_v_ff(i, :) = [sum(features.v1(k-35*2:k)), sum(features.v2(k-35*2:k)), sum(features.v3(k-35*2:k))];
-    pre_f_ff(i, :) = [sum(features.mf(k-35*2:k, 1)), sum(features.mf(k-35*2:k, 2)), sum(features.mf(k-35*2:k, 3))];
-
-    post_v_ff(i, :) = [sum(features.v1(k:k+35*3)), sum(features.v2(k:k+35*3)), sum(features.v3(k:k+35*3))];
-    post_f_ff(i, :) = [sum(features.mf(k:k+35*3, 1)), sum(features.mf(k:k+35*3, 2)), sum(features.mf(k:k+35*3, 3))];
-end
-
-
-
-
-%% Classify initial condition
-
-X0_wc = zeros(length(wc), 1); % Preallocate for efficiency
-for j = 1:length(wc)
-    [~, i] = min(abs(t - d.stimStarts(wc(j))));
-    X0_wc(j) = dFk(i);
-end
-
-X0_nc = zeros(length(nc), 1); % Preallocate for efficiency
-for j = 1:length(nc)
-    [~, i] = min(abs(t - d.stimStarts(nc(j))));
-    X0_nc(j) = dFk(i);
-end
-
-X0 = zeros(length(d.stimStarts), 1); % Preallocate for efficiency
-for j = 1:length(d.stimStarts)
-    [~, i] = min(abs(t - d.stimStarts(j)));
-    X0(j) = dFk(i);
-end
-%% Thresholding
-
-figure()
-subplot(1,3,1)
-s = scatter3(X0_wc,f1_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,f1_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('freq marker')
-zlabel('Tracking error norm')
-xlim([-10 10])
-ylim([0 20])
-zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on state and parameters')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-subplot(1,3,2)
-s = scatter3(X0_wc,f2_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,f2_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('freq marker')
-zlabel('Tracking error norm')
-xlim([-10 10])
-ylim([0 20])
-zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on state and parameters')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-
-subplot(1,3,3)
-s = scatter3(X0_wc,f3_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,f3_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('freq marker')
-zlabel('Tracking error norm')
-xlim([-10 10])
-ylim([0 20])
-zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on state and parameters')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-
-figure()
-subplot(1,3,1)
-s = scatter3(X0_wc,v1_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,v1_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('var marker')
-zlabel('Tracking error norm')
-xlim([-10 10])
-ylim([0 20])
-zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on state and parameters')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-subplot(1,3,2)
-s = scatter3(X0_wc,v2_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,v2_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('var marker')
-zlabel('Tracking error norm')
-xlim([-10 10])
-ylim([0 20])
-zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on state and parameters')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-
-subplot(1,3,3)
-s = scatter3(X0_wc,v3_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,v3_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('var marker')
-zlabel('Tracking error norm')
-xlim([-10 10])
-ylim([0 20])
-zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on state and parameters')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
- 
-%%
-
-figure()
-subplot(1,3,1)
-s = scatter3(X0_wc,pre_f_fb(:,1),er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,pre_f_ff(:,1),er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('freq marker')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('f1')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-subplot(1,3,2)
-s = scatter3(X0_wc,pre_f_fb(:,2),er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,pre_f_ff(:,2),er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('freq marker')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('f2')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-
-subplot(1,3,3)
-s = scatter3(X0_wc,pre_f_fb(:,3),er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,pre_f_ff(:,3),er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('freq marker')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('f3')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-%%
-
-figure()
-subplot(1,3,1)
-s = scatter3(X0_wc,v1_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,v1_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('var marker')
-zlabel('Tracking error norm')
-xlim([-10 10])
-ylim([0 20])
-zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on state and parameters')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-subplot(1,3,2)
-s = scatter3(X0_wc,v2_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,v2_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('var marker')
-zlabel('Tracking error norm')
-xlim([-10 10])
-ylim([0 20])
-zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on state and parameters')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-
-subplot(1,3,3)
-s = scatter3(X0_wc,v3_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,v3_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('var marker')
-zlabel('Tracking error norm')
-xlim([-10 10])
-ylim([0 20])
-zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on state and parameters')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-
-%%
-
-
-%%
-
-figure()
-subplot(1,3,1)
-s = scatter3(X0_wc,total_f_fb(:,1),er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,total_f_ff(:,1),er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('freq marker')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('f1')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-subplot(1,3,2)
-s = scatter3(X0_wc,total_f_fb(:,2),er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,total_f_ff(:,2),er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('freq marker')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('f2')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-
-
-subplot(1,3,3)
-s = scatter3(X0_wc,total_f_fb(:,3),er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,total_f_ff(:,3),er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('freq marker')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('f3')
-
-
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
+function tf = extractTrialFeatures(features, trialIdx, stimStarts, t, Fs)
+% Extract per-trial variance and frequency features from precomputed signals.
+
+    nTrials   = numel(trialIdx);
+    pre_samp  = round(2 * Fs);   % 2 s pre-trial
+    post_samp = round(3 * Fs);   % 3 s post-trial
+    tot_samp  = round(3 * Fs);   % total window: [-3 s, +3 s]
+    T         = numel(features.v1);
+
+    tf.onset_var  = zeros(nTrials, 3);
+    tf.onset_freq = zeros(nTrials, 3);
+    tf.pre_var    = zeros(nTrials, 3);
+    tf.pre_freq   = zeros(nTrials, 3);
+    tf.post_var   = zeros(nTrials, 3);
+    tf.post_freq  = zeros(nTrials, 3);
+    tf.total_var  = zeros(nTrials, 3);
+    tf.total_freq = zeros(nTrials, 3);
+
+    for i = 1:nTrials
+        [~, k] = min(abs(t - stimStarts(trialIdx(i))));
+
+        % Bounds-safe window edges
+        k_pre_lo  = max(1, k - pre_samp);
+        k_post_hi = min(T, k + post_samp);
+        k_tot_lo  = max(1, k - tot_samp);
+
+        % Instantaneous at onset
+        tf.onset_var(i,:)  = [features.v1(k), features.v2(k), features.v3(k)];
+        tf.onset_freq(i,:) = features.mf(k,:);
+
+        % 2 s pre-trial
+        tf.pre_var(i,:)  = [sum(features.v1(k_pre_lo:k)), ...
+                             sum(features.v2(k_pre_lo:k)), ...
+                             sum(features.v3(k_pre_lo:k))];
+        tf.pre_freq(i,:) = [sum(features.mf(k_pre_lo:k, 1)), ...
+                             sum(features.mf(k_pre_lo:k, 2)), ...
+                             sum(features.mf(k_pre_lo:k, 3))];
+
+        % 3 s post-trial
+        tf.post_var(i,:)  = [sum(features.v1(k:k_post_hi)), ...
+                              sum(features.v2(k:k_post_hi)), ...
+                              sum(features.v3(k:k_post_hi))];
+        tf.post_freq(i,:) = [sum(features.mf(k:k_post_hi, 1)), ...
+                              sum(features.mf(k:k_post_hi, 2)), ...
+                              sum(features.mf(k:k_post_hi, 3))];
+
+        % [-3 s, +3 s] total window
+        tf.total_var(i,:)  = [sum(features.v1(k_tot_lo:k_post_hi)), ...
+                               sum(features.v2(k_tot_lo:k_post_hi)), ...
+                               sum(features.v3(k_tot_lo:k_post_hi))];
+        tf.total_freq(i,:) = [sum(features.mf(k_tot_lo:k_post_hi, 1)), ...
+                               sum(features.mf(k_tot_lo:k_post_hi, 2)), ...
+                               sum(features.mf(k_tot_lo:k_post_hi, 3))];
+    end
 end

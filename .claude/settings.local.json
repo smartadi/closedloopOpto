@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(head -580 \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\\\\simple_primary_mouseDataAnalysis.m\")",
+      "Read(//tmp/**)",
+      "Bash(matlab -batch \"which inROI\")"
+    ]
+  }
+}

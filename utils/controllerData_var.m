@@ -32,7 +32,7 @@ inps_wc = [];
 for j = 1: length(nc)
     [a i] = min(abs(d.timeBlue - d.stimStarts(nc(j))));
     ncDfk = [ncDfk; dFk(i-35:i+35*(d.params.dur+1))];
-    pncDfk = [pncDfk; dFk(i-35*10:i+35*(dur+3))];
+    pncDfk = [pncDfk; dFk(i-35*3:i+35*(dur+3))];
 
 
     [a i2] = min(abs(ti - d.stimStarts(nc(j))));
@@ -61,7 +61,7 @@ for j = 1: length(wc)
     [a i] = min(abs(d.timeBlue - d.stimStarts(wc(j))));
     wcDfk = [wcDfk; dFk(i-35:i+35*(d.params.dur+1))];
     
-    pwcDfk = [pwcDfk; dFk(i-35*10:i+35*(dur+3))];
+    pwcDfk = [pwcDfk; dFk(i-35*3:i+35*(dur+3))];
 
 
     [a i2] = min(abs(ti - d.stimStarts(wc(j))));

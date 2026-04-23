@@ -8,14 +8,14 @@ clear all;
 
 
 %%
-mn = 'AL_0041'; td = '2026-03-16'; 
-en = 2;
+% mn = 'AL_0041'; td = '2026-03-16'; 
+% en = 2;
 
 % mn = 'AL_0041'; td = '2026-03-23'; 
 % en = 5;
 
-% mn = 'AL_0041'; td = '2026-03-24'; 
-% en = 1;
+mn = 'AL_0041'; td = '2026-03-24'; 
+en = 1;
 
 %% get data
 pathString = genpath('utils');

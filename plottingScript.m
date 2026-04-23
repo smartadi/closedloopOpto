@@ -328,6 +328,7 @@ er_ncDfk=[];
 vr_ncDfk=[];
 pncDfk = [];
 error_nc = [];
+ncInp=[];
 
 error_NC = [];
 
@@ -346,10 +347,16 @@ for j = 1: length(nc)
 
     spont_dFk = [spont_dFk;dFk(i-(6*35):i-1)];
 
+
+    [a i2] = min(abs(ti - d.stimStarts(nc(j))));
+    
+    
+    ncInp = [ncInp; d.inpVals(i2:i2+dur*2000)'];
+
 end
 
 
-
+wcInp=[];
 
 er_wcDfk=[];
 vr_wcDfk=[];
@@ -364,6 +371,11 @@ for j = 1: length(wc)
     error_wc = [error_wc;dFk(i:i+35*(dur))+5];
 
     spont_dFk = [spont_dFk;dFk(i-(6*35):i-1)];
+
+    [a i2] = min(abs(ti - d.stimStarts(wc(j))));
+    
+    
+    wcInp = [wcInp; d.inpVals(i2:i2+dur*2000)'];
 end
 
 mouse.(fields{k}).data.er_wcDfk_l = er_wcDfk;
@@ -377,6 +389,10 @@ mouse.(fields{k}).data.vr_ncDfk_l = var(pncDfk);
 mouse.(fields{k}).data.pncDfk_l = pncDfk;
 
 mouse.(fields{k}).data.error_wc = error_wc;
+
+
+mouse.(fields{k}).data.ncInp = ncInp;
+mouse.(fields{k}).data.wcInp = wcInp;
 
 mouse.(fields{k}).data.spont_dFk = spont_dFk;
 
@@ -1197,3 +1213,6 @@ data.er_wcDfk = sess.data.er_wcDfk_l;
 d.ref = -5;
 
 analysisPlots_paper(data, d, 0);
+%%
+
+
