@@ -10,7 +10,7 @@ trials = [zeros(length(d.input_params)-t,1);trials];
 dFk = data.dFk;
 nc = find(d.input_params(:,3)==0 & trials == 1);
 wc = find(d.input_params(:,3)==1 & trials == 1);
-dur = d.params.dur
+dur = d.params.dur;
 t = d.timeBlue;
 ti = d.inpTime;
 % Trial Average
@@ -24,7 +24,7 @@ catch
     
 end
 
-data.mv = mv1;
+% data.mv = mv1;
 
 ncDfk=[];
 ncInp=[];

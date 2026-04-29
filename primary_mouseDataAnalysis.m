@@ -13,8 +13,8 @@ clear all;
 
 
 % With rewards %%%%%%%%%%%%%%%%%%%
-mn = 'AL_0033'; td = '2025-03-04'; 
-en = 1;
+% mn = 'AL_0033'; td = '2025-03-04'; 
+% en = 1;
 % mn = 'AL_0033'; td = '2025-03-04'; 
 % en = 2;
    
@@ -135,8 +135,8 @@ en = 1;
 % mn = 'AL_0039'; td = '2025-04-19'; 
 % en = 1;
 % 
-% mn = 'AL_0039'; td = '2025-04-20'; 
-% en = 1;
+mn = 'AL_0039'; td = '2025-04-20'; 
+en = 1;
 
 
 
@@ -224,7 +224,7 @@ dFkp = data_pix.dFk;
 dur = d.params.dur;
 t = d.timeBlue;
 close all
-j=6;
+j=10;
 [a i] = min(abs(t - d.stimStarts(j)));
 [a i2] = min(abs(t - d.stimEnds(j)));
 
@@ -278,10 +278,11 @@ d.ref=-5;
 data = controllerData(data,d,trials);
 %%
 % Plots for interleaved trials, 1 = save as pdf
-analysisPlots(data,d,0);
+% analysisPlots(data,d,0);
 %%
-analysisPlots_paper(data,d,0);
-
+close all
+% analysisPlots_paper(data,d,0);
+analysisPlots_combined(data,d)
 %% get trail stamps
 nc = data.nc;
 wc = data.wc;
@@ -317,13 +318,33 @@ for j = 1:length(d.stimStarts)
     X0(j) = dFk(i);
 end
 %% MSE wrt initial condition
-figure()
-plot(data.er_ncDfk,abs(X0_nc+5),'or','LineWidth',3);hold on;
-plot(data.er_wcDfk,abs(X0_wc+5),'og','LineWidth',3);
-yline(0)
-shortCornerAxes_plot(gca,'Frac',0.10,'XLabel','MSE','YLabel','|y_0 - y_{ref}|','LineWidth',5)
+fig1 = figure('Color','w');
+fig1.Units    = 'inches';
+fig1.Position = [1 1 5 4];
 
+colOL = [1 0 0];
+colCL = [0 0.5 0];
 
+x_nc = abs(X0_nc + 5);
+x_wc = abs(X0_wc + 5);
+y_nc = data.er_ncDfk;
+y_wc = data.er_wcDfk;
+
+ax = axes(fig1);
+hold(ax, 'on');
+
+drawEllipse(ax, x_nc, y_nc, colOL, 0.2);
+drawEllipse(ax, x_wc, y_wc, colCL, 0.2);
+
+h_nc = scatter(ax, x_nc, y_nc, 16, colOL, 'o', ...
+    'MarkerFaceColor', colOL, 'MarkerFaceAlpha', 0.5, 'LineWidth', 0.5);
+h_wc = scatter(ax, x_wc, y_wc, 16, colCL, 'o', ...
+    'MarkerFaceColor', colCL, 'MarkerFaceAlpha', 0.5, 'LineWidth', 0.5);
+
+xlabel(ax, 'Initial deviation from reference', 'FontSize', 8, 'FontWeight', 'bold');
+ylabel(ax, 'Trial MSE', 'FontSize', 8, 'FontWeight', 'bold');
+set(ax, 'Box', 'off', 'TickDir', 'out', 'XTick', [], 'YTick', [], ...
+    'FontName', 'Arial', 'FontSize', 8);
 
 %% Analysis based on H2 
 pixel_test(d,data,dFkp);
@@ -347,139 +368,94 @@ i = 15;
 motionPlotter(i,d,data,features)
 
 %%
-
-
-
+facefile = 'motEngF.npy'
+if isfile(fullfile(serverRoot, facefile))
+    % file exists
+    motEngF = readNPY(facefile);
+    motEngt = readNPY('motEngF.timestamps.npy');
+else
+    vr = VideoReader(fullfile(serverRoot, 'face.mp4'));
+    nf = vr.NumFrames;
+    motEng = zeros(1, nf-1);
+    lastFrame = vr.readFrame; lastFrame = lastFrame(:,:,1);
+    tic
+    for q = 1:nf
+        thisFrame = vr.readFrame;
+        thisFrame = thisFrame(:,:,1);
+        motEng(q) = sum(sum((thisFrame - lastFrame).^2));
+        lastFrame = thisFrame;
+    end
+end
 %%
 
-ncmotion_pre = sum(data.ncmotion(:,1:35*1),2);
-wcmotion_pre = sum(data.wcmotion(:,1:35*1),2);
-
-
-ncmotion_during = sum(data.ncmotion(:,35:(dur)*35),2);
-wcmotion_during = sum(data.wcmotion(:,35:(dur)*35),2);
 
 
 
-%% Thresholding
-close all
+motion =  downsample(motEng, 2);
+
+
+
+
+%% Motion vs MSE
+
+% motion matrix layout: col 1 = t=-10s, col 35*10+1 = t=0 (trial onset)
+pre_end      = 35 * 10;
+trial_on     = pre_end + 1;
+trial_off    = pre_end + dur * 35;
+combined_on  = pre_end - 2 * 35;   % t = -2s relative to trial onset
+
+ncmotion_pre      = sum(data.ncmotion(:, 1:pre_end),                  2);
+wcmotion_pre      = sum(data.wcmotion(:, 1:pre_end),                  2);
+ncmotion_during   = sum(data.ncmotion(:, trial_on:trial_off),         2);
+wcmotion_during   = sum(data.wcmotion(:, trial_on:trial_off),         2);
+ncmotion_combined = sum(data.ncmotion(:, combined_on:trial_off),      2);
+wcmotion_combined = sum(data.wcmotion(:, combined_on:trial_off),      2);
+
 figure()
-subplot(1,2,1)
-s = scatter3(X0_wc,wcmotion_pre,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,ncmotion_pre,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('motion')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% % colorbar
-% % zlim([0,100])
-% % clim([0,80])
-title('regularizability dependece on motion pre trial')
 
+% subplot(1,3,1); hold on
+% scatter(ncmotion_pre, er_ncDfk, 30, colOL, 'o', 'filled', 'MarkerFaceAlpha', 0.6)
+% scatter(wcmotion_pre, er_wcDfk, 30, colCL, 'o', 'filled', 'MarkerFaceAlpha', 0.6)
+% p_nc = polyfit(ncmotion_pre, er_ncDfk, 1);
+% p_wc = polyfit(wcmotion_pre, er_wcDfk, 1);
+% xr = linspace(min([ncmotion_pre; wcmotion_pre]), max([ncmotion_pre; wcmotion_pre]), 100);
+% plot(xr, polyval(p_nc, xr), '-', 'Color', colOL, 'LineWidth', 1.5)
+% plot(xr, polyval(p_wc, xr), '-', 'Color', colCL, 'LineWidth', 1.5)
+% xlabel('Total motion pre-trial (a.u.)')
+% ylabel('MSE norm ||e||')
+% title('Pre-trial motion vs MSE')
+% legend({'OL', 'CL'}, 'Location', 'best')
+% box off
+% 
+% subplot(1,3,2); hold on
+% scatter(ncmotion_during, er_ncDfk, 30, colOL, 'o', 'filled', 'MarkerFaceAlpha', 0.6)
+% scatter(wcmotion_during, er_wcDfk, 30, colCL, 'o', 'filled', 'MarkerFaceAlpha', 0.6)
+% p_nc = polyfit(ncmotion_during, er_ncDfk, 1);
+% p_wc = polyfit(wcmotion_during, er_wcDfk, 1);
+% xr = linspace(min([ncmotion_during; wcmotion_during]), max([ncmotion_during; wcmotion_during]), 100);
+% plot(xr, polyval(p_nc, xr), '-', 'Color', colOL, 'LineWidth', 1.5)
+% plot(xr, polyval(p_wc, xr), '-', 'Color', colCL, 'LineWidth', 1.5)
+% xlabel('Total motion during trial (a.u.)')
+% ylabel('MSE norm ||e||')
+% title('During-trial motion vs MSE')
+% legend({'OL', 'CL'}, 'Location', 'best')
+% box off
 
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
 hold on;
-% 
-subplot(1,2,2)
-s = scatter3(X0_wc,wcmotion_during,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-s = scatter3(X0_nc,ncmotion_during,er_ncDfk,[],er_ncDfk,'filled','r');
-xlabel('x_0 df/F')
-ylabel('motion')
-zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% colorbar
-% zlim([0,100])
-% clim([0,80])
-title('regularizability dependece on motion during trial')
+scatter(ncmotion_combined, er_ncDfk, 30, colOL, 'o', 'filled', 'MarkerFaceAlpha', 0.6)
+scatter(wcmotion_combined, er_wcDfk, 30, colCL, 'o', 'filled', 'MarkerFaceAlpha', 0.6)
+p_nc = polyfit(ncmotion_combined, er_ncDfk, 1);
+p_wc = polyfit(wcmotion_combined, er_wcDfk, 1);
+xr = linspace(min([ncmotion_combined; wcmotion_combined]), max([ncmotion_combined; wcmotion_combined]), 100);
+plot(xr, polyval(p_nc, xr), '-', 'Color', colOL, 'LineWidth', 1.5)
+plot(xr, polyval(p_wc, xr), '-', 'Color', colCL, 'LineWidth', 1.5)
+xlabel('Total motion (t=-2s to trial end) (a.u.)')
+ylabel('MSE norm ||e||')
+title('Combined motion vs MSE')
+legend({'OL', 'CL'}, 'Location', 'best')
+box off
 
 
-threshold = 30; 
-
-xp = get(gca,'Xlim');
-yp = get(gca,'Ylim');
-% Use the axes x and Y limits to find the co-ordinates for the patch
-x1 = [ xp(1) xp(2) xp(2) xp(1)];
-y1 = [ yp(1) yp(1) yp(2) yp(2)];
-z1 = ones(1,numel(y1))* threshold; 
-v = patch(x1,y1,z1, 'g');
-set(v,'facealpha',0.1);
-set(v,'edgealpha',0.5);
-set(gcf,'renderer','opengl') ;
-hold on;
-% 
-% 
-% subplot(1,3,3)
-% s = scatter3(X0,f3_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-% s = scatter3(XX0,f3_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-% xlabel('x_0 df/F')
-% ylabel('freq marker')
-% zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% % colorbar
-% % zlim([0,100])
-% % clim([0,80])
-% title('regularizability dependece on state and parameters')
-
-%%
-dur = d.params.dur
-t = d.timeBlue;
-close all
-j=50;
-[a i] = min(abs(t - d.stimStarts(j)));
-[a i2] = min(abs(t - d.stimEnds(j)));
-
-
-tt = d.inpTime;
-v = d.inpVals;
-
-[a k] = min(abs(tt - d.stimStarts(j)));
-[a k2] = min(abs(tt - d.stimEnds(j)));
-
-
-
-% Tin = 0:0.0005:stimDur(j);
-Tout = -3:0.0285:dur+3;
-close all
-figure()
-subplot(3,1,1)
-plot(Tout,dFk((i-(3*35)):(i+35*(dur+3))));hold on
-plot(Tout,-5*ones(1,length(Tout)))
-xlim([-3,6])
-xline(0)
-xline(3)
-title('analysis')
-
-subplot(3,1,2)
-% plot(tt(k:k2)-tt(k),v(k:k2));
-plot(tt(k:k2)-tt(k),v(k:k2))
-xlim([-3,6])
-xline(0)
-xline(3)
-
-subplot(3,1,3)
-plot(Tout,d.mv((i-(3*35)):(i+35*(dur+3))));hold on
-plot(Tout,5*ones(1,length(Tout)))
-xlim([-3,6])
-xline(0)
-xline(3)
-title('analysis')
 
 
 %%
@@ -2156,3 +2132,15 @@ boxplot(allVar, grpVar);
 xlabel('n (rows sampled)');
 ylabel('Wcvar = variance across time per trial');
 title('Wcvar across bootstrap sizes');
+
+%% -----------------------------------------------------------------------
+function drawEllipse(ax, x, y, col, alpha_val)
+% Draw a 2-sigma confidence ellipse from the 2D covariance of (x, y).
+mu = [mean(x(:)), mean(y(:))];
+C  = cov(x(:), y(:));
+[V, D] = eig(C);
+theta  = linspace(0, 2*pi, 200);
+ell    = 2 * V * sqrt(D) * [cos(theta); sin(theta)];
+fill(ax, mu(1) + ell(1,:), mu(2) + ell(2,:), col, ...
+    'FaceAlpha', alpha_val, 'EdgeColor', col, 'LineWidth', 1.5);
+end

@@ -36,7 +36,7 @@ p.addParameter('XLabel',     '',      @(s) ischar(s)||isstring(s));
 p.addParameter('YLabel',     '',      @(s) ischar(s)||isstring(s));
 p.addParameter('LabelGap',   0.08,    @(v) isnumeric(v)&&isscalar(v)&&v>=0);
 p.addParameter('FontName',   'Arial', @(s) ischar(s)||isstring(s));
-p.addParameter('FontSize',   12,      @(v) isnumeric(v)&&isscalar(v)&&v>0);
+p.addParameter('FontSize',   7,      @(v) isnumeric(v)&&isscalar(v)&&v>0);
 p.addParameter('FontWeight', 'bold',  @(s) ischar(s)||isstring(s));
 p.parse(varargin{:});
 S = p.Results;

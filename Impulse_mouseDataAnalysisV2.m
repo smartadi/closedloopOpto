@@ -8,8 +8,8 @@ clear all;
 
 %% experiment name
 
-mn = 'AL_0041'; td = '2025-12-02'; 
-en = 1;
+% mn = 'AL_0041'; td = '2025-12-02'; 
+% en = 1;
 
 % mn = 'AL_0041'; td = '2025-12-02'; 
 % en = 2;
@@ -18,8 +18,8 @@ en = 1;
 % en  = 1;
 
 
-% mn = 'AL_0033'; td = '2025-01-29';
-% en  = 1;
+mn = 'AL_0033'; td = '2025-01-29';
+en  = 1;
 
 %% get data
 pathString = genpath('utils');
@@ -39,8 +39,8 @@ serverRoot = expPath(mn, td, en);
 d = loadData(serverRoot,mn,td,en);
 
 %% Run Movie
-sigName = 'lightCommand638';
-% sigName = 'lightCommand';
+% sigName = 'lightCommand638';
+sigName = 'lightCommand';
 [tt, v] = getTLanalog(mn, td, en, sigName);
     serverRoot = expPath(mn, td, en);
 
@@ -164,6 +164,7 @@ stimStarts = stimStarts_filled;
 uAmp       = uAmp_filled;
 idxByAmp   = idxByAmp_filled;
 
+save('stim_vars.mat', 'uAmp', 'idxByAmp', 'stimStarts');
 
 
 
@@ -251,7 +252,7 @@ for i = 1:length(uAmp)
     % end
     
     figure(fig1);
-    subplot(3,5,i)
+    subplot(3,15,i)
     hold on;
     for j = 1:length(impulseNums)
         % Find index b closest to stim start time
@@ -294,8 +295,12 @@ for i = 1:length(uAmp)
 
         
     end
-    plot(t_win,df_imp,'Color',[0,0.2*i,0.2*i],'LineWidth',3);
-    plot(t_win,mean(df_imp),'Color',[1,0,0.2*i],'LineWidth',5);
+    % plot(t_win,df_imp,'Color',[0,0.2*i,0.2*i],'LineWidth',3);
+    % plot(t_win,mean(df_imp),'Color',[1,0,0.2*i],'LineWidth',5);
+
+
+    plot(t_win,df_imp,'Color',0.1*[0,0.2*i,0.2*i],'LineWidth',3);
+    plot(t_win,mean(df_imp),'Color',0.1*[1,0,0.2*i],'LineWidth',5);
 
     imp.Peak_imp{i} = p_imp;
     imp.mot{i}      = mot;
@@ -316,28 +321,29 @@ for i = 1:length(uAmp)
         DF_imp = [DF_imp; nan(1, 2*winSamp + 1)];
     end
     
-    subplot(3,5,i+5)
+    subplot(3,15,i+5)
     plot((imp.Peak_imp{i}),imp.lfp{i},'or','LineWidth',3);
     xlabel('inhibition')
     ylabel('lfp')
     xlim([-10 10])
     ylim([0.5 1])
 
-    subplot(3,5,i+10)
+    subplot(3,15,i+10)
     plot((imp.Peak_imp{i}),imp.mot{i},'ob','LineWidth',3);
     xlabel('inhibition')
     xlim([-5,10])
     ylabel('motion')
-
+    
+    if mod(i,2)==1
     figure(fig2);
     % ax = gca;
-    plot(0, 0.25, 'ro', 'MarkerSize', 10, 'MarkerFaceColor', 'red','HandleVisibility', 'off')
-    plot(t_win,mean(df_imp),'Color',[1-( 0.15*i), (1- 0.15*i), (1- 0.15*i)],'LineWidth',5, ...
-        'DisplayName', sprintf('%.2f V', uAmp(i))); hold on;
+    plot(0, 0.35, 'ro', 'MarkerSize', 10, 'MarkerFaceColor', 'red','HandleVisibility', 'off')
+    plot(t_win,mean(df_imp),'Color',[1-( 0.1*i), (1- 0.1*i), (1- 0.1*i)],'LineWidth',5, ...
+        'DisplayName', sprintf('%.2f mW', uAmp(i)/3)); hold on;
     xticks([])
-
+    end
     
-
+    
     % lgd = legend(ax, hLegend, legTxt, 'Box','off','Color','none','Location','north');
     % lgd.ItemTokenSize = [14 6];
     % lgd.AutoUpdate = 'off';
@@ -347,8 +353,21 @@ for i = 1:length(uAmp)
     % shortCornerAxes_plot(gca,'Frac',0.15,'XLabel','Input(mW)','YLabel','dF/F','LineWidth',5,'LabelGap',0.05)
 
 end
+figure(fig2);
+yl = ylim;
+
 legend('Box','off','FontSize',12,'FontWeight','bold','Location','southeast')
-shortCornerAxes_plot(gca,'Frac',0.15,'XLabel','Time','YLabel','dF/F','LineWidth',5,'LabelGap',0.05)
+
+shortCornerAxes_plot(gca, 'XLength', 0.25, 'YLength', 1, ...
+      'XLabel', '250 ms', 'YLabel', '1% dF/F', 'LineWidth', 5,'LabelGap',  0.04)
+
+% text(0, yl(2), 'stim', ...
+%     'Color','r', 'FontSize', 10, ...
+%     'HorizontalAlignment','right', 'VerticalAlignment','top', 'Clipping','off');
+
+text(0.1, 1, 'Stim', ...
+    'Color','r', 'FontSize', 12,'FontWeight','bold', ...
+    'HorizontalAlignment','right', 'VerticalAlignment','top', 'Clipping','off');
 
 exportgraphics(fig2, 'paper/imp_response_single.png', 'Resolution', 300);
 %%

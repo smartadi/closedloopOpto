@@ -34,7 +34,7 @@ dFk = data.dFk;
 nc = data.nc;
 wc = data.wc;
 t = d.timeBlue;
-trial=6;
+trial=10;
 
 j = nc(trial)
 [a i] = min(abs(t - d.stimStarts(j)));
@@ -59,25 +59,34 @@ fig.Position = [1, 1, 10, 4];
 
 
 ax1 = subplot(1,2,1)
+hC = plot(tt(k:k2)-tt(k),2*v(k:k2),'Color',[0.8500, 0.3250, 0.0980],'LineWidth',1.5);hold on
 plot(Tout,0*ones(1,length(Tout)),'k','LineWidth',1, 'HandleVisibility','off');hold on
 hA = plot(Tout,dFk((i-(3*35)):(i+35*(dur+3))),'r','LineWidth',3);hold on
 hB = plot(Tref,-5*ones(1,length(Tref)),'--k','LineWidth',2)
 
 
-hC = plot(tt(k:k2)-tt(k),2*v(k:k2),'b','LineWidth',3)
+% hC = plot(tt(k:k2)-tt(k),2*v(k:k2),'Color',[0.8500, 0.3250, 0.0980],'LineWidth',1.5)
 
 % Vertical scale bar for input (blue): 2 plot units = 1 V (signal is 2*v)
 inpSBx = -3;
+
 line(ax1, [0 0], [6, 8], ...
-    'Color','b', 'LineWidth', 3, 'Clipping','off', 'HandleVisibility','off');
+    'Color',[0.8500, 0.3250, 0.0980], 'LineWidth', 3, 'Clipping','off', 'HandleVisibility','off');
+
+
 text(ax1, 0 - 0.1, 7, '0.2 mW', ...
-    'Color','b', 'FontSize', 10, 'FontWeight','bold', ...
+    'Color',[0.8500, 0.3250, 0.0980], 'FontSize', 10, 'FontWeight','normal', ...
     'HorizontalAlignment','right', 'VerticalAlignment','middle', 'Clipping','off');
 
 
 text(ax1, -3 - 0.1, 0, '0', ...
     'Color','k', 'FontSize', 10, ...
     'HorizontalAlignment','right', 'VerticalAlignment','middle', 'Clipping','off');
+
+
+text(ax1, 3, -7, 'Stim Window', ...
+    'Color','k', 'FontSize', 10, ...
+    'HorizontalAlignment','right', 'VerticalAlignment','middle', 'Clipping','off', 'FontWeight','bold');
 
 % shortCornerAxes(gca, 'XLabel','Time(s)', 'YLabel','\DeltaF/F', 'Frac',0.10,'LineWidth',5);
 
@@ -125,10 +134,11 @@ v = d.inpVals;
 
 
 ax2 = subplot(1,2,2)
+plot(tt(k:k2)-tt(k),2*v(k:k2),'Color',[0.8500, 0.3250, 0.0980],'LineWidth',1.5);hold on
+
 plot(Tout,0*ones(1,length(Tout)),'k','LineWidth',1, 'HandleVisibility','off');hold on
 hD = plot(Tout,dFk((i-(3*35)):(i+35*(dur+3))),'Color',[0,0.5,0],'LineWidth',3);hold on
 plot(Tref,-5*ones(1,length(Tref)),'--k','LineWidth',2)
-plot(tt(k:k2)-tt(k),2*v(k:k2),'b','LineWidth',3)
 % shortCornerAxes(gca, 'XLabel','', 'YLabel','', 'Frac',0.0,'LineWidth',0);
 ylim([-10 10])
 xlim([-3,6])
@@ -189,15 +199,15 @@ wcDfk = data.wcDfk;
 pncDfk = data.pncDfk(:,246:end);
 pwcDfk = data.pwcDfk(:,246:end);
 
-pncDfk = data.pncDfk;
-pwcDfk = data.pwcDfk;
+% pncDfk = data.pncDfk;
+% pwcDfk = data.pwcDfk;
 nc_avg = mean(pncDfk,1);
 wc_avg = mean(pwcDfk,1);
 T= -3:0.0285:(dur+3);
 Tin = 0:0.0005:dur;
 % Tout = 0:0.0285:dur;
 
-%% full experiment
+%% full experiment df/f
 
 nc_inp  = data.ncInp;
 wc_inp  = data.wcInp;
@@ -227,7 +237,7 @@ plot(T,pncDfk,'Color', [1 0 0 0.1],'LineWidth',0.5);hold on
 plot(Tref,d.ref*ones(3*35+1),'--k','Linewidth',3);hold on
 plot(T,nc_avg,'r','Linewidth',3);
 
-plot(Tin,2*mean(nc_inp),'b','LineWidth',3);
+% plot(Tin,2*mean(nc_inp),'b','LineWidth',3);
 xline(0)
 xline(dur)
 % shortCornerAxes_plot(gca,'Frac',0.10,'XLabel','Time (s)','YLabel','\DeltaF/F','LineWidth',5)
@@ -267,7 +277,7 @@ plot(T,pwcDfk,'Color', [0 0.5 0 0.1],'LineWidth',0.5);hold on
 plot(Tref,d.ref*ones(3*35+1),'--k','Linewidth',3);hold on
 plot(T,wc_avg,'Color', [0 0.5 0],'Linewidth',3);
 
-plot(Tin,2*mean(wc_inp),'b','LineWidth',3);
+% plot(Tin,2*mean(wc_inp),'b','LineWidth',3);
 xline(0)
 xline(dur)
 ylim([-10 10])
@@ -298,6 +308,108 @@ set(gca, ...
     'Color','none');
 
 exportgraphics(fig, 'paper/trial_average.png', 'Resolution', 300);
+
+
+
+
+%% full experiment inputs
+
+nc_inp  = data.ncInp;
+wc_inp  = data.wcInp;
+
+fig= figure('Color','w'); hold on;
+fig.Units    = 'inches';
+fig.Position = [1, 1, 10, 2];
+
+
+
+% Column (vertical band) to shade
+x1 = 0;
+x2 = 3;
+
+size(T)
+size(pncDfk)
+ref = [zeros(1,35*3), d.ref*ones(1,3*35),zeros(1,35*3+1)];
+Tref = 0:1/35:3;
+ax1 = subplot(1,2,1)
+plot(Tout,0*ones(1,length(Tout)),'k','LineWidth',1, 'HandleVisibility','off');hold on
+plot(Tref,d.ref*ones(3*35+1),'--k','Linewidth',3);hold on
+plot(Tin,(nc_inp),'LineWidth',0.1,'Color',[1 0 1 0.1]);
+hA = plot(Tin,mean(nc_inp),'Color',[1 0 1],'LineWidth',3);
+xline(0)
+xline(dur)
+
+text(ax1, -3 - 0.1, 0, '0', ...
+    'Color','k', 'FontSize', 10, ...
+    'HorizontalAlignment','right', 'VerticalAlignment','middle', 'Clipping','off');
+
+
+ylim([-2 5])
+xlim([-3,6])
+yl = ylim;   % current y-limits
+patch([x1 x2 x2 x1], ...
+      [yl(1) yl(1) yl(2) yl(2)], ...
+      [0.9 0.9 0.9], ...
+      'FaceAlpha', 0.3, ...
+      'EdgeColor', 'none');
+ shortCornerAxes_plot(gca, 'XLength', 1, 'YLength', 1, ...
+      'XLabel', '1 sec', 'YLabel', '1 mW', 'LineWidth', 5,'LabelGap',  0.04)
+
+
+
+% Keep data on top
+uistack(findobj(gca,'Type','line'),'top')
+hold off
+% yticklabels([])
+
+% title('Open Loop')
+% ax = gca;
+% ax.FontWeight = 'bold';
+ax2 = subplot(1,2,2)
+plot(Tout,0*ones(1,length(Tout)),'k','LineWidth',1, 'HandleVisibility','off');hold on
+% plot(T,pwcDfk,'Color', [0 0.5 0 0.1],'LineWidth',0.5);hold on
+plot(Tref,d.ref*ones(3*35+1),'--k','Linewidth',3);hold on
+% plot(T,wc_avg,'Color', [0 0.5 0],'Linewidth',3);
+
+hB = plot(Tin,mean(wc_inp),'Color',[0,0.5,1],'LineWidth',3);
+plot(Tin,(wc_inp),'Color',[0,0.5,1,0.05],'LineWidth',0.1);
+xline(0)
+xline(dur)
+ylim([-2 5])
+xlim([-3,6])
+% xlabel('time(sec)','FontSize',12,'FontWeight','bold')
+
+yl = ylim;   % current y-limits
+
+patch([x1 x2 x2 x1], ...
+      [yl(1) yl(1) yl(2) yl(2)], ...
+      [0.9 0.9 0.9], ...
+      'FaceAlpha', 0.3, ...
+      'EdgeColor', 'none');
+
+
+
+
+
+xticklabels([])
+yticklabels([])
+set(gca, ...
+    'Box','off', ...
+    'XColor','none', ...
+    'YColor','none', ...
+    'TickDir','out', ...
+    'XTick',[], ...
+    'YTick',[], ...
+    'Color','none');
+
+
+hA_proxy = plot(ax2, NaN, NaN, 'Color',[1 0 1], 'LineWidth', 3);
+legend(ax2, [hA_proxy hB], {'Open-Loop Stims', 'Closed-Loop Stims'}, ...
+    'Location','northeast', ...
+    'Box','off', FontSize=12, FontWeight='bold')
+
+exportgraphics(fig, 'paper/trial_average_inputs.png', 'Resolution', 300);
+
 
 
 % set([ax1 ax2], 'Units','normalized');

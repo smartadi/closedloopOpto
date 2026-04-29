@@ -173,8 +173,7 @@ stimStarts = stimStarts_filled;
 uAmp       = uAmp_filled;
 idxByAmp   = idxByAmp_filled;
 
-
-
+save(sprintf('stim_vars_%s_%s_en%d.mat', mn, td, en), 'uAmp', 'idxByAmp', 'stimStarts');
 
 
 %% get dF/F
@@ -528,7 +527,11 @@ uistack(h1, 'bottom')
 xticks([])
 
 try
-    shortCornerAxes_plot(gca,'Frac',0.15,'XLabel','Input(mW)','YLabel','dF/F','LineWidth',5,'LabelGap',0.05)
+    % shortCornerAxes_plot(gca,'Frac',0.15,'XLabel','Input(mW)','YLabel','dF/F','LineWidth',5,'LabelGap',0.05)
+
+    shortCornerAxes_plot(gca, 'XLength', 1, 'YLength', 1, ...
+      'XLabel', '0.05 mW', 'YLabel', '1% dF/F', 'LineWidth', 5,'LabelGap',  0.04)
+
 catch
     xlabel('Input(V)', 'FontWeight','bold');
     ylabel('dF/F %', 'FontWeight','bold');

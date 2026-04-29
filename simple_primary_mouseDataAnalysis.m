@@ -162,7 +162,7 @@ d.mv = d.motion.motion_1(1:2:end-1);
 
 %%
 
-svdMotionPlayer(U, V, t, mimg, d.mv)
+% svdMotionPlayer(U, V, t, mimg, d.mv)
 
 
 
@@ -230,7 +230,7 @@ plotTrialSample(50, t, dFk, d, tt, v, dur);
 %% Inputs
 inputs = d.iputs(d.params.horizon:d.params.horizon + length(d.timeBlue));
 
-%% Linear Regression
+%% LASSO Regression
 
 % --- USER INPUTS ---
 startIdx    = 2000;
@@ -258,9 +258,19 @@ y_te_z = (y_te - muy) ./ sdy;
 [Phi_tr, y_tr_aligned, maxLag] = buildLagMatrix(y_tr_z, X_tr_z, pY, pX);
 [Phi_te, y_te_aligned]         = buildLagMatrix(y_te_z, X_te_z, pY, pX);
 
-beta      = Phi_tr \ y_tr_aligned;
-yhat_tr_z = Phi_tr * beta;
-yhat_te_z = Phi_te * beta;
+% Strip intercept column (col 1); lasso handles intercept separately
+Xreg_tr = Phi_tr(:, 2:end);
+Xreg_te = Phi_te(:, 2:end);
+
+[B, FitInfo] = lasso(Xreg_tr, y_tr_aligned, 'CV', 5, 'Intercept', true);
+best       = FitInfo.IndexMinMSE;
+beta_lasso = B(:, best);
+b0         = FitInfo.Intercept(best);
+
+fprintf('LASSO: %d / %d nonzero coefficients\n', sum(beta_lasso ~= 0), numel(beta_lasso));
+
+yhat_tr_z = Xreg_tr * beta_lasso + b0;
+yhat_te_z = Xreg_te * beta_lasso + b0;
 
 yhat_tr  = yhat_tr_z * sdy + muy;
 yhat_te  = yhat_te_z * sdy + muy;

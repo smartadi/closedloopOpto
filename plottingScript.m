@@ -335,6 +335,9 @@ error_NC = [];
 
 spont_dFk = []
 
+d = mouse.(fields{k}).d;
+ti = mouse.(fields{k}).d.inpTime;
+
 t = mouse.(fields{k}).d.timeBlue;
 for j = 1: length(nc)
     [a i] = min(abs(t - mouse.(fields{k}).d.stimStarts(nc(j))));
@@ -1006,7 +1009,7 @@ lgd.AutoUpdate = 'off';
 %     'Box','off', FontSize=12, FontWeight='bold')
 % shortCornerAxes_plot(ax,'Frac',0.1,'XLabel','time(secs)','YLabel','dF/F  /  Variance','LineWidth',5,'LabelGap',0.05)
 
-text(-0.1-3, 10, 'Variance', ...
+text(-0.1-3, 10, {'Variance', 'across trials'}, ...
     'Color','k', 'FontSize', 12, 'FontWeight','bold', ...
     'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
     'Rotation', 90, 'Clipping','off');
