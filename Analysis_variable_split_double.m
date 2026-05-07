@@ -32,21 +32,6 @@ en = 2;
 
 % mn = 'AL_0041'; td = '2026-02-21'; 
 % en = 4;
-%%
-
-    githubDir = "/home/nimbus/Documents/Brain/"
-    
-    
-    % Script to analyze widefield/behavioral data from 
-    addpath(genpath(fullfile(githubDir, 'widefield'))) % cortex-lab/widefield
-    addpath(genpath(fullfile(githubDir, 'Pipelines'))) % SteinmetzLab/Pipelines
-    addpath(genpath(fullfile(githubDir, 'npy-matlab'))) % kwikteam/npy-matlab
-    
-    
-    serverRoot = expPath(mn, td, en);
-    
-    d = loadData(serverRoot,mn,td,en);
-
 %% get data
 pathString = genpath('utils');
     addpath(pathString);
@@ -208,82 +193,47 @@ dFk = data.dFk(2,:);
     ti = d.inpTime;
 
     
-    ncInp=[];
-    pncDfk=[];
+    tBlue_ = d.timeBlue(:)';
+    ti_    = d.inpTime(:)';
+    dt_b   = tBlue_(2) - tBlue_(1);
+    dt_i   = ti_(2)    - ti_(1);
 
-    inps_nc = [];
-    inps_wc = [];
+    W_dfk_ = 3*35 + 35*(dur+3) + 1;
+    W_inp_ = dur*2000 + 1;
+    W_inp2 = 1*2000 + (dur+1)*2000 + 1;
 
-    for j = 1: length(nc)
-        [a i] = min(abs(d.timeBlue - d.stimStarts(nc(j))));
-        
-        pncDfk = [pncDfk; dFk(i-35*3:i+35*(dur+3))];
+    nNc_ = numel(nc);  nWc_ = numel(wc);
 
+    ncIdx_   = max(1, min(numel(tBlue_), round((d.stimStarts(nc)  - tBlue_(1)) / dt_b) + 1));
+    wcIdx_   = max(1, min(numel(tBlue_), round((d.stimStarts(wc)  - tBlue_(1)) / dt_b) + 1));
+    ncIdxIn_ = max(1, min(numel(ti_),    round((d.stimStarts(nc)  - ti_(1))    / dt_i) + 1));
+    wcIdxIn_ = max(1, min(numel(ti_),    round((d.stimStarts(wc)  - ti_(1))    / dt_i) + 1));
 
-        [a i2] = min(abs(ti - d.stimStarts(nc(j))));
-        [a i3] = min(abs(ti - d.stimEnds(nc(j))));
-    
-        ncInp = [ncInp; d.inpVals(i2:i2+dur*2000)'];    
-    
+    pncDfk  = zeros(nNc_, W_dfk_);  ncInp  = zeros(nNc_, W_inp_);  inps_nc = zeros(nNc_, W_inp2);
+    pwcDfk  = zeros(nWc_, W_dfk_);  wcInp  = zeros(nWc_, W_inp_);  inps_wc = zeros(nWc_, W_inp2);
+    er_ncDfk = zeros(nNc_,1);  vr_ncDfk = zeros(nNc_,1);
+    er_wcDfk = zeros(nWc_,1);  vr_wcDfk = zeros(nWc_,1);
 
-        [a i] = min(abs(d.inpTime - d.stimStarts(nc(j))));
-
-        inps_nc = [inps_nc; d.inpVals(i-1*2000:i+(dur+1)*2000)];
-
-
-
-    
+    for j = 1:nNc_
+        i  = ncIdx_(j);   i2 = ncIdxIn_(j);
+        pncDfk(j,:)  = dFk(i-105 : i+35*(dur+3));
+        ncInp(j,:)   = d.inpVals(i2 : i2+dur*2000)';
+        inps_nc(j,:) = d.inpVals(i2-1*2000 : i2+(dur+1)*2000);
+        seg = dFk(i : i+35*dur);
+        er_ncDfk(j) = norm(seg + 2);  vr_ncDfk(j) = var(seg);
     end
 
-
-
-    
-    wcInp=[];
-    pwcDfk=[];
-    for j = 1: length(wc)
-        [a i] = min(abs(d.timeBlue - d.stimStarts(wc(j))));
-        
-    
-        pwcDfk = [pwcDfk; dFk(i-35*3:i+35*(dur+3))];
-
-
-        [a i2] = min(abs(ti - d.stimStarts(wc(j))));
-        [a i3] = min(abs(ti - d.stimEnds(wc(j))));
-    
-        wcInp = [wcInp; d.inpVals(i2:i2+dur*2000)'];
-
-        [a i] = min(abs(d.inpTime - d.stimStarts(wc(j))));
-
-        inps_wc = [inps_wc; d.inpVals(i-1*2000:i+(dur+1)*2000)];
+    for j = 1:nWc_
+        i  = wcIdx_(j);   i2 = wcIdxIn_(j);
+        pwcDfk(j,:)  = dFk(i-105 : i+35*(dur+3));
+        wcInp(j,:)   = d.inpVals(i2 : i2+dur*2000)';
+        inps_wc(j,:) = d.inpVals(i2-1*2000 : i2+(dur+1)*2000);
+        seg = dFk(i : i+35*dur);
+        er_wcDfk(j) = norm(seg + 2);  vr_wcDfk(j) = var(seg);
     end
 
-
-    nc_avg = mean(pncDfk,1);
-    wc_avg = mean(pwcDfk,1);
-
-    % PLOTS
-
-    er_ncDfk=[];
-    vr_ncDfk=[];
-    for j = 1: length(nc)
-        [a i] = min(abs(t - d.stimStarts(nc(j))));
-        [a i2] = min(abs(t - d.stimStarts(nc(end))));
-        er_ncDfk = [er_ncDfk; norm(dFk(i:i+35*(dur))+2)];
-        vr_ncDfk = [vr_ncDfk; var(dFk(i:i+35*(dur)))];
-    end
-
-
-
-
-    er_wcDfk=[];
-    vr_wcDfk=[];
-    for j = 1: length(wc)
-        [a i] = min(abs(t - d.stimStarts(wc(j))));
-        [a i2] = min(abs(t - d.stimStarts(nc(end))));
-
-        er_wcDfk = [er_wcDfk; norm(dFk(i:i+35*(dur))+2)];
-        vr_wcDfk = [vr_wcDfk; var(dFk(i:i+35*(dur)))];
-    end
+    nc_avg = mean(pncDfk, 1);
+    wc_avg = mean(pwcDfk, 1);
 
 % end
 
@@ -401,23 +351,6 @@ legend(ax2, [hA hD hC hB], {'Closed Loop', 'Open Loop','Stim', 'Ref'}, ...
     'Box','off', FontSize=12, FontWeight='bold')
 
 
-% 
-% figure()
-% subplot(1,2,1)
-% plot(Tout,abs(data.ncDfk(:,1*35:(1+dur)*35) - rref),'Color', [1 0 0 0.1],'LineWidth',0.5);hold on;
-% plot(Tout,abs(mean(data.ncDfk(:,1*35:(1+dur)*35) - rref)),'Color', [1 0 0],'LineWidth',4);hold on;
-% yline(0)
-% ylim([-1,10])
-% shortCornerAxes_plot(gca,'Frac',0.10,'XLabel','Time (s)','YLabel','Error \DeltaF/F','LineWidth',5)
-% 
-% 
-% subplot(1,2,2)
-% plot(Tout,abs(data.wcDfk(:,1*35:(1+dur)*35) - rref),'Color', [0 0.5 0 0.1],'LineWidth',0.5);hold on;
-% plot(Tout,abs(mean(data.wcDfk(:,1*35:(1+dur)*35) - rref)),'Color', [0 0.5 0],'LineWidth',4);hold on;
-% yline(0)
-% ylim([-1,10])
-% shortCornerAxes_plot(gca,'Frac',0.20,'XLabel','Time (s)','YLabel','Error \DeltaF/F','LineWidth',5)
-% full experiment
 
 
 
@@ -720,21 +653,6 @@ set(v,'facealpha',0.1);
 set(v,'edgealpha',0.5);
 set(gcf,'renderer','opengl') ;
 hold on;
-% 
-% 
-% subplot(1,3,3)
-% s = scatter3(X0,f3_fb,er_wcDfk,[],er_wcDfk,'filled','g');hold on
-% s = scatter3(XX0,f3_ff,er_ncDfk,[],er_ncDfk,'filled','r');
-% xlabel('x_0 df/F')
-% ylabel('freq marker')
-% zlabel('Tracking error norm')
-% xlim([-10 10])
-% ylim([0 20])
-% zlim([0 50])
-% % colorbar
-% % zlim([0,100])
-% % clim([0,80])
-% title('regularizability dependece on state and parameters')
 
 %%
 dur = d.params.dur

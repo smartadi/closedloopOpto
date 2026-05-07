@@ -1,15 +1,15 @@
-% File: compute_past_variance.m
 function var_signal = compute_past_variance(x, Fs, win_len_sec)
-    T = length(x);
-    win_len_samples = round(win_len_sec * Fs);
-    var_signal = NaN(1, T);  % Preallocate
+% Causal sliding variance over a past window of win_len_sec seconds.
+% Returns NaN for samples where the full window is not yet available.
+    win = round(win_len_sec * Fs);
+    T   = numel(x);
 
-    for t = 1:T
-        start_idx = t - win_len_samples + 1;
-        if start_idx < 1
-            continue;  % Not enough data
-        end
-        segment = x(start_idx:t);
-        var_signal(t) = var(segment, 1);  % Normalize by N (not N-1)
-    end
+    % O(T) via cumulative sums: var = E[X²] - (E[X])²
+    cs1 = [0, cumsum(x(:)')];
+    cs2 = [0, cumsum(x(:)'.^2)];
+
+    t_valid  = win:T;
+    sum_x    = cs1(t_valid + 1) - cs1(t_valid - win + 1);
+    sum_x2   = cs2(t_valid + 1) - cs2(t_valid - win + 1);
+    var_signal = [NaN(1, win-1), (sum_x2 - sum_x.^2 / win) / win];
 end

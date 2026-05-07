@@ -1,92 +1,60 @@
-function data = getpixels_dFoF(d,serverRoot)
-% GETPIXEL_DFOF Summary of this function goes here
-%   Detailed explanation goes here
+function data = getpixels_dFoF(d, serverRoot)
+% GETPIXELS_DFOF  Multi-pixel dF/F via rolling-mean baseline normalization.
+% Results cached to data/<mouse>pixels<MMDD><en>.mat.
 
-% serverRoot = "/run/user/1000/gvfs/smb-share:server=sahale.biostr.washington.edu,share=data/Subjects/AL_0039/2025-04-20/1";
-serverRoot = expPath(d.mn, d.td, d.en);
-
-pathData = append(d.mn,'pixels',d.td(6:7),d.td(9:10),int2str(d.en),'.mat');
-
-% source_dir ='/mnt/data/brain/';
-% source_dir = append(source_dir,d.mn,'/',d.td,'/',num2str(d.en));
-% a=dir([source_dir '/*']);
-% out=size(a,1);
-% 
-% out=out-2;
-% path = append(source_dir,'/frame-');
-
-w=d.params.horizon-1;
-
-k=d.params.kernel;
-
-expRoot = serverRoot;
-movieSuffix = 'blue';
-nSV = 2000;
-U = readUfromNPY(fullfile(expRoot, movieSuffix, ['svdSpatialComponents.npy']), nSV);
-mimg = readNPY(fullfile(expRoot, movieSuffix, ['meanImage.npy']));
-
-%
-    fprintf(1, 'corrected file not found; loading uncorrected temporal components\n');
-    V = readVfromNPY(fullfile(expRoot, movieSuffix, ['svdTemporalComponents.npy']), nSV);
-    t = readNPY(fullfile(expRoot, movieSuffix, ['svdTemporalComponents.timestamps.npy']));
-
-
-
-
-if exist(pathData) == 0
-    F = [];
-    dFk=[];
-
-    
-    pixel = d.params.pixels
-    % pixel = d.params.pixels_contra;
-
-
-    for j= 1:length(pixel)
-        % for j= 1:3
-            j
-    Fsvd = [];
-
-    k=d.params.kernel;
-    mimg_kernel = mimg(pixel(j,2)-k:pixel(j,2)+k,pixel(j,1)-k:pixel(j,1)+k);
-    mI = mean(mimg_kernel,'all');
-
-        for i = 1:length(V)
-            mimg_kernel = mimg(pixel(j,2)-k:pixel(j,2)+k,pixel(j,1)-k:pixel(j,1)+k);
-            imkernel = U(pixel(j,2)-k:pixel(j,2)+k,pixel(j,1)-k:pixel(j,1)+k,:);
-            % size(imkernel)
-            imstack = mean(imkernel,[1,2]);
-            Fsvd = [Fsvd,reshape(imstack,[1,2000])*V(:,i)]  ;
-        end
-   
-
-    Fsvd = Fsvd + mI;
-    w=d.params.horizon-1;
-    %
-    Fk  = [ones(1,w),Fsvd];
-    dFsvd=[];
-    Fmean=[];
-
-    Fkmean=[];
-%
-    for i = 1:length(Fsvd)
-    
-        Fkmean = [Fkmean,mean(Fk(i:i+w))];
-        dFsvd = [dFsvd,(Fk(i+w)-Fkmean(i))/Fkmean(i)*100];
-
-    end
-
-    F = [F;Fsvd];
-    dFk=[dFk;dFsvd];
-
-    end
-    
-    save(pathData,'dFk');
-    data.dFk = dFk;
-    data.F = F;
-else
-% 
-     data.dFk = load(pathData).dFk;
-% 
+if nargin < 2 || isempty(serverRoot)
+    serverRoot = expPath(d.mn, d.td, d.en);
 end
 
+if ~exist('data', 'dir'); mkdir('data'); end
+pathData = fullfile('data', append(d.mn, 'pixels', d.td(6:7), d.td(9:10), int2str(d.en), '.mat'));
+
+if exist(pathData, 'file')
+    data = load(pathData);
+    return;
+end
+
+k      = d.params.kernel;
+w      = d.params.horizon - 1;
+pixel  = d.params.pixels;
+nPixels = size(pixel, 1);
+
+expRoot     = serverRoot;
+movieSuffix = 'blue';
+nSV = 2000;
+
+U    = readUfromNPY(fullfile(expRoot, movieSuffix, 'svdSpatialComponents.npy'), nSV);
+mimg = readNPY(fullfile(expRoot, movieSuffix, 'meanImage.npy'));
+fprintf(1, 'corrected file not found; loading uncorrected temporal components\n');
+V = readVfromNPY(fullfile(expRoot, movieSuffix, 'svdTemporalComponents.npy'), nSV);
+
+nFrames = size(V, 2);
+F   = zeros(nPixels, nFrames);
+dFk = zeros(nPixels, nFrames);
+
+for j = 1:nPixels
+    % Mean image value for this patch (scalar baseline)
+    mI = mean(mimg(pixel(j,2)-k:pixel(j,2)+k, pixel(j,1)-k:pixel(j,1)+k), 'all');
+
+    % Vectorised SVD projection: extract spatial weights once, multiply all frames
+    imkernel = U(pixel(j,2)-k:pixel(j,2)+k, pixel(j,1)-k:pixel(j,1)+k, :);
+    imstack  = reshape(mean(imkernel, [1,2]), [1, nSV]);  % 1 x nSV
+    Fsvd     = imstack * V;                               % 1 x nFrames
+
+    F(j,:) = Fsvd + mI;
+
+    % Rolling-mean dF/F via cumulative sum (O(nFrames) instead of O(nFrames·w))
+    Frow = F(j,:);
+    Fk   = [ones(1, w) * mI, Frow];   % prepend w samples at mean level
+    T    = nFrames;
+    cs   = [0, cumsum(Fk)];
+    idx  = 1:T;
+    Fkmean    = (cs(idx + w + 1) - cs(idx)) / (w + 1);
+    dFk(j,:)  = (Frow - Fkmean) ./ Fkmean * 100;
+end
+
+data.dFk   = dFk;
+data.F     = F;
+
+save(pathData, '-struct', 'data');
+end

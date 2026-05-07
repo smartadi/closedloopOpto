@@ -252,113 +252,79 @@ pixelTuningCurveViewerSVD(U, V, d.timeBlue, d.stimStarts(nc), ones(size(d.stimSt
 
 %% data analysis
 
-
-ti = d.inpTime;
-
-dur=3;
-
-
-calDfk=[];
-calInp=[];
-for j = 1: length(nc)
-    [a i] = min(abs(d.timeBlue - d.stimStarts(nc(j))));
-    calDfk = [calDfk; dFk(i-3*35:i+35*(d.params.dur+3))];
-    [a i2] = min(abs(ti - d.stimStarts(nc(j))));
-    calInp = [calInp; d.inpVals(i2:i2+dur*2000)'];
-
-end
-
-
-
-ncDfk=[];
-ncInp=[];
-for j = 1: length(nc)
-    [a i] = min(abs(d.timeBlue - d.stimStarts(nc(j))));
-    ncDfk = [ncDfk; dFk(i-3*35:i+35*(d.params.dur+3))];
-    [a i2] = min(abs(ti - d.stimStarts(nc(j))));
-    ncInp = [ncInp; d.inpVals(i2:i2+dur*2000)'];
-
-end
-
-
-wcDfk=[];
-wcInp=[];
-for j = 1: length(wc)
-    [a i] = min(abs(d.timeBlue - d.stimStarts(wc(j))));
-    wcDfk = [wcDfk; dFk(i-35*3:i+35*(d.params.dur+3))];
-    [a i2] = min(abs(ti - d.stimStarts(wc(j))));
-    wcInp = [wcInp; d.inpVals(i2:i2+dur*2000)'];
-
-end
-
-
-ncoDfk=[];
-ncoInp=[];
-for j = 1: length(nc_opt)
-    [a i] = min(abs(d.timeBlue - d.stimStarts(nc_opt(j))));
-    ncoDfk = [ncoDfk; dFk(i-35*3:i+35*(d.params.dur+3))];
-    [a i2] = min(abs(ti - d.stimStarts(nc_opt(j))));
-    ncoInp = [ncoInp; d.inpVals(i2:i2+dur*2000)'];
-
-end
-
-
-calDfk=[];
-calInp=[];
-for j = 1: length(cal)
-    [a i] = min(abs(d.timeBlue - d.stimStarts(cal(j))));
-    calDfk = [calDfk; dFk(i-35*3:i+35*(d.params.dur+3))];
-    [a i2] = min(abs(ti - d.stimStarts(cal(j))));
-    calInp = [calInp; d.inpVals(i2:i2+dur*2000)'];
-
-end
-
-
-
-
-nc_avg = mean(ncDfk,1);
-wc_avg = mean(wcDfk,1);
-nco_avg = mean(ncoDfk,1);
-
-
-%% Compute H2 performance per trial sum(||e||)
-dur = d.params.dur;
-
+ti    = d.inpTime(:)';
+tBlue = d.timeBlue(:)';
+dur   = d.params.dur;
 d.ref = -2;
 
-er_ncDfk=[];
-vr_ncDfk=[];
-for j = 1: length(nc)
-    [a i] = min(abs(d.timeBlue - d.stimStarts(nc(j))));
-    er_ncDfk = [er_ncDfk; norm(dFk(i:i+35*(dur))-d.ref)];
-    vr_ncDfk = [vr_ncDfk; var(dFk(i:i+35*(dur)))];
+% Vectorised index lookup (uniform sampling)
+dt_blue = tBlue(2) - tBlue(1);
+dt_in   = ti(2)    - ti(1);
+W_dfk = 3*35 + 35*(dur+3) + 1;    % i-105 : i+35*(dur+3)
+W_inp = dur*2000 + 1;              % i2    : i2+dur*2000
+W_err = 35*dur + 1;                % i     : i+35*dur
+
+nearIdx = @(tVec, stamps, dt) max(1, min(numel(tVec), round((stamps(:) - tVec(1)) / dt) + 1));
+
+ncIdx    = nearIdx(tBlue, d.stimStarts(nc),     dt_blue);
+wcIdx    = nearIdx(tBlue, d.stimStarts(wc),     dt_blue);
+ncoIdx   = nearIdx(tBlue, d.stimStarts(nc_opt), dt_blue);
+calIdx   = nearIdx(tBlue, d.stimStarts(cal),    dt_blue);
+
+ncIdxIn  = nearIdx(ti, d.stimStarts(nc),     dt_in);
+wcIdxIn  = nearIdx(ti, d.stimStarts(wc),     dt_in);
+ncoIdxIn = nearIdx(ti, d.stimStarts(nc_opt), dt_in);
+calIdxIn = nearIdx(ti, d.stimStarts(cal),    dt_in);
+
+nNc = numel(nc); nWc = numel(wc); nNco = numel(nc_opt); nCal = numel(cal);
+
+ncDfk   = zeros(nNc,  W_dfk);  ncInp   = zeros(nNc,  W_inp);
+wcDfk   = zeros(nWc,  W_dfk);  wcInp   = zeros(nWc,  W_inp);
+ncoDfk  = zeros(nNco, W_dfk);  ncoInp  = zeros(nNco, W_inp);
+calDfk  = zeros(nCal, W_dfk);  calInp  = zeros(nCal, W_inp);
+
+er_ncDfk  = zeros(nNc,  1);  vr_ncDfk  = zeros(nNc,  1);
+er_wcDfk  = zeros(nWc,  1);  vr_wcDfk  = zeros(nWc,  1);
+er_ncoDfk = zeros(nNco, 1);  vr_ncoDfk = zeros(nNco, 1);
+er_calDfk = zeros(nCal, 1);  vr_calDfk = zeros(nCal, 1);
+
+for j = 1:nNc
+    i = ncIdx(j);   i2 = ncIdxIn(j);
+    ncDfk(j,:) = dFk(i-105 : i+35*(dur+3));
+    ncInp(j,:) = d.inpVals(i2 : i2+dur*2000)';
+    seg = dFk(i : i+35*dur);
+    er_ncDfk(j) = norm(seg - d.ref);   vr_ncDfk(j) = var(seg);
 end
 
-er_wcDfk=[];
-vr_wcDfk=[];
-for j = 1: length(wc)
-    [a i] = min(abs(d.timeBlue - d.stimStarts(wc(j))));
-    er_wcDfk = [er_wcDfk; norm(dFk(i:i+35*(dur))-d.ref)];
-    vr_wcDfk = [vr_wcDfk; var(dFk(i:i+35*(dur)))];
+for j = 1:nWc
+    i = wcIdx(j);   i2 = wcIdxIn(j);
+    wcDfk(j,:) = dFk(i-105 : i+35*(dur+3));
+    wcInp(j,:) = d.inpVals(i2 : i2+dur*2000)';
+    seg = dFk(i : i+35*dur);
+    er_wcDfk(j) = norm(seg - d.ref);   vr_wcDfk(j) = var(seg);
 end
 
-er_ncoDfk=[];
-vr_ncoDfk=[];
-for j = 1: length(nc_opt)
-    [a i] = min(abs(d.timeBlue - d.stimStarts(nc_opt(j))));
-    er_ncoDfk = [er_ncoDfk; norm(dFk(i:i+35*(dur))-d.ref)];
-    vr_ncoDfk = [vr_ncoDfk; var(dFk(i:i+35*(dur)))];
+for j = 1:nNco
+    i = ncoIdx(j);  i2 = ncoIdxIn(j);
+    ncoDfk(j,:) = dFk(i-105 : i+35*(dur+3));
+    ncoInp(j,:) = d.inpVals(i2 : i2+dur*2000)';
+    seg = dFk(i : i+35*dur);
+    er_ncoDfk(j) = norm(seg - d.ref);  vr_ncoDfk(j) = var(seg);
 end
 
-
-er_calDfk=[];
-vr_calDfk=[];
-for j = 1: length(cal)
-    [a i] = min(abs(d.timeBlue - d.stimStarts(cal(j))));
-    er_calDfk = [er_calDfk; norm(dFk(i:i+35*(dur))-d.ref)];
-    vr_calDfk = [vr_calDfk; var(dFk(i:i+35*(dur)))];
+for j = 1:nCal
+    i = calIdx(j);  i2 = calIdxIn(j);
+    calDfk(j,:) = dFk(i-105 : i+35*(dur+3));
+    calInp(j,:) = d.inpVals(i2 : i2+dur*2000)';
+    seg = dFk(i : i+35*dur);
+    er_calDfk(j) = norm(seg - d.ref);  vr_calDfk(j) = var(seg);
 end
-display('analysis done')
+
+nc_avg  = mean(ncDfk,  1);
+wc_avg  = mean(wcDfk,  1);
+nco_avg = mean(ncoDfk, 1);
+
+disp('analysis done')
 
 data.nc = nc;
 data.wc = wc; 
@@ -373,136 +339,6 @@ dFk = data.dFk;
 nc = data.nc;
 wc = data.wc;
 t = d.timeBlue;
-trial=6;
-
-% j = nc(trial)
-% [a i] = min(abs(t - d.stimStarts(j)));
-% [a i2] = min(abs(t - d.stimEnds(j)));
-% 
-% 
-% tt = d.inpTime;
-% v = d.inpVals;
-% 
-% [a k] = min(abs(tt - d.stimStarts(j)));
-% [a k2] = min(abs(tt - d.stimEnds(j)));
-% 
-% 
-% 
-% % Tin = 0:0.0005:stimDur(j);
-% Tout = -3:0.0285:dur+3;
-% Tref = 0:0.0285:dur;
-% figure()
-% ax1 = subplot(1,2,1)
-% hA = plot(Tout,dFk((i-(3*35)):(i+35*(dur+3))),'r','LineWidth',3);hold on
-% hB = plot(Tref,-5*ones(1,length(Tref)),'--k','LineWidth',2)
-% hC = plot(tt(k:k2)-tt(k),2*v(k:k2),'b','LineWidth',3)
-% % shortCornerAxes(gca, 'XLabel','Time(s)', 'YLabel','\DeltaF/F', 'Frac',0.10,'LineWidth',5);
-% 
-% 
-% ylim([-10 10])
-% xlim([-3,6])
-% xline(0)
-% xline(3)
-% % ylabel('dF/F','FontSize',12,'FontWeight','bold')
-% % xlabel('time(secs)','FontSize',12,'FontWeight','bold')
-% yl = ylim;   % current y-limits
-% x1 = 0;
-% x2 = 3;
-% patch([x1 x2 x2 x1], ...
-%       [yl(1) yl(1) yl(2) yl(2)], ...
-%       [0.9 0.9 0.9], ...
-%       'FaceAlpha', 0.3, ...
-%       'EdgeColor', 'none');
-% shortCornerAxes_plot(gca,'Frac',0.10,'XLabel','Time (s)','YLabel','\DeltaF/F','LineWidth',5)
-% 
-% % Keep data on top
-% uistack(findobj(gca,'Type','line'),'top')
-% hold off
-% box off
-% xticklabels([])
-% yticklabels([])
-% 
-% 
-% 
-% j = wc(trial)
-% [a i] = min(abs(t - d.stimStarts(j)));
-% [a i2] = min(abs(t - d.stimEnds(j)));
-% 
-% 
-% tt = d.inpTime;
-% v = d.inpVals;
-% 
-% [a k] = min(abs(tt - d.stimStarts(j)));
-% [a k2] = min(abs(tt - d.stimEnds(j)));
-% 
-% 
-% 
-% ax2 = subplot(1,2,2)
-% hD = plot(Tout,dFk((i-(3*35)):(i+35*(dur+3))),'Color',[0,0.5,0],'LineWidth',3);hold on
-% plot(Tref,-5*ones(1,length(Tref)),'--k','LineWidth',2)
-% plot(tt(k:k2)-tt(k),2*v(k:k2),'b','LineWidth',3)
-% % shortCornerAxes(gca, 'XLabel','', 'YLabel','', 'Frac',0.0,'LineWidth',0);
-% ylim([-10 10])
-% xlim([-3,6])
-% xline(0)
-% xline(3)
-% yl = ylim;   % current y-limits
-% x1 = 0;
-% x2 = 3;
-% patch([x1 x2 x2 x1], ...
-%       [yl(1) yl(1) yl(2) yl(2)], ...
-%       [0.9 0.9 0.9], ...
-%       'FaceAlpha', 0.3, ...
-%       'EdgeColor', 'none');
-% 
-% uistack(findobj(gca,'Type','line'),'top')
-% hold off
-% box off
-% xticklabels([])
-% yticklabels([])
-% set(gca, ...
-%     'Box','off', ...
-%     'XColor','none', ...
-%     'YColor','none', ...
-%     'TickDir','out', ...
-%     'XTick',[], ...
-%     'YTick',[], ...
-%     'Color','none');
-% 
-% 
-% legend(ax2, [hA hD hC hB], {'Closed Loop', 'Open Loop','Stim', 'Ref'}, ...
-%     'Location','northeast', ...
-%     'Box','off', FontSize=12, FontWeight='bold')
-% %%%%%%%%%%%%%%%%%%%%%
-% % set([ax1 ax2], 'Units','normalized');
-% % 
-% % leftMargin   = 0.08;
-% % rightMargin  = 0.03;
-% % bottomMargin = 0.18;
-% % topMargin    = 0.08;
-% % gap          = 0.05;
-% % 
-% % axW = (1 - leftMargin - rightMargin - gap)/2;
-% % axH = 1 - bottomMargin - topMargin;
-% % 
-% % ax1.Position = [leftMargin,              bottomMargin, axW, axH];
-% % ax2.Position = [leftMargin + axW + gap,  bottomMargin, axW, axH];
-% 
-% %%%%%%%%%%%%%%%%%%%%%
-% 
-% %%%%%%%%%%%%%%%%%
-% dur = d.params.dur;
-% ncDfk = data.ncDfk;
-% wcDfk = data.wcDfk;
-% 
-% pncDfk = data.pncDfk(:,246:end);
-% pwcDfk = data.pwcDfk(:,246:end);
-% nc_avg = mean(pncDfk,1);
-% wc_avg = mean(pwcDfk,1);
-% T= -3:0.0285:(dur+3);
-% Tin = 0:0.0005:dur;
-% Tout = 0:0.0285:dur;
-
 %% full experiment
 
 
@@ -625,42 +461,7 @@ set(gca, ...
     'YTick',[], ...
     'Color','none');
 
-%%
-
-
-% set([ax1 ax2], 'Units','normalized');
-% 
-% leftMargin   = 0.08;
-% rightMargin  = 0.03;
-% bottomMargin = 0.18;
-% topMargin    = 0.08;
-% gap          = 0.05;
-% 
-% axW = (1 - leftMargin - rightMargin - gap)/2;
-% axH = 1 - bottomMargin - topMargin;
-% 
-% ax1.Position = [leftMargin,              bottomMargin, axW, axH];
-% ax2.Position = [leftMargin + axW + gap,  bottomMargin, axW, axH];
-% % Keep data on top
-% uistack(findobj(gca,'Type','line'),'top')
-% hold off
-% yticklabels([])
-% ax = gca;
-% ax.FontWeight = 'bold';
-% title('Closed Loop')
-% figure_property.Width= '16'; % Figure width on canvas
-% figure_property.Height= '9'; % Figure height on canvas
-% if a == 1
-%     hgexport(gcf,append('images/comp_controllers',mn,td,num2str(en),'.pdf'),figure_property); %Set desired file name
-% end
-% % exportgraphics(gcf,'P1.png','Resolution',1500)
-% uiwait(k)
-
 %% var analysis
-
-% nc_var = var(ncDfk - nc_avg);
-% wc_var = var(wcDfk - wc_avg);
-
 
 nc_var = var(ncDfk);
 wc_var = var(wcDfk);

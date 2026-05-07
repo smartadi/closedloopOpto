@@ -5,7 +5,8 @@ if nargin < 2 || isempty(serverRoot)
     serverRoot = expPath(d.mn, d.td, d.en);
 end
 
-pathData = append(d.mn, 'pixelsTrace', d.td(6:7), d.td(9:10), int2str(d.en), '.mat');
+if ~exist('data', 'dir'); mkdir('data'); end
+pathData = fullfile('data', append(d.mn, 'pixelsTrace', d.td(6:7), d.td(9:10), int2str(d.en), '.mat'));
 
 if exist(pathData, 'file')
     data = load(pathData);

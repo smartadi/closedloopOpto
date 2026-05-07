@@ -3,7 +3,13 @@
     "allow": [
       "Bash(head -580 \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\\\\simple_primary_mouseDataAnalysis.m\")",
       "Read(//tmp/**)",
-      "Bash(matlab -batch \"which inROI\")"
+      "Bash(matlab -batch \"which inROI\")",
+      "Bash(rm *)",
+      "Bash(awk -F: 'BEGIN{prev=-2;start=-1} {cur=$1; if\\(cur==prev+1\\){if\\(start<0\\)start=prev} else {if\\(start>=0\\)print start\"-\"prev; start=-1} prev=cur} END{if\\(start>=0\\)print start\"-\"prev}')",
+      "Bash(awk -F- '{if\\($2-$1 > 8\\) print $1\"-\"$2\" \\(\"$2-$1+1\" lines\\)\"}')",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

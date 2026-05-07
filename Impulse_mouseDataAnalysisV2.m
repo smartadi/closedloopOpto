@@ -164,7 +164,7 @@ stimStarts = stimStarts_filled;
 uAmp       = uAmp_filled;
 idxByAmp   = idxByAmp_filled;
 
-save('stim_vars.mat', 'uAmp', 'idxByAmp', 'stimStarts');
+save(fullfile('data', 'stim_vars.mat'), 'uAmp', 'idxByAmp', 'stimStarts');
 
 
 

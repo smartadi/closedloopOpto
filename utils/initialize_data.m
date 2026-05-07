@@ -26,10 +26,47 @@ function d = initialize_data(mn,en,td)
     
     %% motion
 
+    facefile  = fullfile(serverRoot, 'motEngF.npy');
+    videofile = fullfile(serverRoot, 'face.mp4');
 
+    if isfile(facefile) || isfile(videofile)
+        if isfile(facefile)
+            motEng = readNPY(facefile);
+        else
+            vr = VideoReader(videofile);
+            nf = vr.NumFrames;
+            motEng = zeros(1, nf-1);
+            lastFrame = double(vr.readFrame()); lastFrame = lastFrame(:,:,1);
+            for q = 1:nf-1
+                thisFrame = double(vr.readFrame());
+                thisFrame = thisFrame(:,:,1);
+                motEng(q) = sum(sum((thisFrame - lastFrame).^2));
+                lastFrame = thisFrame;
+            end
+            writeNPY(motEng, facefile);
+        end
 
-    % d.motion = load(append(serverRoot,'/face_proc.mat'));
+        % Downsample to match d.timeBlue (imaging runs at 2x camera, blue = every other frame)
+        procfile = fullfile(serverRoot, 'motEngProc.npy');
+        if isfile(procfile)
+            motEngDS = readNPY(procfile);
+        else
+            motEngDS = downsample(double(motEng(:)), 2);
+            motEngDS = medfilt1(motEngDS, 5);
+            motEngDS = zscore(motEngDS);
+            writeNPY(motEngDS, procfile);
+        end
 
+        % Low-pass filter
+        fs = 1 / mean(diff(d.timeBlue));
+        cutoff = 10; % Hz
+        [b, a] = butter(4, cutoff / (fs/2), 'low');
+        d.motion = filtfilt(b, a, motEngDS);
+    else
+        d.motion = zeros(size(d.timeBlue));
+    end
+
+    %%
 
     % pixel frame
     pix = [d.params.pixel(1);d.params.pixel(1)]
@@ -52,20 +89,19 @@ function d = initialize_data(mn,en,td)
 expRoot = serverRoot;
 movieSuffix = 'blue';
 nSV = 2000;
-U = readUfromNPY(fullfile(expRoot, movieSuffix, ['svdSpatialComponents.npy']), nSV);
-mimg = readNPY(fullfile(expRoot, movieSuffix, ['meanImage.npy']));
-
-%
-    fprintf(1, 'corrected file not found; loading uncorrected temporal components\n');
-    V = readVfromNPY(fullfile(expRoot, movieSuffix, ['svdTemporalComponents.npy']), nSV);
-    t = readNPY(fullfile(expRoot, movieSuffix, ['svdTemporalComponents.timestamps.npy']));
-
-
-
-d.svd.U = U;
-d.svd.V = V;
-d.svd.t = t;
-d.svd.nSV = nSV;
-d.svd.mimg = mimg;
+if isfile(fullfile(expRoot, movieSuffix, 'svdSpatialComponents.npy')) && ...
+   isfile(fullfile(expRoot, movieSuffix, 'meanImage.npy')) && ...
+   isfile(fullfile(expRoot, movieSuffix, 'svdTemporalComponents.npy')) && ...
+   isfile(fullfile(expRoot, movieSuffix, 'svdTemporalComponents.timestamps.npy'))
+    U    = readUfromNPY(fullfile(expRoot, movieSuffix, 'svdSpatialComponents.npy'), nSV);
+    mimg = readNPY(fullfile(expRoot, movieSuffix, 'meanImage.npy'));
+    V    = readVfromNPY(fullfile(expRoot, movieSuffix, 'svdTemporalComponents.npy'), nSV);
+    t    = readNPY(fullfile(expRoot, movieSuffix, 'svdTemporalComponents.timestamps.npy'));
+    d.svd.U    = U;
+    d.svd.V    = V;
+    d.svd.t    = t;
+    d.svd.nSV  = nSV;
+    d.svd.mimg = mimg;
+end
 
 end

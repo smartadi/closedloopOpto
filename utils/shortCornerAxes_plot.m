@@ -34,7 +34,7 @@ p.addParameter('LineWidth',  1.5,     @(v) isnumeric(v)&&isscalar(v)&&v>0);
 p.addParameter('Color',      [0 0 0], @(v) isnumeric(v)&&numel(v)==3);
 p.addParameter('XLabel',     '',      @(s) ischar(s)||isstring(s));
 p.addParameter('YLabel',     '',      @(s) ischar(s)||isstring(s));
-p.addParameter('LabelGap',   0.08,    @(v) isnumeric(v)&&isscalar(v)&&v>=0);
+p.addParameter('LabelGap',   0.1,    @(v) isnumeric(v)&&isscalar(v)&&v>=0);
 p.addParameter('FontName',   'Arial', @(s) ischar(s)||isstring(s));
 p.addParameter('FontSize',   7,      @(v) isnumeric(v)&&isscalar(v)&&v>0);
 p.addParameter('FontWeight', 'bold',  @(s) ischar(s)||isstring(s));

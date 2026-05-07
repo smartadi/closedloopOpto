@@ -478,4 +478,4 @@ T = d.input_params_table;
 S = d.stimStarts;
 E = d.stimEnds;
 
-save('ExperimentData022726.mat', 'T', 'S', 'E')
+save(fullfile('data', 'ExperimentData022726.mat'), 'T', 'S', 'E')

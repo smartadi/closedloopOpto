@@ -1,160 +1,100 @@
-function [data,dFk] = getpixel_dFoF(d,mode,pixel,r);
+function [data, dFk] = getpixel_dFoF(d, mode, pixel, r)
+% GETPIXEL_DFOF  Single-pixel dF/F via SVD reconstruction (mode=1) or raw
+% frames (mode=0).  Results are cached to data/<mouse>pixel<MMDD><en>.mat.
+%
+%   mode : 0 = raw frame images, 1 = SVD reconstruction (default)
+%   r    : 0 = force recompute, 1 = use cache if available (default)
 
-
-% GETPIXEL_DFOF Summary of this function goes here
-%   Detailed explanation goes here
-
-
-% mode = 0; % from images
-mode = 1; % from svd
-
-%read from
-r = 1
+if nargin < 2 || isempty(mode); mode = 1; end
+if nargin < 4 || isempty(r);    r    = 1; end
 
 serverRoot = expPath(d.mn, d.td, d.en);
-% pathData = append('pixel',d.td(6:7),d.td(9:10),int2str(d.en),'.mat');
 
+if ~exist('data', 'dir'); mkdir('data'); end
+pathData = fullfile('data', append(d.mn, 'pixel', d.td(6:7), d.td(9:10), int2str(d.en), '.mat'));
+dFk = [];
 
-
-pathData = append(d.mn,'pixel',d.td(6:7),d.td(9:10),int2str(d.en),'.mat');
-dFk=[];
-
-
-exist(pathData)
-
-if (exist(pathData) == 0) | (r == 0)
-    F = [];
-
-    try
-        k=d.params.kernel;
-    catch 
-        k=10;
+if exist(pathData, 'file') && r == 1
+    data = load(pathData);
+    if isfield(data, 'dFk')
+        dFk = data.dFk;
+        return;
     end
-    % k=d.params.kernel;
-    display('computing pixel val')
+    F = data.F;
+else
+    % ---- Compute raw fluorescence trace F ----
+    try
+        k = d.params.kernel;
+    catch
+        k = 10;
+    end
+    disp('computing pixel val')
+    j = 1;  % single pixel
 
-    if mode==0
-        % source_dir ='/mnt/data/brain/';
-        source_dir = 'C:\Users\aditya\Documents\projects\data\';
-        source_dir = append(source_dir,d.mn,'\',d.td,'\',num2str(d.en));
-        a=dir([source_dir '\*'])
-        out=size(a,1);
-
-        out=out-2;
-        path = append(source_dir,'\frame-');
-    
-        for i=1:2:out
-            pathim=append(path,num2str(i-1));
-            fileID = fopen(pathim,'r');
-            A = fread(fileID,[560,560],'uint16')';
-            % j=length(pixel);
-            j=1;
-            G = mean(A(pixel(j,2)-k:pixel(j,2)+k,pixel(j,1)-k:pixel(j,1)+k),'all');
-            i
-    
-            F = [F,G];
+    if mode == 0
+        source_dir = fullfile('C:\Users\aditya\Documents\projects\data', d.mn, d.td, num2str(d.en));
+        frames = dir(fullfile(source_dir, '*'));
+        nFrames = numel(frames) - 2;
+        F = zeros(1, ceil(nFrames / 2));
+        fi = 0;
+        for i = 1:2:nFrames
+            fi = fi + 1;
+            pathim = fullfile(source_dir, sprintf('frame-%d', i-1));
+            fileID = fopen(pathim, 'r');
+            A = fread(fileID, [560, 560], 'uint16')';
             fclose(fileID);
-            
-    
+            F(fi) = mean(A(pixel(j,2)-k:pixel(j,2)+k, pixel(j,1)-k:pixel(j,1)+k), 'all');
         end
     else
+        expRoot    = serverRoot;
+        movieSuffix = 'blue';
+        nSV = 2000;
+        U    = readUfromNPY(fullfile(expRoot, movieSuffix, 'svdSpatialComponents.npy'), nSV);
+        mimg = readNPY(fullfile(expRoot, movieSuffix, 'meanImage.npy'));
+        fprintf(1, 'corrected file not found; loading uncorrected temporal components\n');
+        V = readVfromNPY(fullfile(expRoot, movieSuffix, 'svdTemporalComponents.npy'), nSV);
 
-        expRoot = serverRoot;
-movieSuffix = 'blue';
-nSV = 2000;
-U = readUfromNPY(fullfile(expRoot, movieSuffix, ['svdSpatialComponents.npy']), nSV);
-mimg = readNPY(fullfile(expRoot, movieSuffix, ['meanImage.npy']));
+        % Vectorised: extract spatial weights once, then project all frames
+        imkernel = U(pixel(j,2)-k:pixel(j,2)+k, pixel(j,1)-k:pixel(j,1)+k, :);
+        imstack  = reshape(mean(imkernel, [1,2]), [1, nSV]);  % 1 x nSV
+        F = imstack * V;                                       % 1 x T
 
-%
-    fprintf(1, 'corrected file not found; loading uncorrected temporal components\n');
-    V = readVfromNPY(fullfile(expRoot, movieSuffix, ['svdTemporalComponents.npy']), nSV);
-    t = readNPY(fullfile(expRoot, movieSuffix, ['svdTemporalComponents.timestamps.npy']));
-
-
-        % nSV = 2000;
-        % [U, V, t, mimg] = loadUVt(serverRoot, nSV);
-        % mimg = mimg';
-        j=1;
-        mI = [];
-        for i = 1:length(V)
-            mimg_kernel = mimg(pixel(j,2)-k:pixel(j,2)+k,pixel(j,1)-k:pixel(j,1)+k);
-            mI = [mI,mean(mimg_kernel,'all')];
-            imkernel = U(pixel(j,2)-k:pixel(j,2)+k,pixel(j,1)-k:pixel(j,1)+k,:);
-            % size(imkernel)
-            imstack = mean(imkernel,[1,2]);
-            % size(imstack)   
-            F = [F,reshape(imstack,[1,2000])*V(:,i)];
-        end
-
-
+        % Mean image value for normalisation (constant per pixel)
+        mI = mean(mimg(pixel(j,2)-k:pixel(j,2)+k, pixel(j,1)-k:pixel(j,1)+k), 'all');
     end
-    display('computing df/F')
-    % w=d.params.horizon-1;
-
-    try
-    w=d.params.horizon-1;
-    catch
-    w = 40*35-1
-    end
-    Fk  = [ones(1,w),F];
-    dF=[];
-    Fmean=[];
-    dFk=[];
-    Fkmean=[];
-
-    for i = 1:length(F)
-        % Add an LPF filter 
-        if mode == 0
-
-        Fkmean = [Fkmean,mean(Fk(i:i+w))];
-        dFk = [dFk,(Fk(i+w)-Fkmean(i))/Fkmean(i)*100];
-        else
-        dFk = [dFk,(F(i))/mI(i)*100];
-        end
-
-    end
-    
-    
-    save(pathData,'dFk');
-    data.dFk = dFk;
     data.F = F;
-else
-    data = load(pathData);
-    % data.dFk = load(pathData).dFk;
-
+    save(pathData, '-struct', 'data');
 end
 
+% ---- Compute dF/F ----
+disp('computing dF/F')
 
-
-if isfield(data,'dFk')== 0
-
-
-    F = data.F;
-    display('computing df/F')
-
+if mode == 0
+    % Rolling-mean baseline via cumulative sum (O(T) instead of O(T·W))
     try
-    w=d.params.horizon-1;
+        w = d.params.horizon - 1;
     catch
-    w=40*35-1
-    end;
-    Fk  = [ones(1,w),F];
-    dF=[];
-    Fmean=[];
-    dFk=[];
-    Fkmean=[];
-
-    for i = 1:length(F)
-        % Add an LPF filter 
-        if mode == 0
-
-        Fkmean = [Fkmean,mean(Fk(i:i+w))];
-        dFk = [dFk,(Fk(i+w)-Fkmean(i))/Fkmean(i)*100];
-        else
-        dFk = [dFk,(F(i))/mI(i)*100];
-        end
-
+        w = 40*35 - 1;
     end
-    save(pathData,'dFk');
-    data.dFk = dFk;
-    data.F = F;
+    Fk = [ones(1, w), F];
+    T  = numel(F);
+    cs = [0, cumsum(Fk)];
+    i  = 1:T;
+    Fkmean = (cs(i + w + 1) - cs(i)) / (w + 1);
+    dFk    = (F - Fkmean) ./ Fkmean * 100;
+else
+    % SVD mode: normalise by mean image value (already computed above)
+    if ~exist('mI', 'var')
+        % Loaded from cache — recompute mI from mimg if needed
+        expRoot = serverRoot;
+        mimg = readNPY(fullfile(expRoot, 'blue', 'meanImage.npy'));
+        try; k = d.params.kernel; catch; k = 10; end
+        j = 1;
+        mI = mean(mimg(pixel(j,2)-k:pixel(j,2)+k, pixel(j,1)-k:pixel(j,1)+k), 'all');
+    end
+    dFk = F / mI * 100;
+end
+
+data.dFk = dFk;
+save(pathData, '-struct', 'data');
 end

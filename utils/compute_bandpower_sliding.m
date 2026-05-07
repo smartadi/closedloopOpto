@@ -1,41 +1,54 @@
-% File: compute_bandpower_past_window_ratio.m
 function band_ratio = compute_bandpower_sliding(x, Fs, win_len_sec)
-    T = length(x);
-    win_len_samples = round(win_len_sec * Fs);
+% Causal sliding band-power ratios. Returns NaN for samples where the full
+% window is not yet available.
+% Replaces a per-sample pwelch loop with a single batch FFT (M x W matrix).
+%
+% Outputs band_ratio: T x 3 matrix
+%   col 1: [0–6 Hz] / total
+%   col 2: [3–6 Hz] / total
+%   col 3: [6–Nyquist] / total
 
-    % Define bands: 1–3, 3–6, 6–Nyquist
-    bands = [0 6; 3 6; 6 Fs/2];
+    x   = x(:)';
+    T   = numel(x);
+    W   = round(win_len_sec * Fs);
+
+    bands    = [0, 6; 3, 6; 6, Fs/2];
     num_bands = size(bands, 1);
 
-    band_ratio = NaN(T, num_bands);  % Preallocate
+    band_ratio = NaN(T, num_bands);
 
-    for t = 1:T
-        start_idx = t - win_len_samples + 1;
-        if start_idx < 1
-            continue;  % Not enough past data
-        end
+    t_valid = W:T;
+    M = numel(t_valid);
+    if M == 0 || W < 4; return; end
 
-        segment = x(start_idx:t);
-        if numel(segment) < 4
-            continue;
-        end
+    % Build M x W window matrix via index striding (no loop)
+    col_idx  = t_valid(:) - (W-1:-1:0);   % M x W indices into x
+    win_mat  = x(col_idx);                 % M x W signal windows
 
-        % Welch PSD
-        [Pxx, f] = pwelch(segment, [], [], [], Fs);
+    % Hann taper to reduce spectral leakage (row broadcast)
+    win_mat = win_mat .* hann(W)';         % M x W
 
-        % ---- Total power over the "entire band" ----
-        % Use 1 Hz to Nyquist to match your band definitions
-        f_total_idx = (f >= 0) & (f <= Fs/2);
-        total_power = sum(Pxx(f_total_idx));
+    % Single batch FFT across all M windows simultaneously
+    nfft  = W;
+    X     = fft(win_mat, nfft, 2);         % M x nfft
 
-        if total_power <= 0 || ~isfinite(total_power)
-            continue; % avoid divide-by-zero / weird PSD edge cases
-        end
+    % One-sided PSD (normalization cancels in the ratio, but keep it correct)
+    nFreq = floor(nfft/2) + 1;
+    Pxx   = abs(X(:, 1:nFreq)).^2;
+    Pxx(:, 2:end-1) = 2 * Pxx(:, 2:end-1);  % fold negative frequencies
 
-        % ---- Band ratios ----
-        for b = 1:num_bands
-            f_idx = (f >= bands(b,1)) & (f < bands(b,2));
-            band_ratio(t, b) = sum(Pxx(f_idx)) / total_power;
-        end
+    % Frequency axis
+    f = (0:nFreq-1) * (Fs / nfft);         % 1 x nFreq
+
+    % Total power denominator (0 to Nyquist)
+    total_power = sum(Pxx, 2);             % M x 1
+    bad = total_power <= 0 | ~isfinite(total_power);
+
+    % Band ratios — each band is a vectorised column sum
+    for b = 1:num_bands
+        f_idx = (f >= bands(b,1)) & (f < bands(b,2));
+        ratio = sum(Pxx(:, f_idx), 2) ./ total_power;  % M x 1
+        ratio(bad) = NaN;
+        band_ratio(t_valid, b) = ratio;
     end
 end

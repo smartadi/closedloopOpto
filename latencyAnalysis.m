@@ -119,9 +119,15 @@ xlabel('Pair index')
 ylabel('Latency (ms)')
 title('Latency per pair')
 
+PAN_W = 3;  % cm
+PAN_H = 3;  % cm
+
 fig = figure('Color','w');
-fig.Units    = 'inches';
-fig.Position = [1, 1, 4, 3];
+fig.Units         = 'centimeters';
+fig.PaperUnits    = 'centimeters';
+fig.Position      = [0 0 PAN_W PAN_H];
+fig.PaperSize     = [PAN_W PAN_H];
+fig.PaperPosition = [0 0 PAN_W PAN_H];
 
 histogram(latency_ms, 30, ...
     'FaceColor', [0.2 0.2 0.2], ...
@@ -134,16 +140,16 @@ latMax = max(latency_ms);
 set(gca, ...
     'Box',       'off', ...
     'TickDir',   'out', ...
-    'FontSize',  11, ...
-    'FontWeight','bold', ...
-    'LineWidth',  1.2, ...
+    'FontSize',  7, ...
+    'FontName',  'Arial', ...
+    'LineWidth',  0.75, ...
     'XTick',     [latMin, latMax], ...
     'XTickLabel', {sprintf('%.1f', latMin), sprintf('%.1f', latMax)});
 
-xlabel('Latency (ms)', 'FontSize', 12, 'FontWeight', 'bold');
-ylabel('Count',        'FontSize', 12, 'FontWeight', 'bold');
+xlabel('Latency (ms)', 'FontSize', 7, 'FontName', 'Arial');
+ylabel('Count',        'FontSize', 7, 'FontName', 'Arial');
 
-exportgraphics(fig, 'paper/latency_histogram.png', 'Resolution', 300);
+print(fig, 'paper/latency_histogram.pdf', '-dpdf', '-painters');
 
 %% Sample windows for lowest latency
 [~, sortIdx] = sort(latency);
