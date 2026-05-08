@@ -614,250 +614,154 @@ text(ax_m, -0.12, 0.5, 'Inhibition Energy', ...
 print(figM, 'paper/imp_response_median.pdf', '-dpdf', '-painters');
 
 %%
-%%{ =========================================================
-%  PARAMETRIC MODEL — SINGLE SESSION
-%  Transfer function with dead-time (lag) compensation.
-%  Uses DF_imp / uAmp / t_win / fs from the last loop iteration.
-%
-%  Strategy: since input is a known impulse, output = impulse response
-%  directly.  Estimate Td from peak of |response|, then fit the
-%  lag-compensated decaying tail analytically:
-%
-%    1-pole:  h(t) = A * exp(-t/tau)
-%             H(s) = Kp/(tau*s+1) * exp(-Td*s),  Kp = A*tau
-%             pole: p = -1/tau
-%
-%    2-pole:  h(t) = A1*exp(-t/tau1) + A2*exp(-t/tau2)
-%             H(s) = Kp/((tau1*s+1)(tau2*s+1)) * exp(-Td*s)
-%             poles: p1=-1/tau1, p2=-1/tau2
-%
-%  Order selected per amplitude by AIC.
-%  Requires: Optimization Toolbox (lsqcurvefit) only.
-%%{ =========================================================
+%% =========================================================
+%  TF FIT — all amplitudes, session mean
+%  Knobs: selExp, nPoles (1 or 2), nLeads (0 or 1)
+%  nLeads=1 adds one numerator zero → response can start at t=0
+%  (more responsive / faster onset)
+%% =========================================================
 
-selExp  = 2;                                    % <-- change to target session
-DF_this = allExperiments(selExp).DF_imp;        % nAmps x nTime
-uA_this = allExperiments(selExp).uAmp(:);       % nAmps x 1  (assumes sorted ascending)
-nAmp    = size(DF_this, 1);
-dt      = 1/fs;
+selExp   = 3;        % <-- target session
+maxPoles = 3;        % <-- sweep 1..maxPoles
+maxZeros = 2;        % <-- sweep 0..min(np-1, maxZeros)
 
-iPost = find(t_win >= 0);
-tPost = t_win(iPost);    % post-stim time, starting at 0 (seconds)
-tVec  = tPost(:);
-nPost = numel(tPost);
+DF_s   = allExperiments(selExp).DF_imp;
+uA_s   = allExperiments(selExp).uAmp(:);
+nAmp_s = numel(uA_s);
 
-lsqOpt = optimoptions('lsqcurvefit','Display','off', ...
-    'MaxFunctionEvaluations',10000,'MaxIterations',2000, ...
-    'FunctionTolerance',1e-8,'StepTolerance',1e-8);
+% Post-stim window 0 to +1 s
+t_full = -tWin : 1/fs : tWin;
+iPost  = find(t_full >= 0 & t_full <= 1);
+tPost  = t_full(iPost)';
+Ts     = 1/fs;
 
-% ---- Select high-SNR amplitudes to fit the shared shape -----------------
-% Low amplitudes are below noise floor; only use the top nHighKeep.
-nHighKeep = max(2, ceil(nAmp/2));   % <-- change to e.g. 2 if only top 2 are clean
-highIdx   = (nAmp - nHighKeep + 1) : nAmp;   % indices of highest amps
-nFit      = numel(highIdx);
+% Normalise each amplitude by its input voltage → all collapse to h(t)
+% Exclude zero-amplitude rows (inserted missing-event placeholders)
+validAmp = uA_s > 0;
+h_norm   = mean(bsxfun(@rdivide, DF_s(validAmp, iPost), uA_s(validAmp)), 1, 'omitnan')';
+validT_h = isfinite(h_norm);   % guards against NaN and Inf
+nT_h     = sum(validT_h);
 
-fprintf('\nFitting single-session TF on amplitudes: ');
-fprintf('%.3f  ', uA_this(highIdx)); fprintf('\n');
+% Single iddata: unit impulse in, normalised response out
+% Prepend nPre zeros (toolbox requirement for transient data)
+nPre    = maxPoles + maxZeros + 2;
+u_fit   = [zeros(nPre,1); 1; zeros(nT_h-1, 1)];
+y_fit   = [zeros(nPre,1); h_norm(validT_h)];
+data_fit = iddata(y_fit, u_fit, Ts);
 
-% ---- Model shapes (full response from t = 0) ----------------------------
-%
-%  1-pole:  h(t; tau, Td)
-%         = exp(-(t-Td)/tau) .* (t >= Td)
-%           → jump at Td, exponential decay; pole at p = -1/tau
-%
-%  2-pole:  h(t; tau1, tau2, Td)           [tau1 < tau2]
-%         = (exp(-(t-Td)/tau1) - exp(-(t-Td)/tau2)) / (tau1-tau2) .* (t>=Td)
-%           → zero at Td, smooth rise to peak, exponential decay
-%           → poles at p1=-1/tau1, p2=-1/tau2
-
-h1 = @(p, t)  exp(-(t - p(2))  ./ p(1)) .* (t >= p(2));
-h2 = @(p, t) (exp(-(t-p(3))./p(1)) - exp(-(t-p(3))./p(2))) ...
-             ./ (p(1) - p(2) + eps) .* (t >= p(3));
-
-% ---- Normalize each trace by its own amplitude before shape fitting -----
-% This removes amplitude-weighting bias so every trace contributes equally
-% to the shape estimate regardless of stimulus magnitude.
-% K per amplitude is recovered by linear projection afterward.
-yNorm  = DF_this(highIdx, iPost) ./ uA_this(highIdx);   % nFit x nPost (unit IR per amp)
-hMean  = mean(yNorm, 1)';                                % nPost x 1 (mean unit IR)
-
-iPk = min(round(tPeak * fs) + 1, nPost);   % index near expected peak
-
-% ---- 1-pole fit (shape only, no K) --------------------------------------
-p0_1 = [0.30,  tPeak];
-lb_1 = [0.01,  0.005];
-ub_1 = [5.0,   tPost(end)*0.8];
-try
-    p1j = lsqcurvefit(h1, p0_1, tVec, hMean, lb_1, ub_1, lsqOpt);
-catch ME
-    warning('1-pole fit: %s', ME.message);  p1j = p0_1;
-end
-
-% ---- 2-pole fit (shape only, no K) --------------------------------------
-p0_2 = [0.04,  0.50,  tPeak*0.25];
-lb_2 = [0.005, 0.05,  0.005];
-ub_2 = [0.4,   5.0,   tPeak];
-try
-    p2j = lsqcurvefit(h2, p0_2, tVec, hMean, lb_2, ub_2, lsqOpt);
-catch ME
-    warning('2-pole fit: %s', ME.message);  p2j = p0_2;
-end
-
-% ---- AIC on mean normalised trace (k = shape params only) ---------------
-n     = numel(hMean);
-yHat1 = h1(p1j, tVec);
-yHat2 = h2(p2j, tVec);
-RSS1  = sum((hMean - yHat1).^2);
-RSS2  = sum((hMean - yHat2).^2);
-aic1  = n*log(RSS1/n + eps) + 2*2;
-aic2  = n*log(RSS2/n + eps) + 2*3;
-R2_1  = 1 - RSS1 / max(sum((hMean - mean(hMean)).^2), eps);
-R2_2  = 1 - RSS2 / max(sum((hMean - mean(hMean)).^2), eps);
-
-if aic2 < aic1
-    modelOrder = 2;
-    Td_fit   = p2j(3);  tau1_fit = p2j(1);  tau2_fit = p2j(2);
-    h_shape  = @(t) h2(p2j(1:3), t);
-    R2_fit   = R2_2;
-else
-    modelOrder = 1;
-    Td_fit   = p1j(2);  tau1_fit = p1j(1);  tau2_fit = NaN;
-    h_shape  = @(t) h1(p1j(1:2), t);
-    R2_fit   = R2_1;
-end
-
-fprintf('\n=== Single-Session TF — Session %d ===\n', selExp);
-fprintf('  Model order : %d-pole\n', modelOrder);
-fprintf('  AIC (1-pole): %.2f   AIC (2-pole): %.2f\n', aic1, aic2);
-fprintf('  Fit R2      : %.3f\n', R2_fit);
-fprintf('  T_d         : %.1f ms\n', Td_fit*1000);
-fprintf('  tau1        : %.1f ms   (pole p1 = %.3f rad/s)\n', tau1_fit*1000, -1/tau1_fit);
-if modelOrder==2
-    fprintf('  tau2        : %.1f ms   (pole p2 = %.3f rad/s)\n', tau2_fit*1000, -1/tau2_fit);
-    tStar = tau1_fit*tau2_fit/(tau2_fit-tau1_fit) * log(tau2_fit/tau1_fit);
-    fprintf('  Peak time   : Td + %.1f ms = %.1f ms after stim\n', ...
-        tStar*1000, (Td_fit+tStar)*1000);
-end
-
-% ---- Project K for ALL amplitudes (shape fixed, linear solve) -----------
-% Given fixed h_shape(t), K_i = argmin ||y_i - K*h||^2 = (h'*y_i)/(h'*h)
-hVec  = h_shape(tVec);          % nPost x 1
-K_all = nan(nAmp, 1);
-for i = 1:nAmp
-    y_i    = DF_this(i, iPost)';
-    K_all(i) = (hVec' * y_i) / max(hVec' * hVec, eps);
-end
-
-% ---- Overlay plot: all amplitudes, single model -------------------------
-figure('Color','w','Position',[50 50 300*nAmp 360]);
-tlo = tiledlayout(1, nAmp, 'TileSpacing','compact','Padding','tight');
-
-for i = 1:nAmp
-    y_i    = DF_this(i, iPost)';
-    yModel = K_all(i) * hVec;
-    ss_res = sum((y_i - yModel).^2);
-    ss_tot = sum((y_i - mean(y_i)).^2);
-    r2_i   = 1 - ss_res / max(ss_tot, eps);
-
-    nexttile; hold on;
-    plot(tPost*1000, y_i,    'k',  'LineWidth', 2.5);
-    plot(tPost*1000, yModel, 'r--','LineWidth', 2.5);
-    xline(Td_fit*1000, ':b', 'T_d','LabelVerticalAlignment','bottom','FontSize',8);
-
-    flagStr = ''; if ismember(i, highIdx), flagStr = ' [fit]'; end
-    title(sprintf('Amp=%.2fV%s\nK=%.3f  R^2=%.2f', ...
-        uA_this(i), flagStr, K_all(i), r2_i), 'FontSize', 8);
-    xlabel('Time (ms)'); ylabel('dF/F (%)');
-    ax=gca; ax.Box='off'; ax.TickDir='out'; ax.LineWidth=1.2;
-    if i==1, legend({'data','model'},'Box','off','FontSize',7,'Location','southeast'); end
-end
-title(tlo, sprintf('%d-pole TF, T_d=%.0f ms — Session %d', ...
-    modelOrder, Td_fit*1000, selExp), 'FontWeight','bold');
-
-% ---- Cross-amplitude validation (LOAO on high-amp subset) ---------------
-% Fit shape on nHighKeep-1 amplitudes, predict the held-out high-amp trace.
-% Tests whether single TF shape transfers across amplitudes.
-crossR2 = nan(nFit, 1);
-
-for iCV = 1:nFit
-    cvTrainIdx = highIdx(setdiff(1:nFit, iCV));
-    if isempty(cvTrainIdx), crossR2(iCV)=NaN; continue; end
-
-    % normalize training traces by amplitude, take mean → unit IR estimate
-    hTrMean = mean(DF_this(cvTrainIdx, iPost) ./ uA_this(cvTrainIdx), 1)';
-
-    % refit shape on training mean (same model order as selected above)
-    if modelOrder == 2
+% Sweep over (np, nz): strictly proper → nz < np
+tfOpt    = tfestOptions('EnforceStability', false, 'Display', 'off');
+allMdls  = {};
+mdlNames = {};
+res      = struct('np',{},'nz',{},'AIC',{},'FPE',{},'sys',{});
+ri       = 0;
+for np = 1:maxPoles
+    for nz = 0:min(np-1, maxZeros)
         try
-            pCV = lsqcurvefit(h2, p0_2, tVec, hTrMean, lb_2, ub_2, lsqOpt);
-        catch
-            crossR2(iCV) = NaN; continue;
+            sys_i = tfest(data_fit, np, nz, tfOpt);
+            ri = ri + 1;
+            res(ri).np  = np;
+            res(ri).nz  = nz;
+            res(ri).AIC = aic(sys_i);
+            res(ri).FPE = fpe(sys_i);
+            res(ri).sys = sys_i;
+            allMdls{end+1}  = sys_i; %#ok<SAGROW>
+            mdlNames{end+1} = sprintf('%dp%dz', np, nz); %#ok<SAGROW>
+        catch ME
+            fprintf('  tfest(%dp%dz) failed: %s\n', np, nz, ME.message);
         end
-        hCV = h2(pCV, tVec);
-    else
-        try
-            pCV = lsqcurvefit(h1, p0_1, tVec, hTrMean, lb_1, ub_1, lsqOpt);
-        catch
-            crossR2(iCV) = NaN; continue;
-        end
-        hCV = h1(pCV, tVec);
+    end
+end
+
+if isempty(res)
+    error('tfest failed — check that System Identification Toolbox is installed.');
+end
+
+% Toolbox compare on the normalised trace
+figure('Name', sprintf('Session %d — model comparison', selExp));
+compare(data_fit, allMdls{:});
+legend(mdlNames{:}, 'Location','best');
+
+% Select best by AIC
+[~, iBest] = min([res.AIC]);
+best_sys = res(iBest).sys;
+
+fprintf('\nSession %d — TF order selection:\n', selExp);
+fprintf('  np  nz     AIC       FPE\n');
+for r = 1:numel(res)
+    mk = ''; if r == iBest, mk = '  <-- best'; end
+    fprintf('  %d   %d  %8.2f  %10.4f%s\n', res(r).np, res(r).nz, res(r).AIC, res(r).FPE, mk);
+end
+fprintf('Best: %dp/%dz\n', res(iBest).np, res(iBest).nz);
+
+% Per-amplitude predictions using toolbox sim()
+R2_all = nan(nAmp_s,1);
+yp_all = cell(nAmp_s,1);
+for iAmp = 1:nAmp_s
+    y_i    = DF_s(iAmp, iPost)';
+    validT = ~isnan(y_i);
+    if sum(validT) < 5, continue; end
+    nT  = sum(validT);
+    % simulate unit impulse response, scale by input amplitude
+    u_unit = [zeros(nPre,1); 1; zeros(nT-1, 1)];
+    yp_obj = sim(best_sys, iddata([], u_unit, Ts));
+    yp_i   = uA_s(iAmp) * yp_obj.OutputData(nPre+1:end);
+    SS_res = sum((y_i(validT) - yp_i).^2);
+    SS_tot = sum((y_i(validT) - mean(y_i(validT))).^2);
+    R2_all(iAmp) = 1 - SS_res / max(SS_tot, eps);
+    yp_full = nan(size(tPost));
+    yp_full(validT) = yp_i;
+    yp_all{iAmp} = yp_full;
+    fprintf('  amp=%.2fV  R²=%.3f\n', uA_s(iAmp), R2_all(iAmp));
+end
+
+% ── Figure: one subplot per amplitude ────────────────────
+nCols = min(nAmp_s, 4);
+nRows = ceil(nAmp_s / nCols);
+figure('Color','w','Position',[60 80 260*nCols 240*nRows]);
+tlo_tf = tiledlayout(nRows, nCols, 'TileSpacing','compact','Padding','compact');
+tfStr = sprintf('Session %d — best TF: %dp/%dz  (AIC=%.1f)', ...
+    selExp, res(iBest).np, res(iBest).nz, res(iBest).AIC);
+title(tlo_tf, tfStr, 'FontWeight','bold','FontSize',9);
+
+cMap = parula(nAmp_s);
+for iAmp = 1:nAmp_s
+    ax = nexttile(tlo_tf);  hold(ax,'on');
+
+    % individual trials (gray)
+    df_trials = allExperiments(selExp).imp.dfImp{iAmp}(:, iPost);
+    validT = ~isnan(DF_s(iAmp, iPost)');
+    for k = 1:size(df_trials,1)
+        plot(ax, tPost(validT), df_trials(k,validT), '-', ...
+            'Color',[0.8 0.8 0.8],'LineWidth',0.4,'HandleVisibility','off');
     end
 
-    % project K for held-out amplitude and evaluate
-    y_val = DF_this(highIdx(iCV), iPost)';
-    K_cv  = (hCV' * y_val) / max(hCV' * hCV, eps);
-    yPred = K_cv * hCV;
-    crossR2(iCV) = 1 - sum((y_val-yPred).^2) / max(sum((y_val-mean(y_val)).^2), eps);
+    % mean
+    y_data = DF_s(iAmp, iPost)';
+    plot(ax, tPost(validT), y_data(validT), '-', ...
+        'Color', cMap(iAmp,:), 'LineWidth',2, 'DisplayName','Mean');
+
+    % fit
+    if ~isempty(yp_all{iAmp})
+        plot(ax, tPost(validT), yp_all{iAmp}(validT), 'k--', ...
+            'LineWidth',1.5, 'DisplayName',sprintf('R²=%.2f', R2_all(iAmp)));
+    end
+
+    title(ax, sprintf('%.2f V  R²=%.2f', uA_s(iAmp), R2_all(iAmp)), 'FontSize',8);
+    xlabel(ax,'Time (s)');
+    if iAmp==1, ylabel(ax,'dF/F (%)'); end
+    legend(ax,'Box','off','FontSize',7,'Location','best');
+    set(ax,'Box','off','TickDir','out','FontSize',8);
 end
-
-fprintf('\n=== Cross-Amplitude Validation (LOAO on high-SNR amps) ===\n');
-for iCV = 1:nFit
-    fprintf('  Hold-out amp=%.3fV:  R2=%.3f\n', uA_this(highIdx(iCV)), crossR2(iCV));
-end
-fprintf('  Mean R2 = %.3f +/- %.3f\n', mean(crossR2,'omitnan'), std(crossR2,'omitnan'));
-
-% ---- Summary: gain vs amplitude + Bode magnitude -----------------------
-isTrain = ismember(1:nAmp, highIdx)';
-
-figure('Color','w','Position',[100 100 750 300]);
-tlo2 = tiledlayout(1, 2, 'TileSpacing','compact','Padding','compact');
-
-nexttile; hold on;
-plot(uA_this(~isTrain), K_all(~isTrain), 'o', ...
-    'Color',[0.6 0.6 0.6],'MarkerFaceColor',[0.6 0.6 0.6],'MarkerSize',8,'LineWidth',1.5);
-plot(uA_this(isTrain),  K_all(isTrain),  'ko', ...
-    'MarkerFaceColor','k','MarkerSize',8,'LineWidth',2);
-plin = polyfit(uA_this(isTrain), K_all(isTrain), 1);
-xf   = linspace(0, max(uA_this)*1.1, 100);
-plot(xf, polyval(plin, xf), 'r--', 'LineWidth', 1.5);
-xlabel('Amplitude (V)','FontWeight','bold');
-ylabel('Gain K','FontWeight','bold');
-title('Gain vs Amplitude (linearity check)');
-legend({'predict (low SNR)','fit','linear'},'Box','off','Location','best','FontSize',8);
-ax=gca; ax.Box='off'; ax.TickDir='out'; ax.LineWidth=1.5;
-
-nexttile;
-omega = logspace(-1, 3, 500);
-if modelOrder==1
-    H_w = exp(-1i*omega*Td_fit) ./ (1 + 1i*omega*tau1_fit);
-else
-    H_w = exp(-1i*omega*Td_fit) ./ ((1+1i*omega*tau1_fit).*(1+1i*omega*tau2_fit));
-end
-semilogx(omega/(2*pi), 20*log10(abs(H_w)), 'k', 'LineWidth', 2);
-xlabel('Frequency (Hz)','FontWeight','bold');
-ylabel('|H| (dB, normalised)','FontWeight','bold');
-title(sprintf('%d-pole Bode, T_d=%.0f ms', modelOrder, Td_fit*1000));
-ax=gca; ax.Box='off'; ax.TickDir='out'; ax.LineWidth=1.5; grid on;
-
-title(tlo2, sprintf('Session %d — TF Summary', selExp), 'FontWeight','bold');
-%}
 
 %% Motion vs Peak_imp deviation — one figure per session, subplots per amp
 %
 % X: motion energy = sum(mv_z, stim±1s)  (imp.mot, window already set to ±35 samples)
 % Y: |Peak_imp − mean(Peak_imp)| for that amp group  (imp.Peak_imp_dev)
+% Click any dot → motionDetailCallback opens dF/F + motion trace for that trial.
 
 nExp = numel(allExperiments);
+t_win_mot = -tWin : 1/35 : tWin;
 
 for expIdx = 1:nExp
     imp_e  = allExperiments(expIdx).imp;
@@ -870,7 +774,7 @@ for expIdx = 1:nExp
     fig_m = figure('Color','w');
     fig_m.Units    = 'inches';
     fig_m.Position = [1, 1, nCols_m*3, nRows_m*3];
-    sgtitle(sprintf('%s  %s  e%d', allExperiments(expIdx).mn, ...
+    sgtitle(sprintf('%s  %s  e%d  [click dot for detail]', allExperiments(expIdx).mn, ...
         allExperiments(expIdx).td, allExperiments(expIdx).en), ...
         'FontWeight','bold', 'FontSize', 10, 'Interpreter','none');
 
@@ -883,7 +787,7 @@ for expIdx = 1:nExp
         dev_i = dev_i(1:nUse);
 
         ax = subplot(nRows_m, nCols_m, iAmp);
-        scatter(ax, mot_i, dev_i, 25, [0.2 0.4 0.8], 'o', 'filled', ...
+        hS = scatter(ax, mot_i, dev_i, 25, [0.2 0.4 0.8], 'o', 'filled', ...
             'MarkerFaceAlpha', 0.6);
 
         r = corr(mot_i, dev_i, 'rows','complete');
@@ -892,6 +796,16 @@ for expIdx = 1:nExp
         xlabel(ax, 'Motion energy (±1s)', 'FontSize', 8);
         ylabel(ax, '|Peak inhib − mean|', 'FontSize', 8);
         set(ax, 'Box','off', 'TickDir','out', 'FontSize', 8);
+
+        % Capture per-iteration values for the closure
+        c_ax   = ax;
+        c_mot  = mot_i;
+        c_dev  = dev_i;
+        c_imp  = imp_e;
+        c_iAmp = iAmp;
+        c_twin = t_win_mot;
+        set(hS, 'ButtonDownFcn', ...
+            @(~,~) motionDetailCallback(c_ax, c_mot, c_dev, c_imp, c_iAmp, c_twin));
     end
 end
 
@@ -926,18 +840,19 @@ for expIdx = 1:nExp
         dev_i  = dev_i(1:nUse);
         freq_i = freq_i(1:nUse, :);
 
-        % sort trials by Peak_imp_dev ascending
-        [dev_sorted, sOrd] = sort(dev_i, 'ascend');
-        img = freq_i(sOrd, :);      % nTrials × nBands, y=trial(sorted), x=band
+        % sort trials by Peak_imp_dev ascending; z-score each freq column across trials
+        [~, sOrd] = sort(dev_i, 'ascend');
+        img_z = zscore(freq_i(sOrd, :), 0, 1);   % nTrials × nBands
+
+        nC  = 256;
+        bwr = [linspace(0.2,1,nC/2)' linspace(0.3,1,nC/2)' ones(nC/2,1);
+               ones(nC/2,1) linspace(1,0.3,nC/2)' linspace(1,0.2,nC/2)'];
 
         ax = subplot(nRows_f, nCols_f, iAmp);
-        imagesc(ax, fbCtrs, 1:nUse, img);
-        colormap(ax, 'hot');
-        clim_val = prctile(img(:), 98);
-        if clim_val > 0
-            clim(ax, [0, clim_val]);
-        end
-        colorbar(ax);
+        imagesc(ax, fbCtrs, 1:nUse, img_z);
+        colormap(ax, bwr);
+        clim(ax, [-2 2]);
+        cb = colorbar(ax);  cb.Label.String = 'z-score';
 
         xlabel(ax, 'Frequency (Hz)', 'FontSize', 8);
         ylabel(ax, 'Trial (sorted by dev)', 'FontSize', 8);
@@ -982,14 +897,17 @@ for expIdx = 1:nExp
         freq_i = freq_i(1:nUse, :);
 
         [~, sOrd] = sort(dev_i, 'ascend');
-        img = freq_i(sOrd, :);
+        img_z = zscore(freq_i(sOrd, :), 0, 1);
+
+        nC  = 256;
+        bwr = [linspace(0.2,1,nC/2)' linspace(0.3,1,nC/2)' ones(nC/2,1);
+               ones(nC/2,1) linspace(1,0.3,nC/2)' linspace(1,0.2,nC/2)'];
 
         ax = subplot(nRows_f, nCols_f, iAmp);
-        hImg = imagesc(ax, fbCtrs, 1:nUse, img);
-        colormap(ax, 'hot');
-        clim_val = prctile(img(:), 98);
-        if clim_val > 0, clim(ax, [0, clim_val]); end
-        colorbar(ax);
+        hImg = imagesc(ax, fbCtrs, 1:nUse, img_z);
+        colormap(ax, bwr);
+        clim(ax, [-2 2]);
+        cb = colorbar(ax);  cb.Label.String = 'z-score';
         xlabel(ax, 'Frequency (Hz)', 'FontSize', 8);
         ylabel(ax, 'Trial (sorted by dev)', 'FontSize', 8);
         title(ax, sprintf('%.2f V  (n=%d)  [click]', imp_e.uAmp{iAmp}, nUse), ...

@@ -224,7 +224,7 @@ tp = (-3*35 : 35*(dur+3)) / 35;   % -3s to dur+3s, guaranteed 35*(dur+6)+1 pts
 
 
 %% F: Cross-session variance  (2.33" wide — matches 1/3 page column)
-fig_F = figure('Color','w', 'Units','centimeters', 'Position',[0 0 9 5]);
+fig_F = figure('Color','w', 'Units','centimeters', 'Position',[0 0 3.5 3]);
 
 lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
 ax_var = axes(fig_F, 'Position', [lm2, bm2, 1-lm2-rm2, 1-bm2-tm2]);
@@ -246,15 +246,15 @@ text(ax_var, -0.12, 0.5, {'Average of Session'; 'Variance across trials'}, ...
     'Units','normalized', 'Rotation', 90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'FontSize', 6, 'FontWeight','bold', 'Color','k', 'Clipping','off');
-text(ax_var, -0.10, 0.95, 'F', 'Units','normalized', 'FontSize', 6, ...
-    'FontWeight','bold', 'Clipping','off');
+% text(ax_var, -0.10, 0.95, 'F', 'Units','normalized', 'FontSize', 6, ...
+%     'FontWeight','bold', 'Clipping','off');
 
 exportgraphics(fig_F, 'paper/all_variance_sessions.pdf', 'ContentType','vector');
 
 %% G: Cross-session MSE violin  (7.0" wide — fills full page width)
-fig_G = figure('Color','w', 'Units','centimeters', 'Position',[0 0 18 8]);
+fig_G = figure('Color','w', 'Units','centimeters', 'Position',[0 0 9 4]);
 
-lm_g = 0.13; rm_g = 0.05; bm_g = 0.15; tm_g = 0.08;
+lm_g = 0.13; rm_g = 0.05; bm_g = 0.12; tm_g = 0.08;
 ax_mse = axes(fig_G, 'Position', [lm_g, bm_g, 1-lm_g-rm_g, 1-bm_g-tm_g]);
 hold(ax_mse, 'on');
 
@@ -285,24 +285,24 @@ hold(ax_mse, 'off');
 numExp = length(fields);
 xlim(ax_mse, [0.5 numExp+0.5]);
 cleanAxes(ax_mse);
-text(ax_mse, -0.05, 0.5, 'Trial MSE', ...
+text(ax_mse, -0.12, 0.5, 'Trial MSE', ...
     'Units','normalized', 'Rotation', 90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'FontSize', 6, 'FontWeight','bold', 'Color','k', 'Clipping','off');
-text(ax_mse, 0.5, -0.08, 'Sessions', ...
+text(ax_mse, 0.5, -0.05, 'Sessions', ...
     'Units','normalized', ...
     'HorizontalAlignment','center', 'VerticalAlignment','top', ...
     'FontSize', 6, 'FontWeight','bold', 'Color','k', 'Clipping','off');
-text(ax_mse, 0.0, 0.95, 'G', 'Units','normalized', 'FontSize', 6, ...
-    'FontWeight','bold', 'Clipping','off');
+% text(ax_mse, 0.0, 0.95, 'G', 'Units','normalized', 'FontSize', 6, ...
+%     'FontWeight','bold', 'Clipping','off');
 
-exportgraphics(fig_G, 'paper/all_MSE_sessions.pdf', 'ContentType','image', 'Resolution',300);
+exportgraphics(fig_G, 'paper/all_MSE_sessions.pdf', 'ContentType','image', 'Resolution',300, 'Padding','tight');
 
 
 
 
 %% H: All-session trial average
-fig_H = figure('Color','w', 'Units','centimeters', 'Position',[0 0 9 5]);
+fig_H = figure('Color','w', 'Units','centimeters', 'Position',[0 0 3 4]);
 
 lm_h = 0.13; rm_h = 0.05; bm_h = 0.12; tm_h = 0.08;
 ax_H = axes(fig_H, 'Position', [lm_h, bm_h, 1-lm_h-rm_h, 1-bm_h-tm_h]);
@@ -344,9 +344,9 @@ legend(ax_H, {'Open-Loop', 'Closed-Loop'}, ...
 shortCornerAxes_plot(ax_H, 'XLength', 0.5, 'YLength', 1, ...
     'XLabel', '500 msec', 'YLabel', 'MSE dF/F', 'LineWidth', 2.5, 'LabelGap', 0.04);
 cleanAxes(ax_H);
-text(ax_H, -0.10, 0.95, 'H', 'Units','normalized', 'FontSize', 6, ...
-    'FontWeight','bold', 'Clipping','off');
-exportgraphics(fig_H, 'paper/all_average_sessions.pdf', 'ContentType','image', 'Resolution',300);
+% text(ax_H, -0.10, 0.95, 'H', 'Units','normalized', 'FontSize', 6, ...
+%     'FontWeight','bold', 'Clipping','off');
+exportgraphics(fig_H, 'paper/all_average_sessions.pdf', 'ContentType','vector');
 
 
 
