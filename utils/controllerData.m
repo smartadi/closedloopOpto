@@ -72,6 +72,8 @@ vr_wcDfk = zeros(nWc, 1);
 
 ncFreqSpec = zeros(nNc, W_freq, nBands);
 wcFreqSpec = zeros(nWc,  W_freq, nBands);
+ncFreqPow  = zeros(nNc, W_freq, nBands);   % absolute power (S_bands, no ratio)
+wcFreqPow  = zeros(nWc,  W_freq, nBands);
 
 % NC trials — slice windows and compute error in the same pass
 % for j = 1:nNc
@@ -117,7 +119,8 @@ for j = 1:length(nc)
     [~, sc] = min(abs(t_spec - t_on));
     c1 = sc - pre_bins;  c2 = sc + post_bins;
     if c1 >= 1 && c2 <= size(S_norm,2)
-        ncFreqSpec(j,:,:) = S_norm(:, c1:c2)';
+        ncFreqSpec(j,:,:) = S_norm(:,   c1:c2)';
+        ncFreqPow(j,:,:)  = S_bands(:,  c1:c2)';
     end
 end
 
@@ -139,7 +142,8 @@ for j = 1:length(wc)
     [~, sc] = min(abs(t_spec - t_on));
     c1 = sc - pre_bins;  c2 = sc + post_bins;
     if c1 >= 1 && c2 <= size(S_norm,2)
-        wcFreqSpec(j,:,:) = S_norm(:, c1:c2)';
+        wcFreqSpec(j,:,:) = S_norm(:,   c1:c2)';
+        wcFreqPow(j,:,:)  = S_bands(:,  c1:c2)';
     end
 end
 
@@ -160,6 +164,8 @@ data.vr_ncDfk = vr_ncDfk;
 
 data.ncFreqSpec   = ncFreqSpec;
 data.wcFreqSpec   = wcFreqSpec;
+data.ncFreqPow    = ncFreqPow;
+data.wcFreqPow    = wcFreqPow;
 data.freqBandCtrs = freqBandCtrs;
 data.freqOnsetBin = freqOnsetBin;
 

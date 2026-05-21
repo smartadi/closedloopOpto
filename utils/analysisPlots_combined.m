@@ -10,6 +10,7 @@ function analysisPlots_combined(data, d)
 % Scale all to the same display width in external software for matching text.
 
 PW = 8.9;   % cm (= 3.5 inches)
+if ~isfield(d, 'ref'); d.ref = -5; end
 dur    = d.params.dur;
 t      = d.timeBlue;
 tt     = d.inpTime;

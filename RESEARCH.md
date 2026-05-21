@@ -78,6 +78,48 @@ This script loads all sessions, computes per-trial error metrics, and generates 
 - [x] **Step 2 — Figure J: Combined heatmap** — all sessions pooled, raw MSE sort → `paper/freq_heatmap_combined.png`
 - [x] **Step 3 — Interactive Figure I** — click any row → `heatmapClickCallback.m` + `plotSingleTrial.m` (trace / motion / input / spectrogram)
 
+### Motion-clean spectral heatmap (Figure J2)
+**Goal:** Same MSE-sorted OL/CL spectrogram as Fig J but with motion-affected trials removed, to check whether spectral MSE structure is confounded by movement.  
+**Method:** Exclude trials where |mean z-motion| > 1.5 over the combined window (2 s pre + full trial). Sessions without motion data are skipped. Print how many trials are excluded per condition.
+
+- [x] **Figure J2** — pooled MSE-sorted heatmap, motion-clean only → `paper/freq_heatmap_motionclean.png`
+- [ ] Verify exclusion counts are reasonable (expect <20% excluded)
+- [ ] Compare J vs J2 visually — does spectral structure persist after motion removal?
+
+### Pre-stim dFk variance as trial sort key (Figures K1, K2, K1m, K2m)
+**Goal:** Use variance of dFk over the 3 s pre-onset window as a proxy for brain state at stim arrival. Sort trials by this feature and examine (a) spectral content and (b) MSE outcome — both with and without motion exclusion. Tests Nick's hypothesis that pre-trial neural variability predicts controller performance.  
+**Feature:** `var(pncDfk_l(:, 1:105), [], 2)` — already in cache, no new computation.  
+**Window:** 3 s × 35 Hz = 105 samples, the pre-onset portion of the stored `pncDfk_l`/`pwcDfk_l` buffers.
+
+- [x] **Figure K1** — spectral heatmap sorted by pre-stim var, MSE side-strip → `paper/freq_heatmap_prestimvar.png`
+- [x] **Figure K2** — pre-stim var vs MSE scatter, OL/CL regression slopes → `paper/prestimvar_mse.pdf`
+- [x] **Figure K2i** — interactive pooled scatter; click → `plotSingleTrial` (dFk + motion + input)
+- [x] **Figure K1w** — heatmap sorted by pre+trial variance (6 s, cols 1:210 of `pncDfk_l`) → `paper/freq_heatmap_pretrial_var.png`
+- [x] **Figure K2w** — pre+trial var vs MSE scatter, slopes annotated → `paper/pretrial_var_mse.pdf`
+- [x] **Figure K2iw** — interactive pre+trial var scatter; click → `plotSingleTrial`
+- [ ] Compare K2 vs K2w slopes — wider window boosts correlation if trial response variance tracks MSE
+- [ ] Compare K1 vs K1w heatmaps — does spectral structure change when sort key includes trial response?
+- [x] **Figure K1m** — K1 motion-clean (|z-motion| ≤ motThresh) → `paper/freq_heatmap_prestimvar_motclean.png`
+- [x] **Figure K2m** — K2 motion-clean → `paper/prestimvar_mse_motclean.pdf`
+- [ ] Check K2 slope OL vs CL — if CL slope is flatter, controller is decoupling pre-stim state from outcome
+- [ ] Compare K1 vs J: do trials sort similarly by pre-stim var and MSE (would mean the two are correlated)?
+- [ ] Verify exclusion % in K1m matches J2 (same sessions + threshold)
+
+
+### Widebrain prediction of primary pixel activity
+**Goal:** Show that contralateral brain activity predicts primary pixel via ARX (delay embedding); use residual to isolate stimulus and controller effects.
+#### Steps
+- [x] Define predictor pixels: contralateral primary (midline reflection) + contralateral grid (spacing 30px, radius 60px)
+- [x] Extract predictor dFk inline via SVD projection (`buildLagMatrix`, pY=5, pX=3)
+- [x] Fit ARX model on spontaneous pre-trial windows (6s × all trials pooled)
+- [x] Apply to OL and CL trial windows; compute residual = actual − predicted
+- [x] 4-panel figure exported to `paper/wb_prediction.pdf`
+- [ ] Run `define_midline.m` to create `midline.mat` (currently using fallback centre-x)
+- [ ] Verify R²_spont > 0.3; tune pY/pX/contra_R if needed
+- [ ] Interpret residual plot: OL residual = opto effect; CL residual = opto + controller
+ 
+
+   
 
 
 ---
@@ -88,7 +130,10 @@ This script loads all sessions, computes per-trial error metrics, and generates 
 ## Impulse_mouseDataAnalysis_all.m — Impulse experiments
 
 ### What this script does
-Characterises the cortical inhibitory response to brief optogenetic impulses across a range of stimulus amplitudes, and asks whether trial-to-trial variability in that response is predicted by pre-stimulus motion state.
+Characterises the cortical inhibitory response to brief optogenetic impulses across a range of stimulus amplitudes. Three questions:
+1. How does inhibition depth scale with stimulus amplitude (dose–response)?
+2. Is trial-to-trial variability in inhibition depth predicted by pre-stimulus motion state?
+3. Can the amplitude-normalised mean response be described by a low-order transfer function (system ID)?
 
 **Pipeline per session:**
 1. Load widefield SVD data, z-score motion trace (`mv_z = zscore(d.motion.motion_1(1:2:end))`)
@@ -96,21 +141,45 @@ Characterises the cortical inhibitory response to brief optogenetic impulses acr
 3. Extract pixel dF/F from SVD (`F/mI*100`)
 4. For each amplitude group, align ±3s windows around each stim onset (baseline-subtracted at onset)
 5. Compute `Peak_imp` per trial — two switchable methods (`peak_mode`):
-   - **Mode 2** (default): value at per-trial min within ±143 ms of trial-average trough — captures latency jitter
-   - **Mode 3**: mean dF/F over 0–500 ms post-onset — integrates total inhibition energy
+   - **Mode 2**: per-trial min within ±143 ms of trial-average trough — captures latency jitter
+   - **Mode 3** (current default): mean dF/F over 0–200 ms post-onset — integrates total inhibition energy
 6. Compute `Peak_imp_dev = |Peak_imp − mean(Peak_imp)|` per amplitude group — trial-to-trial deviation
-7. Compute motion per trial: `sum(mv_z, stim±2s)` — z-scored motion energy around stim
+7. Compute motion per trial: `sum(mv_z, stim±1s)` — z-scored motion energy around stim
+8. Session-level spectrogram: Hann 2 s window, 1 s hop, 20 bands 0–10 Hz, relative power (band/total)
 
-**Output figure:** scatter of motion energy vs inhibition deviation, all sessions × amps, colored by session → `paper/imp_motion_vs_deviation.png`
+**Output figures:**
+- `paper/imp_single_<session>.pdf` — mean traces per amplitude, session 3
+- `paper/imp_response.pdf` — mean ± SEM dose–response across sessions (linear fits)
+- `paper/imp_response_median.pdf` — median ± IQR version
+- Motion vs `Peak_imp_dev` scatter: one subplot per amplitude, per session (interactive)
+- Freq band power heatmap: trials sorted by `Peak_imp_dev`, per amplitude (static + interactive click)
 
-**Also in script (commented out):** parametric TF fitting (1- and 2-pole with dead time, AIC model selection, cross-amplitude LOAO validation)
+### System ID — Transfer Function fitting
+Uses MATLAB System Identification Toolbox (`tfest`).
+
+**Method:**
+- Amplitude-normalised mean response: `h_norm = mean(DF_imp(validAmp, iPost) ./ uA_s(validAmp), 1)`
+- Fitted as response to unit impulse (`iddata` with `u = [0…0, 1, 0…0]`)
+- Sweep: `np` = 1..3 poles, `nz` = 0..min(np−1, 2) zeros (strictly proper)
+- Model selection by AIC; best model used for per-amplitude R² via `sim()`
+- Currently runs on `selExp = 3` (AL_0033, 2025-01-29) only
+
+**Knobs at top of TF section:** `selExp`, `maxPoles`, `maxZeros`
+
+**Output:** subplot figure — individual trials (gray) + mean (color) + best-fit TF (black dashed) + R² per amplitude
 
 ### Current state
 - [x] 3 sessions: AL_0041 (2×), AL_0033 (1×)
-- [x] `peak_mode` switch at top of analysis section
-- [x] Motion figure working and exported
-- [ ] System ID section (TF fitting) commented out — needs validation before use
-- [ ] Freq analysis not yet implemented — planned next
+- [x] `peak_mode` switch (2 or 3) at top of analysis section; currently set to 3
+- [x] Dose–response figures exported (mean ± SEM and median ± IQR)
+- [x] Add R^2 and slope of each linear fit and put it on the figure as well as print it.
+- [x] Motion vs inhibition deviation scatter (interactive, per session)
+- [x] Freq band power heatmap (static + interactive click-to-detail)
+- [x] TF fit working for session 3: `tfest` sweep, AIC selection, per-amplitude R²
+- [x] TF fit: add transport delay (`tfest(..., 'InputDelay', ...)`) to the sweep
+- [x] TF fit: LOAO (leave-one-amplitude-out) cross-validation
+- [ ] TF fit: run across all sessions, compare poles/zeros/gain between sessions
+- [ ] TF fit: paper-quality output figure (match font/size style of other figures)
 ## Grid_mouseDataAnalysis.m — Controller tuning grid
 - [ ] *(Add tasks here)*
 
@@ -128,3 +197,329 @@ Characterises the cortical inhibitory response to brief optogenetic impulses acr
 |------|--------|---------|
 | 2026-05-05 | plottingScript.m | Initial audit — 13 sessions across 2 mice, figures F/G/H + motion analysis implemented. Open items flagged above. |
 | 2026-05-05 | Impulse_mouseDataAnalysis_all.m | Motion and freq band power loading refactored to match `controllerData.m`: `mv = d.motion.motion_1(1:2:end)`, session-level spectrogram (hann 2s, 1s hop, 20 bands), per-trial spectrogram slice replaces per-trial `pwelch`. Added motion vs inhibition scatter/quartile plots. |
+
+---
+
+## Change Log
+
+<!-- New entries go here, most recent first. One ### block per change. -->
+
+### 2026-05-21 — Manuscript prose fixes and scientific-claim TODOs
+**Changed/Found:** `Closedloop_edit/results_edit.tex`, `discussion.tex`, `main.tex`, `brain_paper/PAPER.md` — (1) Converted passive-voice constructions to active throughout Results: "was well approximated" → "obeyed", "was designed" → "We designed", "was shifted" → "shifted", "were achieved with" → "required only". (2) Fixed spacing and grammar: missing spaces before `(Fig.~`, `regions activity` → `region's activity`. (3) Added `\todo{}` inline notes for: slope ± CI and n=3 justification (linearity para), MSE window update (t=+1 to +3 s), Kp/Ki values, variance-onset quantification, batch-mean vs. batch-variance convergence. (4) Added four placeholder subsections at end of Results for: Curto & Issa trial-sorting, disturbance attribution (spectral/motion), three-layer contralateral-prediction model, and feedforward/preview control. (5) Fixed discussion.tex opening passive ("was driven" → "we drove", removed redundant equation ref from first sentence). (6) Added `% TODO` comment at author affiliations in main.tex. (7) Added "Scientific Claims to Fix" section to PAPER.md.
+**Why:** User requested prose fixes from Text & Prose list and placeholder sections for pending analyses; scientific claims documented as TODOs per analysis dependency.
+**Next:** Extract Kp/Ki from .mat session data; compute slope ± CI for linearity figure; verify Fig. S1 shows batch-mean convergence (not just variance); resolve step-response LTI tension.
+
+### 2026-05-21 — plottingScript: K1z & K2z — z-scored heatmap + quintile MSE bars
+**Changed/Found:** `plottingScript.m` — New section inserted after K2 (before K2i). Reuses `nc_all_k1`/`wc_all_k1` already accumulated by K1/K2. (1) K1z: z-scores each frequency band across all pooled OL+CL trials (`mu_f_z`, `sig_f_z`); applies blue-white-red diverging colormap with symmetric `clim`; MSE strip uses `hot` colormap with shared `clim` across OL and CL. (2) K2z: bins pre-stim variance into 5 equal-count quintiles using pooled edges; grouped bar chart of mean MSE ± SEM for OL (red) and CL (green) per quintile. Both exports commented out (no export per user preference).
+**Why:** Raw absolute power heatmap (K1) is dominated by low-frequency power magnitude; z-scoring removes the mean spectral shape and shows relative trial-to-trial deviations, making 2–4 Hz elevations visible. K2 scatter makes OL/CL overlap hard to judge; quintile bars show the gap clearly per brain-state tier and whether the controller's advantage grows with pre-stim variance.
+**Next:** Run section; check whether K1z shows a visible 2–4 Hz band in high-variance trials for OL; check whether K2z bar gap widens from Q1 to Q5.
+
+### 2026-05-21 — Poster: all 12 figures inserted; Row 2 regrouped by experiment type
+**Changed/Found:** `make_poster.py` + `poster_template.pptx` — 4 PDFs converted to PNG via pdftoppm (220 DPI, saved as `*_poster-1.png` in `paper/`); all 12 figures inserted with `add_picture()` at exact placeholder coordinates. Row 2 regrouped: B1=Impulse brain state (motion tertiles | freq band), B2=Controller brain state (motion quartiles | freq heatmap), instead of previous (motion: impulse+ctrl | freq: impulse+ctrl). C1 schematic left as placeholder for manual insertion.
+**Why:** User wants real figures in poster; Row 2 grouping by experiment type (impulse vs controller) makes direct comparison cleaner.
+**Next:** Insert experimental schematic into C1. Confirm imp_freqband amp5 is the right representative for B1 right, or generate a combined pre-stim-power vs inhibition figure.
+
+### 2026-05-21 — Poster template revised: 8-section focused layout
+**Changed/Found:** `make_poster.py` + `poster_template.pptx` (regenerated) + `paper-writing/POSTER_LAYOUT.md` (new) — restructured from generic 4+3 column layout to content-driven layout: C1=Intro+System, C2=LTI Validation (dose-response + impulse TF left/right + step TF full-width strip), C3=Controller Performance (variance/MSE/avg side-by-side + sine-wave strip), B1=Motion Dependence (impulse tertiles + controller quartiles), B2=Frequency Dependence (impulse freqband + controller spectral heatmap), B3=Conclusions. Removed spatial spread. Layout spec written to `paper-writing/POSTER_LAYOUT.md`.
+**Why:** User specified 8 content areas: impulse linearity, impulse TF, step TF, controller F/G/H, sine-wave avg, motion dependence of both, frequency dependence of both.
+**Next:** (1) Answer two open questions in POSTER_LAYOUT.md — impulse freq combined figure? motion scatter vs quartile? (2) Replace figure placeholders with actual PDFs. (3) Draw experimental schematic. (4) Fill Kp/Ki values.
+
+### 2026-05-21 — Created UW-branded poster template (48" × 36" landscape)
+**Changed/Found:** `make_poster.py` (new) + `poster_template.pptx` (generated) — Python script using python-pptx generates a 48" × 36" landscape PowerPoint with UW purple (#4B2E83) / gold (#85754D) branding. Layout: purple title bar, 4-column main row (Intro | System Design | Impulse LTI Validation | Controller Performance), 3-column supplementary row (Spatial Spread | Brain State/Spectral | Conclusions), purple footer. All figure panels are labelled gray placeholders referencing actual `paper/` export filenames.
+**Why:** Preparing conference poster from paper, controller-analysis, and impulse-analysis content.
+**Next:** Replace figure placeholders with actual exported PDFs/PNGs; fill in Kp/Ki values, author affiliations, grant info; adjust font sizes after printing at full scale.
+
+### 2026-05-21 — Impulse_mouseDataAnalysis_all: pre-trial variance vs prediction error, all trials pooled
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — new `%%` section. Session 3, all amps pooled (no motion exclusion), normalised deviation. Trials sorted by pre-trial variance ascending (Y), prediction error on X, scatter coloured by variance tertile (blue/purple/red). Loess smooth (15% span) overlaid as black line showing trend. r and p from `corr` in title. Exports `paper/imp_prevar_deviation_*.pdf` + `.png` 300 DPI.
+**Why:** Simple companion to the motion-sorted figures. Shows whether pre-trial neural variance predicts prediction error even when high-motion trials are retained.
+**Next:** Run; expect positive trend (high-variance trials at top → larger prediction error on right); compare r here vs r in motion-excluded panel (if r drops after exclusion, variance effect is partly a motion artefact).
+
+### 2026-05-21 — Impulse_mouseDataAnalysis_all: poster figure — brain state predicts impulse predictability
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — new `%%` section inserted before spatial spread. Session 3, all amps pooled, top-25%-motion trials excluded globally. Three panels: (A) freq heatmap (hot colormap, trials sorted by norm |deviation|, quintile boundary lines); (B) mean power per freq band per prediction-error quintile (5 overlaid lines Q1–Q5 blue→red, SEM shaded); (C) pre-trial variance vs norm |deviation| scatter coloured by motion tertile (excluded = only bottom 75%), `fitlm` regression + 95% CI, r and p in title. Exports `paper/imp_brainstate_poster_*.pdf` + `.png` at 300 DPI.
+**Why:** Poster needs a single figure showing that neural state — spectral composition and pre-trial variance — predicts inhibition predictability independently of motion confounds.
+**Next:** Run section; check Panel B Q1 vs Q5 lines diverge (expect Q5/high-error trials to have lower delta/theta power); check Panel C r direction (expect positive: higher variance → higher prediction error).
+
+### 2026-05-21 — Impulse_mouseDataAnalysis_all: added Figs 4–6 (normalised pooled) + PNG exports for all motion figures
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — extended pooled loop to also track `ampIdx_n` and `devNorm_n` (|deviation|/|mean|). Added: Fig 4 (Option A) — normalised heatmap with amp-group colour strip + |deviation| strip, tiledlayout 1×20; Fig 5 (Option B) — scatter of motion vs normalised deviation, per-amp colours, `fitlm` regression + 95% CI, r and p annotated; Fig 6 (Option C) — quartile (Q1–Q4) mean ± SEM normalised traces. All 6 figures now export both PDF (vector) and PNG (300 DPI). Outputs: `imp_motion_normheatmap_*`, `imp_motion_devscatter_*`, `imp_motion_quartiles_*`.
+**Why:** Poster presentation requires high-res PNG alongside vector PDFs. The three pooled-normalised figures directly show the motion–response-regularity relationship across all amplitudes.
+**Next:** Run section; check Fig 5 regression direction (expect negative slope — more motion → lower normalised deviation); check Fig 4 amp strip and deviation strip align with heatmap row ordering.
+
+### 2026-05-17 — Impulse_mouseDataAnalysis_all: motion-sorted heatmap + absolute deviation + normalised tertile traces
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — three figures produced from one `%%` section. Figure 1: per-amp heatmap (raw dF/F, motion-sorted, shared CLim). Figure 2: per-amp absolute deviation scatter (`|Peak_imp − mean|` on X, same motion-sorted trial order on Y, coloured by tertile, r annotated). Figure 3: pooled amplitude-normalised tertile mean ± SEM traces (low/mid/high motion, blue/purple/red) — restores the trace overlay from the first version. Exports: `imp_motion_heatmap_*`, `imp_motion_deviation_*`, `imp_motion_traces_*`.
+**Why:** Absolute deviation makes Figure 2 unambiguous (distance from mean, not direction). Tertile trace figure (Figure 3) provides the mean-response view that reviewers expect alongside the trial-sorted figures.
+**Next:** Run section; check Figure 2 high-motion points (red, top rows) cluster near x=0; check Figure 3 high-motion SEM band is narrower than low-motion.
+
+### 2026-05-18 — plottingScript: OL TF — add random CL trial panel; fix y₀ mismatch; fix repeated trial
+**Changed/Found:** `plottingScript.m` (OL TF section) — (1) `tiledlayout` changed from 2→3 columns; skip block updated to 3 `nexttile` calls. (2) `rng('shuffle')` added once before the session loop so the random trial index changes every run. (3) y₀ anchor correction (`yp = yp + (y_actual(1) - yp(1))`) applied to OL mean, CL mean, and new single-trial predictions — shifts the prediction by a DC offset so the first sample matches the actual, making the dynamic tracking error visible from t=0. (4) New panel 3: random CL trial picked per session via `randi(nWc_ol)`; x0 from `findstates` on the pre-onset window; y₀ anchored; plots actual vs OL-TF pred with scaled input overlay.
+**Why:** Without `rng('shuffle')`, MATLAB uses the default seed on each fresh run, giving the same trial index. y₀ mismatch occurs because `findstates` returns x0 at the start of the pre-onset window (t=−1 s), not at stim onset; the DC correction patches the offset so the visual comparison is valid.
+**Next:** Check whether the dynamic tracking (post-anchor) is good or poor; poor tracking on CL trials with unusual inputs would confirm the LTI model can't capture controller-induced nonlinearities.
+
+### 2026-05-18 — plottingScript: OL TF — replace 2-sample x0 with findstates on full pre-onset window
+**Changed/Found:** `plottingScript.m` (OL TF section) — Replaced the 2-sample output-as-state approximation (`x0 = [y(-1); y(-2)]`) with `findstates(best_ol, iddata(y_pre, u_pre, Ts_ol))` for all four sim calls (OL mean, OL per-trial, CL mean, CL per-trial). Pre-onset input `u_pre = zeros(iOn_ol-1, 1)` (laser off before stim onset). `y_pre` is the full 35-sample (1 s) baseline-corrected pre-onset window per trial, or its mean for the average predictions.
+**Why:** `findstates` uses all 35 pre-onset samples and is realization-independent — it finds the optimal x0 in the least-squares sense regardless of the internal canonical form MATLAB uses for the idtf. The 2-sample approximation was only valid if the model happened to be in observable canonical form.
+**Next:** Run section; compare R² before and after — improvement in per-trial R² (especially for trials with large pre-stim fluctuations) confirms the initial-condition fix is working.
+
+### 2026-05-17 — plottingScript: OL TF — fix initial condition using output-as-state assumption
+**Changed/Found:** `plottingScript.m` (OL TF section, all four sim calls) — Replaced zero-prepend simulation with explicit x0 passed to `sim`. x0 = last 2 pre-onset samples of the baseline-corrected output for each trial (`ncDfk_bc(j, iOn_ol-2:iOn_ol-1)'`), or the mean across trials for the mean-response sim. `nPre_ol` is now only used for the fitting iddata warmup, not for simulation. Rationale: `sim` with zero initial conditions assumes the system state is zero at stim onset; baseline correction only removes DC, not the dynamic state (velocity in state-space terms). For a SISO 2p1z model in observable canonical form the state is approximated by the last 2 output samples.
+**Why:** Zero-prepend sim always started from x(0)=0 regardless of pre-trial activity. For the mean response this nearly cancels, but for individual trials the pre-onset dynamics set a non-zero initial state that biases every prediction from sample 1. This systematically inflates trial-level R² error.
+**Next:** Run section; check whether per-trial R² improves vs. before, especially for trials with large pre-stim fluctuations. If the observable canonical form assumption is too coarse, replace x0 with `findstates(best_ol, iddata(y_pre, u_pre, Ts_ol))`.
+
+### 2026-05-17 — plottingScript: OL TF — fix to 2p1z, drop distribution panels, add interactive validation scatter
+**Changed/Found:** `plottingScript.m` (lines ~2198–end) — Full rewrite of OL step TF section. (1) Fixed model order to 2p1z (removed AIC sweep, `res_ol` struct, `maxPoles/Zeros/Delay_ol` knobs). (2) Layout changed from 5-col to 2-col tiledlayout: OL traces+TF fit | CL mean vs OL-TF pred. AIC panel and the two trial-R² distribution panels (from previous session) removed. (3) After the session loop, builds a separate interactive figure: trial-level R² (X) vs trial MSE (Y), OL red / CL green, `ButtonDownFcn = scatterClickCallback` wired identically to K2i. UserData struct accumulates `field`, `stim_idx` (`data.nc(j)` / `data.wc(j)`), `lbl`, `mse` across all three sessions.
+**Why:** Single fixed 2p1z is the agreed model; sweep was exploratory scaffolding. Distribution panels (jitter scatter) were non-interactive and redundant with console output. Interactive R²-vs-MSE scatter lets you click any outlier trial directly to inspect it with `plotSingleTrial`.
+**Next:** Run section; check console for per-session 2p1z R² and tau; click low-R² CL trials to see if they correspond to high-MSE or atypical inputs.
+
+### 2026-05-17 — plottingScript: OL TF validation — trial-level R² distributions replace anecdotal single-trial panels
+**Changed/Found:** `plottingScript.m` (lines ~2300–2460) — Replaced panels 3 and 4 (random single OL/CL trial overlays) with quantified R² distributions. After fitting best_ol on OL mean: (1) loop over all OL trials, sim each with per-trial input, collect R2_ol_trials; (2) loop over all CL trials with same TF, collect R2_cl_trials. Panels 3/4 now show jittered scatter + median line + yline(0); title reports med/IQR. Two summary fprintf lines added (OL trial-level and CL trial-level med/IQR). Computation placed before panel drawing so values are available for both scatter and console.
+**Why:** Single random-trial panels were anecdotal (non-reproducible, no summary statistic). Trial-level R² distributions show the TF generalises to unseen OL trials (within-condition) and to CL trials (cross-condition). No OL train/test split used — TF is fit on the mean (4 free params, no overfitting risk); CL is the principled held-out condition.
+**Next:** Run section; check console for per-session med/IQR; if CL trial-level R² is close to OL trial-level R², LTI generalisation across conditions is confirmed.
+
+### 2026-05-15 — Corrected Closedloop_edit path in CLAUDE.md files
+**Changed/Found:** `paper-writing/CLAUDE.md`, root `CLAUDE.md`, memory `project_brain_paper.md` — Updated `Closedloop_edit/` path from (incorrectly assumed) `brain_paper/Closedloop_edit/` to the correct absolute path `C:\Users\aditya\Documents\projects\Closedloop_edit\`.
+**Why:** User confirmed the manuscript folder is a sibling directory, not inside the repo.
+**Next:** No action needed; path is now correct in all context files.
+
+### 2026-05-15 — Created multi-agent research folder structure
+**Changed/Found:** `impulse-analysis/CLAUDE.md`, `controller-analysis/CLAUDE.md`, `paper-writing/CLAUDE.md`, `CLAUDE.md` (root updated) — Created three subdirectories with detailed CLAUDE.md context files synthesized from RESEARCH.md, MEETINGS.md, PAPER.md, and existing CLAUDE.md. Root CLAUDE.md updated with three-area overview and relation diagram.
+**Why:** User requested a structured multi-agent session setup so each research area has self-contained context for a Claude subagent starting cold.
+**Next:** Verify folder structure with `ls`; open any of the three CLAUDE.md files at the start of a focused session to load area-specific context.
+
+### 2026-05-15 — plottingScript: OL-TF driven by CL input — CL prediction panel
+**Changed/Found:** `plottingScript.m` — Added centre panel to the OL step TF figure. After fitting `best_ol` on OL data, the same TF is simulated with the average CL input (`wcInp`); result compared against actual average CL response. Layout changed from 2→3 columns per session row: [OL traces+fit | CL actual vs OL-TF prediction | AIC]. Faint OL mean shown as reference in the CL panel. R²_CL printed to console. `paperFig` replaced with plain `figure`; export commented out.
+**Why:** Tests whether the LTI model learned from OL data generalises to the CL condition. R²_CL ≈ R²_OL would validate the LTI assumption across conditions.
+**Next:** Run section; compare R²_OL vs R²_CL per session; check whether prediction over- or undershoots the CL response (would indicate controller effect beyond what the input alone predicts).
+
+### 2026-05-15 — plottingScript: OL step TF fit — looped over three sessions
+**Changed/Found:** `plottingScript.m` — Replaced single-session OL TF fit with a loop over `ol_sess_idx = [4 9 11]`, matching `custom_idx` in the existing OL step response plot (m4=AL_0033 2025-02-26, m9=AL_0039 2025-04-20, m11=AL_0039 2025-04-30). Produces one 3-row × 2-col figure per-session (left: trial traces + mean ± SEM + TF prediction + scaled input; right: AIC bar). Exports `paper/ol_tf_three_sessions.pdf`. Session colors match the OL step response palette.
+**Why:** User wanted TF fit applied to the same three sessions shown in the OL step response plot.
+**Next:** Run section; check R² and tau printout per session; compare time constants to impulse TF.
+
+### 2026-05-14 — plottingScript: OL step TF fit section
+**Changed/Found:** `plottingScript.m` — Appended new section `%% OL step TF fit` at end of file. Uses `data.ncDfk` (35 Hz) and `data.ncInp` (2 kHz) from the selected OL session. Pipeline: resample input 2kHz→35Hz via `resample()`; subtract per-trial pre-onset baseline (t = −1 to 0 s); trial-average; prepend nPre zeros; build `iddata`; run same AIC-based `tfest` pole/zero/delay sweep as impulse section (1–3 poles). Outputs: 2-panel PDF (trial traces + mean ± SEM + TF fit + scaled input; AIC bar chart), Command Window pole→time-constant printout for comparison against impulse TF. Knob: `selSess_ol = 'm2'`.
+**Why:** User requested TF fit to OL step data from closed-loop sessions, analogous to impulse TF. Input treated as arbitrary waveform (step or sine); toolbox handles both. Sinusoidal input caveat noted in comments.
+**Next:** Run section; check R²; compare printed time constants to impulse TF poles. If poles agree, LTI assumption holds across stimulus types.
+
+### 2026-05-14 — Impulse_mouseDataAnalysis_all: exclude 0-amp gap-fill events from dose-response plots
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — Bug: the gap-filling section always stamps inserted missing-stim events with amplitude 0 (`allAmp = [ampDet; zeros(...)]`), so any experiment with gaps in its stim train gets a spurious 0-amp group in `uAmp_filled`. This flowed into `allVals`/`groupLabels` and was plotted at x=0 in both dose-response figures, distorting the linear fit. Fixed by adding `nzMask = xpos_raw > 0` filtering in both the mean±SEM and median±95th-pctile plot loops, after `accumarray` but before plotting and `polyfit`. Mirrors the existing `validAmp = uA_s > 0` guard in the TF fit section.
+**Why:** Experiment 2 (AL_0041, en=2) has no real 0 mW condition; the 0-amp group it carried was entirely gap-filled artefacts, not laser trials.
+**Next:** Re-run both dose-response sections; confirm experiment 2 no longer shows a data point at x=0 and that the linear fits look cleaner.
+
+### 2026-05-14 — Impulse_mouseDataAnalysis_all: error bars IQR → 95th-percentile bounds
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — In the "Combined plot — median ± IQR" section, replaced `prctile(v,25)` / `prctile(v,75)` with `prctile(v,2.5)` / `prctile(v,97.5)`, renamed variables `q25`/`q75` to `p2_5`/`p97_5`, updated section header and fprintf label to "95th-pctile bounds". All three error-bar plot calls (vertical bar, lower cap, upper cap) updated. Output file unchanged (`paper/imp_response_median.pdf`).
+**Why:** Nick's suggestion from 2026-05-08 meeting: IQR (25th–75th) is too narrow for this plot; 95th-percentile bounds (2.5th–97.5th) better reflect trial-to-trial spread and are more standard for reporting in the paper.
+**Next:** Re-run the "Combined plot — median ± 95th-percentile bounds" section; check that error bars are visibly wider than before and still span a sensible range; export and update `Closedloop_edit/images/`.
+
+### 2026-05-14 — Impulse_mouseDataAnalysis_all: spatial spread vs amplitude figure
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — Added full spatial spread analysis pipeline. Inside the experiment loop: (1) compute `brainMask_e` (10% of max mimg intensity) and `UU_brain_e` (SVD spatial matrix restricted to brain pixels); (2) inside the amp loop, compute per-amplitude trial-averaged dF/F response maps in SVD space (peak window 0–200 ms minus baseline −500–0 ms), stored in `imp.resp_map` and `imp.base_map` as brain-pixel vectors. Added `brainMask`, `mimg`, `mI1` to `allExperiments`. New section at end: thresholds at 2×SD of pooled baseline maps, computes area-above-threshold and effective radius = sqrt(area/π); exports a 2-panel PDF: left = mean brain image + per-amplitude inhibition contours, right = spread radius (mm) vs amplitude (mW). Pixel scale: 0.173 mm/px.
+**Why:** User requested spatial spread vs amplitude paper figure; plan agreed: area-above-threshold contour panel + effective radius summary panel.
+**Next:** Run full script; check threshold value printed in contour panel title; verify contours are centred on stim site and grow with amplitude.
+
+### 2026-05-13 — Impulse_mouseDataAnalysis_all: varDetailCallback + interactive motion-excluded scatter
+**Changed/Found:** `utils/varDetailCallback.m` (new), `Impulse_mouseDataAnalysis_all.m` — Created `varDetailCallback` mirroring `motionDetailCallback`: click a dot in the motion-excluded pre-trial variance scatter → 2-panel figure showing dF/F trace (trial vs mean ± SD) and z-scored motion trace for that trial. Wired via `ButtonDownFcn` on the scatter handle; closure captures `preVar_clean`, `dev_clean`, `df_clean`, `mot_clean`, `t_win_imp`, `ampVal` per amplitude/experiment. Title updated with `[click]` hint.
+**Why:** User requested interactive trial inspection matching the freq heatmap pattern, applied to the motion-excluded variance section.
+**Next:** Run section; click a high-variance outlier dot and verify the correct trial trace opens.
+
+### 2026-05-13 — Impulse_mouseDataAnalysis_all: pre-trial variance sort — fix subplot layout + switch bar to errorbar
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — Fixed the subplot index formula in the "Pre-trial variance sort" section: old formula `nCols_v + iAmp` only worked when nAmp ≤ nCols_v (single row group); replaced with column/group calculation (`col_v`, `grp_v`, `sp_top`, `sp_bot`) that correctly pairs each amplitude's scatter and errorbar plot regardless of how many amplitudes wrap across rows. Also replaced the sorted `bar` in row 2 with an `errorbar` plot: trials are binned into 5 variance quintiles and mean ± SEM of |Peak_imp_dev| is shown per quintile.
+**Why:** User reported bad subplot layout; the bar-of-individual-trials was also not informative at the quintile level. Errorbar by quintile is cleaner and more interpretable.
+**Next:** Re-run section; verify row 1 (scatter) and row 2 (errorbar) are correctly paired per amplitude column.
+
+### 2026-05-13 — Impulse_mouseDataAnalysis_all: pre-trial variance sort + motion-excluded sections
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — Appended two new sections after line 1151. Section 1: for each experiment/amplitude, computes per-trial dF/F variance over the 1 s pre-stimulus window (t ∈ [−1, 0) s, 35 samples), then plots a scatter of pre-trial variance vs |Peak_imp deviation from mean| (Pearson r annotated) and a bar of deviation values sorted by variance rank. Section 2: repeats the same plots after excluding the top 25% of trials by motion energy (imp.mot threshold = 75th percentile across all amplitudes per experiment), with n_kept/n_total shown in each subplot title.
+**Why:** Test whether pre-stimulus neural state variance predicts trial-to-trial variability in inhibition peak, and whether that relationship persists after removing motion-contaminated trials.
+**Next:** Run script; inspect whether r is consistently positive across amplitudes; compare Section 1 vs Section 2 r values to assess motion confound.
+
+### 2026-05-13 — plottingScript: G2 — windowed MSE (t=+1 to +3 s) violin comparison + trial-number scatter
+**Changed/Found:** `plottingScript.m` — Added self-contained `%% G2` section after Fig G. Computes RMS MSE from already-loaded `ncDfk`/`wcDfk` (cols 71:141 = t=+1 s to +3 s at 35 Hz, dur=3). G2a: side-by-side violin of full-window (t=0–3 s) vs new window (t=+1–3 s) per session; prints per-session OL/CL means and ratio table. G2b: per-session scatter of windowed RMS MSE vs trial number (red=OL, green=CL). Exports to `paper/MSE_window_comparison.pdf` and `paper/MSE_vs_trial_number.pdf`. Stores `er_ncDfk_w`/`er_wcDfk_w` into the `mouse` struct for downstream reuse.
+**Why:** Nick requested (2026-05-08) that MSE be re-computed on t=+1 to +3 s to skip the initial inhibitory transient and measure error once the controller has had time to act. No util changes, no cache regeneration — slices existing stored trace windows.
+**Next:** Run section; check violin shapes and printed ratio table; compare OL/CL separation between the two windows; inspect trial-number scatter for session-level drift or learning effects.
+
+### 2026-05-13 — plottingScript: K1w/K2w/K2iw — pre+trial dFk variance sort (wider window)
+**Changed/Found:** `plottingScript.m` — Added three figures after K2m using variance over the full pre+trial window (`pncDfk_l` cols 1:210 = 6 s at 35 Hz, vs 3 s pre-only in K1/K2). Single collection loop builds spectral, MSE, and interactive UserData in one pass. K1w is the heatmap with MSE strip; K2w is the static scatter; K2iw is the interactive version wired to `scatterClickCallback`.
+**Why:** Pre+trial variance captures stimulus-evoked variability in addition to brain state, which may better predict MSE when the response itself is the dominant source of variation.
+**Next:** Compare K2 vs K2w slopes; compare K1 vs K1w heatmap ordering to see whether pre-stim vs full-window variance rank trials differently.
+
+### 2026-05-13 — plottingScript: K2i — interactive pooled pre-stim variance scatter
+**Changed/Found:** `plottingScript.m` — Added `%% K2i` section between K2 and K1m. Re-runs the session loop to collect per-trial `UserData` (field, stim_idx, lbl, mse) alongside pre-stim variance and MSE. Creates a single pooled figure with OL (red) and CL (green) scatter objects, each with `ButtonDownFcn = @scatterClickCallback`. Clicking a point opens `plotSingleTrial` (dFk + motion + input).
+**Why:** Mirrors the interactive motion scatter pattern so individual outlier trials (high pre-stim var, high or low MSE) can be inspected in context.
+**Next:** Run section; click a high-var OL trial and a matched CL trial to compare traces.
+
+### 2026-05-13 — plottingScript: Figures K1/K2/K1m/K2m — pre-stim dFk variance sort
+**Changed/Found:** `plottingScript.m` — Added four figures before the Widebrain section. K1: spectral heatmap (OL|CL) with trials sorted by 3-s pre-onset dFk variance, MSE shown as a thin parula side-strip on each panel. K2: scatter of pre-stim variance vs MSE with OL/CL regression lines and annotated slopes. K1m and K2m repeat K1/K2 with motion exclusion (|z-motion| ≤ motThresh). Exports to `paper/freq_heatmap_prestimvar.png`, `paper/prestimvar_mse.pdf`, `paper/freq_heatmap_prestimvar_motclean.png`, `paper/prestimvar_mse_motclean.pdf`.
+**Why:** Nick's suggestion — test whether pre-trial neural state variability predicts MSE outcome, and whether CL decouples that relationship relative to OL.
+**Next:** Run all four sections; compare K2 OL vs CL slopes; compare K1 vs J trial ordering.
+
+### 2026-05-13 — plottingScript: Figure J2 — motion-clean MSE-sorted spectral heatmap
+**Changed/Found:** `plottingScript.m` after Fig J — New section pools all sessions with both motion and spectral data, excludes trials where |mean z-motion| > 1.5 (combined window: 2 s pre + full trial), then produces an MSE-sorted OL/CL heatmap identical in layout to Fig J. Prints per-condition exclusion counts. Exports to `paper/freq_heatmap_motionclean.png`.
+**Why:** Isolate spectral MSE structure from motion confounds; check whether the frequency patterns seen in Fig J survive motion exclusion.
+**Next:** Run section; check exclusion % is <20%; compare J vs J2 visually.
+
+### 2026-05-13 — plottingScript: combined motion vs MSE scatter for all sessions
+**Changed/Found:** `plottingScript.m` line 784 — Added new figure block that pools motion (z-scored, combined window: 2 s pre + full trial) and MSE (`er_ncDfk` / `er_wcDfk`) across all sessions. Plots OL (red) and CL (green) scatter with linear regression lines; exports to `paper/motion_mse_combined.pdf` (vector).
+**Why:** Single-panel summary of motion–MSE relationship across all sessions, complementing the per-session subplots already present.
+**Next:** Run section to verify pooling is correct and regression lines look sensible; check that sessions with no motion data are skipped cleanly.
+
+### 2026-05-13 — Analysis_variable: cache bregma offset to skip image-click on re-runs
+**Changed/Found:** `Analysis_variable.m` — Replaced the bare `openSVDImageClick` call with a save/load cache. On first run the result (`clickData`, `mmData`, `clickPixelCoords`, `bregmaOffset`) is saved to `paper/bregma_<mn>_<td>_en<N>.mat`. On subsequent runs the file is loaded directly and the image GUI is skipped. Set `rerun_click = true` to force re-clicking (e.g. when changing the ROI or bregma position).
+**Why:** The image-click GUI was the main friction point for re-running the script on an already-processed session.
+**Next:** Confirm the mat file is created after first run; test `rerun_click = true` overwrites correctly.
+
+### 2026-05-13 — analysisPlots_var_paper: adaptive ylims for single-trial, trial-average, and variance plots
+**Changed/Found:** `utils/analysisPlots_var_paper.m` — Removed all hardcoded `[-10 10]` and `[-2 12]` ylim calls. Single-trial ylim (`y_lim_trial`) is now computed from the union of both OL/CL dF/F traces, the reference, and the scaled input traces, with 15% padding. Trial-average axes (ax_C, ax_D) reuse `y_lim_trial` to keep the same scaling across figures. Variance axes derive `var_lim` from the actual `nc_var`/`wc_var` traces (15% padding, floor at 0).
+**Why:** Hardcoded limits clipped or wasted space depending on the session; matching single-trial and trial-average ylims preserves visual comparability between the two figures.
+**Next:** Verify traces fill the axes without clipping on a few sessions before finalising figures.
+
+### 2026-05-13 — analysisPlots_var_paper: append session name to exported PDFs
+**Changed/Found:** `utils/analysisPlots_var_paper.m` and `Analysis_variable.m` — Added `sessTag` parameter (`mn_td_enN` format) built in `Analysis_variable.m` and passed to the plot function. All 5 `exportgraphics` calls now use `['paper/<name>' sessTag '.pdf']` so each session saves distinct files (e.g. `single_trial_var_AL_0041_2026-04-13_en6.pdf`). Backward-compatible: calling without `sessTag` still saves to the original filename.
+**Why:** Running multiple sessions overwrote the same PDFs in `paper/`; needed per-session files to keep all outputs.
+**Next:** Verify PDFs appear with session suffix in `paper/` after next run.
+
+### 2026-05-12 — plottingScript.m: pseudo-random grid+jitter+snap pixel sampling for contralateral ROI
+**Changed/Found:** `plottingScript.m` — Replaced `randperm` pixel selection with pseudo-random placement: (1) `n_side × n_side` regular grid spanning ROI bounding box, (2) ±30% jitter in row/col, (3) `dsearchn` snap each jittered point to nearest valid mask pixel, (4) `unique(...,'rows','stable')` de-duplicate, (5) trim to `nPred-1`. Contra-primary still goes first. This spreads pixels evenly across the drawn ROI rather than clustering them by chance.
+**Why:** Pure `randperm` tended to bunch pixels; evenly-spaced then jittered grid gives reproducible spatial coverage of the contralateral region for every ROI redraw.
+**Next:** Set `redefine_roi=true`, rerun the pixel selection cell, verify pixel map shows evenly spread blue dots across the cyan polygon, then set `redefine_roi=false` and run the ARX regression cell.
+
+### 2026-05-12 — plottingScript.m: replace grid pixels with interactive polygon ROI + random sampling
+**Changed/Found:** `plottingScript.m` — Widebrain pixel selection rewritten. Fixed `d.params.pixel` coordinate order (pixel(1)=row, pixel(2)=col). Combined midline + ROI into one interactive figure: Step 1 = 2 midline clicks; Step 2 = polygon boundary around contralateral hemisphere. `inpolygon` mask (no toolbox); random sample `nPred-1=9` pixels from mask ∩ brain_mask. Contra-primary always first in `pred_px/pred_py`. Saves `midline.mat` + `contra_pixels.mat`; `redefine_roi=false` skips interaction on rerun. Pixel map shows outline, primary (red), contra-primary (cyan), random samples (blue).
+**Why:** Grid approach gave badly placed pixels; interactive polygon lets user define exactly which contralateral region to sample.
+**Next:** Run cell, draw midline + ROI, verify pixel map looks right, set `redefine_roi=false`, run regression cell.
+
+### 2026-05-12 — Created MEETINGS.md: parsed all three meeting transcripts
+**Changed/Found:** `MEETINGS.md` created — consolidated action items from all three Nick/Aditya meetings (2026-04-27, 2026-05-08, 2026-05-11). Includes open item tracker (by category), per-meeting summaries, and AI-analysis flags. Several items from Apr 27 marked complete per May 11 overview (laser trace rescale, subplot unification, captions, absolute power spectra, Anna mouse contact).
+**Why:** No structured tracking of meeting action items existed; items were only in Obsidian transcript files. MEETINGS.md gives a single in-project view of what is open vs. done.
+**Next:** After each new meeting, provide transcript path to Claude with "parse this meeting" to append a new entry and update the open items list.
+
+### 2026-05-11 — Impulse_mouseDataAnalysis_all.m: rework Panel A (TF data vs model figure)
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` Panel A section — removed individual trial traces (gray), removed R² from legend labels, added 1s pre-stim baseline window (`preWin_A = 1.0`; display uses `iWin_A = find(t_full >= -preWin_A & t_full <= tFit_s)`). Amplitude selection changed from linspace-3 to exact smallest/middle/largest from `validAmp`. Stim onset now shown as thin red vertical line at t=0 instead of dot. Scale bar updated to 500 ms.
+**Why:** User found raw trial traces cluttered and R² in legend redundant; pre-trial baseline context needed to show that the response starts from a flat baseline.
+**Next:** Check that the red stim line at t=0 and the "Stim" text are visible and not obscured by the corner scale bar.
+
+### 2026-05-11 — plottingScript.m: implement contralateral ARX widebrain prediction
+**Changed/Found:** `plottingScript.m` — Added `%% Widebrain prediction — contralateral ARX model` section. Predictor pixels = contralateral primary pixel (reflected across midline from `midline.mat`, or image-centre fallback) + a grid of contralateral-hemisphere pixels (spacing 30px, radius 60px, brain-mask filtered). Pixel dFk extracted inline via SVD projection. ARX model (`buildLagMatrix`, pY=5, pX=3) fit on 6s pre-trial spontaneous windows pooled across all NC+WC trials. Model applied to OL and CL trial windows; residual (actual − predicted) isolates stimulus+controller deviation from spontaneous widebrain prediction. 4-panel figure: spontaneous snippet, OL mean trace, CL mean trace, residual comparison. Exported to `paper/wb_prediction.pdf`.
+**Why:** RESEARCH.md goal: show contralateral widebrain activity predicts primary pixel; OL residual = opto effect alone; CL residual = opto + controller intervention.
+**Next:** Run `define_midline.m` first to create `midline.mat` (currently falls back to image centre x). Then run cell and check R²_spont > 0.3, contralateral pixel count 5–20, and that OL vs CL residuals differ interpretably. Tune `contra_step`/`contra_R`/`pY`/`pX` as needed.
+
+### 2026-05-11 — Impulse_mouseDataAnalysis_all.m: add paper-quality TF figures (Panel A & B)
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — added two new `%%` sections after the LOAO summary figure. Panel A (`tf_data_vs_model`): 2–3 representative amplitudes overlaid on one axes; individual trials (gray, 0.4 pt), session mean (parula color, 1.5 pt), TF model prediction (black dashed, 1.5 pt), stim onset marker, R² in legend labels. `paperFig(6,4)`, corner axes, vector export. Panel B (`tf_loao`): full-fit R² (filled blue circles) vs LOAO R² (open red squares) across amplitudes, x-axis in mW; `paperFig(4,4)`, adaptive scale bar, vector export. Both export to `paper/tf_data_vs_model_<mn>_<td>_en<N>.pdf` and `paper/tf_loao_<mn>_<td>_en<N>.pdf`.
+**Why:** Manuscript needs a figure showing the TF can be learned. Panel A makes the LTI claim visual (same model shape × amplitude = data). Panel B provides falsifiable cross-validation evidence (LOAO R² close to full-fit R² → not overfit).
+**Next:** Run the TF section for selExp=3 and check that (1) the stim marker position looks right, (2) the scale bar lengths (0.25 s / 1% dF/F and xLen_B / 0.5 R²) are sensible for the actual data range.
+
+### 2026-05-11 — plottingScript.m + Impulse: remove all freq normalization/z-scoring from plots
+**Changed/Found:** `plottingScript.m` — Figure K (per-band mean normalization) removed entirely; with absolute power in Figures I/J it was redundant. `Impulse_mouseDataAnalysis_all.m` — static and interactive freq heatmaps: removed `zscore()` call, replaced BWR colormap with `'hot'`, changed `clim([-2 2])` to `[0 clim_e]` where `clim_e` is the 98th percentile of all freq power for that experiment (computed once before the subplot loop, shared across amplitudes). Colorbar label updated to `'Power (ΔF/F)^2 Hz^{-1}'`.
+**Why:** User confirmed all freq plots should show exact absolute power with no normalization or z-scoring at any stage.
+**Next:** Re-run heatmaps; if low-freq power (delta) dominates and washes out higher bands visually, consider log-scaling the power before display (`log10(freq_i + eps)`).
+
+### 2026-05-11 — Impulse_mouseDataAnalysis_all.m: switch freqSpec to absolute power
+**Changed/Found:** `Impulse_mouseDataAnalysis_all.m` — per-trial freq slice now uses `S_bands` (raw squared FFT magnitude) instead of `S_norm` (band/total ratio). Comment on `S_norm` updated to "kept for reference, not used for freqSpec". Heatmap section comment updated to "absolute band power … z-scored across trials per band for display".
+**Why:** Same motivation as the plottingScript.m change: Nick found band/total normalization confusing; absolute power is the correct quantity. The z-scoring already applied at display time is a separate, per-band normalization that is still appropriate.
+**Next:** Re-run heatmap figures; verify z-score range is similar (if absolute power has a large dynamic range across sessions, consider log-scaling before z-scoring).
+
+### 2026-05-11 — plottingScript.m step-response figure: standardised size and format
+**Changed/Found:** `plottingScript.m` lines 392–395 — replaced ad-hoc `figure('Units','centimeters','Position',[0 0 15 10])` with the standard paper-figure setup (6 cm × 4 cm, explicit `PaperSize`/`PaperPosition`, matching `Impulse_mouseDataAnalysis_all.m`). Also fixed duplicate `legend()` call and changed `ItemTokenSize` from `[14 6]` to `[6 6]`.
+**Why:** Figure size/paper properties must be set explicitly for `exportgraphics` to produce correctly sized vector PDFs. Font size 6 bold is the project standard.
+**Next:** Verify exported `paper/step_response.pdf` is 6 × 4 cm. Use `paperFig(w,h)` for all new figures.
+
+### 2026-05-11 — CLAUDE.md: add paper workflow section
+**Changed/Found:** `CLAUDE.md` — added "Paper workflow" section documenting that the paper is edited on Overleaf, `Closedloop_edit/` holds the local snapshot, and the figure copy workflow (paper/ → Closedloop_edit/images/ → Overleaf).
+**Why:** User asked to track the Overleaf + Closedloop_edit workflow in CLAUDE.md so future sessions have the context.
+**Next:** Keep `Closedloop_edit/images/` in sync when new figures are exported.
+
+### 2026-05-11 — analysisPlots_var_paper.m: reformat to match analysisPlots_combined style + add inputs panel
+**Changed/Found:** `utils/analysisPlots_var_paper.m` — full rewrite to match `analysisPlots_combined.m` style: switched figure units to centimeters (PW=8 dual-panel, PW=3 single-panel); replaced `subplot` with explicit `axes(...,'Position',[...])` using shared `lm/rm/cg` layout; added `cleanAxes` and `addStimPatch` to all axes; fixed `shortCornerAxes_plot` LineWidth 5→2, LabelGap 0.04/0.05; fixed legend FontSize 12→6 and added `ItemTokenSize=[8 4]`; replaced PNG exports with vector PDF (`ContentType','vector'`); added new panel C (`paper/inputs_var.pdf`) showing mean±std input traces for OL and CL separately; used consistent `colOL/colCL/colInpOL/colInpCL` color scheme. Reference profile uses `(-5)*d.iputs(...)` (variable reference from last nc trial, matching `controllerData_var.m`).
+**Why:** Style consistency with `analysisPlots_combined.m` for paper-quality export; inputs panel was missing and needed as a separate panel.
+**Next:** Verify `d.iputs` field exists at runtime (it is computed in `controllerData_var.m`); check y-limits on inputs panel (auto-scaled) against actual signal range.
+
+### 2026-05-11 — findStims.m / Analysis_variable.m: add mode 2 for newer stim detection
+**Changed/Found:** `utils/findStims.m` — split the former `else` branch (mode 1) into two named modes: mode 1 (old, subtracts `horizon` from `input_params(:,2)`) and mode 2 (new, uses `input_params(:,2)` directly as absolute sample index, no horizon subtraction). `Analysis_variable.m` — added `d = findStims(d, 2)` immediately after `initialize_data` so AL_0041 sessions use the correct stim times.
+**Why:** AL_0041 experiments store the stim onset as an absolute sample index in `input_params(:,2)`, whereas older sessions (AL_0033, AL_0039) store a relative index that requires subtracting `horizon`. `initialize_data` hardcodes mode 1 and is unchanged, so `plottingScript.m` is unaffected. The `d.stimStarts = d.stimStarts - 2` workaround on line 175 of `Analysis_variable.m` may now be incorrect — verify stim alignment on a sample trial before keeping or removing it.
+**Next:** Check a sample trial in Analysis_variable.m to confirm `stimStarts` are correct with mode 2; decide whether to remove the `stimStarts - 2` shift on line 175.
+
+### 2026-05-11 — controllerData.m: store absolute power alongside relative
+**Changed/Found:** `utils/controllerData.m` — added `ncFreqPow`/`wcFreqPow` arrays (same shape as `ncFreqSpec`/`wcFreqSpec`) storing raw `S_bands` (squared FFT magnitude, units: (ΔF/F)² Hz⁻¹) for each trial window, without dividing by total power. Both fields now written to `data` and saved to cache.
+**Why:** PAPER.md: Nick found the band/total normalization confusing; absolute power values are more interpretable and directly show spectral content differences between OL and CL.
+**Next:** Set `r_ctrl = 0` and re-run the loading block to regenerate all caches with the new field; then rerun the heatmap figures to verify absolute power colormaps look sensible.
+
+### 2026-05-11 — plottingScript.m: switch freq heatmaps (I/J/K) to absolute power
+**Changed/Found:** `plottingScript.m` — Pass 1 loop and Figures I/J/K updated: prefer `ncFreqPow`/`wcFreqPow` (absolute) over `ncFreqSpec`/`wcFreqSpec` (relative); fallback to relative for old caches. Colorbar label changes from "band/total power" to "Power (ΔF/F)² Hz⁻¹" when absolute power is available. `ud_ol.freq_spec`/`ud_cl.freq_spec` in the interactive click callback also updated to use the correct field.
+**Why:** Companion change to controllerData.m update — heatmap figures now reflect absolute power as requested.
+**Next:** Verify colour scale is informative (98th-percentile clim should work; check if sessions with lower SNR wash out). Consider log-scaling if dynamic range is too large.
+
+### 2026-05-11 — plottingScript.m: add SVD frame export after single-session plot
+**Changed/Found:** `plottingScript.m` — after line 229 (`analysisPlots_combined` call), added a new section that builds `svdData` from `d.svd.{U,V,mimg}` for `selField=10` (AL_0039, 2025-04-19), calls `displayFrame` in SVD mode, then resizes `gcf` to 3 cm × 3 cm and exports via `exportgraphics` to `paper/svd_frame_<mn>_<td>.pdf` at 600 dpi (`ContentType','image'`).
+**Why:** User requested a high-res 3×3 cm PDF brain frame for the selected session using the existing `displayFrame` function in SVD reconstruction mode.
+**Next:** Verify the SVD files (svdSpatialComponents.npy etc.) are present for m10; confirm the exported PDF renders correctly at 3 cm size.
+
+### 2026-05-08 — Impulse_mouseDataAnalysis_all.m: residual analysis + LOAO validation
+**Changed:** `Impulse_mouseDataAnalysis_all.m` — (1) added `resid(data_fit, best_sys)` figure immediately after TF print to check autocorrelation of residuals and cross-correlation with input; (2) added LOAO section: for each valid amplitude, refit amplitude-weighted h_norm on remaining amplitudes using same best np/nz/nd, predict held-out amplitude, record R²_loao; prints full-fit vs LOAO R² table per amplitude; adds summary figure comparing R²_full vs R²_loao across amplitudes
+**Why:** Validation step: resid detects missing model structure; LOAO tests whether poles generalize across amplitude levels (key assumption of the linear scaling model)
+**Next:** Large R²_full − R²_loao gap at strong amplitudes → amplitude-dependent dynamics confirmed → consider per-amplitude TF fits
+
+### 2026-05-08 — Impulse_mouseDataAnalysis_all.m: transport delay sweep added to TF fit
+**Changed:** `Impulse_mouseDataAnalysis_all.m` — added `maxDelay` knob (default 5 samples, ~143 ms at 35 Hz); wrapped `np`/`nz` loops in outer `for nd = 0:maxDelay` loop; passes `'InputDelay', nd*Ts` to `tfest`; `res` struct gains `nd` field; printout header gains `nd` column; best-model summary prints delay in ms; figure title includes delay count
+**Why:** Transport delay (axonal + synaptic) shifts the response onset and can substantially improve fit quality if unmodelled; AIC will select the right delay automatically
+**Next:** Check if AIC consistently selects nd>0; if so, report best delay in ms as a physiological estimate
+
+### 2026-05-08 — Impulse_mouseDataAnalysis_all.m: R² and slope on dose-response figures
+**Changed:** `Impulse_mouseDataAnalysis_all.m` — in both mean±SEM and median±IQR dose-response loops, compute R² from `polyfit` residuals after each `polyfit` call; `fprintf` slope and R² to console; add `text(ax, ...)` annotation (normalized units, font size 5, matching session color) stacked vertically per session at top-left of each figure
+**Why:** Task in RESEARCH.md current state: linear fits were already drawn but R² and slope were neither printed nor shown on the figure
+**Next:** Verify text annotations are readable at the exported PDF size; consider moving annotations if they overlap the data
+
+### 2026-05-08 — plottingScript.m + analysisPlots_combined.m: fully fix missing d.ref
+**Changed:** `plottingScript.m` else-branch now sets `mouse.(fields{k}).d.ref = -5` before re-saving the cache; `utils/analysisPlots_combined.m` line 12 adds `if ~isfield(d,'ref'); d.ref = -5; end` as a last-resort default
+**Why:** Guard in the cache-load path didn't help when the plotting cell was run in isolation on a stale workspace (ref never got set in memory); also the re-saved cache lacked ref so the next full run still hit the guard but didn't persist it
+**Next:** Confirm `analysisPlots_combined` runs cleanly for all loaded sessions
+
+### 2026-05-08 — plottingScript.m: fix "Unrecognized field name 'd'" on stale caches
+**Changed:** `plottingScript.m` lines 91–95 — cache load block now checks `isfield(tmp, 'd')`; if missing, calls `initialize_data` and re-saves the cache with `d` included
+**Why:** Old cache files for m2–m5, m9–m10, m13 were saved before `d` was added to the `save(pathCtrl, 'd', 'data')` call — they only contain `data`, so `tmp.d` threw "Unrecognized field name 'd'" and the catch block skipped those sessions
+**Next:** Re-run the loading block to confirm all 13 sessions load; verify that the re-saved caches now include `d`
+
+### 2026-05-08 — define_midline.m: interactive midline tool created
+**Changed:** `define_midline.m` (new) — loads mean widefield image from AL_0033 2025-01-20 exp 3, displays it, lets user click 2 points along the cortical midline, fits a line, and saves parameters to `midline.mat`
+**Why:** First step of contralateral-pixel prediction pipeline — need midline to mirror the primary ROI to the opposite hemisphere
+**Next:** Use saved `midline.mat` to compute mirrored pixel coordinates; extract contralateral trace via SVD kernel projection
+
+### 2026-05-08 — RESEARCH.md: Impulse script section rewritten
+**Changed:** `RESEARCH.md` — rewrote `Impulse_mouseDataAnalysis_all.m` section to match actual script state: TF fitting is live (not commented out), freq analysis is implemented, pipeline notes corrected (peak_mode 3 default, ±1s motion window, output figures enumerated), open items updated
+**Why:** Section was stale — marked TF and freq as not implemented when both are active
+**Next:** Continue with TF fitting improvements (transport delay, LOAO, cross-session)
+
+### 2026-05-08 — Logging system established
+**Changed:** `CLAUDE.md` created, `RESEARCH.md` updated with Change Log section
+**Why:** No changes from the 2026-05-07 session were recorded; adding mandatory logging rule so all future sessions are tracked
+**Next:** Backfill yesterday's session if you remember what changed
+
+### 2026-05-14 — Closedloop_edit manuscript corrections applied
+**Changed:** `Closedloop_edit/results_edit.tex` — L16: removed `\aditya{}` wrapper, rewrote physiological delay as proper sentence with 80 ms end-to-end latency callout
+**Why:** Blue comment placeholder was left from drafting; needed to be integrated as real text before final submission
+**Next:** Fill in actual Kp/Ki gain values at L89 once extracted from .mat session data
+
+### 2026-05-14 — discussion.tex incomplete sentence completed
+**Changed:** `Closedloop_edit/discussion.tex` — L87: completed trailing sentence "...so that the predicted tracking error over a future horizon is minimized."
+**Why:** Sentence ended mid-clause; manuscript was uncompilable/unreadable at that point
+**Next:** Review Future Directions subsection for overall flow after completion
+
+### 2026-05-14 — Caption enrichment: Fig. 1, 2, 3, S1
+**Changed:** `Closedloop_edit/results_edit.tex` and `methods_edit.tex` — rewrote all four figure captions to Li/Lu journal standard: each panel now states what is shown, error bar type (±1 SD), n values (50 trials/amplitude for Fig. 2; 13 sessions/3 mice for Fig. 3), and stimulation window duration
+**Why:** Reviewer noted captions were too thin — reader of Fig. 2B could not tell what points represent, what error bars show, or how many trials per amplitude
+**Next:** Verify Fig. 2C shading is actually ±1 SD (not variance or SEM); verify Fig. 3H is mean absolute error (not MSE) — adjust caption wording if different
+
+### 2026-05-14 — results_edit.tex: reviewer-driven prose improvements
+**Changed:** `Closedloop_edit/results_edit.tex` — (1) removed vague filler opener from Experimental Setup subsection; (2) rewrote impulse-response paragraph to state peak-response claim precisely with explicit R² / slope units and removed equation cross-ref; (3) added open-loop qualifier to step-response variance sentence; (4) replaced math notation ($d_t$, $\rho_t$) in variability section with plain-English descriptions
+**Why:** Claude online review (pasted in PAPER.md §Stuff from CLAUDE) identified passive voice, equation refs in Results, imprecise linearity claim scope, and missing open-loop qualifier as key issues
+**Next:** Still open: (a) explicit n and ± CI on slope values in linearity paragraph; (b) caption enrichment (error bar type, n per amplitude); (c) caption figure-citation style audit (Fig. 1A vs Figure 1A)
+
+### 2026-05-14 — main.tex: Introduction placeholder removed
+**Changed:** `Closedloop_edit/main.tex` — L85: removed `\aditya{separately editing}` tag, uncommented `\input{introduction}` so introduction.tex is compiled into the document
+**Why:** Introduction file exists and has content; placeholder was blocking it from rendering in the PDF
+**Next:** Fill in real author names and department affiliations at L63–67
+
+### 2026-05-21 -- K1z/K2z and OL TF sections: encoding fix
+**Changed/Found:** `plottingScript.m` lines 1417-1522, 2305-2552 -- 54 lines had non-ASCII bytes. K1z/K2z section used UTF-8 curly quotes (U+2018/U+2019) throughout all string arguments and transpose operators; OL TF section had em dashes, superscript-2, multiplication sign, arrow, and plus-minus sign in string literals and comments.
+**Why:** Edit tool writes UTF-8 but the .m file is Windows-1252 -- curly quotes broke all MATLAB string parsing in K1z/K2z. Fixed via Python byte-level replacement: curly quotes -> ASCII single quote; em dash -> '--'; superscript-2 -> '^2'; others to ASCII equivalents.
+**Next:** Run K1z/K2z and OL TF sections in MATLAB to confirm no parse errors; verify R^2 renders correctly in figure legends.
+
+### 2026-05-21 -- K1zm/K2zm: motion-clean z-scored heatmap and quintile bars
+**Changed/Found:** `plottingScript.m` -- Added section K1zm & K2zm (after K2m, ~line 1732). K1zm: same blue-white-red diverging z-score heatmap as K1z but operating on motion-clean trials (nc_all_k1m / wc_all_k1m, |z-motion| <= motThresh). K2zm: same quintile bar chart but on motion-clean data. Section inserted via Python byte-level write to avoid CRLF/encoding issues.
+**Why:** User requested motion-removed variant of the K1z/K2z section, to show whether the 2-4 Hz elevation in high-variance trials survives motion exclusion.
+**Next:** Run K1zm/K2zm in MATLAB; compare K1z vs K1zm to assess how much of the 2-4 Hz pattern is motion-driven vs genuine neural signal.

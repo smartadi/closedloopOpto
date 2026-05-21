@@ -9,6 +9,7 @@
 data/
 images/
 .venv/
+Closedloop_edit/
 
 # Utils subdirectories
 utils/npy-matlab/
@@ -19,3 +20,9 @@ utils/widefield/
 # VS Code
 .vscode/
 *.code-workspace
+
+# Office lock files
+~$*.pptx
+~$*.docx
+~$*.xlsx
+

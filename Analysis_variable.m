@@ -12,13 +12,25 @@ clear all;
 % en = 4;
 
 % % feedforward 60 trials
-% mn = 'AL_0041'; td = '2026-04-13';   
+% mn = 'AL_0041'; td = '2026-04-13';  % works  
 % en = 2;
+
+% mn = 'AL_0041'; td = '2026-04-13';   % loading issue
+% en = 3;
 % 
 
 % % feedforward 100 trials
-% mn = 'AL_0041'; td = '2026-04-13';   
+% mn = 'AL_0041'; td = '2026-04-13';   % doesnt work. bad tuning? 
 % en = 4;
+
+mn = 'AL_0041'; td = '2026-04-13';    % good 100 trials
+en = 5;
+
+% mn = 'AL_0041'; td = '2026-04-13';     % good 60 trials
+% en = 6;
+
+% mn = 'AL_0041'; td = '2026-04-13';      % loading issue
+% en = 7;
 
 
 % % Good Trial 
@@ -27,8 +39,8 @@ clear all;
 
 
 % Good Trial 
-mn = 'AL_0041'; td = '2026-04-13';   
-en = 6;
+% mn = 'AL_0041'; td = '2026-04-13';   
+% en = 6;
 
 % ? Trial 
 % mn = 'AL_0041'; td = '2026-04-13';   
@@ -60,6 +72,7 @@ pathString = genpath('utils');
     % %%
     % addpath('utils')
 d = initialize_data(mn,en,td);
+d = findStims(d, 2);  % newer sessions: input_params col 2 is absolute sample index
 
 
 %%
@@ -120,15 +133,26 @@ r = 1; % read file
 
 svdImage = mimg;
 
-initBregma = [];
+bregmaSavePath = sprintf('paper/bregma_%s_%s_en%d.mat', mn, td, en);
+rerun_click = false;  % set true to force re-click
 
-
-[clickData, mmData, clickPixelCoords, bregmaOffset] = openSVDImageClick(svdImage, initBregma, 0.0173);
+if ~rerun_click && exist(bregmaSavePath, 'file')
+    S = load(bregmaSavePath);
+    clickData        = S.clickData;
+    mmData           = S.mmData;
+    clickPixelCoords = S.clickPixelCoords;
+    bregmaOffset     = S.bregmaOffset;
+    fprintf('Loaded bregma offset -> x=%d, y=%d\n', bregmaOffset(1), bregmaOffset(2));
+else
+    [clickData, mmData, clickPixelCoords, bregmaOffset] = openSVDImageClick(svdImage, [], 0.0173);
+    if ~isempty(bregmaOffset)
+        save(bregmaSavePath, 'clickData', 'mmData', 'clickPixelCoords', 'bregmaOffset');
+        fprintf('Bregma offset saved -> x=%d, y=%d\n', bregmaOffset(1), bregmaOffset(2));
+    end
+end
 d.params.selected_pixels = clickPixelCoords;
-
 if ~isempty(bregmaOffset)
     d.params.pix_inv = bregmaOffset;
-    fprintf('Saved bregma offset from first click -> x=%d, y=%d\n', d.params.pix_inv(1), d.params.pix_inv(2));
 end
 
 if mmData.isValid
@@ -172,8 +196,10 @@ dFk = data.dFk;
 %% Trial Samples
 % d.mv = d.motion.motion_1;
 % d.mv = d.motion.motion_1(1:2:end,1);
- d.stimStarts = d.stimStarts - 2;
+ % d.stimStarts = d.stimStarts + 2;
 %%
+d.stimStarts = d.stimStarts - 2;
+
 dur = d.params.dur;
 t = d.timeBlue;
 close all
@@ -232,7 +258,7 @@ end
 
 %% Feedforward vs Feedback
 
-% d.stimStarts = d.stimStarts + 2;
+% d.stimStarts = d.stimStarts + 6.5;
 %%
 
 
@@ -245,22 +271,25 @@ trials = 60;
 d.dur = 2
 data = controllerData_var(data,d,trials);
 
-%%
+
 close all;
 % analysisPlots_var(data,d,0);
 
 
-analysisPlots_var_paper(data,d,0)
+sessTag = sprintf('%s_%s_en%d', mn, td, en);
+analysisPlots_var_paper(data,d,0,sessTag)
 %%
 
-nc = data.nc;
-wc = data.wc;
+% nc = data.nc;
+% wc = data.wc;
+% 
+% pixelTuningCurveViewerSVD(U, V, t, d.stimStarts(wc), ones(size(d.stimStarts(wc))), [-2 3])
+% %%
+% pixelTuningCurveViewerSVD(U, V, t, d.stimStarts(nc), ones(size(d.stimStarts(nc))), [-2 3])
+% 
 
-pixelTuningCurveViewerSVD(U, V, t, d.stimStarts(wc), ones(size(d.stimStarts(wc))), [-2 3])
+
 %%
-pixelTuningCurveViewerSVD(U, V, t, d.stimStarts(nc), ones(size(d.stimStarts(nc))), [-2 3])
-
-
-
-%%
-
+figure()
+plot(tt,v);hold on
+xline(d.stimStarts)
