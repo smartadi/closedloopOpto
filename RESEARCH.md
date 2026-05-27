@@ -18,10 +18,20 @@ Two mice: AL_0033 (8 sessions), AL_0039 (3 sessions), Jan–Apr 2025.
 
 <!-- New entries go here, most recent first. One ### block per change. -->
 
+### 2026-05-27 — widebrain_arx: WB-5 bar figure completed + file truncation repaired
+**Changed/Found:** `controller-analysis/widebrain_arx.m` — file was truncated at `for g = 1:3` (same in HEAD); added bar/errorbar loop body, axis formatting, and PNG export for the OL/CL/Optimal grouped bar chart. Confirmed truncation pre-dated this session via `git show HEAD`. No local `buildLagMatrix` needed (utils/ version already on path). Two info-level style warnings (`try;` syntax) left as-is; not errors.
+**Why:** WB-5 was the only incomplete section; script now runs end-to-end without syntax gaps.
+**Next:** Set `redefine_roi = true`, run ROI section to generate `wb_roi_<session>.mat` with the new grid, then run WB-1a and verify R2_test > 0.3.
+
 ### 2026-05-27 — Split plottingScript.m and Impulse_mouseDataAnalysis_all.m into per-section files
 **Changed/Found:** `controller-analysis/` and `impulse-analysis/` — created 7 + 8 split .m files extracted from the two root scripts; originals unchanged
 **Why:** Scripts are 3557 and 1748 lines respectively; splitting into load_sessions/load_experiments loaders plus themed figure scripts allows targeted iteration without scrolling; files share the base workspace (no clear between them)
 **Next:** Confirm each figure script runs correctly after its loader; update controller-analysis/CLAUDE.md primary-script reference once originals are retired
+
+### 2026-05-27 — Decision: controller analysis result caching architecture (deferred task)
+**Changed/Found:** `TASKS.md` — logged future caching work. Three new per-session files proposed: `wb_model.mat` (ARX beta + TF fit), `wb_pred.mat` (pink/orange/red predictions + R²s + WB-5 MSEs), `cross_session_cache.mat` (pooled motion/pre-stim/spectral arrays). Cache-invalidation pattern: compare stored params (pX, grid_rows, grid_cols) against current values before deciding whether to recompute.
+**Why:** ARX lstsq, tfest, and cross-session aggregation are recomputed every run unnecessarily; user wants to avoid this without restructuring the analysis flow now.
+**Next:** Implement when WB pipeline is stable and parameter tuning is done.
 
 ### 2026-05-27 — widebrain_arx: grid strategy → rows×cols parameters, drop outside-ROI nodes
 **Changed/Found:** `controller-analysis/widebrain_arx.m` — replaced `nPred=20` fixed count with `grid_rows=6` / `grid_cols=5` design parameters. Grid generates `grid_cols × grid_rows` cell-centre nodes over the ROI bounding box; each is rounded to the nearest pixel and checked against the eroded interior mask via `interior(sub2ind(...))`. Nodes outside the mask are discarded — no dsearchn snapping. `nPred` is now derived as `length(pred_px)` after filtering. Legend updated to 'Grid pixels'. `roi_file` now also saves `grid_rows`/`grid_cols` for provenance.

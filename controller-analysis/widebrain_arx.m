@@ -11,19 +11,15 @@ close all;
 
 selField = 12;
 
-% -- Parameters
-wb_sel      = selField;   % session to analyse (m10, AL_0039 2025-04-19)
-pY          = 0;          % no AR self-lags -- prediction purely from contralateral pixels
-pX          = 5;          % lags per contralateral predictor (~143 ms at 35 Hz)
-Fs_wb       = 35;
-dur_wb      = 3;          % trial duration (s)
-spont_pre   = 6;          % spontaneous window before each trial (s)
-k_wb         = 1;     % SVD kernel half-size (3x3 patch)
-grid_rows    = 6;     % visual rows in contra ROI grid  (c direction in original image)
-grid_cols    = 5;     % visual cols in contra ROI grid  (r direction in original image)
-% nPred is derived automatically: 1 contra-primary + all grid nodes inside the ROI
-redefine_roi = true; % set true to redo midline + ROI interactively for this session
-mlag_wb      = max(pY, pX);
+% -- Pixel selection parameters
+wb_sel       = selField;  % session to analyse
+Fs_wb        = 35;
+dur_wb       = 3;         % trial duration (s)
+k_wb         = 1;         % SVD kernel half-size (3x3 patch)
+grid_rows    = 6;         % visual rows in contra ROI grid  (c direction)
+grid_cols    = 5;         % visual cols in contra ROI grid  (r direction)
+% nPred derived automatically: 1 contra-primary + grid nodes inside ROI
+redefine_roi = true;      % set true to redo midline + ROI interactively
 
 % -- Session + SVD
 d_wb       = mouse.(fields{wb_sel}).d;
@@ -322,135 +318,16 @@ else
     fprintf('Saved dFk cache: %s\n', path_wb);
 end
 
-%% Widebrain prediction -- ARX regression
-% Requires the pixel-selection cell above to have been run first.
-% Fits contralateral-only ARX model on spontaneous data, applies to OL/CL trials.
+%% [WB-1a] Pink layer -- ARX fit + parameter tuning
+% Adjust pX / spont_pre below, re-run this cell, inspect the held-out figure.
+% Once R2_test > 0.3, run WB-1b to apply to trials.
+% Prereqs: pixel-selection + SVD extraction cells above must have run.
 
-% -- Spontaneous windows (6 s pre-trial, all trials pooled)
-t_wb       = d_wb.timeBlue;
-all_trials = [data_wb.nc(:); data_wb.wc(:)];
-pre_frames = spont_pre * Fs_wb;
-
-y_spont = []; X_spont = [];
-for j = 1:length(all_trials)
-    [~, i_on] = min(abs(t_wb - d_wb.stimStarts(all_trials(j))));
-    i0 = i_on - pre_frames; i1 = i_on - 1;
-    if i0 < 1; continue; end
-    y_spont = [y_spont; y_full(i0:i1)];
-    X_spont = [X_spont; X_full(i0:i1,:)];
-end
-
-% -- Fit ARX on spontaneous data
-[Phi_s, y_s] = buildLagMatrix(y_spont, X_spont, pY, pX);
-beta         = Phi_s \ y_s;
-y_hat_s      = Phi_s * beta;
-R2_spont     = 1 - sum((y_s - y_hat_s).^2) / sum((y_s - mean(y_s)).^2);
-fprintf('ARX  R^2_spont=%.3f  (pY=%d  pX=%d  nPred=%d)\n', R2_spont, pY, pX, nPred);
-
-% -- Apply model to OL trials
-trial_frames = dur_wb * Fs_wb;   % 105 frames
-outlen       = trial_frames;     % buildLagMatrix drops first mlag_wb; output = trial_frames
-
-pred_nc   = nan(length(data_wb.nc), outlen);
-actual_nc = nan(length(data_wb.nc), outlen);
-for j = 1:length(data_wb.nc)
-    [~, i_on] = min(abs(t_wb - d_wb.stimStarts(data_wb.nc(j))));
-    i0 = i_on - mlag_wb; i1 = i_on + trial_frames - 1;
-    if i0 < 1 || i1 > nFrames; continue; end
-    [Phi_t, y_t]   = buildLagMatrix(y_full(i0:i1), X_full(i0:i1,:), pY, pX);
-    pred_nc(j,:)   = Phi_t * beta;
-    actual_nc(j,:) = y_t;
-end
-
-% -- Apply model to CL trials
-pred_wc   = nan(length(data_wb.wc), outlen);
-actual_wc = nan(length(data_wb.wc), outlen);
-for j = 1:length(data_wb.wc)
-    [~, i_on] = min(abs(t_wb - d_wb.stimStarts(data_wb.wc(j))));
-    i0 = i_on - mlag_wb; i1 = i_on + trial_frames - 1;
-    if i0 < 1 || i1 > nFrames; continue; end
-    [Phi_t, y_t]   = buildLagMatrix(y_full(i0:i1), X_full(i0:i1,:), pY, pX);
-    pred_wc(j,:)   = Phi_t * beta;
-    actual_wc(j,:) = y_t;
-end
-
-R2_nc = 1 - sum((actual_nc(:)-pred_nc(:)).^2,'omitnan') / ...
-             sum((actual_nc(:)-mean(actual_nc(:),'omitnan')).^2,'omitnan');
-R2_wc = 1 - sum((actual_wc(:)-pred_wc(:)).^2,'omitnan') / ...
-             sum((actual_wc(:)-mean(actual_wc(:),'omitnan')).^2,'omitnan');
-fprintf('  R^2_OL=%.3f   R^2_CL=%.3f\n', R2_nc, R2_wc);
-
-% -- Figure: 4-panel
-t_trial = (0:outlen-1) / Fs_wb;
-colOL   = [1 0 0];
-colCL   = [0 0.5 0];
-colPrd  = [0.2 0.2 0.8];
-
-fig_wb = paperFig(12, 8);
-lm_wb  = 0.10; rm_wb = 0.05; bm_wb = 0.12; tm_wb = 0.08;
-gx     = 0.08; gy    = 0.15;
-pw_wb  = (1 - lm_wb - rm_wb - gx) / 2;
-ph_wb  = (1 - bm_wb - tm_wb - gy) / 2;
-
-% Panel A -- Spontaneous: actual vs predicted (sample window)
-ax_A = axes(fig_wb, 'Position', [lm_wb,           bm_wb+ph_wb+gy, pw_wb, ph_wb]);
-n_show = min(3*Fs_wb, length(y_s));
-t_show = (0:n_show-1) / Fs_wb;
-hold(ax_A,'on');
-plot(ax_A, t_show, y_s(1:n_show),     'Color',[0 0 0],  'LineWidth',1,   'DisplayName','Actual');
-plot(ax_A, t_show, y_hat_s(1:n_show), 'Color', colPrd,  'LineWidth',1,   'DisplayName','Predicted');
-hold(ax_A,'off');
-legend(ax_A,'Box','off','FontSize',6,'Location','best');
-title(ax_A, sprintf('Spontaneous  R^2=%.2f', R2_spont), 'FontSize',6,'FontWeight','bold');
-
-% Panel B -- OL: mean actual vs mean predicted
-ax_B = axes(fig_wb, 'Position', [lm_wb+pw_wb+gx,  bm_wb+ph_wb+gy, pw_wb, ph_wb]);
-hold(ax_B,'on');
-plot(ax_B, t_trial, mean(actual_nc,1,'omitnan'), 'Color',colOL,  'LineWidth',1.5, 'DisplayName','OL actual');
-plot(ax_B, t_trial, mean(pred_nc,  1,'omitnan'), 'Color',colPrd, 'LineWidth',1,   'DisplayName','Predicted','LineStyle','--');
-addStimPatch(ax_B, 0, dur_wb);
-hold(ax_B,'off');
-legend(ax_B,'Box','off','FontSize',6,'Location','best');
-title(ax_B, sprintf('Open-Loop  R^2=%.2f', R2_nc), 'FontSize',6,'FontWeight','bold');
-
-% Panel C -- CL: mean actual vs mean predicted
-ax_C = axes(fig_wb, 'Position', [lm_wb,           bm_wb, pw_wb, ph_wb]);
-hold(ax_C,'on');
-plot(ax_C, t_trial, mean(actual_wc,1,'omitnan'), 'Color',colCL,  'LineWidth',1.5, 'DisplayName','CL actual');
-plot(ax_C, t_trial, mean(pred_wc,  1,'omitnan'), 'Color',colPrd, 'LineWidth',1,   'DisplayName','Predicted','LineStyle','--');
-addStimPatch(ax_C, 0, dur_wb);
-hold(ax_C,'off');
-legend(ax_C,'Box','off','FontSize',6,'Location','best');
-title(ax_C, sprintf('Closed-Loop  R^2=%.2f', R2_wc), 'FontSize',6,'FontWeight','bold');
-
-% Panel D -- Residual OL vs CL (actual -' predicted)
-ax_D = axes(fig_wb, 'Position', [lm_wb+pw_wb+gx,  bm_wb, pw_wb, ph_wb]);
-hold(ax_D,'on');
-plot(ax_D, t_trial, mean(actual_nc-pred_nc,1,'omitnan'), 'Color',colOL, 'LineWidth',1.5, 'DisplayName','OL residual');
-plot(ax_D, t_trial, mean(actual_wc-pred_wc,1,'omitnan'), 'Color',colCL, 'LineWidth',1.5, 'DisplayName','CL residual');
-yline(ax_D, 0, 'k--', 'HandleVisibility','off');
-addStimPatch(ax_D, 0, dur_wb);
-hold(ax_D,'off');
-legend(ax_D,'Box','off','FontSize',6,'Location','best');
-title(ax_D, 'Residual: actual - predicted', 'FontSize',6,'FontWeight','bold');
-
-for axi = [ax_A ax_B ax_C ax_D]
-    set(axi, 'FontSize',6,'FontWeight','bold','Box','off','TickDir','out');
-    ylabel(axi, 'dF/F (%)', 'FontSize',6,'FontWeight','bold');
-    xlabel(axi, 'Time (s)', 'FontSize',6,'FontWeight','bold');
-end
-
-
-
-
-
-%% [WB-1a] Pink layer -- spontaneous fit + parameter tuning
-% *** TUNING SECTION - adjust nPred / pX at the top of the widebrain block,
-%     re-run this cell, inspect the held-out spont figure, repeat. ***
-% Once R2_test is satisfactory (>0.3), run WB-1b to apply to trials.
-%
-% Prereqs: widebrain ROI + ARX sections above (d_wb, data_wb, y_full, X_full,
-%          pY, pX, nPred, nFrames, mlag_wb, spont_pre, Fs_wb, dur_wb).
+% -- Learning parameters
+pY        = 0;    % AR self-lags on y -- keep 0 (pure contralateral prediction)
+pX        = 10;   % lags per predictor pixel (~286 ms at 35 Hz)
+spont_pre = 6;    % pre-trial spontaneous window used for training (s)
+mlag_wb   = max(pY, pX);
 
 % ---- Build motion-augmented predictor matrix ----
 mot_wb   = d_wb.motion(:);
@@ -788,3 +665,16 @@ gs5  = cellfun(@(x) std(x)/sqrt(numel(x)), grp_data);
 cb5  = [colOL; colCL; 0.5 0.5 0.5];
 
 for g = 1:3
+    bar(ax_wb5, g, gm5(g), 0.6, 'FaceColor', cb5(g,:), 'EdgeColor', 'none');
+    errorbar(ax_wb5, g, gm5(g), gs5(g), 'k', 'LineWidth', 0.8, 'CapSize', 4, 'LineStyle', 'none');
+end
+hold(ax_wb5, 'off');
+set(ax_wb5, 'XTick', 1:3, 'XTickLabel', grp_labels, ...
+    'Box', 'off', 'TickDir', 'out', 'FontSize', PS_wb5.fs, 'FontWeight', PS_wb5.fw);
+ylabel(ax_wb5, 'MSE (\DeltaF/F)^2', 'FontSize', PS_wb5.fs, 'FontWeight', PS_wb5.fw);
+title(ax_wb5, sprintf('CL/Optimal gap: %.2fx', gap_ratio), ...
+    'FontSize', PS_wb5.fs, 'FontWeight', PS_wb5.fw);
+
+exportgraphics(fig_wb5, 'paper/images/figure4/wb_mpc_gap.png', 'Resolution', 300);
+fprintf('[WB-5] Saved wb_mpc_gap.png\n');
+
