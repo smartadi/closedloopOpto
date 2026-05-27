@@ -103,7 +103,7 @@ if ~exist(roi_file, 'file')
         midline.type = 'y_of_x';
     end
     midline.img_size = [nY_wb, nX_wb];
-    save('midline.mat', 'midline');
+    % midline saved as part of roi_file at the end of this block (no separate midline.mat)
 
     % Overlay midline on same figure
     if strcmp(midline.type, 'x_of_y')
@@ -202,19 +202,24 @@ if ~exist(roi_file, 'file')
     snapped_rows = rg_k(ui);
     snapped_cols = cg_k(ui);
 
-    pred_py = [py_c; snapped_rows];
-    pred_px = [px_c; snapped_cols];
+    pred_py = snapped_rows;
+    pred_px = snapped_cols;
 
-    save(roi_file, 'midline', 'pred_px', 'pred_py', 'poly_col', 'poly_row', 'grid_rows', 'grid_cols');
-    fprintf('Saved ROI: %d/%d grid nodes inside ROI + 1 contra-primary = %d total pixels  [%s]\n', ...
-        numel(snapped_rows), grid_rows*grid_cols, length(pred_px), roi_file);
+    % Mark the grid node nearest to the computed contra-primary reflection
+    dists2     = (pred_py - py_c).^2 + (pred_px - px_c).^2;
+    [~, contra_idx] = min(dists2);
+
+    save(roi_file, 'midline', 'pred_px', 'pred_py', 'contra_idx', 'poly_col', 'poly_row', 'grid_rows', 'grid_cols');
+    fprintf('Saved ROI: %d/%d grid nodes inside ROI (node %d is contra-primary)  [%s]\n', ...
+        numel(snapped_rows), grid_rows*grid_cols, contra_idx, roi_file);
 else
     tmp      = load(roi_file);
     midline  = tmp.midline;
     ml       = midline;
-    pred_px  = tmp.pred_px;  pred_py  = tmp.pred_py;
-    poly_col = tmp.poly_col; poly_row = tmp.poly_row;
-    fprintf('Loaded ROI from %s  (%d predictor pixels)\n', roi_file, length(pred_px));
+    pred_px    = tmp.pred_px;  pred_py  = tmp.pred_py;
+    contra_idx = tmp.contra_idx;
+    poly_col   = tmp.poly_col; poly_row = tmp.poly_row;
+    fprintf('Loaded ROI from %s  (%d predictor pixels, contra node %d)\n', roi_file, length(pred_px), contra_idx);
 
     % Recompute contra-primary for display
     denom = 1 + ml.a^2;
@@ -255,9 +260,10 @@ end
 plot(ax_pm, poly_row, poly_col, 'c-', 'LineWidth', 1.2);
 
 % Pixels (transposed display: scatter(row, col))
-scatter(ax_pm, pred_py(2:end), pred_px(2:end), 50, ...
+non_contra = true(nPred, 1); non_contra(contra_idx) = false;
+scatter(ax_pm, pred_py(non_contra), pred_px(non_contra), 50, ...
     'o','filled','MarkerFaceColor',[0.2 0.6 1],'MarkerEdgeColor','w','LineWidth',0.5);
-scatter(ax_pm, py_c,    px_c,    100, ...
+scatter(ax_pm, pred_py(contra_idx), pred_px(contra_idx), 100, ...
     's','filled','MarkerFaceColor',[0 0.9 1],  'MarkerEdgeColor','w','LineWidth',1.5);
 scatter(ax_pm, py_prim, px_prim, 100, ...
     's','filled','MarkerFaceColor',[1 0.3 0.3],'MarkerEdgeColor','w','LineWidth',1.5);
@@ -306,7 +312,7 @@ else
         X_full(:,j) = ((F_j - Fm_j) ./ Fm_j * 100)';
     end
 
-    if ~exist('data', 'dir'); mkdir('data'); end
+    [~] = mkdir(fileparts(path_wb));   % create data/ if missing; silent no-op if it exists
     save(path_wb, 'y_full', 'X_full', 'pred_px', 'pred_py');
     fprintf('Saved dFk cache: %s\n', path_wb);
 end
