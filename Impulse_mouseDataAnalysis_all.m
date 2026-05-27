@@ -1,4 +1,5 @@
 %% Data analysis Script
+
 % add pixel configuration
 
 
@@ -35,7 +36,7 @@ for expIdx = 1:size(experiments, 1)
 pathString = genpath('utils');
 addpath(pathString);
 
-githubDir = "/home/nimbus/Documents/Brain/"
+githubDir = "/home/nimbus/Documents/Brain/";
     
     
 % Script to analyze widefield/behavioral data from 
@@ -289,7 +290,7 @@ for i = 1:length(uAmp)
         df_imp   = bsxfun(@minus, dF(idxMat), baseline);      % nV × nSamp
         motTrace = mv_z(idxMat);                               % nV × nSamp
 
-        % motion sum over ±35 samples using cumsum (no per-trial loop)
+        % motion cumsum over ±35 samples (±1 s) — wide window kept for analysis flexibility
         i0_mot = max(1,   bAll - 35);
         i1_mot = min(nMv, bAll + 35);
         mot    = (cumMv(i1_mot + 1) - cumMv(i0_mot))';   % 1 × nV
@@ -406,87 +407,9 @@ shortCornerAxes_plot(gca,'XLength',0.5,'YLength',1,'XLabel','500 ms', ...
     'YLabel','1% dF/F','LineWidth',2,'LabelGap',0.05);
 text(0.1, 1.5, 'Stim','Color','r','FontSize',7,'FontWeight','bold', ...
     'HorizontalAlignment','right','VerticalAlignment','top','Clipping','off');
-print(figS, sprintf('paper/imp_single_%s_%s_en%d.pdf',mn3,td3,en3), '-dpdf','-painters');
+print(figS, sprintf('paper/images/figure2/imp_single_%s_%s_en%d.pdf',mn3,td3,en3), '-dpdf','-painters');
 
-%% Combined plot for all experiments
-% close all;
-% 
-% % Colors for each experiment
-% expColors = [0.2 0.4 0.8; 0.8 0.2 0.2; 0.2 0.8 0.4];
-% nCond = 3;
-% figure('Color','w','Position',[100 100 800 600]); hold on
-% h1 = yline(0,'--k')
-% hLegend = gobjects(nCond,1);   % preallocate handles
-% 
-% % Plot each experiment
-% for expIdx = 1:length(allExperiments)
-%     allVals = allExperiments(expIdx).allVals;
-%     groupLabels = allExperiments(expIdx).groupLabels;
-% 
-%     % Get means and std per group in plotting order
-%     [ug,~,idx] = unique(groupLabels, 'stable');
-%     meanVals = accumarray(idx(:), allVals(:), [], @(v) mean(v,'omitnan'));
-%     stdVals = accumarray(idx(:), allVals(:), [], @(v) std(v,'omitnan'));
-%     semVals = accumarray(idx(:), allVals(:), [], @(v) std(v,'omitnan')/sqrt(sum(~isnan(v))));
-% 
-%     % X-positions (offset for each experiment)
-%     xpos = 1:numel(ug);
-%     xOffset = (expIdx - 2) * 0.15;  % offset experiments slightly
-%     xpos = xpos + xOffset;
-% 
-%     % Plot mean as dots with std as vertical lines
-%     capWidth = 0.05;
-% 
-%     nCond = 3;
-%     for i = 1:numel(ug)
-%         % Vertical line for SEM
-%         plot([xpos(i) xpos(i)], [meanVals(i)-semVals(i), meanVals(i)+semVals(i)], ...
-%             '-', 'LineWidth', 2.5, 'Color', expColors(expIdx,:));
-%         % Horizontal caps at top and bottom
-%         plot([xpos(i)-capWidth xpos(i)+capWidth], [meanVals(i)-semVals(i), meanVals(i)-semVals(i)], ...
-%             '-', 'LineWidth', 2.5, 'Color', expColors(expIdx,:));
-%         plot([xpos(i)-capWidth xpos(i)+capWidth], [meanVals(i)+semVals(i), meanVals(i)+semVals(i)], ...
-%             '-', 'LineWidth', 2.5, 'Color', expColors(expIdx,:));
-%         % Mean as dot
-%         plot(xpos(i), meanVals(i), 'o', 'MarkerSize', 10, ...
-%             'MarkerFaceColor', expColors(expIdx,:), 'MarkerEdgeColor', expColors(expIdx,:), 'LineWidth', 2);
-% 
-% 
-%     end
-% 
-%     % Fit line through means for this experiment
-%     p  = polyfit(xpos, meanVals, 1);
-%     xf = linspace(min(xpos)-0.2, max(xpos)+0.2, 100);
-%     hMean  = plot(xf, polyval(p,xf), '-', 'LineWidth', 2.0, 'Color', expColors(expIdx,:), ...
-%         'DisplayName', sprintf('%s %s-%d', allExperiments(expIdx).mn, ...
-%                                allExperiments(expIdx).td, allExperiments(expIdx).en));
-%     hLegend(expIdx) = hMean;
-% end
-% 
-% % Beautify for paper
-% ax = gca;
-% ax.LineWidth = 1.5;
-% ax.FontName = 'Arial';
-% ax.FontSize = 12;
-% ax.FontWeight = 'bold';
-% ax.TickDir = 'out';
-% ax.Box = 'off';
-% xlabel('Amplitude(V)', 'FontWeight','bold');
-% ylabel('dF/F %', 'FontWeight','bold');
-% ylim([-5 3])
-% uistack(h1, 'bottom')
-% xticks([])
-% try
-%     shortCornerAxes_plot(gca,'Frac',0.1,'XLabel','Input(V)','YLabel','dF/F','LineWidth',5)
-% catch
-%     xlabel('Input(V)', 'FontWeight','bold');
-%     ylabel('dF/F %', 'FontWeight','bold');
-% end
-% nExp_leg = length(allExperiments);
-% legTxt_1 = arrayfun(@(e) sprintf('Session %d', e), 1:nExp_leg, 'UniformOutput', false);
-% lgd = legend(ax, hLegend(1:nExp_leg), legTxt_1, 'Box','off','Color','none');
-% lgd.ItemTokenSize = [14 6];
-% lgd.AutoUpdate = 'off';
+
 %%
 
 %% Combined plot for all experiments
@@ -522,7 +445,7 @@ for expIdx = 1:nExp
     xpos     = xpos_raw(nzMask) + (expIdx - 2) * 0.005;
     capWidth = 0.003;
 
-    for j = 1:numel(ug)
+    for j = 1:numel(xpos)
         plot([xpos(j) xpos(j)], [meanVals(j)-semVals(j), meanVals(j)+semVals(j)], ...
             '-', 'LineWidth', 1, 'Color', expColors(expIdx,:));
         plot([xpos(j)-capWidth xpos(j)+capWidth], [meanVals(j)-semVals(j), meanVals(j)-semVals(j)], ...
@@ -588,7 +511,7 @@ text(ax, -0.12, 0.5, 'Inhibition Energy', ...
     'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'FontSize',7, 'FontWeight','bold', 'Color','k', 'Clipping','off');
-print(fig, 'paper/imp_response.pdf', '-dpdf', '-painters');
+print(fig, 'paper/images/figure2/imp_response.pdf', '-dpdf', '-painters');
 
 %% Combined plot — median ± 95th-percentile bounds
 figM = figure('Color','w'); hold on
@@ -668,7 +591,7 @@ text(ax_m, -0.12, 0.5, 'Inhibition Energy', ...
     'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'FontSize',7, 'FontWeight','bold', 'Color','k', 'Clipping','off');
-print(figM, 'paper/imp_response_median.pdf', '-dpdf', '-painters');
+exportgraphics(figM, 'paper/imp_response_median.png', 'Resolution',300);
 
 %%
 %% =========================================================
@@ -932,6 +855,7 @@ end
 nRep = numel(repAmpIdx);
 cRep = parula(nRep + 2);
 
+PS = paperStyle();
 fig_A = paperFig(6, 4);
 hold on;
 ax_A  = gca;
@@ -965,13 +889,13 @@ text(ax_A, 0.02, yTop, 'Stim', 'Color','r', 'FontSize',6, 'FontWeight','bold', .
     'HorizontalAlignment','left', 'VerticalAlignment','top', 'Clipping','off');
 
 shortCornerAxes_plot(ax_A, 'XLength',0.15,'YLength',1,'XLabel','150 ms','YLabel','1% dF/F', ...
-    'LineWidth',2,'LabelGap',0.05,'FontSize',6);
+    'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap,'FontSize',PS.fs,'FontWeight',PS.fw);
 
 lgd_A = legend(ax_A, 'Box','off','FontSize',6,'FontWeight','bold','Location','southeast');
 lgd_A.ItemTokenSize = [15 10];
 lgd_A.AutoUpdate = 'off';
 
-exportgraphics(fig_A, sprintf('paper/tf_data_vs_model_%s_%s_en%d.pdf', ...
+exportgraphics(fig_A, sprintf('paper/images/figure2/tf_data_vs_model_%s_%s_en%d.pdf', ...
     allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en), ...
     'ContentType','vector');
 
@@ -1008,30 +932,56 @@ else
 
     shortCornerAxes_plot(ax_B, 'XLength',xLen_B,'YLength',0.5, ...
         'XLabel',sprintf('%.1f mW', xLen_B),'YLabel','0.5 R^2', ...
-        'LineWidth',2,'LabelGap',0.05,'FontSize',6);
+        'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap,'FontSize',PS.fs,'FontWeight',PS.fw);
 
     lgd_B = legend(ax_B, 'Box','off','FontSize',6,'FontWeight','bold','Location','southwest');
     lgd_B.ItemTokenSize = [6 6];
     lgd_B.AutoUpdate = 'off';
 
-    exportgraphics(fig_B, sprintf('paper/tf_loao_%s_%s_en%d.pdf', ...
-        allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en), ...
-        'ContentType','vector');
+    % exportgraphics(fig_B, sprintf('paper/images/figure2/tf_loao_%s_%s_en%d.pdf', ...
+    %     allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en), ...
+    %     'ContentType','vector');
 end
+
+%% Motion analysis parameters — set integration window here before running analysis sections
+% Motion energy is recomputed on-the-fly from the stored motTrace (±3 s).
+% Change motWin_ana / motThr_lo / motThr_hi; both sections below will use them.
+
+motWin_ana     = [-1.0, 0.5];   % [start, end] in seconds relative to stim onset
+motThr_lo      = -0.5;          % mean z-score: Low | Mid boundary
+motThr_hi      =  0.5;          % mean z-score: Mid | High boundary
+tertertColors_motot = [0.20 0.40 0.80;   % Low  — blue
+                  0.55 0.25 0.75;   % Mid  — purple
+                  0.85 0.20 0.20];  % High — red
+tLabels_m      = {'Low motion', 'Mid motion', 'High motion'};
 
 %% Motion vs Peak_imp deviation — one figure per session, subplots per amp
 %
-% X: motion energy = sum(mv_z, stim±1s)  (imp.mot, window already set to ±35 samples)
+% X: mean z-scored motion over motWin_ana (comparable across sessions)
 % Y: |Peak_imp − mean(Peak_imp)| for that amp group  (imp.Peak_imp_dev)
+% Dots coloured by Low/Mid/High using motThr_lo / motThr_hi from parameter cell.
 % Click any dot → motionDetailCallback opens dF/F + motion trace for that trial.
 
-nExp = numel(allExperiments);
-t_win_mot = -tWin : 1/35 : tWin;
+nExp      = numel(allExperiments);
+t_win_mot = -tWin : 1/35 : tWin;   % full ±3 s — matches dfImp / motTrace column count
+iMot_a    = t_win_mot >= motWin_ana(1) & t_win_mot <= motWin_ana(2);
 
 for expIdx = 1:nExp
     imp_e  = allExperiments(expIdx).imp;
     nAmp_e = numel(imp_e.uAmp);
     if nAmp_e == 0, continue; end
+
+    % Compute shared x/y limits across all amps for this experiment
+    xAll_m = []; yAll_m = [];
+    for iA = 1:nAmp_e
+        xAll_m = [xAll_m; mean(imp_e.motTrace{iA}(:, iMot_a), 2)]; %#ok<AGROW>
+        yAll_m = [yAll_m; imp_e.Peak_imp_dev{iA}(:)];              %#ok<AGROW>
+    end
+    xAll_m = xAll_m(isfinite(xAll_m)); yAll_m = yAll_m(isfinite(yAll_m));
+    xPad   = 0.05 * (max(xAll_m) - min(xAll_m));
+    yPad   = 0.05 * max(yAll_m);
+    xLim_m = [min(xAll_m) - xPad,  max(xAll_m) + xPad];
+    yLim_m = [0,                    max(yAll_m) + yPad];
 
     nCols_m = min(nAmp_e, 4);
     nRows_m = ceil(nAmp_e / nCols_m);
@@ -1044,23 +994,33 @@ for expIdx = 1:nExp
         'FontWeight','bold', 'FontSize', 10, 'Interpreter','none');
 
     for iAmp = 1:nAmp_e
-        mot_i = imp_e.mot{iAmp}(:);
-        dev_i = imp_e.Peak_imp_dev{iAmp}(:);
-        nUse  = min(numel(mot_i), numel(dev_i));
+        dev_i  = imp_e.Peak_imp_dev{iAmp}(:);
+        nUse   = min(size(imp_e.motTrace{iAmp}, 1), numel(dev_i));
         if nUse < 2, continue; end
-        mot_i = mot_i(1:nUse);
-        dev_i = dev_i(1:nUse);
+        mot_i  = mean(imp_e.motTrace{iAmp}(1:nUse, iMot_a), 2);
+        dev_i  = dev_i(1:nUse);
+        tert_i = 1 + (mot_i >= motThr_lo) + (mot_i > motThr_hi);
 
         ax = subplot(nRows_m, nCols_m, iAmp);
-        hS = scatter(ax, mot_i, dev_i, 25, [0.2 0.4 0.8], 'o', 'filled', ...
-            'MarkerFaceAlpha', 0.6);
+        hold(ax, 'on');
+        hS = [];
+        for k = 1:3
+            mk = tert_i == k;
+            if ~any(mk), continue; end
+            hS = scatter(ax, mot_i(mk), dev_i(mk), 25, tertertColors_motot(k,:), ...
+                'filled', 'MarkerFaceAlpha', 0.6, 'DisplayName', tLabels_m{k});
+        end
 
         r = corr(mot_i, dev_i, 'rows','complete');
         title(ax, sprintf('%.2f V   (n=%d,  r=%.2f)', imp_e.uAmp{iAmp}, nUse, r), ...
             'FontSize', 8, 'FontWeight','bold');
-        xlabel(ax, 'Motion energy (±1s)', 'FontSize', 8);
+        xlabel(ax, sprintf('Mean motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), 'FontSize', 8);
         ylabel(ax, 'Prediction error', 'FontSize', 8);
+        lg = legend(ax, 'Box','off', 'FontSize', 7, 'Location','best');
+        lg.ItemTokenSize = [6 6];
         set(ax, 'Box','off', 'TickDir','out', 'FontSize', 8);
+        xlim(ax, xLim_m);
+        ylim(ax, yLim_m);
 
         % Capture per-iteration values for the closure
         c_ax   = ax;
@@ -1069,380 +1029,201 @@ for expIdx = 1:nExp
         c_imp  = imp_e;
         c_iAmp = iAmp;
         c_twin = t_win_mot;
-        set(hS, 'ButtonDownFcn', ...
-            @(~,~) motionDetailCallback(c_ax, c_mot, c_dev, c_imp, c_iAmp, c_twin));
+        if ~isempty(hS)
+            set(hS, 'ButtonDownFcn', ...
+                @(~,~) motionDetailCallback(c_ax, c_mot, c_dev, c_imp, c_iAmp, c_twin));
+        end
     end
 end
 
-%% Motion-sorted trial heatmap + signed deviation figure (per amplitude)
+%% Motion-sorted figures — pooled amps, session selExp_mot
 %
-% Figure 1: per-amplitude heatmap — trials × time, sorted by motion energy
-%           ascending, raw dF/F as colour (shared CLim across amps).
-% Figure 2: per-amplitude signed deviation — same trial order on Y-axis,
-%           Peak_imp − mean(Peak_imp) on X-axis, coloured by motion tertile.
+% Figure 1: trials sorted by motion (Y), |Peak_imp − mean| (X), two classes.
+% Figure 2: mean motion z-score (X) vs |Peak_imp − mean| (Y), two classes.
 %
-% Motion window: ±1 s (±35 samples at 35 Hz) around stim onset (imp.mot).
+% Classification: No motion (mean z ≤ motThr_hi) vs Motion (mean z > motThr_hi).
+% motThr_hi is set in the parameters cell above.
 
-selExp_mot     = 3;
-tCrop_mot      = [-0.5, 1.5];   % display window (s)
-tertColors_mot = [0.20 0.40 0.80;   % low  — blue
-                  0.55 0.25 0.75;   % mid  — purple
-                  0.85 0.20 0.20];  % high — red
-cmap_bwr = interp1([0 0.5 1], [0.0 0.0 1.0; 1.0 1.0 1.0; 1.0 0.0 0.0], ...
-                   linspace(0, 1, 256));
+selExp_mot = 3;
 
 imp_e_mot  = allExperiments(selExp_mot).imp;
 nAmp_mot   = numel(imp_e_mot.uAmp);
+mn_mot     = allExperiments(selExp_mot).mn;
+td_mot     = allExperiments(selExp_mot).td;
+en_mot     = allExperiments(selExp_mot).en;
+
 t_full_mot = -tWin : 1/35 : tWin;
-iCrop_mot  = find(t_full_mot >= tCrop_mot(1) & t_full_mot <= tCrop_mot(2));
-tDisp_mot  = t_full_mot(iCrop_mot);
+iMot_a     = t_full_mot >= motWin_ana(1) & t_full_mot <= motWin_ana(2);
+iCrop_new  = find(t_full_mot >= -2 & t_full_mot <= 2);   % for legacy pool loop
 
-% --- Per-amplitude: sort trials by motion, compute signed deviation ---
-dfSorted_all  = cell(nAmp_mot, 1);
-devSorted_all = cell(nAmp_mot, 1);
-motSorted_all = cell(nAmp_mot, 1);
-tertile_all   = cell(nAmp_mot, 1);
-nT_all        = zeros(nAmp_mot, 1);
+binColors_m = [0.30 0.55 0.85; 0.85 0.20 0.20];   % No motion — blue; Motion — red
+binLabels_m = {'No motion', 'Motion'};
+
+% --- Pooled data prep ---
+allAbsDev_m = [];
+allMot_m    = [];
 
 for iAmp = 1:nAmp_mot
     df_i  = imp_e_mot.dfImp{iAmp};
-    mot_i = imp_e_mot.mot{iAmp}(:);
     pk_i  = imp_e_mot.Peak_imp{iAmp}(:);
-    nUse  = min([size(df_i, 1), numel(mot_i), numel(pk_i)]);
+    mn_i  = mean(pk_i, 'omitnan');
+    nUse  = min([size(df_i, 1), numel(pk_i), size(imp_e_mot.motTrace{iAmp}, 1)]);
     if nUse < 2, continue; end
-    df_i  = df_i(1:nUse, iCrop_mot);
-    mot_i = mot_i(1:nUse);
-    pk_i  = pk_i(1:nUse);
-
-    [~, si]             = sort(mot_i, 'ascend');
-    dfSorted_all{iAmp}  = df_i(si, :);
-    motSorted_all{iAmp} = mot_i(si);
-    dev_i               = pk_i - mean(pk_i, 'omitnan');
-    devSorted_all{iAmp} = abs(dev_i(si));
-    nT_all(iAmp)        = nUse;
-
-    edges               = quantile(mot_i(si), [1/3, 2/3]);
-    tertile_all{iAmp}   = 1 + (mot_i(si) >= edges(1)) + (mot_i(si) >= edges(2));
+    mot_i = mean(imp_e_mot.motTrace{iAmp}(1:nUse, iMot_a), 2);
+    allAbsDev_m = [allAbsDev_m; abs(pk_i(1:nUse) - mn_i)];  %#ok<AGROW>
+    allMot_m    = [allMot_m;    mot_i];                       %#ok<AGROW>
 end
 
-% Shared CLim for Figure 1: 2nd–98th percentile across all raw dF/F values
-allRaw_mot = cell2mat(cellfun(@(m) m(:), dfSorted_all, 'UniformOutput', false));
-clim_mot   = prctile(allRaw_mot(~isnan(allRaw_mot)), [2, 98]);
+[~, si_m]      = sort(allMot_m, 'ascend');
+absDevSorted_m = allAbsDev_m(si_m);
+motSorted_m    = allMot_m(si_m);
 
-mn_mot = allExperiments(selExp_mot).mn;
-td_mot = allExperiments(selExp_mot).td;
-en_mot = allExperiments(selExp_mot).en;
+motBin_m     = (allMot_m    > motThr_hi) + 1;   % 1 = No motion, 2 = Motion
+motBinSort_m = (motSorted_m > motThr_hi) + 1;
 
-% ---- Figure 1: heatmap (trials × time, sorted by motion) ----
-fig_mh = paperFig(nAmp_mot * 3, 4);
-tl_mh  = tiledlayout(fig_mh, 1, nAmp_mot, 'TileSpacing', 'tight', 'Padding', 'compact');
-
-for iAmp = 1:nAmp_mot
-    if isempty(dfSorted_all{iAmp}), continue; end
-    ax = nexttile(tl_mh);
-    imagesc(ax, tDisp_mot, 1:nT_all(iAmp), dfSorted_all{iAmp});
-    set(ax, 'YDir', 'normal', 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
-    colormap(ax, cmap_bwr);
-    clim(ax, clim_mot);
-    xline(ax, 0, 'w--', 'LineWidth', 0.8);
-    n3 = nT_all(iAmp);
-    yline(ax, n3/3 + 0.5,   'w--', 'LineWidth', 0.8);
-    yline(ax, 2*n3/3 + 0.5, 'w--', 'LineWidth', 0.8);
-    title(ax, sprintf('%.2f V  n=%d', imp_e_mot.uAmp{iAmp}, nT_all(iAmp)), ...
-        'FontSize', 6, 'FontWeight', 'bold');
-    xlabel(ax, 'Time (s)', 'FontSize', 6, 'FontWeight', 'bold');
-    if iAmp == 1
-        ylabel(ax, 'Trial (sorted by motion)', 'FontSize', 6, 'FontWeight', 'bold');
-    end
-    if iAmp == nAmp_mot
-        cb = colorbar(ax, 'Location', 'eastoutside');
-        cb.Label.String   = '\DeltaF/F (%)';
-        cb.Label.FontSize = 6;
-        cb.FontSize       = 6;
-    end
-end
-exportgraphics(fig_mh, ...
-    sprintf('paper/imp_motion_heatmap_%s_%s_en%d.pdf', mn_mot, td_mot, en_mot), ...
-    'ContentType', 'vector');
-exportgraphics(fig_mh, ...
-    sprintf('paper/imp_motion_heatmap_%s_%s_en%d.png', mn_mot, td_mot, en_mot), ...
-    'Resolution', 300);
-
-% Figure 2 (pooled normalised deviation) is generated after the pool loop below.
-
-% ---- Figure 3 / 4 / 5 / 6: pooled amplitude-normalised data ----
-% Normalise each trial's trace and deviation by |Peak_imp_mean|.
-% Also track amp group index and normalised |deviation| for Options A–C.
-allDF_n    = [];
-allMot_n   = [];
-ampIdx_n   = [];   % amplitude group index per pooled trial
-devNorm_n  = [];   % |Peak_imp - mean| / |Peak_imp_mean| per trial
+% --- Legacy pool loop (used by poster figure and pre-trial variance sections) ---
+allDF_n   = [];
+allMot_n  = [];
+ampIdx_n  = [];
+devNorm_n = [];
 for iAmp = 1:nAmp_mot
     df_i  = imp_e_mot.dfImp{iAmp};
-    mot_i = imp_e_mot.mot{iAmp}(:);
     pk_i  = imp_e_mot.Peak_imp{iAmp}(:);
     mn_i  = imp_e_mot.Peak_imp_mean(iAmp);
     if isnan(mn_i) || mn_i == 0, continue; end
-    nUse  = min([size(df_i, 1), numel(mot_i), numel(pk_i)]);
-    allDF_n   = [allDF_n;   df_i(1:nUse, iCrop_mot) / abs(mn_i)];        %#ok<AGROW>
-    allMot_n  = [allMot_n;  mot_i(1:nUse)];                               %#ok<AGROW>
-    ampIdx_n  = [ampIdx_n;  repmat(iAmp, nUse, 1)];                       %#ok<AGROW>
-    devNorm_n = [devNorm_n; abs(pk_i(1:nUse) - mn_i) / abs(mn_i)];       %#ok<AGROW>
+    nUse  = min([size(df_i, 1), numel(pk_i), size(imp_e_mot.motTrace{iAmp}, 1)]);
+    mot_i = mean(imp_e_mot.motTrace{iAmp}(1:nUse, iMot_a), 2);
+    allDF_n   = [allDF_n;   df_i(1:nUse, iCrop_new) / abs(mn_i)];  %#ok<AGROW>
+    allMot_n  = [allMot_n;  mot_i];                                  %#ok<AGROW>
+    ampIdx_n  = [ampIdx_n;  repmat(iAmp, nUse, 1)];                 %#ok<AGROW>
+    devNorm_n = [devNorm_n; abs(pk_i(1:nUse) - mn_i) / abs(mn_i)];  %#ok<AGROW>
 end
-edges_n   = quantile(allMot_n, [1/3, 2/3]);
-tertile_n = 1 + (allMot_n >= edges_n(1)) + (allMot_n >= edges_n(2));
 
-fig_mt = paperFig(6, 4);
-ax_mt  = axes(fig_mt);
-hold(ax_mt, 'on');
-lgdStr_mt = {'Low motion', 'Mid motion', 'High motion'};
-for k = 1:3
-    mk = tertile_n == k;
-    mu = mean(allDF_n(mk, :), 1, 'omitnan');
-    se = std(allDF_n(mk, :), 0, 1, 'omitnan') / sqrt(sum(mk));
-    fill(ax_mt, [tDisp_mot, fliplr(tDisp_mot)], [mu+se, fliplr(mu-se)], ...
-        tertColors_mot(k, :), 'FaceAlpha', 0.2, 'EdgeColor', 'none');
-    plot(ax_mt, tDisp_mot, mu, 'Color', tertColors_mot(k, :), 'LineWidth', 1, ...
-        'DisplayName', lgdStr_mt{k});
+% ---- Figure 1: trial rank (sorted by motion) vs |Peak dev| ----
+[rA_m, pA_m] = corr(allMot_m, allAbsDev_m, 'rows', 'complete');
+
+fig_ad = paperFig(6, 6);
+ax_ad  = axes(fig_ad);
+hold(ax_ad, 'on');
+for k = 1:2
+    mk = motBinSort_m == k;
+    scatter(ax_ad, absDevSorted_m(mk), find(mk), 6, ...
+        binColors_m(k, :), 'filled', 'MarkerFaceAlpha', 0.6, ...
+        'DisplayName', binLabels_m{k});
 end
-xline(ax_mt, 0, 'k--', 'LineWidth', 0.5);
-set(ax_mt, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
-xlabel(ax_mt, 'Time (s)',        'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_mt, 'Norm. \DeltaF/F', 'FontSize', 6, 'FontWeight', 'bold');
-lg_mt = legend(ax_mt, 'Location', 'best', 'FontSize', 6);
-lg_mt.ItemTokenSize = [6 6];
-hold(ax_mt, 'off');
-exportgraphics(fig_mt, ...
-    sprintf('paper/imp_motion_traces_%s_%s_en%d.pdf', mn_mot, td_mot, en_mot), ...
-    'ContentType', 'vector');
-exportgraphics(fig_mt, ...
-    sprintf('paper/imp_motion_traces_%s_%s_en%d.png', mn_mot, td_mot, en_mot), ...
-    'Resolution', 300);
-
-% ---- Figure 2 (pooled): all amps, trials sorted by motion, norm |deviation| on X ----
-[~, si_md]    = sort(allMot_n, 'ascend');
-devNorm_smd   = devNorm_n(si_md);
-mot_smd       = allMot_n(si_md);
-nT_md         = numel(mot_smd);
-edges_md      = quantile(mot_smd, [1/3, 2/3]);
-tertile_md    = 1 + (mot_smd >= edges_md(1)) + (mot_smd >= edges_md(2));
-
-fig_md = paperFig(6, 6);
-ax_md  = axes(fig_md);
-hold(ax_md, 'on');
-lgdStr_md = {'Low motion', 'Mid motion', 'High motion'};
-for k = 1:3
-    mk = tertile_md == k;
-    scatter(ax_md, devNorm_smd(mk), find(mk), 6, ...
-        tertColors_mot(k, :), 'filled', 'MarkerFaceAlpha', 0.6, ...
-        'DisplayName', lgdStr_md{k});
-end
-hl_md = xline(ax_md, 0, 'k--', 'LineWidth', 0.5);
-hl_md.HandleVisibility = 'off';
-r_md2 = corr(mot_smd, devNorm_smd, 'rows', 'complete');
-title(ax_md, sprintf('All amps pooled  r = %.2f', r_md2), ...
+hl_a0 = xline(ax_ad, 0, 'k-', 'LineWidth', 0.5); hl_a0.HandleVisibility = 'off';
+title(ax_ad, sprintf('r = %.2f  p = %.3f', rA_m, pA_m), ...
     'FontSize', 6, 'FontWeight', 'bold');
-xlabel(ax_md, '|Peak inhib \minus mean| / mean', 'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_md, 'Trial (sorted by motion)',         'FontSize', 6, 'FontWeight', 'bold');
-lg_md = legend(ax_md, 'Location', 'best', 'FontSize', 6);
-lg_md.ItemTokenSize = [6 6];
-set(ax_md, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'YDir', 'normal');
-hold(ax_md, 'off');
-exportgraphics(fig_md, ...
-    sprintf('paper/imp_motion_deviation_%s_%s_en%d.pdf', mn_mot, td_mot, en_mot), ...
-    'ContentType', 'vector');
-exportgraphics(fig_md, ...
-    sprintf('paper/imp_motion_deviation_%s_%s_en%d.png', mn_mot, td_mot, en_mot), ...
-    'Resolution', 300);
-
-% ---- Figure 4 (Option A): normalised heatmap + amp strip + deviation strip ----
-% All trials pooled, sorted by motion.  Left strip = amplitude group colour.
-% Main = normalised dF/F heatmap.  Right strip = normalised |deviation|.
-[~, si_n]    = sort(allMot_n, 'ascend');
-dfN_sorted   = allDF_n(si_n, :);
-ampIdx_sort  = ampIdx_n(si_n);
-devNorm_sort = devNorm_n(si_n);
-nT_n         = numel(allMot_n);
-
-ampColors_n  = lines(nAmp_mot);   % one colour per amplitude group
-ampStrip     = reshape(ampIdx_sort, [], 1);       % nT × 1 integer
-devStrip     = reshape(devNorm_sort, [], 1);       % nT × 1
-
-clim_n   = prctile(dfN_sorted(~isnan(dfN_sorted)), [2, 98]);
-devClim  = [0, prctile(devNorm_n, 98)];
-
-fig_na = paperFig(12, 6);
-tl_na  = tiledlayout(fig_na, 1, 20, 'TileSpacing', 'none', 'Padding', 'compact');
-
-% Left strip: amp group
-ax_as = nexttile(tl_na, 1, [1 1]);
-imagesc(ax_as, 1, 1:nT_n, ampStrip);
-colormap(ax_as, ampColors_n);
-clim(ax_as, [0.5, nAmp_mot + 0.5]);
-set(ax_as, 'YDir', 'normal', 'XTick', [], 'YTick', [], 'Box', 'off');
-ylabel(ax_as, 'Trial (sorted by motion)', 'FontSize', 6, 'FontWeight', 'bold');
-
-% Main heatmap
-ax_nh = nexttile(tl_na, 2, [1 17]);
-imagesc(ax_nh, tDisp_mot, 1:nT_n, dfN_sorted);
-set(ax_nh, 'YDir', 'normal', 'YTick', [], 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
-colormap(ax_nh, cmap_bwr);
-clim(ax_nh, clim_n);
-xline(ax_nh, 0, 'w--', 'LineWidth', 0.8);
-mot_n_s = sort(allMot_n, 'ascend');
-edges_na = quantile(mot_n_s, [1/3, 2/3]);
-t_na     = 1 + (mot_n_s >= edges_na(1)) + (mot_n_s >= edges_na(2));
-yline(ax_nh, sum(t_na==1)+0.5,   'w--', 'LineWidth', 0.8);
-yline(ax_nh, sum(t_na<=2)+0.5,   'w--', 'LineWidth', 0.8);
-xlabel(ax_nh, 'Time (s)', 'FontSize', 6, 'FontWeight', 'bold');
-cb_nh = colorbar(ax_nh, 'Location', 'eastoutside');
-cb_nh.Label.String   = 'Norm. \DeltaF/F';
-cb_nh.Label.FontSize = 6;
-cb_nh.FontSize       = 6;
-
-% Right strip: normalised |deviation|
-ax_ds = nexttile(tl_na, 19, [1 2]);
-imagesc(ax_ds, 1, 1:nT_n, devStrip);
-colormap(ax_ds, hot(256));
-clim(ax_ds, devClim);
-set(ax_ds, 'YDir', 'normal', 'XTick', [], 'YTick', [], 'Box', 'off');
-cb_ds = colorbar(ax_ds, 'Location', 'eastoutside');
-cb_ds.Label.String   = '|Dev| / mean';
-cb_ds.Label.FontSize = 6;
-cb_ds.FontSize       = 6;
-
-exportgraphics(fig_na, ...
-    sprintf('paper/imp_motion_normheatmap_%s_%s_en%d.pdf', mn_mot, td_mot, en_mot), ...
-    'ContentType', 'vector');
-exportgraphics(fig_na, ...
-    sprintf('paper/imp_motion_normheatmap_%s_%s_en%d.png', mn_mot, td_mot, en_mot), ...
-    'Resolution', 300);
-
-% ---- Figure 5 (Option B): normalised deviation scatter + regression ----
-% X: motion energy  Y: |deviation| / |Peak_imp_mean|  colour: amplitude group
-fig_ns = paperFig(8, 6);
-ax_ns  = axes(fig_ns);
-hold(ax_ns, 'on');
-for iAmp = 1:nAmp_mot
-    mk = ampIdx_n == iAmp;
-    scatter(ax_ns, allMot_n(mk), devNorm_n(mk), 6, ampColors_n(iAmp, :), ...
-        'filled', 'MarkerFaceAlpha', 0.4, 'DisplayName', sprintf('%.2f V', imp_e_mot.uAmp{iAmp}));
-end
-mdl_ns  = fitlm(allMot_n, devNorm_n);
-x_rng   = linspace(min(allMot_n), max(allMot_n), 100)';
-[y_fit, ci_fit] = predict(mdl_ns, x_rng);
-hf_ns = fill(ax_ns, [x_rng; flipud(x_rng)], [ci_fit(:,1); flipud(ci_fit(:,2))], ...
-    [0.5 0.5 0.5], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
-hf_ns.HandleVisibility = 'off';
-hp_ns = plot(ax_ns, x_rng, y_fit, 'k-', 'LineWidth', 1.2);
-hp_ns.HandleVisibility = 'off';
-r_ns = corr(allMot_n, devNorm_n, 'rows', 'complete');
-p_ns = mdl_ns.Coefficients.pValue(2);
-title(ax_ns, sprintf('r = %.2f,  p = %.3f', r_ns, p_ns), ...
+xlabel(ax_ad, '|Peak dev| (\DeltaF/F %)',  'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_ad, sprintf('Trial (sorted by motion, %.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
     'FontSize', 6, 'FontWeight', 'bold');
-xlabel(ax_ns, 'Motion energy (±1s)', 'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_ns, '|Peak inhib \minus mean| / mean', 'FontSize', 6, 'FontWeight', 'bold');
-lg_ns = legend(ax_ns, 'Location', 'best', 'FontSize', 6);
-lg_ns.ItemTokenSize = [6 6];
-set(ax_ns, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
-hold(ax_ns, 'off');
-exportgraphics(fig_ns, ...
-    sprintf('paper/imp_motion_devscatter_%s_%s_en%d.pdf', mn_mot, td_mot, en_mot), ...
-    'ContentType', 'vector');
-exportgraphics(fig_ns, ...
-    sprintf('paper/imp_motion_devscatter_%s_%s_en%d.png', mn_mot, td_mot, en_mot), ...
-    'Resolution', 300);
+lg_ad = legend(ax_ad, 'Location', 'best', 'FontSize', 6);
+lg_ad.ItemTokenSize = [6 6];
+set(ax_ad, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'YDir', 'normal');
+hold(ax_ad, 'off');
 
-% ---- Figure 6 (Option C): quartile mean traces (amplitude-normalised) ----
-quartEdges  = quantile(allMot_n, [0.25, 0.50, 0.75]);
-quartile_n  = 1 + (allMot_n >= quartEdges(1)) + ...
-                  (allMot_n >= quartEdges(2)) + ...
-                  (allMot_n >= quartEdges(3));
-quartColors = [0.15 0.35 0.80;   % Q1 — dark blue
-               0.40 0.65 0.90;   % Q2 — light blue
-               0.95 0.55 0.20;   % Q3 — orange
-               0.85 0.15 0.15];  % Q4 — red
-quartLabels = {'Q1 (lowest motion)', 'Q2', 'Q3', 'Q4 (highest motion)'};
-
-fig_nq = paperFig(6, 4);
-ax_nq  = axes(fig_nq);
-hold(ax_nq, 'on');
-for k = 1:4
-    mk = quartile_n == k;
-    mu = mean(allDF_n(mk, :), 1, 'omitnan');
-    se = std(allDF_n(mk, :), 0, 1, 'omitnan') / sqrt(sum(mk));
-    fill(ax_nq, [tDisp_mot, fliplr(tDisp_mot)], [mu+se, fliplr(mu-se)], ...
-        quartColors(k, :), 'FaceAlpha', 0.15, 'EdgeColor', 'none');
-    plot(ax_nq, tDisp_mot, mu, 'Color', quartColors(k, :), 'LineWidth', 1, ...
-        'DisplayName', quartLabels{k});
+% ---- Figure 2: mean motion z-score vs |Peak dev| scatter ----
+fig_mv = paperFig(6, 4);
+ax_mv  = axes(fig_mv);
+hold(ax_mv, 'on');
+for k = 1:2
+    mk = motBin_m == k;
+    scatter(ax_mv, allMot_m(mk), allAbsDev_m(mk), 6, ...
+        binColors_m(k, :), 'filled', 'MarkerFaceAlpha', 0.5, ...
+        'DisplayName', binLabels_m{k});
 end
-xline(ax_nq, 0, 'k--', 'LineWidth', 0.5);
-set(ax_nq, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
-xlabel(ax_nq, 'Time (s)',        'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_nq, 'Norm. \DeltaF/F', 'FontSize', 6, 'FontWeight', 'bold');
-lg_nq = legend(ax_nq, 'Location', 'best', 'FontSize', 6);
-lg_nq.ItemTokenSize = [6 6];
-hold(ax_nq, 'off');
-exportgraphics(fig_nq, ...
-    sprintf('paper/imp_motion_quartiles_%s_%s_en%d.pdf', mn_mot, td_mot, en_mot), ...
+hl_mv = xline(ax_mv, motThr_hi, 'k--', 'LineWidth', 0.8); hl_mv.HandleVisibility = 'off';
+% title(ax_mv, sprintf('r = %.2f  p = %.3f', rA_m, pA_m), ...
+    % 'FontSize', 6, 'FontWeight', 'bold');
+xlabel(ax_mv, sprintf('Mean motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), 'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_mv, '|Peak dev| (\DeltaF/F %)',  'FontSize', 6, 'FontWeight', 'bold');
+lg_mv = legend(ax_mv, 'Location', 'best', 'FontSize', 6);
+lg_mv.ItemTokenSize = [6 6];
+set(ax_mv, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
+hold(ax_mv, 'off');
+exportgraphics(fig_mv, ...
+    sprintf('paper/images/figure2/imp_motion_devscatter_%s_%s_en%d.pdf', mn_mot, td_mot, en_mot), ...
     'ContentType', 'vector');
-exportgraphics(fig_nq, ...
-    sprintf('paper/imp_motion_quartiles_%s_%s_en%d.png', mn_mot, td_mot, en_mot), ...
-    'Resolution', 300);
 
-%% Freq band power heatmap — one figure per session, subplots per amp
-%
-% Y-axis: trials sorted by Peak_imp_dev ascending
-% X-axis: frequency band centres (0.25–9.75 Hz, 20 bands)
-% Color : absolute band power (S_bands), no normalization or z-scoring
-
-fbCtrs = (0:19)*0.5 + 0.25;   % 20 bands, 0.25–9.75 Hz (fixed, same as spectrogram setup)
+% ---- Figure 2 (pooled all sessions): motion z-score vs |Peak dev| ----
+% colour = session (expColors); marker = o no-motion, ^ motion
+allAbsDev_pool = [];
+allMot_pool    = [];
+allExp_pool    = [];
 
 for expIdx = 1:nExp
-    imp_e  = allExperiments(expIdx).imp;
-    nAmp_e = numel(imp_e.uAmp);
-    if nAmp_e == 0, continue; end
-
-    % Shared color limit: 98th percentile of all freq power for this experiment
-    all_freq_e = vertcat(imp_e.freqSpec{:});
-    clim_e     = prctile(all_freq_e(:), 98);
-
-    nCols_f = min(nAmp_e, 4);
-    nRows_f = ceil(nAmp_e / nCols_f);
-
-    fig_f = figure('Color','w');
-    fig_f.Units    = 'inches';
-    fig_f.Position = [1, 1, nCols_f*3.5, nRows_f*3];
-    sgtitle(sprintf('%s  %s  e%d — Freq band power', allExperiments(expIdx).mn, ...
-        allExperiments(expIdx).td, allExperiments(expIdx).en), ...
-        'FontWeight','bold', 'FontSize', 10, 'Interpreter','none');
-
-    for iAmp = 1:nAmp_e
-        dev_i  = imp_e.Peak_imp_dev{iAmp}(:);
-        freq_i = imp_e.freqSpec{iAmp};         % nTrials × nBands, absolute power
-        nUse   = min(numel(dev_i), size(freq_i,1));
+    imp_e_p  = allExperiments(expIdx).imp;
+    nAmp_p   = numel(imp_e_p.uAmp);
+    for iAmp = 1:nAmp_p
+        df_i  = imp_e_p.dfImp{iAmp};
+        pk_i  = imp_e_p.Peak_imp{iAmp}(:);
+        mn_i  = mean(pk_i, 'omitnan');
+        nUse  = min([size(df_i, 1), numel(pk_i), size(imp_e_p.motTrace{iAmp}, 1)]);
         if nUse < 2, continue; end
-        dev_i  = dev_i(1:nUse);
-        freq_i = freq_i(1:nUse, :);
-
-        [~, sOrd] = sort(dev_i, 'ascend');
-
-        ax = subplot(nRows_f, nCols_f, iAmp);
-        imagesc(ax, fbCtrs, 1:nUse, freq_i(sOrd, :));
-        colormap(ax, 'hot');
-        clim(ax, [0 clim_e]);
-        cb = colorbar(ax);  cb.Label.String = 'Power (\DeltaF/F)^2 Hz^{-1}';
-
-        xlabel(ax, 'Frequency (Hz)', 'FontSize', 8);
-        ylabel(ax, 'Trial (sorted by dev)', 'FontSize', 8);
-        title(ax, sprintf('%.2f V  (n=%d)', imp_e.uAmp{iAmp}, nUse), ...
-            'FontSize', 8, 'FontWeight','bold');
-        set(ax, 'YDir','normal', 'Box','off', 'TickDir','out', 'FontSize', 8);
-        xticks(ax, 0:2:10);
+        mot_i = mean(imp_e_p.motTrace{iAmp}(1:nUse, iMot_a), 2);
+        allAbsDev_pool = [allAbsDev_pool; abs(pk_i(1:nUse) - mn_i)];  %#ok<AGROW>
+        allMot_pool    = [allMot_pool;    mot_i];                       %#ok<AGROW>
+        allExp_pool    = [allExp_pool;    repmat(expIdx, nUse, 1)];     %#ok<AGROW>
     end
 end
 
+[rP, pP]    = corr(allMot_pool, allAbsDev_pool, 'rows', 'complete');
+motBin_pool = (allMot_pool > motThr_hi) + 1;   % 1=No motion, 2=Motion
+
+% shuffle so no session dominates by draw order
+rng(0);
+shufIdx        = randperm(numel(allMot_pool));
+allMot_s       = allMot_pool(shufIdx);
+allAbsDev_s    = allAbsDev_pool(shufIdx);
+allExp_s       = allExp_pool(shufIdx);
+motBin_s       = motBin_pool(shufIdx);
+
+poolMarkers = {'o', '^'};   % No motion = circle, Motion = triangle
+
+% per-trial colour matrix (N×3) from session index
+cMat = expColors(allExp_s, :);
+
+fig_mvp = paperFig(6, 4);
+ax_mvp  = axes(fig_mvp);
+hold(ax_mvp, 'on');
+
+% one scatter call per marker class; per-point colour via Nx3 matrix
+for k = 1:2
+    mk = motBin_s == k;
+    if ~any(mk), continue; end
+    scatter(ax_mvp, allMot_s(mk), allAbsDev_s(mk), 8, cMat(mk, :), ...
+        poolMarkers{k}, 'filled', 'MarkerFaceAlpha', 0.5, ...
+        'MarkerEdgeColor', 'none', 'HandleVisibility', 'off');
+end
+
+hLeg_p  = gobjects(nExp + 2, 1);
+for expIdx = 1:nExp
+    eCol = expColors(expIdx, :);
+    hLeg_p(expIdx) = plot(ax_mvp, nan, nan, 'o', ...
+        'MarkerFaceColor', eCol, 'MarkerEdgeColor', 'none', ...
+        'MarkerSize', 4, 'DisplayName', sprintf('Session %d', expIdx));
+end
+% legend entries for marker shape
+hLeg_p(nExp+1) = plot(ax_mvp, nan, nan, 'o', 'MarkerFaceColor', [0.5 0.5 0.5], ...
+    'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','No motion');
+hLeg_p(nExp+2) = plot(ax_mvp, nan, nan, '^', 'MarkerFaceColor', [0.5 0.5 0.5], ...
+    'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','Motion');
+hl_p = xline(ax_mvp, motThr_hi, 'k--', 'LineWidth', 0.8); hl_p.HandleVisibility = 'off';
+% title(ax_mvp, sprintf('All sessions  r = %.2f  p = %.3f', rP, pP), ...
+%     'FontSize', 6, 'FontWeight', 'bold');
+xlabel(ax_mvp, sprintf('Mean motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
+    'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_mvp, '|Peak dev| (\DeltaF/F %)', 'FontSize', 6, 'FontWeight', 'bold');
+lg_mvp = legend(ax_mvp, hLeg_p(1:nExp+2), 'Location', 'best', 'FontSize', 6);
+lg_mvp.ItemTokenSize = [6 6];
+set(ax_mvp, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
+hold(ax_mvp, 'off');
+exportgraphics(fig_mvp, ...
+    'paper/images/figure2/imp_motion_devscatter_all_sessions.pdf', ...
+    'ContentType', 'vector');
+
 %% Interactive freq heatmap — click a trial row to open detail view
+
 %
 % Same layout as static heatmap above.
 % Click any row → impulseDetailCallback opens a 3-panel figure:
@@ -1483,7 +1264,7 @@ for expIdx = 1:nExp
         [~, sOrd] = sort(dev_i, 'ascend');
 
         ax = subplot(nRows_f, nCols_f, iAmp);
-        hImg = imagesc(ax, fbCtrs, 1:nUse, freq_i(sOrd, :));
+        hImg = imagesc(ax, freqBandCtrs, 1:nUse, freq_i(sOrd, :));
         colormap(ax, 'hot');
         clim(ax, [0 clim_e]);
         cb = colorbar(ax);  cb.Label.String = 'Power (\DeltaF/F)^2 Hz^{-1}';
@@ -1587,10 +1368,13 @@ for expIdx = 1:nExp
     end
 end
 
-%% Pre-trial variance sort — motion-excluded (top 25% motion trials removed)
+
+
+%% Pre-trial variance vs deviation (per session, motion-excluded)
 %
-% Same scatter + errorbar layout as above, but trials in the top 25% of
-% motion energy (imp.mot) are excluded before computing mean/deviation.
+% Per-session, per-amplitude: scatter of pre-trial variance vs |Peak dev|,
+% plus quintile errorbar.  Top 25% motion trials excluded.
+% Diagnostic only — no export.
 
 for expIdx = 1:nExp
 
@@ -1687,249 +1471,227 @@ for expIdx = 1:nExp
         title(ax2, sprintf('n=%d kept', n_kept), 'FontSize', 6, 'FontWeight','bold');
         set(ax2, 'Box','off', 'TickDir','out', 'FontSize', 6, 'FontWeight','bold');
     end
+end   % for expIdx - Section A
 
-%% Pre-trial variance vs prediction error — all trials, pooled amps, session 3
-
-selExp_pvp  = 3;
-imp_pvp     = allExperiments(selExp_pvp).imp;
-preIdx_pvp  = t_win_imp >= -1 & t_win_imp < 0;   % 1 s pre-stim
-
-allPreVar_pvp = [];
-allDevN_pvp   = [];
-
-for iAmp = 1:numel(imp_pvp.uAmp)
-    df_i = imp_pvp.dfImp{iAmp};
-    pk_i = imp_pvp.Peak_imp{iAmp}(:);
-    mn_i = imp_pvp.Peak_imp_mean(iAmp);
-    if isnan(mn_i) || mn_i == 0, continue; end
-    nUse = min(size(df_i,1), numel(pk_i));
-    if nUse < 2, continue; end
-    allPreVar_pvp = [allPreVar_pvp; var(df_i(1:nUse, preIdx_pvp), 0, 2)]; %#ok<AGROW>
-    allDevN_pvp   = [allDevN_pvp;   abs(pk_i(1:nUse) - mn_i) / abs(mn_i)]; %#ok<AGROW>
-end
-
-% Sort by pre-trial variance ascending (low at bottom)
-[~, si_pvp]   = sort(allPreVar_pvp, 'ascend');
-devSorted_pvp = allDevN_pvp(si_pvp);
-nT_pvp        = numel(devSorted_pvp);
-
-% Variance tertile colouring
-edges_pvp  = quantile(allPreVar_pvp(si_pvp), [1/3, 2/3]);
-tert_pvp   = 1 + (allPreVar_pvp(si_pvp) >= edges_pvp(1)) ...
-               + (allPreVar_pvp(si_pvp) >= edges_pvp(2));
-tColors_pvp = [0.20 0.40 0.80; 0.55 0.25 0.75; 0.85 0.20 0.20];
-tLabels_pvp = {'Low var', 'Mid var', 'High var'};
-
-% Linear fit: trial rank ~ prediction error
-mdl_pvp  = fitlm(allDevN_pvp, (1:nT_pvp)');
-xr_pvp   = linspace(min(allDevN_pvp), max(allDevN_pvp), 100)';
-yfit_pvp = predict(mdl_pvp, xr_pvp);
-
-% Correlation stats
-r_pvp = corr(allPreVar_pvp, allDevN_pvp, 'rows', 'complete');
-[~, p_pvp] = corr(allPreVar_pvp, allDevN_pvp, 'rows', 'complete');
-
-fig_pvp = paperFig(6, 6);
-ax_pvp  = axes(fig_pvp);
-hold(ax_pvp, 'on');
-for k = 1:3
-    mk = tert_pvp == k;
-    scatter(ax_pvp, devSorted_pvp(mk), find(mk), 6, ...
-        tColors_pvp(k,:), 'filled', 'MarkerFaceAlpha', 0.5, ...
-        'DisplayName', tLabels_pvp{k});
-end
-% hl_pvp = plot(ax_pvp, xr_pvp, yfit_pvp, 'k-', 'LineWidth', 1.5);
-hl_pvp.HandleVisibility = 'off';
-title(ax_pvp, sprintf('All trials  r = %.2f  p = %.3f', r_pvp, p_pvp), ...
-    'FontSize', 6, 'FontWeight', 'bold');
-xlabel(ax_pvp, 'Prediction error (norm. |dev|)',       'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_pvp, 'Trial (sorted by pre-trial variance)', 'FontSize', 6, 'FontWeight', 'bold');
-lg_pvp = legend(ax_pvp, 'Location', 'best', 'FontSize', 6);
-lg_pvp.ItemTokenSize = [6 6];
-set(ax_pvp, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'YDir', 'normal');
-hold(ax_pvp, 'off');
-
-mn_pvp = allExperiments(selExp_pvp).mn;
-td_pvp = allExperiments(selExp_pvp).td;
-en_pvp = allExperiments(selExp_pvp).en;
-exportgraphics(fig_pvp, ...
-    sprintf('paper/imp_prevar_deviation_%s_%s_en%d.pdf', mn_pvp, td_pvp, en_pvp), ...
-    'ContentType', 'vector');
-exportgraphics(fig_pvp, ...
-    sprintf('paper/imp_prevar_deviation_%s_%s_en%d.png', mn_pvp, td_pvp, en_pvp), ...
-    'Resolution', 300);
-
-%% Poster figure — brain state predicts impulse predictability (motion-cleaned)
+%% Pre-trial variance vs peak deviation — paper figure, motion-excluded (session selExp)
 %
-% Session selExp_poster, all amps pooled, top-25%-motion trials excluded.
-% Panel A: freq heatmap (trials sorted by norm |deviation|, X = freq bands)
-% Panel B: mean power per band across prediction-error quintiles
-% Panel C: pre-trial variance vs norm |deviation|, coloured by motion tertile
+% Same as the all-trials paper figure above but top 25% motion trials removed.
+% Motion threshold: 75th percentile of all motion values across all amps, session selExp.
+% Deviation recomputed on kept trials only (mean shifts after removing noisy trials).
 
-selExp_poster  = 3;
-imp_p          = allExperiments(selExp_poster).imp;
-nAmp_p         = numel(imp_p.uAmp);
-preIdx_poster  = t_win_imp >= -1 & t_win_imp < 0;   % 1 s pre-stim (35 samples)
-tertColors_p   = [0.20 0.40 0.80; 0.55 0.25 0.75; 0.85 0.20 0.20];
-lgdStr_p       = {'Low motion', 'Mid motion', 'High motion'};
+PS_pvm = paperStyle();
 
-% Global motion threshold: 75th percentile across all amps
-all_mot_p   = cell2mat(cellfun(@(x) x(:), imp_p.mot, 'UniformOutput', false));
-motThresh_p = prctile(all_mot_p, 75);
+imp_pam   = allExperiments(selExp).imp;
+nAmp_pam  = numel(imp_pam.uAmp);
 
-% Pool across amps (motion-cleaned, normalised)
-allFreq_p   = [];
-allDevN_p   = [];
-allPreVar_p = [];
-allMot_p    = [];
+% Motion threshold: 75th pctile across all amplitudes for this session
+mot_rows_pam = cellfun(@(x) x(:)', imp_pam.mot, 'UniformOutput', false);
+mot_thresh_pam = prctile(horzcat(mot_rows_pam{:}), 75);
 
-for iAmp = 1:nAmp_p
-    df_i   = imp_p.dfImp{iAmp};
-    freq_i = imp_p.freqSpec{iAmp};
-    mot_i  = imp_p.mot{iAmp}(:);
-    pk_i   = imp_p.Peak_imp{iAmp}(:);
-    mn_i   = imp_p.Peak_imp_mean(iAmp);
-    if isnan(mn_i) || mn_i == 0, continue; end
-    nUse = min([size(df_i,1), size(freq_i,1), numel(mot_i), numel(pk_i)]);
-    if nUse < 2, continue; end
-    df_i   = df_i(1:nUse, :);
-    freq_i = freq_i(1:nUse, :);
-    mot_i  = mot_i(1:nUse);
-    pk_i   = pk_i(1:nUse);
+vToMW_pam = 1.8 / 4.9;   % laser calibration: 0 V = 0 mW, 4.9 V = 1.8 mW
 
-    keep   = mot_i <= motThresh_p;
-    if sum(keep) < 2, continue; end
-    df_i   = df_i(keep, :);
-    freq_i = freq_i(keep, :);
-    mot_i  = mot_i(keep);
-    pk_i   = pk_i(keep);
+validAmps_pam = find(cellfun(@(x) x > 0, imp_pam.uAmp));
+nV_pam        = numel(validAmps_pam);
+ampCmap_pam   = cool(nV_pam);
 
-    devN_i   = abs(pk_i - mn_i) / abs(mn_i);
-    preVar_i = var(df_i(:, preIdx_poster), 0, 2);
+fig_pvm = paperFig(6, 4);
+ax_pvm  = axes(fig_pvm);
+hold(ax_pvm, 'on');
 
-    allFreq_p   = [allFreq_p;   freq_i];   %#ok<AGROW>
-    allDevN_p   = [allDevN_p;   devN_i];   %#ok<AGROW>
-    allPreVar_p = [allPreVar_p; preVar_i]; %#ok<AGROW>
-    allMot_p    = [allMot_p;    mot_i];    %#ok<AGROW>
+for ki = 1:nV_pam
+    iAmp   = validAmps_pam(ki);
+    df_i   = imp_pam.dfImp{iAmp};
+    pk_i   = imp_pam.Peak_imp{iAmp}(:);
+    mot_i  = imp_pam.mot{iAmp}(:);
+    n_tot  = min([size(df_i,1), numel(pk_i), numel(mot_i)]);
+    if n_tot < nBins_pa + 1, continue; end
+
+    df_i  = df_i(1:n_tot, :);
+    pk_i  = pk_i(1:n_tot);
+    mot_i = mot_i(1:n_tot);
+
+    keepIdx = mot_i <= mot_thresh_pam;
+    if sum(keepIdx) < nBins_pa + 1, continue; end
+
+    df_k   = df_i(keepIdx, :);
+    pk_k   = pk_i(keepIdx);
+    dev_k  = abs(pk_k - mean(pk_k, 'omitnan'));   % recomputed on kept trials
+
+    preVar_k = var(df_k(:, preIdx_var), 0, 2);
+
+    edges_pam    = quantile(preVar_k, linspace(0, 1, nBins_pa + 1));
+    edges_pam(1) = edges_pam(1) - eps;
+    [~, ~, binID_pam] = histcounts(preVar_k, edges_pam);
+
+    bin_mu_m  = zeros(nBins_pa, 1);
+    bin_sem_m = zeros(nBins_pa, 1);
+    bin_xmu_m = zeros(nBins_pa, 1);
+    for ib = 1:nBins_pa
+        mask_ib       = binID_pam == ib;
+        vals_ib       = dev_k(mask_ib);
+        bin_mu_m(ib)  = mean(vals_ib, 'omitnan');
+        bin_sem_m(ib) = std(vals_ib, 'omitnan') / sqrt(max(sum(~isnan(vals_ib)), 1));
+        bin_xmu_m(ib) = mean(preVar_k(mask_ib), 'omitnan');
+    end
+
+    col_pam = ampCmap_pam(ki, :);
+    errorbar(ax_pvm, bin_xmu_m, bin_mu_m, bin_sem_m, 'o-', ...
+        'Color', col_pam, 'MarkerFaceColor', col_pam, ...
+        'MarkerSize', 3, 'LineWidth', PS_pvm.lw_mean, 'CapSize', 3, ...
+        'DisplayName', sprintf('%.2f mW', imp_pam.uAmp{iAmp} * vToMW_pam));
 end
-nT_p = numel(allDevN_p);
 
-% Sort by prediction error for heatmap
-[~, si_p]     = sort(allDevN_p, 'ascend');
-freq_sorted_p = allFreq_p(si_p, :);
+hold(ax_pvm, 'off');
+set(ax_pvm, 'Box', 'off', 'TickDir', 'out', 'FontSize', PS_pvm.fs, 'FontWeight', PS_pvm.fw);
+xlabel(ax_pvm, 'Pre-trial variance (\DeltaF/F)^2', 'FontSize', PS_pvm.fs, 'FontWeight', PS_pvm.fw);
+ylabel(ax_pvm, 'Mean |peak dev| +/- SEM (\DeltaF/F %)', 'FontSize', PS_pvm.fs, 'FontWeight', PS_pvm.fw);
+% title(ax_pvm, 'Pre-trial variance vs deviation (motion excluded)', ...
+%     'FontSize', PS_pvm.fs, 'FontWeight', PS_pvm.fw);
+lg_pvm = legend(ax_pvm, 'Location', 'eastoutside', 'FontSize', PS_pvm.fs);
+lg_pvm.ItemTokenSize = [PS_pvm.lw_mean * 4, 6];
+lg_pvm.Box = 'off';
 
-% Quintile IDs (based on unsorted devN, for Panel B)
-qEdges_p = quantile(allDevN_p, linspace(0, 1, 6));
-qID_p    = discretize(allDevN_p, qEdges_p);
-qID_p(isnan(qID_p)) = 1;
-
-% Motion tertile (for Panel C colour)
-mEdges_p = quantile(allMot_p, [1/3, 2/3]);
-motTert_p = 1 + (allMot_p >= mEdges_p(1)) + (allMot_p >= mEdges_p(2));
-
-% ── Figure ──────────────────────────────────────────────────────────────
-fig_poster = paperFig(18, 6);
-tl_poster  = tiledlayout(fig_poster, 1, 3, 'TileSpacing', 'tight', 'Padding', 'compact');
-
-% --- Panel A: freq heatmap sorted by prediction error ---
-ax_pA = nexttile(tl_poster);
-clim_pA = [0, prctile(allFreq_p(:), 98)];
-imagesc(ax_pA, fbCtrs, 1:nT_p, freq_sorted_p);
-colormap(ax_pA, 'hot');
-clim(ax_pA, clim_pA);
-set(ax_pA, 'YDir', 'normal', 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
-xlabel(ax_pA, 'Frequency (Hz)',               'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_pA, 'Trial (sorted by pred. error)', 'FontSize', 6, 'FontWeight', 'bold');
-title(ax_pA, 'Spectral content vs prediction error', 'FontSize', 6, 'FontWeight', 'bold');
-xticks(ax_pA, 0:2:10);
-nPerQ_p = round(nT_p / 5);
-for iq = 1:4
-    yline(ax_pA, iq*nPerQ_p + 0.5, 'w--', 'LineWidth', 0.6, 'HandleVisibility', 'off');
-end
-cb_pA = colorbar(ax_pA, 'Location', 'eastoutside');
-cb_pA.Label.String   = 'Power (\DeltaF/F)^2 Hz^{-1}';
-cb_pA.Label.FontSize = 6;
-cb_pA.FontSize       = 6;
-
-% --- Panel B: mean power per freq band by prediction-error quintile ---
-ax_pB = nexttile(tl_poster);
-qColors_p = [0.15 0.35 0.80;
-             0.40 0.60 0.90;
-             0.70 0.70 0.70;
-             0.95 0.55 0.20;
-             0.85 0.15 0.15];
-qLabels_p = {'Q1 (low err)','Q2','Q3','Q4','Q5 (high err)'};
-hold(ax_pB, 'on');
-for q = 1:5
-    mk   = qID_p == q;
-    mu_q = mean(allFreq_p(mk, :), 1, 'omitnan');
-    se_q = std(allFreq_p(mk, :), 0, 1, 'omitnan') / sqrt(sum(mk));
-    hfq  = fill(ax_pB, [fbCtrs, fliplr(fbCtrs)], [mu_q+se_q, fliplr(mu_q-se_q)], ...
-        qColors_p(q,:), 'FaceAlpha', 0.15, 'EdgeColor', 'none');
-    hfq.HandleVisibility = 'off';
-    plot(ax_pB, fbCtrs, mu_q, 'Color', qColors_p(q,:), 'LineWidth', 1, ...
-        'DisplayName', qLabels_p{q});
-end
-hold(ax_pB, 'off');
-set(ax_pB, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
-xlabel(ax_pB, 'Frequency (Hz)',                    'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_pB, 'Mean power (\DeltaF/F)^2 Hz^{-1}', 'FontSize', 6, 'FontWeight', 'bold');
-title(ax_pB, 'Power by error quintile',            'FontSize', 6, 'FontWeight', 'bold');
-xticks(ax_pB, 0:2:10);
-lg_pB = legend(ax_pB, 'Location', 'best', 'FontSize', 6);
-lg_pB.ItemTokenSize = [6 6];
-
-% --- Panel C: pre-trial variance vs prediction error ---
-ax_pC = nexttile(tl_poster);
-hold(ax_pC, 'on');
-for k = 1:3
-    mk = motTert_p == k;
-    scatter(ax_pC, allPreVar_p(mk), allDevN_p(mk), 6, ...
-        tertColors_p(k,:), 'filled', 'MarkerFaceAlpha', 0.5, ...
-        'DisplayName', lgdStr_p{k});
-end
-mdl_pC = fitlm(allPreVar_p, allDevN_p);
-xr_pC  = linspace(min(allPreVar_p), max(allPreVar_p), 100)';
-[yf_pC, ci_pC] = predict(mdl_pC, xr_pC);
-hfc = fill(ax_pC, [xr_pC; flipud(xr_pC)], [ci_pC(:,1); flipud(ci_pC(:,2))], ...
-    [0.5 0.5 0.5], 'FaceAlpha', 0.2, 'EdgeColor', 'none');
-hfc.HandleVisibility = 'off';
-hpc = plot(ax_pC, xr_pC, yf_pC, 'k-', 'LineWidth', 1.2);
-hpc.HandleVisibility = 'off';
-r_pC = corr(allPreVar_p, allDevN_p, 'rows', 'complete');
-p_pC = mdl_pC.Coefficients.pValue(2);
-title(ax_pC, sprintf('r = %.2f   p = %.3f', r_pC, p_pC), ...
-    'FontSize', 6, 'FontWeight', 'bold');
-xlabel(ax_pC, 'Pre-trial variance (\DeltaF/F)^2', 'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_pC, 'Prediction error (norm. |dev|)',    'FontSize', 6, 'FontWeight', 'bold');
-title(ax_pC, sprintf('Pre-trial state  r=%.2f  p=%.3f', r_pC, p_pC), ...
-    'FontSize', 6, 'FontWeight', 'bold');
-lg_pC = legend(ax_pC, 'Location', 'best', 'FontSize', 6);
-lg_pC.ItemTokenSize = [6 6];
-set(ax_pC, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
-hold(ax_pC, 'off');
-
-% --- Export ---
-mn_p = allExperiments(selExp_poster).mn;
-td_p = allExperiments(selExp_poster).td;
-en_p = allExperiments(selExp_poster).en;
-exportgraphics(fig_poster, ...
-    sprintf('paper/imp_brainstate_poster_%s_%s_en%d.pdf', mn_p, td_p, en_p), ...
+mn_pam = allExperiments(selExp).mn;
+td_pam = allExperiments(selExp).td;
+en_pam = allExperiments(selExp).en;
+exportgraphics(fig_pvm, ...
+    sprintf('paper/images/figure2/prevar_vs_dev_allamps_motexcl_%s_%s_en%d.pdf', mn_pam, td_pam, en_pam), ...
     'ContentType', 'vector');
-exportgraphics(fig_poster, ...
-    sprintf('paper/imp_brainstate_poster_%s_%s_en%d.png', mn_p, td_p, en_p), ...
-    'Resolution', 300);
 
-% ── Spatial spread vs amplitude ───────────────────────────────────────────
+%% Freq heatmap sorted by pre-trial variance + deviation side strip (interactive)
+%
+% Trials sorted ascending by pre-trial variance (motion removed, session selExp).
+% X axis: frequency bands (freqBandCtrs).
+% Left panel: spectral power heatmap (parula). 2-4 Hz band highlighted.
+% Right strip: absolute deviation |Peak_imp - mean| per trial (hot colormap).
+%
+% Click any row in either panel to open a 3-panel detail figure for that trial:
+%   top   : dF/F trace (this trial, red) vs all kept-trial mean +/- SD (grey)
+%   middle: frequency spectrum (this trial, red) vs mean spectrum (grey)
+%   bottom: text summary (trial rank, pre-stim variance, deviation, amplitude)
+%
+% Static PNG is also exported.
+
+% --- Pool data across amplitudes (motion excluded, same session and threshold) ---
+imp_pvh        = allExperiments(selExp).imp;
+nAmp_pvh       = numel(imp_pvh.uAmp);
+mot_rows_pvh   = cellfun(@(x) x(:)', imp_pvh.mot, 'UniformOutput', false);
+mot_thresh_pvh = prctile(horzcat(mot_rows_pvh{:}), 75);
+vToMW_pvh      = 1.8 / 4.9;   % 0 V = 0 mW, 4.9 V = 1.8 mW
+
+allPreVar_p   = [];
+allFreq_p     = [];
+allDev_p      = [];
+allTrace_p    = [];
+allAmpV_p     = [];   % amplitude in V per trial
+
+for iAmp_pvh = 1:nAmp_pvh
+    df_i   = imp_pvh.dfImp{iAmp_pvh};
+    pk_i   = imp_pvh.Peak_imp{iAmp_pvh}(:);
+    mot_i  = imp_pvh.mot{iAmp_pvh}(:);
+    freq_i = imp_pvh.freqSpec{iAmp_pvh};
+    n_tot  = min([size(df_i,1), numel(pk_i), numel(mot_i), size(freq_i,1)]);
+    if n_tot < 3, continue; end
+    df_i   = df_i(1:n_tot, :);
+    pk_i   = pk_i(1:n_tot);
+    mot_i  = mot_i(1:n_tot);
+    freq_i = freq_i(1:n_tot, :);
+
+    keep   = find(mot_i <= mot_thresh_pvh);
+    if numel(keep) < 3, continue; end
+
+    df_k   = df_i(keep, :);
+    pk_k   = pk_i(keep);
+    freq_k = freq_i(keep, :);
+    dev_k  = abs(pk_k - mean(pk_k, 'omitnan'));
+    pvar_k = var(df_k(:, preIdx_var), 0, 2);
+
+    allPreVar_p = [allPreVar_p; pvar_k];                                        %#ok<AGROW>
+    allFreq_p   = [allFreq_p;   freq_k];                                        %#ok<AGROW>
+    allDev_p    = [allDev_p;    dev_k];                                         %#ok<AGROW>
+    allTrace_p  = [allTrace_p;  df_k];                                          %#ok<AGROW>
+    allAmpV_p   = [allAmpV_p;   repmat(imp_pvh.uAmp{iAmp_pvh}, numel(keep), 1)]; %#ok<AGROW>
+end
+
+% --- Sort all pooled trials by pre-trial variance ---
+[~, si_pv]       = sort(allPreVar_p, 'ascend');
+freq_sorted_pv   = allFreq_p(si_pv, :);
+dev_sorted_pv    = allDev_p(si_pv);
+trace_sorted_pv  = allTrace_p(si_pv, :);
+pvar_sorted_pv   = allPreVar_p(si_pv);
+ampV_sorted_pv   = allAmpV_p(si_pv);
+nT_pv            = numel(dev_sorted_pv);
+
+% --- Build figure ---
+fig_pvh = paperFig(10, 5);
+tl_pvh  = tiledlayout(fig_pvh, 1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+% Panel A: spectral heatmap
+ax_pvhA = nexttile(tl_pvh, 1);
+hImg_A  = imagesc(ax_pvhA, freqBandCtrs, 1:nT_pv, freq_sorted_pv);
+colormap(ax_pvhA, parula);
+clim(ax_pvhA, [0, prctile(allFreq_p(:), 98)]);
+set(ax_pvhA, 'YDir', 'normal', 'Box', 'off', 'TickDir', 'out', ...
+    'FontSize', 6, 'FontWeight', 'bold');
+xlabel(ax_pvhA, 'Frequency (Hz)', 'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_pvhA, 'Trial (sorted by pre-stim variance, low->high)', ...
+    'FontSize', 6, 'FontWeight', 'bold');
+title(ax_pvhA, 'Spectral power  [click row]', 'FontSize', 6, 'FontWeight', 'bold');
+xticks(ax_pvhA, 0:2:10);
+hold(ax_pvhA, 'on');
+patch(ax_pvhA, [2 4 4 2], [0.5 0.5 nT_pv+0.5 nT_pv+0.5], ...
+    [1 0.85 0.1], 'FaceAlpha', 0.13, 'EdgeColor', [0.85 0.6 0], ...
+    'LineWidth', 0.8, 'HandleVisibility', 'off');
+hold(ax_pvhA, 'off');
+cb_pvhA = colorbar(ax_pvhA, 'Location', 'eastoutside');
+cb_pvhA.Label.String   = 'Power (\DeltaF/F)^2 Hz^{-1}';
+cb_pvhA.Label.FontSize = 6;
+cb_pvhA.FontSize       = 6;
+
+% Panel B: deviation side strip
+ax_pvhB = nexttile(tl_pvh, 2);
+hImg_B  = imagesc(ax_pvhB, 1, 1:nT_pv, dev_sorted_pv);
+colormap(ax_pvhB, hot);
+clim(ax_pvhB, [0, prctile(dev_sorted_pv, 98)]);
+set(ax_pvhB, 'YDir', 'normal', 'Box', 'off', 'TickDir', 'out', ...
+    'XTick', [], 'FontSize', 6, 'FontWeight', 'bold', 'YTickLabel', {});
+title(ax_pvhB, '|Dev| (dF/F)  [click]', 'FontSize', 6, 'FontWeight', 'bold');
+cb_pvhB = colorbar(ax_pvhB, 'Location', 'eastoutside');
+cb_pvhB.Label.String   = '|Peak dev| (\DeltaF/F %)';
+cb_pvhB.Label.FontSize = 6;
+cb_pvhB.FontSize       = 6;
+
+% --- Attach click callbacks ---
+% Capture all closure variables explicitly (avoids workspace-clear issues).
+pvh_data.trace    = trace_sorted_pv;
+pvh_data.dev      = dev_sorted_pv;
+pvh_data.pvar     = pvar_sorted_pv;
+pvh_data.ampV     = ampV_sorted_pv;
+pvh_data.freq     = freq_sorted_pv;
+pvh_data.fbCtrs   = freqBandCtrs;
+pvh_data.twin     = t_win_imp;
+pvh_data.nT       = nT_pv;
+pvh_data.vToMW    = vToMW_pvh;
+pvh_data.meanTr   = mean(trace_sorted_pv, 1, 'omitnan');
+pvh_data.sdTr     = std(trace_sorted_pv, 0, 1);
+pvh_data.meanFreq = mean(freq_sorted_pv, 1, 'omitnan');
+
+set(hImg_A, 'ButtonDownFcn', @(~, ev) heatmapRowCallback(ev, ax_pvhA, pvh_data));
+set(hImg_B, 'ButtonDownFcn', @(~, ev) heatmapRowCallback(ev, ax_pvhB, pvh_data));
+
+exportgraphics(fig_pvh, 'paper/prevar_sorted_heatmap_dev.png', 'Resolution', 300);
+
+%% Spatial spread vs amplitude
+
 pxMM      = 0.173;    % mm per pixel
-selExp_sp = selExp;   % session to analyse; change independently if needed
+selExp_sp = 3;        % session to analyse (change here; does not require selExp in workspace)
 
-uA_sp     = allExperiments(selExp_sp).uAmp(:);
-imp_s     = allExperiments(selExp_sp).imp;
-mimg_s    = allExperiments(selExp_sp).mimg;
-brainMask = allExperiments(selExp_sp).brainMask;
-mI1_s     = allExperiments(selExp_sp).mI1;  
-nAmp_sp   = numel(uA_sp);
+uA_sp       = allExperiments(selExp_sp).uAmp(:);
+imp_s       = allExperiments(selExp_sp).imp;
+mimg_s      = allExperiments(selExp_sp).mimg;
+brainMask   = allExperiments(selExp_sp).brainMask;
+mI1_s       = allExperiments(selExp_sp).mI1;
+nAmp_sp     = numel(uA_sp);
 validAmp_sp = uA_sp > 0;
 validIdx_sp = find(validAmp_sp);
 nV_sp       = numel(validIdx_sp);
@@ -1945,68 +1707,42 @@ for k = 1:nV_sp
     base_maps(:, k) = imp_s.base_map{iA};
 end
 
-% Per-amplitude FWHM threshold: 50% of each map's own peak inhibition.
-% This avoids a global noise threshold that would make all contours identical
-% when the noise floor is much smaller than any amplitude's response.
-spread_area  = nan(nAmp_sp, 1);
-spread_r     = nan(nAmp_sp, 1);
-thr_per_amp  = nan(nV_sp, 1);
+% Global threshold: 50% of the strongest inhibition across ALL amplitudes.
+% Using per-amplitude FWHM inverts the ordering (small amps get a very
+% permissive threshold, counting noise as spread -> spuriously large area).
+% A single shared threshold fixes this: small amps that never reach it
+% give near-zero area, and area grows monotonically with amplitude.
+global_thr_sp = 0.5 * min(resp_maps(:));   % most negative dF/F across all amps, halved
+fprintf('Global threshold: %.4f dF/F%%  (50%% of strongest peak)\n', global_thr_sp);
+
+spread_area = nan(nAmp_sp, 1);
 for k = 1:nV_sp
     iA = validIdx_sp(k);
     map_k = resp_maps(:, k);
-    thr_per_amp(k) = 0.5 * min(map_k);   % 50% of peak inhibition (FWHM)
-    n_px = sum(map_k < thr_per_amp(k));
+    n_px = sum(map_k < global_thr_sp);
     spread_area(iA) = n_px * pxMM^2;
-    spread_r(iA)    = sqrt(spread_area(iA) / pi);   % effective radius (mm)
-    fprintf('  amp=%.2f mW  peak=%.3f%%dF/F  thr=%.3f  area=%.2f mm²  r=%.2f mm\n', ...
-        uA_sp(iA)/3, min(map_k), thr_per_amp(k), spread_area(iA), spread_r(iA));
+    fprintf('  amp=%.2f mW  peak=%.3f%%dF/F  area=%.2f mm2\n', ...
+        uA_sp(iA) * (1.8/4.9), min(map_k), spread_area(iA));
 end
 
-% ── Figure ─────────────────────────────────────────────────────────────────
-fig_sp = paperFig(12, 4);
-tlo_sp = tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+% ── Figure: amplitude vs inhibition area ────────────────────────────────
+vToMW_sp  = 1.8 / 4.9;   % calibration: 0 V = 0 mW, 4.9 V = 1.8 mW
+xAmp_sp   = uA_sp(validAmp_sp) * vToMW_sp;
+yArea_sp  = spread_area(validAmp_sp);
 
-% Panel A: mean brain image + one FWHM contour per amplitude
-ax_map = nexttile(tlo_sp);
-imagesc(ax_map, mimg_s);
-colormap(ax_map, gray);
-axis(ax_map, 'image');
-axis(ax_map, 'off');
-hold(ax_map, 'on');
-
-cMap_sp = parula(nV_sp + 2);
-for k = 1:nV_sp
-    iA       = validIdx_sp(k);
-    map_full = nan(nr_s * nc_s, 1);
-    map_full(brainMask) = resp_maps(:, k);
-    map_2d   = reshape(map_full, nr_s, nc_s);
-    contour(ax_map, map_2d, [thr_per_amp(k) thr_per_amp(k)], ...
-        'Color', cMap_sp(k, :), 'LineWidth', 1.5, ...
-        'DisplayName', sprintf('%.2f mW', uA_sp(iA)/3));
-end
-
-% 1-mm scale bar (bottom-left corner)
-sb_px = 1 / pxMM;
-line(ax_map, [10, 10 + sb_px], [nr_s - 15, nr_s - 15], 'Color', 'w', 'LineWidth', 2);
-text(ax_map, 10, nr_s - 8, '1 mm', 'Color', 'w', 'FontSize', 6, 'FontWeight', 'bold');
-title(ax_map, 'Inhibition contours (FWHM per amplitude)', ...
-    'FontSize', 6, 'FontWeight', 'bold');
-
-% Panel B: effective spread radius vs amplitude
-ax_sp = nexttile(tlo_sp);
-hold(ax_sp, 'on');
-xAmp_sp = uA_sp(validAmp_sp) / 3;
-yR_sp   = spread_r(validAmp_sp);
-plot(ax_sp, xAmp_sp, yR_sp, 'o-', ...
+fig_sp = paperFig(6, 4);
+ax_sp  = axes(fig_sp);
+plot(ax_sp, xAmp_sp, yArea_sp, 'o-', ...
     'Color', [0.15 0.35 0.8], 'MarkerFaceColor', [0.15 0.35 0.8], ...
     'MarkerSize', 4, 'LineWidth', 1.5);
-xlabel(ax_sp, 'Amplitude (mW)', 'FontWeight', 'bold', 'FontSize', 6);
-ylabel(ax_sp, 'Spread radius (mm)', 'FontWeight', 'bold', 'FontSize', 6);
+xlabel(ax_sp, 'Amplitude (mW)', 'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_sp, 'Inhibition area (mm^2)', 'FontSize', 6, 'FontWeight', 'bold');
 set(ax_sp, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'FontWeight', 'bold');
 
 mn_sp = allExperiments(selExp_sp).mn;
 td_sp = allExperiments(selExp_sp).td;
 en_sp = allExperiments(selExp_sp).en;
-exportgraphics(fig_sp, sprintf('paper/spatial_spread_%s_%s_en%d.pdf', mn_sp, td_sp, en_sp), ...
-    'ContentType', 'vector');
-end
+exportgraphics(fig_sp, ...
+    sprintf('paper/spatial_spread_%s_%s_en%d.png', mn_sp, td_sp, en_sp), ...
+    'Resolution', 300);
+

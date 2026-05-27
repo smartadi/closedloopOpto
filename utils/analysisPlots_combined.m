@@ -10,6 +10,7 @@ function analysisPlots_combined(data, d)
 % Scale all to the same display width in external software for matching text.
 
 PW = 8.9;   % cm (= 3.5 inches)
+PS = paperStyle();
 if ~isfield(d, 'ref'); d.ref = -5; end
 dur    = d.params.dur;
 t      = d.timeBlue;
@@ -58,8 +59,7 @@ c2L = lm + cW + cg;
 
 %% A: single trial -------------------------------------------------------
 PH_A = 4;
-PW = 8;
-fig_A = figure('Color','w', 'Units','centimeters', 'Position',[0 0 PW PH_A]);
+fig_A = paperFig(PW, PH_A);
 
 bm = 0.12; tm = 0.12;
 axH = 1 - bm - tm;
@@ -83,12 +83,13 @@ text(ax_A, -0.1, 8, '1 mW', 'Color', colInpOL, 'FontSize', 6, ...
 uistack(findobj(ax_A,'Type','line'), 'top');
 hold(ax_A, 'off');
 shortCornerAxes_plot(ax_A, 'XLength', 1, 'YLength', 3, ...
-    'XLabel', '1 sec', 'YLabel', '3% dF/F', 'LineWidth', 2, 'LabelGap', 0.05);
+    'XLabel', '1 s', 'YLabel', '3% dF/F', 'LineWidth', PS.sca_lw, 'LabelGap', PS.sca_gap, ...
+    'FontSize', PS.fs, 'FontWeight', PS.fw);
 cleanAxes(ax_A);
 % text(ax_A, -0.08, 0.97, 'A', 'Units','normalized', 'FontSize', 9, 'FontWeight','bold', 'Clipping','off');
 text(ax_A, 0.5,   1.06, 'Open-Loop', 'Units','normalized', 'FontSize', 6, 'FontWeight','bold', ...
     'HorizontalAlignment','center', 'Clipping','off');
-text(ax_A, 3*dur/4, 4, 'OL Stim', 'Color', colInpOL, 'FontSize', 6, ...
+text(ax_A, 3*dur/4, 7, 'OL Stim', 'Color', colInpOL, 'FontSize', 6, ...
     'HorizontalAlignment','center', 'FontWeight','bold', 'Clipping','off');
 
 hold(ax_B, 'on');
@@ -104,22 +105,24 @@ ylim(ax_B, [-10 10]); xlim(ax_B, [-3 dur+3]);
 addStimPatch(ax_B, x1, x2);
 uistack(findobj(ax_B,'Type','line'), 'top');
 lgd = legend(ax_B, [hOL_s hCL_s hRef_s], {'Open-Loop','Closed-Loop','Ref'}, ...
-    'Location','southeast', 'Box','off', 'FontSize', 6, 'FontWeight','bold');
-lgd.ItemTokenSize = [8 4];
+    'Orientation','horizontal', 'Box','off', 'FontSize', 6, 'FontWeight','bold');
+lgd.ItemTokenSize = [16 4];
+lgd.Units = 'normalized';
+lgd.Position(2) = 0.01;
+lgd.Position(1) = 0.5 - lgd.Position(3)/2;
 hold(ax_B, 'off');
 cleanAxes(ax_B);
 text(ax_B, 0.5,   1.06, 'Closed-Loop', 'Units','normalized', 'FontSize', 6, 'FontWeight','bold', ...
     'HorizontalAlignment','center', 'Clipping','off');
-text(ax_B, 3*dur/4, 4, 'CL Stim', 'Color', colInpCL, 'FontSize', 6, ...
+text(ax_B, 3*dur/4, 7, 'CL Stim', 'Color', colInpCL, 'FontSize', 6, ...
     'HorizontalAlignment','center', 'FontWeight','bold', 'Clipping','off');
 
 linkaxes([ax_A ax_B], 'x');
-exportgraphics(fig_A, 'paper/panel_A.pdf', 'ContentType','vector');
+exportgraphics(fig_A, 'paper/images/figure3/panel_A.pdf', 'ContentType','vector');
 
 %% B: all trials + average -----------------------------------------------
 PH_B = 4;
-PW = 8;
-fig_B = figure('Color','w', 'Units','centimeters', 'Position',[0 0 PW PH_B]);
+fig_B = paperFig(PW, PH_B);
 
 bm = 0.12; tm = 0.12;
 axH = 1 - bm - tm;
@@ -141,7 +144,8 @@ addStimPatch(ax_C, x1, x2);
 uistack(findobj(ax_C,'Type','line'), 'top');
 hold(ax_C, 'off');
 shortCornerAxes_plot(ax_C, 'XLength', 0.01, 'YLength', 3, ...
-    'XLabel', ' ', 'YLabel', '3% dF/F', 'LineWidth', 2, 'LabelGap', 0.05);
+    'XLabel', ' ', 'YLabel', '3% dF/F', 'LineWidth', PS.sca_lw, 'LabelGap', PS.sca_gap, ...
+    'FontSize', PS.fs, 'FontWeight', PS.fw);
 cleanAxes(ax_C);
 % text(ax_C, -0.08, 0.97, 'B', 'Units','normalized', 'FontSize', 9, 'FontWeight','bold', 'Clipping','off');
 
@@ -161,11 +165,11 @@ hold(ax_D, 'off');
 cleanAxes(ax_D);
 
 linkaxes([ax_C ax_D], 'x');
-exportgraphics(fig_B, 'paper/panel_B.pdf', 'ContentType','vector');
+exportgraphics(fig_B, 'paper/images/figure3/panel_B.pdf', 'ContentType','vector');
 
 %% C: average inputs -----------------------------------------------------
 PH_C = 3;
-fig_C = figure('Color','w', 'Units','centimeters', 'Position',[0 0 PW PH_C]);
+fig_C = paperFig(PW, PH_C);
 
 bm = 0.15; tm = 0.08;
 axH = 1 - bm - tm;
@@ -187,7 +191,8 @@ addStimPatch(ax_E, x1, x2);
 uistack(findobj(ax_E,'Type','line'), 'top');
 hold(ax_E, 'off');
 shortCornerAxes_plot(ax_E, 'XLength', 0.01, 'YLength', 2, ...
-    'XLabel', ' ', 'YLabel', '1 mW', 'LineWidth', 2, 'LabelGap', 0.05);
+    'XLabel', ' ', 'YLabel', '1 mW', 'LineWidth', PS.sca_lw, 'LabelGap', PS.sca_gap, ...
+    'FontSize', PS.fs, 'FontWeight', PS.fw);
 cleanAxes(ax_E);
 % text(ax_E, -0.08, 0.97, 'C', 'Units','normalized', 'FontSize', 9, 'FontWeight','bold', 'Clipping','off');
 
@@ -208,12 +213,12 @@ hold(ax_F, 'off');
 cleanAxes(ax_F);
 
 linkaxes([ax_E ax_F], 'x');
-exportgraphics(fig_C, 'paper/panel_C.pdf', 'ContentType','vector');
+exportgraphics(fig_C, 'paper/images/figure3/panel_C.pdf', 'ContentType','vector');
 
 %% D: variance over time -------------------------------------------------
 PH_D = 3.5;
-PW = 3;
-fig_D = figure('Color','w', 'Units','centimeters', 'Position',[0 0 PW PH_D]);
+PW_D = 3;
+fig_D = paperFig(PW_D, PH_D);
 
 lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
 ax_var = axes(fig_D, 'Position', [lm2, bm2, 1-lm2-rm2, 1-bm2-tm2]);
@@ -222,8 +227,8 @@ nc_var = var(pncDfk);
 wc_var = var(pwcDfk);
 
 hold(ax_var, 'on');
-plot(ax_var, Tp, nc_var, 'Color', colOL, 'LineWidth', 1);
-plot(ax_var, Tp, wc_var, 'Color', colCL, 'LineWidth', 1);
+plot(ax_var, Tp, nc_var, 'Color', colOL, 'LineWidth', PS.lw_mean);
+plot(ax_var, Tp, wc_var, 'Color', colCL, 'LineWidth', PS.lw_mean);
 xline(ax_var, 0,   'LineWidth', 0.75, 'HandleVisibility','off');
 xline(ax_var, dur, 'LineWidth', 0.75, 'HandleVisibility','off');
 ylim(ax_var, [-2 12]); xlim(ax_var, [-3 dur+3]);
@@ -231,7 +236,8 @@ addStimPatch(ax_var, x1, x2);
 uistack(findobj(ax_var,'Type','line'), 'top');
 hold(ax_var, 'off');
 shortCornerAxes_plot(ax_var, 'XLength', 1, 'YLength', 0.01, ...
-    'XLabel', '1 sec', 'YLabel', ' ', 'LineWidth', 2.5, 'LabelGap', 0.04);
+    'XLabel', '1 s', 'YLabel', ' ', 'LineWidth', PS.sca_lw, 'LabelGap', PS.sca_gap, ...
+    'FontSize', PS.fs, 'FontWeight', PS.fw);
 cleanAxes(ax_var);
 text(ax_var, -0.12, 0.5, 'Variance across trials', ...
     'Units','normalized', 'Rotation', 90, ...
@@ -239,12 +245,12 @@ text(ax_var, -0.12, 0.5, 'Variance across trials', ...
     'FontSize', 6, 'FontWeight','bold', 'Color','k', 'Clipping','off');
 % text(ax_var, -0.10, 0.95, 'D', 'Units','normalized', 'FontSize', 9, 'FontWeight','bold', 'Clipping','off');
 
-exportgraphics(fig_D, 'paper/panel_D.pdf', 'ContentType','vector');
+exportgraphics(fig_D, 'paper/images/figure3/panel_D.pdf', 'ContentType','vector');
 
 %% E: MSE half-violin ----------------------------------------------------
 PH_E = 3;
-Pw = 3;
-fig_E = figure('Color','w', 'Units','centimeters', 'Position',[0 0 PW PH_E]);
+PW_E = 3;
+fig_E = paperFig(PW_E, PH_E);
 
 lm2e = 0.13; rm2e = 0.05; bm2e = 0.15; tm2e = 0.10;
 ax_mse = axes(fig_E, 'Position', [lm2e, bm2e, 1-lm2e-rm2e, 1-bm2e-tm2e]);
@@ -276,7 +282,7 @@ text(ax_mse, -0.12, 0.5, 'Trial MSE', ...
 cleanAxes(ax_mse);
 % text(ax_mse, -0.10, 0.95, 'E', 'Units','normalized', 'FontSize', 9, 'FontWeight','bold', 'Clipping','off');
 
-exportgraphics(fig_E, 'paper/panel_E.pdf', 'ContentType','vector');
+exportgraphics(fig_E, 'paper/images/figure3/panel_E.pdf', 'ContentType','vector');
 
 end
 

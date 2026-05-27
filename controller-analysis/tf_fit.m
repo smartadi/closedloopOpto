@@ -1,0 +1,318 @@
+% controller-analysis -- extracted from plottingScript.m
+% Run from brain_paper/ root directory.
+% Requires: load_sessions.m has been run first (mouse, fields, tp, Mean_var_wc/nc, dur).
+
+
+% Fits a fixed 2-pole 1-zero TF to the OL trial average for sessions [4 9 11].
+% Main figure (nSess x 2): col 1 = OL traces + TF fit, col 2 = CL mean vs OL-TF pred.
+% Separate interactive figure: trial R^2 vs trial MSE (OL + CL), click -> plotSingleTrial.
+
+ol_sess_idx = [4 9 11];   % matches custom_idx in OL step response plot
+Fs_ol  = 35;   Ts_ol = 1/Fs_ol;
+Fs_in  = 2000;
+nPre_ol  = 5;             % zero-prepend length (> model order for clean initialisation)
+tfOpt_ol = tfestOptions('EnforceStability', false, 'Display', 'off');
+
+nSess_ol  = numel(ol_sess_idx);
+ol_colors = [0.2 0.4 0.8;
+             0.8 0.2 0.2;
+             0.2 0.7 0.3];
+
+% Accumulation arrays for interactive validation figure
+ud_nc_tf   = struct('field',{}, 'stim_idx',{}, 'lbl',{}, 'mse',{});
+ud_wc_tf   = struct('field',{}, 'stim_idx',{}, 'lbl',{}, 'mse',{});
+r2_nc_all  = [];  mse_nc_all = [];
+r2_wc_all  = [];  mse_wc_all = [];
+
+fig_ol = figure;
+tlo_ol = tiledlayout(nSess_ol, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+rng('shuffle');   % ensure different random trial pick on every run
+
+% Paper-level figure: OL trial average + TF fit, -1 to +1 s, one column per session
+PS = paperStyle();
+fig_tf_paper = paperFig(10, 4);
+tlo_tf_paper = tiledlayout(fig_tf_paper, 1, nSess_ol, 'TileSpacing','compact','Padding','compact');
+
+for si = 1:nSess_ol
+    fld       = fields{ol_sess_idx(si)};
+    d_ol      = mouse.(fld).d;
+    data_ol_s = mouse.(fld).data;
+    dur_ol    = d_ol.params.dur;
+    col_s     = ol_colors(si, :);
+
+    ncDfk_ol = data_ol_s.ncDfk;
+    ncInp_ol = data_ol_s.ncInp;
+    nNc_ol   = size(ncDfk_ol, 1);
+
+    fprintf('\n-- Session %d: %s  %s  en%d  (%d OL trials  dur=%d s)\n', ...
+        si, mouse.(fld).mn, mouse.(fld).td, mouse.(fld).en, nNc_ol, dur_ol);
+
+    if nNc_ol == 0
+        warning('No OL trials in %s -- skipping.', fld);
+        nexttile(tlo_ol); nexttile(tlo_ol); nexttile(tlo_ol);
+        continue
+    end
+
+    % Downsample input 2 kHz -> 35 Hz
+    ncInp_ds = resample(ncInp_ol', Fs_ol, Fs_in)';
+    nSamp_ol = min(dur_ol*Fs_ol + 1, size(ncInp_ds, 2));
+    ncInp_ds = ncInp_ds(:, 1:nSamp_ol);
+
+    % Baseline correct: pre-onset window = first Fs_ol columns (t = -1 to 0 s)
+    iOn_ol      = Fs_ol + 1;
+    baseline_ol = mean(ncDfk_ol(:, 1:iOn_ol-1), 2);
+    ncDfk_bc    = ncDfk_ol - baseline_ol;
+    u_pre       = zeros(iOn_ol-1, 1);   % laser off before stim onset
+
+    % Post-onset OL window (t = 0 to dur s)
+    y_trials_ol = ncDfk_bc(:, iOn_ol : iOn_ol + nSamp_ol - 1);
+    t_ol        = (0 : nSamp_ol-1) / Fs_ol;
+
+    % Trial average
+    y_mean_ol = mean(y_trials_ol, 1)';
+    y_sem_ol  = std(y_trials_ol, 0, 1)' / sqrt(nNc_ol);
+    u_mean_ol = mean(ncInp_ds, 1)';
+
+    % Fit fixed 2p1z TF on OL trial average
+    u_fit_ol   = [zeros(nPre_ol,1); u_mean_ol];
+    y_fit_ol   = [zeros(nPre_ol,1); y_mean_ol];
+    data_id_ol = iddata(y_fit_ol, u_fit_ol, Ts_ol);
+    data_id_ol.Tstart = -nPre_ol * Ts_ol;
+    best_ol = tfest(data_id_ol, 2, 1, tfOpt_ol);
+
+    % OL mean prediction -- x0 from findstates on mean pre-onset window
+    y_pre_ol_mean = mean(ncDfk_bc(:, 1:iOn_ol-1), 1)';
+    x0_ol = findstates(best_ol, iddata(y_pre_ol_mean, u_pre, Ts_ol));
+    yp_ol = sim(best_ol, iddata([], u_mean_ol, Ts_ol), x0_ol).OutputData;
+    yp_ol = yp_ol + (y_mean_ol(1) - yp_ol(1));   % anchor at actual y_0
+
+    SS_res = sum((y_mean_ol - yp_ol).^2, 'omitnan');
+    SS_tot = sum((y_mean_ol - mean(y_mean_ol,'omitnan')).^2, 'omitnan');
+    R2_ol  = 1 - SS_res / max(SS_tot, eps);
+
+    p_ol   = pole(best_ol);
+    tau_ol = sort(abs(1 ./ real(p_ol(real(p_ol) < 0))));
+    fprintf('  2p1z  R2=%.3f  tau =', R2_ol);
+    if ~isempty(tau_ol), fprintf('  %.3f s', tau_ol); end
+    fprintf('\n');
+
+    % Trial-level OL R^2 and accumulate UserData for interactive figure
+    nNC_ud = min(nNc_ol, numel(data_ol_s.er_ncDfk));
+    R2_ol_trials = nan(nNC_ud, 1);
+    for j = 1:nNC_ud
+        u_j = ncInp_ds(j,:)';
+        y_j = y_trials_ol(j,:)';
+        x0_j = findstates(best_ol, iddata(ncDfk_bc(j, 1:iOn_ol-1)', u_pre, Ts_ol));
+        yp_j = sim(best_ol, iddata([], u_j, Ts_ol), x0_j).OutputData;
+        ss_res_j = sum((y_j - yp_j).^2, 'omitnan');
+        ss_tot_j = sum((y_j - mean(y_j,'omitnan')).^2, 'omitnan');
+        R2_ol_trials(j) = 1 - ss_res_j / max(ss_tot_j, eps);
+        ud_nc_tf(end+1) = struct('field', fld, 'stim_idx', data_ol_s.nc(j), ...
+            'lbl', 'OL', 'mse', data_ol_s.er_ncDfk(j));
+    end
+    r2_nc_all  = [r2_nc_all;  R2_ol_trials];
+    mse_nc_all = [mse_nc_all; data_ol_s.er_ncDfk(1:nNC_ud)];
+    fprintf('  OL trial-level R2: med=%.3f  IQR=%.3f\n', median(R2_ol_trials,'omitnan'), iqr(R2_ol_trials));
+
+    % Panel 1: OL trial traces + mean +/- SEM + TF fit
+    ax_ol = nexttile(tlo_ol);
+    hold(ax_ol, 'on');
+    for j = 1:nNc_ol
+        plot(ax_ol, t_ol, y_trials_ol(j,:), ...
+            'Color', [col_s, 0.15], 'LineWidth', 0.4, 'HandleVisibility', 'off');
+    end
+    fill(ax_ol, [t_ol, fliplr(t_ol)], ...
+        [(y_mean_ol+y_sem_ol)', fliplr((y_mean_ol-y_sem_ol)')], ...
+        col_s, 'FaceAlpha', 0.2, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+    plot(ax_ol, t_ol, y_mean_ol, 'Color', col_s, 'LineWidth', 2, 'DisplayName', 'OL mean');
+    plot(ax_ol, t_ol, yp_ol, 'k--', 'LineWidth', 1.5, ...
+        'DisplayName', sprintf('TF 2p1z  R^2=%.2f', R2_ol));
+    u_sc = max(abs(y_mean_ol)) / max(abs(u_mean_ol) + eps);
+    plot(ax_ol, t_ol, u_mean_ol*u_sc, 'Color', [0.6 0.6 0.6], ...
+        'LineWidth', 1, 'LineStyle', ':', 'DisplayName', 'Input (scaled)');
+    xline(ax_ol, dur_ol, 'k:', 'LineWidth', 0.75, 'HandleVisibility', 'off');
+    xlabel(ax_ol, 'Time (s)', 'FontWeight', 'bold', 'FontSize', 6);
+    ylabel(ax_ol, 'dF/F (%)', 'FontWeight', 'bold', 'FontSize', 6);
+    legend(ax_ol, 'Box', 'off', 'FontSize', 6, 'Location', 'best');
+    title(ax_ol, sprintf('Session %d -- %s  %s  en%d  (n=%d OL)', ...
+        si, mouse.(fld).mn, mouse.(fld).td, mouse.(fld).en, nNc_ol), ...
+        'FontSize', 6, 'FontWeight', 'bold');
+    set(ax_ol, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'FontWeight', 'bold');
+
+    % CL data prep
+    wcDfk_ol = data_ol_s.wcDfk;
+    wcInp_ol = data_ol_s.wcInp;
+    nWc_ol   = size(wcDfk_ol, 1);
+    wcInp_ds = resample(wcInp_ol', Fs_ol, Fs_in)';
+    wcInp_ds = wcInp_ds(:, 1:nSamp_ol);
+    baseline_wc = mean(wcDfk_ol(:, 1:iOn_ol-1), 2);
+    wcDfk_bc    = wcDfk_ol - baseline_wc;
+    y_trials_wc = wcDfk_bc(:, iOn_ol : iOn_ol + nSamp_ol - 1);
+    y_mean_wc   = mean(y_trials_wc, 1)';
+    y_sem_wc    = std(y_trials_wc, 0, 1)' / sqrt(nWc_ol);
+    u_mean_wc   = mean(wcInp_ds, 1)';
+
+    % CL mean prediction using OL model -- x0 from findstates on mean pre-onset window
+    y_pre_wc_mean = mean(wcDfk_bc(:, 1:iOn_ol-1), 1)';
+    x0_wc = findstates(best_ol, iddata(y_pre_wc_mean, u_pre, Ts_ol));
+    yp_wc = sim(best_ol, iddata([], u_mean_wc, Ts_ol), x0_wc).OutputData;
+    yp_wc = yp_wc + (y_mean_wc(1) - yp_wc(1));   % anchor at actual y_0
+
+    SS_res_wc = sum((y_mean_wc - yp_wc).^2, 'omitnan');
+    SS_tot_wc = sum((y_mean_wc - mean(y_mean_wc,'omitnan')).^2, 'omitnan');
+    R2_wc     = 1 - SS_res_wc / max(SS_tot_wc, eps);
+    fprintf('  CL mean pred  R2=%.3f  (n=%d CL trials)\n', R2_wc, nWc_ol);
+
+    % Trial-level CL R^2 and accumulate UserData for interactive figure
+    nWC_ud = min(nWc_ol, numel(data_ol_s.er_wcDfk));
+    R2_cl_trials = nan(nWC_ud, 1);
+    for j = 1:nWC_ud
+        u_j = wcInp_ds(j,:)';
+        y_j = y_trials_wc(j,:)';
+        x0_j = findstates(best_ol, iddata(wcDfk_bc(j, 1:iOn_ol-1)', u_pre, Ts_ol));
+        yp_j = sim(best_ol, iddata([], u_j, Ts_ol), x0_j).OutputData;
+        ss_res_j = sum((y_j - yp_j).^2, 'omitnan');
+        ss_tot_j = sum((y_j - mean(y_j,'omitnan')).^2, 'omitnan');
+        R2_cl_trials(j) = 1 - ss_res_j / max(ss_tot_j, eps);
+        ud_wc_tf(end+1) = struct('field', fld, 'stim_idx', data_ol_s.wc(j), ...
+            'lbl', 'CL', 'mse', data_ol_s.er_wcDfk(j));
+    end
+    r2_wc_all  = [r2_wc_all;  R2_cl_trials];
+    mse_wc_all = [mse_wc_all; data_ol_s.er_wcDfk(1:nWC_ud)];
+    fprintf('  CL trial-level R2: med=%.3f  IQR=%.3f\n', median(R2_cl_trials,'omitnan'), iqr(R2_cl_trials));
+
+    % Panel 2: CL actual vs OL-TF prediction (mean)
+    ax_wc = nexttile(tlo_ol);
+    hold(ax_wc, 'on');
+    plot(ax_wc, t_ol, y_mean_ol, 'Color', [col_s, 0.3], 'LineWidth', 1, 'DisplayName', 'OL mean (ref)');
+    fill(ax_wc, [t_ol, fliplr(t_ol)], ...
+        [(y_mean_wc+y_sem_wc)', fliplr((y_mean_wc-y_sem_wc)')], ...
+        colCL, 'FaceAlpha', 0.2, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+    plot(ax_wc, t_ol, y_mean_wc,  'Color', colCL, 'LineWidth', 2, 'DisplayName', 'CL actual');
+    plot(ax_wc, t_ol, yp_wc, 'k--', 'LineWidth', 1.5, ...
+        'DisplayName', sprintf('OL-TF(CL mean input)  R^2=%.2f', R2_wc));
+    u_sc_wc = max(abs(y_mean_wc)) / max(abs(u_mean_wc) + eps);
+    plot(ax_wc, t_ol, u_mean_wc*u_sc_wc, 'Color', [0.6 0.6 0.6], ...
+        'LineWidth', 1, 'LineStyle', ':', 'DisplayName', 'CL input (scaled)');
+    xline(ax_wc, dur_ol, 'k:', 'LineWidth', 0.75, 'HandleVisibility', 'off');
+    xlabel(ax_wc, 'Time (s)', 'FontWeight', 'bold', 'FontSize', 6);
+    ylabel(ax_wc, 'dF/F (%)', 'FontWeight', 'bold', 'FontSize', 6);
+    legend(ax_wc, 'Box', 'off', 'FontSize', 6, 'Location', 'best');
+    title(ax_wc, sprintf('CL actual vs OL-TF pred  (n=%d CL)', nWc_ol), ...
+        'FontSize', 6, 'FontWeight', 'bold');
+    set(ax_wc, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'FontWeight', 'bold');
+
+    % Panel 3: random CL trial vs OL-TF prediction
+    ti   = randi(nWc_ol);
+    u_st = wcInp_ds(ti, :)';
+    y_st = y_trials_wc(ti, :)';
+    x0_st = findstates(best_ol, iddata(wcDfk_bc(ti, 1:iOn_ol-1)', u_pre, Ts_ol));
+    yp_st = sim(best_ol, iddata([], u_st, Ts_ol), x0_st).OutputData;
+    yp_st = yp_st + (y_st(1) - yp_st(1));   % anchor at actual y_0
+
+    ax_st = nexttile(tlo_ol);
+    hold(ax_st, 'on');
+    plot(ax_st, t_ol, y_st, 'Color', colCL, 'LineWidth', 1.5, ...
+        'DisplayName', sprintf('CL trial %d', ti));
+    plot(ax_st, t_ol, yp_st, 'k--', 'LineWidth', 1.5, 'DisplayName', 'OL-TF pred');
+    u_sc_st = max(abs(y_st)) / max(abs(u_st) + eps);
+    plot(ax_st, t_ol, u_st*u_sc_st, 'Color', [0.6 0.6 0.6], ...
+        'LineWidth', 1, 'LineStyle', ':', 'DisplayName', 'Input (scaled)');
+    xline(ax_st, dur_ol, 'k:', 'LineWidth', 0.75, 'HandleVisibility', 'off');
+    xlabel(ax_st, 'Time (s)', 'FontWeight', 'bold', 'FontSize', 6);
+    ylabel(ax_st, 'dF/F (%)', 'FontWeight', 'bold', 'FontSize', 6);
+    legend(ax_st, 'Box', 'off', 'FontSize', 6, 'Location', 'best');
+    title(ax_st, sprintf('CL trial %d vs OL-TF pred', ti), ...
+        'FontSize', 6, 'FontWeight', 'bold');
+    set(ax_st, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'FontWeight', 'bold');
+
+    % Paper panel: OL trial average -1 to stimend+1 s + TF pred (zero input post-stim)
+    n_post_extra = Fs_ol;                                    % 35 pts = 1 s post-stim
+    t_pre_w      = ((0:iOn_ol-2) / Fs_ol) - 1;             % -1 to -1/35 s  (35 pts)
+    t_stim_w     = (0:nSamp_ol-1) / Fs_ol;                 % 0 to dur_ol s
+    t_post_extra = ((1:n_post_extra) / Fs_ol) + dur_ol;    % dur_ol+1/35 to dur_ol+1 s
+    t_w_full     = [t_pre_w, t_stim_w, t_post_extra];
+
+    pre_mn_w   = mean(ncDfk_bc(:, 1:iOn_ol-1), 1);
+    pre_sem_w  = std(ncDfk_bc(:, 1:iOn_ol-1), 0, 1);
+
+    % Post-stim actual data (if ncDfk_bc extends beyond stim window)
+    col_post_s = iOn_ol + nSamp_ol;
+    col_post_e = col_post_s + n_post_extra - 1;
+    if size(ncDfk_bc, 2) >= col_post_e
+        y_post_w   = mean(ncDfk_bc(:, col_post_s:col_post_e), 1);
+        sem_post_w = std(ncDfk_bc(:, col_post_s:col_post_e), 0, 1);
+    else
+        y_post_w   = nan(1, n_post_extra);
+        sem_post_w = nan(1, n_post_extra);
+    end
+
+    y_std_ol_w = std(y_trials_ol, 0, 1);                   % std for paper panel shading
+    y_w_full   = [pre_mn_w,  y_mean_ol',  y_post_w];
+    sem_w_full = [pre_sem_w, y_std_ol_w,  sem_post_w];
+
+    % TF prediction: actual stim input then zero for 1 s post-stim
+    u_pred_ext = [u_mean_ol; zeros(n_post_extra, 1)];
+    yp_ext     = sim(best_ol, iddata([], u_pred_ext, Ts_ol), x0_ol).OutputData;
+    yp_ext     = yp_ext + (y_mean_ol(1) - yp_ext(1));      % anchor at onset
+    t_pred_ext = [t_stim_w, t_post_extra];
+
+    ax_p = nexttile(tlo_tf_paper);
+    hold(ax_p, 'on');
+
+    % Stim window shading (t=0 to dur_ol s)
+    patch(ax_p, [0 dur_ol dur_ol 0], [-8 -8 5 5], [0.85 0.85 0.85], ...
+        'FaceAlpha',0.5,'EdgeColor','none','HandleVisibility','off');
+
+    % OL mean +/- SEM
+    fill(ax_p, [t_w_full, fliplr(t_w_full)], ...
+        [y_w_full+sem_w_full, fliplr(y_w_full-sem_w_full)], ...
+        col_s, 'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
+    plot(ax_p, t_w_full, y_w_full, 'Color',col_s, 'LineWidth',1.5);
+
+    % TF prediction over stim + 1 s post-stim (zero input after stim end)
+    plot(ax_p, t_pred_ext, yp_ext, 'k--', 'LineWidth',1.2);
+
+    xline(ax_p, 0,      'Color',[0.5 0.5 0.5], 'LineWidth',0.5, 'HandleVisibility','off');
+    xline(ax_p, dur_ol, 'Color',[0.5 0.5 0.5], 'LineWidth',0.5, 'HandleVisibility','off');
+    yline(ax_p, 0,      'Color',[0.7 0.7 0.7], 'LineWidth',0.5, 'HandleVisibility','off');
+    hold(ax_p, 'off');
+    set(ax_p, 'Box','off','XTick',[],'YTick',[],'XColor','none','YColor','none', ...
+        'XLim',[-1 dur_ol+1],'YLim',[-8 5],'Clipping','off');
+
+    % Corner scalebar on first panel only
+    if si == 1
+        shortCornerAxes_plot(ax_p, 'XLength',1, 'YLength',3, ...
+            'XLabel','1 s', 'YLabel','3% dF/F', 'FontSize',PS.fs, 'FontWeight',PS.fw, 'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap);
+    end
+end
+
+exportgraphics(fig_tf_paper, 'paper/images/figure2/ol_tf_trial_avg.pdf', 'ContentType','vector');
+fprintf('OL TF paper figure (trial avg -1 to +1 s) ready\n');
+
+% Interactive validation figure -- trial R^2 vs trial MSE, click -> plotSingleTrial
+fig_tf_i = figure('Color', 'w', 'Name', 'TF Validation -- trial R^2 vs MSE (click to inspect)');
+fig_tf_i.Units    = 'inches';
+fig_tf_i.Position = [1, 1, 6, 5];
+hold on;
+
+sc_nc_tf = scatter(r2_nc_all, mse_nc_all, 20, colOL, 'o', 'filled', ...
+    'MarkerFaceAlpha', 0.5, 'DisplayName', 'OL');
+sc_nc_tf.UserData      = ud_nc_tf;
+sc_nc_tf.ButtonDownFcn = @(src,ev) scatterClickCallback(src, ev, mouse, fields);
+
+sc_wc_tf = scatter(r2_wc_all, mse_wc_all, 20, colCL, 'o', 'filled', ...
+    'MarkerFaceAlpha', 0.5, 'DisplayName', 'CL');
+sc_wc_tf.UserData      = ud_wc_tf;
+sc_wc_tf.ButtonDownFcn = @(src,ev) scatterClickCallback(src, ev, mouse, fields);
+
+xline(0, 'k:', 'LineWidth', 0.75, 'HandleVisibility', 'off');
+legend('Box', 'off', 'Location', 'northwest', 'FontSize', 9, 'FontWeight', 'bold');
+xlabel('OL-TF trial R^2',   'FontWeight', 'bold');
+ylabel('Trial MSE  ||e||',  'FontWeight', 'bold');
+title('TF validation -- click any point to inspect trial', 'FontSize', 9);
+set(gca, 'Box', 'off', 'TickDir', 'out');
+fprintf('TF validation figure ready -- click any point to inspect that trial.\n');
+
+% exportgraphics(fig_ol, 'paper/ol_tf_three_sessions.pdf', 'ContentType', 'vector');

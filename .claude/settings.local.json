@@ -9,7 +9,60 @@
       "Bash(awk -F- '{if\\($2-$1 > 8\\) print $1\"-\"$2\" \\(\"$2-$1+1\" lines\\)\"}')",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(matlab -batch \"disp\\('MATLAB ok'\\); disp\\(version\\)\")",
+      "Bash(dir \"%APPDATA%\\\\Claude\")",
+      "PowerShell(Get-ChildItem *)",
+      "WebFetch(domain:github.com)",
+      "Bash(where matlab-mcp-core-server-win64.exe)",
+      "Bash(dir \"%USERPROFILE%\\\\Downloads\\\\*matlab*mcp*\")",
+      "Bash(dir \"%USERPROFILE%\\\\*matlab*mcp*\")",
+      "Bash(git commit *)",
+      "Bash(git branch *)",
+      "Bash(git remote *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(git checkout *)",
+      "Bash(grep -n \"\\\\\\\\\\\\\\\\ref{fig:\\\\|\\\\\\\\\\\\\\\\label{fig:\" *.tex)",
+      "WebSearch",
+      "WebFetch(domain:www.jneurosci.org)",
+      "WebFetch(domain:www.cell.com)",
+      "WebFetch(domain:www.nature.com)",
+      "WebFetch(domain:pubmed.ncbi.nlm.nih.gov)",
+      "Bash(mkdir -p /c/Users/aditya/Documents/projects/brain_paper/impulse-analysis)",
+      "Bash(mkdir -p /c/Users/aditya/Documents/projects/brain_paper/controller-analysis)",
+      "Bash(mkdir -p /c/Users/aditya/Documents/projects/brain_paper/paper-writing)",
+      "Bash(npm --version)",
+      "Bash(where matlab *)",
+      "WebFetch(domain:www.mathworks.com)",
+      "PowerShell(New-Item *)",
+      "PowerShell(claude mcp *)",
+      "Bash(pip install *)",
+      "Bash(python3 -m pip install python-pptx --quiet)",
+      "Bash(python3 *)",
+      "Bash(where gswin64c *)",
+      "Bash(where gs *)",
+      "Bash(where pdftoppm *)",
+      "Bash(where magick *)",
+      "Bash(awk -F: '$2 >= 1417 && $2 <= 1522')",
+      "Bash(awk -F: '$2 >= 2305 && $2 <= 2552')",
+      "Bash(del *)",
+      "Bash(git pull *)",
+      "mcp__matlab__evaluate_matlab_code",
+      "mcp__matlab__check_matlab_code"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"\\n COMMIT REMINDER: if you changed any scripts this session, stage and commit before closing.\\n  git status  |  git add <files>  |  git commit\""
+          }
+        ]
+      }
     ]
   }
 }
