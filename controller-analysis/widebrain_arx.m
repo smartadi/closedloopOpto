@@ -3,9 +3,9 @@
 % Requires: load_sessions.m has been run first (mouse, fields, tp, Mean_var_wc/nc, dur).
 
 
-%% Widebrain prediction -- contralateral ARX model (delay embedding)
-% Predictor pixels = contralateral primary + grid around it.
-% Model trained on spontaneous (pre-trial) data, applied to OL and CL trials.
+%% Widebrain -- pixel selection
+% Define contralateral ROI grid. Re-run freely to adjust grid_rows/grid_cols.
+% When happy with the pixel map, run the SVD extraction cell below.
 % Residual (actual -' predicted) captures stimulus + controller effect.
 close all;
 
@@ -272,7 +272,12 @@ legend(ax_pm, {'Midline','ROI outline','Grid pixels','Contra primary','Primary'}
     'TextColor','w','Color','none','EdgeColor','none','FontSize',6,'FontWeight','bold', ...
     'Location','south','Orientation','horizontal');
 hold(ax_pm, 'off');
-fprintf('Pixel map ready. Set redefine_roi=false then run the regression cell.\n');
+fprintf('Pixel map ready. Adjust grid_rows/grid_cols or redefine_roi and re-run this cell as needed.\n');
+
+%% Widebrain -- SVD extraction
+% Run once after finalising the pixel selection above.
+% Set recompute_svd=true to force recomputation (e.g. after changing the grid).
+recompute_svd = false;
 
 % -- Extract dFk via SVD projection (cached)
 mn_wb   = mouse.(fields{wb_sel}).mn;
@@ -280,7 +285,7 @@ td_wb   = mouse.(fields{wb_sel}).td;
 en_wb   = mouse.(fields{wb_sel}).en;
 path_wb = fullfile('data', sprintf('%swb%s%s%d.mat', mn_wb, td_wb(6:7), td_wb(9:10), en_wb));
 
-if exist(path_wb,'file') && ~redefine_roi
+if exist(path_wb,'file') && ~recompute_svd
     tmp    = load(path_wb);
     y_full = tmp.y_full;
     X_full = tmp.X_full;
