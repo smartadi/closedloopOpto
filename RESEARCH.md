@@ -18,6 +18,26 @@ Two mice: AL_0033 (8 sessions), AL_0039 (3 sessions), Jan–Apr 2025.
 
 <!-- New entries go here, most recent first. One ### block per change. -->
 
+### 2026-05-27 — annotation pass: \todo flags for all open issues, pushed to GitHub
+**Changed/Found:** `Closedloop_edit/results_edit.tex`, `methods_edit.tex` — added \todo{} flags at every open issue location: wrong variance claim (FACTUALLY WRONG — post-onset slope data), 2-vs-3 mice inconsistency, Fig 2B caption terminology (Peak suppression → Inhibition energy), MSE window in Fig 3E caption (3 s → +1 to +3 s), step-response steady-state note, brain-states section placeholder with full content spec, variability section contradiction, latency 47 ms vs 80 ms inconsistency + 60-frame/1-s error + beat-frequency artifact, TF model-order inconsistency + held-out R², missing spatial spread supplementary panel, missing algorithm pseudocode block, MSE window verification and missing motion-vs-MSE panel. Pushed to GitHub (`ddbfce1`).
+**Why:** User wants to address all open issues directly in Overleaf; \todo{} flags render as red [NOTE:] boxes in the compiled PDF at the exact problem location.
+**Next:** Pull from GitHub into Overleaf. Work through red notes in priority order: (1) factually wrong variance claim → (2) mouse count → (3) MSE window + caption → (4) fill Kp/Ki → (5) run TF fit across all 3 sessions.
+
+### 2026-05-27 — widebrain_arx WB-1c: spatial map of pixel traces on brain image
+**Changed/Found:** `controller-analysis/widebrain_arx.m` — added new `%% [WB-1c]` cell between WB-2 and WB-3. Extracts trial-averaged traces for all predictor pixels (X_full columns) plus primary pixel (actual_nc_m/actual_wc_m), places each as a mini-axes at its spatial location on a faded brain image. OL left panel, CL right panel. Red border = primary pixel; cyan border = contra-primary. Shared y-limits across all pixels and conditions. Exports wb_spat_traces.png at 300 dpi.
+**Why:** Evaluation figure to visually inspect which pixels respond and whether OL/CL differ spatially.
+**Next:** Verify mini-axes positions look sensible; may need to tune mw_s/mh_s if pixels are densely packed or very sparse.
+
+### 2026-05-27 — widebrain_arx WB-1b: add individual trial traces for evaluation
+**Changed/Found:** `controller-analysis/widebrain_arx.m` — WB-1b figure now plots up to 10 individual trial traces (thin, 25% alpha) per condition (OL and CL) behind the mean line; trial count shown in panel title; export changed from PDF to PNG 300 dpi.
+**Why:** User wanted to visually inspect trial-to-trial variability for evaluation; not a paper panel so PNG is correct.
+**Next:** Verify alpha transparency renders correctly in MATLAB; check that 10 complete (non-NaN) trials exist in both nc and wc.
+
+### 2026-05-27 — methods_edit.tex: add missing analysis sections
+**Changed/Found:** `Closedloop_edit/methods_edit.tex` — added inhibition energy quantification (0–200 ms mean, eq:inhib_energy), transfer function fitting (tfest sweep 1–3 poles/0–2 zeros/0–5 delay, AIC, LOAO CV), MSE window note (+1 to +3 s post-onset), and new "Offline data analysis" subsection with: cross-session pooling (n=13 sessions), motion exclusion (motThresh=1.5), power spectral analysis (absolute (ΔF/F)²/Hz), pre-stimulus state analysis, widebrain ARX model (3 nested layers). Also fixed impulse response protocol text which wrongly said "mean peak suppression" instead of referencing inhibition energy.
+**Why:** Impulse and controller analyses were not documented in Methods; the mean-peak wording contradicted the locked-in peak_mode=3 decision; MSE window and motion exclusion criteria were not stated anywhere in the manuscript.
+**Next:** Verify that results_edit.tex refers to "inhibition energy" consistently (currently says "peak %ΔF/F suppression"); fill in Kp/Ki placeholders; resolve 2-vs-3 mice discrepancy between Fig 3 caption and Results text.
+
 ### 2026-05-27 — widebrain_arx: add [WB-1a-tune] pX order-selection section
 **Changed/Found:** `controller-analysis/widebrain_arx.m` — inserted `%% [WB-1a-tune]` between WB-1a and WB-1b. Sweeps `pX_cands = [2 4 6 8 10 12 15 20 25 30]`; computes BIC and 5-fold CV R^2 on training trials only (test set untouched). Prints BIC-selected and CV-selected pX vs current; plots BIC-min(BIC) and CV R^2 curves with vertical markers.
 **Why:** Avoid exhaustive test-set search (biases reported R2); BIC is the classical method for ARX order selection (no held-out data needed); 5-fold CV provides a non-parametric cross-check.

@@ -49,6 +49,7 @@ Findings that are done live in FINDINGS.md. Meeting context lives in MEETINGS.md
 
 ## 🟢 Deferred / waiting
 
+- [ ] **Controller analysis result caching** — avoid recomputing ARX fits, TF fits, and cross-session pooled arrays on every run. Proposed structure: `data/<session>wb_model.mat` (ARX `beta_m`, `pY/pX/grid_rows/grid_cols`, R²_train/test, TF fit object + time constants), `data/<session>wb_pred.mat` (pink/orange/red trial predictions + R²s + WB-5 MSEs), `cross_session_cache.mat` (motion quartile arrays, pre-stim dev/MSE, spectral aggregations, contributing sessions list). Each section checks whether cached params match current params before recomputing. See RESEARCH.md 2026-05-27 for full struct design.
 - [ ] Post-hoc optimal laser sequence (MPC motivation) — depends on three-layer model — see FINDINGS.md
 - [ ] Add motion energy as co-predictor in contralateral prediction models
 - [ ] Fraction of high-error CL trials attributable to 2–4 Hz fluctuations vs motion

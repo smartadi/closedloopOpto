@@ -620,6 +620,108 @@ R2_wc_org = max(0, 1 - sum((actual_wc_m(:)-pred_wc_orange(:)).^2,'omitnan') / ..
 fprintf('[WB-2] Orange:  R2_OL=%.3f   R2_CL=%.3f\n', R2_nc_org, R2_wc_org);
 
 
+%% [WB-1c] Spatial map -- trial-averaged pixel traces at grid locations
+% Each predictor pixel (plus primary) shown as a mini-trace at its spatial
+% position on the brain image. OL left, CL right. Prereqs: WB-1b must have run.
+
+% --- Per-pixel trial-averaged traces ---
+nPix_sp   = nPred + 1;
+pix_py_sp = [pred_py(:); py_prim];   % image row coords -> display x
+pix_px_sp = [pred_px(:); px_prim];   % image col coords -> display y
+
+trMean_nc = nan(nPix_sp, outlen_m);
+trMean_wc = nan(nPix_sp, outlen_m);
+
+for p_sp = 1:nPred
+    buf_nc_sp = nan(nNc_wb, outlen_m);
+    buf_wc_sp = nan(nWc_wb, outlen_m);
+    for j = 1:nNc_wb
+        [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.nc(j))));
+        i1 = i_on + outlen_m - 1;
+        if i_on < 1 || i1 > nF; continue; end
+        buf_nc_sp(j,:) = X_full(i_on:i1, p_sp);
+    end
+    for j = 1:nWc_wb
+        [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.wc(j))));
+        i1 = i_on + outlen_m - 1;
+        if i_on < 1 || i1 > nF; continue; end
+        buf_wc_sp(j,:) = X_full(i_on:i1, p_sp);
+    end
+    trMean_nc(p_sp,:) = mean(buf_nc_sp, 1, 'omitnan');
+    trMean_wc(p_sp,:) = mean(buf_wc_sp, 1, 'omitnan');
+end
+trMean_nc(nPix_sp,:) = mean(actual_nc_m, 1, 'omitnan');
+trMean_wc(nPix_sp,:) = mean(actual_wc_m, 1, 'omitnan');
+
+% Shared y-limits across all pixels and conditions
+allTr_sp = [trMean_nc; trMean_wc];
+yl_lo_sp = min(allTr_sp(:), [], 'omitnan');
+yl_hi_sp = max(allTr_sp(:), [], 'omitnan');
+yrng_sp  = max(yl_hi_sp - yl_lo_sp, 1);
+yl_sp    = [yl_lo_sp - 0.08*yrng_sp, yl_hi_sp + 0.08*yrng_sp];
+
+% --- Figure: two side-by-side panels ---
+fig_spat = figure('Color','w','Units','centimeters','Position',[2 2 24 11]);
+lm_s=0.03; rm_s=0.02; bm_s=0.06; tm_s=0.07; gap_s=0.04;
+pw_s = (1 - lm_s - rm_s - gap_s) / 2;
+ph_s = 1 - bm_s - tm_s;
+mw_s = pw_s * 0.14;    % mini-axes width  (~1 grid cell)
+mh_s = ph_s * 0.17;    % mini-axes height
+
+colPrim_sp = [1  0.25 0.25];   % red border  = primary pixel
+colCont_sp = [0  0.85 0.85];   % cyan border = contra-primary pixel
+
+for iP_sp = 1:2
+    pan_x0 = lm_s + (iP_sp-1)*(pw_s + gap_s);
+    if iP_sp == 1
+        trMat_sp = trMean_nc;  colLine_sp = colOL;  lbl_sp = 'OL (no-controller)';
+    else
+        trMat_sp = trMean_wc;  colLine_sp = colCL;  lbl_sp = 'CL (with-controller)';
+    end
+
+    % Brain image background (faded)
+    ax_bg_sp = axes(fig_spat,'Position',[pan_x0, bm_s, pw_s, ph_s]);
+    h_im_sp  = imagesc(ax_bg_sp, mimg_wb');
+    colormap(ax_bg_sp, gray);
+    clim(ax_bg_sp, [prctile(mimg_wb(:),2), prctile(mimg_wb(:),98)]);
+    axis(ax_bg_sp,'image','off');
+    h_im_sp.AlphaData = 0.45;
+    title(ax_bg_sp, lbl_sp, 'FontSize',7,'FontWeight','bold','Color','k');
+
+    % Mini-axes at each pixel's spatial location
+    for p_sp = 1:nPix_sp
+        % Map display coords to normalized figure position
+        % imagesc(mimg_wb'): x-axis = image rows (pred_py), y-axis = image cols (pred_px), y down
+        fx_sp = pan_x0 + pw_s * (pix_py_sp(p_sp) - 0.5) / nY_wb;
+        fy_sp = bm_s   + ph_s * (1 - (pix_px_sp(p_sp) - 0.5) / nX_wb);
+        ap = [fx_sp - mw_s/2, fy_sp - mh_s/2, mw_s, mh_s];
+        ap(1) = max(pan_x0,        min(pan_x0 + pw_s - mw_s, ap(1)));
+        ap(2) = max(bm_s,          min(bm_s   + ph_s - mh_s, ap(2)));
+
+        ax_m_sp = axes(fig_spat,'Position',ap);
+        ax_m_sp.Color = 'none';
+        plot(ax_m_sp, t_trial_m, trMat_sp(p_sp,:), 'Color',colLine_sp,'LineWidth',0.9);
+        xline(ax_m_sp, 0,'Color',[0.5 0.5 0.5],'LineWidth',0.4,'HandleVisibility','off');
+        ylim(ax_m_sp, yl_sp);
+        xlim(ax_m_sp, [t_trial_m(1), t_trial_m(end)]);
+
+        if p_sp == nPix_sp           % primary pixel -- red border
+            set(ax_m_sp,'Box','on','XTick',[],'YTick',[], ...
+                'XColor',colPrim_sp,'YColor',colPrim_sp,'LineWidth',1.5);
+        elseif p_sp == contra_idx    % contra-primary -- cyan border
+            set(ax_m_sp,'Box','on','XTick',[],'YTick',[], ...
+                'XColor',colCont_sp,'YColor',colCont_sp,'LineWidth',1.5);
+        else
+            set(ax_m_sp,'Box','off','XTick',[],'YTick',[], ...
+                'XColor','none','YColor','none');
+        end
+    end
+end
+
+exportgraphics(fig_spat,'paper/images/figure4/wb_spat_traces.png','Resolution',300);
+fprintf('[WB-1c] Saved wb_spat_traces.png\n');
+
+
 %% [WB-3] Red layer -- per-trial TF response to actual laser input
 % Fits 2p1z TF for wb_sel session on OL trial average, then runs each
 % trial's actual laser input through that TF via lsim.
