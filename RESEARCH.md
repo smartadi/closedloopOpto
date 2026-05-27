@@ -23,6 +23,11 @@ Two mice: AL_0033 (8 sessions), AL_0039 (3 sessions), Jan–Apr 2025.
 **Why:** Scripts are 3557 and 1748 lines respectively; splitting into load_sessions/load_experiments loaders plus themed figure scripts allows targeted iteration without scrolling; files share the base workspace (no clear between them)
 **Next:** Confirm each figure script runs correctly after its loader; update controller-analysis/CLAUDE.md primary-script reference once originals are retired
 
+### 2026-05-27 — widebrain_arx: grid strategy → rows×cols parameters, drop outside-ROI nodes
+**Changed/Found:** `controller-analysis/widebrain_arx.m` — replaced `nPred=20` fixed count with `grid_rows=6` / `grid_cols=5` design parameters. Grid generates `grid_cols × grid_rows` cell-centre nodes over the ROI bounding box; each is rounded to the nearest pixel and checked against the eroded interior mask via `interior(sub2ind(...))`. Nodes outside the mask are discarded — no dsearchn snapping. `nPred` is now derived as `length(pred_px)` after filtering. Legend updated to 'Grid pixels'. `roi_file` now also saves `grid_rows`/`grid_cols` for provenance.
+**Why:** User wanted grid count to be determined by the ROI shape, not a preset target; outside-ROI nodes should vanish, not be forced inward.
+**Next:** Set `redefine_roi=true`, run ROI definition section, check pixel map (expect up to 30 nodes, some dropped by ROI boundary), then set `redefine_roi=false` and run WB-1a.
+
 ### 2026-05-27 — plottingScript: WB grid fix — visual row/col confusion corrected + edge-pixel erosion
 **Changed/Found:** `plottingScript.m` lines 2944-2984 — (1) Due to `imagesc(mimg_wb')` transposing display, visual rows correspond to original col (c) direction and visual cols to original row (r) direction. Previously `n_vis_rows` was incorrectly adding to the r direction (visual cols). Fixed: `n_vis_cols=ceil(sqrt(n_grid))` controls `r_lin`, `n_vis_rows=n_vis_cols+1` controls `c_lin`. (2) Pixels were snapping to polygon boundary. Fixed: erode `valid_mask` by `margin_px=4` via `conv2` (no toolbox), use eroded `interior` mask as candidate pool for `dsearchn`. (3) Pixel map legend updated from 'Random contra' → 'Grid pixels'.
 **Why:** User pointed out an extra visual column was added instead of extra row; pixels landing on polygon edge.

@@ -11,7 +11,7 @@ close all;
 
 selField = 12;
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Parameters Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Parameters
 wb_sel      = selField;   % session to analyse (m10, AL_0039 2025-04-19)
 pY          = 0;          % no AR self-lags -- prediction purely from contralateral pixels
 pX          = 5;          % lags per contralateral predictor (~143 ms at 35 Hz)
@@ -19,11 +19,13 @@ Fs_wb       = 35;
 dur_wb      = 3;          % trial duration (s)
 spont_pre   = 6;          % spontaneous window before each trial (s)
 k_wb         = 1;     % SVD kernel half-size (3x3 patch)
-nPred        = 20;    % total predictor pixels (1 contra-primary + nPred-1 grid)
+grid_rows    = 6;     % visual rows in contra ROI grid  (c direction in original image)
+grid_cols    = 5;     % visual cols in contra ROI grid  (r direction in original image)
+% nPred is derived automatically: 1 contra-primary + all grid nodes inside the ROI
 redefine_roi = true; % set true to redo midline + ROI interactively for this session
 mlag_wb      = max(pY, pX);
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Session + SVD Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Session + SVD
 d_wb       = mouse.(fields{wb_sel}).d;
 data_wb    = mouse.(fields{wb_sel}).data;
 
@@ -71,7 +73,7 @@ idx_r      = 1:nFrames;
 py_prim = double(d_wb.params.pixel(1));   % row
 px_prim = double(d_wb.params.pixel(2));   % col
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Combined interactive: midline + contralateral ROI Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Combined interactive: midline + contralateral ROI
 % One figure: click midline (2 pts, Enter) ->' polygon outline (n pts, Enter).
 % Results saved to midline.mat + contra_pixels.mat.  Set redefine_roi=false to skip.
 if redefine_roi && exist(roi_file, 'file')
@@ -85,7 +87,7 @@ if ~exist(roi_file, 'file')
     clim([prctile(mimg_wb(:),1), prctile(mimg_wb(:),99)]);
     axis image off; hold on;
 
-    % Ã¢â€â‚¬Ã¢â€â‚¬ Step 1: midline (exactly 2 clicks) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    % -- Step 1: midline (exactly 2 clicks)
     title('STEP 1 -- Click 2 points along the MIDLINE, then press Enter', ...
         'Color','w', 'FontSize',10, 'FontWeight','bold');
     [xd1, yd1] = ginput(2);
@@ -113,7 +115,7 @@ if ~exist(roi_file, 'file')
     end
     fprintf('Midline saved (type=%s  a=%.4f  b=%.4f)\n', midline.type, midline.a, midline.b);
 
-    % Ã¢â€â‚¬Ã¢â€â‚¬ Step 2: polygon outline of contralateral hemisphere Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    % -- Step 2: polygon outline of contralateral hemisphere
     title('STEP 2 -- Click boundary of CONTRALATERAL hemisphere, press Enter to finish', ...
         'Color','c', 'FontSize',10, 'FontWeight','bold');
     [xd2, yd2] = ginput;   % unlimited clicks, Enter to finish
@@ -127,7 +129,7 @@ if ~exist(roi_file, 'file')
     poly_col = yd2;   % original cols
     poly_row = xd2;   % original rows
 
-    % Ã¢â€â‚¬Ã¢â€â‚¬ Build mask via inpolygon (no toolbox needed) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    % -- Build mask via inpolygon (no toolbox needed)
     % Grid in display space (transposed): xg = original rows, yg = original cols
     [xg, yg] = meshgrid(1:nY_wb, 1:nX_wb);
     in_poly   = inpolygon(xg(:), yg(:), xd2, yd2);
@@ -160,52 +162,52 @@ if ~exist(roi_file, 'file')
     px_c = max(k_wb+1, min(nX_wb-k_wb, double(px_c)));
     py_c = max(k_wb+1, min(nY_wb-k_wb, double(py_c)));
 
-    % Regular grid: evenly spaced nodes, snapped to nearest interior pixel.
+    % Regular grid: grid_cols x grid_rows cell-centre nodes over the ROI bounding box.
+    % Nodes whose rounded pixel coordinate falls OUTSIDE the eroded interior mask
+    % are simply discarded -- no snapping.  nPred is set by how many survive.
+    %
     % Display is transposed (imagesc(mimg')), so:
-    %   visual rows  = original col (c) direction  -> n_vis_rows controls c_lin
-    %   visual cols  = original row (r) direction  -> n_vis_cols controls r_lin
-    n_grid     = nPred - 1;
-    n_vis_cols = ceil(sqrt(n_grid));     % grid columns in visual space (r direction)
-    n_vis_rows = n_vis_cols + 1;         % +1 visual row (c direction)
-
+    %   visual rows = c direction (nX dim, cols of valid_mask) -> grid_rows controls c_lin
+    %   visual cols = r direction (nY dim, rows of valid_mask) -> grid_cols controls r_lin
     r_min = min(rows_v); r_max = max(rows_v);
     c_min = min(cols_v); c_max = max(cols_v);
 
-    % Inset by one full cell so no node touches the bounding-box edge
-    r_inset = (r_max - r_min) / (2 * n_vis_cols);
-    c_inset = (c_max - c_min) / (2 * n_vis_rows);
-    r_lin = linspace(r_min + r_inset, r_max - r_inset, n_vis_cols);
-    c_lin = linspace(c_min + c_inset, c_max - c_inset, n_vis_rows);
+    % Cell-centre linspace (grid divided into equal cells, node at each centre)
+    dr    = (r_max - r_min) / grid_cols;
+    dc    = (c_max - c_min) / grid_rows;
+    r_lin = linspace(r_min + dr/2, r_max - dr/2, grid_cols);
+    c_lin = linspace(c_min + dc/2, c_max - dc/2, grid_rows);
     [cg, rg] = meshgrid(c_lin, r_lin);
     rg = round(rg(:));
     cg = round(cg(:));
-    rg = max(k_wb+1, min(nY_wb-k_wb, rg));
-    cg = max(k_wb+1, min(nX_wb-k_wb, cg));
+    % Clamp to image bounds
+    rg = max(1, min(nY_wb, rg));
+    cg = max(1, min(nX_wb, cg));
 
-    % Erode valid mask before snapping so pixels cannot land on polygon boundary.
-    % Uses convolution (no toolbox): a pixel is interior only if all neighbours
-    % within margin_px are also valid.
-    margin_px  = 4;
-    kernel_e   = ones(2*margin_px+1);
-    interior   = conv2(double(valid_mask), kernel_e, 'same') >= numel(kernel_e);
-    [rows_vi, cols_vi] = find(interior);
-    if isempty(rows_vi)
+    % Erode valid mask: a pixel is interior only if all neighbours within
+    % margin_px are also valid (conv2, no toolbox required).
+    margin_px = 4;
+    kernel_e  = ones(2*margin_px+1);
+    interior  = conv2(double(valid_mask), kernel_e, 'same') >= numel(kernel_e);
+    if ~any(interior(:))
         warning('Interior mask empty after erosion -- falling back to full valid mask');
-        rows_vi = rows_v;  cols_vi = cols_v;
+        interior = valid_mask;
     end
-    valid_pts = double([rows_vi, cols_vi]);
-    query_pts = double([rg, cg]);
-    snap_idx  = dsearchn(valid_pts, query_pts);
-    snapped_rows = rows_vi(snap_idx);
-    snapped_cols = cols_vi(snap_idx);
-    [~, ui]      = unique([snapped_rows, snapped_cols], 'rows', 'stable');
-    snapped_rows = snapped_rows(ui(1:min(n_grid, numel(ui))));
-    snapped_cols = snapped_cols(ui(1:min(n_grid, numel(ui))));
+
+    % Keep only grid nodes that land on an interior pixel; drop the rest
+    in_int = interior(sub2ind(size(interior), rg, cg));
+    rg_k   = rg(in_int);
+    cg_k   = cg(in_int);
+    [~, ui]      = unique([rg_k, cg_k], 'rows', 'stable');
+    snapped_rows = rg_k(ui);
+    snapped_cols = cg_k(ui);
+
     pred_py = [py_c; snapped_rows];
     pred_px = [px_c; snapped_cols];
 
-    save(roi_file, 'midline', 'pred_px', 'pred_py', 'poly_col', 'poly_row');
-    fprintf('Saved %d grid predictor pixels to %s\n', length(pred_px), roi_file);
+    save(roi_file, 'midline', 'pred_px', 'pred_py', 'poly_col', 'poly_row', 'grid_rows', 'grid_cols');
+    fprintf('Saved ROI: %d/%d grid nodes inside ROI + 1 contra-primary = %d total pixels  [%s]\n', ...
+        numel(snapped_rows), grid_rows*grid_cols, length(pred_px), roi_file);
 else
     tmp      = load(roi_file);
     midline  = tmp.midline;
@@ -230,7 +232,7 @@ nPred = length(pred_px);
 % fprintf('Primary (%d,%d) ->' contra (%d,%d)  |  %d predictor pixels\n', ...
 %     py_prim, px_prim, py_c, px_c, nPred);
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Pixel map: verify selection on transposed brain image Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Pixel map: verify selection on transposed brain image
 fig_pmap = figure('Color','k', 'Name','Widebrain predictor pixels');
 fig_pmap.Units = 'centimeters'; fig_pmap.Position = [0 0 10 8];
 ax_pm = axes(fig_pmap, 'Position',[0 0 1 0.88]);
@@ -260,13 +262,13 @@ scatter(ax_pm, py_c,    px_c,    100, ...
 scatter(ax_pm, py_prim, px_prim, 100, ...
     's','filled','MarkerFaceColor',[1 0.3 0.3],'MarkerEdgeColor','w','LineWidth',1.5);
 
-legend(ax_pm, {'Midline','ROI outline','Random contra','Contra primary','Primary'}, ...
+legend(ax_pm, {'Midline','ROI outline','Grid pixels','Contra primary','Primary'}, ...
     'TextColor','w','Color','none','EdgeColor','none','FontSize',6,'FontWeight','bold', ...
     'Location','south','Orientation','horizontal');
 hold(ax_pm, 'off');
 fprintf('Pixel map ready. Set redefine_roi=false then run the regression cell.\n');
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Extract dFk via SVD projection (cached) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Extract dFk via SVD projection (cached)
 mn_wb   = mouse.(fields{wb_sel}).mn;
 td_wb   = mouse.(fields{wb_sel}).td;
 en_wb   = mouse.(fields{wb_sel}).en;
@@ -304,6 +306,7 @@ else
         X_full(:,j) = ((F_j - Fm_j) ./ Fm_j * 100)';
     end
 
+    if ~exist('data', 'dir'); mkdir('data'); end
     save(path_wb, 'y_full', 'X_full', 'pred_px', 'pred_py');
     fprintf('Saved dFk cache: %s\n', path_wb);
 end
@@ -312,7 +315,7 @@ end
 % Requires the pixel-selection cell above to have been run first.
 % Fits contralateral-only ARX model on spontaneous data, applies to OL/CL trials.
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Spontaneous windows (6 s pre-trial, all trials pooled) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Spontaneous windows (6 s pre-trial, all trials pooled)
 t_wb       = d_wb.timeBlue;
 all_trials = [data_wb.nc(:); data_wb.wc(:)];
 pre_frames = spont_pre * Fs_wb;
@@ -326,14 +329,14 @@ for j = 1:length(all_trials)
     X_spont = [X_spont; X_full(i0:i1,:)];
 end
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Fit ARX on spontaneous data Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Fit ARX on spontaneous data
 [Phi_s, y_s] = buildLagMatrix(y_spont, X_spont, pY, pX);
 beta         = Phi_s \ y_s;
 y_hat_s      = Phi_s * beta;
 R2_spont     = 1 - sum((y_s - y_hat_s).^2) / sum((y_s - mean(y_s)).^2);
 fprintf('ARX  R^2_spont=%.3f  (pY=%d  pX=%d  nPred=%d)\n', R2_spont, pY, pX, nPred);
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Apply model to OL trials Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Apply model to OL trials
 trial_frames = dur_wb * Fs_wb;   % 105 frames
 outlen       = trial_frames;     % buildLagMatrix drops first mlag_wb; output = trial_frames
 
@@ -348,7 +351,7 @@ for j = 1:length(data_wb.nc)
     actual_nc(j,:) = y_t;
 end
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Apply model to CL trials Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Apply model to CL trials
 pred_wc   = nan(length(data_wb.wc), outlen);
 actual_wc = nan(length(data_wb.wc), outlen);
 for j = 1:length(data_wb.wc)
@@ -366,7 +369,7 @@ R2_wc = 1 - sum((actual_wc(:)-pred_wc(:)).^2,'omitnan') / ...
              sum((actual_wc(:)-mean(actual_wc(:),'omitnan')).^2,'omitnan');
 fprintf('  R^2_OL=%.3f   R^2_CL=%.3f\n', R2_nc, R2_wc);
 
-% Ã¢â€â‚¬Ã¢â€â‚¬ Figure: 4-panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+% -- Figure: 4-panel
 t_trial = (0:outlen-1) / Fs_wb;
 colOL   = [1 0 0];
 colCL   = [0 0.5 0];
@@ -431,7 +434,7 @@ end
 
 
 %% [WB-1a] Pink layer -- spontaneous fit + parameter tuning
-% *** TUNING SECTION â€” adjust nPred / pX at the top of the widebrain block,
+% *** TUNING SECTION - adjust nPred / pX at the top of the widebrain block,
 %     re-run this cell, inspect the held-out spont figure, repeat. ***
 % Once R2_test is satisfactory (>0.3), run WB-1b to apply to trials.
 %
@@ -519,7 +522,7 @@ for s = 1:N_show
         xlabel(ax_t,'Time (s)','FontSize',6,'FontWeight','bold');
     end
 end
-sgtitle(sprintf('Spont prediction â€” nPred=%d  pX=%d  |  R2_{train}=%.2f  R2_{test}=%.2f', ...
+sgtitle(sprintf('Spont prediction - nPred=%d  pX=%d  |  R2_{train}=%.2f  R2_{test}=%.2f', ...
     nPred, pX, R2_train, R2_test), 'FontSize',7,'FontWeight','bold');
 
 
