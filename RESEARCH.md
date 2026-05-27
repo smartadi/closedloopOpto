@@ -18,6 +18,11 @@ Two mice: AL_0033 (8 sessions), AL_0039 (3 sessions), Jan–Apr 2025.
 
 <!-- New entries go here, most recent first. One ### block per change. -->
 
+### 2026-05-27 — widebrain_arx: add [WB-1a-tune] pX order-selection section
+**Changed/Found:** `controller-analysis/widebrain_arx.m` — inserted `%% [WB-1a-tune]` between WB-1a and WB-1b. Sweeps `pX_cands = [2 4 6 8 10 12 15 20 25 30]`; computes BIC and 5-fold CV R^2 on training trials only (test set untouched). Prints BIC-selected and CV-selected pX vs current; plots BIC-min(BIC) and CV R^2 curves with vertical markers.
+**Why:** Avoid exhaustive test-set search (biases reported R2); BIC is the classical method for ARX order selection (no held-out data needed); 5-fold CV provides a non-parametric cross-check.
+**Next:** Run WB-1a to build spont_y/spont_X/train_idx, then run WB-1a-tune to see BIC optimum; update pX in WB-1a if different, re-run both, then proceed to WB-1b.
+
 ### 2026-05-27 — widebrain_arx: WB-5 bar figure completed + file truncation repaired
 **Changed/Found:** `controller-analysis/widebrain_arx.m` — file was truncated at `for g = 1:3` (same in HEAD); added bar/errorbar loop body, axis formatting, and PNG export for the OL/CL/Optimal grouped bar chart. Confirmed truncation pre-dated this session via `git show HEAD`. No local `buildLagMatrix` needed (utils/ version already on path). Two info-level style warnings (`try;` syntax) left as-is; not errors.
 **Why:** WB-5 was the only incomplete section; script now runs end-to-end without syntax gaps.

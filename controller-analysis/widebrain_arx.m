@@ -414,6 +414,120 @@ sgtitle(sprintf('Spont prediction - nPred=%d  pX=%d  |  R2_{train}=%.2f  R2_{tes
     nPred, pX, R2_train, R2_test), 'FontSize',7,'FontWeight','bold');
 
 
+%% [WB-1a-tune] pX order selection -- BIC sweep + 5-fold CV (training set only)
+% Sweeps pX over a candidate range; selects order by BIC (no test data used).
+% 5-fold CV on training trials provides a second, non-parametric estimate.
+% Prereqs: WB-1a must have run (spont_y, spont_X, train_idx, pY, nPred, pX).
+% After inspecting the plot: update pX in WB-1a and re-run WB-1a + WB-1a-tune.
+% Test set is NOT touched here.
+
+pX_cands = [2 4 6 8 10 12 15 20 25 30];
+nPX_c    = numel(pX_cands);
+aic_c    = nan(nPX_c, 1);
+bic_c    = nan(nPX_c, 1);
+cv5_c    = nan(nPX_c, 1);   % 5-fold CV R^2 on training trials
+
+% ---- Concatenate all training-trial spontaneous windows ----
+y_tr_all = cell2mat(spont_y(train_idx));
+X_tr_all = cell2mat(spont_X(train_idx));
+
+% ---- AIC / BIC on full training pool ----
+for ip = 1:nPX_c
+    [Phi_c, y_c] = buildLagMatrix(y_tr_all, X_tr_all, pY, pX_cands(ip));
+    b_c   = Phi_c \ y_c;
+    rss_c = sum((y_c - Phi_c*b_c).^2);
+    n_c   = numel(y_c);
+    k_c   = size(Phi_c, 2);          % pX*nPred + bias  (pY=0)
+    aic_c(ip) = n_c * log(rss_c/n_c) + 2*k_c;
+    bic_c(ip) = n_c * log(rss_c/n_c) + k_c * log(n_c);
+end
+
+% ---- 5-fold CV on training trials ----
+kFold      = 5;
+nTr_cv     = numel(train_idx);
+fold_edges = round(linspace(0, nTr_cv, kFold+1));
+
+for ip = 1:nPX_c
+    r2_folds = nan(kFold, 1);
+    for kk = 1:kFold
+        val_local   = (fold_edges(kk)+1) : fold_edges(kk+1);
+        train_local = setdiff(1:nTr_cv, val_local);
+        if isempty(train_local) || isempty(val_local); continue; end
+
+        [Phi_ktr, y_ktr] = buildLagMatrix( ...
+            cell2mat(spont_y(train_idx(train_local))), ...
+            cell2mat(spont_X(train_idx(train_local))), pY, pX_cands(ip));
+        [Phi_kva, y_kva] = buildLagMatrix( ...
+            cell2mat(spont_y(train_idx(val_local))), ...
+            cell2mat(spont_X(train_idx(val_local))), pY, pX_cands(ip));
+
+        b_k    = Phi_ktr \ y_ktr;
+        ss_res = sum((y_kva - Phi_kva*b_k).^2);
+        ss_tot = sum((y_kva - mean(y_kva)).^2);
+        r2_folds(kk) = 1 - ss_res/ss_tot;
+    end
+    cv5_c(ip) = mean(r2_folds, 'omitnan');
+end
+
+% ---- Report recommendations ----
+[~, iBIC] = min(bic_c);
+[~, iCV]  = max(cv5_c);
+pX_bic    = pX_cands(iBIC);
+pX_cv5    = pX_cands(iCV);
+
+fprintf('[WB-1a-tune] BIC-selected pX = %d  |  5-fold CV-selected pX = %d  |  current pX = %d\n', ...
+    pX_bic, pX_cv5, pX);
+if pX_bic ~= pX
+    fprintf('             --> Update pX to %d in WB-1a and re-run.\n', pX_bic);
+else
+    fprintf('             --> Current pX matches BIC optimum -- no change needed.\n');
+end
+
+% ---- Figure: BIC curve (left) + CV R^2 curve (right) ----
+fig_pxtune = figure('Color','w','Units','centimeters','Position',[2 2 12 5]);
+lmT=0.11; rmT=0.04; bmT=0.20; tmT=0.10; gxT=0.10;
+pwT = (1-lmT-rmT-gxT)/2;
+phT = 1-bmT-tmT;
+
+% Left: BIC - min(BIC)
+ax_bic = axes(fig_pxtune,'Position',[lmT, bmT, pwT, phT]);
+hold(ax_bic,'on');
+plot(ax_bic, pX_cands, bic_c - min(bic_c), 'k-o', ...
+    'LineWidth',1.2, 'MarkerSize',3, 'MarkerFaceColor','k');
+xline(ax_bic, pX_bic, '--r', 'LineWidth',1.0, ...
+    'Label',sprintf('BIC=%d',pX_bic), 'LabelHorizontalAlignment','right', ...
+    'FontSize',5, 'FontWeight','bold');
+if pX ~= pX_bic
+    xline(ax_bic, pX, ':k', 'LineWidth',0.8, ...
+        'Label',sprintf('cur=%d',pX), 'LabelHorizontalAlignment','left', ...
+        'FontSize',5, 'FontWeight','bold');
+end
+hold(ax_bic,'off');
+xlabel(ax_bic, 'pX (lags)', 'FontSize',6, 'FontWeight','bold');
+ylabel(ax_bic, 'BIC \minus min(BIC)', 'FontSize',6, 'FontWeight','bold');
+title(ax_bic, 'Training-set BIC', 'FontSize',6, 'FontWeight','bold');
+set(ax_bic, 'Box','off', 'TickDir','out', 'FontSize',6, 'FontWeight','bold');
+
+% Right: 5-fold CV R^2
+ax_cv = axes(fig_pxtune,'Position',[lmT+pwT+gxT, bmT, pwT, phT]);
+hold(ax_cv,'on');
+plot(ax_cv, pX_cands, cv5_c, 'k-o', ...
+    'LineWidth',1.2, 'MarkerSize',3, 'MarkerFaceColor','k');
+xline(ax_cv, pX_cv5, '--', 'Color',[0.2 0.5 0.8], 'LineWidth',1.0, ...
+    'Label',sprintf('CV=%d',pX_cv5), 'LabelHorizontalAlignment','right', ...
+    'FontSize',5, 'FontWeight','bold');
+if pX ~= pX_cv5
+    xline(ax_cv, pX, ':k', 'LineWidth',0.8, ...
+        'Label',sprintf('cur=%d',pX), 'LabelHorizontalAlignment','left', ...
+        'FontSize',5, 'FontWeight','bold');
+end
+hold(ax_cv,'off');
+xlabel(ax_cv, 'pX (lags)', 'FontSize',6, 'FontWeight','bold');
+ylabel(ax_cv, '5-fold CV  R^2', 'FontSize',6, 'FontWeight','bold');
+title(ax_cv, '5-fold CV (training trials)', 'FontSize',6, 'FontWeight','bold');
+set(ax_cv, 'Box','off', 'TickDir','out', 'FontSize',6, 'FontWeight','bold');
+
+
 %% [WB-1b] Pink layer -- apply to OL/CL trials, export figure
 % Prereqs: WB-1a must have run (beta_m, X_full_m, y_full_m, t_wb_m, nF, colPrd_m).
 % Run this only once parameters in WB-1a are satisfactory.
