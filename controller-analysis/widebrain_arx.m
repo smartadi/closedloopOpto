@@ -767,12 +767,17 @@ colormap(ax_bg, gray);
 clim(ax_bg, [prctile(mimg_wb(:),1), prctile(mimg_wb(:),99)]);
 axis(ax_bg, 'image', 'off');
 
-ax_sc = axes(fig_alpha, 'Position', pos_al);
-ax_sc.Color = 'none';            % transparent -- brain image shows through
-ax_sc.XLim  = ax_bg.XLim;
-ax_sc.YLim  = ax_bg.YLim;
-ax_sc.YDir  = 'reverse';         % match imagesc convention (row 1 at top)
-axis(ax_sc, 'image', 'off');
+% Use ax_bg's post-axis-image InnerPosition so the overlay is pixel-exact.
+% Do NOT call axis(image) on ax_sc -- it would reset limits on an empty axes.
+ax_sc = axes(fig_alpha, 'Position', ax_bg.InnerPosition);
+ax_sc.Color      = 'none';          % transparent -- brain image shows through
+ax_sc.XLim       = ax_bg.XLim;
+ax_sc.YLim       = ax_bg.YLim;
+ax_sc.YDir       = 'reverse';       % match imagesc convention (row 1 at top)
+ax_sc.XLimMode   = 'manual';        % prevent autoscaling when scatter is added
+ax_sc.YLimMode   = 'manual';
+ax_sc.DataAspectRatio = ax_bg.DataAspectRatio;
+set(ax_sc, 'XTick', [], 'YTick', [], 'Box', 'off');
 hold(ax_sc, 'on');
 scatter(ax_sc, pred_py, pred_px, 40, alpha_wb, 'filled', 'MarkerEdgeColor','none');
 plot(ax_sc, py_prim, px_prim, 'c+', 'MarkerSize',8, 'LineWidth',1.5);
