@@ -15,9 +15,9 @@ selField = 12;
 wb_sel       = selField;  % session to analyse
 Fs_wb        = 35;
 dur_wb       = 3;         % trial duration (s)
-k_pred       = 1;         % SVD kernel half-size for predictor pixels (1 -> 3x3, 2 -> 5x5, ...)
-grid_rows    = 6;         % visual rows in contra ROI grid  (c direction)
-grid_cols    = 5;         % visual cols in contra ROI grid  (r direction)
+k_pred       = 5;         % SVD kernel half-size for predictor pixels (1 -> 3x3, 2 -> 5x5, ...)
+grid_rows    = 10;         % visual rows in contra ROI grid  (c direction)
+grid_cols    = 10;         % visual cols in contra ROI grid  (r direction)
 % nPred derived automatically: 1 contra-primary + grid nodes inside ROI
 redefine_roi = true;      % set true to redo midline + ROI interactively
 
@@ -607,6 +607,200 @@ for axi = [ax1B ax1C ax1D]
 end
 exportgraphics(fig_wb1,'paper/images/figure4/wb_pink_4panel.pdf','ContentType','vector');
 fprintf('[WB-1b] Saved wb_pink_4panel.pdf\n');
+
+
+%% [WB-1c] Decontaminated pink -- Option A: subtract mean OL contralateral response
+% During OL/CL trials the contralateral pixels carry a laser-driven component
+% (laser -> primary pixel -> bilateral propagation -> contra pixels -> ARX input).
+% This inflates the pink prediction during trials relative to the spontaneous model.
+%
+% Option A: subtract the MEAN OL contralateral response (averaged across OL trials)
+% from every trial window before ARX evaluation.  Removes mean coupling; fast; no
+% extra fitting.  Assumes per-trial laser coupling variation is small.
+%
+% Prereqs: WB-1b must have run (actual_nc_m/actual_wc_m, X_full_m, y_full_m,
+%          beta_m, t_wb_m, nF, mlag_wb, pY, pX, outlen_m, nNc_wb, nWc_wb).
+
+% -- Compute mean OL contralateral response across trials (pixel cols only)
+ol_contra_A = nan(nNc_wb, outlen_m, nPred);
+for j = 1:nNc_wb
+    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.nc(j))));
+    i0 = i_on;  i1 = i_on + outlen_m - 1;
+    if i0 < 1 || i1 > nF; continue; end
+    ol_contra_A(j,:,:) = X_full_m(i0:i1, 1:nPred);
+end
+X_ol_mean_A = squeeze(mean(ol_contra_A, 1, 'omitnan'));   % [outlen_m x nPred]
+
+% -- Re-predict OL trials: subtract mean OL contra from trial window (not pre-history)
+pred_nc_A = nan(nNc_wb, outlen_m);
+for j = 1:nNc_wb
+    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.nc(j))));
+    i0 = i_on - mlag_wb;  i1 = i_on + outlen_m - 1;
+    if i0 < 1 || i1 > nF; continue; end
+    Xw = X_full_m(i0:i1, :);
+    Xw(mlag_wb+1:end, 1:nPred) = Xw(mlag_wb+1:end, 1:nPred) - X_ol_mean_A;
+    [Phi_t, ~] = buildLagMatrix(y_full_m(i0:i1), Xw, pY, pX);
+    pred_nc_A(j,:) = Phi_t * beta_m;
+end
+
+% -- Re-predict CL trials: same mean OL subtraction
+pred_wc_A = nan(nWc_wb, outlen_m);
+for j = 1:nWc_wb
+    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.wc(j))));
+    i0 = i_on - mlag_wb;  i1 = i_on + outlen_m - 1;
+    if i0 < 1 || i1 > nF; continue; end
+    Xw = X_full_m(i0:i1, :);
+    Xw(mlag_wb+1:end, 1:nPred) = Xw(mlag_wb+1:end, 1:nPred) - X_ol_mean_A;
+    [Phi_t, ~] = buildLagMatrix(y_full_m(i0:i1), Xw, pY, pX);
+    pred_wc_A(j,:) = Phi_t * beta_m;
+end
+
+R2_nc_A = max(0, 1 - sum((actual_nc_m(:)-pred_nc_A(:)).^2,'omitnan') / ...
+                      sum((actual_nc_m(:)-mean(actual_nc_m(:),'omitnan')).^2,'omitnan'));
+R2_wc_A = max(0, 1 - sum((actual_wc_m(:)-pred_wc_A(:)).^2,'omitnan') / ...
+                      sum((actual_wc_m(:)-mean(actual_wc_m(:),'omitnan')).^2,'omitnan'));
+fprintf('[WB-1c] Decontam A (mean sub):  R2_OL=%.3f  R2_CL=%.3f   (raw: %.3f  %.3f)\n', ...
+    R2_nc_A, R2_wc_A, R2_nc_m, R2_wc_m);
+
+% -- Figure: raw pink vs decontaminated A, OL (left) / CL (right)
+colDecA  = [0.15 0.60 0.20];
+fig_1c   = paperFig(12, 4);
+lm1c=0.09; rm1c=0.04; bm1c=0.20; tm1c=0.08; gx1c=0.08;
+pw1c = (1-lm1c-rm1c-gx1c)/2;  ph1c = 1-bm1c-tm1c;
+
+ax1cL = axes(fig_1c,'Position',[lm1c,          bm1c, pw1c, ph1c]);  hold(ax1cL,'on');
+plot(ax1cL, t_trial_m, mean(actual_nc_m,1,'omitnan'), 'Color',colOL,   'LineWidth',1.5,'DisplayName','OL actual');
+plot(ax1cL, t_trial_m, mean(pred_nc_m,  1,'omitnan'), 'Color',colPrd_m,'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (raw)');
+plot(ax1cL, t_trial_m, mean(pred_nc_A,  1,'omitnan'), 'Color',colDecA, 'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (decontam A)');
+addStimPatch(ax1cL, 0, dur_wb);  hold(ax1cL,'off');
+lgd1cL = legend(ax1cL,'Box','off','FontSize',5,'Location','best');  lgd1cL.ItemTokenSize=[6 6];
+title(ax1cL, sprintf('OL  raw=%.2f  decontam=%.2f',R2_nc_m,R2_nc_A), 'FontSize',6,'FontWeight','bold');
+
+ax1cR = axes(fig_1c,'Position',[lm1c+pw1c+gx1c, bm1c, pw1c, ph1c]);  hold(ax1cR,'on');
+plot(ax1cR, t_trial_m, mean(actual_wc_m,1,'omitnan'), 'Color',colCL,   'LineWidth',1.5,'DisplayName','CL actual');
+plot(ax1cR, t_trial_m, mean(pred_wc_m,  1,'omitnan'), 'Color',colPrd_m,'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (raw)');
+plot(ax1cR, t_trial_m, mean(pred_wc_A,  1,'omitnan'), 'Color',colDecA, 'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (decontam A)');
+addStimPatch(ax1cR, 0, dur_wb);  hold(ax1cR,'off');
+lgd1cR = legend(ax1cR,'Box','off','FontSize',5,'Location','best');  lgd1cR.ItemTokenSize=[6 6];
+title(ax1cR, sprintf('CL  raw=%.2f  decontam=%.2f',R2_wc_m,R2_wc_A), 'FontSize',6,'FontWeight','bold');
+
+for axi = [ax1cL ax1cR]
+    set(axi,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+    xlabel(axi,'Time (s)','FontSize',6,'FontWeight','bold');
+    ylabel(axi,'dF/F (%)','FontSize',6,'FontWeight','bold');
+end
+
+
+%% [WB-1d] Decontaminated pink -- Option B: per-pixel laser coupling regression
+% For each predictor pixel j, fit a scalar coupling gain alpha_j:
+%   X_contra_j(t) ~ alpha_j * u(t)     (using stacked OL trial windows)
+% Then subtract alpha_j * u_trial from pixel j before ARX evaluation.
+% Handles per-trial laser variation (different powers / pulse shapes).
+% Also produces a spatial alpha map showing which contra pixels couple to the laser.
+%
+% Prereqs: WB-1b must have run.  data_wb.ncInp / wcInp must be present.
+
+ds_1d = round(2000 / Fs_wb);   % laser recorded at 2000 Hz, imaging at Fs_wb
+
+% -- Stack OL trial windows to fit alpha: u [N x 1], X_pixels [N x nPred]
+u_stk  = nan(nNc_wb * outlen_m, 1);
+X_stk  = nan(nNc_wb * outlen_m, nPred);
+stk_n  = 0;
+for j = 1:nNc_wb
+    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.nc(j))));
+    i0 = i_on;  i1 = i_on + outlen_m - 1;
+    if i0 < 1 || i1 > nF; continue; end
+    u_j = downsample(data_wb.ncInp(j,:)', ds_1d);
+    u_j = u_j(1:outlen_m);
+    rows = stk_n + (1:outlen_m);
+    u_stk(rows)   = u_j;
+    X_stk(rows,:) = X_full_m(i0:i1, 1:nPred);
+    stk_n = stk_n + outlen_m;
+end
+u_stk = u_stk(1:stk_n);
+X_stk = X_stk(1:stk_n, :);
+
+% OLS per pixel (no intercept -- signals are mean-removed via rolling baseline)
+% alpha = (u'u)^{-1} u'X  ->  [1 x nPred]
+alpha_wb = ((u_stk' * u_stk) \ (u_stk' * X_stk))';   % [nPred x 1]
+fprintf('[WB-1d] alpha range: [%.4f, %.4f]  mean=%.4f\n', min(alpha_wb), max(alpha_wb), mean(alpha_wb));
+
+% -- Re-predict OL trials with per-pixel cleaned X
+pred_nc_B = nan(nNc_wb, outlen_m);
+for j = 1:nNc_wb
+    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.nc(j))));
+    i0 = i_on - mlag_wb;  i1 = i_on + outlen_m - 1;
+    if i0 < 1 || i1 > nF; continue; end
+    u_j = downsample(data_wb.ncInp(j,:)', ds_1d);
+    u_j = u_j(1:outlen_m);
+    Xw = X_full_m(i0:i1, :);
+    Xw(mlag_wb+1:end, 1:nPred) = Xw(mlag_wb+1:end, 1:nPred) - u_j * alpha_wb';
+    [Phi_t, ~] = buildLagMatrix(y_full_m(i0:i1), Xw, pY, pX);
+    pred_nc_B(j,:) = Phi_t * beta_m;
+end
+
+% -- Re-predict CL trials (subtract OL-fitted alpha * CL laser)
+pred_wc_B = nan(nWc_wb, outlen_m);
+for j = 1:nWc_wb
+    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.wc(j))));
+    i0 = i_on - mlag_wb;  i1 = i_on + outlen_m - 1;
+    if i0 < 1 || i1 > nF; continue; end
+    u_j = downsample(data_wb.wcInp(j,:)', ds_1d);
+    u_j = u_j(1:outlen_m);
+    Xw = X_full_m(i0:i1, :);
+    Xw(mlag_wb+1:end, 1:nPred) = Xw(mlag_wb+1:end, 1:nPred) - u_j * alpha_wb';
+    [Phi_t, ~] = buildLagMatrix(y_full_m(i0:i1), Xw, pY, pX);
+    pred_wc_B(j,:) = Phi_t * beta_m;
+end
+
+R2_nc_B = max(0, 1 - sum((actual_nc_m(:)-pred_nc_B(:)).^2,'omitnan') / ...
+                      sum((actual_nc_m(:)-mean(actual_nc_m(:),'omitnan')).^2,'omitnan'));
+R2_wc_B = max(0, 1 - sum((actual_wc_m(:)-pred_wc_B(:)).^2,'omitnan') / ...
+                      sum((actual_wc_m(:)-mean(actual_wc_m(:),'omitnan')).^2,'omitnan'));
+fprintf('[WB-1d] Decontam B (alpha reg): R2_OL=%.3f  R2_CL=%.3f   (raw: %.3f  %.3f)\n', ...
+    R2_nc_B, R2_wc_B, R2_nc_m, R2_wc_m);
+
+% -- Alpha spatial map: which contra pixels couple most to the laser?
+fig_alpha = figure('Color','w','Units','centimeters','Position',[2 2 8 6]);
+ax_al = axes(fig_alpha);
+imagesc(ax_al, mimg_wb');
+colormap(ax_al, gray);
+clim(ax_al, [prctile(mimg_wb(:),1), prctile(mimg_wb(:),99)]);
+axis(ax_al, 'image', 'off');  hold(ax_al, 'on');
+scatter(ax_al, pred_py, pred_px, 40, alpha_wb, 'filled', 'MarkerEdgeColor','none');
+colormap(ax_al, 'hot');
+cb_al = colorbar(ax_al);
+ylabel(cb_al, '\alpha  (laser-contra coupling)', 'FontSize',5, 'FontWeight','bold');
+plot(ax_al, py_prim, px_prim, 'c+', 'MarkerSize',8, 'LineWidth',1.5);
+title(ax_al, 'Laser-to-contra coupling (\alpha per pixel)', 'FontSize',6, 'FontWeight','bold');
+
+% -- Figure: raw pink vs decontaminated B, OL (left) / CL (right)
+colDecB  = [0.60 0.15 0.75];
+fig_1d   = paperFig(12, 4);
+lm1d=0.09; rm1d=0.04; bm1d=0.20; tm1d=0.08; gx1d=0.08;
+pw1d = (1-lm1d-rm1d-gx1d)/2;  ph1d = 1-bm1d-tm1d;
+
+ax1dL = axes(fig_1d,'Position',[lm1d,          bm1d, pw1d, ph1d]);  hold(ax1dL,'on');
+plot(ax1dL, t_trial_m, mean(actual_nc_m,1,'omitnan'), 'Color',colOL,   'LineWidth',1.5,'DisplayName','OL actual');
+plot(ax1dL, t_trial_m, mean(pred_nc_m,  1,'omitnan'), 'Color',colPrd_m,'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (raw)');
+plot(ax1dL, t_trial_m, mean(pred_nc_B,  1,'omitnan'), 'Color',colDecB, 'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (decontam B)');
+addStimPatch(ax1dL, 0, dur_wb);  hold(ax1dL,'off');
+lgd1dL = legend(ax1dL,'Box','off','FontSize',5,'Location','best');  lgd1dL.ItemTokenSize=[6 6];
+title(ax1dL, sprintf('OL  raw=%.2f  decontam=%.2f',R2_nc_m,R2_nc_B), 'FontSize',6,'FontWeight','bold');
+
+ax1dR = axes(fig_1d,'Position',[lm1d+pw1d+gx1d, bm1d, pw1d, ph1d]);  hold(ax1dR,'on');
+plot(ax1dR, t_trial_m, mean(actual_wc_m,1,'omitnan'), 'Color',colCL,   'LineWidth',1.5,'DisplayName','CL actual');
+plot(ax1dR, t_trial_m, mean(pred_wc_m,  1,'omitnan'), 'Color',colPrd_m,'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (raw)');
+plot(ax1dR, t_trial_m, mean(pred_wc_B,  1,'omitnan'), 'Color',colDecB, 'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (decontam B)');
+addStimPatch(ax1dR, 0, dur_wb);  hold(ax1dR,'off');
+lgd1dR = legend(ax1dR,'Box','off','FontSize',5,'Location','best');  lgd1dR.ItemTokenSize=[6 6];
+title(ax1dR, sprintf('CL  raw=%.2f  decontam=%.2f',R2_wc_m,R2_wc_B), 'FontSize',6,'FontWeight','bold');
+
+for axi = [ax1dL ax1dR]
+    set(axi,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+    xlabel(axi,'Time (s)','FontSize',6,'FontWeight','bold');
+    ylabel(axi,'dF/F (%)','FontSize',6,'FontWeight','bold');
+end
 
 
 %% [WB-2] Orange layer -- mean OL residual on top of pink
