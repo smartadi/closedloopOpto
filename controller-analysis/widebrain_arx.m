@@ -756,18 +756,30 @@ fprintf('[WB-1d] Decontam B (alpha reg): R2_OL=%.3f  R2_CL=%.3f   (raw: %.3f  %.
     R2_nc_B, R2_wc_B, R2_nc_m, R2_wc_m);
 
 % -- Alpha spatial map: which contra pixels couple most to the laser?
+% Two overlapping axes: gray brain image (ax_bg) + hot scatter (ax_sc),
+% each with its own colormap and clim.
 fig_alpha = figure('Color','w','Units','centimeters','Position',[2 2 8 6]);
-ax_al = axes(fig_alpha);
-imagesc(ax_al, mimg_wb');
-colormap(ax_al, gray);
-clim(ax_al, [prctile(mimg_wb(:),1), prctile(mimg_wb(:),99)]);
-axis(ax_al, 'image', 'off');  hold(ax_al, 'on');
-scatter(ax_al, pred_py, pred_px, 40, alpha_wb, 'filled', 'MarkerEdgeColor','none');
-colormap(ax_al, 'hot');
-cb_al = colorbar(ax_al);
+pos_al = [0.08 0.10 0.72 0.82];
+
+ax_bg = axes(fig_alpha, 'Position', pos_al);
+imagesc(ax_bg, mimg_wb');
+colormap(ax_bg, gray);
+clim(ax_bg, [prctile(mimg_wb(:),1), prctile(mimg_wb(:),99)]);
+axis(ax_bg, 'image', 'off');
+
+ax_sc = axes(fig_alpha, 'Position', pos_al);
+ax_sc.Color = 'none';            % transparent -- brain image shows through
+ax_sc.XLim  = ax_bg.XLim;
+ax_sc.YLim  = ax_bg.YLim;
+axis(ax_sc, 'image', 'off');
+hold(ax_sc, 'on');
+scatter(ax_sc, pred_py, pred_px, 40, alpha_wb, 'filled', 'MarkerEdgeColor','none');
+plot(ax_sc, py_prim, px_prim, 'c+', 'MarkerSize',8, 'LineWidth',1.5);
+colormap(ax_sc, 'hot');
+clim(ax_sc, [min(alpha_wb), max(alpha_wb)]);   % scale to actual alpha range
+cb_al = colorbar(ax_sc, 'Position', [0.82 0.15 0.04 0.70]);
 ylabel(cb_al, '\alpha  (laser-contra coupling)', 'FontSize',5, 'FontWeight','bold');
-plot(ax_al, py_prim, px_prim, 'c+', 'MarkerSize',8, 'LineWidth',1.5);
-title(ax_al, 'Laser-to-contra coupling (\alpha per pixel)', 'FontSize',6, 'FontWeight','bold');
+title(ax_sc, 'Laser-to-contra coupling (\alpha per pixel)', 'FontSize',6, 'FontWeight','bold');
 
 % -- Figure: raw pink vs decontaminated B, OL (left) / CL (right)
 colDecB  = [0.60 0.15 0.75];
