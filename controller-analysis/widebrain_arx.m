@@ -281,36 +281,32 @@ td_wb   = mouse.(fields{wb_sel}).td;
 en_wb   = mouse.(fields{wb_sel}).en;
 path_wb = fullfile('data', sprintf('%swb%s%s%d.mat', mn_wb, td_wb(6:7), td_wb(9:10), en_wb));
 
+% y_full -- always from mouse struct (no cache needed; same signal as controller analysis)
+y_full = data_wb.dFk(:);
+if numel(y_full) ~= nFrames
+    warning('[WB-SVD] data_wb.dFk length (%d) ~= nFrames (%d) -- truncating to shorter.', ...
+        numel(y_full), nFrames);
+    nFrames = min(numel(y_full), nFrames);
+    y_full  = y_full(1:nFrames);
+end
+
+% X_full -- SVD predictor pixels (expensive; cached by k_pred + grid)
 if exist(path_wb,'file') && ~recompute_svd
     tmp = load(path_wb);
-    cache_ok = isfield(tmp,'k_pred')   && tmp.k_pred == k_pred && ...
-               isfield(tmp,'pred_px')  && isequal(tmp.pred_px(:), pred_px(:)) && ...
-               isfield(tmp,'pred_py')  && isequal(tmp.pred_py(:), pred_py(:));
+    cache_ok = isfield(tmp,'k_pred')  && tmp.k_pred == k_pred && ...
+               isfield(tmp,'pred_px') && isequal(tmp.pred_px(:), pred_px(:)) && ...
+               isfield(tmp,'pred_py') && isequal(tmp.pred_py(:), pred_py(:));
     if cache_ok
-        y_full = tmp.y_full;
         X_full = tmp.X_full;
-        fprintf('Loaded dFk cache: %s  (k_pred=%d, nPred=%d)\n', path_wb, k_pred, nPred);
+        fprintf('Loaded predictor cache: %s  (k_pred=%d, nPred=%d)\n', path_wb, k_pred, nPred);
     else
-        fprintf('Cache stale (k_pred or grid changed) -- recomputing.\n');
+        fprintf('Predictor cache stale (k_pred or grid changed) -- recomputing.\n');
         recompute_svd = true;
     end
 end
 
 if ~exist(path_wb,'file') || recompute_svd
     fprintf('Computing SVD predictor dFk (%d pixels, k_pred=%d) ...\n', nPred, k_pred);
-
-    % Primary pixel -- use session dFk directly (same signal as controller analysis,
-    % computed by getpixel_dFoF with the session's own kernel and baseline).
-    dFk_prim = data_wb.dFk(:);
-    if numel(dFk_prim) ~= nFrames
-        warning('[WB-SVD] data_wb.dFk length (%d) ~= nFrames (%d) -- truncating to shorter.', ...
-            numel(dFk_prim), nFrames);
-        nFrames = min(numel(dFk_prim), nFrames);
-        dFk_prim = dFk_prim(1:nFrames);
-    end
-    y_full = dFk_prim;   % [nFrames x 1]
-
-    % Contralateral predictor pixels
     X_full = zeros(nFrames, nPred);
     for j = 1:nPred
         cx = pred_px(j); cy = pred_py(j);
@@ -323,10 +319,9 @@ if ~exist(path_wb,'file') || recompute_svd
         Fm_j    = (cs_j(idx_r+w_r+1) - cs_j(idx_r)) / (w_r+1);
         X_full(:,j) = ((F_j - Fm_j) ./ Fm_j * 100)';
     end
-
-    [~] = mkdir(fileparts(path_wb));   % create data/ if missing; silent no-op if it exists
-    save(path_wb, 'y_full', 'X_full', 'pred_px', 'pred_py', 'k_pred');
-    fprintf('Saved dFk cache: %s  (k_pred=%d, nPred=%d)\n', path_wb, k_pred, nPred);
+    [~] = mkdir(fileparts(path_wb));
+    save(path_wb, 'X_full', 'pred_px', 'pred_py', 'k_pred');
+    fprintf('Saved predictor cache: %s  (k_pred=%d, nPred=%d)\n', path_wb, k_pred, nPred);
 end
 
 %% [WB-1a] Pink layer -- ARX fit + parameter tuning
