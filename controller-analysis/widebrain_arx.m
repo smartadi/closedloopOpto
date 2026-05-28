@@ -816,6 +816,87 @@ for axi = [ax1dL ax1dR]
 end
 
 
+%% [WB-1e] Pre-trial counterfactual prediction -- clean X, no laser contamination
+% For each trial, build the ARX lag matrix from the pre-trial contra window
+% (same duration+buffer as the trial window, ending 1 frame before onset).
+% All X lags are spontaneous → zero laser contamination by construction.
+%
+% Prediction = "what would the primary pixel do if the pre-trial contra
+% state continued uninterrupted?"  No decontamination algebra required.
+%
+% Prereqs: WB-1a (beta_m), WB-1b (actual_nc_m / actual_wc_m, nNc_wb, nWc_wb).
+
+colCF = [0.05 0.55 0.35];   % dark teal -- distinguishable from pink/orange/red
+
+buf_pre = mlag_wb + outlen_m;   % frames needed before onset: pX lags + full trial
+
+pred_nc_pre = nan(nNc_wb, outlen_m);
+pred_wc_pre = nan(nWc_wb, outlen_m);
+
+for j = 1:nNc_wb
+    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.nc(j))));
+    i0_pre = i_on - buf_pre;
+    i1_pre = i_on - 1;             % ends 1 frame before onset
+    if i0_pre < 1 || i1_pre > nF; continue; end
+    [Phi_pre, ~] = buildLagMatrix(y_full_m(i0_pre:i1_pre), X_full_m(i0_pre:i1_pre,:), pY, pX);
+    if size(Phi_pre,1) ~= outlen_m; continue; end
+    pred_nc_pre(j,:) = Phi_pre * beta_m;
+end
+
+for j = 1:nWc_wb
+    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.wc(j))));
+    i0_pre = i_on - buf_pre;
+    i1_pre = i_on - 1;
+    if i0_pre < 1 || i1_pre > nF; continue; end
+    [Phi_pre, ~] = buildLagMatrix(y_full_m(i0_pre:i1_pre), X_full_m(i0_pre:i1_pre,:), pY, pX);
+    if size(Phi_pre,1) ~= outlen_m; continue; end
+    pred_wc_pre(j,:) = Phi_pre * beta_m;
+end
+
+R2_nc_pre = max(0, 1 - sum((actual_nc_m(:)-pred_nc_pre(:)).^2,'omitnan') / ...
+                        sum((actual_nc_m(:)-mean(actual_nc_m(:),'omitnan')).^2,'omitnan'));
+R2_wc_pre = max(0, 1 - sum((actual_wc_m(:)-pred_wc_pre(:)).^2,'omitnan') / ...
+                        sum((actual_wc_m(:)-mean(actual_wc_m(:),'omitnan')).^2,'omitnan'));
+fprintf('[WB-1e] Pre-trial CF:  R2_OL=%.3f   R2_CL=%.3f   (pink: %.3f  %.3f)\n', ...
+    R2_nc_pre, R2_wc_pre, R2_nc_m, R2_wc_m);
+
+% -- Figure: OL left / CL right; actual, pink, pre-trial CF
+fig_1e = paperFig(12, 4);
+lm1e = 0.10; rm1e = 0.04; bm1e = 0.22; tm1e = 0.14; gx1e = 0.10;
+pw1e = (1-lm1e-rm1e-gx1e)/2;
+ph1e = 1-bm1e-tm1e;
+
+ax1eL = axes(fig_1e,'Position',[lm1e,          bm1e, pw1e, ph1e]); hold(ax1eL,'on');
+patch(ax1eL, [t_trial_m, fliplr(t_trial_m)], ...
+    [mean(actual_nc_m,1,'omitnan') + std(actual_nc_m,0,1,'omitnan'), ...
+     fliplr(mean(actual_nc_m,1,'omitnan') - std(actual_nc_m,0,1,'omitnan'))], ...
+    colOL, 'FaceAlpha',0.15, 'EdgeColor','none', 'HandleVisibility','off');
+plot(ax1eL, t_trial_m, mean(actual_nc_m,  1,'omitnan'), 'Color',colOL,    'LineWidth',1.5, 'DisplayName','OL actual');
+plot(ax1eL, t_trial_m, mean(pred_nc_m,    1,'omitnan'), 'Color',colPrd_m, 'LineWidth',1.0, 'LineStyle','--', 'DisplayName','Pink (trial X)');
+plot(ax1eL, t_trial_m, mean(pred_nc_pre,  1,'omitnan'), 'Color',colCF,    'LineWidth',1.0, 'LineStyle','-',  'DisplayName','Pre-trial CF');
+addStimPatch(ax1eL, 0, dur_wb); hold(ax1eL,'off');
+title(ax1eL, sprintf('OL  R^2 pink=%.2f  CF=%.2f', R2_nc_m, R2_nc_pre), 'FontSize',6,'FontWeight','bold');
+
+ax1eR = axes(fig_1e,'Position',[lm1e+pw1e+gx1e, bm1e, pw1e, ph1e]); hold(ax1eR,'on');
+patch(ax1eR, [t_trial_m, fliplr(t_trial_m)], ...
+    [mean(actual_wc_m,1,'omitnan') + std(actual_wc_m,0,1,'omitnan'), ...
+     fliplr(mean(actual_wc_m,1,'omitnan') - std(actual_wc_m,0,1,'omitnan'))], ...
+    colCL, 'FaceAlpha',0.15, 'EdgeColor','none', 'HandleVisibility','off');
+plot(ax1eR, t_trial_m, mean(actual_wc_m,  1,'omitnan'), 'Color',colCL,    'LineWidth',1.5, 'DisplayName','CL actual');
+plot(ax1eR, t_trial_m, mean(pred_wc_m,    1,'omitnan'), 'Color',colPrd_m, 'LineWidth',1.0, 'LineStyle','--', 'DisplayName','Pink (trial X)');
+plot(ax1eR, t_trial_m, mean(pred_wc_pre,  1,'omitnan'), 'Color',colCF,    'LineWidth',1.0, 'LineStyle','-',  'DisplayName','Pre-trial CF');
+addStimPatch(ax1eR, 0, dur_wb); hold(ax1eR,'off');
+title(ax1eR, sprintf('CL  R^2 pink=%.2f  CF=%.2f', R2_wc_m, R2_wc_pre), 'FontSize',6,'FontWeight','bold');
+
+for axi = [ax1eL ax1eR]
+    set(axi,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+    xlabel(axi,'Time (s)','FontSize',6,'FontWeight','bold');
+    ylabel(axi,'dF/F (%)','FontSize',6,'FontWeight','bold');
+    legend(axi,'Location','best','FontSize',5,'Box','off','ItemTokenSize',[6 6]);
+end
+exportgraphics(fig_1e, 'wb_pretrial_cf.png', 'Resolution',300);
+fprintf('[WB-1e] Exported wb_pretrial_cf.png\n');
+
 %% [WB-2] Orange layer -- mean OL residual on top of pink
 % Orange = pink + average open-loop stimulus response.
 % When applied to CL trials, orange overshoots because feedback suppresses
