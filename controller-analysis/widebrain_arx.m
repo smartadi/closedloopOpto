@@ -609,48 +609,43 @@ exportgraphics(fig_wb1,'paper/images/figure4/wb_pink_4panel.pdf','ContentType','
 fprintf('[WB-1b] Saved wb_pink_4panel.pdf\n');
 
 
-%% [WB-1c] Decontaminated pink -- Option A: subtract mean OL contralateral response
+%% [WB-1c] Decontaminated pink -- Option A: subtract mean OL primary response from predictors
 % During OL/CL trials the contralateral pixels carry a laser-driven component
 % (laser -> primary pixel -> bilateral propagation -> contra pixels -> ARX input).
-% This inflates the pink prediction during trials relative to the spontaneous model.
 %
-% Option A: subtract the MEAN OL contralateral response (averaged across OL trials)
-% from every trial window before ARX evaluation.  Removes mean coupling; fast; no
-% extra fitting.  Assumes per-trial laser coupling variation is small.
+% Option A (revised): subtract the mean OL PRIMARY pixel response (averaged across
+% OL trials) from every contralateral predictor pixel's trial window.  The primary
+% pixel's mean OL trace is the best single-channel proxy for the laser-propagated
+% component, because the contamination reaches the contralateral hemisphere via
+% the primary pixel.  Subtracting per-pixel contra means (previous version) removed
+% spontaneous cross-hemisphere correlations and caused flat predictions.
 %
 % Prereqs: WB-1b must have run (actual_nc_m/actual_wc_m, X_full_m, y_full_m,
 %          beta_m, t_wb_m, nF, mlag_wb, pY, pX, outlen_m, nNc_wb, nWc_wb).
 
-% -- Compute mean OL contralateral response across trials (pixel cols only)
-ol_contra_A = nan(nNc_wb, outlen_m, nPred);
-for j = 1:nNc_wb
-    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.nc(j))));
-    i0 = i_on;  i1 = i_on + outlen_m - 1;
-    if i0 < 1 || i1 > nF; continue; end
-    ol_contra_A(j,:,:) = X_full_m(i0:i1, 1:nPred);
-end
-X_ol_mean_A = squeeze(mean(ol_contra_A, 1, 'omitnan'));   % [outlen_m x nPred]
+% -- Mean OL primary pixel response: already in actual_nc_m from WB-1b
+y_ol_mean_A = mean(actual_nc_m, 1, 'omitnan')';   % [outlen_m x 1]
 
-% -- Re-predict OL trials: subtract mean OL contra from trial window (not pre-history)
+% -- Re-predict OL trials: subtract y_ol_mean from all predictor pixels (not pre-history)
 pred_nc_A = nan(nNc_wb, outlen_m);
 for j = 1:nNc_wb
     [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.nc(j))));
     i0 = i_on - mlag_wb;  i1 = i_on + outlen_m - 1;
     if i0 < 1 || i1 > nF; continue; end
     Xw = X_full_m(i0:i1, :);
-    Xw(mlag_wb+1:end, 1:nPred) = Xw(mlag_wb+1:end, 1:nPred) - X_ol_mean_A;
+    Xw(mlag_wb+1:end, 1:nPred) = Xw(mlag_wb+1:end, 1:nPred) - y_ol_mean_A;
     [Phi_t, ~] = buildLagMatrix(y_full_m(i0:i1), Xw, pY, pX);
     pred_nc_A(j,:) = Phi_t * beta_m;
 end
 
-% -- Re-predict CL trials: same mean OL subtraction
+% -- Re-predict CL trials: subtract same OL primary mean from contra predictors
 pred_wc_A = nan(nWc_wb, outlen_m);
 for j = 1:nWc_wb
     [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.wc(j))));
     i0 = i_on - mlag_wb;  i1 = i_on + outlen_m - 1;
     if i0 < 1 || i1 > nF; continue; end
     Xw = X_full_m(i0:i1, :);
-    Xw(mlag_wb+1:end, 1:nPred) = Xw(mlag_wb+1:end, 1:nPred) - X_ol_mean_A;
+    Xw(mlag_wb+1:end, 1:nPred) = Xw(mlag_wb+1:end, 1:nPred) - y_ol_mean_A;
     [Phi_t, ~] = buildLagMatrix(y_full_m(i0:i1), Xw, pY, pX);
     pred_wc_A(j,:) = Phi_t * beta_m;
 end
