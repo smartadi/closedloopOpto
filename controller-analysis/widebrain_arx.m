@@ -897,6 +897,108 @@ end
 exportgraphics(fig_1e, 'wb_pretrial_cf.png', 'Resolution',300);
 fprintf('[WB-1e] Exported wb_pretrial_cf.png\n');
 
+%% [WB-artifact] Laser artifact characterization -- OL contra pixel responses
+% For each contra predictor pixel j, stack the OL trial windows and average.
+% The mean is the deterministic laser artifact (propagated to contra).
+% The pre-trial window provides the spontaneous baseline for the same trials.
+%
+% Outputs:
+%   art_amp [nPred]  -- mean artifact amplitude (dF/F, trial-averaged, baseline-corrected)
+%   art_snr [nPred]  -- artifact / pre-trial std  (how many sigmas above noise)
+%   mu_art  [outlen_m x nPred]  -- full temporal artifact profile per pixel
+%
+% Prereqs: WB-1b must have run (nNc_wb, outlen_m, t_trial_m, X_full_m, t_wb_m).
+
+art_stk = nan(nNc_wb, outlen_m, nPred);   % trial x time x pixel
+pre_stk = nan(nNc_wb, outlen_m, nPred);   % pre-trial baseline (same duration)
+
+for j_art = 1:nNc_wb
+    [~, i_on] = min(abs(t_wb_m - d_wb.stimStarts(data_wb.nc(j_art))));
+    i0_t = i_on;             i1_t = i_on + outlen_m - 1;   % trial window
+    i0_p = i_on - outlen_m; i1_p = i_on - 1;               % pre-trial window
+    if i0_t < 1 || i1_t > nF || i0_p < 1; continue; end
+    art_stk(j_art,:,:) = X_full_m(i0_t:i1_t, 1:nPred);
+    pre_stk(j_art,:,:) = X_full_m(i0_p:i1_p, 1:nPred);
+end
+
+mu_art   = squeeze(mean(art_stk, 1, 'omitnan'));   % [outlen_m x nPred]
+mu_pre   = squeeze(mean(pre_stk, 1, 'omitnan'));   % [outlen_m x nPred]
+std_pre  = squeeze(std( pre_stk, 0, 1, 'omitnan'));% [outlen_m x nPred] -- per-frame std
+
+% Scalar per pixel: mean artifact over full trial window, baseline-corrected
+art_amp = mean(mu_art, 1, 'omitnan') - mean(mu_pre, 1, 'omitnan');   % [1 x nPred]
+art_snr = art_amp ./ (mean(std_pre, 1, 'omitnan') + eps);            % artifact / noise floor
+
+fprintf('[WB-artifact] Artifact amp: min=%.3f  max=%.3f  mean=%.3f (dF/F%%)\n', ...
+    min(art_amp), max(art_amp), mean(art_amp,'omitnan'));
+fprintf('[WB-artifact] Artifact SNR: min=%.2f  max=%.2f  mean=%.2f (sigma)\n', ...
+    min(art_snr), max(art_snr), mean(art_snr,'omitnan'));
+
+% -- Figure 1: Temporal artifact profile (all pixels, mean ± std across trials)
+fig_art1 = paperFig(10, 5);
+lmA=0.11; rmA=0.04; bmA=0.18; tmA=0.12;
+ax_art1 = axes(fig_art1,'Position',[lmA, bmA, 1-lmA-rmA, 1-bmA-tmA]);
+hold(ax_art1,'on');
+for jp = 1:nPred
+    if jp == contra_idx
+        plot(ax_art1, t_trial_m, mu_art(:,jp), 'Color',[0 0.8 0.8], 'LineWidth',1.2, ...
+            'DisplayName','Contra-primary');
+    else
+        plot(ax_art1, t_trial_m, mu_art(:,jp), 'Color',[0.6 0.6 0.6], 'LineWidth',0.4, ...
+            'HandleVisibility','off');
+    end
+end
+% Primary pixel OL mean for reference
+plot(ax_art1, t_trial_m, mean(actual_nc_m,1,'omitnan'), 'Color',colOL, 'LineWidth',1.5, ...
+    'DisplayName','Primary (OL actual)');
+yline(ax_art1, 0, 'k--', 'LineWidth',0.6, 'HandleVisibility','off');
+addStimPatch(ax_art1, 0, dur_wb);
+hold(ax_art1,'off');
+set(ax_art1,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+xlabel(ax_art1,'Time (s)','FontSize',6,'FontWeight','bold');
+ylabel(ax_art1,'dF/F (%)','FontSize',6,'FontWeight','bold');
+title(ax_art1,'OL contra pixel responses (trial-averaged artifact)','FontSize',6,'FontWeight','bold');
+legend(ax_art1,'Location','best','FontSize',5,'Box','off','ItemTokenSize',[6 6]);
+exportgraphics(fig_art1,'wb_artifact_traces.png','Resolution',300);
+
+% -- Figure 2: Spatial maps of artifact amplitude and SNR (dual-axes brain overlay)
+fig_art2 = figure('Color','w','Units','centimeters','Position',[2 2 16 6]);
+
+for sp_i = 1:2
+    val_sp  = [art_amp(:); art_snr(:)];
+    data_sp = {art_amp, art_snr};
+    lbl_sp2 = {'Artifact amp (dF/F%)', 'Artifact SNR (\sigma)'};
+    pax_sp  = [0.04, 0.56];
+
+    dv = data_sp{sp_i};
+    ax_bg2 = axes(fig_art2,'Position',[pax_sp(sp_i), 0.10, 0.42, 0.82]);
+    imagesc(ax_bg2, mimg_wb');
+    colormap(ax_bg2, gray);
+    clim(ax_bg2, [prctile(mimg_wb(:),1), prctile(mimg_wb(:),99)]);
+    axis(ax_bg2,'image','off');
+
+    ax_sc2 = axes(fig_art2,'Position', ax_bg2.Position);
+    ax_sc2.Color    = 'none';
+    ax_sc2.XLim     = ax_bg2.XLim;
+    ax_sc2.YLim     = ax_bg2.YLim;
+    ax_sc2.YDir     = 'reverse';
+    ax_sc2.XLimMode = 'manual';
+    ax_sc2.YLimMode = 'manual';
+    set(ax_sc2,'XTick',[],'YTick',[],'Box','off');
+    hold(ax_sc2,'on');
+    scatter(ax_sc2, pred_py, pred_px, 50, dv(:)', 'filled','MarkerEdgeColor','none');
+    plot(ax_sc2, py_prim, px_prim, 'c+','MarkerSize',8,'LineWidth',1.5,'HandleVisibility','off');
+    colormap(ax_sc2, 'hot');
+    dv_lim = [min(dv(:)), max(dv(:))];
+    if diff(dv_lim) < eps; dv_lim = dv_lim + [-1 1]*0.01; end
+    clim(ax_sc2, dv_lim);
+    cb2 = colorbar(ax_sc2,'Location','eastoutside');
+    ylabel(cb2, lbl_sp2{sp_i},'FontSize',5,'FontWeight','bold');
+    title(ax_sc2, lbl_sp2{sp_i},'FontSize',6,'FontWeight','bold');
+end
+exportgraphics(fig_art2,'wb_artifact_map.png','Resolution',300);
+fprintf('[WB-artifact] Exported wb_artifact_traces.png + wb_artifact_map.png\n');
+
 %% [WB-2] Orange layer -- mean OL residual on top of pink
 % Orange = pink + average open-loop stimulus response.
 % When applied to CL trials, orange overshoots because feedback suppresses
