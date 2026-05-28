@@ -771,6 +771,7 @@ ax_sc = axes(fig_alpha, 'Position', pos_al);
 ax_sc.Color = 'none';            % transparent -- brain image shows through
 ax_sc.XLim  = ax_bg.XLim;
 ax_sc.YLim  = ax_bg.YLim;
+ax_sc.YDir  = 'reverse';         % match imagesc convention (row 1 at top)
 axis(ax_sc, 'image', 'off');
 hold(ax_sc, 'on');
 scatter(ax_sc, pred_py, pred_px, 40, alpha_wb, 'filled', 'MarkerEdgeColor','none');
