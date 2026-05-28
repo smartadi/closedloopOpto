@@ -18,6 +18,16 @@ Two mice: AL_0033 (8 sessions), AL_0039 (3 sessions), Jan–Apr 2025.
 
 <!-- New entries go here, most recent first. One ### block per change. -->
 
+### 2026-05-28 — widebrain_arx: primary pixel uses data_wb.dFk; k_pred for predictor kernel
+**Changed/Found:** `controller-analysis/widebrain_arx.m` — (1) Primary pixel y_full now taken directly from data_wb.dFk (same signal as controller analysis / getpixel_dFoF pipeline) instead of SVD reconstruction. (2) k_wb renamed to k_pred — applies only to predictor pixel SVD kernel (1→3×3, 2→5×5, etc.). (3) Cache validity now checks k_pred and pred_px/pred_py; cache save stores k_pred. Length mismatch between data_wb.dFk and nFrames triggers a warning and truncates to shorter.
+**Why:** y_full should match the actual controller signal. Predictor pixels are new (not in session cache) so must still use SVD; k_pred lets the user control spatial smoothing on those pixels independently.
+**Next:** Set recompute_svd=true to rebuild cache with new y_full source; run WB-1a to check R2_test.
+
+### 2026-05-27 — dose_response.m: swap to IQR, fix non-ASCII, export to supplementary
+**Changed/Found:** `impulse-analysis/dose_response.m` — plot 2 changed from 95th-percentile bounds to IQR (p25/p75); section header and fprintf updated; ylim set to auto on plot 2; export path changed to `paper/images/supplementary/imp_response_median_IQR.png`; all non-ASCII bytes removed (mojibake `a--` on section header was final remnant at byte 4172)
+**Why:** Median +/- IQR is the more informative supplementary panel (shows trial distribution spread); 95th-pctile error bars were excessively wide; supplementary directory keeps it separate from paper panels
+**Next:** Verify supplementary directory exists before running; confirm IQR plot renders correctly in MATLAB
+
 ### 2026-05-27 — annotation pass: \todo flags for all open issues, pushed to GitHub
 **Changed/Found:** `Closedloop_edit/results_edit.tex`, `methods_edit.tex` — added \todo{} flags at every open issue location: wrong variance claim (FACTUALLY WRONG — post-onset slope data), 2-vs-3 mice inconsistency, Fig 2B caption terminology (Peak suppression → Inhibition energy), MSE window in Fig 3E caption (3 s → +1 to +3 s), step-response steady-state note, brain-states section placeholder with full content spec, variability section contradiction, latency 47 ms vs 80 ms inconsistency + 60-frame/1-s error + beat-frequency artifact, TF model-order inconsistency + held-out R², missing spatial spread supplementary panel, missing algorithm pseudocode block, MSE window verification and missing motion-vs-MSE panel. Pushed to GitHub (`ddbfce1`).
 **Why:** User wants to address all open issues directly in Overleaf; \todo{} flags render as red [NOTE:] boxes in the compiled PDF at the exact problem location.

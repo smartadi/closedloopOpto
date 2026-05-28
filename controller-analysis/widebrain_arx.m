@@ -15,7 +15,7 @@ selField = 12;
 wb_sel       = selField;  % session to analyse
 Fs_wb        = 35;
 dur_wb       = 3;         % trial duration (s)
-k_wb         = 1;         % SVD kernel half-size (3x3 patch)
+k_pred       = 1;         % SVD kernel half-size for predictor pixels (1 -> 3x3, 2 -> 5x5, ...)
 grid_rows    = 6;         % visual rows in contra ROI grid  (c direction)
 grid_cols    = 5;         % visual cols in contra ROI grid  (r direction)
 % nPred derived automatically: 1 contra-primary + grid nodes inside ROI
@@ -133,10 +133,10 @@ if ~exist(roi_file, 'file')
 
     % Intersect with brain mask; enforce boundary margin
     valid_mask = in_poly & brain_mask;
-    valid_mask(1:k_wb+1, :)   = false;
-    valid_mask(end-k_wb:end,:) = false;
-    valid_mask(:, 1:k_wb+1)   = false;
-    valid_mask(:, end-k_wb:end)= false;
+    valid_mask(1:k_pred+1, :)   = false;
+    valid_mask(end-k_pred:end,:) = false;
+    valid_mask(:, 1:k_pred+1)   = false;
+    valid_mask(:, end-k_pred:end)= false;
 
     [rows_v, cols_v] = find(valid_mask);
     if isempty(rows_v)
@@ -155,8 +155,8 @@ if ~exist(roi_file, 'file')
         px_c = round(px_prim - 2*ml.a*D / denom);
         py_c = round(py_prim + 2*D / denom);
     end
-    px_c = max(k_wb+1, min(nX_wb-k_wb, double(px_c)));
-    py_c = max(k_wb+1, min(nY_wb-k_wb, double(py_c)));
+    px_c = max(k_pred+1, min(nX_wb-k_pred, double(px_c)));
+    py_c = max(k_pred+1, min(nY_wb-k_pred, double(py_c)));
 
     % Regular grid: grid_cols x grid_rows cell-centre nodes over the ROI bounding box.
     % Nodes whose rounded pixel coordinate falls OUTSIDE the eroded interior mask
@@ -282,29 +282,40 @@ en_wb   = mouse.(fields{wb_sel}).en;
 path_wb = fullfile('data', sprintf('%swb%s%s%d.mat', mn_wb, td_wb(6:7), td_wb(9:10), en_wb));
 
 if exist(path_wb,'file') && ~recompute_svd
-    tmp    = load(path_wb);
-    y_full = tmp.y_full;
-    X_full = tmp.X_full;
-    fprintf('Loaded dFk cache: %s\n', path_wb);
-else
-    fprintf('Computing SVD pixel dFk (%d pixels) ...\n', nPred+1);
+    tmp = load(path_wb);
+    cache_ok = isfield(tmp,'k_pred')   && tmp.k_pred == k_pred && ...
+               isfield(tmp,'pred_px')  && isequal(tmp.pred_px(:), pred_px(:)) && ...
+               isfield(tmp,'pred_py')  && isequal(tmp.pred_py(:), pred_py(:));
+    if cache_ok
+        y_full = tmp.y_full;
+        X_full = tmp.X_full;
+        fprintf('Loaded dFk cache: %s  (k_pred=%d, nPred=%d)\n', path_wb, k_pred, nPred);
+    else
+        fprintf('Cache stale (k_pred or grid changed) -- recomputing.\n');
+        recompute_svd = true;
+    end
+end
 
-    % Primary pixel
-    mI_p    = mean(mimg_wb(py_prim-k_wb:py_prim+k_wb, px_prim-k_wb:px_prim+k_wb), 'all');
-    ikern_p = U_wb(py_prim-k_wb:py_prim+k_wb, px_prim-k_wb:px_prim+k_wb, :);
-    ist_p   = reshape(mean(ikern_p, [1 2]), [1, nSV_wb]);
-    F_p     = ist_p * V_wb + mI_p;
-    Fk_p    = [ones(1,w_r)*mI_p, F_p];
-    cs_p    = [0, cumsum(Fk_p)];
-    Fm_p    = (cs_p(idx_r+w_r+1) - cs_p(idx_r)) / (w_r+1);
-    y_full  = ((F_p - Fm_p) ./ Fm_p * 100)';
+if ~exist(path_wb,'file') || recompute_svd
+    fprintf('Computing SVD predictor dFk (%d pixels, k_pred=%d) ...\n', nPred, k_pred);
+
+    % Primary pixel -- use session dFk directly (same signal as controller analysis,
+    % computed by getpixel_dFoF with the session's own kernel and baseline).
+    dFk_prim = data_wb.dFk(:);
+    if numel(dFk_prim) ~= nFrames
+        warning('[WB-SVD] data_wb.dFk length (%d) ~= nFrames (%d) -- truncating to shorter.', ...
+            numel(dFk_prim), nFrames);
+        nFrames = min(numel(dFk_prim), nFrames);
+        dFk_prim = dFk_prim(1:nFrames);
+    end
+    y_full = dFk_prim;   % [nFrames x 1]
 
     % Contralateral predictor pixels
     X_full = zeros(nFrames, nPred);
     for j = 1:nPred
         cx = pred_px(j); cy = pred_py(j);
-        mI_j    = mean(mimg_wb(cy-k_wb:cy+k_wb, cx-k_wb:cx+k_wb), 'all');
-        ikern_j = U_wb(cy-k_wb:cy+k_wb, cx-k_wb:cx+k_wb, :);
+        mI_j    = mean(mimg_wb(cy-k_pred:cy+k_pred, cx-k_pred:cx+k_pred), 'all');
+        ikern_j = U_wb(cy-k_pred:cy+k_pred, cx-k_pred:cx+k_pred, :);
         ist_j   = reshape(mean(ikern_j, [1 2]), [1, nSV_wb]);
         F_j     = ist_j * V_wb + mI_j;
         Fk_j    = [ones(1,w_r)*mI_j, F_j];
@@ -314,8 +325,8 @@ else
     end
 
     [~] = mkdir(fileparts(path_wb));   % create data/ if missing; silent no-op if it exists
-    save(path_wb, 'y_full', 'X_full', 'pred_px', 'pred_py');
-    fprintf('Saved dFk cache: %s\n', path_wb);
+    save(path_wb, 'y_full', 'X_full', 'pred_px', 'pred_py', 'k_pred');
+    fprintf('Saved dFk cache: %s  (k_pred=%d, nPred=%d)\n', path_wb, k_pred, nPred);
 end
 
 %% [WB-1a] Pink layer -- ARX fit + parameter tuning
@@ -727,12 +738,12 @@ fprintf('[WB-1c] Saved wb_spat_traces.png\n');
 % trial's actual laser input through that TF via lsim.
 
 iOn_wb   = 36;            % c0_g2: onset column in ncDfk (= 1 s pre-onset at 35 Hz)
-ncDfk_wb = data_wb.ncDfk;
+ncDfk_pred = data_wb.ncDfk;
 ncInp_wb = data_wb.ncInp;
 wcInp_wb = data_wb.wcInp;
 
-bc_nc        = mean(ncDfk_wb(:, 1:iOn_wb-1), 2);
-ncDfk_bc_wb  = ncDfk_wb - bc_nc;
+bc_nc        = mean(ncDfk_pred(:, 1:iOn_wb-1), 2);
+ncDfk_bc_wb  = ncDfk_pred - bc_nc;
 y_mean_wb    = mean(ncDfk_bc_wb(:, iOn_wb : iOn_wb+outlen_m-1), 1)';
 
 ds_wb      = round(2000 / Fs_wb);
@@ -782,7 +793,7 @@ fprintf('  Check: R2_wc_red (%.3f) > R2_wc_pink (%.3f)? %s\n', ...
 % Left: OL actual vs pink / orange / red
 % Right: CL actual vs pink / red  (orange omitted -- built from OL residual)
 
-colPink_wb   = [0.85 0.55 0.70];
+colPink_pred   = [0.85 0.55 0.70];
 colOrange_wb = [0.90 0.55 0.10];
 colRed_wb    = [0.75 0.10 0.10];
 
@@ -799,7 +810,7 @@ se_nc = std(actual_nc_m,0,1,'omitnan') / sqrt(sum(~all(isnan(actual_nc_m),2)));
 fill(ax4L,[t_trial_m,fliplr(t_trial_m)],[mn_nc+se_nc,fliplr(mn_nc-se_nc)], ...
     colOL,'FaceAlpha',0.15,'EdgeColor','none','HandleVisibility','off');
 plot(ax4L,t_trial_m,mn_nc,                              'Color',colOL,       'LineWidth',PS_wb4.lw_mean,'DisplayName','OL actual');
-plot(ax4L,t_trial_m,mean(pred_nc_m,     1,'omitnan'),   'Color',colPink_wb,   'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Pink');
+plot(ax4L,t_trial_m,mean(pred_nc_m,     1,'omitnan'),   'Color',colPink_pred,   'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Pink');
 plot(ax4L,t_trial_m,mean(pred_nc_orange,1,'omitnan'),   'Color',colOrange_wb, 'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Orange');
 plot(ax4L,t_trial_m,mean(pred_nc_red,   1,'omitnan'),   'Color',colRed_wb,    'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Red');
 addStimPatch(ax4L, 0, dur_wb);  hold(ax4L,'off');
@@ -817,7 +828,7 @@ se_wc = std(actual_wc_m,0,1,'omitnan') / sqrt(sum(~all(isnan(actual_wc_m),2)));
 fill(ax4R,[t_trial_m,fliplr(t_trial_m)],[mn_wc+se_wc,fliplr(mn_wc-se_wc)], ...
     colCL,'FaceAlpha',0.15,'EdgeColor','none','HandleVisibility','off');
 plot(ax4R,t_trial_m,mn_wc,                            'Color',colCL,     'LineWidth',PS_wb4.lw_mean,'DisplayName','CL actual');
-plot(ax4R,t_trial_m,mean(pred_wc_m,   1,'omitnan'),   'Color',colPink_wb,'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Pink');
+plot(ax4R,t_trial_m,mean(pred_wc_m,   1,'omitnan'),   'Color',colPink_pred,'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Pink');
 plot(ax4R,t_trial_m,mean(pred_wc_red, 1,'omitnan'),   'Color',colRed_wb, 'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Red');
 addStimPatch(ax4R, 0, dur_wb);  hold(ax4R,'off');
 lgd4R = legend(ax4R,'Box','off','Location','southwest','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
