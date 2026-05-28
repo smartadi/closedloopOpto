@@ -668,7 +668,7 @@ plot(ax1cL, t_trial_m, mean(actual_nc_m,1,'omitnan'), 'Color',colOL,   'LineWidt
 plot(ax1cL, t_trial_m, mean(pred_nc_m,  1,'omitnan'), 'Color',colPrd_m,'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (raw)');
 plot(ax1cL, t_trial_m, mean(pred_nc_A,  1,'omitnan'), 'Color',colDecA, 'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (decontam A)');
 addStimPatch(ax1cL, 0, dur_wb);  hold(ax1cL,'off');
-lgd1cL = legend(ax1cL,'Box','off','FontSize',5,'Location','best');  lgd1cL.ItemTokenSize=[6 6];
+lgd1cL = legend(ax1cL,'Box','off','FontSize',5,'Location','best');  try; lgd1cL.ItemTokenSize=[6 6]; catch; end
 title(ax1cL, sprintf('OL  raw=%.2f  decontam=%.2f',R2_nc_m,R2_nc_A), 'FontSize',6,'FontWeight','bold');
 
 ax1cR = axes(fig_1c,'Position',[lm1c+pw1c+gx1c, bm1c, pw1c, ph1c]);  hold(ax1cR,'on');
@@ -676,7 +676,7 @@ plot(ax1cR, t_trial_m, mean(actual_wc_m,1,'omitnan'), 'Color',colCL,   'LineWidt
 plot(ax1cR, t_trial_m, mean(pred_wc_m,  1,'omitnan'), 'Color',colPrd_m,'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (raw)');
 plot(ax1cR, t_trial_m, mean(pred_wc_A,  1,'omitnan'), 'Color',colDecA, 'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (decontam A)');
 addStimPatch(ax1cR, 0, dur_wb);  hold(ax1cR,'off');
-lgd1cR = legend(ax1cR,'Box','off','FontSize',5,'Location','best');  lgd1cR.ItemTokenSize=[6 6];
+lgd1cR = legend(ax1cR,'Box','off','FontSize',5,'Location','best');  try; lgd1cR.ItemTokenSize=[6 6]; catch; end
 title(ax1cR, sprintf('CL  raw=%.2f  decontam=%.2f',R2_wc_m,R2_wc_A), 'FontSize',6,'FontWeight','bold');
 
 for axi = [ax1cL ax1cR]
@@ -798,7 +798,7 @@ plot(ax1dL, t_trial_m, mean(actual_nc_m,1,'omitnan'), 'Color',colOL,   'LineWidt
 plot(ax1dL, t_trial_m, mean(pred_nc_m,  1,'omitnan'), 'Color',colPrd_m,'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (raw)');
 plot(ax1dL, t_trial_m, mean(pred_nc_B,  1,'omitnan'), 'Color',colDecB, 'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (decontam B)');
 addStimPatch(ax1dL, 0, dur_wb);  hold(ax1dL,'off');
-lgd1dL = legend(ax1dL,'Box','off','FontSize',5,'Location','best');  lgd1dL.ItemTokenSize=[6 6];
+lgd1dL = legend(ax1dL,'Box','off','FontSize',5,'Location','best');  try; lgd1dL.ItemTokenSize=[6 6]; catch; end
 title(ax1dL, sprintf('OL  raw=%.2f  decontam=%.2f',R2_nc_m,R2_nc_B), 'FontSize',6,'FontWeight','bold');
 
 ax1dR = axes(fig_1d,'Position',[lm1d+pw1d+gx1d, bm1d, pw1d, ph1d]);  hold(ax1dR,'on');
@@ -806,7 +806,7 @@ plot(ax1dR, t_trial_m, mean(actual_wc_m,1,'omitnan'), 'Color',colCL,   'LineWidt
 plot(ax1dR, t_trial_m, mean(pred_wc_m,  1,'omitnan'), 'Color',colPrd_m,'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (raw)');
 plot(ax1dR, t_trial_m, mean(pred_wc_B,  1,'omitnan'), 'Color',colDecB, 'LineWidth',1.0,'LineStyle','--','DisplayName','Pink (decontam B)');
 addStimPatch(ax1dR, 0, dur_wb);  hold(ax1dR,'off');
-lgd1dR = legend(ax1dR,'Box','off','FontSize',5,'Location','best');  lgd1dR.ItemTokenSize=[6 6];
+lgd1dR = legend(ax1dR,'Box','off','FontSize',5,'Location','best');  try; lgd1dR.ItemTokenSize=[6 6]; catch; end
 title(ax1dR, sprintf('CL  raw=%.2f  decontam=%.2f',R2_wc_m,R2_wc_B), 'FontSize',6,'FontWeight','bold');
 
 for axi = [ax1dL ax1dR]
@@ -892,7 +892,8 @@ for axi = [ax1eL ax1eR]
     set(axi,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
     xlabel(axi,'Time (s)','FontSize',6,'FontWeight','bold');
     ylabel(axi,'dF/F (%)','FontSize',6,'FontWeight','bold');
-    legend(axi,'Location','best','FontSize',5,'Box','off','ItemTokenSize',[6 6]);
+    lg_1e = legend(axi,'Location','best','FontSize',5,'Box','off');
+    try; lg_1e.ItemTokenSize = [6 6]; catch; end
 end
 exportgraphics(fig_1e, 'wb_pretrial_cf.png', 'Resolution',300);
 fprintf('[WB-1e] Exported wb_pretrial_cf.png\n');
@@ -958,7 +959,8 @@ set(ax_art1,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
 xlabel(ax_art1,'Time (s)','FontSize',6,'FontWeight','bold');
 ylabel(ax_art1,'dF/F (%)','FontSize',6,'FontWeight','bold');
 title(ax_art1,'OL contra pixel responses (trial-averaged artifact)','FontSize',6,'FontWeight','bold');
-legend(ax_art1,'Location','best','FontSize',5,'Box','off','ItemTokenSize',[6 6]);
+lg_art1 = legend(ax_art1,'Location','best','FontSize',5,'Box','off');
+try; lg_art1.ItemTokenSize = [6 6]; catch; end
 exportgraphics(fig_art1,'wb_artifact_traces.png','Resolution',300);
 
 % -- Figure 2: Spatial maps of artifact amplitude and SNR (dual-axes brain overlay)
@@ -1200,7 +1202,7 @@ plot(ax4L,t_trial_m,mean(pred_nc_orange,1,'omitnan'),   'Color',colOrange_wb, 'L
 plot(ax4L,t_trial_m,mean(pred_nc_red,   1,'omitnan'),   'Color',colRed_wb,    'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Red');
 addStimPatch(ax4L, 0, dur_wb);  hold(ax4L,'off');
 lgd4L = legend(ax4L,'Box','off','Location','southwest','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-lgd4L.ItemTokenSize = [6 6];
+try; lgd4L.ItemTokenSize = [6 6]; catch; end
 title(ax4L,'Open-Loop','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
 xlabel(ax4L,'Time (s)','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
 ylabel(ax4L,'dF/F (%)','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
@@ -1217,7 +1219,7 @@ plot(ax4R,t_trial_m,mean(pred_wc_m,   1,'omitnan'),   'Color',colPink_pred,'Line
 plot(ax4R,t_trial_m,mean(pred_wc_red, 1,'omitnan'),   'Color',colRed_wb, 'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Red');
 addStimPatch(ax4R, 0, dur_wb);  hold(ax4R,'off');
 lgd4R = legend(ax4R,'Box','off','Location','southwest','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-lgd4R.ItemTokenSize = [6 6];
+try; lgd4R.ItemTokenSize = [6 6]; catch; end
 title(ax4R,'Closed-Loop','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
 xlabel(ax4R,'Time (s)','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
 ylabel(ax4R,'dF/F (%)','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
