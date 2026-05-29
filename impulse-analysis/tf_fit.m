@@ -310,8 +310,17 @@ lgd_A = legend(ax_A, 'Box','off','FontSize',6,'FontWeight','bold','Location','so
 try; lgd_A.ItemTokenSize = [15 10]; catch; end
 lgd_A.AutoUpdate = 'off';
 
-exportgraphics(fig_A, sprintf('paper/images/figure2/tf_data_vs_model_%s_%s_en%d.pdf', ...
-    allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en), ...
+% Resolve output dir whether run from brain_paper/ root or impulse-analysis/
+if exist(fullfile('paper','images','figure2'), 'dir')
+    out_imp_dir = fullfile('paper','images','figure2');
+elseif exist(fullfile('..','paper','images','figure2'), 'dir')
+    out_imp_dir = fullfile('..','paper','images','figure2');
+else
+    out_imp_dir = '.';
+    warning('tf_fit: cannot find paper/images/figure2/ -- exporting to current folder.');
+end
+exportgraphics(fig_A, fullfile(out_imp_dir, sprintf('tf_data_vs_model_%s_%s_en%d.pdf', ...
+    allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en)), ...
     'ContentType','vector');
 
 %% â”€â”€ Paper Fig B: LOAO validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

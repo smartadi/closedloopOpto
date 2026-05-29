@@ -277,6 +277,12 @@ for si = 1:nSess_ol
     xline(ax_p, 0,      'Color',[0.5 0.5 0.5], 'LineWidth',0.5, 'HandleVisibility','off');
     xline(ax_p, dur_ol, 'Color',[0.5 0.5 0.5], 'LineWidth',0.5, 'HandleVisibility','off');
     yline(ax_p, 0,      'Color',[0.7 0.7 0.7], 'LineWidth',0.5, 'HandleVisibility','off');
+
+    % R² annotation on paper panel (top-right, inside stim window)
+    text(ax_p, dur_ol - 0.05, 4.5, sprintf('R^2=%.2f', R2_ol), ...
+        'FontSize',5, 'FontWeight','bold', 'Color','k', ...
+        'HorizontalAlignment','right', 'VerticalAlignment','top');
+
     hold(ax_p, 'off');
     set(ax_p, 'Box','off','XTick',[],'YTick',[],'XColor','none','YColor','none', ...
         'XLim',[-1 dur_ol+1],'YLim',[-8 5],'Clipping','off');
@@ -288,7 +294,16 @@ for si = 1:nSess_ol
     end
 end
 
-exportgraphics(fig_tf_paper, 'paper/images/figure2/ol_tf_trial_avg.pdf', 'ContentType','vector');
+% Resolve output dir whether run from brain_paper/ root or controller-analysis/
+if exist(fullfile('paper','images','figure2'), 'dir')
+    out_tf_dir = fullfile('paper','images','figure2');
+elseif exist(fullfile('..','paper','images','figure2'), 'dir')
+    out_tf_dir = fullfile('..','paper','images','figure2');
+else
+    out_tf_dir = '.';
+    warning('tf_fit: cannot find paper/images/figure2/ -- exporting to current folder.');
+end
+exportgraphics(fig_tf_paper, fullfile(out_tf_dir, 'ol_tf_trial_avg.pdf'), 'ContentType','vector');
 fprintf('OL TF paper figure (trial avg -1 to +1 s) ready\n');
 
 % Interactive validation figure -- trial R^2 vs trial MSE, click -> plotSingleTrial
