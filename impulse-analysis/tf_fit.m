@@ -274,11 +274,17 @@ for k = 1:nRep
     y_data = DF_s(iAmp, iWin_A)';
     validT = ~isnan(y_data);
 
-    plot(ax_A, tWin_A(validT), y_data(validT), '-', ...
-        'Color', cRep(k,:), 'LineWidth', 1.5, ...
-        'DisplayName', sprintf('%.2f mW', uA_s(iAmp)/3));
+    % Include R² in legend label (nan-safe)
+    if isfinite(R2_all(iAmp))
+        ampLabel = sprintf('%.2f mW  (R^2=%.2f)', uA_s(iAmp)/3, R2_all(iAmp));
+    else
+        ampLabel = sprintf('%.2f mW', uA_s(iAmp)/3);
+    end
 
-    % TF model prediction â€” same color as mean trace, dashed; out of legend
+    plot(ax_A, tWin_A(validT), y_data(validT), '-', ...
+        'Color', cRep(k,:), 'LineWidth', 1.5, 'DisplayName', ampLabel);
+
+    % TF model prediction -- same color as mean trace, dashed; out of legend
     if ~isempty(yp_all{iAmp})
         validPost = ~isnan(DF_s(iAmp, iPost)');
         plot(ax_A, tPost(validPost), yp_all{iAmp}(validPost), '--', ...
@@ -286,8 +292,8 @@ for k = 1:nRep
     end
 end
 
-% Single neutral legend entry â€” gray dash explains the dashed style
-plot(ax_A, nan, nan, '--', 'Color', [0.45 0.45 0.45], 'LineWidth', 1.5, 'DisplayName', 'TF Pred');
+% Single neutral legend entry -- gray dash explains the dashed style
+plot(ax_A, nan, nan, '--', 'Color', [0.45 0.45 0.45], 'LineWidth', 1.5, 'DisplayName', 'TF fit');
 
 % Stim onset marker (vertical line at t = 0)
 yl_A = ylim(ax_A);
@@ -301,7 +307,7 @@ shortCornerAxes_plot(ax_A, 'XLength',0.15,'YLength',1,'XLabel','150 ms','YLabel'
     'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap,'FontSize',PS.fs,'FontWeight',PS.fw);
 
 lgd_A = legend(ax_A, 'Box','off','FontSize',6,'FontWeight','bold','Location','southeast');
-lgd_A.ItemTokenSize = [15 10];
+try; lgd_A.ItemTokenSize = [15 10]; catch; end
 lgd_A.AutoUpdate = 'off';
 
 exportgraphics(fig_A, sprintf('paper/images/figure2/tf_data_vs_model_%s_%s_en%d.pdf', ...
@@ -344,7 +350,7 @@ else
         'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap,'FontSize',PS.fs,'FontWeight',PS.fw);
 
     lgd_B = legend(ax_B, 'Box','off','FontSize',6,'FontWeight','bold','Location','southwest');
-    lgd_B.ItemTokenSize = [6 6];
+    try; lgd_B.ItemTokenSize = [6 6]; catch; end
     lgd_B.AutoUpdate = 'off';
 
     % exportgraphics(fig_B, sprintf('paper/images/figure2/tf_loao_%s_%s_en%d.pdf', ...
