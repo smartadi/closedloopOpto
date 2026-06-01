@@ -73,7 +73,7 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Analysis:** `impulse-analysis/prestim_variance.m` — all motion-excluded trials pooled across amplitudes and sessions, sorted ascending by pre-trial variance. Pre-stimulus frequency spectrum (1 s window before stim) computed per trial. Trials pooled into batches of 20, batch-mean TF prediction error (|Peak_imp deviation|) computed and plotted against batch center trial rank. Linear fit through batch means.
 **Result:** Trials with higher pre-stimulus variance (dominated by 1–4 Hz power, highlighted in heatmap) tend to show larger prediction error. Correlation r and p read from figure title at runtime.
 **Paper claim (draft):** Pre-stimulus low-frequency (1–4 Hz) power predicts trial-by-trial impulse response prediction error (r = XX, p = XX), indicating that slow fluctuations in brain state set the gain of the inhibitory response beyond what the linear TF model captures.
-**Figure:** `paper/images/figure2/prevar_heatmap_with_blockfit.pdf` (12 × 5 cm; left: log power heatmap sorted by pre-stim var; right: 20-trial batch curve fit, X = prediction error, Y = trial rank)
+**Figure:** `paper/images/figure2/prevar_heatmap_with_blockfit.pdf` (7 × 4 cm; panel **2H**; left: log power heatmap sorted by pre-stim var; right: 20-trial batch curve fit, X = prediction error, Y = trial rank)
 **Status:** Figure code complete. Needs one run to verify and record r/p values. Manuscript paragraph not yet written.
 **To finalise:** Run `prestim_variance.m`, read r/p from right panel title, update claim above, add parenthetical to `results_edit.tex`.
 

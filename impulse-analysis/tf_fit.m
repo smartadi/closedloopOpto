@@ -1,4 +1,4 @@
-﻿% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
+% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
 % Run from impulse-analysis/ directory.
 % Requires: load_experiments.m has been run first (allExperiments, selExp, t_win).
 
@@ -278,9 +278,8 @@ for k = 1:nRep
     y_data = DF_s(iAmp, iWin_A)';
     validT = ~isnan(y_data);
 
-    % Include R² in legend label (nan-safe)
     if isfinite(R2_all(iAmp))
-        ampLabel = sprintf('%.2f mW  (R^2=%.2f)', uA_s(iAmp)/3, R2_all(iAmp));
+        ampLabel = sprintf('%.2f mW(R^2=%.2f)', uA_s(iAmp)/3, R2_all(iAmp));
     else
         ampLabel = sprintf('%.2f mW', uA_s(iAmp)/3);
     end
@@ -303,6 +302,12 @@ plot(ax_A, nan, nan, '--', 'Color', [0.45 0.45 0.45], 'LineWidth', 1.5, 'Display
 yl_A = ylim(ax_A);
 yTop = max(yl_A(2), 0.5);
 ylim(ax_A, [yl_A(1), yTop]);
+
+% Gray shaded region added AFTER ylim is fixed — use data range so patch never expands axes
+hPatch = patch(ax_A, [-preWin_A tFit_s tFit_s -preWin_A], ...
+    [yl_A(1) yl_A(1) yTop yTop], ...
+    [0.8 0.8 0.8], 'FaceAlpha', 0.5, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+uistack(hPatch, 'bottom');   % send behind all traces
 line(ax_A, [0 0], [yl_A(1), yTop * 0.85], 'Color','r', 'LineWidth', 0.75, 'HandleVisibility','off');
 text(ax_A, 0.02, yTop, 'Stim', 'Color','r', 'FontSize',6, 'FontWeight','bold', ...
     'HorizontalAlignment','left', 'VerticalAlignment','top', 'Clipping','off');
@@ -311,7 +316,12 @@ paperAxes(ax_A, 'XLength',0.15,'YLength',1,'XLabel','150 ms','YLabel','1% dF/F')
 
 lgd_A = legend(ax_A, 'Location','southeast');
 paperLegend(lgd_A);
-lgd_A.AutoUpdate = 'off';
+lgd_A.ItemTokenSize = [20 6];   % wider than default [6 6] so dash pattern is visible
+lgd_A.FontSize      = 5;        % one pt smaller to fit long labels
+lgd_A.Location      = 'none';   % switch to manual placement
+lgd_A.Units         = 'normalized';
+lgd_A.Position      = [0.55 0.03 0.43 0.35];  % pinned to bottom-right corner
+lgd_A.AutoUpdate    = 'off';
 
 % Resolve output dir whether run from brain_paper/ root or impulse-analysis/
 if exist(fullfile('paper','images','figure2'), 'dir')

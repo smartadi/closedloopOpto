@@ -59,7 +59,7 @@ p_fr_post = signrank(varnc_post_f, varwc_post_f);
 
 stars_fr = @(p) repmat('*', 1, (p < 0.001)*3 + (p >= 0.001 && p < 0.01)*2 + (p >= 0.01 && p < 0.05)*1);
 
-fig_Fr = paperFig(6, 4);
+fig_Fr = paperFig(5, 4);
 ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.18 0.14 0.78 0.78]);
 hold(ax_fr, 'on');
 
@@ -422,7 +422,7 @@ for k = 1:length(fields)
     r_post_g2r(ki_r)  = mean(enc_post) / mean(ewc_post);
 end
 
-fig_G2r = paperFig(6, 4);
+fig_G2r = paperFig(5, 4);
 ax_g2r = axes(fig_G2r,'Units','normalized','Position',[0.18 0.14 0.78 0.78]);
 hold(ax_g2r,'on');
 

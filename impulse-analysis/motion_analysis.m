@@ -246,7 +246,7 @@ poolMarkers = {'o', '^'};   % No motion = circle, Motion = triangle
 % per-trial colour matrix (NÃ—3) from session index
 cMat = expColors(allExp_s, :);
 
-fig_mvp = paperFig(6, 4);
+fig_mvp = paperFig(4, 4);
 ax_mvp  = axes(fig_mvp);
 hold(ax_mvp, 'on');
 

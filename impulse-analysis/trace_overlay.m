@@ -1,4 +1,4 @@
-﻿% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
+% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
 % Run from impulse-analysis/ directory.
 % Requires: load_experiments.m has been run first (allExperiments, selExp, t_win).
 
@@ -20,8 +20,8 @@ hold on;
 % Shaded region = exact xlim of tf_fit.m paper figure (preWin_A=0.2 s, tFit_s=0.5 s)
 % Update these values if tFit_s or preWin_A change in tf_fit.m.
 tShade = [-0.2, 0.5];
-patch([tShade(1) tShade(2) tShade(2) tShade(1)], [-99 -99 99 99], ...
-    [0.93 0.93 0.93], 'FaceAlpha', 0.5, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+patch([tShade(1) tShade(2) tShade(2) tShade(1)], [-5 -5 3 3], ...
+    [0.8 0.8 0.8], 'FaceAlpha', 0.5, 'EdgeColor', 'none', 'HandleVisibility', 'off');
 
 for i = 1:length(uAmp3)
     if mod(i,2)==1 && ~isempty(imp3.dfImp{i})
@@ -33,14 +33,14 @@ for i = 1:length(uAmp3)
 end
 xlim([-1,1])
 yl_s = ylim(gca);
-text(gca, mean(tShade), yl_s(2), 'model fit', ...
+text(gca, mean(tShade), yl_s(2)-0.5, 'Model Fit Window', ...
     'FontSize', 5, 'Color', [0.45 0.45 0.45], 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'Clipping', 'off');
 lgd = legend('Box','off','FontSize',6,'FontWeight','bold','Location','southeast');
 lgd.ItemTokenSize = [6 6];
-shortCornerAxes_plot(gca,'XLength',0.5,'YLength',1,'XLabel','500 ms', ...
+shortCornerAxes_plot(gca,'XLength',0.25,'YLength',1,'XLabel','250 ms', ...
     'YLabel','1% dF/F','LineWidth',2,'LabelGap',0.05);
-text(0.1, 1.5, 'Stim','Color','r','FontSize',7,'FontWeight','bold', ...
+text(0.1, 2, 'Stim','Color','r','FontSize',7,'FontWeight','bold', ...
     'HorizontalAlignment','right','VerticalAlignment','top','Clipping','off');
 print(figS, fullfile(paperRoot, 'images', 'figure2', sprintf('imp_single_%s_%s_en%d.pdf',mn3,td3,en3)), '-dpdf','-painters');
 

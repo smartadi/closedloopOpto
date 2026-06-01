@@ -213,7 +213,7 @@ nV_pam        = numel(validAmps_pam);
 grayLevels_pam = linspace(0.85, 0.20, max(nV_pam, 1));
 ampCmap_pam    = repmat(grayLevels_pam(:), 1, 3);   % nV_pam x 3 grayscale RGB
 
-fig_pvm = paperFig(6, 4);
+fig_pvm = paperFig(4, 4);
 ax_pvm  = axes(fig_pvm);
 hold(ax_pvm, 'on');
 
@@ -410,38 +410,50 @@ set(hImg_B, 'ButtonDownFcn', @(~, ev) heatmapRowCallback(ev, ax_pvhB, pvh_data))
 %              Each series has its own linear fit and r/p annotation.
 
 % -- Block data: 50-trial batches --
-blockSize    = 50;
-nBlocks      = floor(nT_pv / blockSize);
-blockDev     = zeros(nBlocks, 1);
-blockDev_std = zeros(nBlocks, 1);
-blockYpos    = zeros(nBlocks, 1);
+blockSize         = 50;
+nBlocks           = floor(nT_pv / blockSize);
+blockDev          = zeros(nBlocks, 1);
+blockDev_std      = zeros(nBlocks, 1);
+blockYpos         = zeros(nBlocks, 1);
+blockDeltaPow     = zeros(nBlocks, 1);
+blockDeltaPow_std = zeros(nBlocks, 1);
+
+% Delta band (1-4 Hz) mean power per trial (linear units)
+deltaBands_pv = freqBandCtrs >= 1 & freqBandCtrs <= 4;
+deltaPow_pv   = mean(freq_sorted_pv(:, deltaBands_pv), 2, 'omitnan');
 
 for ib = 1:nBlocks
-    idx              = (ib-1)*blockSize + (1:blockSize);
-    blockDev(ib)     = mean(dev_sorted_pv(idx), 'omitnan');
-    blockDev_std(ib) = std( dev_sorted_pv(idx), 'omitnan');
-    blockYpos(ib)    = mean(idx);
+    idx                   = (ib-1)*blockSize + (1:blockSize);
+    blockDev(ib)          = mean(dev_sorted_pv(idx), 'omitnan');
+    blockDev_std(ib)      = std( dev_sorted_pv(idx), 'omitnan');
+    blockYpos(ib)         = mean(idx);
+    blockDeltaPow(ib)     = mean(deltaPow_pv(idx),   'omitnan');
+    blockDeltaPow_std(ib) = std( deltaPow_pv(idx),   'omitnan');
 end
-blockDev_sem = blockDev_std / sqrt(blockSize);   % within-batch SEM
+blockDev_sem      = blockDev_std      / sqrt(blockSize);
+blockDeltaPow_sem = blockDeltaPow_std / sqrt(blockSize);
 
-[r_blk, p_blk] = corr(blockDev, blockYpos, 'rows', 'complete');
+% Fits and correlations
+[r_blk, p_blk] = corr(blockDev, blockYpos,     'rows', 'complete');
+[r_dp,  p_dp]  = corr(blockDev, blockDeltaPow, 'rows', 'complete');
 xFit_blk = linspace(min(blockDev)*0.95, max(blockDev)*1.05, 200);
-yFit_blk = polyval(polyfit(blockDev, blockYpos, 1), xFit_blk);
-% NOTE FOR PAPER — transcribe to results_edit.tex and FINDINGS.md when final:
-fprintf('[fig_pvs 2G] pred error vs trial rank:  r = %.3f,  p = %.4f  (n=%d batches of %d trials)\n', ...
-    r_blk, p_blk, nBlocks, blockSize);
+yFit_blk = polyval(polyfit(blockDev, blockYpos,     1), xFit_blk);
+yFit_dp  = polyval(polyfit(blockDev, blockDeltaPow, 1), xFit_blk);
 
-% -- Figure layout --
-% Left (heatmap): narrow   [left=0.08, w=0.20]
-% Colorbar:       vertical, short, between panels  [left=0.30, w=0.013, h=0.28]
-% Right (scatter): wide    [left=0.36, w=0.48]
-fig_pvs  = paperFig(12, 5);
-ax_pvs_A = axes(fig_pvs, 'Position', [0.08 0.14 0.20 0.60]);
-ax_pvs_B = axes(fig_pvs, 'Position', [0.36 0.14 0.48 0.60]);
+% NOTE FOR PAPER — transcribe to results_edit.tex and FINDINGS.md when final:
+fprintf('[fig_pvs 2H] pred error vs trial rank:  r=%.3f  p=%.4f  (n=%d batches of %d)\n', r_blk, p_blk, nBlocks, blockSize);
+fprintf('[fig_pvs 2H] delta power vs pred error: r=%.3f  p=%.4f\n', r_dp,  p_dp);
+
+% -- Figure layout (3 panels + colorbar, 7 cm wide x 4 cm tall) --
+% [left=0.06, w=0.33] heatmap | colorbar | [0.43, w=0.17] trial rank | [0.66, w=0.22] delta power
+fig_pvs  = paperFig(7, 4);
+ax_pvs_A = axes(fig_pvs, 'Position', [0.06 0.14 0.33 0.76]);
+ax_pvs_B = axes(fig_pvs, 'Position', [0.43 0.14 0.17 0.76]);
+ax_pvs_C = axes(fig_pvs, 'Position', [0.66 0.14 0.22 0.76]);
 
 % --- Left: grayscale log heatmap (static, no click) ---
 imagesc(ax_pvs_A, freqBandCtrs, 1:nT_pv, freq_log_pv);
-colormap(ax_pvs_A, flipud(gray));
+colormap(ax_pvs_A, parula);
 clim(ax_pvs_A, clim_log_pv);
 set(ax_pvs_A, 'YDir', 'normal', 'Box', 'off', 'TickDir', 'out', ...
     'FontSize', 6, 'FontWeight', 'bold', 'YTick', []);
@@ -462,13 +474,13 @@ hold(ax_pvs_A, 'off');
 
 % --- Vertical short colorbar between panels ---
 % Spans middle 45% of figure height, centred on the panel.
-ax_cb = axes(fig_pvs, 'Position', [0.30 0.295 0.013 0.27]);
+ax_cb = axes(fig_pvs, 'Position', [0.41 0.68 0.010 0.22]);  % between heatmap and middle panel, flush to top
 imagesc(ax_cb, 1, [0 1], linspace(0,1,256)');   % column vector → vertical gradient
-colormap(ax_cb, flipud(gray));
+colormap(ax_cb, parula);
 set(ax_cb, 'YDir', 'normal', 'XTick', [], ...
     'YTick', [0 1], 'YTickLabel', {'0','1'}, 'YAxisLocation', 'right', ...
     'FontSize', 5, 'FontWeight', 'bold', 'TickDir', 'out', 'Box', 'off');
-text(ax_cb, 0.5, -0.10, 'log power', 'Units', 'normalized', 'FontSize', 5, ...
+text(ax_cb, 0.5, -0.10, {'normalized'; 'log power'}, 'Units', 'normalized', 'FontSize', 5, ...
     'FontWeight', 'bold', 'Color', [0.4 0.4 0.4], ...
     'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'Clipping', 'off');
 
@@ -485,7 +497,7 @@ plot(ax_pvs_B, xFit_blk, yFit_blk, '-', 'Color', col_err, 'LineWidth', 1.5, ...
     'HandleVisibility', 'off');
 hold(ax_pvs_B, 'off');
 
-xlabel(ax_pvs_B, 'Prediction error (\DeltaF/F %)', 'FontSize', 6, 'FontWeight', 'bold');
+xlabel(ax_pvs_B, 'Impulse Prediction Error', 'FontSize', 6, 'FontWeight', 'bold');
 set(ax_pvs_B, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, ...
     'YLim', [0.5, nT_pv+0.5], 'YDir', 'normal', 'YColor', 'none');
 
@@ -498,5 +510,35 @@ end
 text(ax_pvs_B, 0.05, 0.95, sig_str, ...
     'Units', 'normalized', 'FontSize', 8, 'FontWeight', 'bold', ...
     'Color', col_err, 'VerticalAlignment', 'top');
+
+% --- Right: delta band power vs prediction error (same batches, same X axis) ---
+col_dp = [0.75 0.45 0.0];   % gold — matches delta band highlight
+
+hold(ax_pvs_C, 'on');
+errorbar(ax_pvs_C, blockDev, blockDeltaPow, ...
+    blockDeltaPow_sem, blockDeltaPow_sem, ...   % vertical ±SEM (delta power)
+    blockDev_sem,      blockDev_sem, ...        % horizontal ±SEM (pred error)
+    'o', 'Color', col_dp, 'MarkerFaceColor', col_dp, 'MarkerEdgeColor', 'none', ...
+    'MarkerSize', 4, 'LineWidth', 0.8, 'CapSize', 3, 'HandleVisibility', 'off');
+plot(ax_pvs_C, xFit_blk, yFit_dp, '-', 'Color', col_dp, 'LineWidth', 1.5, ...
+    'HandleVisibility', 'off');
+hold(ax_pvs_C, 'off');
+
+xlabel(ax_pvs_C, 'Prediction error (\DeltaF/F %)', 'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_pvs_C, '\delta power  (\DeltaF/F)^2 Hz^{-1}', 'FontSize', 6, 'FontWeight', 'bold');
+set(ax_pvs_C, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
+
+% Significance stars
+if     p_dp < 0.001,  sig_dp = '***';
+elseif p_dp < 0.01,   sig_dp = '**';
+elseif p_dp < 0.05,   sig_dp = '*';
+else,                 sig_dp = 'ns';
+end
+text(ax_pvs_C, 0.05, 0.95, sig_dp, ...
+    'Units', 'normalized', 'FontSize', 8, 'FontWeight', 'bold', ...
+    'Color', col_dp, 'VerticalAlignment', 'top');
+
+% Link X axes of middle and right panels
+linkaxes([ax_pvs_B, ax_pvs_C], 'x');
 
 paperExport(fig_pvs, fullfile(paperRoot, 'images', 'figure2', 'prevar_heatmap_with_blockfit.pdf'));

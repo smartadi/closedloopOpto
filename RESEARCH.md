@@ -18,6 +18,26 @@ Two mice: AL_0033 (8 sessions), AL_0039 (3 sessions), Jan–Apr 2025.
 
 <!-- New entries go here, most recent first. One ### block per change. -->
 
+### 2026-06-01 — Figure layout system: ASCII diagrams + fit-check utility in PAPER.md
+**Changed/Found:** `PAPER.md`, `utils/checkLayout.m` (new) — Added ASCII layout diagrams for all four figures (showing panel positions, export W×H, generating script). Created `checkLayout(widths, heights, total, gap, label)` utility that replicates Illustrator's uniform-height scaling and reports slack/overflow. Added inline fit-check annotations to Fig 2 and Fig 3 rows. Found two issues: (1) Fig 2 row 2 overflows by 1.6 cm (three 6×4 panels = 18.6 cm in 17 cm figure); (2) Fig 3 H panel (8 cm wide) overflows right column (7.8 cm) by 0.2 cm. Also found row-height mismatches in Fig 3 rows 1 and 3.  Updated 2A, 2B, 2D panel registry sizes (all were "pending").
+**Why:** No way to verify proposed panel sizes would fit without mental arithmetic. Needed a single place to see layout + sizes + whether each row fits, updated whenever panels change.
+**Next:** (1) Resolve Fig 2 row 2 overflow — decide whether 2D/2E/2F get narrower (W→5.4) or row shrinks to 2 panels; (2) Fix Fig 3 H panel: resize to 7.8×4 in variance_mse.m; (3) Decide whether row-height mismatches in Fig 3 rows 1/3 are acceptable or need resolving.
+
+### 2026-06-01 — tf_fit.m Paper Fig A: patch ordering fix + R² tag format fix
+**Changed:** `impulse-analysis/tf_fit.m` — (1) moved gray patch to after ylim is set from data (was before traces, causing ylim to expand to patch bounds); patch y-range now uses `[yl_A(1), yTop]` exactly; `uistack(hPatch,'bottom')` pushes it behind traces; (2) fixed R² text from invalid `R^2\!=\!%.2f` to plain `R^2=%.2f`.
+**Why:** Patch added before traces forced MATLAB auto-ylim to expand to patch bounds, making traces tiny. `\!` is LaTeX negative-space — invalid in MATLAB TeX renderer, displayed as literal characters.
+**Next:** Re-run `tf_fit.m` — verify ylim matches data range and R² tags are readable at right edge.
+
+### 2026-06-01 — tf_fit.m Paper Fig A: gray patch + R² tags at trace ends
+**Changed:** `impulse-analysis/tf_fit.m` — (1) added gray `[0.8 0.8 0.8]` `FaceAlpha 0.5` background patch covering `[-preWin_A, tFit_s]`, matching `trace_overlay.m`; (2) shortened legend labels to `'%.1f mW'` (removed R² from label); (3) added small (5 pt) color-matched `R²=X.XX` text tag at the right end of each TF fit trace (`tFit_s + 0.02 s`, `Clipping off`).
+**Why:** LOAO panel is not a paper figure so R² must appear in Fig A. Long legend labels were overlapping traces on the 6×4 cm figure. Inline end-of-trace tags keep R² readable without crowding the interior.
+**Next:** Re-run `tf_fit.m` — check that R² tags clear the right edge of the axes without colliding with the scalebar or each other (adjust `+0.02` offset if needed).
+
+### 2026-05-31 — prestim_variance.m: added third panel ax_pvs_C (delta power vs prediction error)
+**Changed:** `impulse-analysis/prestim_variance.m` — added `ax_pvs_C` plotting block: errorbar (both horizontal ±SEM and vertical ±SEM), gold linear fit line, significance stars from `[r_dp, p_dp]`, ylabel `\delta power`, xlabel matching ax_pvs_B. `linkaxes([ax_pvs_B, ax_pvs_C], 'x')` links X axes. Figure widened to 16 × 5 cm.
+**Why:** User requested third panel showing delta band power vs prediction error using the same 50-trial batches as the middle panel, on a shared X axis. Brings back the delta-power relationship that was previously on the same panel before z-score confusion.
+**Next:** Run `prestim_variance.m`, verify all three panels render and X axes are linked. Read r_dp/p_dp from fprintf output and transcribe to FINDINGS.md "Pre-stimulus 1–4 Hz power" entry (update batch size to 50 and add delta-power correlation values).
+
 ### 2026-05-31 — fig_pvs promoted to paper panel 2G with 5 paper-quality improvements
 **Changed/Found:** `impulse-analysis/prestim_variance.m`, `PAPER.md` — (1) Switched from equal-width tiledlayout to manual `axes` Position layout: heatmap ~55% width, scatter ~32% width (unequal columns). (2) Right panel Y axis hidden (`YColor=none`) — shared dimension with left, no redundant label. (3) Scatter dots coloured by batch mean pre-stim variance using parula colormap (same cmap as heatmap — visual coherence). (4) r/p correlation stat moved from axes title to text annotation inside axes (top-left, 5pt bold). (5) n-trials note added inside heatmap panel (bottom-right, 5pt). `blockVar` computation added to block-data loop. `blockSize` set to 20. Panel registered as 2G in PAPER.md (12 × 5 cm, vector).
 **Why:** Figure promoted to paper panel; needed all paper-quality details: unequal widths to emphasise scatter result, no redundant axes, stat annotation, motion-exclusion note.

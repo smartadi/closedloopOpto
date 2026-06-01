@@ -79,14 +79,15 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 1D | Fig1 | *(interface diagram — illustrator)* | — | — | — | external |
 | 1E | Fig1 | *(control system — illustrator)* | — | — | — | external |
 | 1F | Fig1 | *(latency image)* | — | — | — | pending |
-| 2A | Fig2 | paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf | — | vector | — | pending size |
-| 2B | Fig2 | paper/images/figure2/imp_response.pdf | — | vector | — | pending size |
+| 2A | Fig2 | paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf | 5 × 4 | vector | — | trace_overlay.m |
+| 2B | Fig2 | paper/images/figure2/imp_response.pdf | 5 × 4 | vector | — | dose_response.m |
 | 2C | Fig2 | paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf | 6 × 4 | vector | ±std | done |
-| 2D | Fig2 | paper/images/figure2/step_response.pdf | — | image 300dpi | — | pending size |
+| 2D | Fig2 | paper/images/figure2/step_response.pdf | 6 × 4 | image 300dpi | — | step_response.m |
 | 2E | Fig2 | paper/images/figure2/onset_variance_slope.pdf | 6 × 4 | vector | ±SEM | OL variance trace + slope lines; gray traces, red stim lines |
 | 2F (supp) | Supp | paper/images/supplementary/imp_motion_devscatter_*.png | 6 × 4 | PNG 300dpi | — | Single-session only (selExp_mot=3); supplementary, not paper panel |
-| 2F | Fig2 | paper/images/figure2/imp_motion_devscatter_all_sessions.pdf | 6 × 4 | vector | — | Pooled all sessions; colour=session, shape=motion class; motion threshold labelled on xline |
-| 2G | Fig2 | paper/images/figure2/prevar_heatmap_with_blockfit.pdf | 12 × 5 | vector | — | Left: log power heatmap (1-4 Hz highlighted); Right: 20-trial batches, X=prediction error, Y=trial rank, dots coloured by pre-stim var (parula); linear fit; r/p text box. Motion excluded. |
+| 2F | Fig2 | paper/images/figure2/imp_motion_devscatter_all_sessions.pdf | 4 × 4 | vector | — | motion z-score vs inhib dev, all sessions pooled; impulse-analysis/motion_analysis.m fig_mvp |
+| 2G | Fig2 | paper/images/figure2/prevar_vs_dev_allamps_motexcl_AL_0033_2025-01-29_en1.pdf | 4 × 4 | vector | — | pre-stim var vs inhib dev per amplitude (motion excluded); impulse-analysis/prestim_variance.m fig_pvm |
+| 2H | Fig2 | paper/images/figure2/prevar_heatmap_with_blockfit.pdf | 7 × 4 | vector | — | heatmap (freq×trial sorted by pre-stim var) + trial-rank scatter + delta-power scatter; impulse-analysis/prestim_variance.m fig_pvs |
 | 3A | Fig3 | paper/images/figure3/panel_A.pdf | 8.9 × 4 | vector | — | utils/analysisPlots_combined.m — single trial OL\|CL |
 | 3B | Fig3 | paper/images/figure3/panel_B.pdf | 8.9 × 4 | vector | ±std | utils/analysisPlots_combined.m — all trials + avg OL\|CL |
 | 3C | Fig3 | paper/images/figure3/panel_C.pdf | 8.9 × 3 | vector | — | utils/analysisPlots_combined.m — avg inputs OL\|CL |
@@ -95,8 +96,8 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3F | Fig3 | paper/images/figure3/all_variance_sessions.pdf | 3 × 3.5 | vector | ±SEM | variance_mse.m fig_F — cross-session variance trace |
 | 3G | Fig3 | paper/images/figure3/all_average_sessions.pdf | 3 × 4 | vector | ±SEM | step_response.m fig_H — per-session faint + bold mean |
 | 3H | Fig3 | paper/images/figure3/all_MSE_sessions.pdf | 8 × 4 | image 300dpi | — | variance_mse.m fig_G — cross-session MSE violin; mean dot too large (open task) |
-| 3I | Fig3 | paper/images/figure3/variance_ratio_by_window.pdf | 6 × 4 | vector | — | variance_mse.m fig_Fr — OL/CL variance ratio: Pre/Stim/Post; Wilcoxon stars |
-| 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 6 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post |
+| 3I | Fig3 | paper/images/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_Fr — OL/CL variance ratio: Pre/Stim/Post; Wilcoxon stars |
+| 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post |
 | 3K | Fig3 | paper/images/figure3/ol_tf_trial_avg.pdf | 12 × 4 | vector | ±std | tf_fit.m fig_tf_paper — OL trial avg + TF pred, 3 sessions |
 | 4 (system) | Fig4 | *(feedforward control system — illustrator)* | — | — | — | external |
 | 4A | Fig4 | *(single trial OL/CL — sine wave)* | — | vector | — | pending |
@@ -124,8 +125,8 @@ All MATLAB-exported figures, including those not yet assigned to a paper panel. 
 
 | Var | Size (cm W×H) | Export path | Format | Active? | Notes |
 |-----|--------------|-------------|--------|---------|-------|
-| fig_Fr | 6 × 4 | paper/images/figure3/variance_ratio_by_window.pdf | vector | yes | OL/CL variance ratio by window (pre/stim/post); Wilcoxon stars *** on stim; **paper panel 3I** |
-| fig_G2r | 6 × 4 | paper/images/figure3/MSE_ratio_by_window.pdf | vector | yes | OL/CL RMS MSE ratio — 4 windows: Pre / 0–1 s / 1–3 s / Post; **paper panel 3J** |
+| fig_Fr | 5 × 4 | paper/images/figure3/variance_ratio_by_window.pdf | vector | yes | OL/CL variance ratio by window (pre/stim/post); Wilcoxon stars *** on stim; **paper panel 3I** |
+| fig_G2r | 5 × 4 | paper/images/figure3/MSE_ratio_by_window.pdf | vector | yes | OL/CL RMS MSE ratio — 4 windows: Pre / 0–1 s / 1–3 s / Post; **paper panel 3J** |
 
 #### plottingScript.m
 
@@ -243,75 +244,73 @@ end
 - **Cross-session means** (fig_F variance trace, fig_H avg trace): currently unknown — audit before touching
 
 
-### Figure panels
-Figures are created in illustrator by importing pdfs, panels exported as pdf. Each figure is 17cm wide, height depends on rows 
+### Figure layouts
+Sizes are **MATLAB export sizes** (W × H cm). Illustrator scales all panels in a row to a
+uniform height, so widths scale proportionally. `[ext]` = Illustrator/external. `?` = not yet set.
+To resize a panel: change the numbers. To move a panel: cut/paste the token to a different row.
+Run `checkLayout(widths, heights, total, gap, label)` in MATLAB to verify any row fits.
 
-Figure1 System Architecture
+**Notation:**  `Label(W×H)`  ·  space = side-by-side  ·  new line = new row  ·  `/` = stacked in same column
+
 ---
-Row 1
----  
-- A microscope image (paper/images/wfpath.pdf)
-- B mouse (paper/images/schematic_optoephyswf (1).pdf)
-- C brain (paper/images/figure1/svd_frame_AL_0039_2025-04-19.pdf)
-- D interface diagram
+
+#### Fig 1  [total=17  gap=0.3]
+```
+row1:  1A(?×?)[ext]  1B(?×?)[ext]  1C(?×?)[ext]  1D(?×?)[ext]
+row2:  1E(?×?)[ext]  1F(?×?)[ext]
+```
+
 ---
-Row 2
+
+#### Fig 2  [total=17  gap=0.3]
+```
+row1:  Text(1.2×4)  2A(5×4)   2B(5×4)   2C(6×4)
+row2:  Text(1.2×4)  2D(6×4)   2E(6×4)
+row3:              2F(4×4)   2G(4×4)   2H(7×4)
+```
+Fit checks (last computed, gap=0.3 cm):
+- row1: text(1.2)+2A(5)+2B(5)+2C(6) + 3×0.3 = **18.1/17** ✗ (−1.1 overflow → shrink 2A/2B/2C: try 4.5×4 each → 1.2+4.5+4.5+6+0.9=17.1 ✓)
+- row2: text(1.2)+2D(6)+2E(6) + 2×0.3 = **14.1/17** ✓ (+2.9)
+- row3 @H=4: 2F(4)+2G(4)+2H(7) + 2×0.3 = **15.6/17** ✓ (+1.4)
+
 ---
-- E control system 
-- F Latency image
+
+#### Fig 3  [total=17  col-gap=0.3  inner-gap=0.3]
+Two-column layout: col1 fixed at 8.9 cm, col2 = 17 − 8.9 − 0.3 = **7.8 cm**
+```
+section1:
+  col1[8.9]:  3A(8.9×4)  /  3B(8.9×4)  /  3C(8.9×3)
+  col2[7.8]:
+    row1:  3D(3×3.5)  3E(3×3)
+    row2:  3F(3×3.5)  3G(3×4)
+    row3:  3H(7.8×4)
+
+section2:
+  row1:  3I(5×4)  3J(5×4)
+
+supp:  3K(12×4)
+```
+Fit checks (last computed, gap=0.3):
+- col2 row1 @H=3.5: D(3→3.00) E(3→3.50) + 0.3 = **6.8/7.8** ✓ (+1.0)
+- col2 row2 @H=4.0: F(3→3.43) G(3→3.00) + 0.3 = **6.7/7.8** ✓ (+1.1)
+- col2 row3: H(7.8) = **7.8/7.8** ✓ (exact fit — updated from 8×4)
+- col1 heights: 4+4+3 + 2×0.3 = **11.6 cm** total
+- Row height match: row1 A=4 vs D/E=3.5 (⚠ 0.5 cm gap) · row2 B=4 vs F/G=4 ✓ · row3 C=3 vs H=4 (⚠ 1.0 cm gap)
+- section2 row1: 5+5 + 0.3 = **10.3/17** ✓ (+6.7 — can widen panels)
+
+---
+
+#### Fig 4  [total=17  gap=0.3]
+Two-column: col1 = step/stationary reference, col2 = sine wave reference
+```
+row1:  4A(?×?) 4B(?×?)
+
+col1[?]:
+  4A(?×?)  /  4B(?×?)  /  4C(?×?)  /  4D(?×?)  4E(?×?)
+
+col2[?]:
+  4A'(?×?)  /  4B'(?×?)  /  4C'(?×?)  /  4D'(?×?)  4E'(?×?)
+```
 
 
-Figure 2 :: Input output charactereization
----
-Row 1
---- 
-- A single session stim responses (paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf)
-- B multi session inhibition eenrgy (paper/images/figure2/imp_response.pdf)
-- C Single Session TF fit (paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf)
----
-Row 2
----
-- D TF fit step response
-- E Variance quantification (paper/images/figure2/onset_variance_slope.pdf)
-- F Motion vs inhibition deviation (paper/images/figure2/imp_motion_devscatter_*.pdf)
-
-
-Figure 3 :: analysis stationary reference
----
-Column 1 (8.9 cm wide each panel)
---- 
-- A single trial OL/CL (paper/images/figure3/panel_A.pdf) 8.9×4
-- B Trial avg OL/CL (paper/images/figure3/panel_B.pdf) 8.9×4
-- C Trial avg inp OL/CL (paper/images/figure3/panel_C.pdf) 8.9×3
----
-Column 2 (sub-panels, ~3–6 cm wide)
----
-row 1
-- D variance across trials (paper/images/figure3/panel_D.pdf) 3×3.5
-- E Trial MSE distribution (paper/images/figure3/panel_E.pdf) 3×3
-row 2
-- F avg variance across all sessions (paper/images/figure3/all_variance_sessions.pdf) 3×3.5
-- G avg tracking error across all sessions (paper/images/figure3/all_average_sessions.pdf) 3×4
-row 3
-- H All sessions Trial MSE distributions (paper/images/figure3/all_MSE_sessions.pdf) 8×4 — mean dot still too large (open task)
----
-Supplementary / extended panels (not yet assigned to figure slots)
-- I variance ratio OL/CL by window (paper/images/figure3/variance_ratio_by_window.pdf) 6×4
-- J MSE ratio OL/CL by window (paper/images/figure3/MSE_ratio_by_window.pdf) 6×4
-- K OL trial avg + TF prediction, 3 sessions (paper/images/figure3/ol_tf_trial_avg.pdf) 12×4
-
-
-Figure 4:: Sine wave Reference
-Row 1
-- Feedforward Control system
-Row 2 (need pdf versions with appropriate sizes)
-column 1
-- A single trial OL/CL 
-- B Trial avg OL/CL 
-- C Trial avg inp OL/CL 
-- D Variance Across trials, E Trail MSE Dist
-column 2
-- A single trial OL/CL 
-- B Trial avg OL/CL 
-- C Trial avg inp OL/CL
-- D Variance Across trials, E Trail MSE Dist 
+#### Fig 5
