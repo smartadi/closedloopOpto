@@ -10,11 +10,9 @@ mn3   = allExperiments(3).mn;
 td3   = allExperiments(3).td;
 en3   = allExperiments(3).en;
 
-PW_s = 5; PH_s = 4;
-figS = figure('Color','w');
-figS.Units = 'centimeters';  figS.PaperUnits = 'centimeters';
-figS.Position = [0 0 PW_s PH_s];
-figS.PaperSize = [PW_s PH_s];  figS.PaperPosition = [0 0 PW_s PH_s];
+PS = paperStyle();
+setPaperDefaults();
+figS = paperFig(5, 4);
 hold on;
 
 % Shaded region = exact xlim of tf_fit.m paper figure (preWin_A=0.2 s, tFit_s=0.5 s)
@@ -36,13 +34,12 @@ yl_s = ylim(gca);
 text(gca, mean(tShade), yl_s(2)-0.5, 'Model Fit Window', ...
     'FontSize', 5, 'Color', [0.45 0.45 0.45], 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'Clipping', 'off');
-lgd = legend('Box','off','FontSize',6,'FontWeight','bold','Location','southeast');
-lgd.ItemTokenSize = [6 6];
-shortCornerAxes_plot(gca,'XLength',0.25,'YLength',1,'XLabel','250 ms', ...
-    'YLabel','1% dF/F','LineWidth',2,'LabelGap',0.05);
-text(0.1, 2, 'Stim','Color','r','FontSize',7,'FontWeight','bold', ...
+lgd = legend('Box','off','Location','southeast');
+paperLegend(lgd);
+paperAxes(gca,'XLength',0.25,'YLength',1,'XLabel','250 ms','YLabel','1% dF/F');
+text(0.1, 2, 'Stim','Color','r','FontSize',PS.fs,'FontWeight','bold', ...
     'HorizontalAlignment','right','VerticalAlignment','top','Clipping','off');
-print(figS, fullfile(paperRoot, 'images', 'figure2', sprintf('imp_single_%s_%s_en%d.pdf',mn3,td3,en3)), '-dpdf','-painters');
+paperExport(figS, fullfile(paperRoot, 'images', 'figure2', sprintf('imp_single_%s_%s_en%d.pdf',mn3,td3,en3)));
 
 
 %%

@@ -207,7 +207,7 @@ paperExport(fig_ov, 'paper/images/figure2/onset_variance_slope.pdf');
 fprintf('Variance slope figure ready\n');
 
 %% G: Cross-session MSE violin  (7.0" wide -- fills full page width)
-fig_G = paperFig(8, 4);
+fig_G = paperFig(7.8, 4);
 
 lm_g = 0.10; rm_g = 0.05; bm_g = 0.12; tm_g = 0.08;
 ax_mse = axes(fig_G, 'Position', [lm_g, bm_g, 1-lm_g-rm_g, 1-bm_g-tm_g]);

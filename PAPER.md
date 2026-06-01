@@ -95,7 +95,7 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3E | Fig3 | paper/images/figure3/panel_E.pdf | 3 × 3 | vector | — | utils/analysisPlots_combined.m — MSE half-violin (single panel) |
 | 3F | Fig3 | paper/images/figure3/all_variance_sessions.pdf | 3 × 3.5 | vector | ±SEM | variance_mse.m fig_F — cross-session variance trace |
 | 3G | Fig3 | paper/images/figure3/all_average_sessions.pdf | 3 × 4 | vector | ±SEM | step_response.m fig_H — per-session faint + bold mean |
-| 3H | Fig3 | paper/images/figure3/all_MSE_sessions.pdf | 8 × 4 | image 300dpi | — | variance_mse.m fig_G — cross-session MSE violin; mean dot too large (open task) |
+| 3H | Fig3 | paper/images/figure3/all_MSE_sessions.pdf | 7.8 × 4 | image 300dpi | — | variance_mse.m fig_G — cross-session MSE violin; mean dot too large (open task) |
 | 3I | Fig3 | paper/images/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_Fr — OL/CL variance ratio: Pre/Stim/Post; Wilcoxon stars |
 | 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post |
 | 3K | Fig3 | paper/images/figure3/ol_tf_trial_avg.pdf | 12 × 4 | vector | ±std | tf_fit.m fig_tf_paper — OL trial avg + TF pred, 3 sessions |
