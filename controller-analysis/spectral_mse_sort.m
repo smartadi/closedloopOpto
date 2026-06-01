@@ -2,6 +2,9 @@
 % Run from brain_paper/ root directory.
 % Requires: load_sessions.m has been run first (mouse, fields, tp, Mean_var_wc/nc, dur).
 
+PS = paperStyle();
+setPaperDefaults();
+
 %% Figures I & J -- Spectral heatmaps sorted by MSE (absolute power: S_bands)
 % ncFreqPow/wcFreqPow store raw FFT^2 power (no band/total normalization).
 % Old caches that only have ncFreqSpec (relative) are used as fallback.
@@ -74,7 +77,7 @@ row_gap  = 0.10;
 pw = (1 - lm - rm - nSess_f*pair_gap - (nSess_f-1)*sess_gap) / (nSess_f*2);
 ph = (1 - tm - bm - (nRows_f-1)*row_gap) / nRows_f;
 
-fig_I = figure('Color','w', 'Units','centimeters', 'Position',[0 0 nSess_f*11.4 nRows_f*8.9]);
+fig_I = paperFig(nSess_f*11.4, nRows_f*8.9);
 
 sessIdx = 0;
 ax_last = [];
@@ -145,7 +148,7 @@ end
 if ~isempty(ax_last)
     cb = colorbar(ax_last); cb.Label.String = cbar_label; cb.FontSize = 6;
 end
-exportgraphics(fig_I, 'paper/freq_heatmap_sessions.png', 'Resolution', 300);
+paperExport(fig_I, 'paper/freq_heatmap_sessions.png');
 fprintf('Figure I ready -- click any row to inspect that trial.\n');
 
 % --- Figure J: combined heatmap (all sessions pooled, raw MSE sort) ---
@@ -156,7 +159,7 @@ lm_j = 0.08; rm_j = 0.12; bm_j = 0.10; tm_j = 0.06; mid_gap = 0.04;
 pw_j = (1 - lm_j - rm_j - mid_gap) / 2;
 ph_j = 1 - tm_j - bm_j;
 
-fig_J = figure('Color','w', 'Units','centimeters', 'Position',[0 0 25.4 15.2]);
+fig_J = paperFig(25.4, 15.2);
 
 ax_ol = axes(fig_J, 'Position', [lm_j,              bm_j, pw_j, ph_j]);
 imagesc(ax_ol, freqCtrs, 1:size(nc_all,1), nc_all(nc_ord_all,:));
@@ -173,7 +176,7 @@ set(ax_cl, 'YDir','normal', 'Box','off', 'TickDir','out', 'FontSize', 6, 'YTickL
 xlabel(ax_cl, 'Frequency (Hz)', 'FontWeight','bold');
 title(ax_cl, 'Closed-Loop', 'FontSize', 6, 'FontWeight','bold');
 cb = colorbar(ax_cl); cb.Label.String = cbar_label; cb.FontSize = 6;
-exportgraphics(fig_J, 'paper/freq_heatmap_combined.png', 'Resolution', 300);
+paperExport(fig_J, 'paper/freq_heatmap_combined.png');
 
 % Figure K removed -- band-normalised view is redundant when using absolute power (S_bands).
 
@@ -257,7 +260,7 @@ if ~isempty(nc_all_m) && ~isempty(freqCtrs_m)
     pw_j2 = (1 - lm_j2 - rm_j2 - mid_gap2) / 2;
     ph_j2 = 1 - tm_j2 - bm_j2;
 
-    fig_J2 = figure('Color','w', 'Units','centimeters', 'Position',[0 0 25.4 15.2]);
+    fig_J2 = paperFig(25.4, 15.2);
 
     ax_ol2 = axes(fig_J2, 'Position', [lm_j2,                bm_j2, pw_j2, ph_j2]);
     imagesc(ax_ol2, freqCtrs_m, 1:size(nc_all_m,1), nc_all_m(nc_ord_m,:));
@@ -277,6 +280,6 @@ if ~isempty(nc_all_m) && ~isempty(freqCtrs_m)
         'FontSize',6, 'FontWeight','bold');
     cb2 = colorbar(ax_cl2); cb2.Label.String = cbar_lbl_m; cb2.FontSize = 6;
 
-    exportgraphics(fig_J2, 'paper/freq_heatmap_motionclean.png', 'Resolution',300);
+    paperExport(fig_J2, 'paper/freq_heatmap_motionclean.png');
     % fprintf('Figure J2 saved ->' paper/freq_heatmap_motionclean.png\n');
 end

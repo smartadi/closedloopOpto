@@ -1,5 +1,5 @@
 ﻿% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
-% Run from brain_paper/ root directory.
+% Run from impulse-analysis/ directory.
 % Requires: load_experiments.m has been run first (allExperiments, selExp, t_win).
 
 %%
@@ -262,12 +262,16 @@ else
     repAmpIdx = vIdx;
 end
 nRep = numel(repAmpIdx);
-cRep = parula(nRep + 2);
+% Grayscale color grading: lightest = weakest amp, darkest = strongest (matches Fig 2A scheme)
+grayLevels = linspace(0.85, 0.20, max(nRep, 1));
+cRep = repmat(grayLevels(:), 1, 3);   % Nx3 grayscale RGB
 
 PS = paperStyle();
+setPaperDefaults();
 fig_A = paperFig(6, 4);
 hold on;
 ax_A  = gca;
+title(ax_A, 'Session 1', 'FontSize', 6, 'FontWeight', 'bold', 'Color', [0.2 0.4 0.8]);
 
 for k = 1:nRep
     iAmp   = repAmpIdx(k);
@@ -303,11 +307,10 @@ line(ax_A, [0 0], [yl_A(1), yTop * 0.85], 'Color','r', 'LineWidth', 0.75, 'Handl
 text(ax_A, 0.02, yTop, 'Stim', 'Color','r', 'FontSize',6, 'FontWeight','bold', ...
     'HorizontalAlignment','left', 'VerticalAlignment','top', 'Clipping','off');
 
-shortCornerAxes_plot(ax_A, 'XLength',0.15,'YLength',1,'XLabel','150 ms','YLabel','1% dF/F', ...
-    'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap,'FontSize',PS.fs,'FontWeight',PS.fw);
+paperAxes(ax_A, 'XLength',0.15,'YLength',1,'XLabel','150 ms','YLabel','1% dF/F');
 
-lgd_A = legend(ax_A, 'Box','off','FontSize',6,'FontWeight','bold','Location','southeast');
-try; lgd_A.ItemTokenSize = [15 10]; catch; end
+lgd_A = legend(ax_A, 'Location','southeast');
+paperLegend(lgd_A);
 lgd_A.AutoUpdate = 'off';
 
 % Resolve output dir whether run from brain_paper/ root or impulse-analysis/
@@ -319,9 +322,8 @@ else
     out_imp_dir = '.';
     warning('tf_fit: cannot find paper/images/figure2/ -- exporting to current folder.');
 end
-exportgraphics(fig_A, fullfile(out_imp_dir, sprintf('tf_data_vs_model_%s_%s_en%d.pdf', ...
-    allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en)), ...
-    'ContentType','vector');
+paperExport(fig_A, fullfile(out_imp_dir, sprintf('tf_data_vs_model_%s_%s_en%d.pdf', ...
+    allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en)));
 
 %% â”€â”€ Paper Fig B: LOAO validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 % Full-fit RÂ² (filled circles) vs LOAO RÂ² (open squares) across amplitudes

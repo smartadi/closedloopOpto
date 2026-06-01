@@ -2,6 +2,9 @@
 % Run from brain_paper/ root directory.
 % Requires: load_sessions.m has been run first (mouse, fields, tp, Mean_var_wc/nc, dur).
 
+PS = paperStyle();
+setPaperDefaults();
+
 %% Figures K1 & K2 -- Pre-stim dFk variance as trial sort key (all trials)
 % K1: OL|CL spectral heatmap sorted by 3-s pre-onset dFk variance, MSE shown as side strip
 % K2: pre-stim variance vs MSE scatter with regression slopes
@@ -76,12 +79,16 @@ if ~isempty(nc_all_k1) && ~isempty(freqCtrs_k1)
     x_cl_h = x_ol_s + mse_w_k1 + pair_gap_k1;
     x_cl_s = x_cl_h + pw_k1 + gap_k1;
 
-    fig_K1 = figure('Color','w', 'Units','centimeters', 'Position',[0 0 25.4 15.2]);
+    fig_K1 = paperFig(25.4, 15.2);
 
+    % Version 1: log color scale
     ax_ol_k1 = axes(fig_K1, 'Position', [x_ol_h, bm_k1, pw_k1,    ph_k1]);
     imagesc(ax_ol_k1, freqCtrs_k1, 1:size(nc_all_k1,1), nc_all_k1(nc_ord_k1,:));
-    colormap(ax_ol_k1, 'hot'); clim(ax_ol_k1, [0 clim_k1]);
-    set(ax_ol_k1, 'YDir','normal','Box','off','TickDir','out','FontSize',6);
+    colormap(ax_ol_k1, 'hot');
+    % Log color scale: clamp lower bound to a small positive value
+    clim_lo_k1 = max(clim_k1 * 1e-3, min(nc_all_k1(nc_all_k1 > 0)));
+    clim(ax_ol_k1, [clim_lo_k1 clim_k1]);
+    set(ax_ol_k1, 'YDir','normal','Box','off','TickDir','out','FontSize',6,'ColorScale','log');
     xlabel(ax_ol_k1, 'Frequency (Hz)', 'FontWeight','bold');
     ylabel(ax_ol_k1, 'Trial (low \rightarrow high pre-stim var)', 'FontWeight','bold');
     title(ax_ol_k1, 'Open-Loop', 'FontSize',6, 'FontWeight','bold');
@@ -94,11 +101,14 @@ if ~isempty(nc_all_k1) && ~isempty(freqCtrs_k1)
 
     ax_cl_k1 = axes(fig_K1, 'Position', [x_cl_h, bm_k1, pw_k1,    ph_k1]);
     imagesc(ax_cl_k1, freqCtrs_k1, 1:size(wc_all_k1,1), wc_all_k1(wc_ord_k1,:));
-    colormap(ax_cl_k1, 'hot'); clim(ax_cl_k1, [0 clim_k1]);
-    set(ax_cl_k1, 'YDir','normal','Box','off','TickDir','out','FontSize',6,'YTickLabel',{});
+    colormap(ax_cl_k1, 'hot');
+    clim_lo_k1_wc = max(clim_k1 * 1e-3, min(wc_all_k1(wc_all_k1 > 0)));
+    clim(ax_cl_k1, [clim_lo_k1_wc clim_k1]);
+    set(ax_cl_k1, 'YDir','normal','Box','off','TickDir','out','FontSize',6,'YTickLabel',{},'ColorScale','log');
     xlabel(ax_cl_k1, 'Frequency (Hz)', 'FontWeight','bold');
     title(ax_cl_k1, 'Closed-Loop', 'FontSize',6, 'FontWeight','bold');
-    cb_k1 = colorbar(ax_cl_k1); cb_k1.Label.String = cbar_lbl_k1; cb_k1.FontSize = 6;
+    cb_k1 = colorbar(ax_cl_k1);
+    cb_k1.Label.String = [cbar_lbl_k1, ' (log)']; cb_k1.FontSize = 6;
 
     ax_cl_ms = axes(fig_K1, 'Position', [x_cl_s, bm_k1, mse_w_k1, ph_k1]);
     imagesc(ax_cl_ms, 1, 1:numel(wc_mse_k1), wc_mse_k1(wc_ord_k1));
@@ -106,13 +116,59 @@ if ~isempty(nc_all_k1) && ~isempty(freqCtrs_k1)
     set(ax_cl_ms, 'YDir','normal','Box','off','XTick',[],'YTickLabel',{},'FontSize',6);
     title(ax_cl_ms, 'MSE', 'FontSize',6, 'FontWeight','bold');
 
-    exportgraphics(fig_K1, 'paper/freq_heatmap_prestimvar.png', 'Resolution',300);
+    paperExport(fig_K1, 'paper/freq_heatmap_prestimvar.png');
     % fprintf('Figure K1 saved ->' paper/freq_heatmap_prestimvar.png\n');
+
+    % Version 2: 1/f-corrected heatmap (multiply each freq band by 1/f)
+    % Divide power at each frequency by f to remove 1/f spectral tilt.
+    f_vec_k1 = freqCtrs_k1(:)';       % 1 x nBands, Hz
+    f_vec_k1(f_vec_k1 == 0) = 1e-3;   % guard against 0 Hz
+    nc_1f_k1 = nc_all_k1 ./ f_vec_k1; % broadcast: nTrials x nBands
+    wc_1f_k1 = wc_all_k1 ./ f_vec_k1;
+
+    clim_1f_k1 = prctile([nc_1f_k1(:); wc_1f_k1(:)], 98);
+    clim_lo_1f_nc = max(clim_1f_k1 * 1e-3, min(nc_1f_k1(nc_1f_k1 > 0)));
+    clim_lo_1f_wc = max(clim_1f_k1 * 1e-3, min(wc_1f_k1(wc_1f_k1 > 0)));
+
+    fig_K1_1f = paperFig(25.4, 15.2);
+
+    ax_ol_1f = axes(fig_K1_1f, 'Position', [x_ol_h, bm_k1, pw_k1, ph_k1]);
+    imagesc(ax_ol_1f, freqCtrs_k1, 1:size(nc_1f_k1,1), nc_1f_k1(nc_ord_k1,:));
+    colormap(ax_ol_1f, 'hot');
+    clim(ax_ol_1f, [clim_lo_1f_nc clim_1f_k1]);
+    set(ax_ol_1f, 'YDir','normal','Box','off','TickDir','out','FontSize',6,'ColorScale','log');
+    xlabel(ax_ol_1f, 'Frequency (Hz)', 'FontWeight','bold');
+    ylabel(ax_ol_1f, 'Trial (low \rightarrow high pre-stim var)', 'FontWeight','bold');
+    title(ax_ol_1f, 'Open-Loop (1/f corrected)', 'FontSize',6, 'FontWeight','bold');
+
+    ax_ol_ms_1f = axes(fig_K1_1f, 'Position', [x_ol_s, bm_k1, mse_w_k1, ph_k1]);
+    imagesc(ax_ol_ms_1f, 1, 1:numel(nc_mse_k1), nc_mse_k1(nc_ord_k1));
+    colormap(ax_ol_ms_1f, 'parula'); clim(ax_ol_ms_1f, [0 mse_lim_k1]);
+    set(ax_ol_ms_1f, 'YDir','normal','Box','off','XTick',[],'YTickLabel',{},'FontSize',6);
+    title(ax_ol_ms_1f, 'MSE', 'FontSize',6, 'FontWeight','bold');
+
+    ax_cl_1f = axes(fig_K1_1f, 'Position', [x_cl_h, bm_k1, pw_k1, ph_k1]);
+    imagesc(ax_cl_1f, freqCtrs_k1, 1:size(wc_1f_k1,1), wc_1f_k1(wc_ord_k1,:));
+    colormap(ax_cl_1f, 'hot');
+    clim(ax_cl_1f, [clim_lo_1f_wc clim_1f_k1]);
+    set(ax_cl_1f, 'YDir','normal','Box','off','TickDir','out','FontSize',6,'YTickLabel',{},'ColorScale','log');
+    xlabel(ax_cl_1f, 'Frequency (Hz)', 'FontWeight','bold');
+    title(ax_cl_1f, 'Closed-Loop (1/f corrected)', 'FontSize',6, 'FontWeight','bold');
+    cb_1f = colorbar(ax_cl_1f);
+    cb_1f.Label.String = 'Power/f (\DeltaF/F)^2 Hz^{-2} (log)'; cb_1f.FontSize = 6;
+
+    ax_cl_ms_1f = axes(fig_K1_1f, 'Position', [x_cl_s, bm_k1, mse_w_k1, ph_k1]);
+    imagesc(ax_cl_ms_1f, 1, 1:numel(wc_mse_k1), wc_mse_k1(wc_ord_k1));
+    colormap(ax_cl_ms_1f, 'parula'); clim(ax_cl_ms_1f, [0 mse_lim_k1]);
+    set(ax_cl_ms_1f, 'YDir','normal','Box','off','XTick',[],'YTickLabel',{},'FontSize',6);
+    title(ax_cl_ms_1f, 'MSE', 'FontSize',6, 'FontWeight','bold');
+
+    paperExport(fig_K1_1f, 'paper/freq_heatmap_prestimvar_1f.png');
 end
 
 % Figure K2 -- pre-stim variance vs MSE scatter
 if ~isempty(nc_var_k1)
-    fig_K2 = figure('Color','w', 'Units','centimeters', 'Position',[0 0 6 4]);
+    fig_K2 = paperFig(6, 4);
     hold on;
 
     scatter(nc_var_k1, nc_mse_k1, 8, colOL, 'o', 'filled', 'MarkerFaceAlpha',0.3, 'HandleVisibility','off');
@@ -140,7 +196,7 @@ if ~isempty(nc_var_k1)
     xlabel('Pre-stim dFk variance (3 s)', 'FontWeight','bold', 'FontSize',6);
     ylabel('MSE  ||e||',                   'FontWeight','bold', 'FontSize',6);
     set(gca, 'Box','off', 'TickDir','out', 'FontSize',6);
-    exportgraphics(fig_K2, 'paper/prestimvar_mse.png', 'Resolution',300);
+    paperExport(fig_K2, 'paper/prestimvar_mse.png');
     % fprintf('Figure K2 saved ->' paper/prestimvar_mse.pdf\n');
 end
 
@@ -182,7 +238,7 @@ if ~isempty(nc_all_k1) && ~isempty(freqCtrs_k1)
     x_cl_hz = x_ol_sz + mse_w_z + pair_gap_z;
     x_cl_sz = x_cl_hz + pw_z + gap_z;
 
-    fig_K1z = figure('Color','w', 'Units','centimeters', 'Position',[0 0 25.4 15.2]);
+    fig_K1z = paperFig(25.4, 15.2);
 
     ax_ol_z = axes(fig_K1z, 'Position', [x_ol_hz, bm_z, pw_z, ph_z]);
     imagesc(ax_ol_z, freqCtrs_k1, 1:size(nc_z_k1,1), nc_z_k1(nc_ord_z,:));
@@ -234,7 +290,7 @@ if ~isempty(nc_var_k1)
     wc_sem_z = cellfun(@(x) std(x) / sqrt(max(numel(x),1)), wc_mse_bins);
 
     bw = 0.35;
-    fig_K2z = figure('Color','w', 'Units','centimeters', 'Position',[0 0 8 5]);
+    fig_K2z = paperFig(8, 5);
     hold on;
     bar((1:nBins) - bw/2, nc_mu_z, bw, 'FaceColor',colOL, 'EdgeColor','none', 'DisplayName','Open-Loop');
     bar((1:nBins) + bw/2, wc_mu_z, bw, 'FaceColor',colCL, 'EdgeColor','none', 'DisplayName','Closed-Loop');
@@ -390,7 +446,7 @@ if ~isempty(nc_all_k1m) && ~isempty(freqCtrs_k1m)
         cbar_lbl_k1m = 'band/total power';
     end
 
-    fig_K1m = figure('Color','w', 'Units','centimeters', 'Position',[0 0 25.4 15.2]);
+    fig_K1m = paperFig(25.4, 15.2);
 
     ax_ol_k1m = axes(fig_K1m, 'Position', [x_ol_h, bm_k1, pw_k1,    ph_k1]);
     imagesc(ax_ol_k1m, freqCtrs_k1m, 1:size(nc_all_k1m,1), nc_all_k1m(nc_ord_k1m,:));
@@ -422,13 +478,13 @@ if ~isempty(nc_all_k1m) && ~isempty(freqCtrs_k1m)
     set(ax_cl_msm, 'YDir','normal','Box','off','XTick',[],'YTickLabel',{},'FontSize',6);
     title(ax_cl_msm, 'MSE', 'FontSize',6, 'FontWeight','bold');
 
-    exportgraphics(fig_K1m, 'paper/freq_heatmap_prestimvar_motclean.png', 'Resolution',300);
+    paperExport(fig_K1m, 'paper/freq_heatmap_prestimvar_motclean.png');
     % fprintf('Figure K1m saved ->' paper/freq_heatmap_prestimvar_motclean.png\n');
 end
 
 % Figure K2m -- motion-clean pre-stim variance vs MSE scatter
 if ~isempty(nc_var_k1m)
-    fig_K2m = figure('Color','w', 'Units','centimeters', 'Position',[0 0 6 4]);
+    fig_K2m = paperFig(6, 4);
     hold on;
 
     scatter(nc_var_k1m, nc_mse_k1m, 8, colOL, 'o', 'filled', 'MarkerFaceAlpha',0.3, 'HandleVisibility','off');
@@ -456,7 +512,7 @@ if ~isempty(nc_var_k1m)
     xlabel('Pre-stim dFk variance (3 s)', 'FontWeight','bold', 'FontSize',6);
     ylabel('MSE  ||e||',                   'FontWeight','bold', 'FontSize',6);
     set(gca, 'Box','off', 'TickDir','out', 'FontSize',6);
-    exportgraphics(fig_K2m, 'paper/prestimvar_mse_motclean.png', 'Resolution',300);
+    paperExport(fig_K2m, 'paper/prestimvar_mse_motclean.png');
     % fprintf('Figure K2m saved ->' paper/prestimvar_mse_motclean.pdf\n');
 end
 %% K1zm & K2zm -- Pre-stim variance sort: z-scored spectrum + quintile bars, motion-clean
@@ -492,7 +548,7 @@ if ~isempty(nc_all_k1m) && ~isempty(freqCtrs_k1m)
     x_cl_hzm = x_ol_szm + mse_w_zm + pair_gap_zm;
     x_cl_szm = x_cl_hzm + pw_zm + gap_zm;
 
-    fig_K1zm = figure('Color','w', 'Units','centimeters', 'Position',[0 0 25.4 15.2]);
+    fig_K1zm = paperFig(25.4, 15.2);
 
     ax_ol_zm = axes(fig_K1zm, 'Position', [x_ol_hzm, bm_zm, pw_zm, ph_zm]);
     imagesc(ax_ol_zm, freqCtrs_k1m, 1:size(nc_zm,1), nc_zm(nc_ord_zm,:));
@@ -546,7 +602,7 @@ if ~isempty(nc_var_k1m)
     wc_sem_zm = cellfun(@(x) std(x) / sqrt(max(numel(x),1)), wc_mse_binsm);
 
     bw_zm = 0.35;
-    fig_K2zm = figure('Color','w', 'Units','centimeters', 'Position',[0 0 8 5]);
+    fig_K2zm = paperFig(8, 5);
     hold on;
     bar((1:nBins_zm) - bw_zm/2, nc_mu_zm, bw_zm, 'FaceColor',colOL, 'EdgeColor','none', 'DisplayName','Open-Loop');
     bar((1:nBins_zm) + bw_zm/2, wc_mu_zm, bw_zm, 'FaceColor',colCL, 'EdgeColor','none', 'DisplayName','Closed-Loop');
@@ -642,7 +698,7 @@ if ~isempty(nc_all_kw) && ~isempty(freqCtrs_kw)
         cbar_lbl_kw = 'band/total power';
     end
 
-    fig_K1w = figure('Color','w', 'Units','centimeters', 'Position',[0 0 25.4 15.2]);
+    fig_K1w = paperFig(25.4, 15.2);
 
     ax_ol_kw = axes(fig_K1w, 'Position', [x_ol_h, bm_k1, pw_k1,    ph_k1]);
     imagesc(ax_ol_kw, freqCtrs_kw, 1:size(nc_all_kw,1), nc_all_kw(nc_ord_kw,:));
@@ -672,13 +728,13 @@ if ~isempty(nc_all_kw) && ~isempty(freqCtrs_kw)
     set(ax_cl_msw, 'YDir','normal','Box','off','XTick',[],'YTickLabel',{},'FontSize',6);
     title(ax_cl_msw, 'MSE', 'FontSize',6, 'FontWeight','bold');
 
-    exportgraphics(fig_K1w, 'paper/freq_heatmap_pretrial_var.png', 'Resolution',300);
+    paperExport(fig_K1w, 'paper/freq_heatmap_pretrial_var.png');
     % fprintf('Figure K1w saved ->' paper/freq_heatmap_pretrial_var.png\n');
 end
 
 % Figure K2w -- pre+trial variance vs MSE scatter
 if ~isempty(nc_var_kw)
-    fig_K2w = figure('Color','w', 'Units','centimeters', 'Position',[0 0 6 4]);
+    fig_K2w = paperFig(6, 4);
     hold on;
 
     scatter(nc_var_kw, nc_mse_kw, 8, colOL, 'o', 'filled', 'MarkerFaceAlpha',0.3, 'HandleVisibility','off');
@@ -706,7 +762,7 @@ if ~isempty(nc_var_kw)
     xlabel('dFk variance (pre+trial, 6 s)', 'FontWeight','bold', 'FontSize',6);
     ylabel('MSE  ||e||',                    'FontWeight','bold', 'FontSize',6);
     set(gca, 'Box','off', 'TickDir','out', 'FontSize',6);
-    exportgraphics(fig_K2w, 'paper/pretrial_var_mse.png', 'Resolution',300);
+    paperExport(fig_K2w, 'paper/pretrial_var_mse.png');
     % fprintf('Figure K2w saved ->' paper/pretrial_var_mse.pdf\n');
 end
 

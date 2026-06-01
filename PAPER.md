@@ -84,17 +84,20 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 2C | Fig2 | paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf | 6 × 4 | vector | ±std | done |
 | 2D | Fig2 | paper/images/figure2/step_response.pdf | — | image 300dpi | — | pending size |
 | 2E | Fig2 | paper/images/figure2/onset_variance_slope.pdf | 6 × 4 | vector | ±SEM | OL variance trace + slope lines; gray traces, red stim lines |
-| 2F | Fig2 | paper/images/figure2/imp_motion_devscatter_*.pdf | 6 × 4 | vector | — | Motion z-score vs \|Peak dev\| — single session (selExp_mot=3); binary No motion/Motion |
-| 2F-pool | Fig2 | paper/images/figure2/imp_motion_devscatter_all_sessions.pdf | 6 × 4 | vector | — | Same scatter pooled across all sessions; r and p annotated |
+| 2F (supp) | Supp | paper/images/supplementary/imp_motion_devscatter_*.png | 6 × 4 | PNG 300dpi | — | Single-session only (selExp_mot=3); supplementary, not paper panel |
+| 2F | Fig2 | paper/images/figure2/imp_motion_devscatter_all_sessions.pdf | 6 × 4 | vector | — | Pooled all sessions; colour=session, shape=motion class; motion threshold labelled on xline |
+| 2G | Fig2 | paper/images/figure2/prevar_heatmap_with_blockfit.pdf | 12 × 5 | vector | — | Left: log power heatmap (1-4 Hz highlighted); Right: 20-trial batches, X=prediction error, Y=trial rank, dots coloured by pre-stim var (parula); linear fit; r/p text box. Motion excluded. |
 | 3A | Fig3 | paper/images/figure3/panel_A.pdf | 8.9 × 4 | vector | — | utils/analysisPlots_combined.m — single trial OL\|CL |
 | 3B | Fig3 | paper/images/figure3/panel_B.pdf | 8.9 × 4 | vector | ±std | utils/analysisPlots_combined.m — all trials + avg OL\|CL |
 | 3C | Fig3 | paper/images/figure3/panel_C.pdf | 8.9 × 3 | vector | — | utils/analysisPlots_combined.m — avg inputs OL\|CL |
-| 3D | Fig3 | paper/images/figure3/panel_D.pdf | 8.9 × 3.5 | vector | ±std | utils/analysisPlots_combined.m — variance over time |
-| 3E | Fig3 | paper/images/figure3/panel_E.pdf | 8.9 × 3 | vector | — | utils/analysisPlots_combined.m — MSE half-violin |
-| 3F | Fig3 | paper/images/figure3/all_variance_sessions.pdf | 3.5 × 3 | vector | — | done |
-| 3G | Fig3 | paper/images/figure3/all_average_sessions.pdf | 3 × 4 | vector | ±SEM | done |
-| 3H | Fig3 | paper/images/figure3/all_MSE_sessions.pdf | 9 × 4 | image 300dpi | — | done — mean dot too large |
-| 3I | Fig3 | paper/images/figure3/ol_tf_trial_avg.pdf | 12 × 4 | vector | ±std | OL trial avg + TF pred, 3 sessions |
+| 3D | Fig3 | paper/images/figure3/panel_D.pdf | 3 × 3.5 | vector | — | utils/analysisPlots_combined.m — variance over time (single panel) |
+| 3E | Fig3 | paper/images/figure3/panel_E.pdf | 3 × 3 | vector | — | utils/analysisPlots_combined.m — MSE half-violin (single panel) |
+| 3F | Fig3 | paper/images/figure3/all_variance_sessions.pdf | 3 × 3.5 | vector | ±SEM | variance_mse.m fig_F — cross-session variance trace |
+| 3G | Fig3 | paper/images/figure3/all_average_sessions.pdf | 3 × 4 | vector | ±SEM | step_response.m fig_H — per-session faint + bold mean |
+| 3H | Fig3 | paper/images/figure3/all_MSE_sessions.pdf | 8 × 4 | image 300dpi | — | variance_mse.m fig_G — cross-session MSE violin; mean dot too large (open task) |
+| 3I | Fig3 | paper/images/figure3/variance_ratio_by_window.pdf | 6 × 4 | vector | — | variance_mse.m fig_Fr — OL/CL variance ratio: Pre/Stim/Post; Wilcoxon stars |
+| 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 6 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post |
+| 3K | Fig3 | paper/images/figure3/ol_tf_trial_avg.pdf | 12 × 4 | vector | ±std | tf_fit.m fig_tf_paper — OL trial avg + TF pred, 3 sessions |
 | 4 (system) | Fig4 | *(feedforward control system — illustrator)* | — | — | — | external |
 | 4A | Fig4 | *(single trial OL/CL — sine wave)* | — | vector | — | pending |
 | 4B | Fig4 | *(trial avg OL/CL — sine wave)* | — | vector | ±std | pending |
@@ -117,12 +120,19 @@ All MATLAB-exported figures, including those not yet assigned to a paper panel. 
 | fig_D | 8.9 × 3.5 | paper/images/figure3/panel_D.pdf | vector | Variance over time; shading=±std |
 | fig_E | 8.9 × 3 | paper/images/figure3/panel_E.pdf | vector | MSE half-violin |
 
+#### variance_mse.m
+
+| Var | Size (cm W×H) | Export path | Format | Active? | Notes |
+|-----|--------------|-------------|--------|---------|-------|
+| fig_Fr | 6 × 4 | paper/images/figure3/variance_ratio_by_window.pdf | vector | yes | OL/CL variance ratio by window (pre/stim/post); Wilcoxon stars *** on stim; **paper panel 3I** |
+| fig_G2r | 6 × 4 | paper/images/figure3/MSE_ratio_by_window.pdf | vector | yes | OL/CL RMS MSE ratio — 4 windows: Pre / 0–1 s / 1–3 s / Post; **paper panel 3J** |
+
 #### plottingScript.m
 
 | Var | Size (cm W×H) | Export path | Format | Active? | Notes |
 |-----|--------------|-------------|--------|---------|-------|
-| fig_F | 3.5 × 3 | paper/images/figure3/all_variance_sessions.pdf | vector | yes | Cross-session variance trace |
-| fig_G | 9 × 4 | paper/images/figure3/all_MSE_sessions.pdf | image 300dpi | yes | Cross-session MSE violin |
+| fig_F | 3 × 3.5 | paper/images/figure3/all_variance_sessions.pdf | vector | yes | Cross-session variance trace (paper panel 3F) |
+| fig_G | 8 × 4 | paper/images/figure3/all_MSE_sessions.pdf | image 300dpi | yes | Cross-session MSE violin (paper panel 3H) |
 | fig_G2a | 8 × 5 | paper/MSE_window_comparison.pdf | vector | **commented** | Trial-avg trace OL vs CL (replaced violins) |
 | fig_G2b | nC×5 × nR×4 | paper/MSE_vs_trial_number.png | image 300dpi | yes | Windowed RMS MSE vs trial# |
 | fig_H | 3 × 4 | paper/images/figure3/all_average_sessions.pdf | vector | yes | Per-session faint + bold mean |
@@ -132,13 +142,14 @@ All MATLAB-exported figures, including those not yet assigned to a paper panel. 
 | fig_I | nSess×11.4 × nRows×8.9 | paper/freq_heatmap_sessions.png | image 300dpi | yes | Per-session spectral heatmap |
 | fig_J | 25.4 × 15.2 | paper/freq_heatmap_combined.png | image 300dpi | yes | All-session pooled heatmap (MSE sort) |
 | fig_J2 | 25.4 × 15.2 | paper/freq_heatmap_motionclean.png | image 300dpi | yes | J, motion-clean |
-| fig_K1 | 25.4 × 15.2 | paper/freq_heatmap_prestimvar.png | image 300dpi | yes | Pre-stim var sort heatmap |
+| fig_K1 | 25.4 × 15.2 | paper/freq_heatmap_prestimvar.png | image 300dpi | yes | Pre-stim var sort heatmap — **log color scale** (updated 2026-05-29) |
+| fig_K1_1f | 25.4 × 15.2 | paper/freq_heatmap_prestimvar_1f.png | image 300dpi | yes | K1 with 1/f correction (power ÷ f per band), log scale — companion to K1 |
 | fig_K2 | 6 × 4 | paper/prestimvar_mse.png | image 300dpi | yes | Pre-stim var vs MSE scatter |
 | fig_K1m | 25.4 × 15.2 | paper/freq_heatmap_prestimvar_motclean.png | image 300dpi | yes | K1 motion-clean |
 | fig_K2m | 6 × 4 | paper/prestimvar_mse_motclean.png | image 300dpi | yes | K2 motion-clean |
 | fig_K1w | 25.4 × 15.2 | paper/freq_heatmap_pretrial_var.png | image 300dpi | yes | Pre+trial var sort heatmap |
 | fig_K2w | 6 × 4 | paper/pretrial_var_mse.png | image 300dpi | yes | Pre+trial var vs MSE scatter |
-| fig_wb | 12 × 8 | *(no export)* | — | no export | Widebrain ARX 4-panel |
+| fig_wb | 12 × 8 | *(no export)* | — | no export | Widebrain ARX 4-panel — pending R²_spont > 0.3 |
 | fig_tf_paper | 12 × 4 | paper/images/figure3/ol_tf_trial_avg.pdf | vector | yes | OL trial avg + TF pred, -1 to stimend+1 s; shading=±std; scalebar on panel 1 only |
 | fig_ov | 6 × 4 | paper/images/figure2/onset_variance_slope.pdf | vector | yes | OL variance trace + pre/post slope lines; gray, red stim xlines |
 | fig_K1z/K2z | 25.4×15.2 / 8×5 | paper/freq_heatmap_prestimvar_zscore* | mixed | **commented** | Z-scored spectrum heatmap + quintile bars |
@@ -162,13 +173,34 @@ All MATLAB-exported figures, including those not yet assigned to a paper panel. 
 | fig_poster | 18 × 6 | paper/poster_brainstate_*.pdf | yes | Brain-state poster panel |
 | fig_sp | 12 × 4 | paper/spatial_spread_*.png | image 300dpi | yes | Spatial spread of response |
 
+#### widebrain_arx.m  (Fig 4 — widebrain / contralateral prediction)
+
+| Var | Size (cm W×H) | Export path | Format | Active? | Notes |
+|-----|--------------|-------------|--------|---------|-------|
+| fig_wb1 | 16 × 5 | paper/images/figure4/wb_pink_4panel.pdf | vector | yes | ARX pink prediction: 4 panels (OL/CL trace, residual, R²) |
+| fig_wb4 | 12 × 4 | paper/images/figure4/wb_three_layers.pdf | vector | yes | Three-layer contralateral prediction (pink/orange/red) |
+| fig_wb5 | 6 × 4 | paper/images/figure4/wb_mpc_gap.png | image 300dpi | yes | WB-5 MSE gap (CL vs OL residuals) |
+| fig_spat | auto | paper/images/figure4/wb_spat_traces.png | image 300dpi | yes | Spatial spread of contralateral signal |
+
+#### controller-analysis/motion_analysis.m  (candidate Fig 4 panels)
+
+| Var | Size (cm W×H) | Export path | Format | Active? | Notes |
+|-----|--------------|-------------|--------|---------|-------|
+| fig_ps_mse | 6 × 4 | paper/images/figure4/prestim_dev_vs_mse.pdf | vector | yes | Pre-stim state deviation vs MSE (OL+CL) |
+| figQp | 6 × 4 | paper/images/figure4/motion_quartile_combined.pdf | vector | yes | Motion quartile MSE summary (pooled sessions) |
+
 #### Uniformity checklist
-- [ ] Font: 6 pt bold throughout — audit `Impulse_mouseDataAnalysis_all.m` (currently uses 5–10 pt)
-- [ ] Shading: ±std for single-session traces, ±SEM for cross-session means — audit `fig_H`, `fig_F`
-- [ ] Line widths: mean=1.5, fit=1.2, individual trials=0.4, ref=1.0, input=0.75, zero=0.5
-- [ ] Scalebars: `shortCornerAxes_plot` with LineWidth=1.5, LabelGap=0.05, FontSize=6, FontWeight='bold'
+- [ ] Font: 6 pt bold throughout — audit `impulse-analysis/tf_fit.m` and `impulse-analysis/dose_response.m`
+- [x] Shading convention confirmed: ±std single-session (panels A–D, fig_tf_paper); ±SEM cross-session (fig_F, fig_H)
+- [x] Line widths: enforced via `paperStyle()` in all paper panel scripts
+- [x] Scalebars: `shortCornerAxes_plot` LineWidth=1.5, LabelGap=0.05, FontSize=6, FontWeight='bold' — fixed in fig_F (variance_mse.m) and step figure (step_response.m)
+- [x] Legend `ItemTokenSize = [6 6]` — fixed in analysisPlots_combined panel A, variance_mse fig_G2v, step_response spont figure
 - [ ] Export: `exportgraphics(...,'ContentType','vector')` for all line-art; 300 dpi PNG for heatmaps
 - [ ] fig_wb: needs exportgraphics added once ARX R²_spont > 0.3 confirmed
+- [x] K-figures (prestim_variance.m): all raw `figure()` → `paperFig()` (K1/K1_1f/K2: 25.4×15.2/6×4; K1z/K1m/K1zm/K1w: 25.4×15.2; K2z/K2zm: 8×5; K2m/K2w: 6×4; interactive K2i/K2iw left unchanged)
+- [x] Spectral figures (spectral_mse_sort.m): fig_I/J/J2 raw `figure()` → `paperFig()`
+- [x] fig_G2a/G2b/G2v (variance_mse.m): all raw `figure()` → `paperFig()`; G2a mean LineWidth 2→1.5
+- [ ] dose_response.m: legend `FontWeight` added; `lgd_m.ItemTokenSize` fixed; text annotations FontSize 5/7→6; `shortCornerAxes_plot` LW fixed; `print()` replaced with `exportgraphics(...,'ContentType','vector')`; paths updated to dynamic detection matching tf_fit.m pattern — **re-run to regenerate panel 2B**
 
 ---
 
@@ -246,22 +278,27 @@ Row 2
 
 Figure 3 :: analysis stationary reference
 ---
-Column 1
+Column 1 (8.9 cm wide each panel)
 --- 
-- A single trial OL/CL (paper/images/figure3/panel_A.pdf)
-- B Trial avg OL/CL (paper/images/figure3/panel_B.pdf)
-- C Trial avg inp OL/CL (paper/images/figure3/panel_C.pdf)
+- A single trial OL/CL (paper/images/figure3/panel_A.pdf) 8.9×4
+- B Trial avg OL/CL (paper/images/figure3/panel_B.pdf) 8.9×4
+- C Trial avg inp OL/CL (paper/images/figure3/panel_C.pdf) 8.9×3
 ---
-Column 2
+Column 2 (sub-panels, ~3–6 cm wide)
 ---
 row 1
-- D variance across trials (paper/images/figure3/panel_D.pdf)
-- E Trial MSE distribution (paper/images/figure3/panel_E.pdf)
+- D variance across trials (paper/images/figure3/panel_D.pdf) 3×3.5
+- E Trial MSE distribution (paper/images/figure3/panel_E.pdf) 3×3
 row 2
-- F avg Variacne across all experiments (paper/images/figure3/all_variance_sessions.pdf)
-- G avg Tracking error across all experiments (paper/images/figure3/all_average_sessions.pdf)
+- F avg variance across all sessions (paper/images/figure3/all_variance_sessions.pdf) 3×3.5
+- G avg tracking error across all sessions (paper/images/figure3/all_average_sessions.pdf) 3×4
 row 3
-- H All sessions Trial error distributions, (need to make the size of the dots representing the mean smaller) (paper/images/figure3/all_MSE_sessions.pdf) 
+- H All sessions Trial MSE distributions (paper/images/figure3/all_MSE_sessions.pdf) 8×4 — mean dot still too large (open task)
+---
+Supplementary / extended panels (not yet assigned to figure slots)
+- I variance ratio OL/CL by window (paper/images/figure3/variance_ratio_by_window.pdf) 6×4
+- J MSE ratio OL/CL by window (paper/images/figure3/MSE_ratio_by_window.pdf) 6×4
+- K OL trial avg + TF prediction, 3 sessions (paper/images/figure3/ol_tf_trial_avg.pdf) 12×4
 
 
 Figure 4:: Sine wave Reference

@@ -49,7 +49,13 @@
       "Bash(del *)",
       "Bash(git pull *)",
       "mcp__matlab__evaluate_matlab_code",
-      "mcp__matlab__check_matlab_code"
+      "mcp__matlab__check_matlab_code",
+      "Bash(grep -rn \"Section \\\\b\\\\|Algorithm ??\\\\|\\(??\\)\\\\|\\\\\\\\\\\\\\\\ref{}\" /c/Users/aditya/Documents/projects/Closedloop_edit/)",
+      "Bash(grep -rn \"\\\\\\\\\\\\\\\\ref{}\\\\|\\\\\\\\\\\\\\\\eqref{}\\\\|\\(Section \\)\" /c/Users/aditya/Documents/projects/Closedloop_edit/*.tex)",
+      "Bash(grep *)",
+      "Bash(dir \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\" /b /a-d)",
+      "PowerShell(Copy-Item \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\\\\Impulse_mouseDataAnalysis_all.asv\" \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\\\\Impulse_mouseDataAnalysis_all.m\")",
+      "Bash(ls -la \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\\\\plottingScript\"* 2>/dev/null || echo \"checking...\" *)"
     ]
   },
   "hooks": {
@@ -64,5 +70,6 @@
         ]
       }
     ]
-  }
+  },
+  "autoCompactEnabled": true
 }

@@ -35,7 +35,7 @@ Cache check: `isfield(tmp, 'd')` — if missing, reinitialise and re-save.
 - `utils/findStims.m` — mode 1 (AL_0033/AL_0039), mode 2 (AL_0041)
 
 ## Locked-in decisions (see root CLAUDE.md for full list)
-- MSE window: t = +1 s to +3 s (field: `er_ncDfk_w` / `er_wcDfk_w`)
+- MSE window: **t = 0 s to +3 s** default (`er_ncDfk` / `er_wcDfk`); **t = +1 s to +3 s** only for the disturbance-rejection panel (`er_ncDfk_w` / `er_wcDfk_w`)
 - Power spectra: absolute (ΔF/F)² Hz⁻¹ only
 - `d.ref = −5` as project-wide default reference level
 

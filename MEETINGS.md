@@ -5,7 +5,7 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 
 ---
 
-## Open Action Items — as of 2026-05-11
+## Open Action Items — as of 2026-05-29
 
 ### Manuscript — Text & Structure
 - [ ] Finalize reorganized paragraph structure (punchline → explanation); move remaining content to Methods *(2026-05-08)*
@@ -14,6 +14,8 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [x] Update remaining figure captions; incorporate Nick's Slack/cloud comments *(2026-04-27, done per 2026-05-11)*
 
 ### Manuscript — Figures (existing)
+- [ ] `2026-05-29.1` Unify laser-power color scheme across all panels of the disturbance figure (grayscale for laser intensity; label sessions with colored text, not color-coded data) *(2026-05-29)*
+- [ ] `2026-05-29.2` Add significance stars to the variance-ratio stem plot; reformat to show pre- and post-stimulus periods matching the trial-average time-course figure structure *(2026-05-29)*
 - [ ] Generate supplementary panel: spatial spread (ΔF/F inhibition area) vs. laser power; cite Nuoli/Svoboda *(2026-05-08)*
 - [x] Update impulse-response figure: zoom in x-axis on panel A so power levels are distinguishable *(2026-05-08)*
 - [x] Change error bars on impulse-response plots from IQR to 95th-percentile bounds *(2026-05-08, done 2026-05-14)*
@@ -26,6 +28,8 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [x] Replace relative (normalized) power spectra with absolute power (ΔF/F²/Hz) *(2026-05-08, done per 2026-05-11)*
 
 ### Manuscript — New Analyses (from 2026-05-11)
+- [ ] `2026-05-29.3` Apply log scale (or 1/f correction, or trial-vs-mean difference) to power spectra color axis in the pre-trial-variance trial-sorting figure to make the 2–4 Hz feature visually apparent *(2026-05-29)*
+- [ ] `2026-05-29.4` Consult Joanne's Spiral paper (Fig. 3) for spatially-localized predictor-pixel maps; consider SVD-based left-hemisphere representation (vs. fixed pixels) to predict ipsilateral ROI; compare R² *(2026-05-29)*
 - [ ] Implement **Curto & Issa-style trial-sorting figure**: split trials into synchronized (high pre-stim variance) vs. desynchronized (low pre-stim variance) using ~1 s pre-stim window; sort within groups by absolute fluorescence at t = 0; display ΔF/F heatmaps *(2026-05-11)*
 - [ ] Confirm absolute power spectral plots complete; finalize narrative framing (motion + frequency → trial outcome) and produce summary figure *(2026-05-11)*
 - [ ] Generate **three-layer contralateral-prediction model** figure:
@@ -36,10 +40,14 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [ ] Add motion energy as co-predictor alongside contralateral pixels in pink/red models *(2026-05-11)*
 - [ ] Determine what fraction of high-error closed-loop trials are attributable to 2–4 Hz spontaneous fluctuations vs. motion; prepare summary figure *(2026-05-08)*
 
+### Spatial Spread Characterization
+- [ ] `2026-05-29.5` Use widefield GUI to step through open-loop trials frame-by-frame; characterize spatial spread of optogenetic effect over time (ping vs. sustained); discuss discrepancy with Whitefield Opto paper Fig. 1 with Anna *(2026-05-29)*
+
 ### Latency Analysis
 - [ ] Optional: insert fixed 2 ms pause in processing code to verify ~14 ms minimum latency shifts *(2026-04-27)*
 
 ### Mouse Logistics
+- [ ] `2026-05-29.6` For sine-wave/feedforward tracking sessions on new mouse: use longer stimulus duration (≥4 s, ≥4 cycles) and shorter inter-trial intervals; start with full-grid ping characterization before closed-loop *(2026-05-29)*
 - [x] Coordinate with Anna on timeline for retroorbital PHP.eB mouse; begin habituation; run first open-loop sessions with **data saving enabled** *(2026-05-11)*
 - [x] Track habituation timeline for freshly injected mouse (~2 weeks from 2026-05-11) *(2026-05-11)*
 - [x] Run open-loop controller sessions and **save the stimulus/response data** for new mouse(es) *(2026-05-08)*
@@ -48,6 +56,7 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [x] Ask Anna to identify suitable GCaMP mice for new local viral injections *(2026-04-27, done — two mice now injected per 2026-05-11)*
 
 ### Collaboration
+- [ ] `2026-05-29.7` Chat with Anna about contralateral spread observations; reconcile with existing spatial-spread characterization data *(2026-05-29)*
 - [ ] Follow up with Zilu on ARIMA/forecasting models for multi-region widefield forecasting *(2026-04-27)*
 - [ ] Prepare widefield dataset (impulse/step responses) for Tim Kim's latent-space forecasting model; arrange joint meeting *(2026-04-27)*
 - [x] Send Nick screenshots: (a) bad/good-trial interactive spectral plots, (b) motion vs. MSE scatter — via Slack *(2026-05-08)*
@@ -59,6 +68,26 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 ---
 
 ## Meeting Entries
+
+---
+
+### 2026-05-29
+**Source:** `C:\Users\aditya\OneDrive\Notes\Adick meetings\May 29th.md`
+
+**Overview:** Reviewed progress on motion-based and pre-trial-variance trial-sorting figures (partially complete; need color scheme unification, statistics, log-scale power spectra). Validated use of total pre-stimulus variance as a synchrony measure (Kenneth Harris review cited). Contralateral-prediction (pink model) partially implemented: R² ~95% on test data predicting ipsilateral from contralateral pixels in spontaneous data. Nick recommended using SVD-based hemisphere representation and consulting Joanne's Spiral paper (Fig. 3) for spatially-localized predictor maps. Concern raised about spatial spread of optogenetic effect to contralateral hemisphere; Nick attributes this to neural propagation (withdrawal of excitation), not direct light spread. Sine-wave/feedforward results are inconclusive due to insufficient trials and low amplitude — new sessions should use longer stimuli and shorter ITIs.
+
+**Key decisions:**
+- Unify laser-power color scheme across disturbance figure panels (grayscale for laser; colored text for session labels)
+- Variance-ratio stem plot to add significance stars and show pre/post structure matching trial-average figure
+- SVD-based left-hemisphere representation preferred over fixed pixels for the contralateral-prediction model
+- Spatial spread of opto effect attributed to neural propagation — characterize frame-by-frame with widefield GUI; discuss with Anna
+- New mouse sine-wave sessions: ≥4 s / ≥4 cycle stimuli, shorter ITIs; full-grid ping characterization first
+- Sine-wave results may need to be scoped out of primary manuscript if new sessions don't yield enough trials
+
+**AI analysis flags (from transcript):**
+- SVD component count claim ("need 2000 components") is unusual — verify cumulative variance explained vs. component count before finalizing contralateral-prediction model
+- Contralateral signal temporal onset should be checked: simultaneous onset with ipsilateral dip would implicate optical artifact; a ≥1 frame (~30 ms) lag supports neural propagation
+- Spatial predictor maps: ridge regression over all contralateral pixels → weight map identifies minimal predictor set relevant for real-time multi-input controller
 
 ---
 

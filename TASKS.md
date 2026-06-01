@@ -20,7 +20,7 @@ Findings that are done live in FINDINGS.md. Meeting context lives in MEETINGS.md
 - [ ] Run TF fit across all 3 impulse sessions; compare poles/time constants between sessions — `Impulse_mouseDataAnalysis_all.m`
 - [ ] Relax TF delay τ; report R² on held-out 20% test set (Nick, 2026-05-08)
 - [ ] Verify widebrain ARX R²_spont > 0.3; interpret OL vs CL residuals — `plottingScript.m`
-- [ ] Re-confirm trial MSE window t=+1→+3 s is used everywhere and stated in manuscript
+- [ ] Confirm Methods states both MSE windows: general trial MSE = t=0→+3 s; disturbance-rejection panel = t=+1→+3 s
 
 ---
 

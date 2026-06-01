@@ -1,7 +1,15 @@
 ﻿% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
-% Run from brain_paper/ root directory.
+% Run from impulse-analysis/ directory.
 
 %% Data analysis Script
+
+% Absolute output root -- immune to MATLAB CWD.
+% which() finds this file on the path; fallback to pwd if run section-by-section.
+le_path    = which('load_experiments');
+if isempty(le_path), le_path = fullfile(pwd, 'load_experiments.m'); end
+impulseDir = fileparts(le_path);
+paperRoot  = fullfile(impulseDir, '..', 'paper');   % brain_paper/paper/
+clear le_path
 
 % add pixel configuration
 

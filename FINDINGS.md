@@ -40,11 +40,11 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ## Finding: CL reduces MSE and variance vs OL across sessions
 **Question:** Does the PI closed-loop controller reduce neural error and variance relative to open-loop?
-**Analysis:** `controller-analysis/variance_mse.m` — 13 sessions (AL_0033 + AL_0039), MSE window t=+1 to +3 s
+**Analysis:** `controller-analysis/variance_mse.m` — 13 sessions (AL_0033 + AL_0039), MSE window t=0 to +3 s
 **Result:** CL MSE lower than OL across sessions. CL variance trace lower than OL. Per-session violins show consistent effect.
 **Paper claim:** Closed-loop PI control reduces trial MSE and across-trial variance relative to open-loop stimulation, consistent across n=13 sessions in 2 mice.
 **Figure:** `paper/images/figure3/` panels A–H
-**Status:** Analysis done. Figures exported. Manuscript text in `results_edit.tex` — verify MSE window t=+1→+3 s is stated explicitly.
+**Status:** Analysis done. Figures exported. Manuscript text in `results_edit.tex` — verify general MSE window t=0→+3 s is stated; disturbance-rejection panel uses t=+1→+3 s.
 
 ---
 
@@ -65,6 +65,17 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Paper claim:** Trials with higher peri-stimulus motion show greater deviation from the mean impulse response, suggesting motion as a source of trial-to-trial variability.
 **Figure:** `paper/images/figure2/imp_motion_devscatter_*.pdf` (panel 2F single), `paper/images/figure2/imp_motion_devscatter_all_sessions.pdf` (panel 2F-pool)
 **Status:** Analysis done. Figures promoted to paper panel 2F. Manuscript integration pending.
+
+---
+
+## Finding: Pre-stimulus 1–4 Hz power predicts impulse prediction error
+**Question:** Does the spectral content of pre-stimulus neural activity (specifically 1–4 Hz low-frequency power) predict how well the TF model captures the trial's impulse response?
+**Analysis:** `impulse-analysis/prestim_variance.m` — all motion-excluded trials pooled across amplitudes and sessions, sorted ascending by pre-trial variance. Pre-stimulus frequency spectrum (1 s window before stim) computed per trial. Trials pooled into batches of 20, batch-mean TF prediction error (|Peak_imp deviation|) computed and plotted against batch center trial rank. Linear fit through batch means.
+**Result:** Trials with higher pre-stimulus variance (dominated by 1–4 Hz power, highlighted in heatmap) tend to show larger prediction error. Correlation r and p read from figure title at runtime.
+**Paper claim (draft):** Pre-stimulus low-frequency (1–4 Hz) power predicts trial-by-trial impulse response prediction error (r = XX, p = XX), indicating that slow fluctuations in brain state set the gain of the inhibitory response beyond what the linear TF model captures.
+**Figure:** `paper/images/figure2/prevar_heatmap_with_blockfit.pdf` (12 × 5 cm; left: log power heatmap sorted by pre-stim var; right: 20-trial batch curve fit, X = prediction error, Y = trial rank)
+**Status:** Figure code complete. Needs one run to verify and record r/p values. Manuscript paragraph not yet written.
+**To finalise:** Run `prestim_variance.m`, read r/p from right panel title, update claim above, add parenthetical to `results_edit.tex`.
 
 ---
 

@@ -31,7 +31,8 @@ rng('shuffle');   % ensure different random trial pick on every run
 
 % Paper-level figure: OL trial average + TF fit, -1 to +1 s, one column per session
 PS = paperStyle();
-fig_tf_paper = paperFig(10, 4);
+setPaperDefaults();
+fig_tf_paper = paperFig(12, 4);
 tlo_tf_paper = tiledlayout(fig_tf_paper, 1, nSess_ol, 'TileSpacing','compact','Padding','compact');
 
 for si = 1:nSess_ol
@@ -289,8 +290,7 @@ for si = 1:nSess_ol
 
     % Corner scalebar on first panel only
     if si == 1
-        shortCornerAxes_plot(ax_p, 'XLength',1, 'YLength',3, ...
-            'XLabel','1 s', 'YLabel','3% dF/F', 'FontSize',PS.fs, 'FontWeight',PS.fw, 'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap);
+        paperAxes(ax_p, 'XLength',1, 'YLength',3, 'XLabel','1 s', 'YLabel','3% dF/F');
     end
 end
 
@@ -303,7 +303,7 @@ else
     out_tf_dir = '.';
     warning('tf_fit: cannot find paper/images/figure2/ -- exporting to current folder.');
 end
-exportgraphics(fig_tf_paper, fullfile(out_tf_dir, 'ol_tf_trial_avg.pdf'), 'ContentType','vector');
+paperExport(fig_tf_paper, fullfile(out_tf_dir, 'ol_tf_trial_avg.pdf'));
 fprintf('OL TF paper figure (trial avg -1 to +1 s) ready\n');
 
 % Interactive validation figure -- trial R^2 vs trial MSE, click -> plotSingleTrial

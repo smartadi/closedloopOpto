@@ -1,5 +1,5 @@
 ﻿% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
-% Run from brain_paper/ root directory.
+% Run from impulse-analysis/ directory.
 % Requires: load_experiments.m has been run first (allExperiments, selExp, t_win).
 
 %% Interactive freq heatmap â€” click a trial row to open detail view

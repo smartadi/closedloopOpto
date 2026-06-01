@@ -23,7 +23,7 @@
 
 ## Locked-in decisions (see root CLAUDE.md for full list)
 - Error bars on impulse plots: 95th-percentile bounds (2.5th–97.5th)
-- MSE window: t = +1 to +3 s (state this explicitly in Methods)
+- MSE window: **t = 0 to +3 s** (general trial MSE); **t = +1 to +3 s** only for the disturbance-rejection panel — state both windows explicitly in Methods
 - Inhibition energy = integral over 0–200 ms post-onset (define exact bounds in Methods)
 - Absolute power spectra only — no relative normalization
 

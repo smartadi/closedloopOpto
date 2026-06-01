@@ -1,6 +1,9 @@
 ﻿% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
-% Run from brain_paper/ root directory.
+% Run from impulse-analysis/ directory.
 % Requires: load_experiments.m has been run first (allExperiments, selExp, t_win).
+
+PS = paperStyle();
+setPaperDefaults();
 
 %% Spatial spread vs amplitude
 
@@ -63,6 +66,5 @@ set(ax_sp, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'FontWeight', 'bold');
 mn_sp = allExperiments(selExp_sp).mn;
 td_sp = allExperiments(selExp_sp).td;
 en_sp = allExperiments(selExp_sp).en;
-exportgraphics(fig_sp, ...
-    sprintf('paper/spatial_spread_%s_%s_en%d.png', mn_sp, td_sp, en_sp), ...
-    'Resolution', 300);
+paperExport(fig_sp, ...
+    fullfile(paperRoot, 'images', 'figure2', sprintf('spatial_spread_%s_%s_en%d.png', mn_sp, td_sp, en_sp)));

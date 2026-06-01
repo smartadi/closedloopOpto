@@ -2,6 +2,8 @@
 % Run from brain_paper/ root directory.
 % Requires: load_sessions.m has been run first (mouse, fields, tp, Mean_var_wc/nc, dur).
 
+PS = paperStyle();
+setPaperDefaults();
 
 %% Widebrain -- pixel selection
 % Define contralateral ROI grid. Re-run freely to adjust grid_rows/grid_cols.
@@ -605,7 +607,7 @@ for axi = [ax1B ax1C ax1D]
     ylabel(axi,'dF/F (%)','FontSize',6,'FontWeight','bold');
     xlabel(axi,'Time (s)','FontSize',6,'FontWeight','bold');
 end
-exportgraphics(fig_wb1,'paper/images/figure4/wb_pink_4panel.pdf','ContentType','vector');
+paperExport(fig_wb1,'paper/images/figure4/wb_pink_4panel.pdf');
 fprintf('[WB-1b] Saved wb_pink_4panel.pdf\n');
 
 
@@ -895,7 +897,7 @@ for axi = [ax1eL ax1eR]
     lg_1e = legend(axi,'Location','best','FontSize',5,'Box','off');
     try; lg_1e.ItemTokenSize = [6 6]; catch; end
 end
-exportgraphics(fig_1e, 'wb_pretrial_cf.png', 'Resolution',300);
+paperExport(fig_1e, 'wb_pretrial_cf.png');
 fprintf('[WB-1e] Exported wb_pretrial_cf.png\n');
 
 %% [WB-artifact] Laser artifact characterization -- OL contra pixel responses
@@ -961,7 +963,7 @@ ylabel(ax_art1,'dF/F (%)','FontSize',6,'FontWeight','bold');
 title(ax_art1,'OL contra pixel responses (trial-averaged artifact)','FontSize',6,'FontWeight','bold');
 lg_art1 = legend(ax_art1,'Location','best','FontSize',5,'Box','off');
 try; lg_art1.ItemTokenSize = [6 6]; catch; end
-exportgraphics(fig_art1,'wb_artifact_traces.png','Resolution',300);
+paperExport(fig_art1,'wb_artifact_traces.png');
 
 % -- Figure 2: Spatial maps of artifact amplitude and SNR (dual-axes brain overlay)
 fig_art2 = figure('Color','w','Units','centimeters','Position',[2 2 16 6]);
@@ -998,7 +1000,7 @@ for sp_i = 1:2
     ylabel(cb2, lbl_sp2{sp_i},'FontSize',5,'FontWeight','bold');
     title(ax_sc2, lbl_sp2{sp_i},'FontSize',6,'FontWeight','bold');
 end
-exportgraphics(fig_art2,'wb_artifact_map.png','Resolution',300);
+paperExport(fig_art2,'wb_artifact_map.png');
 fprintf('[WB-artifact] Exported wb_artifact_traces.png + wb_artifact_map.png\n');
 
 %% [WB-2] Orange layer -- mean OL residual on top of pink
@@ -1116,7 +1118,7 @@ for iP_sp = 1:2
     end
 end
 
-exportgraphics(fig_spat,'paper/images/figure4/wb_spat_traces.png','Resolution',300);
+paperExport(fig_spat,'paper/images/figure4/wb_spat_traces.png');
 fprintf('[WB-1c] Saved wb_spat_traces.png\n');
 
 
@@ -1184,7 +1186,6 @@ colPink_pred   = [0.85 0.55 0.70];
 colOrange_wb = [0.90 0.55 0.10];
 colRed_wb    = [0.75 0.10 0.10];
 
-PS_wb4  = paperStyle();
 fig_wb4 = paperFig(12, 4);
 lm4=0.09; rm4=0.04; bm4=0.20; tm4=0.08; gx4=0.08;
 pw4 = (1-lm4-rm4-gx4)/2;
@@ -1196,17 +1197,15 @@ mn_nc = mean(actual_nc_m,1,'omitnan');
 se_nc = std(actual_nc_m,0,1,'omitnan') / sqrt(sum(~all(isnan(actual_nc_m),2)));
 fill(ax4L,[t_trial_m,fliplr(t_trial_m)],[mn_nc+se_nc,fliplr(mn_nc-se_nc)], ...
     colOL,'FaceAlpha',0.15,'EdgeColor','none','HandleVisibility','off');
-plot(ax4L,t_trial_m,mn_nc,                              'Color',colOL,       'LineWidth',PS_wb4.lw_mean,'DisplayName','OL actual');
-plot(ax4L,t_trial_m,mean(pred_nc_m,     1,'omitnan'),   'Color',colPink_pred,   'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Pink');
-plot(ax4L,t_trial_m,mean(pred_nc_orange,1,'omitnan'),   'Color',colOrange_wb, 'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Orange');
-plot(ax4L,t_trial_m,mean(pred_nc_red,   1,'omitnan'),   'Color',colRed_wb,    'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Red');
+plot(ax4L,t_trial_m,mn_nc,                              'Color',colOL,       'LineWidth',PS.lw_mean,'DisplayName','OL actual');
+plot(ax4L,t_trial_m,mean(pred_nc_m,     1,'omitnan'),   'Color',colPink_pred,   'LineWidth',PS.lw_fit, 'LineStyle','--','DisplayName','Pink');
+plot(ax4L,t_trial_m,mean(pred_nc_orange,1,'omitnan'),   'Color',colOrange_wb, 'LineWidth',PS.lw_fit, 'LineStyle','--','DisplayName','Orange');
+plot(ax4L,t_trial_m,mean(pred_nc_red,   1,'omitnan'),   'Color',colRed_wb,    'LineWidth',PS.lw_fit, 'LineStyle','--','DisplayName','Red');
 addStimPatch(ax4L, 0, dur_wb);  hold(ax4L,'off');
-lgd4L = legend(ax4L,'Box','off','Location','southwest','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-try; lgd4L.ItemTokenSize = [6 6]; catch; end
-title(ax4L,'Open-Loop','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-xlabel(ax4L,'Time (s)','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-ylabel(ax4L,'dF/F (%)','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-set(ax4L,'Box','off','TickDir','out','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
+lgd4L = legend(ax4L,'Location','southwest'); paperLegend(lgd4L);
+title(ax4L,'Open-Loop');
+xlabel(ax4L,'Time (s)','FontWeight','bold');
+ylabel(ax4L,'dF/F (%)','FontWeight','bold');
 
 % Right panel -- CL
 ax4R = axes(fig_wb4,'Position',[lm4+pw4+gx4, bm4, pw4, ph4]);  hold(ax4R,'on');
@@ -1214,18 +1213,16 @@ mn_wc = mean(actual_wc_m,1,'omitnan');
 se_wc = std(actual_wc_m,0,1,'omitnan') / sqrt(sum(~all(isnan(actual_wc_m),2)));
 fill(ax4R,[t_trial_m,fliplr(t_trial_m)],[mn_wc+se_wc,fliplr(mn_wc-se_wc)], ...
     colCL,'FaceAlpha',0.15,'EdgeColor','none','HandleVisibility','off');
-plot(ax4R,t_trial_m,mn_wc,                            'Color',colCL,     'LineWidth',PS_wb4.lw_mean,'DisplayName','CL actual');
-plot(ax4R,t_trial_m,mean(pred_wc_m,   1,'omitnan'),   'Color',colPink_pred,'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Pink');
-plot(ax4R,t_trial_m,mean(pred_wc_red, 1,'omitnan'),   'Color',colRed_wb, 'LineWidth',PS_wb4.lw_fit, 'LineStyle','--','DisplayName','Red');
+plot(ax4R,t_trial_m,mn_wc,                            'Color',colCL,     'LineWidth',PS.lw_mean,'DisplayName','CL actual');
+plot(ax4R,t_trial_m,mean(pred_wc_m,   1,'omitnan'),   'Color',colPink_pred,'LineWidth',PS.lw_fit, 'LineStyle','--','DisplayName','Pink');
+plot(ax4R,t_trial_m,mean(pred_wc_red, 1,'omitnan'),   'Color',colRed_wb, 'LineWidth',PS.lw_fit, 'LineStyle','--','DisplayName','Red');
 addStimPatch(ax4R, 0, dur_wb);  hold(ax4R,'off');
-lgd4R = legend(ax4R,'Box','off','Location','southwest','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-try; lgd4R.ItemTokenSize = [6 6]; catch; end
-title(ax4R,'Closed-Loop','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-xlabel(ax4R,'Time (s)','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-ylabel(ax4R,'dF/F (%)','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
-set(ax4R,'Box','off','TickDir','out','FontSize',PS_wb4.fs,'FontWeight',PS_wb4.fw);
+lgd4R = legend(ax4R,'Location','southwest'); paperLegend(lgd4R);
+title(ax4R,'Closed-Loop');
+xlabel(ax4R,'Time (s)','FontWeight','bold');
+ylabel(ax4R,'dF/F (%)','FontWeight','bold');
 
-exportgraphics(fig_wb4,'paper/images/figure4/wb_three_layers.pdf','ContentType','vector');
+paperExport(fig_wb4,'paper/images/figure4/wb_three_layers.pdf');
 fprintf('[WB-4] Saved wb_three_layers.pdf\n');
 
 
@@ -1265,7 +1262,6 @@ fprintf('[WB-5] MSE -- OL: %.3f  CL: %.3f  Optimal: %.3f\n', ...
 fprintf('[WB-5] CL/Optimal gap: %.2fx\n', gap_ratio);
 
 % Grouped bar: OL / CL / Optimal (mean +/- SEM)
-PS_wb5  = paperStyle();
 fig_wb5 = paperFig(6, 4);
 ax_wb5  = axes(fig_wb5,'Units','normalized','Position',[0.20 0.18 0.74 0.72]);
 hold(ax_wb5,'on');
@@ -1284,11 +1280,11 @@ for g = 1:3
 end
 hold(ax_wb5, 'off');
 set(ax_wb5, 'XTick', 1:3, 'XTickLabel', grp_labels, ...
-    'Box', 'off', 'TickDir', 'out', 'FontSize', PS_wb5.fs, 'FontWeight', PS_wb5.fw);
-ylabel(ax_wb5, 'MSE (\DeltaF/F)^2', 'FontSize', PS_wb5.fs, 'FontWeight', PS_wb5.fw);
+    'Box', 'off', 'TickDir', 'out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+ylabel(ax_wb5, 'MSE (\DeltaF/F)^2', 'FontSize', PS.fs, 'FontWeight', PS.fw);
 title(ax_wb5, sprintf('CL/Optimal gap: %.2fx', gap_ratio), ...
-    'FontSize', PS_wb5.fs, 'FontWeight', PS_wb5.fw);
+    'FontSize', PS.fs, 'FontWeight', PS.fw);
 
-exportgraphics(fig_wb5, 'paper/images/figure4/wb_mpc_gap.png', 'Resolution', 300);
+paperExport(fig_wb5, 'paper/images/figure4/wb_mpc_gap.png');
 fprintf('[WB-5] Saved wb_mpc_gap.png\n');
 

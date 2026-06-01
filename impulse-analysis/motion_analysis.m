@@ -1,6 +1,12 @@
-﻿% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
-% Run from brain_paper/ root directory.
+% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
+% Run from impulse-analysis/ directory.
 % Requires: load_experiments.m has been run first (allExperiments, selExp, t_win).
+
+PS = paperStyle();
+setPaperDefaults();
+
+assert(isfolder('../paper'), ...
+    'Run from impulse-analysis/ directory (current: %s)', pwd);
 
 %% Motion analysis parameters â€” set integration window here before running analysis sections
 % Motion energy is recomputed on-the-fly from the stored motTrace (Â±3 s).
@@ -195,14 +201,12 @@ hl_mv = xline(ax_mv, motThr_hi, 'k--', 'LineWidth', 0.8); hl_mv.HandleVisibility
 % title(ax_mv, sprintf('r = %.2f  p = %.3f', rA_m, pA_m), ...
     % 'FontSize', 6, 'FontWeight', 'bold');
 xlabel(ax_mv, sprintf('Mean motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), 'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_mv, '|Peak dev| (\DeltaF/F %)',  'FontSize', 6, 'FontWeight', 'bold');
-lg_mv = legend(ax_mv, 'Location', 'best', 'FontSize', 6);
-lg_mv.ItemTokenSize = [6 6];
-set(ax_mv, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
+ylabel(ax_mv, 'impulse prediction error',  'FontSize', 6, 'FontWeight', 'bold');
+lg_mv = legend(ax_mv, 'Location', 'best');
+paperLegend(lg_mv);
 hold(ax_mv, 'off');
-exportgraphics(fig_mv, ...
-    sprintf('paper/images/figure2/imp_motion_devscatter_%s_%s_en%d.pdf', mn_mot, td_mot, en_mot), ...
-    'ContentType', 'vector');
+paperExport(fig_mv, ...
+    fullfile(paperRoot, 'images', 'supplementary', sprintf('imp_motion_devscatter_%s_%s_en%d.png', mn_mot, td_mot, en_mot)));
 
 % ---- Figure 2 (pooled all sessions): motion z-score vs |Peak dev| ----
 % colour = session (expColors); marker = o no-motion, ^ motion
@@ -255,28 +259,27 @@ for k = 1:2
         'MarkerEdgeColor', 'none', 'HandleVisibility', 'off');
 end
 
-hLeg_p  = gobjects(nExp + 2, 1);
+% ghost plots for session colours (not shown in legend)
 for expIdx = 1:nExp
-    eCol = expColors(expIdx, :);
-    hLeg_p(expIdx) = plot(ax_mvp, nan, nan, 'o', ...
-        'MarkerFaceColor', eCol, 'MarkerEdgeColor', 'none', ...
-        'MarkerSize', 4, 'DisplayName', sprintf('Session %d', expIdx));
+    plot(ax_mvp, nan, nan, 'o', 'MarkerFaceColor', expColors(expIdx,:), ...
+        'MarkerEdgeColor', 'none', 'MarkerSize', 4, 'HandleVisibility', 'off');
 end
-% legend entries for marker shape
-hLeg_p(nExp+1) = plot(ax_mvp, nan, nan, 'o', 'MarkerFaceColor', [0.5 0.5 0.5], ...
+% legend entries: marker shape only
+hLeg_p = gobjects(2, 1);
+hLeg_p(1) = plot(ax_mvp, nan, nan, 'o', 'MarkerFaceColor', [0.5 0.5 0.5], ...
     'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','No motion');
-hLeg_p(nExp+2) = plot(ax_mvp, nan, nan, '^', 'MarkerFaceColor', [0.5 0.5 0.5], ...
+hLeg_p(2) = plot(ax_mvp, nan, nan, '^', 'MarkerFaceColor', [0.5 0.5 0.5], ...
     'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','Motion');
-hl_p = xline(ax_mvp, motThr_hi, 'k--', 'LineWidth', 0.8); hl_p.HandleVisibility = 'off';
+hl_p = xline(ax_mvp, motThr_hi, 'k--', 'Motion Threshold', 'LineWidth', 0.8, ...
+    'FontSize', 6, 'LabelVerticalAlignment', 'top', 'LabelHorizontalAlignment', 'right');
+hl_p.HandleVisibility = 'off';
 % title(ax_mvp, sprintf('All sessions  r = %.2f  p = %.3f', rP, pP), ...
 %     'FontSize', 6, 'FontWeight', 'bold');
-xlabel(ax_mvp, sprintf('Mean motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
+xlabel(ax_mvp, sprintf('Motion energy z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
     'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_mvp, '|Peak dev| (\DeltaF/F %)', 'FontSize', 6, 'FontWeight', 'bold');
-lg_mvp = legend(ax_mvp, hLeg_p(1:nExp+2), 'Location', 'best', 'FontSize', 6);
-lg_mvp.ItemTokenSize = [6 6];
-set(ax_mvp, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6);
+ylabel(ax_mvp, 'Impulse Prediction error', 'FontSize', 6, 'FontWeight', 'bold');
+lg_mvp = legend(ax_mvp, hLeg_p, 'Location', 'best');
+paperLegend(lg_mvp);
 hold(ax_mvp, 'off');
-exportgraphics(fig_mvp, ...
-    'paper/images/figure2/imp_motion_devscatter_all_sessions.pdf', ...
-    'ContentType', 'vector');
+paperExport(fig_mvp, ...
+    fullfile(paperRoot, 'images', 'figure2', 'imp_motion_devscatter_all_sessions.pdf'));
