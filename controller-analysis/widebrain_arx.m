@@ -5,6 +5,16 @@
 PS = paperStyle();
 setPaperDefaults();
 
+% Resolve paper/ root -- works whether run from brain_paper/ or controller-analysis/
+if exist(fullfile('paper', 'images'), 'dir')
+    paper_root = 'paper';
+elseif exist(fullfile('..', 'paper', 'images'), 'dir')
+    paper_root = fullfile('..', 'paper');
+else
+    paper_root = 'paper';
+    warning('widebrain_arx: cannot locate paper/ directory -- paths may be incorrect.');
+end
+
 %% Widebrain -- pixel selection
 % Define contralateral ROI grid. Re-run freely to adjust grid_rows/grid_cols.
 % When happy with the pixel map, run the SVD extraction cell below.
@@ -607,7 +617,7 @@ for axi = [ax1B ax1C ax1D]
     ylabel(axi,'dF/F (%)','FontSize',6,'FontWeight','bold');
     xlabel(axi,'Time (s)','FontSize',6,'FontWeight','bold');
 end
-paperExport(fig_wb1,'paper/images/figure4/wb_pink_4panel.pdf');
+paperExport(fig_wb1, fullfile(paper_root, 'images', 'figure4', 'wb_pink_4panel.pdf'));
 fprintf('[WB-1b] Saved wb_pink_4panel.pdf\n');
 
 
@@ -1118,7 +1128,7 @@ for iP_sp = 1:2
     end
 end
 
-paperExport(fig_spat,'paper/images/figure4/wb_spat_traces.png');
+paperExport(fig_spat, fullfile(paper_root, 'images', 'figure4', 'wb_spat_traces.png'));
 fprintf('[WB-1c] Saved wb_spat_traces.png\n');
 
 
@@ -1222,7 +1232,7 @@ title(ax4R,'Closed-Loop');
 xlabel(ax4R,'Time (s)','FontWeight','bold');
 ylabel(ax4R,'dF/F (%)','FontWeight','bold');
 
-paperExport(fig_wb4,'paper/images/figure4/wb_three_layers.pdf');
+paperExport(fig_wb4, fullfile(paper_root, 'images', 'figure4', 'wb_three_layers.pdf'));
 fprintf('[WB-4] Saved wb_three_layers.pdf\n');
 
 
@@ -1285,6 +1295,6 @@ ylabel(ax_wb5, 'MSE (\DeltaF/F)^2', 'FontSize', PS.fs, 'FontWeight', PS.fw);
 title(ax_wb5, sprintf('CL/Optimal gap: %.2fx', gap_ratio), ...
     'FontSize', PS.fs, 'FontWeight', PS.fw);
 
-paperExport(fig_wb5, 'paper/images/figure4/wb_mpc_gap.png');
+paperExport(fig_wb5, fullfile(paper_root, 'images', 'figure4', 'wb_mpc_gap.png'));
 fprintf('[WB-5] Saved wb_mpc_gap.png\n');
 

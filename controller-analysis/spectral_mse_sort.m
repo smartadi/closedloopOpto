@@ -5,6 +5,16 @@
 PS = paperStyle();
 setPaperDefaults();
 
+% Resolve paper/ root -- works whether run from brain_paper/ or controller-analysis/
+if exist(fullfile('paper', 'images'), 'dir')
+    paper_root = 'paper';
+elseif exist(fullfile('..', 'paper', 'images'), 'dir')
+    paper_root = fullfile('..', 'paper');
+else
+    paper_root = 'paper';
+    warning('spectral_mse_sort: cannot locate paper/ directory -- paths may be incorrect.');
+end
+
 %% Figures I & J -- Spectral heatmaps sorted by MSE (absolute power: S_bands)
 % ncFreqPow/wcFreqPow store raw FFT^2 power (no band/total normalization).
 % Old caches that only have ncFreqSpec (relative) are used as fallback.
@@ -148,7 +158,7 @@ end
 if ~isempty(ax_last)
     cb = colorbar(ax_last); cb.Label.String = cbar_label; cb.FontSize = 6;
 end
-paperExport(fig_I, 'paper/freq_heatmap_sessions.png');
+paperExport(fig_I, fullfile(paper_root, 'freq_heatmap_sessions.png'));
 fprintf('Figure I ready -- click any row to inspect that trial.\n');
 
 % --- Figure J: combined heatmap (all sessions pooled, raw MSE sort) ---
@@ -176,7 +186,7 @@ set(ax_cl, 'YDir','normal', 'Box','off', 'TickDir','out', 'FontSize', 6, 'YTickL
 xlabel(ax_cl, 'Frequency (Hz)', 'FontWeight','bold');
 title(ax_cl, 'Closed-Loop', 'FontSize', 6, 'FontWeight','bold');
 cb = colorbar(ax_cl); cb.Label.String = cbar_label; cb.FontSize = 6;
-paperExport(fig_J, 'paper/freq_heatmap_combined.png');
+paperExport(fig_J, fullfile(paper_root, 'freq_heatmap_combined.png'));
 
 % Figure K removed -- band-normalised view is redundant when using absolute power (S_bands).
 
@@ -280,6 +290,6 @@ if ~isempty(nc_all_m) && ~isempty(freqCtrs_m)
         'FontSize',6, 'FontWeight','bold');
     cb2 = colorbar(ax_cl2); cb2.Label.String = cbar_lbl_m; cb2.FontSize = 6;
 
-    paperExport(fig_J2, 'paper/freq_heatmap_motionclean.png');
+    paperExport(fig_J2, fullfile(paper_root, 'freq_heatmap_motionclean.png'));
     % fprintf('Figure J2 saved ->' paper/freq_heatmap_motionclean.png\n');
 end

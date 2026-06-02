@@ -2,9 +2,20 @@
 % Run from brain_paper/ root directory.
 % Requires: load_sessions.m has been run first (mouse, fields, tp, Mean_var_wc/nc, dur).
 
-%% F: Cross-session variance  (2.33" wide -- matches 1/3 page column)
 PS = paperStyle();
 setPaperDefaults();
+
+% Resolve paper/ root -- works whether run from brain_paper/ or controller-analysis/
+if exist(fullfile('paper', 'images'), 'dir')
+    paper_root = 'paper';
+elseif exist(fullfile('..', 'paper', 'images'), 'dir')
+    paper_root = fullfile('..', 'paper');
+else
+    paper_root = 'paper';
+    warning('variance_mse: cannot locate paper/ directory -- paths may be incorrect.');
+end
+
+%% F: Cross-session variance  (2.33" wide -- matches 1/3 page column)
 fig_F = paperFig(3, 3.5);
 
 lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
@@ -26,7 +37,7 @@ text(ax_var, -0.12, 0.5, {'Average of Session'; 'Variance across trials'}, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'FontSize', 6, 'FontWeight','bold', 'Color','k', 'Clipping','off');
 
-paperExport(fig_F, 'paper/images/figure3/all_variance_sessions.pdf');
+paperExport(fig_F, fullfile(paper_root, 'images', 'figure3', 'all_variance_sessions.pdf'));
 
 
 %% Fr: Cross-session OL/CL variance ratio -- pre / stim / post windows
@@ -91,7 +102,7 @@ for wi = 1:3
     end
 end
 
-paperExport(fig_Fr, 'paper/images/figure3/variance_ratio_by_window.pdf');
+paperExport(fig_Fr, fullfile(paper_root, 'images', 'figure3', 'variance_ratio_by_window.pdf'));
 
 %% Variance slope test -- OL: linear trend in variance across pre / stim / post windows
 % Three windows: pre (-3 to 0 s), stim (0 to dur s), post (dur to dur+3 s).
@@ -203,7 +214,7 @@ text(ax_ov, -0.10, 0.5, {'Variance across trials' ;'for all sessions'}, ...
     'Color','k', 'Clipping','off');
 paperAxes(ax_ov, 'XLength',1, 'YLength',0.01, 'XLabel','1 s', 'YLabel',' ');
 
-paperExport(fig_ov, 'paper/images/figure2/onset_variance_slope.pdf');
+paperExport(fig_ov, fullfile(paper_root, 'images', 'figure2', 'onset_variance_slope.pdf'));
 fprintf('Variance slope figure ready\n');
 
 %% G: Cross-session MSE violin  (7.0" wide -- fills full page width)
@@ -251,7 +262,7 @@ text(ax_mse, 0.5, -0.02, 'Sessions', ...
 % text(ax_mse, 0.0, 0.95, 'G', 'Units','normalized', 'FontSize', 6, ...
 %     'FontWeight','bold', 'Clipping','off');
 
-paperExport(fig_G, 'paper/images/figure3/all_MSE_sessions.pdf');
+paperExport(fig_G, fullfile(paper_root, 'images', 'figure3', 'all_MSE_sessions.pdf'));
 
 
 %% G2: Windowed MSE -- t = +1 to +3 s (Nick 2026-05-08) vs full window t = 0Ã¢â‚¬â€œ3 s
@@ -360,7 +371,7 @@ for k = 1:length(fields)
         ylabel(ax_s,'RMS MSE (\DeltaF/F)','FontSize',6,'FontWeight','bold');
     end
 end
-paperExport(fig_G2b,'paper/MSE_vs_trial_number.png');
+paperExport(fig_G2b, fullfile(paper_root, 'MSE_vs_trial_number.png'));
 
 
 %% G2r: OL/CL ratio by window -- 4 windows: pre / 0-1 s / 1-3 s / post
@@ -444,7 +455,7 @@ ax_g2r.XTick = [1 2 3 4];
 ax_g2r.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
 ylabel(ax_g2r, 'OL/CL RMS ratio', 'FontWeight','bold');
 lgd_g2r = legend(ax_g2r, 'Location','best'); paperLegend(lgd_g2r);
-paperExport(fig_G2r, 'paper/images/figure3/MSE_ratio_by_window.pdf');
+paperExport(fig_G2r, fullfile(paper_root, 'images', 'figure3', 'MSE_ratio_by_window.pdf'));
 
 
 %% G2v: Windowed MSE violin -- Option B (grouped per session, both windows)
@@ -503,4 +514,4 @@ patch(ax_gv,NaN,NaN,colB_gv,'FaceAlpha',al_e,'EdgeColor','none','DisplayName','C
 patch(ax_gv,NaN,NaN,colA_gv,'FaceAlpha',al_w,'EdgeColor','none','DisplayName','OL 1-3 s');
 patch(ax_gv,NaN,NaN,colB_gv,'FaceAlpha',al_w,'EdgeColor','none','DisplayName','CL 1-3 s');
 lgd_gv = legend(ax_gv,'Location','northeast'); paperLegend(lgd_gv);
-paperExport(fig_G2v,'paper/MSE_windowed_violin.png');
+paperExport(fig_G2v, fullfile(paper_root, 'MSE_windowed_violin.png'));

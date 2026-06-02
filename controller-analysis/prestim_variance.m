@@ -5,6 +5,16 @@
 PS = paperStyle();
 setPaperDefaults();
 
+% Resolve paper/ root -- works whether run from brain_paper/ or controller-analysis/
+if exist(fullfile('paper', 'images'), 'dir')
+    paper_root = 'paper';
+elseif exist(fullfile('..', 'paper', 'images'), 'dir')
+    paper_root = fullfile('..', 'paper');
+else
+    paper_root = 'paper';
+    warning('prestim_variance: cannot locate paper/ directory -- paths may be incorrect.');
+end
+
 %% Figures K1 & K2 -- Pre-stim dFk variance as trial sort key (all trials)
 % K1: OL|CL spectral heatmap sorted by 3-s pre-onset dFk variance, MSE shown as side strip
 % K2: pre-stim variance vs MSE scatter with regression slopes
@@ -116,7 +126,7 @@ if ~isempty(nc_all_k1) && ~isempty(freqCtrs_k1)
     set(ax_cl_ms, 'YDir','normal','Box','off','XTick',[],'YTickLabel',{},'FontSize',6);
     title(ax_cl_ms, 'MSE', 'FontSize',6, 'FontWeight','bold');
 
-    paperExport(fig_K1, 'paper/freq_heatmap_prestimvar.png');
+    paperExport(fig_K1, fullfile(paper_root, 'freq_heatmap_prestimvar.png'));
     % fprintf('Figure K1 saved ->' paper/freq_heatmap_prestimvar.png\n');
 
     % Version 2: 1/f-corrected heatmap (multiply each freq band by 1/f)
@@ -163,7 +173,7 @@ if ~isempty(nc_all_k1) && ~isempty(freqCtrs_k1)
     set(ax_cl_ms_1f, 'YDir','normal','Box','off','XTick',[],'YTickLabel',{},'FontSize',6);
     title(ax_cl_ms_1f, 'MSE', 'FontSize',6, 'FontWeight','bold');
 
-    paperExport(fig_K1_1f, 'paper/freq_heatmap_prestimvar_1f.png');
+    paperExport(fig_K1_1f, fullfile(paper_root, 'freq_heatmap_prestimvar_1f.png'));
 end
 
 % Figure K2 -- pre-stim variance vs MSE scatter
@@ -196,7 +206,7 @@ if ~isempty(nc_var_k1)
     xlabel('Pre-stim dFk variance (3 s)', 'FontWeight','bold', 'FontSize',6);
     ylabel('MSE  ||e||',                   'FontWeight','bold', 'FontSize',6);
     set(gca, 'Box','off', 'TickDir','out', 'FontSize',6);
-    paperExport(fig_K2, 'paper/prestimvar_mse.png');
+    paperExport(fig_K2, fullfile(paper_root, 'prestimvar_mse.png'));
     % fprintf('Figure K2 saved ->' paper/prestimvar_mse.pdf\n');
 end
 
@@ -478,7 +488,7 @@ if ~isempty(nc_all_k1m) && ~isempty(freqCtrs_k1m)
     set(ax_cl_msm, 'YDir','normal','Box','off','XTick',[],'YTickLabel',{},'FontSize',6);
     title(ax_cl_msm, 'MSE', 'FontSize',6, 'FontWeight','bold');
 
-    paperExport(fig_K1m, 'paper/freq_heatmap_prestimvar_motclean.png');
+    paperExport(fig_K1m, fullfile(paper_root, 'freq_heatmap_prestimvar_motclean.png'));
     % fprintf('Figure K1m saved ->' paper/freq_heatmap_prestimvar_motclean.png\n');
 end
 
@@ -512,7 +522,7 @@ if ~isempty(nc_var_k1m)
     xlabel('Pre-stim dFk variance (3 s)', 'FontWeight','bold', 'FontSize',6);
     ylabel('MSE  ||e||',                   'FontWeight','bold', 'FontSize',6);
     set(gca, 'Box','off', 'TickDir','out', 'FontSize',6);
-    paperExport(fig_K2m, 'paper/prestimvar_mse_motclean.png');
+    paperExport(fig_K2m, fullfile(paper_root, 'prestimvar_mse_motclean.png'));
     % fprintf('Figure K2m saved ->' paper/prestimvar_mse_motclean.pdf\n');
 end
 %% K1zm & K2zm -- Pre-stim variance sort: z-scored spectrum + quintile bars, motion-clean
@@ -728,7 +738,7 @@ if ~isempty(nc_all_kw) && ~isempty(freqCtrs_kw)
     set(ax_cl_msw, 'YDir','normal','Box','off','XTick',[],'YTickLabel',{},'FontSize',6);
     title(ax_cl_msw, 'MSE', 'FontSize',6, 'FontWeight','bold');
 
-    paperExport(fig_K1w, 'paper/freq_heatmap_pretrial_var.png');
+    paperExport(fig_K1w, fullfile(paper_root, 'freq_heatmap_pretrial_var.png'));
     % fprintf('Figure K1w saved ->' paper/freq_heatmap_pretrial_var.png\n');
 end
 
@@ -762,7 +772,7 @@ if ~isempty(nc_var_kw)
     xlabel('dFk variance (pre+trial, 6 s)', 'FontWeight','bold', 'FontSize',6);
     ylabel('MSE  ||e||',                    'FontWeight','bold', 'FontSize',6);
     set(gca, 'Box','off', 'TickDir','out', 'FontSize',6);
-    paperExport(fig_K2w, 'paper/pretrial_var_mse.png');
+    paperExport(fig_K2w, fullfile(paper_root, 'pretrial_var_mse.png'));
     % fprintf('Figure K2w saved ->' paper/pretrial_var_mse.pdf\n');
 end
 

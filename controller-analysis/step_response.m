@@ -2,9 +2,20 @@
 % Run from brain_paper/ root directory.
 % Requires: load_sessions.m has been run first (mouse, fields, tp, Mean_var_wc/nc, dur).
 
-%% H: All-session trial average
 PS = paperStyle();
 setPaperDefaults();
+
+% Resolve paper/ root -- works whether run from brain_paper/ or controller-analysis/
+if exist(fullfile('paper', 'images'), 'dir')
+    paper_root = 'paper';
+elseif exist(fullfile('..', 'paper', 'images'), 'dir')
+    paper_root = fullfile('..', 'paper');
+else
+    paper_root = 'paper';
+    warning('step_response: cannot locate paper/ directory -- paths may be incorrect.');
+end
+
+%% H: All-session trial average
 fig_H = paperFig(3, 4);
 
 lm_h = 0.18; rm_h = 0.05; bm_h = 0.12; tm_h = 0.08;
@@ -45,7 +56,7 @@ hold(ax_H, 'off');
 lgd_H = legend(ax_H, {'Open-Loop', 'Closed-Loop'}, 'Location','northeast');
 paperLegend(lgd_H);
 paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','MSE dF/F');
-paperExport(fig_H, 'paper/images/figure3/all_average_sessions.pdf');
+paperExport(fig_H, fullfile(paper_root, 'images', 'figure3', 'all_average_sessions.pdf'));
 
 
 
@@ -159,7 +170,7 @@ text(-0.1-3, 10, {'Variance', 'across trials'}, ...
 
 
 % shortCornerAxes_plot(gca,'Frac',0.15,'XLabel','Time','YLabel','dF/F','LineWidth',5,'LabelGap',0.05)
-paperExport(fig, 'paper/images/figure2/step_response.pdf');
+paperExport(fig, fullfile(paper_root, 'images', 'figure2', 'step_response.pdf'));
 
 
 
@@ -277,7 +288,7 @@ xl.Color = 'k';
 lgd = legend(ax, hLegend, legTxt, 'Color','none');
 paperLegend(lgd);
 lgd.AutoUpdate = 'off';
-paperExport(fig, 'paper/spont_variance.png');
+paperExport(fig, fullfile(paper_root, 'spont_variance.png'));
 
 
 
