@@ -5,6 +5,16 @@
 PS = paperStyle();
 setPaperDefaults();
 
+% Resolve paper/ root -- works whether run from brain_paper/ or controller-analysis/
+if exist(fullfile('paper', 'images'), 'dir')
+    paper_root = 'paper';
+elseif exist(fullfile('..', 'paper', 'images'), 'dir')
+    paper_root = fullfile('..', 'paper');
+else
+    paper_root = 'paper';
+    warning('motion_analysis: cannot locate paper/ directory -- paths may be incorrect.');
+end
+
 %% Pre-stim state vs trial MSE -- OL/CL all sessions pooled
 % Scientific question: does trial MSE scale with how far Î”F/F was from the
 % reference at stim onset?  OL: no feedback â†’ expect positive slope.
@@ -72,7 +82,7 @@ xlabel(ax_ps, '|{\DeltaF/F} at onset \minus ref| quartile', 'FontWeight', 'bold'
 ylabel(ax_ps, 'Trial MSE (t = 0 to +3 s)', 'FontWeight', 'bold');
 hold(ax_ps, 'off');
 
-paperExport(fig_ps_mse, 'paper/images/figure4/prestim_dev_vs_mse.pdf');
+paperExport(fig_ps_mse, fullfile(paper_root, 'images', 'figure4', 'prestim_dev_vs_mse.pdf'));
 
 %% Motion vs MSE -- three analysis modes
 % onset_col is derived dynamically per session:
@@ -173,7 +183,7 @@ for m = 1:length(motModes)
 
     xlabel(ax, 'Motion (z-scored)', 'FontWeight','bold', 'FontSize', 6);
     ylabel(ax, 'MSE ||e||',         'FontWeight','bold', 'FontSize', 6);
-    paperExport(figS, sprintf('paper/motion_scatter_%s.png', mode.label));
+    paperExport(figS, fullfile(paper_root, sprintf('motion_scatter_%s.png', mode.label)));
 
     % pooled quartile figure for this mode
     figQ = figure('Color','w', 'Units','centimeters', 'Position',[0 0 13 10]);
@@ -197,7 +207,7 @@ for m = 1:length(motModes)
     xlabel(sprintf('Motion quartile -- %s', strrep(mode.label,'_',' ')), 'FontWeight','bold');
     ylabel('MSE  ||e||', 'FontWeight','bold');
     set(gca, 'Box','off', 'TickDir','out');
-    paperExport(figQ, sprintf('paper/motion_quartile_%s.png', mode.label));
+    paperExport(figQ, fullfile(paper_root, sprintf('motion_quartile_%s.png', mode.label)));
 
     % ---- paper panel (combined mode only) â†’ Figure 4 ----
     if strcmp(mode.label, 'combined')
@@ -216,7 +226,7 @@ for m = 1:length(motModes)
         paperLegend(lgd_qp);
         xlabel(ax_qp, 'Motion quartile (combined window)', 'FontWeight', 'bold');
         ylabel(ax_qp, 'MSE ||e|| (t = 0 to +3 s)', 'FontWeight', 'bold');
-        paperExport(figQp, 'paper/images/figure4/motion_quartile_combined.pdf');
+        paperExport(figQp, fullfile(paper_root, 'images', 'figure4', 'motion_quartile_combined.pdf'));
     end
 end
 
@@ -245,7 +255,7 @@ legend('Box','off', 'Location','eastoutside', 'FontSize',6, 'Interpreter','none'
 xlabel('Time (s)',           'FontWeight','bold');
 ylabel('Motion (z-scored)',  'FontWeight','bold');
 set(gca, 'Box','off', 'TickDir','out');
-paperExport(fig, 'paper/motion_traces.png');
+paperExport(fig, fullfile(paper_root, 'motion_traces.png'));
 
 %% Combined motion vs MSE -- all sessions pooled (combined window)
 iMode = motModes(1);   % 2 s pre + full trial
@@ -301,7 +311,7 @@ legend('Box','off', 'Location','northwest', 'FontSize',6, 'FontWeight','bold');
 xlabel('Motion (z-scored)', 'FontWeight','bold', 'FontSize',6);
 ylabel('MSE  ||e||',        'FontWeight','bold', 'FontSize',6);
 set(gca, 'Box','off', 'TickDir','out', 'FontSize',6);
-paperExport(figC, 'paper/motion_mse_combined.png');
+paperExport(figC, fullfile(paper_root, 'motion_mse_combined.png'));
 
 %% Onset deviation vs windowed MSE scatter (fig_onset_dev)
 % Scientific question: does OL MSE increase steeply with initial deviation
@@ -393,7 +403,7 @@ xlabel(ax_od, '|{\DeltaF/F} at stim onset| (%)',  'FontWeight','bold');
 ylabel(ax_od, 'Trial MSE (t=+1 to +3 s)',          'FontWeight','bold');
 hold(ax_od, 'off');
 
-paperExport(fig_onset_dev, 'paper/onset_dev_vs_mse.png');
+paperExport(fig_onset_dev, fullfile(paper_root, 'onset_dev_vs_mse.png'));
 fprintf('onset_dev_vs_mse: OL slope=%.4f+/-%.4f r2=%.3f  CL slope=%.4f+/-%.4f r2=%.3f\n', ...
     pNC_od(1), slope_se_NC_od, rSq_NC_od, pWC_od(1), slope_se_WC_od, rSq_WC_od);
 
