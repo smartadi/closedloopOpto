@@ -556,25 +556,45 @@ if pX ~= 0
     warning('[CP-IMP] assumes instantaneous model (pX=0); current pX=%d.', pX);
 end
 
-% RESIDUAL is the adopted impulse estimate (2026-06-15). With decontam=false the
-% recovered impulse = res_imp = actual - raw_beta prediction. Held-out validation
-% (paper/cp_val_residual_vs_decontam.png) showed this is STABLE: monotonic
-% dose-response, flat baseline, correct sign, no overshoot. Both decontam paths
-% below (pca/kernel) over-subtract PER-AMPLITUDE -- the prediction flips positive
-% at some amplitudes (e.g. 2.7V), see paper/cp_val_peramp_pca_rescue.png -- so they
-% are kept only as deprecated fallbacks. CAVEAT: residual is a LOWER BOUND on the
-% true stim effect (contra is itself stim-driven, so raw_beta legitimately explains
-% away the shared portion of the dip). True impulse lies between residual and actual.
-decontam = false;         % false -> residual (actual - raw beta), ADOPTED.
-                          % true  -> subtract bleed in neg_win (deprecated, unstable).
+% DECONTAM: subtract the stim bleed from contra in neg_win so the residual =
+% pure stim response. Two estimates available:
+%   - decontam=false -> RESIDUAL (actual - raw_beta). Stable lower bound on the
+%     stim effect (recovers ~21% of dip), monotonic, flat baseline. Caveat: it is
+%     a LOWER BOUND (contra is itself stim-driven so raw_beta explains away the
+%     shared dip portion). True impulse lies between residual and actual.
+%   - decontam=true  -> project out the artifact subspace in neg_win (pca) or
+%     subtract the per-amplitude onset mean (kernel). Recovers closer to the full
+%     dip and stays smooth through the impulse (pca), at the cost of per-amplitude
+%     stability. With pca_per_amp=true the PCA basis is built PER AMPLITUDE (each
+%     amplitude's own dip-window epoch) -> per-amplitude correction, which fixes
+%     the pooled-basis over-subtraction seen at mid amplitudes (e.g. 2.7V; see
+%     paper/cp_val_peramp_pca_rescue.png). In-sample basis uses ALL trials of the
+%     amplitude (not a held-out split) so it is far less noisy than the rescue test.
+decontam = true;          % true -> decontaminated prediction
 neg_win  = [0 0.30];      % window (s) where contra is suppressed = the stim dip.
                           % Outside this, contra predicts normally (post-dip
                           % recovery is explained, not isolated). Tune to the dip.
-decontam_mode = 'pca';    % DEPRECATED (decontam=false adopted). 'pca' = per-trial
-                          % subspace projection, 'kernel' = per-amplitude mean
-                          % subtraction. Both over-subtract per-amplitude on held-out
-                          % validation; retained only for diagnostic comparison.
-n_art_pca = 1;            % # PCA artifact components (dip-window basis; PC1~84%).
+decontam_mode = 'scaledkernel';   % ADOPTED. Subtract kernel_alpha * (per-amplitude
+                          % onset-mean artifact, tapered) from contra. beta*(full
+                          % artifact)=the bleed, so scaling by alpha<1 can NEVER
+                          % overshoot (convex) -> NO per-amplitude flips, and alpha<1
+                          % leaves natural dynamics (no full switch-off). Stable +
+                          % smooth + per-amplitude. Leaves ~ (1-alpha)*bleed residual.
+                          %   'pca'    = artifact-subspace projection. REJECTED: PCA
+                          %     orders modes by artifact variance not by beta-weight,
+                          %     so low-rank recon mis-scales through beta and FLIPS
+                          %     positive per-amplitude (2.1/3.2/4.3/4.9V), pooled or
+                          %     per-amp, any rank. See paper/cp_decontam_pca_vs_kernel.
+                          %   'kernel' = subtract full artifact (alpha=1, no taper):
+                          %     exact zero bleed but switches contra off + boundary step.
+                          %   false (decontam=false) = residual (actual-raw beta), the
+                          %     stable LOWER BOUND alternative.
+kernel_alpha = 0.8;       % scaledkernel: fraction of bleed to remove (0..1). 0.8 ->
+                          % ~15% residual bleed at all amplitudes; 1.0 == kernel.
+taper_win = [0.20 0.40];  % scaledkernel: cosine ramp 1->0 over this window past the
+                          % dip, so subtraction fades out smoothly (kills boundary step).
+pca_per_amp  = true;      % pca only: per-amplitude basis vs single pooled basis.
+n_art_pca = 1;            % pca only: # PCA artifact components.
 
 pre_imp  = Fs;                       % 1 s pre-onset
 post_imp = Fs;                       % 1 s post-onset
@@ -590,40 +610,71 @@ act_imp  = cell(nAmp_imp,1);   % actual (onset-baselined)
 prd_imp  = cell(nAmp_imp,1);   % prediction AFTER decontam
 prr_imp  = cell(nAmp_imp,1);   % prediction BEFORE decontam (raw, contaminated)
 res_imp  = cell(nAmp_imp,1);   % residual = actual - (active) prediction
-art_imp  = cell(nAmp_imp,1);   % per-amplitude onset-locked contra artifact
+art_imp  = cell(nAmp_imp,1);   % per-amplitude onset-locked contra artifact (hard neg_win)
+art_tap_imp = cell(nAmp_imp,1);% per-amplitude artifact, cosine-tapered (scaledkernel)
 
 % ---- Pass 1: per-amplitude onset-locked contra artifact (the stim bleed) -----
 art_raw_imp = build_onset_artifact(nAmp_imp, nzMask_cp, imp_data, t_full, X_cp_m, ...
     nPred_cp, pre_imp, post_imp + 1, nF_m);
+% Taper weight: 1 from onset to taper_win(1), cosine ramp 1->0 over taper_win, 0
+% after; 0 pre-onset. Smooth fade-out removes the hard-edge boundary step.
+taper_w = ones(1, nImp);
+tr = (t_imp >= taper_win(1) & t_imp <= taper_win(2));
+taper_w(tr) = 0.5 * (1 + cos(pi * (t_imp(tr) - taper_win(1)) / (taper_win(2) - taper_win(1))));
+taper_w(t_imp > taper_win(2)) = 0;
+taper_w(t_imp < 0) = 0;
 for ia = 1:nAmp_imp
     tmp = art_raw_imp{ia};
     tmp(~neg_mask, :) = 0;    % suppress contra in dip window only; else untouched
     art_imp{ia} = tmp;
+    tt = art_raw_imp{ia};
+    tt(t_imp < 0, :) = 0;     % keep onset-locked mean post-onset, then taper it
+    art_tap_imp{ia} = tt .* taper_w(:);
 end
 
-% ---- PCA artifact basis (decontam_mode='pca'): pooled dip-window epoch --------
-% Build the mean stim artifact epoch over the dip window, pooled across all
-% nonzero-amplitude trials, then PCA over time -> orthonormal spatial (mode-space)
-% artifact basis. Restricting the epoch to the dip makes the basis artifact-
-% specific (not the recovery), so projecting it out costs no post-dip prediction.
+% ---- PCA artifact basis (decontam_mode='pca'): dip-window epoch ---------------
+% Build the mean stim artifact epoch over the dip window, then PCA over time ->
+% orthonormal spatial (mode-space) artifact basis. Restricting the epoch to the
+% dip makes the basis artifact-specific (not the recovery), so projecting it out
+% costs no post-dip prediction. Two bases are built:
+%   Ab_pca         -- pooled across all nonzero-amplitude trials (single basis)
+%   Ab_pca_amp{ia} -- PER AMPLITUDE, from that amplitude's own dip epoch
+% pca_per_amp selects which is used per trial in Pass 2. The per-amplitude basis
+% uses ALL trials of the amplitude (in-sample), so it is well-conditioned here.
 dip_rows = (t_imp >= neg_win(1) & t_imp <= neg_win(2));
-A_epoch  = zeros(nImp, nPred_cp); ne_pca = 0;
+A_epoch     = zeros(nImp, nPred_cp); ne_pca = 0;
+A_epoch_amp = cell(nAmp_imp,1); ne_amp = zeros(nAmp_imp,1);
+Ab_pca_amp  = cell(nAmp_imp,1); expl1_amp = nan(nAmp_imp,1);
 for ia = 1:nAmp_imp
     if ~nzMask_cp(ia); continue; end
+    Aa = zeros(nImp, nPred_cp);
     for s = imp_data.startTimes{ia}(:)'
         [~, ion] = min(abs(t_full - s)); g = ion-pre_imp : ion+post_imp;
         if g(1) < 1 || g(end) > min(nFrames, nF_m); continue; end
         seg = X_cp_m(g, 1:nPred_cp);
-        A_epoch = A_epoch + (seg - mean(seg(pre_bl,:), 1, 'omitnan'));
-        ne_pca = ne_pca + 1;
+        dseg = seg - mean(seg(pre_bl,:), 1, 'omitnan');
+        A_epoch = A_epoch + dseg;  ne_pca = ne_pca + 1;
+        Aa      = Aa      + dseg;  ne_amp(ia) = ne_amp(ia) + 1;
     end
+    A_epoch_amp{ia} = Aa / max(ne_amp(ia),1);
 end
 A_epoch = A_epoch / max(ne_pca, 1);
 [coeff_pca, ~, ~, ~, expl_pca] = pca(A_epoch(dip_rows, :));
 n_art_pca = max(1, min(n_art_pca, size(coeff_pca, 2)));
-Ab_pca = coeff_pca(:, 1:n_art_pca)';            % [n_art × nPred] orthonormal basis
-fprintf('[CP-IMP] decontam_mode=%s  | PCA dip-artifact: PC explained=[%s]%% (using %d)\n', ...
-    decontam_mode, sprintf('%.0f ', expl_pca(1:min(4,numel(expl_pca)))), n_art_pca);
+Ab_pca = coeff_pca(:, 1:n_art_pca)';            % [n_art × nPred] pooled basis
+% Per-amplitude bases (fall back to pooled if an amplitude is too sparse).
+for ia = 1:nAmp_imp
+    if ~nzMask_cp(ia) || ne_amp(ia) < 3
+        Ab_pca_amp{ia} = Ab_pca; continue;
+    end
+    [cfa, ~, ~, ~, eva] = pca(A_epoch_amp{ia}(dip_rows, :));
+    na = max(1, min(n_art_pca, size(cfa,2)));
+    Ab_pca_amp{ia} = cfa(:, 1:na)';
+    expl1_amp(ia)  = eva(1)/sum(eva)*100;
+end
+fprintf('[CP-IMP] decontam_mode=%s per_amp=%d | pooled PC explained=[%s]%% | per-amp PC1=[%s]%%\n', ...
+    decontam_mode, pca_per_amp, sprintf('%.0f ', expl_pca(1:min(4,numel(expl_pca)))), ...
+    sprintf('%.0f ', expl1_amp(nzMask_cp)));
 
 % ---- Pass 2: prediction (raw + decontam), actual, residual -------------------
 for ia = 1:nAmp_imp
@@ -642,13 +693,21 @@ for ia = 1:nAmp_imp
             % Per-trial: project the contra signal onto the artifact subspace
             % within neg_win and subtract. Removes only the rank-n_art_pca
             % artifact direction; neural subspace (natural dynamics) preserved.
+            % pca_per_amp -> use this amplitude's own basis (per-amplitude corr).
+            if pca_per_amp, Ab_use = Ab_pca_amp{ia}; else, Ab_use = Ab_pca; end
             seg   = X_cp_m(g, 1:nPred_cp);
             bc    = seg - mean(seg(pre_bl,:), 1, 'omitnan');
             recon = zeros(nImp, nPred_cp);
-            recon(neg_mask,:) = (bc(neg_mask,:) * Ab_pca') * Ab_pca;
+            recon(neg_mask,:) = (bc(neg_mask,:) * Ab_use') * Ab_use;
             Xw(:,1:nPred_cp) = seg - recon;
+        elseif decontam && strcmpi(decontam_mode,'scaledkernel')
+            % ADOPTED: subtract kernel_alpha * tapered per-amplitude artifact.
+            % Convex scaling of the bleed -> cannot overshoot (no flip); taper
+            % fades the subtraction out smoothly past the dip (no boundary step);
+            % alpha<1 keeps natural dynamics (no switch-off).
+            Xw(:,1:nPred_cp) = Xw(:,1:nPred_cp) - kernel_alpha * art_tap_imp{ia};
         elseif decontam
-            % Kernel mode: subtract per-amplitude onset-locked mean (in neg_win).
+            % Kernel mode: subtract full per-amplitude onset-locked mean (in neg_win).
             Xw(:,1:nPred_cp) = Xw(:,1:nPred_cp) - art;
         end
         % decontam=false: Xw left raw, so yp_dec == yp_raw and the residual
