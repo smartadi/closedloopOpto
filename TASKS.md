@@ -53,7 +53,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ### Contra→ipsi prediction framework (impulse) — from JOURNAL 2026-06-16
 - [ ] Solidify ONE prediction approach on non-stim data: benchmark current instantaneous OLS vs Zhiwen Ye 2023 method vs PCA-based; pick the winner on held-out spontaneous R² — `impulse-analysis/contra_prediction.m`
 - [ ] Compare against Ye et al. 2023 instantaneous contra→ipsi code/method directly (`C:\Users\aditya\Documents\projects\YE-et-al-2023-spirals\`) — confirm our pX=0 map matches their formulation
-- [ ] Quantify per-trial prediction quality vs motion AND pre-stim variance / delta power during stim — which trials predict well vs badly (residual magnitude as outcome)
+- [ ] Per-trial prediction error → brain-state mapping (JOURNAL 2026-06-16). Define prediction = contra_pred (pink) + TF impulse for that amplitude (red); error = deviation of actual trial from red over stim..stim+200ms (0-200ms dip window). Map error to motion AND motion-excluded pre-stim variance / delta power. NOTE: CP-4 in contra_prediction.m ALREADY computes red4=pink+TF, per-trial err4, and covariates (mot4, pvar4, dpow_pre4, dpow_stim4) — but err window is 0-1s (change to 0-200ms) and pink uses old full-kernel decontam (reconcile to α=1 baseline). This REPLACES the old per-trial error = deviation from trial-averaged-response-per-amp method.
 - [ ] Generalize the contra→ipsi setup into a reusable framework callable from controller-level analysis (not just impulse)
 - [ ] (decision pending) TF fit on the residual dip → add learned impulse response on top of the contra prediction at trial level
 

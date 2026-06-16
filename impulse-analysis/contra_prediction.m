@@ -852,9 +852,14 @@ end
 
 eval_end_s  = 1.0;
 eval_frames = round(eval_end_s * Fs);
-iEval       = 1:eval_frames;
+iEval       = 1:eval_frames;           % 0-1 s window (R^2, trace display)
 tEval       = (0:eval_frames-1) / Fs;
+err_end_s   = 0.2;                      % prediction-error window = stim..stim+200 ms
+iErr        = 1:(round(err_end_s*Fs)+1);% 0-200 ms (the dip), maps to brain state
 nAmp_cp4    = numel(uAmp_cp);
+cp4_alpha   = 1.0;                      % full decontam for the no-stim baseline (pink):
+                                        % red = pink + full TF, so pink must be bleed-free
+                                        % (alpha=1) to avoid double-counting the stim effect.
 
 % ── [CP-4a] Contra artifact check ─────────────────────────────────────────────
 nPad_a4 = round(0.5 * Fs);
@@ -891,6 +896,14 @@ fprintf('[CP-4a] Contra artifact: max_dev=%.4f  prestim_SD=%.4f  ratio=%.2f  dec
 art_raw_4      = build_onset_artifact(nAmp_cp4, nzMask_cp, imp_data, t_full, X_cp_m, ...
     nPred_cp, nPad_a4, outlen, nF_m);
 art_shape4_amp = cellfun(@(a) a(nPad_a4+1:end, :), art_raw_4, 'UniformOutput', false);
+% Cosine-taper the post-onset artifact (same scheme as CP-IMP scaledkernel) so the
+% bleed is removed only in the dip + ramp and post-dip contra dynamics are kept.
+t_post4 = (0:outlen-1) / Fs;
+w4      = ones(1, outlen);
+tr4     = (t_post4 >= taper_win(1) & t_post4 <= taper_win(2));
+w4(tr4) = 0.5 * (1 + cos(pi * (t_post4(tr4) - taper_win(1)) / (taper_win(2) - taper_win(1))));
+w4(t_post4 > taper_win(2)) = 0;
+art_tap4_amp = cellfun(@(a) a .* w4(:), art_shape4_amp, 'UniformOutput', false);
 
 % ── [CP-4b] TF impulse response per amplitude ─────────────────────────────────
 try; nPre4 = numel(pole(best_sys)) + numel(zero(best_sys)) + 4; catch; nPre4 = 20; end
@@ -953,7 +966,7 @@ for ia4 = 1:nAmp_cp4
         X_win4 = X_cp_m(i0w4:i1w4, :);
 
         if do_decontam4
-            art_ia4 = art_shape4_amp{ia4};
+            art_ia4 = cp4_alpha * art_tap4_amp{ia4};   % tapered, alpha=1 (full baseline)
             n_sub4  = min(outlen, size(art_ia4, 1));
             X_win4(pX+1:pX+n_sub4, 1:nPred_cp) = ...
                 X_win4(pX+1:pX+n_sub4, 1:nPred_cp) - art_ia4(1:n_sub4, :);
@@ -971,7 +984,7 @@ for ia4 = 1:nAmp_cp4
         act_ia4(j4,:)  = act_j4';
         pink_ia4(j4,:) = pink_j4';
         red_ia4(j4,:)  = red_j4';
-        err_ia4(j4)    = mean((act_j4(iEval) - red_j4(iEval)).^2, 'omitnan');
+        err_ia4(j4)    = mean((act_j4(iErr) - red_j4(iErr)).^2, 'omitnan');  % 0-200ms
 
         i_pv0 = ion4 - Fs; i_pv1 = ion4 - 1;
         if i_pv0 >= 1
@@ -1043,7 +1056,7 @@ vDstm4 = isfinite(err_all4) & isfinite(dstim_all4)& motExcl4;
 [r4_dpre, p4_dpre] = corr(err_all4(vDpre4), dpre_all4(vDpre4),  'rows','complete');
 [r4_dstm, p4_dstm] = corr(err_all4(vDstm4), dstim_all4(vDstm4), 'rows','complete');
 
-fprintf('[CP-4e] Prediction error correlations:\n');
+fprintf('[CP-4e] Prediction error (MSE 0-200ms) correlations:\n');
 fprintf('  vs Motion (all):              r=%+.3f  p=%.4f  n=%d\n',r4_mot, p4_mot, sum(vMot4));
 fprintf('  vs Pre-stim var (motexcl):    r=%+.3f  p=%.4f  n=%d\n',r4_pv,  p4_pv,  sum(vPV4));
 fprintf('  vs Pre-stim delta (motexcl):  r=%+.3f  p=%.4f  n=%d\n',r4_dpre,p4_dpre,sum(vDpre4));

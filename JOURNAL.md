@@ -17,6 +17,12 @@ Newest entry on top.
 
 ---
 ### 2026-06-16 
+
+#### Regarging prediction vs brain states,
+- Earlier we had an analysis where we did prediction error per trial on impulse responses as deviation of trial response from trial averaged response on that amp.
+- with this new decontaminated version, should we instead add a TF based impulse reponse(learned on trail averaged for that amp, so same for that amp) and the contra pred + tf amp as prediction vs what happended on trial as actual. the deviation on the stim to stim + 200ms as the pred error and we map that to the states(motion and motion excluded prestim var/ delta power)  
+↳ gleaned: TASKS#Contra→ipsi framework — refined per-trial-error definition (red=contra+TF vs actual, 0-200ms) mapped to brain states; CP-4 already computes red4/err4/covariates (needs 0-200ms window + α=1 baseline). Answer = YES, do it this way.
+
 #### Focus on contra to ipsi prediction model.
 - The goal is to be able to use contra activity to predict the ipsi 21 by 21 kernel. This has been shown to work really well by just using instantaneous activity by Zhiwen ye(folder:: C:\Users\aditya\Documents\projects\YE-et-al-2023-spirals\2023.12.07.570517v3.full.pdf, code exists alongside).
 - We are currently using a OLS type regressor, I want to solidify one single approach either OLS, one used by Zhiwen or PCA based, which ever wins best on non stim data.
