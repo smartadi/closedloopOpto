@@ -2,8 +2,21 @@
 
 Single source of truth for open work. Updated after each session or meeting.
 Findings that are done live in FINDINGS.md. Meeting context lives in MEETINGS.md.
+Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ---
+
+## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
+
+<!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-06-15 — Set up JOURNAL.md diary layer + Recently-done section (project-management refactor)
+
+---
+
+## Impulse Prediction plan
+- Use pre-trial contralateral widebrain activity to predict pre-trial(stim- 6sec to stim-(1frame)) ipsi lateral pixel(primary pixel kernel which we use for df/f). This is a one to one mapping where we are not forecasting but just using contra to predict ipsi
+- Use this learning mapping we will predict the impulse response(stim-1sec to stim +2sec) of primary pixel. The impulse is applied near primary pixel so it does not affect the contra region. Now taking the contralateral activity we will get a baseline activity of ipsi during trial without impulse response added, so we will use the learned tf model to predict the impulse response by adding it to the prediction.
+- Note that contra hemishpere may see effects of impulse as some impulse activity may bleed over, I want to figure out if this is happening and then come up with a plan to predict activity during stim as if stim was not actually there(from contra).
 
 ## 🔴 Blocking submission
 
@@ -25,6 +38,24 @@ Findings that are done live in FINDINGS.md. Meeting context lives in MEETINGS.md
 ---
 
 ## 🟡 Next sprint
+
+### Bilateral analysis — AL_0048 (new sub-area)
+- [ ] Fill in session registry in `bilateral-analysis/load_bilateral.m` as experiments are collected
+- [ ] Confirm `BREGMA_COL` (input_params column for galvo bregma X) and set in `load_bilateral.m`
+- [ ] Decide stim detection mode (`STIM_MODE`: A / B / C) once first session is inspected
+- [ ] Confirm reference polarity from first experiment; adjust `SIGN_L` / `SIGN_R` if needed
+- [ ] Run `ol_characterization.m` on first impulse + step sessions → get OL time constants per side
+- [ ] Run `cl_constant_ref.m` → baseline CL MSE per side
+- [ ] Run `cl_tuning.m` → grid sweep + gradient descent for optimal Kp/Ki per side
+- [ ] Run `cl_sinewave.m` → feedforward benefit quantification
+- [ ] Run `compare_sides.m` → cross-side summary figure
+
+### Contra→ipsi prediction framework (impulse) — from JOURNAL 2026-06-16
+- [ ] Solidify ONE prediction approach on non-stim data: benchmark current instantaneous OLS vs Zhiwen Ye 2023 method vs PCA-based; pick the winner on held-out spontaneous R² — `impulse-analysis/contra_prediction.m`
+- [ ] Compare against Ye et al. 2023 instantaneous contra→ipsi code/method directly (`C:\Users\aditya\Documents\projects\YE-et-al-2023-spirals\`) — confirm our pX=0 map matches their formulation
+- [ ] Quantify per-trial prediction quality vs motion AND pre-stim variance / delta power during stim — which trials predict well vs badly (residual magnitude as outcome)
+- [ ] Generalize the contra→ipsi setup into a reusable framework callable from controller-level analysis (not just impulse)
+- [ ] (decision pending) TF fit on the residual dip → add learned impulse response on top of the contra prediction at trial level
 
 ### New analyses
 - [ ] Implement three-layer contralateral prediction model (pink/orange/red) — see FINDINGS.md — `plottingScript.m`
