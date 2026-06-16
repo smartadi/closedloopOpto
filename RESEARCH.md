@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-16 — contra_prediction: full run with residual default — guard verified, Ye benchmark, OLS wins
+**Found:** Ran `impulse-analysis/contra_prediction.m` end-to-end with `decontam=false` (committed 6afcff0). (1) Guard works: CP-IMP prints raw_pred==decontam_pred at every amplitude (bleed % identical), confirming the kernel branch no longer fires when decontam off → residual = actual−raw β. (2) CP-FIT held-out R²=0.900. (3) Ye benchmark (CP-RRR): OLS-200 CV R²=0.900 vs RRR/PCR r*=100 CV R²=0.890 — OLS-200 wins marginally (RRR at full rank IS OLS). Ye's ~16-comp plateau does NOT replicate: rank sweep climbs to ~100 comps (single focal-pixel target is higher-dim than Ye's hemisphere field). Both well-conditioned (Gram cond 50–62). DECISION: keep instantaneous OLS-200; PCR/PCA gives no accuracy gain. (4) Residual: pooled bleed 79% (recovers 21% of dip), post-dip 78% explained, boundary smoothness 0.055 (no subtraction → no artifact), amp-0 unbiased (+0.018 vs +0.014).
+**Why:** User asked to commit then run to see live OLS-vs-Ye-RRR contrast and confirm the residual default runs clean.
+**Next:** CP-4 errors at TF dependency (needs `best_sys`/`uA_s` from tf_fit.m) — known, in TASKS. Cosmetic: cp_impulse_pred_noTF.png still exports 45×8cm sliver (pre-existing). Pending decision: TF fit on directly-measured impulse vs residual.
+
 ### 2026-06-16 — Manuscript: resolved 4 open \todo blocks across results + methods (Closedloop_edit)
 **Changed/Found:** `Closedloop_edit/results.tex`, `methods_edit.tex` — (1) variance-convergence \todo → batch-mean stationarity result; (2) OL onset-variance claim kept "not significant", forward-ref to Fig 3I OL/CL ratio; (3) new motion-disturbance paragraph + Fig (motion_mse_quartile.pdf); (4) TF \todo → cross-session comparison + Table 1; (5) spatial-spread \todo → Fig 6/7; expanded Statistical analysis (Wilcoxon/Spearman/rank-sum/sign); stated both MSE windows (0→3 general, +1→3 disturbance); mouse breakdown (AL_0033 ×9, AL_0039 ×4 = 13); sum-vs-MSE wording. Copied 4 figures into Closedloop_edit/images/.
 **Why:** User directive: write up impulse #1/#2 + controller #5/#10 results, keep #4 claim, improve controller methods sections.
