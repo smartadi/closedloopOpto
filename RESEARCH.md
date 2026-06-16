@@ -3,7 +3,7 @@
 ## Project Context
 Mouse widefield closed-loop PI controller vs open-loop analysis.
 Controller uses kernel average of a cortical region as output; PI controller drives input.
-Two mice: AL_0033 (8 sessions), AL_0039 (3 sessions), Jan–Apr 2025.
+Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, Jan–Apr 2025. (Verified 2026-06-16 from loaded cache m1–m13.)
 
 **Core question:** Does the closed-loop controller reduce neural variability and error compared to open-loop?
 **Secondary questions:** Do motion, frequency-band power, and wide-brain activity explain trial-to-trial variability? Do these differ between OL and CL?
@@ -16,12 +16,319 @@ Two mice: AL_0033 (8 sessions), AL_0039 (3 sessions), Jan–Apr 2025.
 
 ## Change Log
 
+### 2026-06-16 — Manuscript: resolved 4 open \todo blocks across results + methods (Closedloop_edit)
+**Changed/Found:** `Closedloop_edit/results.tex`, `methods_edit.tex` — (1) variance-convergence \todo → batch-mean stationarity result; (2) OL onset-variance claim kept "not significant", forward-ref to Fig 3I OL/CL ratio; (3) new motion-disturbance paragraph + Fig (motion_mse_quartile.pdf); (4) TF \todo → cross-session comparison + Table 1; (5) spatial-spread \todo → Fig 6/7; expanded Statistical analysis (Wilcoxon/Spearman/rank-sum/sign); stated both MSE windows (0→3 general, +1→3 disturbance); mouse breakdown (AL_0033 ×9, AL_0039 ×4 = 13); sum-vs-MSE wording. Copied 4 figures into Closedloop_edit/images/.
+**Why:** User directive: write up impulse #1/#2 + controller #5/#10 results, keep #4 claim, improve controller methods sections.
+**Next:** draftmode pdflatex exit 0, all new \ref/\label resolve. Pending author judgment: feedforward eq degeneracy (Kr vs Kp identical error-driven form, eq:ff/eq:pi); Nuoli/Svoboda .bib keys; pre-existing undefined `eq:controller` ref in discussion.tex. Not pushed — awaiting user command.
+
+### 2026-06-16 — motion_mse_significance.m: closed-loop feedback rejects motion disturbance (controller #5)
+**Changed/Found:** `controller-analysis/motion_mse_significance.m` (new) — per-session regression of within-session-z MSE on concurrent motion, OL vs CL. OL slope median +0.72 (signrank vs 0 p=0.0039); CL slope median −0.016 (p=0.91); interaction signrank p=0.0078 (OL>CL 8/9 sessions); top motion quartile OL z-MSE +0.71 vs CL −0.44 (ranksum p=4.3e−16). Exported motion_mse_quartile_OLCL.pdf.
+**Why:** User wanted significance for "high-motion → high OL MSE, low CL MSE"; chose slope-interaction over quartile-only (consistent with pre-stim-variance regression framework).
+**Next:** Spectral disturbance-attribution portion still held. Panel needs Illustrator compositing into Fig 3/4.
+
+### 2026-06-16 — batch_mean_stationarity.m: spontaneous batch mean stationary across all 13 sessions (#10)
+**Changed/Found:** `controller-analysis/batch_mean_stationarity.m` (new) — regressed per-trial spontaneous mean ΔF/F on acquisition order. 0/13 significant (OLS all p>0.24, Spearman all p>0.12); slopes balanced 8+/5− (sign-test p=0.58); median drift 0.17 trial-SD. Exported batch_mean_stationarity.png.
+**Why:** Resolve reviewer \todo — variance convergence (CLT) doesn't exclude a drifting mean; needed direct mean-stationarity evidence (option i).
+**Next:** Wrote into results.tex + methods Fig S2. None further.
+
+### 2026-06-16 — tf_fit_allsessions.m: TF dynamics agree across 2 of 3 impulse sessions (impulse #1)
+**Changed/Found:** `impulse-analysis/tf_fit_allsessions.m` (new) — looped tf_fit logic over 3 sessions, AIC-selected, poles→time constants. AL_0033: 2p/0z, τ=271 ms, 2.2 Hz, R²=0.80; AL_0041 en1: 3p/1z, τ=196 ms, 2.8 Hz, R²=0.74; AL_0041 en2: 2p/1z, R²=0.48 (low-SNR, fit→slow drift, excluded).
+**Why:** Nick 2026-05-08 request; validate stationary-LTI assumption across sessions.
+**Next:** Two well-fit sessions agree (~200–270 ms, 2–3 Hz). Wrote into methods Table 1. en2 SNR revisit optional, not blocking.
+
+### 2026-06-16 — spatial_spread.m: exported supplementary inhibition-area figure (impulse #2)
+**Changed/Found:** `impulse-analysis/spatial_spread.m` (run) — exported spatial_spread_AL_0033_2025-01-29_en1.pdf (6×4) + spatial_maps PNG. Inhibition area grows monotonically with power (focal → ~85–91 mm² at high amp); low-amp points noisy (qualitative thresholding).
+**Why:** Resolve methods \todo for spatial-spread supplementary panel.
+**Next:** Inserted as methods Fig 6/7. Citation (Nuoli/Svoboda) still needs .bib keys.
+
+### 2026-06-15 — contra_prediction: per-amplitude PCA basis does NOT rescue decontam — PCA abandoned
+**Found:** Built per-amplitude rank-1 PCA artifact bases from train trials (fair rng=42 70/30 split, 524/224) and applied to held-out val, vs pooled basis. Fig `paper/cp_val_peramp_pca_rescue.png`. Per-amp PC1 explains only 34–68% (vs pooled 79%) → noisier basis, less reliable per-trial coeffs. Per-amp decontam still non-monotonic and STILL flips positive at 2.7V (+0.07) and 4.3V (+1.08, worse than pooled +0.74); bleed-removal swings 96%→−75% across amplitudes with no consistency. Marginally better than pooled only at 2.7V. Root cause unchanged: projecting per-trial contra onto a spatial artifact basis with a per-trial scalar coeff is unstable because the coeff is fit on dip-window data containing real neural structure spatially correlated with the artifact.
+**Why:** User asked to attempt the per-amplitude PCA rescue and show plots before abandoning PCA.
+**Next:** PCA decontam (pooled or per-amplitude) abandoned for per-trial/per-amplitude impulse recovery. Adopt residual (actual − raw β) as the impulse estimate; proceed to TF fit on the residual dip.
+
+### 2026-06-15 — contra_prediction: residual impulse (actual − raw β) beats decontam — stable, monotonic, flat baseline
+**Found:** Prototyped `Imp_res = actual − raw_β` vs `Imp_dec = actual − decontam` on the 224 held-out validation trials. Fig `paper/cp_val_residual_vs_decontam.png`. Residual recovered-impulse dip is MONOTONIC in amplitude (−0.01 → −0.11 → −0.19 → −0.34 → −0.38 → −0.47 → −0.49 → −0.48 across 0.5–4.9V) with small SEM, always correct sign; baseline flat (pre ≈ 0.00, post a small physiological rebound +0.01..+0.17) — i.e. correctly reads "no impulse" outside the stim window. Decontam-recovered dip is non-monotonic and overshoots: at 2.7V it is −1.44, DEEPER than the actual signal (−1.04), which is unphysical (implies contra predicted an upward deflection). Outside the stim window Imp_res and Imp_dec coincide (decontam only edits neg_win); they diverge only in-window where decontam over-subtracts.
+**Why:** User asked to prototype the actual−raw_β residual as a more stable alternative to the unstable per-amplitude decontam (see prior entry).
+**Caveat (important):** residual is a LOWER BOUND on the true stim effect — because contra is itself stim-driven, raw β legitimately explains away the portion of the ipsi dip that co-occurs with the contra dip, so actual−raw_β removes real shared stim variance along with spontaneous coupling. True impulse lies between residual (lower) and actual dip (upper). Residual wins on stability/monotonicity, not on absolute magnitude.
+**Next:** Decide residual-vs-decontam for Phase 2 TF fit. If absolute magnitude matters, consider scaling residual by 1/(1−bleed_frac) using the measured ~79% bleed, or report residual as a conservative lower-bound impulse.
+
+### 2026-06-15 — contra_prediction: held-out validation confirms PCA decontam over-subtracts per-amplitude (2.7V positive bump)
+**Found:** Built PCA artifact basis from TRAIN trials only (524), applied decontam to 224 held-out validation trials, per-amplitude. Fig `paper/cp_val_decontam_smoothness.png`. RAW β prediction (no decontam) is well-behaved at every amplitude: dip always negative, reproduces 54–95% of actual dip (the bleed) and is SMOOTH. PCA-decontam is NOT smooth per-amplitude: dip fraction scatters wildly — 0.5V −165%/255%, 1.1V FLIPS to +0.11 (−50%), 2.1V clean (0.5%), **2.7V FLIPS to +0.40 (−39%)**, 3.2V 13%, 3.7V −42% (under-corrects), 4.9V FLIPS to +0.31 (−16%). Confirms user's 2.7V observation: the spurious positive "impulse-type" bump in the stim window is **PCA over-subtraction by the rank-1 pooled basis, NOT a β fit problem** (raw β at 2.7V is correctly −0.70). Pooled −4% was averaging positive overshoots against under-corrections (1.6/3.7 still −66%/−42%).
+**Why:** User flagged 2.7V positive overshoot on validation; wanted to verify whether PCA-based ipsi prediction stays smooth during the trial on random held-out trials.
+**Next:** Rank-1 pooled basis cannot match per-amplitude artifact magnitude. Options: (a) scale projection coeff per-amplitude / per-amplitude PCA basis; (b) preferred — treat raw β prediction as the trustworthy "bleed" reference and define impulse response as actual − raw_β residual, rather than flattening the prediction itself. Decide before Phase 2 TF fit.
+
+### 2026-06-15 — contra_prediction: PCA stim-artifact removal (decontam_mode='pca') — smooth, no switch-off
+**Changed:** `impulse-analysis/contra_prediction.m` CP-IMP — added `decontam_mode` ('pca' default | 'kernel'), `n_art_pca`. PCA path (from `pca_stim_artifact_removal.md`): mean stim-artifact epoch over dip window, pooled → PCA → rank-1 artifact basis (PC1=84%); per-trial project contra onto basis within neg_win and subtract. Added boundary-smoothness diagnostic. Compact compare fig cp_impulse_pred_pca_compact.png.
+**Why:** kernel method (mean subtraction) flattens the dip = "switch-off" + hard boundary step; user wanted prediction smooth through the impulse. PCA removes only the rank-1 artifact SUBSPACE per trial, keeping the neural subspace. Result: pooled bleed 79%→-4% (recovers 104% of dip), post-dip explains 78% (matches kernel), boundary step 0.244 vs kernel ~0.6 (~2.5x smoother), spontaneous R²=0.900 UNTOUCHED (input-only cleaning, β unchanged — unlike soft-weighting which collapsed R²). Amp-0 unbiased. Key design: restrict projection to dip window (neg_win) so post-dip contra stays intact (projecting over whole window dropped post-dip to 34%).
+**Caveats:** per-amplitude bleed noisy (pooled clean; rank-1 pooled basis + per-trial coeffs scatters per amp, e.g. A=2.10 -114%) — fine for pooled/TF fit. Small residual bump at 0.3s remains (~2.5x reduced) — hard window edge; taper would remove it. kernel mode still available.
+**Next:** Optional — boundary taper and/or per-amplitude PCA basis. Then Phase 2: TF fit to recovered dip residual (needs tf_fit.m).
+
+### 2026-06-15 — contra_prediction: SVD mode selection as decontam strategy — failed
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — Tested using predictive weight P_j = |beta_cp(j+1)| vs contamination C_j = mean contra dip deviation per mode to select "clean" modes. Result: r = −0.014 (P vs C uncorrelated); bleed ranged −112% to +103% across modes with no exploitable structure. Even the 30 least-contaminated modes still showed full bleed because stim propagates through the same interhemispheric channels as spontaneous activity.
+**Why:** User wanted to see if mode-level selection could avoid the switch-off during stim — this was a plausible approach given we have per-mode predictive weights and per-mode bleed estimates.
+**Next:** Mode selection is not viable. Temporal decontam (zeroing neg_win) remains the only sound approach.
+
+### 2026-06-15 — contra_prediction: CP-BLEED map added; confirmed no truly uninfected contra pixels
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — Added `[CP-BLEED]` section. Computed onset-locked contra deviation per SVD mode during dip window (0–300 ms), back-projected to pixel space: `bleed_pixel = U_svd_cp * C_signed_orig`. Distribution: min=0.00006, median=1.22, max=4.16 — unimodal, no gap. "Green" pixels (bleed_n < 0.20) had mean absolute bleed = 0.396; no truly uninfected region exists. Exports `cp_bleed_map.png`.
+**Why:** User wanted spatial map of which contra pixels carry stim bleed vs prediction signal, to potentially use only uninfected pixels for stim-window prediction.
+**Next:** Map is useful as a diagnostic figure. Pixel-level selection is not viable (no clean pixels). Temporal decontam remains the only approach.
+
+### 2026-06-15 — contra_prediction: CP-ARX module removed; replaced with lean CP-FIT
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — Removed `[CP-ARX]` + `[CP-ARX-var]` + `[CP-ARX-fig]` blocks (was ~189 lines, 4 figure exports: cp_r2_per_trial.png, cp_r2_distribution.png, cp_r2_vs_variance.png, cp_arx_test_windows.png). Replaced with lean `[CP-FIT]` block (~35 lines): single held-out fold quick R², then full-data fit → `beta_cp`. Confirmed working: `[CP-FIT] 748 windows  nSV=200  held-out R²=0.900`. Full pipeline end-to-end clean.
+**Why:** CP-ARX was producing diagnostic figures that cluttered the pipeline; the actual model (instantaneous map, pX=0, pY=0) is unchanged — CP-FIT is the same fit with diagnostics stripped.
+**Next:** Pipeline verified. Phase 2 (fit best_sys TF to CP-IMP residual) is still pending. Motion/variance analysis on CP-IMP residuals also pending.
+
+### 2026-06-15 — contra_prediction: soft-weighting (map-based) rejected; temporal decontam confirmed correct
+**Found:** Tested user's idea — down-weight stim/motion-affected contra pixels so prediction comes from "clean" pixels (soft weighting via contamination-penalized ridge: per-mode λ_j=Σ_p (impulse+motion)(p)·U(p,j)², same midline+left mask). Built 3 per-pixel maps (impulse-affected, prediction-kernel, motion). Pixel-level feasibility looked great: pred-vs-impulse spatial corr=+0.07 (near-orthogonal), pred-vs-motion=+0.31. BUT the penalized refit fails: bleed and R² fall together (κ sweep: 79%/0.899 → 76%/0.893 → 72%/0.864 → 59%/0.744). ~1:1 tradeoff, no clean separation.
+**Why it fails / decided NOT to use it:** Spatial separability ≠ temporal separability. The stimulus propagates into contra through the SAME interhemispheric channels (modes) that carry the spontaneous prediction, so predictive modes == bleed modes. Can mask a pixel, not a temporal channel. ALSO confirmed the temporal-subtraction "switch-off" concern is a mean-only artifact: A=3.70 decontam prediction in dip window has mean +0.005 (flat) but across-trial SD=4.2% (132% of pre-stim) — per-trial natural dynamics ARE fully preserved; the mean is flat only because spontaneous activity isn't onset-locked. Temporal dip-window subtraction (CP-IMP) is the principled approach: bleed→0%, zero R² cost, per-trial dynamics intact.
+**Next:** Keep CP-IMP temporal decontam. Optional: keep the 3-map overlay as a paper diagnostic (drop weighting); add single-trial overlay panel to CP-IMP to visualize per-trial dynamics through the dip. Then Phase 2 TF fit to residual.
+
+### 2026-06-15 — contra_prediction: restrict bleed negation to dip window (fix over-suppression)
+**Changed/Found:** `impulse-analysis/contra_prediction.m` CP-IMP — the decontam was subtracting the onset-locked contra artifact over the ENTIRE post-onset second, which switched the contra prediction off for the whole second (prediction flat throughout, residual = dip + everything after). Fixed: artifact now subtracted only within a tunable `neg_win=[0 0.30] s` (the stim dip); outside neg_win the contra prediction runs on actual contra and resumes tracking. Added post-dip tracking metric (iPostDip).
+**Why:** Desired behaviour = isolate the sharp stim dip in the residual but let contra EXPLAIN the post-dip recovery (coupled network activity). After fix: dip bleed still 0% (dip fully in residual), POST-DIP (0.30-1 s) |actual|=0.241 → |residual|=0.053, i.e. contra explains 78% of the post-dip recovery; residual is now a clean dip returning to baseline. Amp-0 control still unbiased.
+**Next:** neg_win is tunable — widen if high-amplitude dips run >300 ms. Possible hard-boundary artifact at neg_win(2) (flat→tracking handoff); offer taper (ramp art down ~3 frames) if a post-dip residual bump appears. Then Phase 2: fit learned TF to the recovered dip residual.
+
+### 2026-06-15 — contra_prediction: CP-IMP stim-bleed negation (decontam) working
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — added stim-bleed negation to CP-IMP (`decontam` toggle). Method: per-amplitude trial-averaged onset-locked contra deviation (the stim bleed, per SVD mode) subtracted from contra predictors over the POST-onset window only (pre-stim untouched), then beta applied. Each trace baselined by its OWN pre-stim mean (removes model DC bias → decontam prediction flat at exactly zero, clean per-amplitude validation). Built-in validation: raw-vs-decontam bleed per amplitude + pooled, amp-0 no-stim control. Figure cp_impulse_pred_noTF.png now shows actual + raw pred (bleed) + decontam pred (flat) + residual.
+**Why:** Raw contra prediction reproduced 79% of the stim dip (bleedover). After negation: per-amplitude decontam bleed 0% (±1%), pooled raw 79% → -0%, residual recovers 100% of the dip. Amp-0 control (n=196 no-stim trials): actual +0.018, pred +0.014 → model unbiased, no spurious drift. Desired effect achieved: mean prediction flat during stim (no +/- drift), residual = full stim response with tight pre-stim baseline (spontaneous variance removed per trial). Linear-model identity: subtracting onset-locked contra = driving mean predicted deflection to zero.
+**Next:** Phase 2 — fit the learned TF (best_sys from tf_fit.m) to the recovered residual; consistency check: TF(residual) should match directly-measured impulse/dose-response. Caveat: mean subtraction leaves trial-level bleed variability — fine for mean/TF, flag before single-trial residual correlations. tf_fit.m still required for CP-4/Phase 2.
+
+### 2026-06-15 — contra_prediction: X-lag (causal FIR) model rejected — instantaneous optimal
+**Found:** Tested the one untested lag structure — causal FIR (concurrent + L past lags of X, no Y-lags): ŷ(t)=Σ_{l=0..L} β_l·X(t−l). 5-fold pooled R²: L=0 0.8986, L=1 0.8977, L=2 0.8971, L=3 0.8962, L=5 0.8958 — monotonically worse, doubling params each lag. All three lag structures now tested independently and all lose to instantaneous: past-only (buildLagMatrix), concurrent+future (acausal), concurrent+past (causal FIR).
+**Why (decided NOT to use X-lags):** (1) No R² gain — coupling is purely same-frame. (2) Usability for stim window: instantaneous bleed correction is pointwise β·X_stim(t); an FIR makes it a convolution β(L)⊛X_stim that smears post-onset contamination across L frames and low-pass-filters/blurs the residual's sharp inhibitory onset. Instantaneous wins on BOTH R² and decontam tractability — no trade-off.
+**Next:** Model locked as instantaneous (pX=0). Proceed to stim-effect negation: per-amplitude evoked subtraction ŷ_clean=β·X−β·art_shape_a + scaled-canonical refinement, amp-0 control + 4 validation checks, as a decontam toggle in CP-IMP.
+
+### 2026-06-14 — contra_prediction: CP-IMP impulse-window prediction (no TF) + bleed quantified
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — added [CP-IMP] section: applies the spontaneous instantaneous contra map (beta_cp) across the impulse window [-1,+1] s using only concurrent contra+motion (NO stim info, NO TF). Exports cp_impulse_pred_noTF.png (per-amplitude actual vs pred + residual). Runs before CP-4, no best_sys dependency.
+**Why:** Phase 1 of impulse prediction. Confirmed the short 2 s prediction window is a non-issue: the instantaneous model (pX=0) is memoryless, predicts pointwise, needs no history buffer — training-window length (6 s) only set sample count for estimating beta. KEY RESULT: prediction is NOT flat — large contralateral bleedover. At the dip (0-200 ms), the no-stim contra prediction reproduces ~79% of the actual inhibition (pooled actual=-1.28%, pred=-1.02%; per-amplitude 66-100%). So residual=actual-pred currently retains only ~21% of the true stim response. Contra (left) hemisphere is strongly contaminated by the stim-driven inhibition.
+**Next:** Decontamination is mandatory before Phase 2 — must negate the contra bleed (per-amplitude artifact shape, cf. CP-4a) so the residual recovers the full stim response, THEN add the learned-TF stim-response model. Verify bleed drops toward 0 after decontam. tf_fit.m still needed for the TF layer.
+
+### 2026-06-13 — contra_prediction: 5-fold CV + per-window variance diagnostic
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — replaced single random 60/20/20 split with 5-fold CV (every valid window gets one out-of-fold R²); final beta_cp refit on all 748 valid windows for downstream CP-1..4. Added [CP-ARX-var] per-window variance diagnostic + 4 reworked/new figures (cp_r2_per_trial = OOF scatter, cp_r2_distribution = OOF histogram + per-fold bars, cp_r2_vs_variance = NEW diagnostic, cp_arx_test_windows = worst→best OOF panels).
+**Why:** Confirmed two things. (1) The earlier single-split train/test gap (0.916 vs 0.868) was sampling variance, not overfitting — 5-fold CV R²=0.898±0.005 (SD across folds only 0.005, rock-stable). Ridge sweep beforehand moved test R² by <0.001 → nothing to regularize (470:1 samples:params, cond 57). (2) The R²=0 windows are near-flat low-variance pre-stim windows: low-var (bottom 10%, var≤1.22) median OOF R²=0.441 vs 0.883 for the rest. They floor R² at 0 by construction (no signal to explain), not model failure. Target is already kernel-patch-averaged+SVD (load_experiments.m:197-207) so target-denoising lever is spent. Model is at its linear ceiling.
+**Next:** Headline number for paper = 5-fold CV R²=0.898±0.005. Optionally report median OOF R² among signal-bearing windows (0.883). CP-4 still pending tf_fit.m. pY=0 must stay (AR self-lags would corrupt the counterfactual residual).
+
+### 2026-06-13 — contra_prediction: random train/test/val split
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — replaced chronological 60/20/20 split with random sampling across all pre-stim windows (`randperm`, fixed `split_seed=42`). Per-trial R² figure A now plots each window at its true chronological trial index coloured by split (interleaved), dropped the split-boundary xlines.
+**Why:** Chronological blocks let the test set fall on one contiguous (easy) stretch of the session, biasing the held-out estimate. Random sampling makes train/test/val each span the full range of behavioural/state conditions. Result: train/test/val R²=0.916/0.868/0.913 (vs chronological 0.902/0.930/0.900). Test dropped from the optimistic 0.930 to a more honest 0.868; train≈val≈0.91 confirms no overfitting.
+**Next:** Per-trial stem plot is dense/overplotted with 748 interleaved points — consider switching stems→scatter for readability. CP-4 still pending tf_fit.m.
+
+### 2026-06-13 — contra_prediction: instantaneous map beats lagged ARX
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — switched contra→primary predictor from lagged ARX (pX=10) to an **instantaneous map** (pX=0, y(t)=B·contra(t)), z-scored all SVD predictors, raised nSV_use 20→200. CP-2 rewritten to branch on pX (instantaneous = single standardized weight per mode, stem plot; lagged = old kernel lines).
+**Why:** Interhemispheric coupling is near-instantaneous (callosal delay << 28.6 ms frame) and slow GCaMP makes lag copies collinear → the rank-200/211 deficiency seen earlier. Empirical lag sweep on AL_0033 confirmed: pX=0 test R²=0.905 > pX=10 R²=0.880, with 1/10th the params. pX=1 worst (0.843) — drops the concurrent sample. Z-scoring cut cond 1.1e8→6; nSV sweep at pX=0: 100→0.918, 200→0.930, 500→0.938 but cond 2.4e6 (overfit). Final model train/test/val R²=0.902/0.930/0.900. Mode weights concentrate in first ~25 modes; kernel-energy map sharpens onto the homotopic mirror of the primary pixel.
+**Next:** CP-4 (concurrent + TF) still needs tf_fit.m run first — verify the instantaneous map + decontam behaves during the stim window (concurrent contra now more exposed to laser bleedover than the past-only lag model was). Consider whether nSV=200 should be locked as the design default.
+
+### 2026-06-13 — contra_prediction: SVD-only, 60/20/20 split, per-trial R² figures
+**Changed:** `impulse-analysis/contra_prediction.m` — (1) Removed pixel-grid predictor branch entirely; script is now SVD-direct only (`nSV_use=20` contra modes). Grid-node ROI code and all `~use_svd_direct` branches deleted. (2) Changed train/test split to chronological 60/20/20 (train/test/validate). (3) Added per-trial R² output: stem plot over all trials coloured by split, boxplot distribution per split, trace panels for evenly-spaced test and val windows. (4) Moved local functions (`compute_r2`, `per_trial_r2`, `plot_window`) to end of script file (MATLAB requires this for scripts).
+**Why:** Pixel-grid mode was slower and less interpretable than SVD-direct; removing it simplifies the code path. Validate split needed to confirm generalisation beyond the test set. Per-trial R² requested for debugging model quality.
+**Next:** Run script in MATLAB with allExperiments in workspace; check R²_test and R²_val are comparable (gap > 0.1 would suggest overfitting). If low overall, try increasing nSV_use or pX.
+
+### 2026-06-12 — contra_prediction: test-set per-window prediction figure
+**Changed:** `impulse-analysis/contra_prediction.m` — Added [CP-ARX-fig] section after the ARX fit. Computes per-window R² for all held-out test windows, then plots 6 evenly-spaced examples as actual vs predicted pre-trial traces with R² in each panel title. Also prints median/min/max R² across all test windows to console.
+**Why:** User asked how the model is fit and wanted to see one-step-ahead performance on individual test windows, not just the pooled scalar R².
+**Next:** If per-window R² is highly variable, may indicate some pre-trial windows are dominated by motion; cross-check with motion z-score.
+
+### 2026-06-12 — contra_prediction: SVD-direct knob + per-amplitude bleedover compensation
+**Changed:** `impulse-analysis/contra_prediction.m` — (1) Added `use_svd_direct` / `nSV_direct` knobs (default off). When enabled, runs `redoSVD` on the full contra-hemisphere mask and uses top `nSV_direct` temporal components as predictors instead of per-pixel grid dFk. Results cached to `*_svddirect.mat`. (2) CP-3 kernel map shows pixel-projected SVD energy (`U_svd_cp^2 * kern_energy`) when `use_svd_direct=true`. (3) CP-4a now computes per-amplitude artifact shapes (`art_shape4_amp{ia}`) in addition to global shape; CP-4c subtracts the amplitude-matched artifact instead of a single global mean.
+**Why:** User request — improve bleedover subtraction (per-amplitude rather than global mean) and add SVD-direct prediction mode from widebrain_hemi_kernel.m approach; confusing Pink/Red labels also fixed this session.
+**Next:** Test `use_svd_direct=true` with `nSV_direct=20`; compare R² against per-pixel mode. Check whether per-amplitude artifact subtraction reduces residual artifact correlation with amplitude.
+
+### 2026-06-11 — CP-4: concurrent contra + TF impulse prediction implemented and run
+**Changed:** `impulse-analysis/contra_prediction.m` — Added [CP-4] section (~240 lines): artifact check, TF simulation per amplitude, per-trial concurrent prediction loop, R² comparison, error correlation analysis, 4 figures.
+**Found:** (1) Contra artifact ratio=36.5 (bilateral laser response) — decontamination applied. (2) CP-4 pink R²=0.862 but CP-1 (pre-trial only) R²=0.000 — the high CP-4 R² is entirely from in-trial bilateral laser response, NOT spontaneous state. (3) Prediction error (after bilateral correction) correlates with pre-stim variance (r=+0.225, p<0.001), pre-stim delta power (r=+0.231, p<0.001), stim-window delta (r=+0.211, p<0.001). Motion NOT significant (r=-0.056, p=0.12). (4) ARX fit R²_train=0.898, R²_test=0.861 (68 contra pixels + motion predictor).
+**Why:** User requested full concurrent prediction pipeline with error vs brain-state correlations (motion, pre-stim variance, delta power). Also ran programmatic ROI (no ginput) since no cached ROI existed.
+**Next:** Reconcile CP-4 finding with pre-stim variance result from prestim_variance.m. The prediction error r~+0.23 with delta/variance extends the K-figure finding to regression residuals. Consider whether CP-1 pre-trial prediction error (not CP-4) is the cleaner analysis for correlating with pre-stim state (avoids bilateral artifact confound).
+
+### 2026-06-11 — CP-ARX model validation figures generated
+**Changed:** New diagnostic figures: `cp_pretrial_validation.png` (8 held-out test windows, per-window R² 0.23–0.95) and `cp_continuous_validation.png` (60 s continuous held-out stretch, R²=0.924). Stim onsets marked — brief divergences visible at each onset confirming model tracks spontaneous dynamics only.
+**Why:** Visual confirmation that beta_cp genuinely learns contra→ipsi mapping on spontaneous data, not overfitting. Supports interpretation that R²=0 on CP-1 trial prediction is because laser drives a novel ipsi dynamic, not a model failure.
+**Next:** Use continuous figure to show in paper or supplement as model diagnostic.
+
+### 2026-06-11 — CP-ARX trained: R²_test=0.861 (68 contra pixels, pX=10, pY=0, AL_0033 e1)
+**Changed:** Workspace — ran ARX fitting on spontaneous pre-trial windows (6s each, 80/20 train/test split, 598 train trials, 150 test trials). Programmatic contra ROI (midline at col=280, left hemisphere, 68 grid nodes), motion from `d.motion.motion_1(1:2:end)`.
+**Why:** Setting up workspace for CP-4 — no cached ROI or SVD existed; built programmatic ROI avoiding ginput.
+**Next:** ROI saved to impulse-analysis/cp_roi_AL_0033_0129_e1.mat. SVD cached to impulse-analysis/data/AL_0033cp01291.mat. Subsequent runs will use caches.
+
+### 2026-06-10 — spectral_mse_sort.m: Figure J6 added (merged variance + delta vs MSE)
+**Changed:** `controller-analysis/spectral_mse_sort.m` — Added Figure J6 as a single pooling loop combining analysis from prestim_variance.m (variance) and spectral_mse_sort.m (delta power). Per trial: variance = var(pncDfk_l, trial-2s to trial end, cols 36:210); delta = 1-4 Hz fractional power (ncFreqPow, full spectral window); MSE = er_ncDfk. Motion-clean (motThresh=1.5). Trials sorted by variance ascending. Layout: 14x8 cm, 3 cols x 2 rows. Col 1 = reference-subtracted dF/F heatmap; Col 2 = variance vs MSE scatter; Col 3 = delta vs MSE scatter. All three axes per row linked on Y (rank). Exports to paper/trial_state_mse.png.
+**Why:** User wants a single figure testing the message "high trial variance → high MSE, same trials also show high delta power" — requires computing all three quantities on the same motion-clean trial pool.
+**Next:** Run J6 section; compare OL vs CL r-values for both predictors; check if variance r > delta r (variance may be stronger predictor since it directly reflects the signal mismatch).
+
+### 2026-06-09 — Pre-stim variance (not delta) is the per-session-robust controllability predictor; two independent state axes
+**Changed/Found:** Re-tested state-dependence with the correct variable + rank correlation (per-session Spearman, controller data, loaded session). (1) **Pre-stim ΔF/F variance → trial MSE survives strongly per-session:** median Spearman r=+0.21 (OL) / +0.24 (CL), signrank p=0.0017 each, 12/13 sessions positive in BOTH loops; motion-clean r=+0.25/+0.13, p=0.027, 8/9 sessions. Linear slope was weak (relationship monotonic-nonlinear) — rank correlation captures it. (2) **Corrects old FINDINGS "CL decouples from pre-stim state":** CL is predicted by pre-stim variance just as much as OL (r 0.24 vs 0.21, paired signrank p=0.64) — uncontrollability PERSISTS under closed-loop (feedback can't reject intrinsic unpredictability). (3) **Motion ⊥ pre-stim variance** (per-session r(motion,prestim-var)=−0.009, p=0.82): two independent state axes, not one arousal axis. Synthesis: motion = rejectable exogenous disturbance (CL motion-invariant, OL degrades, interaction p=0.039); pre-stim variance = irreducible model-mismatch (both loops degrade). Maps cleanly onto internal model principle: you can't reject what you can't model.
+**Why:** User clarified the real scientific narrative (predictability=controllability, grounded in impulse TF prediction error; motion→predictable-but-random; high pre-stim variance→unpredictable→uncontrollable, trend persists in controller data but weak under linear slopes). Pushed me to the correct variable (pre-stim variance) and method (rank corr).
+**Next:** Impulse-side anchor not yet pulled (would need load_experiments.m + impulse-analysis/prestim_variance.m to quantify TF-prediction-error vs pre-stim variance / motion; FINDINGS r/p still placeholder XX). Abstract NOT yet edited — awaiting user choice between two-pillar framing now (controller numbers) vs loading impulse data first for the predictability anchor.
+
+### 2026-06-09 — Per-session paired re-test: delta-power finding is a pseudoreplication artifact; motion story revised
+**Changed/Found:** Re-ran state-dependence stats with session as the independent unit (paired `signrank`/per-session Spearman across n=9–13), replacing pooled-trial `ranksum`. (1) Variance −40.7% and MSE −19.3% **survive** (signrank p=0.0005, p=0.0002). (2) **Delta(1–4 Hz)→trial-MSE COLLAPSES per-session:** within-session Spearman median r=−0.14 (CL), signrank p=0.57; only 3/9 sessions r>0. The pooled r=+0.35 (p=1.6e-15) was Simpson's paradox — driven by a *between-session* link corr(session-mean delta, session-median MSE)=+0.76, p=0.018 (n=9; heavily weighted by m2). So delta is a session/state-level marker, NOT a per-trial predictor. (3) **Motion story revised:** per-session paired, CL beats OL at BOTH low (gap +4.1, p=0.008) and high motion (gap +7.0, p=0.004) — the pooled "indistinguishable at low motion (p=0.28)" was an artifact. What holds: OL degrades with movement (MSE 23.1→27.3) while CL is motion-invariant (19.7→19.6), so CL advantage is larger during movement (interaction signrank p=0.039). Mechanism = feedback rejects movement-induced disturbance.
+**Why:** User asked to redo all abstract stats as proper per-session paired tests after a discussion of pseudoreplication; the pooled p-values treated 1470 trials as independent across only 13 sessions / 2 mice.
+**Next:** Abstract NOT yet edited (user to decide). Options: drop delta claim, or demote to hedged between-session observation. Motion claim must be rewritten to the "motion-invariance/decoupling" framing. For journal: use mixed-effects (session random effect) throughout; treat delta as a between-session covariate only.
+
+### 2026-06-09 — State-dependence of controller MSE quantified for SfN abstract (motion + delta)
+**Changed/Found:** Ran two pooled analyses in live MATLAB (data from `load_sessions.m`). (1) Motion quartile → trial MSE (9 motion sessions, combined-window mean-sq z-motion): at high-motion Q4, CL MSE 20.3±0.5 vs OL 29.8±1.0 (CL −32%, gap +9.5, ranksum p<1e-4); at low-motion Q1, OL 33.5±1.8 vs CL 30.5±1.3 (gap +3.0, p=0.28 n.s.). CL advantage grows with arousal. (2) Motion-removed (|z|≤1.5) MSE median-split → pre-stim delta (1–4 Hz) power: CL high-error trials carry +24% delta power (0.040→0.049, ranksum p=2.7e-7; r=+0.35, p=1.6e-15); OL +12% (p=0.018; r=+0.155).
+**Why:** User wanted hard numbers for the state-dependence section of the SfN abstract — specifically the motion-quartile (high motion → better CL) and motion-removed delta-power (high MSE → more slow-wave) results. Note: pooled *linear* motion→MSE correlation is weak/positive (OL r=+0.10); the quartile framing is the defensible one and is what was used.
+**Next:** For journal version, compute these per-session (not just pooled) with mixed-effects to respect session nesting; add exact delta-band definition (centers 1–4 Hz, pre-stim bins 1–6, onsetBin=7) to Methods.
+
+### 2026-06-06 — explore.m: comprehensive trial plot (both pixels × both stim sides × type × amp)
+**Changed/Found:** `explore/explore.m` — replaced old per-side trial-plot loop with a comprehensive section; one figure per recording pixel, rows=stim condition (impulse/step × amp), cols=stim side (left/right), each panel overlays both pixels (solid=recording, dashed=other); auto-detects type codes when IMPULSE_CODE_P/STEP_CODE_P are NaN
+**Why:** User requested a single organised view showing all experimental conditions together so both hemispheres' responses can be compared across stim type, amplitude, and stimulated side
+**Next:** Set IMPULSE_CODE_P and STEP_CODE_P once codes are confirmed from the viewer section printout
+
+### 2026-06-06 — bilateral-analysis/ restructured for mixed-stim sessions (trial_meta)
+**Changed/Found:** `load_bilateral.m` — replaced per-session `exp_type` tag with per-trial `trial_meta` struct array; added `STIM_TYPE_COL`, `AMP_COL`, `STIM_TYPE_MAP` placeholders; all downstream scripts (`ol_characterization`, `cl_constant_ref`, `cl_tuning`, `cl_sinewave`) now filter trials via `trial_meta` mask instead of `sess.exp_type`
+**Why:** Single session can contain impulse + step + mixed amplitudes on either side; session-level exp_type cannot represent this
+**Next:** Fill `STIM_TYPE_COL`, `AMP_COL`, and `STIM_TYPE_MAP` codes once experiment repo is shared; verify `trial_meta` summary printout on first real session
+
+### 2026-06-06 — bilateral-analysis/ sub-area scaffolded for AL_0048 dual-opsin mouse
+**Changed/Found:** Created `bilateral-analysis/` with `CLAUDE.md`, `load_bilateral.m`, `ol_characterization.m`, `cl_constant_ref.m`, `cl_tuning.m`, `cl_sinewave.m`, `compare_sides.m`; updated root `CLAUDE.md` trigger table and locked-in decisions; added 9 tasks to TASKS.md
+**Why:** AL_0048 has excitatory (left) and inhibitory (right) opsins requiring bilateral analysis with per-side reference polarity, variable galvo position identity from input_params, and new controller tuning (Kp/Ki grid + gradient descent) not present in existing sub-areas
+**Next:** Fill `BREGMA_COL`, `STIM_MODE`, and first session entry in `load_bilateral.m` once first AL_0048 experiment is collected; confirm reference polarity sign
+
+### 2026-06-04 — widebrain_hemi_kernel.m: align contra-SVD pipeline with spirals paper
+**Changed:** `controller-analysis/widebrain_hemi_kernel.m` — Three changes: (1) replaced `eig(U_c'*U_c)` eigendecomp with `redoSVD` (batch-downsampled covariance SVD from Ye et al. 2023); (2) zscore regressors along time using train-set params applied to both train and test; (3) replaced spont-epoch frame loop with simple 80/20 frame-index cutoff on the full recording. Copied `utils/redoSVD.m` from spirals repo.
+**Why:** Prior version deviated from the spirals methodology in SVD derivation and normalisation; aligning ensures the contra kernel is computed the same way as in the published pipeline.
+**Next:** Run on selField=12 session; check R2_spont vs previous value; verify redoSVD completes without OOM.
+
+### 2026-06-04 — spectral_mse_sort.m: drop J3/J3i; fix J5 scatter alignment
+**Changed:** `controller-analysis/spectral_mse_sort.m` — (1) Deleted Figure J3 and J3 interactive entirely. Script now opens directly with J4. (2) Fixed J5 scatter: Y now uses `bYpos_nc5`/`bYpos_wc5` (rank-centre positions) so dots align with heatmap bins like J4 does. Custom Y-tick labels show actual block-mean variance at 5 evenly-spaced ticks. `linkaxes` updated: each heatmap–scatter pair linked on Y; cross-row scatter Y link removed.
+**Why:** J3/J3i made redundant by J4+J5. J5 scatter dots were at variance-unit Y values (~1–50 ΔF/F²) while heatmap Y is rank (1–500+), causing complete misalignment.
+**Next:** Run J4 and J5; confirm scatter dots sit at bin midpoints; check variance tick labels are readable.
+
+### 2026-06-04 — spectral_mse_sort.m: new Figure J5 (variance-sorted dF/F heatmap)
+**Changed:** `controller-analysis/spectral_mse_sort.m` — Added Figure J5 after J4. Same 2-col × 2-row layout (grayscale heatmap + scatter). Sort key: per-trial `var(ncDfk, 0, 2)` over full available window (1s pre + 3s trial, 140 frames). Scatter Y = block-mean trial variance ± SEM (not rank); X = block-mean MSE ± SEM. No fit line. `linkaxes`: time X linked across heatmaps; MSE X and variance Y linked across scatter rows. Exports to `paper/dff_var_sort.png`.
+**Why:** User requested variance-sorted companion figure to J4 delta-sorted heatmap, with variance on Y-axis of scatter.
+**Next:** Run J5 section; compare r-values OL vs CL; check if variance gradient is visible in heatmap.
+
+### 2026-06-04 — spectral_mse_sort.m J4: sort key extended to full trial window
+**Changed:** `controller-analysis/spectral_mse_sort.m` — Replaced `preWinF` (2 s pre-onset only, also had a stale `round(2*Fs_j4)` bug that accidentally clipped to `1:onsetBin-1`) with `sortWinF = max(1, onsetBin-2) : min(nBins, onsetBin+dur_k-1)`, covering trial−2 s through end of trial at ~1 Hz spectral bins. Renamed intermediate vars `nc_pre_s/wc_pre_s/nc_sort_norm` accordingly; pooled arrays (`nc_delta_pre_j4`) and sort call unchanged. Updated section header, fprintf, and sort comment.
+**Why:** User requested full window (trial−2 s → end of trial) as sort key rather than pre-trial-only window.
+**Next:** Run J4 section in MATLAB; verify heatmap gradient is stronger / weaker and OL vs CL r values.
+
+### 2026-06-04 — tf_fit.m: Bode plot + phase-margin block added
+**Changed:** `controller-analysis/tf_fit.m` — (1) Added `colOL = PS.col_ol; colCL = PS.col_cl;` after `paperStyle()` (pre-existing bug). (2) Stash each fitted TF as `tf_ol{si}` inside the loop. (3) Appended `%% Bode / phase-margin analysis` block: 500-point logspace freq grid 0.01–32 Hz, `bode()` on `tf(G)` (idtf→CT tf), `margin()` for Pm/Gm/crossover freqs, interpolated -90° crossing. Produces `fig_bode` with mag+phase panels, 3-session overlay, -90° dashed ref.
+**Why:** User requested Bode plot and phase margin / -90° phase crossing frequency from the 2p1z OL TF fits.
+**Next:** Phase never crosses -90° in the biological range (0–17.5 Hz Nyquist) — all sessions sit at +100° to +180° phase throughout. This is because the fitted TFs have a non-minimum-phase character (positive DC phase ~180°, driven by the inhibitory sign inversion). Discuss with Nick whether to negate the plant gain convention or interpret Pm differently.
+
+### 2026-06-04 — spectral_mse_sort.m: new Figure J4 (raw dF/F delta-sorted)
+**Changed:** `controller-analysis/spectral_mse_sort.m` — Added `%% Figure J4`. Sort key: per-trial pre-onset delta (1–4 Hz fractional power, 2 s pre-onset window). Col 1: raw dF/F heatmap (diverging blue-white-red, Y=rank, X=time, onset line). Col 2: MSE vs delta-rank block scatter (horizontal errorbars ±SEM, fit+r). Col 3: block-mean dF/F traces parula-coded by rank + onset + ref line + colourbar strip. linkaxes: heatmap+scatter share Y per row; heatmaps share X; scatter share X; traces share XY. Exports `dff_delta_sort.png`.
+**Why:** User requested raw dF/F (not spectrum) as display, pre-trial delta as sort key (cleaner brain-state marker in CL where controller shapes pre-stim variance), and block-mean traces to show how response evolves with delta rank.
+**Next:** Run J4; verify heatmap gradient visible; compare OL vs CL scatter r values.
+
+### 2026-06-04 — spectral_mse_sort.m J4: 2-col layout, baseline-subtracted heatmap, no sig
+**Changed:** `controller-analysis/spectral_mse_sort.m` — Removed Col 3 (block-mean traces + colourbar strip). Col 1 heatmap now plots `nc_dfk_bsl4` (per-trial pre-stim mean subtracted) so pre-stim centres at 0 and colour encodes post-onset deviation. clim recomputed on baseline-subtracted pool. Scatter r text has no significance stars. Layout 10×8 cm, hm_w4=0.48, sc_w4=0.32.
+**Why:** User requested col 3 removed, reference zeroed before stim, significance not reported yet.
+**Next:** Run J4; check heatmap shows clean onset response gradient vs rank.
+
+### 2026-06-04 — Parsed June 3rd Nick meeting into MEETINGS.md
+**Changed/Found:** `MEETINGS.md` — Added 2026-06-03 meeting entry and 8 new action items (2026-06-03.1–.8); updated open items header to as-of 2026-06-03
+**Why:** New meeting covered laser-subtraction validation approach, delta-band fraction as sorting criterion, phase-margin instability frequency analysis, and joint amplitude+latency spatial spread characterization
+**Next:** Prioritize 2026-06-03.1 (laser subtraction in `plottingScript.m`) and 2026-06-03.3 (instability frequency plot); update TASKS.md to reflect new 🔴/🟡 items from this meeting
+
+### 2026-06-04 — contra_prediction.m: pre-trial CF + motion predictor
+**Changed:** `impulse-analysis/contra_prediction.m` — (1) z-scored motion appended to predictor matrix as `X_cp_m = [X_cp, mot_z]`; (2) ARX trains on contra+motion; (3) `[CP-1]` rewritten to pre-trial counterfactual: model uses only `buf_pre = mlag+outlen` frames before onset — no laser-period data. Both actual and predicted baseline-corrected by `y_full(i_on)`.
+**Why:** User wanted pure contra+motion prediction with zero laser input knowledge.
+**Next:** Run and check R2_test; verify residual shape scales with amplitude.
+
+### 2026-06-04 — New script: impulse-analysis/contra_prediction.m
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — new script; contralateral ARX model for impulse analysis (initial version with trial-window prediction).
+**Why:** User requested contra-pixel predictive model for impulse experiments, analogous to widebrain_arx.m.
+
+### 2026-06-04 — spectral_mse_sort.m J3: right column changed to delta vs MSE scatter
+**Changed:** `controller-analysis/spectral_mse_sort.m` — Right column (delta panels) in both fig_J3 and fig_J3i: X = MSE (matches middle column), Y = delta (1–4 Hz) fractional power, vertical ±SEM errorbars. Correlation changed to `corr(bMSE, bDelta)`. Fit lines now span MSE range. linkaxes: mid col Y linked to heatmap (rank); all four scatter panels share X (MSE); right col OL/CL share Y (delta range).
+**Why:** User requested right column mirror middle column — prediction error on X, band power on Y.
+**Next:** Re-run J3; check delta vs MSE slope is steeper for OL than CL.
+
+### 2026-06-04 — spectral_mse_sort.m: dropped Fig I/J/J2, kept J3 + interactive copy
+**Changed:** `controller-analysis/spectral_mse_sort.m` — Removed Figures I (per-session), J (combined MSE-sort all), and J2 (combined MSE-sort motion-clean). Kept Figure J3 (variance-sorted heatmap + scatter panels). Added `%% Figure J3 — interactive` section: identical layout, `ButtonDownFcn` on both heatmap images calls local function `j3ClickCb` which prints rank / MSE / variance / delta to command window on click. Local function added at end of file.
+**Why:** User confirmed Figs J and J2 are duplicates redundant with J3; Fig I's callback was broken (undefined `heatmapClickCallback`). Interactivity moved to J3 copy instead.
+**Next:** Run both J3 sections; verify click prints to command window correctly.
+
+### 2026-06-03 — spectral_mse_sort.m J3: Y-aligned scatter panels, 20-trial bins
+**Changed:** `controller-analysis/spectral_mse_sort.m` — Scatter panels now use Y = trial rank (aligned with heatmap via `linkaxes(...,'y')`), X = MSE or delta with horizontal errorbars. `blockSize_j3` reduced 50→20 for more points. Four `linkaxes` calls: row-Y links each heatmap to its two scatter panels; column-X links OL/CL within MSE and delta columns. Stale `ax_ol_var`/`bVar_nc`/`xfv_nc` references removed from plotting code.
+**Why:** User requested bins increase + scatter panels should align with heatmap Y axis so trial rank is a continuous shared axis across all three columns per row.
+**Next:** Run J3 in MATLAB; verify trial count printout, heatmap gradient visible, r-values positive for OL MSE vs rank.
+
+### 2026-06-03 — pixelviewer.m: trial-based SVD viewer for controller sessions
+**Changed/Found:** `controller-analysis/pixelviewer.m` — wrote script to launch `pixelTuningCurveViewerSVD` from controller workspace; uses `d.svd.U/V`, `d.timeBlue`, and `d.stimStarts` indexed by `data.nc`/`data.wc`; two conditions: 'OL' and 'CL'; calcWin = [-1 4] s; selField selects session
+**Why:** needed interactive pixel-level peri-event viewer to explore spatial structure of CL vs OL responses
+**Next:** verify `d.svd` fields exist for target sessions (some older caches may lack them); check that stimStarts indexing with nc/wc matches timeBlue frame rate
+
 <!-- New entries go here, most recent first. One ### block per change. -->
+
+### 2026-06-02 — spectral_mse_sort.m J3: split OL/CL rows, normalize log power, motion-only sessions
+**Changed/Found:** `controller-analysis/spectral_mse_sort.m` §J3 — (1) pooling loop already gates on `ncmotion` so only sessions with face video are included; added trial count printout; (2) per-trial normalization: `nc_norm = nc_spec ./ sum(nc_spec, 2)` before log10, heatmap now shows fractional spectral shape; delta scatter also uses fractional power; (3) figure split into 6 panels (3 cols × 2 rows): each row has its own heatmap + variance scatter + delta scatter coloured by condition; `linkaxes` syncs X within each scatter column.
+**Why:** User requested separated OL/CL rows, normalized power for heatmap, and confirmed motion-only session filtering.
+**Next:** Run J3; check console for trial counts; verify heatmap gradient cold→warm with variance sort; check r_var/r_dlt positive for OL.
+
+### 2026-06-02 — Fix integer/double concat crash in initialize_data.m
+**Changed/Found:** `utils/initialize_data.m` line 86 — `d.params.pixel` is an integer type; concatenating with double `px`/`py` arrays crashed with "Integers can only be combined with integers of the same class"
+**Why:** MATLAB forbids mixed integer/double array concatenation; cast with `double()` fixes it
+**Next:** verify all 13 sessions load cleanly after this fix
+
+### 2026-06-02 — Add run_all.m pipeline runner for controller-analysis
+**Changed/Found:** `controller-analysis/run_all.m` — new script that cds to brain_paper root, runs load_sessions.m then all six analysis scripts in dependency order
+**Why:** needed a single entry-point to run the full pipeline without manually calling each script
+**Next:** verify each script completes cleanly end-to-end when called via run()
+
+### 2026-06-02 — spectral_mse_sort.m: Figure J3 redesigned — variance-sort + MSE scatter panels
+**Changed/Found:** `controller-analysis/spectral_mse_sort.m` — full rewrite of J3: (1) new self-contained pooling loop collects dF/F variance over trial period (`var(ncDfk(:, c0:end), 0, 2)`), spectral power, and MSE with motion exclusion (|z|≤1.5, 2s-pre+trial window); (2) trials sorted by variance ascending; (3) log-power heatmap (OL top / CL bottom, 9×8 cm); (4) mid panel = block-mean variance vs MSE for OL+CL overlaid; (5) right panel = block-mean delta (1–4 Hz) power vs MSE for OL+CL overlaid; Pearson r + sig stars on each panel; exports `freq_heatmap_var_sort.png`.
+**Why:** User restructured to use variance as sort key and MSE as the shared X axis across side panels, so OL/CL slopes can be compared directly. Previous design sorted by MSE and showed delta vs rank separately per condition.
+**Next:** Run J3 (no J2 dependency now — self-contained loop); check r_var_nc and r_dlt_nc print positive for OL, and that CL slopes are shallower; upgrade to PDF + figure4 subfolder once verified.
+
+### 2026-06-02 — spectral_mse_sort.m: new Figure J3 — heatmap + delta block curve
+**Changed/Found:** `controller-analysis/spectral_mse_sort.m` — appended `%% Figure J3` section; reuses J2's motion-excluded pooled arrays (`nc_all_m`, `wc_all_m`, `nc_ord_m`, `wc_ord_m`); adds 50-trial block means of in-trial delta (1–4 Hz) power vs MSE rank; Pearson r + significance stars for OL and CL separately; 7×8 cm two-row figure (log heatmap + gold block curve per row); exports `freq_heatmap_blockfit.png`.
+**Why:** Mirrors impulse-analysis `prestim_variance.m` §2G figure structure; tests whether high in-trial delta power predicts high MSE in OL (no feedback) but not CL (feedback attenuates coupling).
+**Next:** Run J2 section first to populate arrays, then run J3; check that r_nc and r_wc print expected signs; upgrade to PDF and set paper/ subfolder once result is confirmed.
+
+### 2026-06-02 — motion_analysis.m: drop redundant sections 3, 4, 5
+**Changed/Found:** `controller-analysis/motion_analysis.m` — removed §3 (raw motion traces), §4 (pooled combined-window scatter), §5 (onset deviation vs windowed MSE scatter); ~175 lines deleted.
+**Why:** §3 was diagnostic-only with no paper use; §4 was absorbed by §2's pooled quartile panel; §5 overlapped §1 (same scientific question, different display) and the windowed-MSE version was not designated as a paper panel.
+**Next:** Confirm §2 pooled quartile panel (combined mode) is the sole motion-vs-MSE paper figure; consider whether §5's slope-annotation approach should be folded into §1 if Nick requests it.
+
+### 2026-06-02 — Add has_motion flag to session pipeline; backfill old caches
+**Changed/Found:** `utils/initialize_data.m`, `controller-analysis/load_sessions.m` — `initialize_data` now sets `d.has_motion = true/false` in both branches of the motion-file check (previously no-video sessions silently got `d.motion = zeros(...)` with no flag). `load_sessions` now backfills `has_motion` for old cached `.mat` files (inferred from `any(d.motion ~= 0)`) and propagates it to `mouse.(fields{k}).has_motion` for both the cache-hit and fresh-init paths.
+**Why:** Sessions without face video were indistinguishable from sessions with video — motion was just zeroed out. Motion analyses were silently including those sessions with meaningless zero motion. The flag lets downstream scripts gate on `has_motion` cleanly.
+**Next:** Update `cl_mse_factors.m` X2 pooling loop to check `mouse.(fields{k}).has_motion` instead of `~any(dk.wcmotion(:))`. Check `motion_analysis.m` for the same pattern.
+
+### 2026-06-02 — Propagate has_motion flag to cl_mse_factors and motion_analysis
+**Changed/Found:** `controller-analysis/cl_mse_factors.m`, `controller-analysis/motion_analysis.m` — replaced all `~any(...ncmotion(:))` guards with `~mouse.(fields{k}).has_motion`. In `cl_mse_factors`, also removed the now-redundant per-trial `mot_valid` zero-row mask (unnecessary once the flag guarantees valid video for the whole session).
+**Why:** The old `any(ncmotion(:))` guard was fragile — a real session with very low but non-zero motion could differ from a zero-padded one by floating-point noise. The `has_motion` flag is set at source in `initialize_data` and is unambiguous.
+**Next:** Run `load_sessions` + `cl_mse_factors` to confirm trial count changes as expected (should drop sessions without video).
+
+### 2026-06-02 — cl_mse_factors: fix motion X2 to use motion energy (mean squared)
+**Changed/Found:** `controller-analysis/cl_mse_factors.m` — X2 predictor changed from `mean(wcmotion, 2)` (raw mean of z-scored signal, which can cancel) to `mean(wcmotion.^2, 2)` (mean squared = motion energy). Also added named constant `c0_mot = 71` for the onset column in `wcmotion` (replaces implicit `onset_mot = n_mot - Fs_cl*dur_k`). Predictor label updated to 'Motion energy'.
+**Why:** `d.motion` is a z-scored signal that goes negative; mean can cancel out genuine motion. Energy (sum of squares) is the correct summary. `c0_mot=71` is exact: `wcmotion = mv(i-70:i+35*dur)` so onset is at index 71.
+**Next:** Re-run script and check whether R² for motion energy predictor changes substantially; verify VIF stays low.
+
+### 2026-06-02 — motion_analysis.m: remove legend from motion-quartile paper figure
+**Changed/Found:** `controller-analysis/motion_analysis.m` — removed `lgd_qp = legend(...)` and `paperLegend(lgd_qp)` from the motion-vs-MSE quartile paper figure (lines 225–226); OL/CL are colour-coded and the legend was redundant.
+**Why:** User confirmed figure will carry no legend; tick labels and colour alone are sufficient for a 6×4 cm panel.
+**Next:** Verify exported `motion_quartile_combined.pdf` looks clean without legend box.
+
+### 2026-06-02 — widebrain_hemi_kernel.m: rewritten as OLS observability kernel (removed CCA)
+**Changed/Found:** `controller-analysis/widebrain_hemi_kernel.m` — Stripped CCA and ipsi SVD entirely. New pipeline: contra SVD timecourses (V_c via M=U_c'U_c), primary pixel timecourse from full SVD (y_prim = U_flat(prim,:)*V_wb), OLS on spontaneous pre-trial frames (beta_c = V_c_tr \ y_prim_tr), kernel projected to pixel space (k_contra = U_c*W_c*beta_c). Scalar outputs: R2_spont, kernel_norm, kernel_peak — saved to data/hemi_obs_<session>.mat. Two figures: contra kernel map + R² vs rank curve. Script is now ~150 lines vs 380 lines previously.
+**Why:** CCA finds coupled modes across all ipsi pixels simultaneously — overkill when the goal is the kernel for a single target pixel (the primary). OLS is the correct tool: it directly minimises prediction error for that pixel. CCA also caused OOM (materialised [nPix_i × nTrain]). The scalar R2_spont and kernel_norm are the observability index connecting to controller analysis.
+**Next:** Run on session m12. R2_spont should be ~0.1–0.5 (meaningful contra prediction). Check kernel map for structured spatial pattern. Then connect R2_spont/kernel_norm to trial MSE across sessions.
+
+### 2026-06-02 — New script: spiral_analysis.m — spiral detection + trial performance grading
+**Changed/Found:** `controller-analysis/spiral_analysis.m` (new) — Calls `utils/detectSpirals.m` (which wraps spirals repo) per session, caches results to `data/*_spirals.mat`, then computes per-trial spiral density (spirals/s during trial window) and pre-trial density (pre-stim window). Six analysis panels: (1) pre-trial density vs MSE quartile bins OL/CL, (2) trial density vs MSE bins, (3) OL vs CL density bar/scatter per session, (4) peri-trial PETH ±SEM, (5) CW/CCW direction ratio OL vs CL, (6) MSE-sorted heatmap coloured by spiral density.
+**Why:** User wants to grade trial MSE against spiral wave activity the same way motion_analysis.m grades against motion and deviation. Spirals are a candidate neural-state variable that could predict or be modulated by the closed-loop controller.
+**Next:** Run detection on at least one session to verify detectSpirals returns non-empty table. Check whether pre-trial density (SPD-1) predicts MSE — if OL slope is significant and CL slope is flat, that is a strong result. Check SPD-3 PETH for suppression onset timing relative to stim.
+
+### 2026-06-01 — New script: widebrain_rrr.m — spirals-style RRR widebrain prediction
+**Changed/Found:** `controller-analysis/widebrain_rrr.m` (new) — Created companion to widebrain_arx.m that replaces the sparse ARX pixel-grid predictor with a Reduced Rank Regression over brain-wide SVD components. Key addition over ARX: projects regression weights back to pixel space to produce a spatial kernel map (cf. spirals paper Fig 3h). Includes the full three-layer model (pink/orange/red), BIC/CV order selection sweep over RRR rank, variance-explained-vs-rank figure, and MPC gap analysis. Contra-hemisphere basis computed via eigenvectors of M=Uc'Uc (no need to materialise full data matrix).
+**Why:** User wants to apply the spirals-style interhemispheric RRR kernel analysis to the closed-loop opto paper. The spatial kernel shows which contra-hemisphere pixels drive the primary pixel — directly comparable to spirals Fig 3h and interpretable in terms of interhemispheric coupling structure under OL vs CL.
+**Next:** Run RRR-1a and check R2_test vs ARX R2_test. Check RRR-varexp elbow for optimal nSV_rrr. Compare spatial kernel map to atlas regions. If R2_test is substantially higher than ARX, consider replacing widebrain_arx pink with RRR pink in paper figure.
 
 ### 2026-06-01 — Figure layout system: ASCII diagrams + fit-check utility in PAPER.md
 **Changed/Found:** `PAPER.md`, `utils/checkLayout.m` (new) — Added ASCII layout diagrams for all four figures (showing panel positions, export W×H, generating script). Created `checkLayout(widths, heights, total, gap, label)` utility that replicates Illustrator's uniform-height scaling and reports slack/overflow. Added inline fit-check annotations to Fig 2 and Fig 3 rows. Found two issues: (1) Fig 2 row 2 overflows by 1.6 cm (three 6×4 panels = 18.6 cm in 17 cm figure); (2) Fig 3 H panel (8 cm wide) overflows right column (7.8 cm) by 0.2 cm. Also found row-height mismatches in Fig 3 rows 1 and 3.  Updated 2A, 2B, 2D panel registry sizes (all were "pending").
 **Why:** No way to verify proposed panel sizes would fit without mental arithmetic. Needed a single place to see layout + sizes + whether each row fits, updated whenever panels change.
 **Next:** (1) Resolve Fig 2 row 2 overflow — decide whether 2D/2E/2F get narrower (W→5.4) or row shrinks to 2 panels; (2) Fix Fig 3 H panel: resize to 7.8×4 in variance_mse.m; (3) Decide whether row-height mismatches in Fig 3 rows 1/3 are acceptable or need resolving.
+
+### 2026-06-04 — prestim_variance.m: align spectrum window with variance window
+**Changed:** `impulse-analysis/prestim_variance.m` — replaced `imp_pvh.freqSpec{iAmp}` (pre-stored ±1 s window centred on stim onset, computed in `load_experiments.m`) with per-trial FFT computed directly from `df_k(:, preIdx_var)` (the same −1..0 s pre-stim window used for variance). Uses 70-pt Hann-windowed FFT → Δf = 0.5 Hz, matching existing `freqBandCtrs` bins. Normalization: `|X_k|² × 2 / (fs × W_hann)` → (ΔF/F)² Hz⁻¹.
+**Why:** The stored `freqSpec` was a ±1 s slice centred on stim onset — it included 1 s of post-stimulus inhibition response, contaminating the "pre-stimulus" spectral estimate. The heatmap and delta-band correlation should reflect brain state before the stimulus.
+**Next:** Re-run `prestim_variance.m`; verify heatmap still shows expected low-freq structure sorted by variance; check delta band (1–4 Hz) correlation `r_dp` is stable or improves.
 
 ### 2026-06-01 — tf_fit.m Paper Fig A: patch ordering fix + R² tag format fix
 **Changed:** `impulse-analysis/tf_fit.m` — (1) moved gray patch to after ylim is set from data (was before traces, causing ylim to expand to patch bounds); patch y-range now uses `[yl_A(1), yTop]` exactly; `uistack(hPatch,'bottom')` pushes it behind traces; (2) fixed R² text from invalid `R^2\!=\!%.2f` to plain `R^2=%.2f`.
@@ -657,3 +964,43 @@ Two mice: AL_0033 (8 sessions), AL_0039 (3 sessions), Jan–Apr 2025.
 **Changed/Found:** `plottingScript.m` lines 2532, 2728-2772 -- Added paper-level figure `fig_tf_paper` (12 x 4 cm, 1 row x nSess_ol cols). Initialised before the OL TF loop (after rng('shuffle')). Each tile: stim window shaded grey (t=0 to +1 s), pre-onset mean +/- SEM from ncDfk_bc cols 1:35 (t=-1 to -1/35 s), post-onset mean +/- SEM from y_mean_ol/y_sem_ol (t=0 to +1 s), TF prediction yp_ol overlaid as k--. XLim [-1 1]. Insertion done via Python byte-level replacement (file is CRLF/Windows-1252). Export line commented out.
 **Why:** User requested paper-level plot showing OL trial average + TF fit in -1 to +1 s window for 3 sessions as a 1-row panel.
 **Next:** Run OL TF section in MATLAB to verify figure renders; uncomment exportgraphics when satisfied.
+
+### 2026-06-10 -- trial_state_mse.m: fixed undefined nSess, verified end-to-end run
+**Changed/Found:** `controller-analysis/trial_state_mse.m` line 19 -- Added `nSess = length(fields);` (was undefined; load_sessions.m never sets it, only `motion_analysis.m`/`variance_mse.m` derive it locally). Ran load_sessions.m + trial_state_mse.m: pools 465 OL / 501 CL motion-clean trials (|z-motion| <= 1.5), sorts by total variance (trial-2s to trial end, from pncDfk_l), produces 3-col x 2-row (OL/CL) figure -- dF/F deviation heatmap, block-mean variance vs MSE, block-mean 1-4 Hz delta power vs MSE. No export (no figures as paper per user instruction).
+**Why:** This is the single merged script replacing the earlier prestim_variance.m / spectral_mse_sort.m pair (already deleted) per user's request to consolidate variance-sort + delta-power + MSE comparison into one script.
+**Next:** Correlations: OL MSE~var r=0.653 p=0.0007, CL MSE~var r=0.771 p<0.0001, OL MSE~delta r=-0.062 p=0.78 (n.s.), CL MSE~delta r=0.509 p=0.0093. User to review figure and direct any layout/binning changes; no paper export until told.
+
+### 2026-06-10 -- trial_state_mse.m: replaced timeseries heatmap with power spectrum, dropped redundant column
+**Changed/Found:** `controller-analysis/trial_state_mse.m` -- Reworked figure from 3 cols x 2 rows to 2 cols x 2 rows. Col 1 was a dF/F-deviation timeseries heatmap (-1 to +3 s); replaced with a power spectrum heatmap (0-10 Hz, log10 absolute power, parula colormap, percentile-based clim) computed from ncFreqPow/wcFreqPow averaged over the same trial-2s-to-end window used for the variance sort, with white dashed lines marking the 1-4 Hz delta band. Removed pncDfk_l/ncDfk-based timeseries pooling entirely (no longer needed). Dropped the old Col 3 (delta-power vs MSE) since it plotted identical (x,y) points to Col 2 (variance vs MSE) and only differed in y-tick labels; the OL/CL MSE~delta correlations are still printed to console.
+**Why:** User flagged that Col 2 and Col 3 were visually the same plot (same bMSE/bYpos data, different labels), and asked for the sorted-trial heatmap to show each trial's power spectrum instead of its dF/F timeseries.
+**Next:** Colorbar label ("log10 power (DeltaF/F)^2 Hz^-1") slightly overlaps the heatmap's right edge -- tighten if it bothers the user. No export yet.
+
+### 2026-06-10 -- trial_state_mse.m: f x power(f) weighting to flatten 1/f spectrum
+**Changed/Found:** `controller-analysis/trial_state_mse.m` -- 0-1 Hz power was dominating the spectrum heatmap colour range, hiding structure in 1-10 Hz bands. Added `nc_specw_s = nc_spec_s .* freqCtrs` (and wc_ equivalent) -- multiplies each band's absolute power by its band-centre frequency (f x P(f)), a fixed deterministic per-band weight applied identically to OL/CL/all trials (not a trial-relative normalization). clim_spec, imagesc data, and colourbar label all updated to the weighted quantity (units (DeltaF/F)^2, log10 colour scale). 0-1 Hz band now saturates at the top of the colourbar; 1-10 Hz bands show clear trial-to-trial structure.
+**Why:** User asked how to make non-0-1Hz effects visible without violating the locked "absolute power, no normalization" rule; f x P(f) is a standard fixed re-weighting (not data-driven normalization) so OL/CL and cross-trial comparisons remain valid.
+**Next:** User to confirm this visualization is useful; consider also trying a log-frequency x-axis if 1-10 Hz still needs more spread. No export yet.
+
+### 2026-06-10 -- trial_state_mse.m: log-frequency x-axis tried and reverted
+**Changed/Found:** `controller-analysis/trial_state_mse.m` -- Briefly added a log-frequency x-axis (resampled bands onto a log10(Hz) grid via interp1) on top of the f x P(f) weighting. User clarified they meant the colour/intensity should be logged (already done via log10 colour scale), not the frequency axis -- reverted to linear 0-10 Hz x-axis with f x P(f) weighting + log10 colour (nc_specw_s/wc_specw_s, freqCtrs as XData).
+**Why:** Misread "use log as well" as log-frequency axis; actual ask was about log power intensity, which the f x P(f) + log10 colour step already provides.
+**Next:** User to confirm current version (linear freq axis, f x P(f), log10 colour) is the desired visualization. No export yet.
+
+### 2026-06-10 -- trial_state_mse.m: removed f x P(f) weighting
+**Changed/Found:** `controller-analysis/trial_state_mse.m` -- Removed the f x P(f) weighting added earlier; heatmap now shows plain absolute power (nc_spec_s/wc_spec_s) on log10 colour scale, linear 0-10 Hz x-axis, percentile-based clim. Colourbar label reverted to "log10 power (DeltaF/F)^2 Hz^-1".
+**Why:** User asked to remove the f x P(f) weighting.
+**Next:** User to confirm current version (absolute power, log10 colour) is the desired visualization. No export yet.
+
+### 2026-06-10 -- trial_state_mse.m: restored f x P(f) weighting
+**Changed/Found:** `controller-analysis/trial_state_mse.m` -- Re-added f x P(f) weighting (nc_specw_s/wc_specw_s = nc_spec_s/wc_spec_s .* freqCtrs), clim/colourbar/imagesc reverted to the weighted quantity. Current state: linear 0-10 Hz x-axis, f x P(f) weighting, log10 colour, percentile clim.
+**Why:** User asked to go back to f x P(f) after discussing and declining the per-band z-score alternative (z-score would be a trial-population-relative normalization, conflicting with the locked "absolute power, no normalization" rule for OL vs CL comparisons; f x P(f) is a fixed deterministic re-weighting so it doesn't have that issue).
+**Next:** This is the settled spectrum-heatmap visualization for now. No export yet.
+
+### 2026-06-15 — contra_prediction: removed CP-1, unified decontam helper, brain_overlay_fig helper
+**Changed/Found:** `impulse-analysis/contra_prediction.m` — (1) Deleted the entire `[CP-1]` section (pre-trial forward-extrapolation pipeline, ~106 lines): the approach (extrapolate from pre-stim history alone) is scientifically invalid — the concurrent contra prediction with stim-bleed negation (CP-IMP) is the correct pipeline and supersedes it. (2) Merged the duplicate decontamination logic: CP-IMP Pass 1 (nested loop building `art_imp`) and CP-4a (nested loop building `contra_sum4_amp`/`art_shape4_amp`) both computed per-amplitude mean onset-locked contra SVD deviation — replaced both with calls to a new `build_onset_artifact()` local function (pre_f, post_f arguments adapt to each caller's window). CP-IMP passes `(pre_imp, post_imp+1)` then masks with `neg_mask`; CP-4 passes `(nPad_a4, outlen)` then slices post-onset. The pooled `contra_sum4`/`contra_mean4` loop in CP-4a (used for `do_decontam4` threshold check and the artifact figure) is kept separate since it accumulates the raw signal, not deviation. (3) Extracted `brain_overlay_fig()` local function: the 15-line gray-background + transparent-overlay axes setup was copy-pasted between CP-3 and CP-RRR; both now call `[fig, ~, ax] = brain_overlay_fig(mimg_cp, 8, 6)`.
+**Why:** User identified CP-1 as invalid (uses only pre-stim history to extrapolate, so the prediction includes no information about the actual trial dynamics and incorrectly attributes network state changes to the laser). CP-IMP (concurrent prediction with artifact removal) is the valid approach. Redundancy cleanup reduces maintenance surface and makes it easier to tune the decontam window in one place.
+**Next:** Verify script runs cleanly in MATLAB from load_experiments.m → contra_prediction.m. CP-IMP and CP-4 decontam behaviour should be identical to before the refactor.
+
+### 2026-06-10 -- trial_state_mse.m: added in-trial-only variance window alternative
+**Changed/Found:** `controller-analysis/trial_state_mse.m` -- Added a `varWinMode` knob ('pre2trial' = trial-2s to end, the prior default; 'trial' = 0s to end, in-trial only). Controls both the `pncDfk_l`/`pwcDfk_l` variance window (`varWin_a`/`varWin_b`) and the matching spectral averaging window (`sortWinF`, via `specPreBins`). Heatmap titles now show `winLabel` dynamically. Ran with `varWinMode = 'trial'`: 465 OL / 501 CL trials pooled (motion-clean), OL MSE~var r=0.977 p<0.0001, CL MSE~var r=0.978 p<0.0001, OL MSE~delta r=0.954 p<0.0001, CL MSE~delta r=0.973 p<0.0001.
+**Why:** User asked for an alternative where the variance-sort uses only the in-trial window (0 to +3s) instead of trial-2s-to-end, to compare against the original.
+**Next:** Note the in-trial variance and MSE are both computed over ~t=0..+3s, so the much higher r-values (~0.97-0.98) vs the pre2trial mode (r~0.65-0.77) likely reflect window overlap rather than a stronger relationship -- flag this if either mode is used in the manuscript. `varWinMode` currently left set to 'trial'; switch back to 'pre2trial' to reproduce the original figure. No export yet.
