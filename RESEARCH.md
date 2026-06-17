@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-17 — CP-BLEED: add accurate algorithm description to section header
+**Changed/Found:** `contra_prediction.m` — rewrote the `%% [CP-BLEED]` section comment to accurately describe the algorithm (signed mean deviation in dip window relative to pre-stim mean, soft-weighted not SNR-thresholded) and explicitly note that it does NOT compare to baseline variance. User queried whether the bleed detection gates on dip-vs-baseline-variance; it does not — it uses the signed trial-averaged mean change as a continuous weight.
+**Why:** User wanted to understand the detection criterion and verify whether it matches their mental model (SNR-style gating). It doesn't — current method is soft weighting. Note added explaining how to add SNR threshold if desired.
+**Next:** Decide whether to add hard SNR gating (require dip > k × baseline SD before pixel projection) or leave as soft weighting.
+
 ### 2026-06-17 — Fix: ROI cache not found when impulseDir resolves to wrong dir
 **Changed/Found:** `contra_prediction.m` — expanded legacy migration to search `impulseDir`, `pwd`, AND `fileparts(impulseDir)` (project root) for the roi_name, not just `impulseDir`. Added `fprintf` that prints the expected cache path every run. `load_experiments.m` — added `addpath(impulseDir)` so `which('contra_prediction')` works as a fallback when `mfilename` returns empty (command-window runs). Root cause: if `mfilename` returns '' and `which` can't find `contra_prediction` (not on path), the `pwd` fallback fires; if pwd is `brain_paper/` rather than `impulse-analysis/`, `dataDir` becomes `brain_paper/data/` and the cache is not found.
 **Why:** User reported ROI selector firing every run despite cache file existing. The file was likely saved at the project root level by an earlier version.

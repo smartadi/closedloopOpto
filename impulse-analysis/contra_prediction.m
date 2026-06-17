@@ -493,13 +493,36 @@ paperExport(fig_kmR, fullfile(paper_root,'images','figure2','cp_rrr_kernel_map.p
 fprintf('[CP-RRR] Exported cp_rrr_kernel_map.png\n');
 
 %% [CP-BLEED] Impulse-bleed spatial map on contra hemisphere
-% Computes the mean onset-locked contra deviation during the stim dip window
-% per SVD mode, then projects to pixel space via U_svd_cp.
-% Separate figure from the RRR prediction kernel — shows WHERE on contra
-% the impulse propagates, not where contra predicts ipsi.
+%
+% WHAT THIS MEASURES
+% For each contra SVD mode, compute the SIGNED mean change in that mode
+% during the stim dip window (0–bleed_neg_win(2) s) relative to the
+% pre-stim baseline, averaged across all trials and amplitudes.
+% Project the resulting weight vector back to pixel space via U_svd_cp to
+% get a spatial map of where on the contralateral hemisphere the stimulus
+% drives correlated activity (positive = driven up, negative = driven down).
+%
+% ALGORITHM
+%   1. Per trial: extract [−bleed_pre_s, +bleed_neg_win(2)] s window of
+%      z-scored contra SVD modes (X_cp_m).
+%   2. Subtract the per-trial pre-stim MEAN (t < 0) from each mode as
+%      baseline correction.
+%   3. Average the baseline-corrected traces across all trials of one
+%      amplitude => trial-average onset-locked deviation [nWin × nPred_cp].
+%   4. Take the TIME-MEAN over the dip window (t = 0..bleed_neg_win(2)) =>
+%      one signed scalar per mode per amplitude.
+%   5. Average those scalars across amplitudes => C_signed_z [nPred_cp × 1].
+%   6. Convert C_signed_z from z-score units back to original SVD units
+%      (multiply by per-mode std), then project: bleed_pixel_w = U * C.
+%
+% NOTE: Detection threshold is implicit (soft weighting by magnitude).
+% The signed mean is NOT compared to baseline variance — a mode with a
+% small but consistent dip gets a small weight, not a hard zero. To gate on
+% SNR (require dip > k × baseline SD), compute baseline std and threshold
+% C_signed_z accordingly before the pixel projection.
 
 bleed_neg_win  = [0 0.30];         % dip window (s); must match [CP-IMP] neg_win
-bleed_pre_s    = 1.0;              % pre-stim baseline window (s)
+bleed_pre_s    = 6.0;              % pre-stim baseline window (s)
 bleed_nPre     = round(bleed_pre_s * Fs);
 bleed_nPost    = round(bleed_neg_win(2) * Fs);
 bleed_nWin     = bleed_nPre + bleed_nPost + 1;
@@ -617,7 +640,7 @@ decontam_mode = 'scaledkernel';   % ADOPTED. Subtract kernel_alpha * (per-amplit
                           %     exact zero bleed but switches contra off + boundary step.
                           %   false (decontam=false) = residual (actual-raw beta), the
                           %     stable LOWER BOUND alternative.
-kernel_alpha = 0.8;       % scaledkernel: fraction of bleed to remove (0..1). 0.8 ->
+kernel_alpha = 0.85;       % scaledkernel: fraction of bleed to remove (0..1). 0.8 ->
                           % ~15% residual bleed at all amplitudes; 1.0 == kernel.
 taper_win = [0.20 0.40];  % scaledkernel: cosine ramp 1->0 over this window past the
                           % dip, so subtraction fades out smoothly (kills boundary step).
