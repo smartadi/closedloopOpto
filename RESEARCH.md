@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-17 — CP-7 per-session error-sorted heatmap (clickable)
+**Changed/Found:** Added `%% [CP-7]` section to `contra_prediction.m` and created `utils/cp_error_heatmap.m`. One panel per amplitude: imagesc heatmap with x=time(ms), y=trial rank sorted ascending by prediction error (rank 1=best predicted at bottom). Blue-white-red diverging colormap symmetric about zero. Click any row → detail figure: actual (black) + amplitude average ±SEM (gray) + contra SVD (blue dashed) + ARX+TF (red dashed), with error window marker. Exports `cp7_error_heatmap.png`.
+**Why:** Session-level overview of prediction quality across all trials and amplitudes, with drill-down on any individual trial.
+**Next:** Run CP-7; click worst-predicted trials to look for systematic failure modes (large-motion, non-responsive, etc).
+
 ### 2026-06-17 — CP-6i inspector + local helpers moved to utils/
 **Changed/Found:** `contra_prediction.m` — (1) added `onset4` cell preallocation and `onset_ia4(j4) = ion4` in the CP-4c per-trial loop; (2) stacked `onset_all4` and `amp_all4` after the CP-4d cell2mat block; (3) added `%% [CP-6i]` section that packs S_insp struct and calls `cp_trial_inspector`; (4) removed 6 local function bodies from end of script (moved to utils/). Created 7 new utils files: `compute_r2.m`, `per_trial_r2.m`, `plot_window.m`, `rrr_fit.m`, `build_onset_artifact.m`, `brain_overlay_fig.m`, `cp_trial_inspector.m`.
 **Why:** Requested interactive trial inspector: clickable motion-vs-error scatter, per-trial detail pop-up (actual + amp-average + prediction top panel; z-scored motion trace bottom panel). Moving helpers to utils/ makes them available to future scripts without duplicating code.

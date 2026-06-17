@@ -1620,6 +1620,26 @@ S_insp.Fs         = Fs;
 cp_trial_inspector(S_insp);
 fprintf('[CP-6i] Inspector launched — click a trial point to inspect.\n');
 
+%% ── [CP-7] Per-session error-sorted heatmap (clickable) ──────────────────────
+% One panel per amplitude. X = time (ms), Y = trial rank (ascending pred error).
+% Click any row to pop a detail figure: actual + amp average + prediction.
+S7.actual4    = actual4;
+S7.pink4      = pink4;
+S7.red4       = red4;
+S7.err4       = err4;
+S7.tEval      = tEval;
+S7.uAmp_cp    = uAmp_cp;
+S7.ia_list4   = ia_list4;
+S7.iEval      = iEval;
+S7.err_end_s  = err_end_s;
+S7.mn         = mn;
+S7.td         = td;
+S7.en         = en;
+S7.paper_root = paper_root;
+
+cp_error_heatmap(S7);
+
 % Helpers live in utils/ (on path via addpath at top):
 %   compute_r2, per_trial_r2, plot_window, rrr_fit,
-%   build_onset_artifact, brain_overlay_fig, cp_trial_inspector
+%   build_onset_artifact, brain_overlay_fig, cp_trial_inspector,
+%   cp_error_heatmap
