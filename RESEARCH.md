@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-17 — Option C shifted-window in build_onset_artifact (corrected)
+**Changed/Found:** `utils/build_onset_artifact.m` — implemented the actual Option C: shifted_window mode computes a matched spontaneous reference window shifted `spont_offset_f` frames (~20 s default) before each stim onset, averages across trials, and subtracts from the stim-locked average. Result = stim_mean − spont_mean = pure stim-specific artifact. 'detrend' and 'none' modes retained. `contra_prediction.m` — default `bleed_spont_ref = 'shifted_window'`, `bleed_spont_offset_s = 20`; both call sites guard for missing workspace vars and pass `round(bleed_spont_offset_s * Fs)` as the frame offset. Previous 'detrend' commit was a wrong substitution — this corrects it.
+**Why:** User pointed out the shifted-window subtraction (artifact = stim_mean − spont_mean) was agreed but not implemented — linear detrend was substituted without disclosure.
+**Next:** Re-run CP-IMP and CP-4; check console for spont-window validity warnings (if many trials report fewer valid spont frames than stim frames, the 20 s offset is too large for the session's recording length — reduce bleed_spont_offset_s).
+
 ### 2026-06-17 — Option C detrend in build_onset_artifact (bleed_spont_ref)
 **Changed/Found:** `utils/build_onset_artifact.m` — added optional `spont_ref` arg ('none' | 'detrend'). 'detrend' fits a line to each mode's pre-stim window per trial and extrapolates it forward; subtracts this expected spontaneous trajectory instead of the flat pre-stim mean. Isolates the stim-specific deflection, removing slow hemodynamic/arousal drifts correlated with trial timing. `contra_prediction.m` — added `bleed_spont_ref = 'detrend'` knob in Setup section; threaded through both build_onset_artifact call sites (CP-IMP and CP-4).
 **Why:** Current mean-subtraction baseline leaves any pre-stim slope extrapolated into the stim window, inflating the artifact estimate and degrading decontamination. Linear detrend removes this without needing a fixed-offset spontaneous reference window (which risks landing on a prior stim period given unknown ITI).
