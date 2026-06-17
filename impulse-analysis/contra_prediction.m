@@ -671,6 +671,7 @@ art_imp  = cell(nAmp_imp,1);   % per-amplitude onset-locked contra artifact (har
 art_tap_imp = cell(nAmp_imp,1);% per-amplitude artifact, cosine-tapered (scaledkernel)
 
 % ---- Pass 1: per-amplitude onset-locked contra artifact (the stim bleed) -----
+if ~exist('bleed_spont_ref','var'); bleed_spont_ref = 'detrend'; end
 art_raw_imp = build_onset_artifact(nAmp_imp, nzMask_cp, imp_data, t_full, X_cp_m, ...
     nPred_cp, pre_imp, post_imp + 1, nF_m, bleed_spont_ref);
 % Taper weight: 1 from onset to taper_win(1), cosine ramp 1->0 over taper_win, 0
@@ -968,6 +969,7 @@ fprintf('[CP-4a] Contra artifact: max_dev=%.4f  prestim_SD=%.4f  ratio=%.2f  dec
     max_art4, sd_pre4, art_ratio4, double(do_decontam4));
 
 % Per-amplitude artifact via shared helper; slice to post-onset window
+if ~exist('bleed_spont_ref','var'); bleed_spont_ref = 'detrend'; end
 art_raw_4      = build_onset_artifact(nAmp_cp4, nzMask_cp, imp_data, t_full, X_cp_m, ...
     nPred_cp, nPad_a4, outlen, nF_m, bleed_spont_ref);
 art_shape4_amp = cellfun(@(a) a(nPad_a4+1:end, :), art_raw_4, 'UniformOutput', false);
