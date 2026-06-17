@@ -20,6 +20,20 @@ tertertColors_motot = [0.20 0.40 0.80;   % Low  â€” blue
                   0.85 0.20 0.20];  % High â€” red
 tLabels_m      = {'Low motion', 'Mid motion', 'High motion'};
 
+% TWO PARALLEL STREAMS — set which deviation signal Y is:
+%   'peakdev' = |Peak_imp - mean(Peak_imp)| per amp (ORIGINAL: deviation from
+%               trial-averaged response). Always available.
+%   'cperr'   = CP-4 per-trial prediction error (contra-pred + TF route). Needs
+%               contra_prediction.m to have run (populates imp.cp_err).
+% Output filenames are tagged with the stream so the two never overwrite.
+if ~exist('dev_metric','var'), dev_metric = 'cperr'; end   % 'peakdev' | 'cperr'
+dev_tag = dev_metric;
+% expColors normally comes from dose_response.m (runs earlier in run_all); guard
+% so motion_analysis can also run standalone.
+if ~exist('expColors','var'), expColors = [0.2 0.4 0.8; 0.8 0.2 0.2; 0.2 0.8 0.4]; end
+dev_ylabel = 'Prediction error';
+if strcmp(dev_metric,'peakdev'), dev_ylabel = '|Peak dev| (\DeltaF/F %)'; end
+
 %% Motion vs Peak_imp deviation â€” one figure per session, subplots per amp
 %
 % X: mean z-scored motion over motWin_ana (comparable across sessions)
@@ -40,7 +54,7 @@ for expIdx = 1:nExp
     xAll_m = []; yAll_m = [];
     for iA = 1:nAmp_e
         xAll_m = [xAll_m; mean(imp_e.motTrace{iA}(:, iMot_a), 2)]; %#ok<AGROW>
-        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iA})
+        if strcmp(dev_metric,'cperr') && isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iA})
             yAll_m = [yAll_m; imp_e.cp_err{iA}(:)];              %#ok<AGROW>
         else
             yAll_m = [yAll_m; imp_e.Peak_imp_dev{iA}(:)];        %#ok<AGROW>
@@ -63,7 +77,7 @@ for expIdx = 1:nExp
         'FontWeight','bold', 'FontSize', 10, 'Interpreter','none');
 
     for iAmp = 1:nAmp_e
-        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
+        if strcmp(dev_metric,'cperr') && isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
             dev_i = imp_e.cp_err{iAmp}(:);
         else
             dev_i = imp_e.Peak_imp_dev{iAmp}(:);
@@ -89,7 +103,7 @@ for expIdx = 1:nExp
         title(ax, sprintf('%.2f V   (n=%d,  r=%.2f)', imp_e.uAmp{iAmp}, nUse, r), ...
             'FontSize', 8, 'FontWeight','bold');
         xlabel(ax, sprintf('Mean motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), 'FontSize', 8);
-        ylabel(ax, 'Prediction error', 'FontSize', 8);
+        ylabel(ax, dev_ylabel, 'FontSize', 8);
         lg = legend(ax, 'Box','off', 'FontSize', 7, 'Location','best');
         lg.ItemTokenSize = [6 6];
         set(ax, 'Box','off', 'TickDir','out', 'FontSize', 8);
@@ -141,7 +155,7 @@ for iAmp = 1:nAmp_mot
     nUse = min([size(imp_e_mot.dfImp{iAmp}, 1), size(imp_e_mot.motTrace{iAmp}, 1)]);
     if nUse < 2, continue; end
     mot_i = mean(imp_e_mot.motTrace{iAmp}(1:nUse, iMot_a), 2);
-    if isfield(imp_e_mot, 'cp_err') && ~isempty(imp_e_mot.cp_err{iAmp})
+    if strcmp(dev_metric,'cperr') && isfield(imp_e_mot, 'cp_err') && ~isempty(imp_e_mot.cp_err{iAmp})
         dev_i = imp_e_mot.cp_err{iAmp}(1:nUse);
     else
         pk_i  = imp_e_mot.Peak_imp{iAmp}(:);
@@ -214,12 +228,12 @@ hl_mv = xline(ax_mv, motThr_hi, 'k--', 'LineWidth', 0.8); hl_mv.HandleVisibility
 % title(ax_mv, sprintf('r = %.2f  p = %.3f', rA_m, pA_m), ...
     % 'FontSize', 6, 'FontWeight', 'bold');
 xlabel(ax_mv, sprintf('Mean motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), 'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_mv, 'impulse prediction error',  'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_mv, dev_ylabel,  'FontSize', 6, 'FontWeight', 'bold');
 lg_mv = legend(ax_mv, 'Location', 'best');
 paperLegend(lg_mv);
 hold(ax_mv, 'off');
 paperExport(fig_mv, ...
-    fullfile(paperRoot, 'images', 'supplementary', sprintf('imp_motion_devscatter_%s_%s_en%d.png', mn_mot, td_mot, en_mot)));
+    fullfile(paperRoot, 'images', 'supplementary', sprintf('imp_motion_devscatter_%s_%s_%s_en%d.png', dev_tag, mn_mot, td_mot, en_mot)));
 
 % ---- Figure 2 (pooled all sessions): motion z-score vs |Peak dev| ----
 % colour = session (expColors); marker = o no-motion, ^ motion
@@ -234,7 +248,7 @@ for expIdx = 1:nExp
         nUse = min([size(imp_e_p.dfImp{iAmp}, 1), size(imp_e_p.motTrace{iAmp}, 1)]);
         if nUse < 2, continue; end
         mot_i = mean(imp_e_p.motTrace{iAmp}(1:nUse, iMot_a), 2);
-        if isfield(imp_e_p, 'cp_err') && ~isempty(imp_e_p.cp_err{iAmp})
+        if strcmp(dev_metric,'cperr') && isfield(imp_e_p, 'cp_err') && ~isempty(imp_e_p.cp_err{iAmp})
             dev_i = imp_e_p.cp_err{iAmp}(1:nUse);
         else
             pk_i  = imp_e_p.Peak_imp{iAmp}(:);
@@ -294,12 +308,12 @@ hl_p.HandleVisibility = 'off';
 %     'FontSize', 6, 'FontWeight', 'bold');
 xlabel(ax_mvp, sprintf('Motion energy z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
     'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_mvp, 'Impulse Prediction error', 'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_mvp, dev_ylabel, 'FontSize', 6, 'FontWeight', 'bold');
 lg_mvp = legend(ax_mvp, hLeg_p, 'Location', 'best');
 paperLegend(lg_mvp);
 hold(ax_mvp, 'off');
 paperExport(fig_mvp, ...
-    fullfile(paperRoot, 'images', 'figure2', 'imp_motion_devscatter_all_sessions.pdf'));
+    fullfile(paperRoot, 'images', 'figure2', sprintf('imp_motion_devscatter_all_sessions_%s.pdf', dev_tag)));
 
 %% Prediction error vs motion z-score — all sessions, all amps, threshold = 1.5
 motThr_15    = 1.5;
@@ -332,10 +346,10 @@ hold(ax_15, 'off');
 set(ax_15, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'FontWeight', 'bold');
 xlabel(ax_15, sprintf('Motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
     'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_15, 'Prediction error', 'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_15, dev_ylabel, 'FontSize', 6, 'FontWeight', 'bold');
 title(ax_15, sprintf('All sessions · all amps  r=%.3f  p=%.4f', r15, p15), ...
     'FontSize', 6, 'FontWeight', 'bold');
 lg_15 = legend(ax_15, 'Location', 'best');
 paperLegend(lg_15);
 paperExport(fig_15, ...
-    fullfile(paperRoot, 'images', 'figure2', 'imp_motion_pred_err_thr15.png'));
+    fullfile(paperRoot, 'images', 'figure2', sprintf('imp_motion_pred_err_thr15_%s.png', dev_tag)));

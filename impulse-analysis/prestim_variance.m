@@ -15,6 +15,12 @@ if ~exist('t_win_imp', 'var')
     t_win_imp = -3 : 1/35 : 3;
 end
 
+% TWO PARALLEL STREAMS (see motion_analysis.m): which deviation signal Y is.
+%   'peakdev' = |Peak_imp - mean| per amp (ORIGINAL). 'cperr' = CP-4 prediction
+%   error (contra-pred route). Output filenames tagged so streams don't overwrite.
+if ~exist('dev_metric','var'), dev_metric = 'cperr'; end   % 'peakdev' | 'cperr'
+dev_tag = dev_metric;
+
 preIdx_var = t_win_imp >= -1 & t_win_imp < 0;   % 35 samples, -1 to 0 s
 nVarBins   = 5;
 
@@ -37,7 +43,7 @@ for expIdx = 1:nExp
 
     for iAmp = 1:nAmp_e
         df_i  = imp_e.dfImp{iAmp};
-        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
+        if strcmp(dev_metric,'cperr') && isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
             dev_i = imp_e.cp_err{iAmp}(:);
         else
             dev_i = imp_e.Peak_imp_dev{iAmp}(:);
@@ -127,7 +133,7 @@ for expIdx = 1:nExp
         pk_i    = imp_e.Peak_imp{iAmp}(:);
         mot_i   = imp_e.mot{iAmp}(:);
         n_total = min([size(df_i,1), numel(pk_i), numel(mot_i)]);
-        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
+        if strcmp(dev_metric,'cperr') && isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
             n_total = min(n_total, numel(imp_e.cp_err{iAmp}));
         end
         if n_total < 3, continue; end
@@ -142,7 +148,7 @@ for expIdx = 1:nExp
 
         df_clean  = df_i(keepIdx, :);
         pk_clean  = pk_i(keepIdx);
-        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
+        if strcmp(dev_metric,'cperr') && isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
             cp_err_i  = imp_e.cp_err{iAmp}(1:n_total);
             dev_clean = cp_err_i(keepIdx);
         else
@@ -287,7 +293,7 @@ mn_pam = allExperiments(selExp).mn;
 td_pam = allExperiments(selExp).td;
 en_pam = allExperiments(selExp).en;
 paperExport(fig_pvm, ...
-    fullfile(paperRoot, 'images', 'figure2', sprintf('prevar_vs_dev_allamps_motexcl_%s_%s_en%d.pdf', mn_pam, td_pam, en_pam)));
+    fullfile(paperRoot, 'images', 'figure2', sprintf('prevar_vs_dev_allamps_motexcl_%s_%s_%s_en%d.pdf', dev_tag, mn_pam, td_pam, en_pam)));
 
 %% Freq heatmap sorted by pre-trial variance + deviation side strip (interactive)
 %
