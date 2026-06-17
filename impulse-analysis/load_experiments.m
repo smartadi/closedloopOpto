@@ -9,8 +9,9 @@ le_path    = which('load_experiments');
 if isempty(le_path), le_path = fullfile(pwd, 'load_experiments.m'); end
 impulseDir = fileparts(le_path);
 
-% Add utils before clear all wipes impulseDir
+% Add utils and impulse-analysis/ itself (so which('contra_prediction') works)
 addpath(genpath(fullfile(impulseDir, '..', 'utils')));
+addpath(impulseDir);
 clear le_path
 
 % add pixel configuration

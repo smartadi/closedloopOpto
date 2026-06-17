@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-17 — Fix: ROI cache not found when impulseDir resolves to wrong dir
+**Changed/Found:** `contra_prediction.m` — expanded legacy migration to search `impulseDir`, `pwd`, AND `fileparts(impulseDir)` (project root) for the roi_name, not just `impulseDir`. Added `fprintf` that prints the expected cache path every run. `load_experiments.m` — added `addpath(impulseDir)` so `which('contra_prediction')` works as a fallback when `mfilename` returns empty (command-window runs). Root cause: if `mfilename` returns '' and `which` can't find `contra_prediction` (not on path), the `pwd` fallback fires; if pwd is `brain_paper/` rather than `impulse-analysis/`, `dataDir` becomes `brain_paper/data/` and the cache is not found.
+**Why:** User reported ROI selector firing every run despite cache file existing. The file was likely saved at the project root level by an earlier version.
+**Next:** Run the section; confirm `[CP] ROI cache expected at: …impulse-analysis/data/…` is printed and the migration fires once if the file is found in a neighbouring directory. After that runs should skip the selector.
+
 ### 2026-06-17 — CP-7 per-session error-sorted heatmap (clickable)
 **Changed/Found:** Added `%% [CP-7]` section to `contra_prediction.m` and created `utils/cp_error_heatmap.m`. One panel per amplitude: imagesc heatmap with x=time(ms), y=trial rank sorted ascending by prediction error (rank 1=best predicted at bottom). Blue-white-red diverging colormap symmetric about zero. Click any row → detail figure: actual (black) + amplitude average ±SEM (gray) + contra SVD (blue dashed) + ARX+TF (red dashed), with error window marker. Exports `cp7_error_heatmap.png`.
 **Why:** Session-level overview of prediction quality across all trials and amplitudes, with drill-down on any individual trial.

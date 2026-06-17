@@ -96,12 +96,22 @@ clear d_tmp
 %% Contra ROI definition
 % Interactive on first run (or if redefine_roi=true); cached afterward.
 % Only the midline and the contra polygon boundary are needed (no pixel grid).
-roi_file = fullfile(dataDir, sprintf('cp_roi_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
-% Migrate a legacy ROI cache saved in the script folder (pwd-relative) into data/.
-legacy_roi = fullfile(impulseDir, sprintf('cp_roi_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
-if ~exist(roi_file,'file') && exist(legacy_roi,'file')
-    movefile(legacy_roi, roi_file);
-    fprintf('Migrated legacy ROI cache -> %s\n', roi_file);
+roi_name = sprintf('cp_roi_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en);
+roi_file = fullfile(dataDir, roi_name);
+fprintf('[CP] ROI cache expected at: %s\n', roi_file);
+
+% Migrate from any known legacy location into data/.
+% Checked in priority order: impulseDir, pwd (catches root-level saves when
+% mfilename resolved wrong), and parent of impulseDir.
+if ~exist(roi_file, 'file')
+    for rsd = {impulseDir, pwd, fileparts(impulseDir)}
+        candidate = fullfile(rsd{1}, roi_name);
+        if ~strcmp(candidate, roi_file) && exist(candidate, 'file')
+            movefile(candidate, roi_file);
+            fprintf('[CP] Migrated ROI cache: %s\n  -> %s\n', candidate, roi_file);
+            break;
+        end
+    end
 end
 
 if redefine_roi && exist(roi_file,'file')
