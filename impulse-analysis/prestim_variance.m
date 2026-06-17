@@ -11,6 +11,10 @@
 % Subplot index uses column/group calculation so the layout is correct
 % when nAmp > 4 and amplitudes wrap across rows.
 
+if ~exist('t_win_imp', 'var')
+    t_win_imp = -3 : 1/35 : 3;
+end
+
 preIdx_var = t_win_imp >= -1 & t_win_imp < 0;   % 35 samples, -1 to 0 s
 nVarBins   = 5;
 
@@ -33,7 +37,11 @@ for expIdx = 1:nExp
 
     for iAmp = 1:nAmp_e
         df_i  = imp_e.dfImp{iAmp};
-        dev_i = imp_e.Peak_imp_dev{iAmp}(:);
+        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
+            dev_i = imp_e.cp_err{iAmp}(:);
+        else
+            dev_i = imp_e.Peak_imp_dev{iAmp}(:);
+        end
         n_i   = min(size(df_i,1), numel(dev_i));
         if n_i < 3, continue; end
         df_i  = df_i(1:n_i, :);
@@ -54,7 +62,7 @@ for expIdx = 1:nExp
         ax1 = subplot(nGridR, nCols_v, sp_top);
         scatter(ax1, preVar_i, dev_i, 12, 'filled', 'MarkerFaceAlpha', 0.5);
         xlabel(ax1, 'Pre-trial var (\DeltaF/F)^2', 'FontSize', 6, 'FontWeight','bold');
-        ylabel(ax1, '|Peak dev|', 'FontSize', 6, 'FontWeight','bold');
+        ylabel(ax1, 'Prediction error', 'FontSize', 6, 'FontWeight','bold');
         title(ax1, sprintf('%.2f V  r=%.2f  p=%.3f', imp_e.uAmp{iAmp}, r_v, p_v), ...
             'FontSize', 6, 'FontWeight','bold');
         set(ax1, 'Box','off', 'TickDir','out', 'FontSize', 6, 'FontWeight','bold');
@@ -78,7 +86,7 @@ for expIdx = 1:nExp
         xticks(ax2, 1:nVarBins);
         xticklabels(ax2, {'Q1','Q2','Q3','Q4','Q5'});
         xlabel(ax2, 'Pre-trial var quintile', 'FontSize', 6, 'FontWeight','bold');
-        ylabel(ax2, 'Mean |Peak dev| Â± SEM', 'FontSize', 6, 'FontWeight','bold');
+        ylabel(ax2, 'Mean prediction error ± SEM', 'FontSize', 6, 'FontWeight','bold');
         title(ax2, sprintf('n=%d', n_i), 'FontSize', 6, 'FontWeight','bold');
         set(ax2, 'Box','off', 'TickDir','out', 'FontSize', 6, 'FontWeight','bold');
     end
@@ -119,6 +127,9 @@ for expIdx = 1:nExp
         pk_i    = imp_e.Peak_imp{iAmp}(:);
         mot_i   = imp_e.mot{iAmp}(:);
         n_total = min([size(df_i,1), numel(pk_i), numel(mot_i)]);
+        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
+            n_total = min(n_total, numel(imp_e.cp_err{iAmp}));
+        end
         if n_total < 3, continue; end
 
         df_i  = df_i(1:n_total, :);
@@ -131,7 +142,12 @@ for expIdx = 1:nExp
 
         df_clean  = df_i(keepIdx, :);
         pk_clean  = pk_i(keepIdx);
-        dev_clean = abs(pk_clean - mean(pk_clean, 'omitnan'));
+        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
+            cp_err_i  = imp_e.cp_err{iAmp}(1:n_total);
+            dev_clean = cp_err_i(keepIdx);
+        else
+            dev_clean = abs(pk_clean - mean(pk_clean, 'omitnan'));
+        end
         mot_clean = imp_e.motTrace{iAmp}(keepIdx, :);
 
         preVar_clean = var(df_clean(:, preIdx_var), 0, 2);
@@ -147,7 +163,7 @@ for expIdx = 1:nExp
         ax1 = subplot(nGridR_m, nCols_m, sp_top);
         hS = scatter(ax1, preVar_clean, dev_clean, 12, 'filled', 'MarkerFaceAlpha', 0.5);
         xlabel(ax1, 'Pre-trial var (\DeltaF/F)^2', 'FontSize', 6, 'FontWeight','bold');
-        ylabel(ax1, '|Peak dev|', 'FontSize', 6, 'FontWeight','bold');
+        ylabel(ax1, 'Prediction error', 'FontSize', 6, 'FontWeight','bold');
         title(ax1, sprintf('%.2f V  r=%.2f  p=%.3f  (%d/%d)  [click]', ...
             imp_e.uAmp{iAmp}, r_m, p_m, n_kept, n_total), ...
             'FontSize', 6, 'FontWeight','bold');
@@ -183,7 +199,7 @@ for expIdx = 1:nExp
         xticks(ax2, 1:nVarBins);
         xticklabels(ax2, {'Q1','Q2','Q3','Q4','Q5'});
         xlabel(ax2, 'Pre-trial var quintile', 'FontSize', 6, 'FontWeight','bold');
-        ylabel(ax2, 'Mean |Peak dev| Â± SEM', 'FontSize', 6, 'FontWeight','bold');
+        ylabel(ax2, 'Mean prediction error ± SEM', 'FontSize', 6, 'FontWeight','bold');
         title(ax2, sprintf('n=%d kept', n_kept), 'FontSize', 6, 'FontWeight','bold');
         set(ax2, 'Box','off', 'TickDir','out', 'FontSize', 6, 'FontWeight','bold');
     end
@@ -223,14 +239,14 @@ for ki = 1:nV_pam
     pk_i   = imp_pam.Peak_imp{iAmp}(:);
     mot_i  = imp_pam.mot{iAmp}(:);
     n_tot  = min([size(df_i,1), numel(pk_i), numel(mot_i)]);
-    if n_tot < nBins_pa + 1, continue; end
+    if n_tot < nVarBins + 1, continue; end
 
     df_i  = df_i(1:n_tot, :);
     pk_i  = pk_i(1:n_tot);
     mot_i = mot_i(1:n_tot);
 
     keepIdx = mot_i <= mot_thresh_pam;
-    if sum(keepIdx) < nBins_pa + 1, continue; end
+    if sum(keepIdx) < nVarBins + 1, continue; end
 
     df_k   = df_i(keepIdx, :);
     pk_k   = pk_i(keepIdx);
@@ -238,14 +254,14 @@ for ki = 1:nV_pam
 
     preVar_k = var(df_k(:, preIdx_var), 0, 2);
 
-    edges_pam    = quantile(preVar_k, linspace(0, 1, nBins_pa + 1));
+    edges_pam    = quantile(preVar_k, linspace(0, 1, nVarBins + 1));
     edges_pam(1) = edges_pam(1) - eps;
     [~, ~, binID_pam] = histcounts(preVar_k, edges_pam);
 
-    bin_mu_m  = zeros(nBins_pa, 1);
-    bin_sem_m = zeros(nBins_pa, 1);
-    bin_xmu_m = zeros(nBins_pa, 1);
-    for ib = 1:nBins_pa
+    bin_mu_m  = zeros(nVarBins, 1);
+    bin_sem_m = zeros(nVarBins, 1);
+    bin_xmu_m = zeros(nVarBins, 1);
+    for ib = 1:nVarBins
         mask_ib       = binID_pam == ib;
         vals_ib       = dev_k(mask_ib);
         bin_mu_m(ib)  = mean(vals_ib, 'omitnan');
@@ -300,26 +316,38 @@ allDev_p      = [];
 allTrace_p    = [];
 allAmpV_p     = [];   % amplitude in V per trial
 
-for iAmp_pvh = 1:nAmp_pvh
-    df_i   = imp_pvh.dfImp{iAmp_pvh};
-    pk_i   = imp_pvh.Peak_imp{iAmp_pvh}(:);
-    mot_i  = imp_pvh.mot{iAmp_pvh}(:);
-    freq_i = imp_pvh.freqSpec{iAmp_pvh};
-    n_tot  = min([size(df_i,1), numel(pk_i), numel(mot_i), size(freq_i,1)]);
-    if n_tot < 3, continue; end
-    df_i   = df_i(1:n_tot, :);
-    pk_i   = pk_i(1:n_tot);
-    mot_i  = mot_i(1:n_tot);
-    freq_i = freq_i(1:n_tot, :);
+% Spectral parameters for pre-stim window (same window as variance: -1..0 s)
+% load_experiments uses ±1 s centred on onset — that includes post-stim activity.
+% Here we recompute from the raw pre-stim trace so spectrum and variance are aligned.
+nPre_smp = sum(preIdx_var);          % 35 samples = 1 s at fs=35 Hz
+nfft_pv  = 2 * fs;                   % 70-pt FFT → Δf = 0.5 Hz, matches freqBandCtrs bins
+W_hann   = sum(hann(nPre_smp).^2);  % Hann window normalisation factor
 
-    keep   = find(mot_i <= mot_thresh_pvh);
+for iAmp_pvh = 1:nAmp_pvh
+    df_i  = imp_pvh.dfImp{iAmp_pvh};
+    pk_i  = imp_pvh.Peak_imp{iAmp_pvh}(:);
+    mot_i = imp_pvh.mot{iAmp_pvh}(:);
+    n_tot = min([size(df_i,1), numel(pk_i), numel(mot_i)]);
+    if n_tot < 3, continue; end
+    df_i  = df_i(1:n_tot, :);
+    pk_i  = pk_i(1:n_tot);
+    mot_i = mot_i(1:n_tot);
+
+    keep = find(mot_i <= mot_thresh_pvh);
     if numel(keep) < 3, continue; end
 
     df_k   = df_i(keep, :);
     pk_k   = pk_i(keep);
-    freq_k = freq_i(keep, :);
     dev_k  = abs(pk_k - mean(pk_k, 'omitnan'));
     pvar_k = var(df_k(:, preIdx_var), 0, 2);
+
+    % Recompute spectrum from the -1..0 s window of each kept trial
+    freq_k = nan(numel(keep), nBands);
+    for jj = 1:numel(keep)
+        xj           = df_k(jj, preIdx_var)';
+        Xj           = fft(xj .* hann(nPre_smp), nfft_pv);
+        freq_k(jj,:) = abs(Xj(1:nBands)).^2 * 2 / (fs * W_hann);
+    end
 
     allPreVar_p = [allPreVar_p; pvar_k];                                        %#ok<AGROW>
     allFreq_p   = [allFreq_p;   freq_k];                                        %#ok<AGROW>

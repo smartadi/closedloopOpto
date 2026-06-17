@@ -16,6 +16,69 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-16 — contra_prediction: fix ROI/SVD cache path (re-detection bug) + CP-6b motion z-score bug
+**Changed:** `impulse-analysis/contra_prediction.m` — (1) anchor `roi_file` and `path_cp` to `fullfile(impulseDir,'data')` (absolute) instead of pwd-relative; resolve `impulseDir` via `mfilename('fullpath')` (robust to cwd/path) with which()/pwd fallback; auto-migrate a legacy `cp_roi_*.mat` from the script folder into `data/`. (2) CP-4c motion z-score: was normalizing per-trial `imp_data.mot` (already ~centered, mean 0.08) by the raw continuous `mot_full` trace (mean 8213, std 5338) → every trial z≈−1.5 → CP-6b high/low split gave 0 high-motion trials. Fixed to pool per-trial `imp_data.mot` across amplitudes for the z-score.
+**Why:** User reported the midline/mask ROI re-detecting on each run "which should not happen if it's in the data." Root cause: bare-filename cache saved to pwd; the orphaned ROI sat in `impulse-analysis/` while runs from root looked in `./`. The motion bug surfaced when verifying the run (CP-6b "0 high-motion trials").
+**Found (verified run load_experiments→tf_fit→contra_prediction):** ROI + SVD now load from absolute `...\impulse-analysis\data\` regardless of cwd, no re-detection. CP-6b now splits High=105 / Low=643 (was 0/748); motion scatter x-range 0–15 (was −1.55..−1.40). Pred error High 0.65±0.05 vs Low 0.62±0.02 (≈equal, consistent with motion-null). Pipeline runs clean end-to-end; CP-4d ARX=0.952, +TF=0.970.
+**Next:** Note CP-6 now uses 0–500 ms error window + onset-clamped pink → all 4 predictors weakly+significant (motion r=0.075 p=0.04, prestim var r=0.115 p=0.006). Earlier 0–200 ms run had motion null — window choice changes the motion result; decide final error window. run_all.m reordered (contra_prediction before motion/prestim, which now consume `imp.cp_err`).
+
+### 2026-06-16 — motion_analysis.m: add pooled prediction error vs motion z-score, threshold 1.5
+**Changed:** `impulse-analysis/motion_analysis.m` — new figure at end: scatter of prediction error (Y) vs motion z-score (X) pooling all sessions and all amps; binary split at z=1.5 (blue below, red above); Pearson r + n printed; exports `imp_motion_pred_err_thr15.png`
+**Why:** User requested combined all-session/all-amp view with 1.5 as the high-motion threshold (stricter than the existing 0.5 threshold used in the tertile figures)
+**Next:** Check whether high-motion trials (z>1.5) have systematically higher prediction error; if r is near zero, motion is not a driver of prediction error
+
+### 2026-06-16 — CP-5 trial grid: rows = amplitude levels, columns = trials sorted by error
+**Changed:** `impulse-analysis/contra_prediction.m` CP-5 Fig A — replaced single-amplitude 25-trial grid with amplitude-stratified layout: `nAmps5g` rows × `nPerAmp5` (=5) columns; each row is one valid amplitude, trials within row sorted ascending by prediction error; y-axis label of first column shows amplitude in volts; empty cells (fewer trials than nPerAmp5) are blanked with `axis off`
+**Why:** User requested trial-level responses characterised by amplitude to see whether prediction quality differs across stim levels
+**Next:** Check figure — expect worse prediction (higher error) at stronger amplitudes if stim bleed is not fully removed; if best-predicted trials across all amps look similar, decontam is working
+
+### 2026-06-16 — CP-6b: high/low motion split + error window 0–500 ms + session z-score motion
+**Changed:** `impulse-analysis/contra_prediction.m` — (1) `err_end_s` 0.2→0.5 s so prediction error MSE spans dip + early recovery; (2) per-trial motion (`mot_ia4`) now z-scored against full-session `mot_full` mean/std (same scale as predictor `mot_z`); (3) new `[CP-6b]` section after CP-6 scatter: splits trials by session-z-scored motion at threshold 0 (= session mean), computes mean ± SEM actual + contra-pred traces per group and mean prediction error ± SEM, exports `cp6_motion_split.png` (Fig 14)
+**Why:** User observed spaghetti (Fig 12) shows residual contamination; motion classification needed to determine whether high-motion trials drive prediction error; z-score against session mean makes high/low split interpretable (0 = session average motion)
+**Next:** Run CP-4 through CP-6b; check Fig 14 — does high-motion group have larger prediction error and/or different mean actual trace? If yes, motion is a confound not a predictor
+
+### 2026-06-16 — contra_prediction.m: move CP-4e + scatter to new [CP-6] section after CP-5
+**Changed:** `impulse-analysis/contra_prediction.m` — removed CP-4e correlations block and Fig 4 scatter from between CP-4d and CP-4f; re-inserted as `%% [CP-6]` after CP-5 Done fprintf; CP-4 fprintf trimmed to 3 exports; scatter sgtitle updated to "CP-6 error correlations"; Fig 4 is now Fig 13
+**Why:** User requested motion/variance/delta analysis run last so all CP-4 prediction errors are fully populated before cross-correlating with behavioural predictors; simplifies script narrative: model build → visualise → trial inspect → diagnose
+**Next:** Verify CP-6 runs cleanly — err_all4, mot_all4, pv_all4, dpre_all4, dstim_all4 are all accumulated in CP-4c so they are in scope at CP-6
+
+### 2026-06-16 — CP-4c: clamp pink to zero at t=0 (consistent with act reference)
+**Changed:** `impulse-analysis/contra_prediction.m` CP-4c per-trial loop — added `pink_j4 = pink_j4 - pink_j4(1)` after computing pink, before computing red. `act_j4` was always zero at t=0 (actual minus its own onset value). `pink_j4` was NOT zero at t=0 (model prediction at t=0 minus the actual onset value — a different reference). Clamping pink to its own onset value makes both act and pink express change-from-stim-onset, giving them a consistent reference. `red = pink + h4` inherits the fix; h4(1)≈0 for a strictly proper TF so red also starts near zero.
+**Why:** User identified the mismatch: averaging collapses actual to exactly 0 at t=0, while pink doesn't share that property, creating a visual initial-condition gap in all trace figures (fig9/CP-5).
+**Next:** Re-run CP-4 and check fig9 (mean traces) and CP-5 trial grid: all three signals (act/pink/red) should start at 0 at t=0. Note that err_ia4 values will shift slightly (initial-condition contribution to MSE removed).
+
+### 2026-06-16 — CP-4a fig8: onset-baseline + SEM band to show actual initial condition
+**Changed:** `impulse-analysis/contra_prediction.m` CP-4a — accumulation loop now also tracks per-trial mode-averaged contra sum + sum-of-squares → `sem4_all` (across-trial SEM). Figure baseline changed from pre-stim mean to stim-onset value (`bl4_fig = mu4_all(onset_idx4)`) so traces are relative to t=0, consistent with all other trace figures. Gray per-mode lines also shifted to onset baseline. Added SEM shading band to mean trace so the spread of initial conditions across trials is visible in the pre-stim period. Pre-stim mean (`bl4_a`) kept for artifact ratio computation only.
+**Why:** Pre-stim mean subtraction forced the pooled mean trace to exactly zero pre-stim, erasing all initial condition information. Other trace figures (CP-IMP, CP-4 traces) are all relative to stim onset, not pre-stim mean — this fix restores consistency.
+**Next:** Re-run CP-4a and inspect fig8: pre-stim SEM band should be non-zero; post-stim artifact should be visible as deviation above/below the stim-onset level.
+
+### 2026-06-16 — CP-4: cp4_alpha=0.8 (match CP-IMP kernel_alpha); fig8 shows raw+decontam mean
+**Changed:** `impulse-analysis/contra_prediction.m` — `cp4_alpha` changed from 0.0 to 0.8 (was temporarily set to 0.0 to fix flatness; now matched to CP-IMP `kernel_alpha=0.8`). Fig 8 (artifact check) updated: now shows raw pooled mean (black) AND decontaminated pooled mean (blue dash) so the before/after is explicit and the continuity from figure 7 → 8 is visible.
+**Why:** cp4_alpha=0 fed raw contra (full bleed) into beta_cp, making pink contaminated by the stim effect. cp4_alpha=0.8 removes 80% of the bleed consistently with CP-IMP while leaving 20% of the mean artifact + spontaneous trial-to-trial variation → pink is smooth, non-flat, and mostly bleed-free. Figure 8 previously showed only raw contra (user expected to see the decontam effect after figure 7 addressed the bleed).
+**Next:** Re-run CP-4 and inspect fig8 (raw vs decontam line) and CP-5 trial grid to confirm pink is smooth and non-flat but not driven by the full bleed.
+
+### 2026-06-16 — CP-4: set cp4_alpha=0 so pink uses raw contra dynamics (not flat)
+**Changed:** `impulse-analysis/contra_prediction.m` — `cp4_alpha` changed from 1.0 to 0.0. With alpha=1 the full mean per-amplitude contra artifact was subtracted from X_win4 before beta_cp, leaving near-zero signal during the stim window → flat pink. alpha=0 skips that subtraction so the ARX model sees real contra dynamics (including contra's own stim response) → smooth non-flat pink, matching the PCA-era behaviour.
+**Why:** User observed pink was flat during the impulse effect window; PCA had given a smooth natural response because it only removed the PC1 stim direction rather than the full mean signal.
+**Next:** Re-run CP-4 and inspect CP-5 trial grid to confirm pink is now non-flat; check whether red = pink + TF over-predicts (since contra's stim response is counted twice — once in pink via beta_cp, once in h_TF4). If double-counting is visible, may need to revisit the decomposition.
+
+### 2026-06-16 — Add [CP-5] individual trial on-stim trace inspection section
+**Changed:** `impulse-analysis/contra_prediction.m` — new `[CP-5]` section appended before local functions. Two figures: (A) `cp5_trial_grid.png` — configurable grid of `nShow=25` trials sorted by prediction error, each subplot shows actual/pink/red with error-window shading; (B) `cp5_trial_spaghetti.png` — all-trials faint overlay + mean thick for every valid amplitude. Parameters `selAmp_tr`, `nShow`, `sort_by_err` at top of section.
+**Why:** User suspects a conceptual issue in the on-stim predictions; per-trial view needed to diagnose whether contra SVD (pink) is contaminated by ipsilateral response or the TF decomposition has structural problems.
+**Next:** Run [CP-5] and inspect: does pink track actual with an amplitude-dependent pattern during stim? Does red-pink (TF contribution) have the expected impulse shape on every trial?
+
+### 2026-06-16 — Wire cp_err into motion_analysis and prestim_variance as deviation signal
+**Changed:** `impulse-analysis/contra_prediction.m` — after CP-4c loop, writes `err4` and `pvar4` into `allExperiments(selExp).imp.cp_err` and `.cp_pvar` so downstream scripts can read them.
+**Changed:** `impulse-analysis/motion_analysis.m` — Section 1 (per-experiment scatter) and Section 2 (selExp motion-sorted + pooled all-sessions scatter) now use `imp_e.cp_err{iAmp}` as the Y deviation signal when present; fall back to `Peak_imp_dev` otherwise.
+**Changed:** `impulse-analysis/prestim_variance.m` — both Section 1 (all experiments) and Section 2 (motion-excluded) now use `cp_err` as Y when present; ylabel updated from '|Peak dev|' → 'Prediction error'. Section 2 also clips `n_total` to `numel(cp_err{iAmp})` so trial indexing stays aligned.
+**Why:** Methodology change: prediction error from the contra-SVD+TF model is now the canonical measure of trial-to-trial variability, replacing raw deviation from mean peak.
+**Next:** Run contra_prediction → motion_analysis → prestim_variance (via run_all) and confirm figures update; check that cp_err is non-NaN for enough trials before deciding whether to tighten nzMask or add a NaN-count guard.
+
+### 2026-06-16 — run_all.m: move contra_prediction before motion/prestim scripts
+**Changed:** `impulse-analysis/run_all.m` — moved `contra_prediction.m` to run immediately after `tf_fit.m` (was last); updated comment to document the full dependency chain.
+**Why:** motion_analysis and prestim_variance now use contra_prediction residuals as the deviation signal, so contra_prediction must complete before those scripts run. tf_fit → contra_prediction → motion_analysis / prestim_variance.
+**Next:** confirm motion_analysis.m and prestim_variance.m actually read the residual/prediction-error variables contra_prediction writes, rather than the raw Peak_imp_dev from load_experiments.
+
 ### 2026-06-16 — TF fit + CP-4 layered model run: impulse-prediction error tracks pre-stim DELTA power, NOT motion
 **Changed:** `impulse-analysis/contra_prediction.m` CP-4 — error window changed from 0-1s to 0-200ms (`iErr`, the dip, matches peak_mode=3); wired the no-stim baseline (pink) to a cosine-tapered per-amplitude artifact at `cp4_alpha=1` (`art_tap4_amp`, full decontam) so red=pink+full-TF doesn't double-count the bleed and post-dip dynamics are kept.
 **Found (ran load_experiments->tf_fit->contra_prediction, selExp=3):** (1) TF fit best = 2p0z0d, G(s)=-505.1/(s^2+7.37s+200.6), underdamped 2nd-order (wn~2.25Hz, zeta~0.26 = dip+rebound), pooled R2=0.797, per-amp up to 0.88, LOAO tracks full fit (0.55->0.87) -> generalizes across amplitude. (2) CP-4 layered: contra baseline R2=0.870, +TF=0.893 (TF adds +0.023; TF alone 0.025). (3) CP-4e per-trial error (MSE 0-200ms) vs brain state: Motion (all 748) r=-0.015 ns; pre-stim var (motexcl 561) ns; pre-stim DELTA (1-4Hz) power r=+0.10 p=0.017 SIG; stim delta ns. Amplitude-normalized (z within amp) + Spearman CONFIRMS: motion robust NULL (rho=-0.01), prestim var weak trend (rho=+0.08 p=0.07), prestim delta rho=+0.14 p=0.001 (real), stim delta rho=+0.10 p=0.023 (weak). HEADLINE: impulse-prediction error driven by pre-stim DELTA-band power (synchronized/down-state), NOT motion or broadband variance — cleaner & more specific than the original motion hypothesis; connects to Curto&Issa synced-vs-desynced. Figs cp4_traces.png, cp4_r2_bars.png, cp4_error_correlations.png.

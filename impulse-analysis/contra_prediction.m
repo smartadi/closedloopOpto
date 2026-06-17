@@ -12,11 +12,22 @@
 % Prereqs: load_experiments.m has been run (allExperiments in workspace).
 % Run from brain_paper/ root directory or impulse-analysis/.
 close all;
-cp_path    = which('contra_prediction');
+clc;
+
+
+% Resolve the script's own folder robustly (independent of cwd / MATLAB path):
+% mfilename('fullpath') is the abs path of THIS running script. Fall back to
+% which()/pwd only if pasted into the command window.
+cp_path    = mfilename('fullpath');
+if isempty(cp_path), cp_path = which('contra_prediction'); end
 if isempty(cp_path), cp_path = fullfile(pwd, 'contra_prediction.m'); end
 impulseDir = fileparts(cp_path);
 paperRoot  = fullfile(impulseDir, '..', 'paper');
 utilsDir   = fullfile(impulseDir, '..', 'utils');
+% Absolute cache dir (ROI + SVD), anchored to the script -- NOT pwd -- so the
+% midline/mask and SVD caches are found regardless of the working directory.
+dataDir    = fullfile(impulseDir, 'data');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
 addpath(utilsDir);
 addpath(genpath(utilsDir));
 
@@ -85,7 +96,13 @@ clear d_tmp
 %% Contra ROI definition
 % Interactive on first run (or if redefine_roi=true); cached afterward.
 % Only the midline and the contra polygon boundary are needed (no pixel grid).
-roi_file = sprintf('cp_roi_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en);
+roi_file = fullfile(dataDir, sprintf('cp_roi_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+% Migrate a legacy ROI cache saved in the script folder (pwd-relative) into data/.
+legacy_roi = fullfile(impulseDir, sprintf('cp_roi_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+if ~exist(roi_file,'file') && exist(legacy_roi,'file')
+    movefile(legacy_roi, roi_file);
+    fprintf('Migrated legacy ROI cache -> %s\n', roi_file);
+end
 
 if redefine_roi && exist(roi_file,'file')
     delete(roi_file);
@@ -181,7 +198,7 @@ hold(ax_pm,'off');
 %   *_svdraw.mat — full decomposition; computed once.
 %   nSV_use      — slice index only; changing it does NOT rerun redoSVD.
 
-path_cp      = fullfile('data', sprintf('%scp%s%s%d.mat', mn, td(6:7), td(9:10), en));
+path_cp      = fullfile(dataDir, sprintf('%scp%s%s%d.mat', mn, td(6:7), td(9:10), en));
 path_svd_raw = strrep(path_cp, '.mat', '_svdraw.mat');
 
 if exist(path_svd_raw, 'file')
@@ -854,34 +871,52 @@ eval_end_s  = 1.0;
 eval_frames = round(eval_end_s * Fs);
 iEval       = 1:eval_frames;           % 0-1 s window (R^2, trace display)
 tEval       = (0:eval_frames-1) / Fs;
-err_end_s   = 0.2;                      % prediction-error window = stim..stim+200 ms
-iErr        = 1:(round(err_end_s*Fs)+1);% 0-200 ms (the dip), maps to brain state
+err_end_s   = 0.5;                      % prediction-error window = stim..stim+500 ms
+iErr        = 1:(round(err_end_s*Fs)+1);% 0-500 ms (dip + early recovery)
 nAmp_cp4    = numel(uAmp_cp);
-cp4_alpha   = 1.0;                      % full decontam for the no-stim baseline (pink):
-                                        % red = pink + full TF, so pink must be bleed-free
-                                        % (alpha=1) to avoid double-counting the stim effect.
+cp4_alpha   = 0.9;                      % removes 90% of the per-amplitude bleed from
+                                        % contra before beta_cp; ~10% residual mean artifact
 
 % ── [CP-4a] Contra artifact check ─────────────────────────────────────────────
 nPad_a4 = round(0.5 * Fs);
 nWin_a4 = nPad_a4 + outlen;
 t_art4  = ((-nPad_a4):(outlen-1))' / Fs;
 % Pooled (all amplitudes) for threshold check and figure
-contra_sum4 = zeros(nWin_a4, nPred_cp);
-n_art4      = 0;
+% Also accumulate mode-averaged sum + sum-of-squares for per-trial SEM.
+contra_sum4   = zeros(nWin_a4, nPred_cp);
+mu_sum4       = zeros(nWin_a4, 1);   % sum of per-trial mode-averaged contra
+mu_sq4        = zeros(nWin_a4, 1);   % sum of squared per-trial mode-averaged contra
+n_art4        = 0;
 for ia4 = 1:nAmp_cp4
     if ~nzMask_cp(ia4); continue; end
     for j4 = 1:numel(imp_data.startTimes{ia4})
         [~, ion4] = min(abs(t_full - imp_data.startTimes{ia4}(j4)));
         i0a4 = ion4 - nPad_a4; i1a4 = ion4 + outlen - 1;
         if i0a4 < 1 || i1a4 > nF_m; continue; end
-        contra_sum4 = contra_sum4 + X_cp_m(i0a4:i1a4, 1:nPred_cp);
-        n_art4      = n_art4 + 1;
+        seg4         = X_cp_m(i0a4:i1a4, 1:nPred_cp);
+        contra_sum4  = contra_sum4 + seg4;
+        mu_seg4      = mean(seg4, 2);          % mode-averaged, 1 value per timepoint
+        mu_sum4      = mu_sum4 + mu_seg4;
+        mu_sq4       = mu_sq4  + mu_seg4.^2;
+        n_art4       = n_art4 + 1;
     end
 end
 contra_mean4 = contra_sum4 / max(n_art4, 1);
 
+% Mode-averaged mean and SEM across trials (for figure initial-condition display)
+mu4_all  = mu_sum4 / max(n_art4, 1);
+sem4_all = sqrt(max(mu_sq4/max(n_art4,1) - mu4_all.^2, 0)) / sqrt(max(n_art4,1));
+
+% onset_idx4 = index of t=0; use stim-onset value as figure baseline (consistent
+% with all other trace figures which are relative to stim time, not pre-stim mean)
+onset_idx4  = nPad_a4 + 1;
+bl4_fig     = mu4_all(onset_idx4);           % scalar: mode-averaged contra at t=0
+mu4_bl      = mu4_all  - bl4_fig;            % onset-baselined mean
+sem4_bl     = sem4_all;                      % SEM unchanged by baseline shift
+
 pre_mask4  = t_art4 < 0;
 stim_mask4 = t_art4 >= 0 & t_art4 <= 0.2;
+% Keep pre-stim mean baseline for artifact ratio only (not for figure)
 bl4_a      = mean(contra_mean4(pre_mask4, :), 1);
 dev4_art   = contra_mean4(stim_mask4, :) - bl4_a;
 max_art4   = max(abs(dev4_art(:)));
@@ -939,6 +974,19 @@ delta4 = freqBandCtrs >= 1 & freqBandCtrs <= 4;
 nfft4  = 2 * Fs;
 W4     = sum(hann(Fs).^2);
 
+% Per-trial motion statistics used to z-score per-trial motion values.
+% imp_data.mot{ia} is a PER-TRIAL motion summary (already ~centered), NOT the
+% continuous mot_full trace -- normalizing by mot_full's mean/std (~8000) made
+% every trial z<0 and broke the high/low-motion split. Pool the per-trial values
+% across amplitudes so the z-score is centered (mean 0) and the split is valid.
+mot_pool4 = [];
+for ia4p = 1:nAmp_cp4
+    if ~nzMask_cp(ia4p); continue; end
+    mot_pool4 = [mot_pool4; imp_data.mot{ia4p}(:)]; %#ok<AGROW>
+end
+mot_mean_sess4 = mean(mot_pool4, 'omitnan');
+mot_std_sess4  = std(mot_pool4,  'omitnan');
+
 for ia4 = 1:nAmp_cp4
     if ~nzMask_cp(ia4); continue; end
     starts4   = imp_data.startTimes{ia4}(:);
@@ -954,7 +1002,7 @@ for ia4 = 1:nAmp_cp4
     pv_ia4    = nan(nT4, 1);
     dpre_ia4  = nan(nT4, 1);
     dstim_ia4 = nan(nT4, 1);
-    mot_ia4(1:nMot4) = mot_raw4(1:nMot4);
+    mot_ia4(1:nMot4) = (mot_raw4(1:nMot4) - mot_mean_sess4) / max(mot_std_sess4, eps);
     h4 = h_TF4{ia4};
 
     for j4 = 1:nT4
@@ -978,13 +1026,14 @@ for ia4 = 1:nAmp_cp4
 
         bl_on4  = y_full(ion4);
         pink_j4 = Phi4 * beta_cp - bl_on4;
-        red_j4  = pink_j4 + h4;
+        pink_j4 = pink_j4 - pink_j4(1);   % clamp: express as change from t=0, same
+        red_j4  = pink_j4 + h4;            % reference as act_j4 (both Δ from onset)
         act_j4  = y_full(ion4 : ion4+outlen-1) - bl_on4;
 
         act_ia4(j4,:)  = act_j4';
         pink_ia4(j4,:) = pink_j4';
         red_ia4(j4,:)  = red_j4';
-        err_ia4(j4)    = mean((act_j4(iErr) - red_j4(iErr)).^2, 'omitnan');  % 0-200ms
+        err_ia4(j4)    = mean((act_j4(iErr) - red_j4(iErr)).^2, 'omitnan');  % 0-500ms
 
         i_pv0 = ion4 - Fs; i_pv1 = ion4 - 1;
         if i_pv0 >= 1
@@ -1012,6 +1061,11 @@ for ia4 = 1:nAmp_cp4
     dpow_pre4{ia4}  = dpre_ia4;
     dpow_stim4{ia4} = dstim_ia4;
 end
+
+% Expose per-trial CP-4 outputs so motion_analysis / prestim_variance can use
+% prediction error instead of raw Peak_imp_dev as the deviation signal.
+allExperiments(selExp).imp.cp_err  = err4;
+allExperiments(selExp).imp.cp_pvar = pvar4;
 
 % ── [CP-4d] Stack + R² ────────────────────────────────────────────────────────
 ia_list4  = find(nzMask_cp);
@@ -1042,51 +1096,58 @@ R2_red4  = max(0, 1 - sum((e_act4(:)-e_red4(:)).^2, 'omitnan') / ss4);
 fprintf('[CP-4d] R² (0-1 s):  Contra ARX=%.3f  TF model=%.3f  ARX+TF=%.3f  dR²=%.3f\n', ...
     R2_pink4, R2_tf4, R2_red4, R2_red4 - R2_tf4);
 
-% ── [CP-4e] Prediction error correlations ─────────────────────────────────────
-mot_thresh4 = prctile(mot_all4(isfinite(mot_all4)), 75);
-motExcl4    = isfinite(mot_all4) & mot_all4 <= mot_thresh4;
-
-vMot4  = isfinite(err_all4) & isfinite(mot_all4);
-vPV4   = isfinite(err_all4) & isfinite(pv_all4)   & motExcl4;
-vDpre4 = isfinite(err_all4) & isfinite(dpre_all4) & motExcl4;
-vDstm4 = isfinite(err_all4) & isfinite(dstim_all4)& motExcl4;
-
-[r4_mot,  p4_mot]  = corr(err_all4(vMot4),  mot_all4(vMot4),    'rows','complete');
-[r4_pv,   p4_pv]   = corr(err_all4(vPV4),   pv_all4(vPV4),      'rows','complete');
-[r4_dpre, p4_dpre] = corr(err_all4(vDpre4), dpre_all4(vDpre4),  'rows','complete');
-[r4_dstm, p4_dstm] = corr(err_all4(vDstm4), dstim_all4(vDstm4), 'rows','complete');
-
-fprintf('[CP-4e] Prediction error (MSE 0-200ms) correlations:\n');
-fprintf('  vs Motion (all):              r=%+.3f  p=%.4f  n=%d\n',r4_mot, p4_mot, sum(vMot4));
-fprintf('  vs Pre-stim var (motexcl):    r=%+.3f  p=%.4f  n=%d\n',r4_pv,  p4_pv,  sum(vPV4));
-fprintf('  vs Pre-stim delta (motexcl):  r=%+.3f  p=%.4f  n=%d\n',r4_dpre,p4_dpre,sum(vDpre4));
-fprintf('  vs Stim delta (motexcl):      r=%+.3f  p=%.4f  n=%d\n',r4_dstm,p4_dstm,sum(vDstm4));
-
 % ── [CP-4f] Figures ───────────────────────────────────────────────────────────
 colAct4  = [0.1 0.1 0.1];
 colTF4   = [0.6 0.3 0.8];
 colPink4 = [0.2 0.5 0.9];
 colRed4  = [0.85 0.15 0.15];
 
-% Fig 1: Artifact check
+% Fig 1: Artifact check — raw vs decontaminated pooled contra mean
+% Pooled decontam mean: average the per-amplitude artifact-subtracted means
+art_pool4 = zeros(outlen, nPred_cp);
+n_art_pool4 = 0;
+for ia4_v = 1:nAmp_cp4
+    if ~nzMask_cp(ia4_v) || isempty(art_tap4_amp{ia4_v}); continue; end
+    art_pool4 = art_pool4 + art_tap4_amp{ia4_v};
+    n_art_pool4 = n_art_pool4 + 1;
+end
+art_pool4 = art_pool4 / max(n_art_pool4, 1);
+contra_mean4_dec = contra_mean4;
+n_sub_dec = min(outlen, size(art_pool4, 1));
+contra_mean4_dec(nPad_a4+1 : nPad_a4+n_sub_dec, 1:nPred_cp) = ...
+    contra_mean4_dec(nPad_a4+1 : nPad_a4+n_sub_dec, 1:nPred_cp) - cp4_alpha * art_pool4(1:n_sub_dec, :);
+mean_dev4     = mean(contra_mean4     - bl4_a, 2);   % raw
+mean_dev4_dec = mean(contra_mean4_dec - bl4_a, 2);   % after scaledkernel decontam
+
 fig_art4 = paperFig(8, 4);
 lmA4=0.12; rmA4=0.04; bmA4=0.18; tmA4=0.10;
 ax_art4 = axes(fig_art4,'Position',[lmA4,bmA4,1-lmA4-rmA4,1-bmA4-tmA4]);
+% Onset-baselined per-mode gray traces (consistent with stim-time reference)
+bl4_onset = contra_mean4(onset_idx4, :);   % [1 × nPred_cp] onset value per mode
+% Onset-baselined decontam mean (mode-averaged)
+mu4_dec_all = mean(contra_mean4_dec, 2);
+mu4_dec_bl  = mu4_dec_all - mu4_dec_all(onset_idx4);
+
 hold(ax_art4,'on');
 for kk4 = 1:nPred_cp
-    plot(ax_art4, t_art4, contra_mean4(:,kk4)-bl4_a(kk4), ...
-        'Color',[0.8 0.8 0.8],'LineWidth',0.3,'HandleVisibility','off');
+    plot(ax_art4, t_art4, contra_mean4(:,kk4) - bl4_onset(kk4), ...
+        'Color',[0.85 0.85 0.85],'LineWidth',0.3,'HandleVisibility','off');
 end
-mean_dev4 = mean(contra_mean4 - bl4_a, 2);
-plot(ax_art4, t_art4, mean_dev4, 'k-','LineWidth',1.5, ...
-    'DisplayName',sprintf('Mean (ratio=%.1f)', art_ratio4));
+% SEM band shows actual spread of initial conditions across trials
+fill(ax_art4, [t_art4; flipud(t_art4)], ...
+    [mu4_bl + sem4_bl; flipud(mu4_bl - sem4_bl)], ...
+    [0.5 0.5 0.5],'FaceAlpha',0.15,'EdgeColor','none','HandleVisibility','off');
+plot(ax_art4, t_art4, mu4_bl, 'k-','LineWidth',1.5, ...
+    'DisplayName',sprintf('Raw mean ±SEM  (ratio=%.1f)', art_ratio4));
+plot(ax_art4, t_art4, mu4_dec_bl, 'Color',colPink4,'LineWidth',1.2,'LineStyle','--', ...
+    'DisplayName',sprintf('After decontam (\\alpha=%.1f)', cp4_alpha));
 xline(ax_art4,0,'r--','LineWidth',0.8,'HandleVisibility','off');
 hold(ax_art4,'off');
 set(ax_art4,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
 xlabel(ax_art4,'Time re onset (s)','FontSize',6,'FontWeight','bold');
 ylabel(ax_art4,'\DeltaF/F (%) contra dev','FontSize',6,'FontWeight','bold');
-title(ax_art4,sprintf('Contra SVD artifact  decontam=%d',double(do_decontam4)), ...
-    'FontSize',6,'FontWeight','bold');
+title(ax_art4,sprintf('Contra SVD artifact  decontam=%d  \\alpha=%.1f', ...
+    double(do_decontam4), cp4_alpha),'FontSize',6,'FontWeight','bold');
 lg_art4 = legend(ax_art4,'Location','best','Box','off','FontSize',5);
 try; lg_art4.ItemTokenSize=[8 6]; catch; end
 paperExport(fig_art4, fullfile(paper_root,'images','figure2','cp4_artifact_check.png'));
@@ -1155,7 +1216,150 @@ ylabel(ax_r2_4,'R^2 (%)','FontSize',6,'FontWeight','bold');
 ylim(ax_r2_4,[0, max([R2_pink4,R2_tf4,R2_red4])*100*1.25 + 1]);
 paperExport(fig_r2_4, fullfile(paper_root,'images','figure2','cp4_r2_bars.png'));
 
-% Fig 4: Scatter plots (2x2) -- prediction error vs 4 predictors
+fprintf('[CP-4] Done. Exported: cp4_artifact_check.png  cp4_traces.png  cp4_r2_bars.png\n');
+
+%% ── [CP-5] Individual trial on-stim trace inspection ─────────────────────────
+% Grid layout: rows = amplitude levels, columns = individual trials.
+% Trials within each row are sorted by ascending prediction error so the
+% best- and worst-predicted trials are visible per amplitude.
+%
+% Adjustable parameters — edit these and re-run only this section:
+nPerAmp5    = 5;      % columns: trials shown per amplitude
+sort_by_err = true;   % true → ascending prediction error; false → trial order
+
+nAmps5g = numel(ia_list4);
+nCols5  = nPerAmp5;
+nRows5  = nAmps5g;
+fig_tr5 = figure('Color','w','Units','centimeters', ...
+    'Position',[2 2 nCols5*5 nRows5*3.5]);
+sgtitle(fig_tr5, sprintf('CP-5 trial grid  %s %s e%d  |  %d per amp  sorted\\_err=%d', ...
+    mn, td, en, nPerAmp5, sort_by_err), ...
+    'FontSize',6,'FontWeight','bold','Interpreter','tex');
+
+spIdx5 = 0;
+for aiG = 1:nAmps5g
+    ia5      = ia_list4(aiG);
+    act_tr5  = actual4{ia5}(:, iEval);
+    pink_tr5 = pink4{ia5}(:, iEval);
+    red_tr5  = red4{ia5}(:, iEval);
+    err_tr5  = err4{ia5}(:);
+
+    validRows5 = find(~all(isnan(act_tr5), 2) & isfinite(err_tr5));
+    if sort_by_err && ~isempty(validRows5)
+        [~, si5]   = sort(err_tr5(validRows5), 'ascend');
+        validRows5 = validRows5(si5);
+    end
+    nUse5 = min(nPerAmp5, numel(validRows5));
+    rows5 = validRows5(1:nUse5);
+
+    for ki = 1:nPerAmp5
+        spIdx5 = spIdx5 + 1;
+        ax5 = subplot(nRows5, nCols5, spIdx5);
+        if ki > nUse5
+            axis(ax5, 'off'); continue
+        end
+        jj = rows5(ki);
+        hold(ax5,'on');
+        yl5 = [min([act_tr5(jj,:) pink_tr5(jj,:) red_tr5(jj,:)], [], 'omitnan'), ...
+               max([act_tr5(jj,:) pink_tr5(jj,:) red_tr5(jj,:)], [], 'omitnan')];
+        if ~any(isnan(yl5)) && diff(yl5) > 0
+            patch(ax5, [0 err_end_s err_end_s 0], yl5([1 1 2 2]), ...
+                [1 0.92 0.70],'FaceAlpha',0.30,'EdgeColor','none','HandleVisibility','off');
+        end
+        plot(ax5, tEval, pink_tr5(jj,:), 'Color',colPink4, 'LineWidth',0.7,'LineStyle','--');
+        plot(ax5, tEval, red_tr5(jj,:),  'Color',colRed4,  'LineWidth',0.9,'LineStyle','--');
+        plot(ax5, tEval, act_tr5(jj,:),  'Color',colAct4,  'LineWidth',1.0);
+        yline(ax5, 0, 'k:', 'LineWidth',0.3,'HandleVisibility','off');
+        hold(ax5,'off');
+        title(ax5, sprintf('t%d  e=%.3f', jj, err_tr5(jj)), 'FontSize',5,'FontWeight','bold');
+        set(ax5,'Box','off','TickDir','out','FontSize',5,'FontWeight','bold');
+        if ki == 1
+            % amplitude label on y-axis of first column
+            ylabel(ax5, sprintf('%.2fV\n\\DeltaF/F', uAmp_cp(ia5)), ...
+                'FontSize',5,'FontWeight','bold');
+        end
+        if aiG == nAmps5g && ki == 1
+            xlabel(ax5, 'Time (s)', 'FontSize',5,'FontWeight','bold');
+        end
+        if aiG == 1 && ki == 1
+            legend(ax5, {'Contra SVD','ARX+TF','Actual'}, ...
+                'FontSize',4,'Box','off','Location','southwest');
+        end
+    end
+end
+paperExport(fig_tr5, fullfile(paper_root,'images','figure2','cp5_trial_grid.png'));
+
+% ── Fig B: spaghetti — all trials (faint) + mean (thick), one panel per amp ─
+nAmps5   = numel(ia_list4);
+fig_sp5  = paperFig(max(6, 5*nAmps5), 5);
+lmSp=0.07; rmSp=0.02; bmSp=0.15; tmSp=0.12; gxSp=0.03;
+pwSp = (1-lmSp-rmSp-(nAmps5-1)*gxSp) / max(nAmps5,1);
+phSp = 1-bmSp-tmSp;
+
+for kkS = 1:nAmps5
+    iaS  = ia_list4(kkS);
+    aS   = actual4{iaS}(:,iEval);
+    pS   = pink4{iaS}(:,iEval);
+    rS   = red4{iaS}(:,iEval);
+    valS = find(~all(isnan(aS),2));
+
+    muA = mean(aS(valS,:),1,'omitnan');
+    muP = mean(pS(valS,:),1,'omitnan');
+    muR = mean(rS(valS,:),1,'omitnan');
+
+    xLS = lmSp + (kkS-1)*(pwSp+gxSp);
+    axS = axes(fig_sp5,'Position',[xLS,bmSp,pwSp,phSp]);
+    hold(axS,'on');
+    for jr = valS'
+        plot(axS,tEval,aS(jr,:),'Color',[colAct4  0.08],'LineWidth',0.3,'HandleVisibility','off');
+        plot(axS,tEval,rS(jr,:),'Color',[colRed4  0.08],'LineWidth',0.3,'HandleVisibility','off');
+        plot(axS,tEval,pS(jr,:),'Color',[colPink4 0.08],'LineWidth',0.3,'HandleVisibility','off');
+    end
+    plot(axS,tEval,muP,'Color',colPink4,'LineWidth',1.0,'LineStyle','--','DisplayName','Contra SVD');
+    plot(axS,tEval,muR,'Color',colRed4, 'LineWidth',1.0,'LineStyle','--','DisplayName','ARX+TF');
+    plot(axS,tEval,muA,'Color',colAct4, 'LineWidth',1.5,'DisplayName','Actual');
+    xline(axS,err_end_s,'Color',[0.7 0.5 0],'LineStyle',':','LineWidth',0.8,'HandleVisibility','off');
+    yline(axS,0,'k:','LineWidth',0.3,'HandleVisibility','off');
+    hold(axS,'off');
+    title(axS,sprintf('%.2fV  n=%d',uAmp_cp(iaS),numel(valS)),'FontSize',6,'FontWeight','bold');
+    set(axS,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+    xlabel(axS,'Time (s)','FontSize',6,'FontWeight','bold');
+    if kkS==1
+        ylabel(axS,'\DeltaF/F (%)','FontSize',6,'FontWeight','bold');
+        lg_sp5 = legend(axS,'Location','southwest','Box','off','FontSize',5);
+        try; lg_sp5.ItemTokenSize=[10 5]; catch; end
+    end
+end
+sgtitle(fig_sp5,sprintf('CP-5 spaghetti  %s %s e%d  (each trial faint; mean thick)',mn,td,en), ...
+    'FontSize',6,'FontWeight','bold');
+paperExport(fig_sp5, fullfile(paper_root,'images','figure2','cp5_trial_spaghetti.png'));
+
+fprintf('[CP-5] Done.  Exported: cp5_trial_grid.png  cp5_trial_spaghetti.png\n');
+
+%% ── [CP-6] Prediction error correlations + scatter ───────────────────────────
+% Motion/variance/delta analysis — runs after CP-5 so CP-4 prediction errors
+% are fully populated before cross-correlating with behavioural predictors.
+
+mot_thresh4 = prctile(mot_all4(isfinite(mot_all4)), 75);
+motExcl4    = isfinite(mot_all4) & mot_all4 <= mot_thresh4;
+
+vMot4  = isfinite(err_all4) & isfinite(mot_all4);
+vPV4   = isfinite(err_all4) & isfinite(pv_all4)   & motExcl4;
+vDpre4 = isfinite(err_all4) & isfinite(dpre_all4) & motExcl4;
+vDstm4 = isfinite(err_all4) & isfinite(dstim_all4)& motExcl4;
+
+[r4_mot,  p4_mot]  = corr(err_all4(vMot4),  mot_all4(vMot4),    'rows','complete');
+[r4_pv,   p4_pv]   = corr(err_all4(vPV4),   pv_all4(vPV4),      'rows','complete');
+[r4_dpre, p4_dpre] = corr(err_all4(vDpre4), dpre_all4(vDpre4),  'rows','complete');
+[r4_dstm, p4_dstm] = corr(err_all4(vDstm4), dstim_all4(vDstm4), 'rows','complete');
+
+fprintf('[CP-6] Prediction error (MSE 0-200ms) correlations:\n');
+fprintf('  vs Motion (all):              r=%+.3f  p=%.4f  n=%d\n',r4_mot, p4_mot, sum(vMot4));
+fprintf('  vs Pre-stim var (motexcl):    r=%+.3f  p=%.4f  n=%d\n',r4_pv,  p4_pv,  sum(vPV4));
+fprintf('  vs Pre-stim delta (motexcl):  r=%+.3f  p=%.4f  n=%d\n',r4_dpre,p4_dpre,sum(vDpre4));
+fprintf('  vs Stim delta (motexcl):      r=%+.3f  p=%.4f  n=%d\n',r4_dstm,p4_dstm,sum(vDstm4));
+
+% Fig 13: Scatter plots (2x2) -- prediction error vs 4 predictors
 fig_sc4 = paperFig(12, 10);
 lmS4=0.11; rmS4=0.04; bmS4=0.12; tmS4=0.08; gxS4=0.08; gyS4=0.10;
 pwS4 = (1-lmS4-rmS4-gxS4)/2;
@@ -1196,11 +1400,90 @@ for sp4 = 1:4
     xlabel(ax_s4,xl4,'FontSize',6,'FontWeight','bold');
     ylabel(ax_s4,'Pred error (MSE)','FontSize',6,'FontWeight','bold');
 end
-sgtitle(fig_sc4,sprintf('CP-4 error correlations  %s %s e%d',mn,td,en), ...
+sgtitle(fig_sc4,sprintf('CP-6 error correlations  %s %s e%d',mn,td,en), ...
     'FontSize',6,'FontWeight','bold');
 paperExport(fig_sc4, fullfile(paper_root,'images','figure2','cp4_error_correlations.png'));
 
-fprintf('[CP-4] Done. Exported: cp4_artifact_check.png  cp4_traces.png  cp4_r2_bars.png  cp4_error_correlations.png\n');
+fprintf('[CP-6] Done. Exported: cp4_error_correlations.png\n');
+
+%% ── [CP-6b] High vs low motion classification ────────────────────────────────
+% Split trials by session-z-scored motion (threshold = 0 = session mean).
+% mot_all4 is already in session-z-score units after the CP-4c change.
+
+motH6 = mot_all4 > 0  & isfinite(mot_all4);
+motL6 = mot_all4 <= 0 & isfinite(mot_all4);
+fprintf('[CP-6b] High motion (z>0): %d trials  |  Low motion (z≤0): %d trials\n', ...
+    sum(motH6), sum(motL6));
+
+% Rows of act_all4 / pink_all4 / red_all4 align with mot_all4 / err_all4.
+validRow6 = ~any(isnan(act_all4), 2);
+
+muActH  = mean(act_all4(motH6 & validRow6, iEval), 1, 'omitnan');
+muActL  = mean(act_all4(motL6 & validRow6, iEval), 1, 'omitnan');
+semActH = std(act_all4(motH6 & validRow6, iEval), 0, 1, 'omitnan') / sqrt(max(sum(motH6 & validRow6),1));
+semActL = std(act_all4(motL6 & validRow6, iEval), 0, 1, 'omitnan') / sqrt(max(sum(motL6 & validRow6),1));
+
+muPinkH = mean(pink_all4(motH6 & validRow6, iEval), 1, 'omitnan');
+muPinkL = mean(pink_all4(motL6 & validRow6, iEval), 1, 'omitnan');
+
+vEH = motH6 & isfinite(err_all4);
+vEL = motL6 & isfinite(err_all4);
+errH_mu  = mean(err_all4(vEH), 'omitnan');
+errH_sem = std( err_all4(vEH), 'omitnan') / sqrt(max(sum(vEH),1));
+errL_mu  = mean(err_all4(vEL), 'omitnan');
+errL_sem = std( err_all4(vEL), 'omitnan') / sqrt(max(sum(vEL),1));
+fprintf('[CP-6b] Pred error  High=%.4f±%.4f  Low=%.4f±%.4f\n', ...
+    errH_mu, errH_sem, errL_mu, errL_sem);
+
+colH6 = [0.85 0.35 0.10];   % orange — high motion
+colL6 = [0.15 0.45 0.80];   % blue   — low motion
+
+fig_ms6 = paperFig(12, 8);
+lm6=0.08; rm6=0.04; bm6=0.13; tm6=0.10; gx6=0.10;
+pw6 = (1-lm6-rm6-gx6)/2;
+
+% Left panel: mean actual ± SEM for high vs low motion
+ax6L = axes(fig_ms6, 'Position', [lm6, bm6, pw6, 1-bm6-tm6]);
+hold(ax6L, 'on');
+fill(ax6L, [tEval, fliplr(tEval)], ...
+    [muActH+semActH, fliplr(muActH-semActH)], colH6, ...
+    'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
+fill(ax6L, [tEval, fliplr(tEval)], ...
+    [muActL+semActL, fliplr(muActL-semActL)], colL6, ...
+    'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
+plot(ax6L, tEval, muActH,  'Color',colH6, 'LineWidth',1.5, 'DisplayName',sprintf('High mot (n=%d)',sum(motH6)));
+plot(ax6L, tEval, muActL,  'Color',colL6, 'LineWidth',1.5, 'DisplayName',sprintf('Low mot (n=%d)',sum(motL6)));
+plot(ax6L, tEval, muPinkH, 'Color',colH6, 'LineWidth',0.8, 'LineStyle','--','HandleVisibility','off');
+plot(ax6L, tEval, muPinkL, 'Color',colL6, 'LineWidth',0.8, 'LineStyle','--','HandleVisibility','off');
+xline(ax6L, 0, 'k:', 'LineWidth',0.6,'HandleVisibility','off');
+xline(ax6L, err_end_s, 'Color',[0.7 0.5 0],'LineStyle',':','LineWidth',0.8,'HandleVisibility','off');
+yline(ax6L, 0, 'k:', 'LineWidth',0.3,'HandleVisibility','off');
+hold(ax6L, 'off');
+set(ax6L, 'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+xlabel(ax6L, 'Time (s)',     'FontSize',6,'FontWeight','bold');
+ylabel(ax6L, '\DeltaF/F',   'FontSize',6,'FontWeight','bold');
+lh6 = legend(ax6L, 'Location', 'southwest');
+set(lh6, 'FontSize', 5, 'Box', 'off');
+try; set(lh6, 'ItemTokenSize', [6 6]); catch; end
+title(ax6L, 'Mean actual ± SEM  (dashed = contra pred)', 'FontSize',6,'FontWeight','bold');
+
+% Right panel: mean prediction error ± SEM bar chart
+ax6R = axes(fig_ms6, 'Position', [lm6+pw6+gx6, bm6+0.15, pw6*0.5, 1-bm6-tm6-0.15]);
+hold(ax6R, 'on');
+bar(ax6R, 1, errH_mu, 0.5, 'FaceColor',colH6, 'EdgeColor','none');
+bar(ax6R, 2, errL_mu, 0.5, 'FaceColor',colL6, 'EdgeColor','none');
+errorbar(ax6R, [1 2], [errH_mu errL_mu], [errH_sem errL_sem], ...
+    'k.', 'LineWidth',1.0, 'CapSize',4);
+hold(ax6R, 'off');
+set(ax6R, 'Box','off','TickDir','out','FontSize',6,'FontWeight','bold', ...
+    'XTick',[1 2],'XTickLabel',{'High','Low'},'XLim',[0.3 2.7]);
+ylabel(ax6R, 'Pred error (MSE 0-500ms)', 'FontSize',6,'FontWeight','bold');
+title(ax6R, 'Error by motion group', 'FontSize',6,'FontWeight','bold');
+
+sgtitle(fig_ms6, sprintf('CP-6b motion split  %s %s e%d',mn,td,en), ...
+    'FontSize',6,'FontWeight','bold');
+paperExport(fig_ms6, fullfile(paper_root,'images','figure2','cp6_motion_split.png'));
+fprintf('[CP-6b] Done. Exported: cp6_motion_split.png\n');
 
 %% ── Local functions (must be at end of script file) ──────────────────────────
 

@@ -40,7 +40,11 @@ for expIdx = 1:nExp
     xAll_m = []; yAll_m = [];
     for iA = 1:nAmp_e
         xAll_m = [xAll_m; mean(imp_e.motTrace{iA}(:, iMot_a), 2)]; %#ok<AGROW>
-        yAll_m = [yAll_m; imp_e.Peak_imp_dev{iA}(:)];              %#ok<AGROW>
+        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iA})
+            yAll_m = [yAll_m; imp_e.cp_err{iA}(:)];              %#ok<AGROW>
+        else
+            yAll_m = [yAll_m; imp_e.Peak_imp_dev{iA}(:)];        %#ok<AGROW>
+        end
     end
     xAll_m = xAll_m(isfinite(xAll_m)); yAll_m = yAll_m(isfinite(yAll_m));
     xPad   = 0.05 * (max(xAll_m) - min(xAll_m));
@@ -59,7 +63,11 @@ for expIdx = 1:nExp
         'FontWeight','bold', 'FontSize', 10, 'Interpreter','none');
 
     for iAmp = 1:nAmp_e
-        dev_i  = imp_e.Peak_imp_dev{iAmp}(:);
+        if isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
+            dev_i = imp_e.cp_err{iAmp}(:);
+        else
+            dev_i = imp_e.Peak_imp_dev{iAmp}(:);
+        end
         nUse   = min(size(imp_e.motTrace{iAmp}, 1), numel(dev_i));
         if nUse < 2, continue; end
         mot_i  = mean(imp_e.motTrace{iAmp}(1:nUse, iMot_a), 2);
@@ -68,12 +76,13 @@ for expIdx = 1:nExp
 
         ax = subplot(nRows_m, nCols_m, iAmp);
         hold(ax, 'on');
-        hS = [];
+        hAll = gobjects(0);
         for k = 1:3
             mk = tert_i == k;
             if ~any(mk), continue; end
             hS = scatter(ax, mot_i(mk), dev_i(mk), 25, tertertColors_motot(k,:), ...
                 'filled', 'MarkerFaceAlpha', 0.6, 'DisplayName', tLabels_m{k});
+            hAll(end+1) = hS;
         end
 
         r = corr(mot_i, dev_i, 'rows','complete');
@@ -94,8 +103,8 @@ for expIdx = 1:nExp
         c_imp  = imp_e;
         c_iAmp = iAmp;
         c_twin = t_win_mot;
-        if ~isempty(hS)
-            set(hS, 'ButtonDownFcn', ...
+        for hh = hAll
+            set(hh, 'ButtonDownFcn', ...
                 @(~,~) motionDetailCallback(c_ax, c_mot, c_dev, c_imp, c_iAmp, c_twin));
         end
     end
@@ -129,14 +138,18 @@ allAbsDev_m = [];
 allMot_m    = [];
 
 for iAmp = 1:nAmp_mot
-    df_i  = imp_e_mot.dfImp{iAmp};
-    pk_i  = imp_e_mot.Peak_imp{iAmp}(:);
-    mn_i  = mean(pk_i, 'omitnan');
-    nUse  = min([size(df_i, 1), numel(pk_i), size(imp_e_mot.motTrace{iAmp}, 1)]);
+    nUse = min([size(imp_e_mot.dfImp{iAmp}, 1), size(imp_e_mot.motTrace{iAmp}, 1)]);
     if nUse < 2, continue; end
     mot_i = mean(imp_e_mot.motTrace{iAmp}(1:nUse, iMot_a), 2);
-    allAbsDev_m = [allAbsDev_m; abs(pk_i(1:nUse) - mn_i)];  %#ok<AGROW>
-    allMot_m    = [allMot_m;    mot_i];                       %#ok<AGROW>
+    if isfield(imp_e_mot, 'cp_err') && ~isempty(imp_e_mot.cp_err{iAmp})
+        dev_i = imp_e_mot.cp_err{iAmp}(1:nUse);
+    else
+        pk_i  = imp_e_mot.Peak_imp{iAmp}(:);
+        mn_i  = mean(pk_i, 'omitnan');
+        dev_i = abs(pk_i(1:nUse) - mn_i);
+    end
+    allAbsDev_m = [allAbsDev_m; dev_i];   %#ok<AGROW>
+    allMot_m    = [allMot_m;    mot_i];   %#ok<AGROW>
 end
 
 [~, si_m]      = sort(allMot_m, 'ascend');
@@ -218,15 +231,19 @@ for expIdx = 1:nExp
     imp_e_p  = allExperiments(expIdx).imp;
     nAmp_p   = numel(imp_e_p.uAmp);
     for iAmp = 1:nAmp_p
-        df_i  = imp_e_p.dfImp{iAmp};
-        pk_i  = imp_e_p.Peak_imp{iAmp}(:);
-        mn_i  = mean(pk_i, 'omitnan');
-        nUse  = min([size(df_i, 1), numel(pk_i), size(imp_e_p.motTrace{iAmp}, 1)]);
+        nUse = min([size(imp_e_p.dfImp{iAmp}, 1), size(imp_e_p.motTrace{iAmp}, 1)]);
         if nUse < 2, continue; end
         mot_i = mean(imp_e_p.motTrace{iAmp}(1:nUse, iMot_a), 2);
-        allAbsDev_pool = [allAbsDev_pool; abs(pk_i(1:nUse) - mn_i)];  %#ok<AGROW>
-        allMot_pool    = [allMot_pool;    mot_i];                       %#ok<AGROW>
-        allExp_pool    = [allExp_pool;    repmat(expIdx, nUse, 1)];     %#ok<AGROW>
+        if isfield(imp_e_p, 'cp_err') && ~isempty(imp_e_p.cp_err{iAmp})
+            dev_i = imp_e_p.cp_err{iAmp}(1:nUse);
+        else
+            pk_i  = imp_e_p.Peak_imp{iAmp}(:);
+            mn_i  = mean(pk_i, 'omitnan');
+            dev_i = abs(pk_i(1:nUse) - mn_i);
+        end
+        allAbsDev_pool = [allAbsDev_pool; dev_i];                   %#ok<AGROW>
+        allMot_pool    = [allMot_pool;    mot_i];                    %#ok<AGROW>
+        allExp_pool    = [allExp_pool;    repmat(expIdx, nUse, 1)];  %#ok<AGROW>
     end
 end
 
@@ -283,3 +300,42 @@ paperLegend(lg_mvp);
 hold(ax_mvp, 'off');
 paperExport(fig_mvp, ...
     fullfile(paperRoot, 'images', 'figure2', 'imp_motion_devscatter_all_sessions.pdf'));
+
+%% Prediction error vs motion z-score — all sessions, all amps, threshold = 1.5
+motThr_15    = 1.5;
+colLo15      = [0.25 0.50 0.85];   % blue  — below threshold
+colHi15      = [0.85 0.20 0.20];   % red   — above threshold
+
+% use finite pairs only
+vP15 = isfinite(allMot_pool) & isfinite(allAbsDev_pool);
+mot15  = allMot_pool(vP15);
+dev15  = allAbsDev_pool(vP15);
+bin15  = mot15 > motThr_15;        % true = high motion
+
+[r15, p15] = corr(mot15, dev15, 'rows', 'complete');
+nLo15 = sum(~bin15);  nHi15 = sum(bin15);
+fprintf('[motion] All sessions pooled  n=%d  r=%.3f  p=%.4f\n', numel(mot15), r15, p15);
+fprintf('[motion] Below z=1.5: %d trials  |  Above z=1.5: %d trials\n', nLo15, nHi15);
+
+fig_15 = paperFig(6, 4);
+ax_15  = axes(fig_15);
+hold(ax_15, 'on');
+scatter(ax_15, mot15(~bin15), dev15(~bin15), 6, colLo15, 'filled', ...
+    'MarkerFaceAlpha', 0.45, 'MarkerEdgeColor', 'none', ...
+    'DisplayName', sprintf('z \\leq 1.5  (n=%d)', nLo15));
+scatter(ax_15, mot15( bin15), dev15( bin15), 6, colHi15, 'filled', ...
+    'MarkerFaceAlpha', 0.55, 'MarkerEdgeColor', 'none', ...
+    'DisplayName', sprintf('z > 1.5  (n=%d)', nHi15));
+xl15 = xline(ax_15, motThr_15, 'k--', 'LineWidth', 0.8);
+xl15.HandleVisibility = 'off';
+hold(ax_15, 'off');
+set(ax_15, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'FontWeight', 'bold');
+xlabel(ax_15, sprintf('Motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
+    'FontSize', 6, 'FontWeight', 'bold');
+ylabel(ax_15, 'Prediction error', 'FontSize', 6, 'FontWeight', 'bold');
+title(ax_15, sprintf('All sessions · all amps  r=%.3f  p=%.4f', r15, p15), ...
+    'FontSize', 6, 'FontWeight', 'bold');
+lg_15 = legend(ax_15, 'Location', 'best');
+paperLegend(lg_15);
+paperExport(fig_15, ...
+    fullfile(paperRoot, 'images', 'figure2', 'imp_motion_pred_err_thr15.png'));

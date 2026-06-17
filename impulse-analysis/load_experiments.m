@@ -1,4 +1,4 @@
-﻿% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
+% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
 % Run from impulse-analysis/ directory.
 
 %% Data analysis Script
@@ -8,15 +8,18 @@
 le_path    = which('load_experiments');
 if isempty(le_path), le_path = fullfile(pwd, 'load_experiments.m'); end
 impulseDir = fileparts(le_path);
-paperRoot  = fullfile(impulseDir, '..', 'paper');   % brain_paper/paper/
+
+% Add utils before clear all wipes impulseDir
+addpath(genpath(fullfile(impulseDir, '..', 'utils')));
 clear le_path
 
 % add pixel configuration
 
 
-clc;
-close all;
-clear all;
+
+% Recompute paths wiped by clear all — mfilename() still works after clear.
+impulseDir = fileparts(mfilename('fullpath'));
+paperRoot  = fullfile(impulseDir, '..', 'paper');
 
 %% experiment name - define all experiments
 
@@ -44,16 +47,7 @@ for expIdx = 1:size(experiments, 1)
         expIdx, size(experiments,1), mn, td, en, sigName);
 
 % get data
-pathString = genpath('utils');
-addpath(pathString);
-
-githubDir = "/home/nimbus/Documents/Brain/";
-    
-    
-% Script to analyze widefield/behavioral data from 
-addpath(genpath(fullfile(githubDir, 'widefield'))) % cortex-lab/widefield
-addpath(genpath(fullfile(githubDir, 'Pipelines'))) % SteinmetzLab/Pipelines
-addpath(genpath(fullfile(githubDir, 'npy-matlab'))) % kwikteam/npy-matlab
+% (utils already on path — added before clear all above)
     
     
 serverRoot = expPath(mn, td, en);
@@ -388,3 +382,6 @@ allExperiments(expIdx).mimg          = mimg;
 allExperiments(expIdx).mI1           = mI(1);
 
 end  % End of experiment loop
+
+% Shared time vector used by prestim_variance, spectral_heatmap, etc.
+t_win_imp = -tWin : 1/fs : tWin;
