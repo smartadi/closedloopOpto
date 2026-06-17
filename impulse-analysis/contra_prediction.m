@@ -57,7 +57,13 @@ nSV_use   = 200;    % contra SVD components used as predictors (z-scored).
                     % cond blows up (2.4e6) at 500 -> overfit. 200 = sweet spot.
 spont_pre = 6;      % pre-trial spontaneous training window (s)
 dur_imp   = 3.0;    % trial window (s)
-redefine_roi = false; % set true to force re-draw midline + contra polygon
+redefine_roi  = false; % set true to force re-draw midline + contra polygon
+% Artifact baseline mode — controls build_onset_artifact for both CP-IMP and CP-4.
+%   'none'    : subtract pre-stim mean only (original behaviour)
+%   'detrend' : fit + extrapolate pre-stim linear trend per trial (Option C)
+%               removes slow hemodynamic/arousal drifts correlated with trial
+%               timing, leaving only the stim-driven deflection in the artifact.
+bleed_spont_ref = 'detrend';
 
 if ~exist('allExperiments','var') || isempty(allExperiments)
     error('contra_prediction: run load_experiments.m first.');
@@ -521,7 +527,7 @@ fprintf('[CP-RRR] Exported cp_rrr_kernel_map.png\n');
 % SNR (require dip > k × baseline SD), compute baseline std and threshold
 % C_signed_z accordingly before the pixel projection.
 
-bleed_neg_win  = [0 0.30];         % dip window (s); must match [CP-IMP] neg_win
+bleed_neg_win  = [0 0.1];         % dip window (s); must match [CP-IMP] neg_win
 bleed_pre_s    = 6.0;              % pre-stim baseline window (s)
 bleed_nPre     = round(bleed_pre_s * Fs);
 bleed_nPost    = round(bleed_neg_win(2) * Fs);
@@ -666,7 +672,7 @@ art_tap_imp = cell(nAmp_imp,1);% per-amplitude artifact, cosine-tapered (scaledk
 
 % ---- Pass 1: per-amplitude onset-locked contra artifact (the stim bleed) -----
 art_raw_imp = build_onset_artifact(nAmp_imp, nzMask_cp, imp_data, t_full, X_cp_m, ...
-    nPred_cp, pre_imp, post_imp + 1, nF_m);
+    nPred_cp, pre_imp, post_imp + 1, nF_m, bleed_spont_ref);
 % Taper weight: 1 from onset to taper_win(1), cosine ramp 1->0 over taper_win, 0
 % after; 0 pre-onset. Smooth fade-out removes the hard-edge boundary step.
 taper_w = ones(1, nImp);
@@ -963,7 +969,7 @@ fprintf('[CP-4a] Contra artifact: max_dev=%.4f  prestim_SD=%.4f  ratio=%.2f  dec
 
 % Per-amplitude artifact via shared helper; slice to post-onset window
 art_raw_4      = build_onset_artifact(nAmp_cp4, nzMask_cp, imp_data, t_full, X_cp_m, ...
-    nPred_cp, nPad_a4, outlen, nF_m);
+    nPred_cp, nPad_a4, outlen, nF_m, bleed_spont_ref);
 art_shape4_amp = cellfun(@(a) a(nPad_a4+1:end, :), art_raw_4, 'UniformOutput', false);
 % Cosine-taper the post-onset artifact (same scheme as CP-IMP scaledkernel) so the
 % bleed is removed only in the dip + ramp and post-dip contra dynamics are kept.

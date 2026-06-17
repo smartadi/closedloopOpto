@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-17 — Option C detrend in build_onset_artifact (bleed_spont_ref)
+**Changed/Found:** `utils/build_onset_artifact.m` — added optional `spont_ref` arg ('none' | 'detrend'). 'detrend' fits a line to each mode's pre-stim window per trial and extrapolates it forward; subtracts this expected spontaneous trajectory instead of the flat pre-stim mean. Isolates the stim-specific deflection, removing slow hemodynamic/arousal drifts correlated with trial timing. `contra_prediction.m` — added `bleed_spont_ref = 'detrend'` knob in Setup section; threaded through both build_onset_artifact call sites (CP-IMP and CP-4).
+**Why:** Current mean-subtraction baseline leaves any pre-stim slope extrapolated into the stim window, inflating the artifact estimate and degrading decontamination. Linear detrend removes this without needing a fixed-offset spontaneous reference window (which risks landing on a prior stim period given unknown ITI).
+**Next:** Re-run CP-IMP and CP-4 sections; compare art_ratio4 and held-out R² before/after. If decontam quality improves (lower art_ratio, higher R²), keep 'detrend' as default. If no change, the drifts weren't the limiting factor — investigate pixel-space bleed detection instead.
+
 ### 2026-06-17 — CP-BLEED: add accurate algorithm description to section header
 **Changed/Found:** `contra_prediction.m` — rewrote the `%% [CP-BLEED]` section comment to accurately describe the algorithm (signed mean deviation in dip window relative to pre-stim mean, soft-weighted not SNR-thresholded) and explicitly note that it does NOT compare to baseline variance. User queried whether the bleed detection gates on dip-vs-baseline-variance; it does not — it uses the signed trial-averaged mean change as a continuous weight.
 **Why:** User wanted to understand the detection criterion and verify whether it matches their mental model (SNR-style gating). It doesn't — current method is soft weighting. Note added explaining how to add SNR threshold if desired.
