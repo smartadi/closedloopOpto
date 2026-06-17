@@ -225,17 +225,19 @@ X_cp       = V_c_full(1:nSV_actual, :)';   % [nFrames × nSV_actual]
 nPred_cp   = nSV_actual;
 fprintf('SVD-direct: using %d/%d modes\n', nSV_actual, size(V_c_full,1));
 
-%% Motion-augmented predictor matrix
+%% Predictor matrix (contra SVD modes only)
 % Each contra SVD mode is z-scored (unit variance) so high- and low-index modes
 % are on equal footing — without this the Gram matrix is ill-conditioned
-% (cond~1e8) because mode 1 variance >> mode N. Motion is z-scored too.
+% (cond~1e8) because mode 1 variance >> mode N.
+% NOTE: motion is deliberately NOT a predictor here. Including motion in the
+% baseline regressed the motion-linked component out of cp_err, making the
+% downstream motion-state split (CP-6b) partially circular. Dropping it lets
+% motion be tested as an independent state variable. (2026-06-17)
 nF_m   = min(nFrames, numel(mot_full));
-mot_z  = zscore(mot_full(1:nF_m));
-mot_z  = mot_z(:);
 X_cp_z = zscore(X_cp(1:nF_m,:));    % unit-variance per mode
-X_cp_m = [X_cp_z, mot_z];           % [nF_m × (nPred_cp+1)]
-fprintf('Predictor matrix: %d contra SVD (z-scored) + 1 motion = %d features\n', ...
-    nPred_cp, size(X_cp_m,2));
+X_cp_m = X_cp_z;                    % [nF_m × nPred_cp] — contra modes only
+fprintf('Predictor matrix: %d contra SVD (z-scored) features (motion-free baseline)\n', ...
+    size(X_cp_m,2));
 
 %% [CP-FIT] Spontaneous contra→ipsi map fit
 % Fits an instantaneous linear map (pX=0, pY=0) on pre-trial spontaneous
@@ -290,7 +292,7 @@ fprintf('[CP-FIT] %d windows  nSV=%d  held-out R²=%.3f\n', nValid_cp, nPred_cp,
 
 
 %% [CP-2] SVD mode weights / kernels
-% beta layout (pY=0): [intercept; (sv1..svN, mot) blocks of pX lags each].
+% beta layout (pY=0): [intercept; (sv1..svN) blocks of pX lags each].
 % pX=0 (instantaneous): one standardized weight per predictor -> stem plot.
 % pX>0:                 per-mode lag kernels -> overlaid line plot.
 beta_offset = 1 + pY;
@@ -372,15 +374,14 @@ if pX ~= 0 || pY ~= 0
 end
 
 rank_grid = unique(min([1 2 3 5 8 12 16 24 32 48 64 100 150 200], nPred_cp));
-nRanks    = numel(rank_grid);
-mot_col   = nPred_cp + 1;                 % motion is the last predictor column
+nRanks    = numel(rank_grid);             % motion-free baseline: predictors are contra modes only
 
 rrr_R2_mean = nan(nRanks,1);
 rrr_R2_sd   = nan(nRanks,1);
 
 for ir = 1:nRanks
     r      = rank_grid(ir);
-    cols_r = [1:r, mot_col];              % top-r contra SVD modes + motion
+    cols_r = 1:r;                         % top-r contra SVD modes
     foldR2 = nan(kfold,1);
     for f = 1:kfold
         tr_idx = valid_idx_cp(fold_id ~= f);
@@ -410,8 +411,8 @@ fprintf('[CP-RRR] CONTRAST: OLS-%d CV R^2=%.3f (cp-arx) vs RRR r*=%d CV R^2=%.3f
 
 % Final RRR model: refit at r* on ALL valid windows (mirrors [CP-ARX] beta_cp refit)
 y_all_v   = cell2mat(spont_y_cp(valid_idx_cp));
-X_all_v   = cell2mat(spont_X_cp(valid_idx_cp));      % [N x (nPred_cp+1)]
-cols_star = [1:r_star, mot_col];
+X_all_v   = cell2mat(spont_X_cp(valid_idx_cp));      % [N x nPred_cp]
+cols_star = 1:r_star;
 [Phi_star, yo_star] = buildLagMatrix(y_all_v, X_all_v(:,cols_star), pY, pX);
 beta_rrr  = Phi_star \ yo_star;
 
@@ -969,6 +970,7 @@ mot4       = cell(nAmp_cp4, 1);
 pvar4      = cell(nAmp_cp4, 1);
 dpow_pre4  = cell(nAmp_cp4, 1);
 dpow_stim4 = cell(nAmp_cp4, 1);
+onset4     = cell(nAmp_cp4, 1);
 
 delta4 = freqBandCtrs >= 1 & freqBandCtrs <= 4;
 nfft4  = 2 * Fs;
@@ -1002,6 +1004,7 @@ for ia4 = 1:nAmp_cp4
     pv_ia4    = nan(nT4, 1);
     dpre_ia4  = nan(nT4, 1);
     dstim_ia4 = nan(nT4, 1);
+    onset_ia4 = nan(nT4, 1);                  % onset frame (for CP-6i motion trace)
     mot_ia4(1:nMot4) = (mot_raw4(1:nMot4) - mot_mean_sess4) / max(mot_std_sess4, eps);
     h4 = h_TF4{ia4};
 
@@ -1014,7 +1017,7 @@ for ia4 = 1:nAmp_cp4
         X_win4 = X_cp_m(i0w4:i1w4, :);
 
         if do_decontam4
-            art_ia4 = cp4_alpha * art_tap4_amp{ia4};   % tapered, alpha=1 (full baseline)
+            art_ia4 = cp4_alpha * art_tap4_amp{ia4};   % tapered, scaled by cp4_alpha
             n_sub4  = min(outlen, size(art_ia4, 1));
             X_win4(pX+1:pX+n_sub4, 1:nPred_cp) = ...
                 X_win4(pX+1:pX+n_sub4, 1:nPred_cp) - art_ia4(1:n_sub4, :);
@@ -1034,6 +1037,7 @@ for ia4 = 1:nAmp_cp4
         pink_ia4(j4,:) = pink_j4';
         red_ia4(j4,:)  = red_j4';
         err_ia4(j4)    = mean((act_j4(iErr) - red_j4(iErr)).^2, 'omitnan');  % 0-500ms
+        onset_ia4(j4) = ion4;
 
         i_pv0 = ion4 - Fs; i_pv1 = ion4 - 1;
         if i_pv0 >= 1
@@ -1060,6 +1064,7 @@ for ia4 = 1:nAmp_cp4
     pvar4{ia4}      = pv_ia4;
     dpow_pre4{ia4}  = dpre_ia4;
     dpow_stim4{ia4} = dstim_ia4;
+    onset4{ia4}     = onset_ia4;
 end
 
 % Expose per-trial CP-4 outputs so motion_analysis / prestim_variance can use
@@ -1079,6 +1084,11 @@ mot_all4   = cell2mat(mot4(nzMask_cp));
 pv_all4    = cell2mat(pvar4(nzMask_cp));
 dpre_all4  = cell2mat(dpow_pre4(nzMask_cp));
 dstim_all4 = cell2mat(dpow_stim4(nzMask_cp));
+onset_all4 = cell2mat(onset4(nzMask_cp));
+amp_all4   = [];
+for iaA = find(nzMask_cp(:))'
+    amp_all4 = [amp_all4; repmat(uAmp_cp(iaA), size(actual4{iaA},1), 1)]; %#ok<AGROW>
+end
 
 tf_all4 = cell2mat(arrayfun(@(k) ...
     repmat(h_TF4{ia_list4(k)}', size(actual4{ia_list4(k)}, 1), 1), ...
@@ -1353,11 +1363,42 @@ vDstm4 = isfinite(err_all4) & isfinite(dstim_all4)& motExcl4;
 [r4_dpre, p4_dpre] = corr(err_all4(vDpre4), dpre_all4(vDpre4),  'rows','complete');
 [r4_dstm, p4_dstm] = corr(err_all4(vDstm4), dstim_all4(vDstm4), 'rows','complete');
 
-fprintf('[CP-6] Prediction error (MSE 0-200ms) correlations:\n');
+fprintf('[CP-6] Prediction error (MSE 0-%dms) correlations:\n', round(err_end_s*1000));
 fprintf('  vs Motion (all):              r=%+.3f  p=%.4f  n=%d\n',r4_mot, p4_mot, sum(vMot4));
 fprintf('  vs Pre-stim var (motexcl):    r=%+.3f  p=%.4f  n=%d\n',r4_pv,  p4_pv,  sum(vPV4));
 fprintf('  vs Pre-stim delta (motexcl):  r=%+.3f  p=%.4f  n=%d\n',r4_dpre,p4_dpre,sum(vDpre4));
 fprintf('  vs Stim delta (motexcl):      r=%+.3f  p=%.4f  n=%d\n',r4_dstm,p4_dstm,sum(vDstm4));
+
+% ── [CP-6w] Dip vs recovery dissociation ──────────────────────────────────────
+% Recomputes per-trial MSE from the stacked traces (act_all4/red_all4) over
+% DISJOINT windows — dip (0-200 ms) vs recovery (200-500 ms) — plus the full
+% 0-500 ms (canonical cp_err) for reference, then re-runs the same state
+% correlations (same masks as CP-6). Shows the state effect lives in the
+% recovery, not the inhibition dip. Pearson + Spearman.
+win_specs = { 'dip 0-200ms',       0.0, 0.2; ...
+              'recovery 200-500ms', 0.2, 0.5; ...
+              'full 0-500ms',       0.0, 0.5 };
+fprintf('[CP-6w] State correlations — dip vs recovery dissociation:\n');
+for iw = 1:size(win_specs,1)
+    i_lo   = max(1, round(win_specs{iw,2}*Fs)+1);
+    i_hi   = min(size(act_all4,2), round(win_specs{iw,3}*Fs)+1);
+    iErr_w = i_lo:i_hi;
+    err_w  = mean((act_all4(:,iErr_w) - red_all4(:,iErr_w)).^2, 2, 'omitnan');
+    vMot_w   = isfinite(err_w) & isfinite(mot_all4);
+    vPV_w    = isfinite(err_w) & isfinite(pv_all4)    & motExcl4;
+    vDpre_w  = isfinite(err_w) & isfinite(dpre_all4)  & motExcl4;
+    [rmP,pmP] = corr(err_w(vMot_w),  mot_all4(vMot_w));
+    [rmS,pmS] = corr(err_w(vMot_w),  mot_all4(vMot_w),  'type','Spearman');
+    [rvP,pvP] = corr(err_w(vPV_w),   pv_all4(vPV_w));
+    [rvS,pvS] = corr(err_w(vPV_w),   pv_all4(vPV_w),    'type','Spearman');
+    [rdP,pdP] = corr(err_w(vDpre_w), dpre_all4(vDpre_w));
+    [rdS,pdS] = corr(err_w(vDpre_w), dpre_all4(vDpre_w),'type','Spearman');
+    fprintf('  --- %s (n_mot=%d, n_motexcl=%d) ---\n', ...
+        win_specs{iw,1}, sum(vMot_w), sum(vPV_w));
+    fprintf('    Motion : Pearson r=%+.3f p=%.4f | Spearman rho=%+.3f p=%.4f\n', rmP,pmP,rmS,pmS);
+    fprintf('    PreVar : Pearson r=%+.3f p=%.4f | Spearman rho=%+.3f p=%.4f\n', rvP,pvP,rvS,pvS);
+    fprintf('    PreDlt : Pearson r=%+.3f p=%.4f | Spearman rho=%+.3f p=%.4f\n', rdP,pdP,rdS,pdS);
+end
 
 % Fig 13: Scatter plots (2x2) -- prediction error vs 4 predictors
 fig_sc4 = paperFig(12, 10);
@@ -1485,109 +1526,100 @@ sgtitle(fig_ms6, sprintf('CP-6b motion split  %s %s e%d',mn,td,en), ...
 paperExport(fig_ms6, fullfile(paper_root,'images','figure2','cp6_motion_split.png'));
 fprintf('[CP-6b] Done. Exported: cp6_motion_split.png\n');
 
-%% ── Local functions (must be at end of script file) ──────────────────────────
+%% ── [CP-6c/6d] Pre-stim variance & delta-power splits (mirror CP-6b) ──────────
+% Median hi/lo split on motion-excluded trials (same cohort as the CP-6
+% variance/delta correlations). Grouped comparison + trace means complement the
+% CP-6 scatter. Error bars use err_all4 (canonical 0-500ms); the dip-vs-recovery
+% dissociation (CP-6w) shows the effect concentrates in the 200-500ms recovery.
+split_states = { ...
+    'CP-6c', pv_all4,   'Pre-stim variance', 'cp6c_pvar_split.png'; ...
+    'CP-6d', dpre_all4, 'Pre-stim \delta',   'cp6d_delta_split.png' };
 
-function r2 = compute_r2(y, X, beta, pY, pX)
-% One-shot R² of ARX model on a concatenated y/X pair.
-    if isempty(y); r2 = NaN; return; end
-    [Phi, yo] = buildLagMatrix(y, X, pY, pX);
-    ss_res = sum((yo - Phi*beta).^2);
-    ss_tot = sum((yo - mean(yo)).^2);
-    if ss_tot < eps; r2 = NaN; return; end
-    r2 = max(0, 1 - ss_res/ss_tot);
-end
+for is = 1:size(split_states,1)
+    stag = split_states{is,1};  sv = split_states{is,2};
+    slbl = split_states{is,3};  sfile = split_states{is,4};
 
-function r2_arr = per_trial_r2(idx_list, spont_y, spont_X, beta, pY, pX)
-% Per-trial R² for a list of pre-stim window indices.
-    r2_arr = nan(numel(idx_list), 1);
-    for kk = 1:numel(idx_list)
-        j  = idx_list(kk);
-        yj = spont_y{j};
-        Xj = spont_X{j};
-        if isempty(yj); continue; end
-        [Phi_j, yo_j] = buildLagMatrix(yj, Xj, pY, pX);
-        ss_res = sum((yo_j - Phi_j*beta).^2);
-        ss_tot = sum((yo_j - mean(yo_j)).^2);
-        if ss_tot > eps
-            r2_arr(kk) = max(0, 1 - ss_res/ss_tot);
-        end
-    end
-end
+    base6 = motExcl4 & isfinite(sv) & validRow6;     % motion-excluded, valid traces
+    medS  = median(sv(base6), 'omitnan');
+    hiS   = base6 & sv >  medS;
+    loS   = base6 & sv <= medS;
+    fprintf('[%s] %s split (motexcl, median=%.3g): High=%d  Low=%d trials\n', ...
+        stag, slbl, medS, sum(hiS), sum(loS));
 
-function plot_window(tlo, t_ax, y_j, X_j, beta, pY, pX, r2, label_str, col_pred)
-% Plot one pre-stim window: actual vs predicted, with R² in title.
-    [Phi_j, yo_j] = buildLagMatrix(y_j, X_j, pY, pX);
-    yp_j = Phi_j * beta;
-    ax   = nexttile(tlo);
-    hold(ax,'on');
-    plot(ax, t_ax, yo_j, 'Color',[0.1 0.1 0.1],'LineWidth',0.8,'DisplayName','Actual');
-    plot(ax, t_ax, yp_j, 'Color',col_pred,      'LineWidth',0.8,'LineStyle','--','DisplayName','Predicted');
-    yline(ax, 0, 'k:', 'LineWidth',0.4,'HandleVisibility','off');
-    hold(ax,'off');
-    set(ax,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
-    xlabel(ax,'Time re onset (s)','FontSize',6,'FontWeight','bold');
-    r2_str = 'n/a';
-    if isfinite(r2); r2_str = sprintf('%.2f',r2); end
-    title(ax, sprintf('%s  R^2=%s', label_str, r2_str),'FontSize',6,'FontWeight','bold');
-end
+    muActHi = mean(act_all4(hiS, iEval), 1, 'omitnan');
+    muActLo = mean(act_all4(loS, iEval), 1, 'omitnan');
+    semActHi= std(act_all4(hiS, iEval),0,1,'omitnan')/sqrt(max(sum(hiS),1));
+    semActLo= std(act_all4(loS, iEval),0,1,'omitnan')/sqrt(max(sum(loS),1));
+    muPinkHi= mean(pink_all4(hiS, iEval), 1, 'omitnan');
+    muPinkLo= mean(pink_all4(loS, iEval), 1, 'omitnan');
 
-function B_r = rrr_fit(X, Y, r)
-% General reduced-rank regression (Ye et al. 2023, "Linear regression within
-% cortex"). Returns the rank-r least-squares coefficient matrix mapping X -> Y.
-%   X : [N x p] regressors (prepend a column of ones for an intercept if wanted)
-%   Y : [N x q] targets
-%   r : target rank of the coefficient matrix
-% Method: ordinary LS, then project the coefficients onto the top-r right singular
-% subspace of the fitted response Yhat = X*B_ols (the subspace of regressor activity
-% most predictive of the target -- Ye's RRR).
-% For a single target (q = 1) this collapses to rank-1 = OLS, so it is only
-% non-trivial for multi-output Y (e.g. a whole-hemisphere pixel map). It is included
-% so the [CP-RRR] section extends to that target with a one-line change.
-    B_ols = X \ Y;                          % [p x q] full-rank least squares
-    r     = min([r, size(B_ols,1), size(B_ols,2)]);
-    Yhat  = X * B_ols;                      % fitted response
-    [~, ~, Vr] = svd(Yhat, 'econ');
-    Pr    = Vr(:, 1:r) * Vr(:, 1:r)';       % rank-r projector in target space
-    B_r   = B_ols * Pr;
-end
+    eHi_mu = mean(err_all4(hiS),'omitnan'); eHi_sem = std(err_all4(hiS),'omitnan')/sqrt(max(sum(hiS),1));
+    eLo_mu = mean(err_all4(loS),'omitnan'); eLo_sem = std(err_all4(loS),'omitnan')/sqrt(max(sum(loS),1));
+    [~, pErr] = ttest2(err_all4(hiS), err_all4(loS));
+    fprintf('[%s] Pred error  High=%.4f±%.4f  Low=%.4f±%.4f  (t-test p=%.4f)\n', ...
+        stag, eHi_mu, eHi_sem, eLo_mu, eLo_sem, pErr);
 
-function art_cell = build_onset_artifact(nAmp, nzMask, imp_data, t_full, X_cp_m, nPred, pre_f, post_f, nF_m)
-% Returns art_cell{ia}: [(pre_f+post_f) x nPred] mean onset-locked contra SVD
-% deviation, baseline-subtracted using the first pre_f (pre-onset) frames.
-nWin     = pre_f + post_f;
-art_cell = cell(nAmp, 1);
-for ia = 1:nAmp
-    art_cell{ia} = zeros(nWin, nPred);
-    if ~nzMask(ia); continue; end
-    starts = imp_data.startTimes{ia}(:);
-    devsum = zeros(nWin, nPred); nval = 0;
-    for j = 1:numel(starts)
-        [~, ion] = min(abs(t_full - starts(j)));
-        i0 = ion - pre_f; i1 = ion + post_f - 1;
-        if i0 < 1 || i1 > nF_m; continue; end
-        chunk = X_cp_m(i0:i1, 1:nPred);
-        bl    = mean(chunk(1:pre_f, :), 1, 'omitnan');
-        devsum = devsum + (chunk - bl); nval = nval + 1;
-    end
-    art_cell{ia} = devsum / max(nval, 1);
-end
+    colHi = [0.60 0.20 0.60];   % purple — high state
+    colLo = [0.20 0.60 0.45];   % teal   — low state
+
+    fig_sd = paperFig(12, 8);
+    lmd=0.08; rmd=0.04; bmd=0.13; tmd=0.10; gxd=0.10;
+    pwc = (1-lmd-rmd-gxd)/2;
+
+    axL = axes(fig_sd, 'Position', [lmd, bmd, pwc, 1-bmd-tmd]);
+    hold(axL,'on');
+    fill(axL,[tEval,fliplr(tEval)],[muActHi+semActHi, fliplr(muActHi-semActHi)],colHi,'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
+    fill(axL,[tEval,fliplr(tEval)],[muActLo+semActLo, fliplr(muActLo-semActLo)],colLo,'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
+    plot(axL,tEval,muActHi,'Color',colHi,'LineWidth',1.5,'DisplayName',sprintf('High (n=%d)',sum(hiS)));
+    plot(axL,tEval,muActLo,'Color',colLo,'LineWidth',1.5,'DisplayName',sprintf('Low (n=%d)',sum(loS)));
+    plot(axL,tEval,muPinkHi,'Color',colHi,'LineWidth',0.8,'LineStyle','--','HandleVisibility','off');
+    plot(axL,tEval,muPinkLo,'Color',colLo,'LineWidth',0.8,'LineStyle','--','HandleVisibility','off');
+    xline(axL,0,'k:','LineWidth',0.6,'HandleVisibility','off');
+    xline(axL,0.2,'Color',[0.5 0.5 0.5],'LineStyle',':','LineWidth',0.6,'HandleVisibility','off');
+    xline(axL,err_end_s,'Color',[0.7 0.5 0],'LineStyle',':','LineWidth',0.8,'HandleVisibility','off');
+    yline(axL,0,'k:','LineWidth',0.3,'HandleVisibility','off');
+    hold(axL,'off');
+    set(axL,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+    xlabel(axL,'Time (s)','FontSize',6,'FontWeight','bold');
+    ylabel(axL,'\DeltaF/F','FontSize',6,'FontWeight','bold');
+    lhd = legend(axL,'Location','southwest'); set(lhd,'FontSize',5,'Box','off');
+    try; set(lhd,'ItemTokenSize',[6 6]); catch; end
+    title(axL,'Mean actual ± SEM  (dashed = contra pred)','FontSize',6,'FontWeight','bold');
+
+    axR = axes(fig_sd, 'Position',[lmd+pwc+gxd, bmd+0.15, pwc*0.5, 1-bmd-tmd-0.15]);
+    hold(axR,'on');
+    bar(axR,1,eHi_mu,0.5,'FaceColor',colHi,'EdgeColor','none');
+    bar(axR,2,eLo_mu,0.5,'FaceColor',colLo,'EdgeColor','none');
+    errorbar(axR,[1 2],[eHi_mu eLo_mu],[eHi_sem eLo_sem],'k.','LineWidth',1.0,'CapSize',4);
+    hold(axR,'off');
+    set(axR,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold','XTick',[1 2],'XTickLabel',{'High','Low'},'XLim',[0.3 2.7]);
+    ylabel(axR,sprintf('Pred error (MSE 0-%dms)',round(err_end_s*1000)),'FontSize',6,'FontWeight','bold');
+    title(axR,sprintf('Error by %s  (p=%.3f)',slbl,pErr),'FontSize',6,'FontWeight','bold');
+
+    sgtitle(fig_sd, sprintf('%s %s split  %s %s e%d',stag,slbl,mn,td,en),'FontSize',6,'FontWeight','bold');
+    paperExport(fig_sd, fullfile(paper_root,'images','figure2',sfile));
+    fprintf('[%s] Done. Exported: %s\n', stag, sfile);
 end
 
-function [fig, ax_bg, ax_ov] = brain_overlay_fig(mimg, w_cm, h_cm, ax_pos)
-% Gray brain background + transparent overlay axes for kernel maps.
-if nargin < 4; ax_pos = [0.06 0.08 0.70 0.84]; end
-fig   = figure('Color','w','Units','centimeters','Position',[2 2 w_cm h_cm]);
-ax_bg = axes(fig,'Position',ax_pos);
-imagesc(ax_bg, mimg'); colormap(ax_bg, gray);
-clim(ax_bg, [prctile(mimg(:),1), prctile(mimg(:),99)]);
-axis(ax_bg,'image','off');
-ax_ov           = axes(fig,'Position',ax_bg.Position);
-ax_ov.Color     = 'none';
-ax_ov.XLim      = ax_bg.XLim;
-ax_ov.YLim      = ax_bg.YLim;
-ax_ov.YDir      = 'reverse';
-ax_ov.XLimMode  = 'manual';
-ax_ov.YLimMode  = 'manual';
-set(ax_ov,'XTick',[],'YTick',[],'Box','off');
-hold(ax_ov,'on');
-end
+%% ── [CP-6i] Interactive trial inspector ──────────────────────────────────────
+% Click any point on the motion-vs-error scatter to overlay that trial's
+% actual trace, its amplitude-average, and the prediction, plus the
+% motion-energy trace locked to that trial's onset.
+mot_z_full = (mot_full(1:nF_m) - mot_mean_sess4) / max(mot_std_sess4, eps);
+
+S_insp.mot_all4   = mot_all4;
+S_insp.err_all4   = err_all4;
+S_insp.amp_all4   = amp_all4;
+S_insp.act_all4   = act_all4(:, iEval);
+S_insp.red_all4   = red_all4(:, iEval);
+S_insp.tEval      = tEval;
+S_insp.onset_all4 = onset_all4;
+S_insp.mot_z      = mot_z_full;
+S_insp.Fs         = Fs;
+
+cp_trial_inspector(S_insp);
+fprintf('[CP-6i] Inspector launched — click a trial point to inspect.\n');
+
+% Helpers live in utils/ (on path via addpath at top):
+%   compute_r2, per_trial_r2, plot_window, rrr_fit,
+%   build_onset_artifact, brain_overlay_fig, cp_trial_inspector
