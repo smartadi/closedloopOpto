@@ -16,6 +16,20 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-17 — Stage 1 bleed-spatial-decay GATE: separable+decays but NOT amp-scaled → use pooled bleed
+**Changed/Found:** `contra_prediction.m` — added `%% [CP-BLEED-SD]` Stage-1 diagnostic (per-amplitude contra bleed maps → distance-from-stim, rank-1 separability, amplitude scaling). RAN on selExp=3 (AL_0033). Results:
+  - **Separable: YES** — PC1 = 91.6% of the [pixel × amp] bleed (one spatial pattern scaled across amps).
+  - **Decays from stim: YES (moderate)** — pooled |profile| vs distance-from-stim Spearman rho=−0.392 p≈0; beats distance-from-midline (rho=−0.204) → organized around the STIM site, not callosal/midline entry. λ≈464 px (gradual); per-amp curves PEAK at ~200–250 px (a localized contra locus), not monotonic from nearest pixel.
+  - **Amplitude-scaled: NO** — blob bleed per amp = −17.9,−11.7,−4.3,−2.3,−8.0,**+11.5**,−2.2,−19.0,−6.8 (rho=+0.20 p=0.61); sign-flips at 3.2V; weakest stim (0.5V) shows LARGEST bleed. Per-amp bleed is noise-dominated.
+  - **GATE VERDICT: PARTIAL** — per-amp `gain(amp)·profile(d)` model NOT supported (gain unreliable). A single POOLED, amplitude-INDEPENDENT bleed pattern IS supported. Exported cp_bleed_spatial_decay.png.
+**Why:** Stage 1 is the GATE for the spatial-decay residual route (residual=actual−clean-contra, replacing err4 per JOURNAL 2026-06-17). Validate the bleed model before retiring err4. Fixed a dim bug (uAmp_cp is [10×1] col; corr transpose mismatch).
+**Next:** Stage 2 → POOLED amplitude-independent bleed removal (α=1, no per-amp gain), likely in `contra_residual.m`. OPEN: why is contra bleed amplitude-independent (stim artifact vs onset-locked arousal/hemodynamic)? — affects residual interpretation. Then residual DV (0–200ms inhibition energy) + amp/state characterization.
+
+### 2026-06-17 — Create contra_residual.m: simplified pipeline stopping after CP-IMP
+**Changed/Found:** `impulse-analysis/contra_residual.m` (new) — copy of contra_prediction.m trimmed to stop after `%% [CP-IMP]`; removes CP-2, CP-RRR, CP-BLEED, CP-4/5/6/7; retains all infrastructure (SVD, ROI, CP-FIT) and the full CP-IMP residual computation; workspace after run contains `res_imp`, `act_imp`, `prd_imp`, `t_imp`, `ia_imp`
+**Why:** User wants to focus on residual analysis without the concurrent-prediction / TF / error-correlation machinery
+**Next:** Add residual-analysis sections below the CP-IMP block as the new work develops
+
 ### 2026-06-17 — Option C shifted-window in build_onset_artifact (corrected)
 **Changed/Found:** `utils/build_onset_artifact.m` — implemented the actual Option C: shifted_window mode computes a matched spontaneous reference window shifted `spont_offset_f` frames (~20 s default) before each stim onset, averages across trials, and subtracts from the stim-locked average. Result = stim_mean − spont_mean = pure stim-specific artifact. 'detrend' and 'none' modes retained. `contra_prediction.m` — default `bleed_spont_ref = 'shifted_window'`, `bleed_spont_offset_s = 20`; both call sites guard for missing workspace vars and pass `round(bleed_spont_offset_s * Fs)` as the frame offset. Previous 'detrend' commit was a wrong substitution — this corrects it.
 **Why:** User pointed out the shifted-window subtraction (artifact = stim_mean − spont_mean) was agreed but not implemented — linear detrend was substituted without disclosure.

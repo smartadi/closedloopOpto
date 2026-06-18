@@ -595,6 +595,125 @@ hold(ax_bleed,'off');
 paperExport(fig_bleed, fullfile(paper_root,'images','figure2','cp_bleed_map.png'));
 fprintf('[CP-BLEED] Exported cp_bleed_map.png\n');
 
+%% [CP-BLEED-SD] Stage 1: is the bleed a separable, distance-decaying function?
+% GATE for the spatial-decay residual route. Tests whether the stim bleed into
+% contra factorizes as  bleed(pixel,amp) ~ gain(amp) * profile(distance-from-stim),
+% with profile decaying monotonically with distance. If YES, the bleed can be
+% removed with NO free alpha (Stage 2: residual = actual - clean-contra pred).
+% If the profile is non-monotonic in distance or the [pixel x amp] bleed is not
+% rank-1, the spatial-decay premise fails and we must reconsider before
+% retiring err4. Diagnostic only — exports a figure + prints gate flags.
+
+% --- per-amplitude bleed map in pixel space (same windowing as [CP-BLEED]) ---
+amps_sd  = find(nzMask_cp(:))';
+nAmp_sd  = numel(amps_sd);
+C_amp_z  = zeros(nPred_cp, nAmp_sd);
+for k_sd = 1:nAmp_sd
+    ia_b     = amps_sd(k_sd);
+    starts_b = imp_data.startTimes{ia_b}(:);
+    devsum_b = zeros(bleed_nWin, nPred_cp);
+    nval_b   = 0;
+    for j_b = 1:numel(starts_b)
+        [~, ion_b] = min(abs(t_full - starts_b(j_b)));
+        i0_b = ion_b - bleed_nPre; i1_b = ion_b + bleed_nPost;
+        if i0_b < 1 || i1_b > nF_m; continue; end
+        Xc_b = X_cp_m(i0_b:i1_b, 1:nPred_cp);
+        bl_b = mean(Xc_b(bleed_pre_mask, :), 1, 'omitnan');
+        devsum_b = devsum_b + (Xc_b - bl_b);
+        nval_b = nval_b + 1;
+    end
+    if nval_b == 0; continue; end
+    amp_mean_b    = devsum_b / nval_b;
+    C_amp_z(:,k_sd) = mean(amp_mean_b(bleed_dip_mask, :), 1)';
+end
+C_amp_orig    = C_amp_z .* std_X_b;          % [nPred_cp x nAmp]  (std_X_b from CP-BLEED)
+bleed_pix_amp = U_svd_cp * C_amp_orig;        % [nPix_contra x nAmp]  signed
+
+% --- distance of each contra pixel from the stim site (pixels) ---
+[iy_c, ix_c] = ind2sub([nY_cp, nX_cp], idx_contra_b);   % iy<->py_prim, ix<->px_prim
+d_pix = sqrt((iy_c - py_prim).^2 + (ix_c - px_prim).^2);
+
+% --- separability: rank-1 fraction of the [pixel x amp] bleed ---
+[Usd, Ssd, Vsd] = svd(bleed_pix_amp, 'econ');
+sv_sd  = diag(Ssd);
+pc1_sd = sv_sd(1)^2 / sum(sv_sd.^2);
+sflip           = sign(mean(Vsd(:,1)));                 % orient gain positive vs amp
+spatial_profile = Usd(:,1) * sflip;                     % [nPix x 1]  PC1 spatial loading
+gain_amp        = sv_sd(1) * Vsd(:,1) * sflip;          % [nAmp x 1]  per-amp PC1 gain
+
+% --- pooled (amplitude-collapsed) bleed pattern = high-SNR reference ---
+prof_pool = mean(bleed_pix_amp, 2);                     % signed pooled spatial pattern
+gp_pool   = abs(prof_pool);
+blob      = gp_pool > prctile(gp_pool, 90);             % top-10% strongest-bleed pixels
+blob_amp  = mean(bleed_pix_amp(blob, :), 1)';           % [nAmp x 1] signed bleed in blob
+
+% --- spatial organizer: distance-from-stim vs distance-from-midline ---
+if strcmp(ml_cp.type,'x_of_y')
+    d_mid = abs(ix_c - ml_cp.a*iy_c - ml_cp.b) / sqrt(1+ml_cp.a^2);
+else
+    d_mid = abs(iy_c - ml_cp.a*ix_c - ml_cp.b) / sqrt(1+ml_cp.a^2);
+end
+sel = gp_pool > prctile(gp_pool,50) & gp_pool > 0;      % fit on stronger-bleed pixels
+pcoef      = polyfit(d_pix(sel), log(gp_pool(sel)), 1); % |profile|~a*exp(d/.) log-linear
+lambda_pix = -1 / pcoef(1);
+[r_ds, p_ds] = corr(d_pix, gp_pool, 'type','Spearman'); % decay vs distance-from-STIM
+[r_dm, p_dm] = corr(d_mid, gp_pool, 'type','Spearman'); % decay vs distance-from-MIDLINE
+[r_ba, p_ba] = corr(uAmp_cp(amps_sd(:)), blob_amp, 'type','Spearman');  % amp scaling
+
+fprintf('[CP-BLEED-SD] Stage 1 — separability / decay / amplitude scaling:\n');
+fprintf('  PC1 fraction of [pixel x amp] bleed = %.1f%%  (separable if >=70%%)\n', 100*pc1_sd);
+fprintf('  pooled |profile| vs dist-from-STIM:     rho=%+.3f p=%.2g  (lambda=%.0f px)\n', r_ds, p_ds, lambda_pix);
+fprintf('  pooled |profile| vs dist-from-MIDLINE:  rho=%+.3f p=%.2g\n', r_dm, p_dm);
+fprintf('  blob bleed vs stim amp:                 rho=%+.3f p=%.2g  (want rho>0)\n', r_ba, p_ba);
+fprintf('  blob bleed per amp: '); fprintf('%+.1f ', blob_amp); fprintf('\n');
+gate_sep  = pc1_sd  >= 0.70;
+gate_dec  = r_ds < -0.30 && p_ds < 0.05;
+gate_amp  = r_ba >  0.30 && p_ba < 0.05;
+if gate_sep && gate_dec && gate_amp; gate_verdict = 'PROCEED (per-amp gain*profile)'; ...
+elseif gate_sep && gate_dec;         gate_verdict = 'PARTIAL: separable+decays but NOT amp-scaled -> use POOLED (amp-independent) bleed'; ...
+else;                                gate_verdict = 'RECONSIDER'; end
+fprintf('  GATE -> separable=%d | decays-from-stim=%d | amp-scaled=%d\n', gate_sep, gate_dec, gate_amp);
+fprintf('  VERDICT: %s\n', gate_verdict);
+
+% --- figure: (A) profile vs distance + fit, (B) per-amp curves, (C) gain vs amp ---
+fig_sd = paperFig(20, 6);
+lmA=0.06; bmA=0.16; pwA=0.25; phA=0.72; gxA=0.075;
+cmap_sd = parula(nAmp_sd);
+
+axA = axes(fig_sd,'Position',[lmA, bmA, pwA, phA]); hold(axA,'on');
+scatter(axA, d_pix, gp_pool, 6, [0.5 0.5 0.5], 'filled', 'MarkerFaceAlpha',0.3);
+dd = linspace(min(d_pix), max(d_pix), 100);
+plot(axA, dd, exp(polyval(pcoef, dd)), 'r-', 'LineWidth',1.5);
+set(axA,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+xlabel(axA,'Distance from stim (px)','FontSize',6,'FontWeight','bold');
+ylabel(axA,'|pooled bleed profile|','FontSize',6,'FontWeight','bold');
+title(axA, sprintf('Decay vs stim  \\lambda=%.0f px  (\\rho=%.2f)', lambda_pix, r_ds), 'FontSize',6,'FontWeight','bold');
+
+% per-amp binned magnitude vs distance (separability = parallel scaled curves)
+nbin = 12; edges = linspace(min(d_pix), max(d_pix), nbin+1);
+bc   = 0.5*(edges(1:end-1)+edges(2:end));
+axB = axes(fig_sd,'Position',[lmA+pwA+gxA, bmA, pwA, phA]); hold(axB,'on');
+for k_sd = 1:nAmp_sd
+    bm = arrayfun(@(b) mean(abs(bleed_pix_amp(d_pix>=edges(b)&d_pix<edges(b+1), k_sd)),'omitnan'), 1:nbin);
+    plot(axB, bc, bm, '-', 'Color',cmap_sd(k_sd,:), 'LineWidth',1.0);
+end
+set(axB,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+xlabel(axB,'Distance from stim (px)','FontSize',6,'FontWeight','bold');
+ylabel(axB,'|bleed| per amp','FontSize',6,'FontWeight','bold');
+title(axB, sprintf('Separability  PC1=%.0f%%', 100*pc1_sd), 'FontSize',6,'FontWeight','bold');
+
+axC = axes(fig_sd,'Position',[lmA+2*(pwA+gxA), bmA, pwA, phA]); hold(axC,'on');
+plot(axC, uAmp_cp(amps_sd), blob_amp, 'o-', 'Color',[0.2 0.4 0.8], 'MarkerFaceColor',[0.2 0.4 0.8], 'MarkerSize',3, 'LineWidth',1.0);
+yline(axC, 0, 'k:', 'LineWidth',0.5);
+set(axC,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+xlabel(axC,'Stim amplitude (V)','FontSize',6,'FontWeight','bold');
+ylabel(axC,'blob bleed (signed)','FontSize',6,'FontWeight','bold');
+title(axC, sprintf('Amp scaling  (\\rho=%.2f, ns)', r_ba), 'FontSize',6,'FontWeight','bold');
+
+sgtitle(fig_sd, sprintf('CP-BLEED-SD Stage 1  %s %s e%d',mn,td,en), 'FontSize',6,'FontWeight','bold');
+paperExport(fig_sd, fullfile(paper_root,'images','figure2','cp_bleed_spatial_decay.png'));
+fprintf('[CP-BLEED-SD] Exported cp_bleed_spatial_decay.png\n');
+
 %% [CP-IMP] Impulse-window contra prediction + stim-bleed negation (no TF)
 % Apply the spontaneous instantaneous contra map (beta_cp) across [-1,+1] s using
 % only concurrent contra+motion -- no stimulus info, no TF.

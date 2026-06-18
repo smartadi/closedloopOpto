@@ -16,7 +16,14 @@ ideas, frustrations, half-decisions, "today I noticed…", questions for Nick, e
 Newest entry on top.
 
 ---
-### 2026-06-16 
+### 2026-06-17 
+
+#### Realization
+-Actually we should only care about ipsi-only part of stimulation, when we create the mapping from contra to ipsi(near stim site), we created it on non stim data. but then on stim trials the stim effects infects the contra too with decreasing intensity. Then we tried fancy methods to be able to recreate the proper ipsi activity from ipsi using the model plus some manipulations. Instead why dont we directly report that during stim the contra(infected) predicts ipsi to do y, but in actuality it did y_prime, so the difference is the actual local ipsi activity, and then characterize its behavior on trial avg setup cmparing amp vs residual and their sate dependences(compared to motion and then variance/delta power)
+↳ gleaned: TASKS#Residual-as-local-activity reframing — residual = actual_ipsi − contra_pred becomes canonical DV (REPLACES err4). CRITICAL incompleteness flagged: must use BLEED-CORRECTED (not infected) contra, else residual is amplitude-dependently attenuated (raw bleed 97% @0.5V → 76% @4.9V, so naive residual = 3–24% of true local response, distorting the amp-vs-residual dose-response). Decision: bleed removed via SPATIAL-DECAY extrapolation (fit gain(amp)·profile(distance-from-stim), no free α); bleed itself becomes a reported finding (decay λ + spatial map). TF demoted to descriptor of trial-avg residual. See RESEARCH.md 2026-06-17. Decided with user via routing Q.
+
+
+### 2026-06-16
 
 #### Regarging prediction vs brain states,
 - Earlier we had an analysis where we did prediction error per trial on impulse responses as deviation of trial response from trial averaged response on that amp.
