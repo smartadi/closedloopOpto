@@ -3,7 +3,7 @@ function d = initialize_data(mn,en,td)
     
     
     
-    githubDir = "/home/nimbus/Documents/Brain/"
+    githubDir = "/home/nimbus/Documents/Brain/";
     
     
     % Script to analyze widefield/behavioral data from 
@@ -61,15 +61,17 @@ function d = initialize_data(mn,en,td)
         fs = 1 / mean(diff(d.timeBlue));
         cutoff = 10; % Hz
         [b, a] = butter(4, cutoff / (fs/2), 'low');
-        d.motion = filtfilt(b, a, motEngDS);
+        d.motion     = filtfilt(b, a, motEngDS);
+        d.has_motion = true;
     else
-        d.motion = zeros(size(d.timeBlue));
+        d.motion     = zeros(size(d.timeBlue));
+        d.has_motion = false;
     end
 
     %%
 
     % pixel frame
-    pix = [d.params.pixel(1);d.params.pixel(1)]
+    pix = [d.params.pixel(1);d.params.pixel(1)];
     % offsetx = 40;
     % offsety = -75;
 
@@ -81,7 +83,7 @@ function d = initialize_data(mn,en,td)
     % px=[];
     % py=[];
     
-    frame = double([d.params.pixel(1),px;d.params.pixel(2),py]);
+    frame = [double(d.params.pixel(1)),px;double(d.params.pixel(2)),py];
     d.params.pixels = frame';
 
 

@@ -128,6 +128,24 @@ for iAmp = 1:nAmp_s
     fprintf('  amp=%.2fV  RÂ²=%.3f\n', uA_s(iAmp), R2_all(iAmp));
 end
 
+% Pooled R² across all amplitudes (global-mean centering).
+y_pool  = [];
+yp_pool = [];
+for iAmp = 1:nAmp_s
+    if isempty(yp_all{iAmp}), continue; end
+    y_i  = DF_s(iAmp, iPost)';
+    yp_i = yp_all{iAmp};
+    vT   = ~isnan(y_i) & ~isnan(yp_i);
+    y_pool  = [y_pool;  y_i(vT)];
+    yp_pool = [yp_pool; yp_i(vT)];
+end
+if numel(y_pool) > 1
+    R2_pool = 1 - sum((y_pool - yp_pool).^2) / sum((y_pool - mean(y_pool)).^2);
+else
+    R2_pool = NaN;
+end
+fprintf('  Session %d total R² (pooled, all amps): %.3f\n', selExp, R2_pool);
+
 % â”€â”€ Figure: one subplot per amplitude â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 nCols = min(nAmp_s, 4);
 nRows = ceil(nAmp_s / nCols);
@@ -311,6 +329,11 @@ uistack(hPatch, 'bottom');   % send behind all traces
 line(ax_A, [0 0], [yl_A(1), yTop * 0.85], 'Color','r', 'LineWidth', 0.75, 'HandleVisibility','off');
 text(ax_A, 0.02, yTop, 'Stim', 'Color','r', 'FontSize',6, 'FontWeight','bold', ...
     'HorizontalAlignment','left', 'VerticalAlignment','top', 'Clipping','off');
+if isfinite(R2_pool)
+    text(ax_A, tWin_A(end), yTop, sprintf('R^2=%.2f', R2_pool), ...
+        'FontSize',6, 'FontWeight','bold', 'Color',[0.2 0.2 0.2], ...
+        'HorizontalAlignment','right', 'VerticalAlignment','top');
+end
 
 paperAxes(ax_A, 'XLength',0.15,'YLength',1,'XLabel','150 ms','YLabel','1% dF/F');
 

@@ -37,7 +37,7 @@ if exist(roi_path, 'file')
     load(roi_path, 'roi');
 else
     fprintf('No ROI found — draw brain outline on the figure, then double-click to confirm.\n');
-    mimg = mean(reshape(U1, [], nSV) * dV1, 2);   % rough mean image from SVD
+    mimg = reshape(U1, [], nSV) * mean(dV1, 2);    % [nPix×1]: mean(U*V,2) = U*mean(V,2)
     mimg = reshape(mimg, size(U1,1), size(U1,2));
     mimg_padded = padZeros(mimg, params.halfpadding);
     figure; imagesc(mimg_padded); colormap gray; axis image;
@@ -53,8 +53,8 @@ params.xxRoi = params.xx(tf);
 params.yyRoi = params.yy(tf);
 
 %% Per-trial detection
-spiralAll = [];
-nTrials   = numel(stimStarts);
+spiralCell = {};   % accumulate as cell to avoid repeated reallocation
+nTrials    = numel(stimStarts);
 
 for j = 1:nTrials
     t0 = stimStarts(j);
@@ -71,17 +71,16 @@ for j = 1:nTrials
 
     [~, ~, tracePhase_raw] = spiralPhaseMap_freq(U1, dV_chunk, t_chunk, params, freq, 1);
 
-    % strip filter padding
-    i_start          = filterPad + 1;
-    i_end            = size(tracePhase_raw, 3) - filterPad;
-    tracePhase_inner = tracePhase_raw(:,:, i_start:i_end);
+    % strip filter padding and immediately free the padded version
+    i_start      = filterPad + 1;
+    i_end        = size(tracePhase_raw, 3) - filterPad;
+    tracePhase   = padZeros(tracePhase_raw(:,:, i_start:i_end), params.halfpadding);
+    clear tracePhase_raw;
 
-    tracePhase = padZeros(tracePhase_inner, params.halfpadding);
-
-    nFrames    = size(tracePhase, 3);
+    nFramesTr  = size(tracePhase, 3);
     abs_frames = f_start:f_end;
 
-    for fi = 1:nFrames
+    for fi = 1:nFramesTr
         A = squeeze(tracePhase(:,:,fi));
 
         pw1 = spiralAlgorithm(A, params);
@@ -95,17 +94,26 @@ for j = 1:nTrials
 
         pw5(:,1:2) = pw5(:,1:2) - params.halfpadding;
 
-        abs_frame = abs_frames(fi);
-        t_rel     = t(abs_frame) - t0;
+        abs_frame     = abs_frames(fi);
+        t_rel         = t(abs_frame) - t0;
         pw5(:, end+1) = abs_frame;
         pw5(:, end+1) = j;
         pw5(:, end+1) = t_rel;
 
-        spiralAll = [spiralAll; pw5];
+        spiralCell{end+1} = pw5;
     end
 
-    fprintf('Trial %d/%d done — %d spirals so far\n', j, nTrials, size(spiralAll,1));
+    clear tracePhase;
+    fprintf('Trial %d/%d done — %d spirals so far\n', j, nTrials, numel(spiralCell));
 end
+
+% Concatenate once at the end
+if isempty(spiralCell)
+    spiralAll = [];
+else
+    spiralAll = vertcat(spiralCell{:});
+end
+clear spiralCell;
 
 if isempty(spiralAll)
     spirals = table();

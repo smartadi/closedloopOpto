@@ -7,6 +7,7 @@ function [data, dFk] = getpixel_dFoF(d, mode, pixel, r)
 
 if nargin < 2 || isempty(mode); mode = 1; end
 if nargin < 4 || isempty(r);    r    = 1; end
+pixel = double(pixel);
 
 serverRoot = expPath(d.mn, d.td, d.en);
 
@@ -24,7 +25,7 @@ if exist(pathData, 'file') && r == 1
 else
     % ---- Compute raw fluorescence trace F ----
     try
-        k = d.params.kernel;
+        k = double(d.params.kernel);
     catch
         k = 10;
     end
@@ -72,7 +73,7 @@ disp('computing dF/F')
 if mode == 0
     % Rolling-mean baseline via cumulative sum (O(T) instead of O(T·W))
     try
-        w = d.params.horizon - 1;
+        w = double(d.params.horizon) - 1;
     catch
         w = 40*35 - 1;
     end
@@ -88,7 +89,7 @@ else
         % Loaded from cache — recompute mI from mimg if needed
         expRoot = serverRoot;
         mimg = readNPY(fullfile(expRoot, 'blue', 'meanImage.npy'));
-        try; k = d.params.kernel; catch; k = 10; end
+        try; k = double(d.params.kernel); catch; k = 10; end
         j = 1;
         mI = mean(mimg(pixel(j,2)-k:pixel(j,2)+k, pixel(j,1)-k:pixel(j,1)+k), 'all');
     end

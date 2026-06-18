@@ -14,6 +14,9 @@
 %
 % Run from brain_paper/ root OR controller-analysis/ -- path auto-detected.
 % Requires: load_sessions.m has run first (mouse, fields defined in workspace).
+clc;
+close all;
+
 
 PS = paperStyle();
 setPaperDefaults();
@@ -29,10 +32,11 @@ else
 end
 
 % ---- constants ----
-Fs_cl  = 35;            % imaging frame rate (Hz)
-c0     = 36;            % stim-onset column in wcDfk (t = 0; 35 cols = 1 s pre)
-pre_s  = 1;             % pre-trial window for X3 (s)
+Fs_cl     = 35;         % imaging frame rate (Hz)
+c0        = 36;         % stim-onset column in wcDfk (t = 0; 35 cols = 1 s pre)
+pre_s     = 1;          % pre-trial window for X3 (s)
 mot_pre_s = 2;          % motion combined window: 2 s pre + full trial
+c0_mot    = 71;         % onset column in wcmotion (mv(i-70:i+35*dur), so onset=index 71)
 
 % ---- helper: OLS R² (no toolbox required) ----
 % fitR2(X, y) -- X does NOT include intercept; added internally
@@ -54,20 +58,21 @@ for k = 1:length(fields)
     ref_k = mouse.(fields{k}).d.ref;
     dur_k = mouse.(fields{k}).d.params.dur;
 
-    % require motion data
-    if ~isfield(dk,'wcmotion') || ~any(dk.wcmotion(:)); continue; end
+    % require motion data (flag set by initialize_data / backfilled by load_sessions)
+    if ~mouse.(fields{k}).has_motion; continue; end
+    if ~isfield(dk,'wcmotion');       continue; end
 
     nT = size(dk.wcDfk, 1);    % number of CL trials
 
     % X1: onset deviation from reference
     x1_k = abs(dk.wcDfk(:, c0) - ref_k);                              % [nT x 1]
 
-    % X2: motion -- combined window
-    n_mot  = size(dk.wcmotion, 2);
-    onset_mot = n_mot - Fs_cl * dur_k;
-    ws = max(1, onset_mot - round(mot_pre_s * Fs_cl));
-    we = min(n_mot, onset_mot + dur_k * Fs_cl);
-    x2_k = mean(dk.wcmotion(1:nT, ws:we), 2);                         % [nT x 1]
+    % X2: motion energy -- combined window (2 s pre-onset through trial end)
+    % d.motion is z-scored motion energy; mean of squares avoids cancellation.
+    ws = max(1, c0_mot - round(mot_pre_s * Fs_cl));
+    we = min(size(dk.wcmotion, 2), c0_mot + round(dur_k * Fs_cl) - 1);
+    mot_win = dk.wcmotion(1:nT, ws:we);                                % [nT x W]
+    x2_k = mean(mot_win .^ 2, 2);                                      % mean sq energy [nT x 1]
 
     % X3: pre-trial dF/F std (1 s before onset)
     pre_end   = c0 - 1;
@@ -99,7 +104,7 @@ X_z  = zscore([X1, X2, X3]);   % [n x 3]
 %% ── Stage 1: Collinearity ───────────────────────────────────────────────────
 
 R_pred = corr([X1 X2 X3]);
-pred_names = {'Onset dev', 'Motion', 'Pre-trial std'};
+pred_names = {'Onset dev', 'Motion energy', 'Pre-trial std'};
 
 % VIF for each predictor
 vif_vals = nan(3,1);

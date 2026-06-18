@@ -43,7 +43,7 @@ function d = initialize_data_nosvd(mn,en,td)
     % px=[];
     % py=[];
     
-    frame = double([d.params.pixel(1),px;d.params.pixel(2),py]);
+    frame = [double(d.params.pixel(1)),px;double(d.params.pixel(2)),py];
     d.params.pixels = frame';
 
 

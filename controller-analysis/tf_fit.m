@@ -32,6 +32,8 @@ rng('shuffle');   % ensure different random trial pick on every run
 % Paper-level figure: OL trial average + TF fit, -1 to +1 s, one column per session
 PS = paperStyle();
 setPaperDefaults();
+colOL = PS.col_ol;
+colCL = PS.col_cl;
 fig_tf_paper = paperFig(12, 4);
 tlo_tf_paper = tiledlayout(fig_tf_paper, 1, nSess_ol, 'TileSpacing','compact','Padding','compact');
 
@@ -81,6 +83,7 @@ for si = 1:nSess_ol
     data_id_ol = iddata(y_fit_ol, u_fit_ol, Ts_ol);
     data_id_ol.Tstart = -nPre_ol * Ts_ol;
     best_ol = tfest(data_id_ol, 2, 1, tfOpt_ol);
+    tf_ol{si} = best_ol;   % stash for Bode / margin analysis below
 
     % OL mean prediction -- x0 from findstates on mean pre-onset window
     y_pre_ol_mean = mean(ncDfk_bc(:, 1:iOn_ol-1), 1)';
@@ -331,3 +334,82 @@ set(gca, 'Box', 'off', 'TickDir', 'out');
 fprintf('TF validation figure ready -- click any point to inspect that trial.\n');
 
 % exportgraphics(fig_ol, 'paper/ol_tf_three_sessions.pdf', 'ContentType', 'vector');
+
+
+%% ── Bode plot + phase-margin analysis ────────────────────────────────────────
+% Uses tf_ol{1..nSess_ol} stashed in the loop above.
+% Requires Control System Toolbox (license confirmed present).
+
+freq_hz  = logspace(-2, 1.5, 500);   % 0.01 – ~32 Hz (beyond Nyquist = 17.5 Hz)
+freq_rad = freq_hz * 2 * pi;
+
+fig_bode = figure('Color','w','Name','OL TF -- Bode plot');
+fig_bode.Units    = 'inches';
+fig_bode.Position = [2 2 7 5];
+
+ax_mag = subplot(2,1,1);  hold(ax_mag,'on');
+ax_ph  = subplot(2,1,2);  hold(ax_ph, 'on');
+
+sess_labels = cell(nSess_ol,1);
+fprintf('\n── Bode / phase-margin summary ──────────────────────────────────\n');
+
+for si = 1:nSess_ol
+    G   = tf_ol{si};
+    col = ol_colors(si,:);
+
+    % --- Bode magnitude & phase at dense freq grid
+    [mag, ph] = bode(G, freq_rad);
+    mag_db = 20*log10(squeeze(mag));
+    ph_deg = squeeze(ph);          % already in degrees (unwrapped by bode())
+
+    plot(ax_mag, freq_hz, mag_db, 'Color', col, 'LineWidth', 1.5);
+    plot(ax_ph,  freq_hz, ph_deg, 'Color', col, 'LineWidth', 1.5);
+
+    % --- Phase margin & gain/phase crossover via margin()
+    % margin() needs a continuous TF; tfest returns idtf -> convert
+    G_ct = tf(G);   % idtf -> standard CT tf (continuous-time)
+    [Gm, Pm, Wcg, Wcp] = margin(G_ct);
+
+    % --- Frequency where phase first hits -90 deg
+    % Interpolate (ph_deg goes from 0 toward more negative values)
+    idx90 = find(ph_deg <= -90, 1, 'first');
+    if ~isempty(idx90) && idx90 > 1
+        % linear interpolation between idx90-1 and idx90
+        f1 = freq_hz(idx90-1); f2 = freq_hz(idx90);
+        p1 = ph_deg(idx90-1);  p2 = ph_deg(idx90);
+        f_90hz = f1 + (f2-f1)*(-90-p1)/(p2-p1);
+    else
+        f_90hz = NaN;
+    end
+
+    fld = fields{ol_sess_idx(si)};
+    sess_labels{si} = sprintf('S%d %s %s', si, mouse.(fld).mn, mouse.(fld).td);
+
+    fprintf('Session %d (%s  %s):\n', si, mouse.(fld).mn, mouse.(fld).td);
+    fprintf('  Phase margin     = %.1f deg  @ %.3f Hz\n', Pm,   Wcp/(2*pi));
+    fprintf('  Gain  margin     = %.1f dB   @ %.3f Hz\n', 20*log10(Gm), Wcg/(2*pi));
+    fprintf('  Phase = -90 deg  @ %.3f Hz\n', f_90hz);
+    fprintf('  Poles: %s\n', mat2str(round(pole(G_ct),3)));
+    fprintf('  Zeros: %s\n', mat2str(round(zero(G_ct),3)));
+end
+fprintf('─────────────────────────────────────────────────────────────────\n');
+
+% --- Cosmetics: magnitude panel
+yline(ax_mag, 0, 'k:', 'LineWidth', 0.75, 'HandleVisibility','off');
+set(ax_mag, 'XScale','log','Box','off','TickDir','out','FontSize',9,'FontWeight','bold');
+xlabel(ax_mag, 'Frequency (Hz)', 'FontWeight','bold');
+ylabel(ax_mag, 'Magnitude (dB)', 'FontWeight','bold');
+title(ax_mag,  'OL TF -- Bode magnitude', 'FontSize',9);
+legend(ax_mag, sess_labels, 'Box','off','Location','southwest','FontSize',8);
+xlim(ax_mag, [freq_hz(1) freq_hz(end)]);
+
+% --- Cosmetics: phase panel
+yline(ax_ph, -90, 'k--', 'LineWidth', 0.75, 'HandleVisibility','off');  % -90 deg ref
+yline(ax_ph,   0, 'k:',  'LineWidth', 0.75, 'HandleVisibility','off');
+set(ax_ph, 'XScale','log','Box','off','TickDir','out','FontSize',9,'FontWeight','bold');
+xlabel(ax_ph, 'Frequency (Hz)', 'FontWeight','bold');
+ylabel(ax_ph, 'Phase (deg)',    'FontWeight','bold');
+title(ax_ph,  'OL TF -- Bode phase',      'FontSize',9);
+xlim(ax_ph, [freq_hz(1) freq_hz(end)]);
+
+fprintf('Bode figure ready.\n');

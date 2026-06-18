@@ -288,7 +288,9 @@ xl.Color = 'k';
 lgd = legend(ax, hLegend, legTxt, 'Color','none');
 paperLegend(lgd);
 lgd.AutoUpdate = 'off';
-paperExport(fig, fullfile(paper_root, 'spont_variance.png'));
+supp_dir = fullfile(paper_root, 'images', 'supplementary');
+if ~isfolder(supp_dir), mkdir(supp_dir); end
+paperExport(fig, fullfile(supp_dir, 'spont_variance.pdf'));
 
 
 

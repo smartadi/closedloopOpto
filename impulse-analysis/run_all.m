@@ -30,8 +30,8 @@ here = fileparts(mfilename('fullpath'));
 %  contra_prediction residuals as the deviation signal)
 run(fullfile(here, 'tf_fit.m'));
 run(fullfile(here, 'contra_prediction.m'));
-run(fullfile(here, 'trace_overlay.m'));
-run(fullfile(here, 'dose_response.m'));
+% run(fullfile(here, 'trace_overlay.m'));
+% run(fullfile(here, 'dose_response.m'));
 
 % Motion + pre-stim variance run as TWO PARALLEL STREAMS:
 %   'peakdev' = deviation from trial-averaged response (ORIGINAL method)

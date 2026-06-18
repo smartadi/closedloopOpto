@@ -8,6 +8,13 @@ clear all;
 mn = 'test'; td = '2026-04-23';
 en = 1;
 
+
+% mn = 'test'; td = '2026-04-24';
+% en = 4;
+
+% mn = 'test'; td = '2026-05-04';
+% en = 1;
+
 %% Setup
 pathString = genpath('utils');
 addpath(pathString);

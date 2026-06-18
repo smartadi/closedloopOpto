@@ -55,7 +55,23 @@
       "Bash(grep *)",
       "Bash(dir \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\" /b /a-d)",
       "PowerShell(Copy-Item \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\\\\Impulse_mouseDataAnalysis_all.asv\" \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\\\\Impulse_mouseDataAnalysis_all.m\")",
-      "Bash(ls -la \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\\\\plottingScript\"* 2>/dev/null || echo \"checking...\" *)"
+      "Bash(ls -la \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\brain_paper\\\\plottingScript\"* 2>/dev/null || echo \"checking...\" *)",
+      "Bash(npm list *)",
+      "PowerShell(node --version)",
+      "PowerShell(npm list -g docx 2>$null)",
+      "Bash(find /c/Users/aditya/Documents/projects -maxdepth 3 -name \"*.m\" | xargs grep -l \"hemi\\\\|contra.*kernel\\\\|hemisphere.*SVD\" 2>/dev/null | head -20)",
+      "Bash(cp \"/c/Users/aditya/Documents/projects/YE-et-al-2023-spirals/spirals_mirror/utils/redoSVD.m\" \"/c/Users/aditya/Documents/projects/brain_paper/utils/redoSVD.m\")",
+      "WebFetch(domain:www.sfn.org)",
+      "Bash(python -c ' *)",
+      "Bash(python -m pip install pymupdf -q)",
+      "Bash(grep -rni \"midline\\\\|roipoly\\\\|drawpolygon\\\\|brainmask\\\\|bregma\" /mnt/c/Users/aditya/Documents/projects/brain_paper/controller-analysis/ 2>/dev/null | head -40)",
+      "mcp__matlab__run_matlab_file",
+      "Bash(git check-ignore *)",
+      "Bash(awk '{print $6, $7}')",
+      "Bash(pdflatex -interaction=nonstopmode -draftmode -halt-on-error main.tex)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(find \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\Closedloop_edit\" -name \"*.tex\" -type f)",
+      "Bash(git reset *)"
     ]
   },
   "hooks": {

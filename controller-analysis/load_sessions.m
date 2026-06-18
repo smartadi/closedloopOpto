@@ -9,6 +9,12 @@ clc;
 close all;
 clear all;
 
+% If launched via run() from controller-analysis/, step up to project root
+% so that relative paths (data/, utils/) resolve correctly.
+% Check for controller-analysis/ as a subdirectory — only true at brain_paper/ level.
+if ~isfolder('controller-analysis') && isfolder(fullfile('..', 'controller-analysis'))
+    cd('..');
+end
 
 %% get data
 pathString = genpath('utils');
@@ -102,12 +108,17 @@ for k = 1:length(fields)
                 mouse.(fields{k}).d.ref = -5;
                 d    = mouse.(fields{k}).d;
                 data = mouse.(fields{k}).data;
-                save(pathCtrl, 'd', 'data');
+                save(pathCtrl, 'd', 'data', '-v7.3');
                 fprintf('Re-saved cache with d: %s\n', fields{k});
             end
             if ~isfield(mouse.(fields{k}).d, 'ref')
                 mouse.(fields{k}).d.ref = -5;
             end
+            % Backfill has_motion for caches saved before the flag existed.
+            if ~isfield(mouse.(fields{k}).d, 'has_motion')
+                mouse.(fields{k}).d.has_motion = any(mouse.(fields{k}).d.motion ~= 0);
+            end
+            mouse.(fields{k}).has_motion = mouse.(fields{k}).d.has_motion;
             fprintf('Loaded cache: %s\n', fields{k});
         else
             mouse.(fields{k}).d = initialize_data(mn_k, en_k, td_k);
@@ -117,12 +128,13 @@ for k = 1:length(fields)
             mouse.(fields{k}).data = getpixel_dFoF(mouse.(fields{k}).d, mode, mouse.(fields{k}).d.params.pixel, r);
 
             mouse.(fields{k}).d.ref = -5;
+            mouse.(fields{k}).has_motion = mouse.(fields{k}).d.has_motion;
             mouse.(fields{k}).data = controllerData(mouse.(fields{k}).data, mouse.(fields{k}).d, mouse.(fields{k}).trials);
 
             d    = mouse.(fields{k}).d;
             data = mouse.(fields{k}).data;
             if ~exist('data', 'dir'); mkdir('data'); end
-            save(pathCtrl, 'd', 'data');
+            save(pathCtrl, 'd', 'data', '-v7.3');
             fprintf('Saved cache: %s\n', fields{k});
         end
     catch ME

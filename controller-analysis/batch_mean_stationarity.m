@@ -102,4 +102,6 @@ ylabel(tlo, 'Per-trial mean \DeltaF/F (%)', 'FontSize',6,'FontWeight','bold');
 title(tlo, 'Spontaneous batch-mean stationarity', 'FontSize',7,'FontWeight','bold');
 
 if isfolder('paper'), out_root = 'paper'; elseif isfolder(fullfile('..','paper')), out_root = fullfile('..','paper'); else, out_root = '.'; end
-paperExport(figBM, fullfile(out_root, 'batch_mean_stationarity.png'));
+supp_dir = fullfile(out_root, 'images', 'supplementary');
+if ~isfolder(supp_dir), mkdir(supp_dir); end
+paperExport(figBM, fullfile(supp_dir, 'batch_mean_stationarity.png'));

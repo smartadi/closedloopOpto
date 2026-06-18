@@ -8,8 +8,9 @@
 - `variance_mse.m` — OL/CL variance, MSE violin, windowed MSE (Figs F, G)
 - `step_response.m` — trial-averaged dF/F, step response (Fig H)
 - `motion_analysis.m` — pre-stim state vs MSE, motion vs MSE, onset deviation
-- `spectral_mse_sort.m` — spectral heatmaps sorted by MSE (Figs I, J)
+- `spectral_mse_sort.m` — dF/F heatmaps sorted by delta power (J4) or variance (J5)
 - `prestim_variance.m` — pre-stim dFk variance as trial sort key (K figures)
+- `trial_state_mse.m` — merged figure J6: variance + delta power both vs MSE on same trial pool (from pncDfk_l + ncFreqPow); tests "high trial variance → high MSE, same trials show high delta"
 - `widebrain_arx.m` — contralateral ARX model, OL TF fit, WB prediction layers
 
 ## Other scripts

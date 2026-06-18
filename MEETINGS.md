@@ -5,17 +5,17 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 
 ---
 
-## Open Action Items — as of 2026-05-29
+## Open Action Items — as of 2026-06-03
 
 ### Manuscript — Text & Structure
-- [ ] Finalize reorganized paragraph structure (punchline → explanation); move remaining content to Methods *(2026-05-08)*
-- [ ] Fix broken cross-reference links throughout the draft *(2026-05-08)*
+- [x] Finalize reorganized paragraph structure (punchline → explanation); move remaining content to Methods *(2026-05-08)*
+- [x] Fix broken cross-reference links throughout the draft *(2026-05-08)*
 - [ ] Notify Nick when revised draft (text + figures) is ready for full review *(2026-05-08)*
 - [x] Update remaining figure captions; incorporate Nick's Slack/cloud comments *(2026-04-27, done per 2026-05-11)*
 
 ### Manuscript — Figures (existing)
-- [ ] `2026-05-29.1` Unify laser-power color scheme across all panels of the disturbance figure (grayscale for laser intensity; label sessions with colored text, not color-coded data) *(2026-05-29)*
-- [ ] `2026-05-29.2` Add significance stars to the variance-ratio stem plot; reformat to show pre- and post-stimulus periods matching the trial-average time-course figure structure *(2026-05-29)*
+- [x] `2026-05-29.1` Unify laser-power color scheme across all panels of the disturbance figure (grayscale for laser intensity; label sessions with colored text, not color-coded data) *(2026-05-29, done 2026-06-11)*
+- [x] `2026-05-29.2` Add significance stars to the variance-ratio stem plot; reformat to show pre- and post-stimulus periods matching the trial-average time-course figure structure *(2026-05-29, done 2026-06-11)*
 - [ ] Generate supplementary panel: spatial spread (ΔF/F inhibition area) vs. laser power; cite Nuoli/Svoboda *(2026-05-08)*
 - [x] Update impulse-response figure: zoom in x-axis on panel A so power levels are distinguishable *(2026-05-08)*
 - [x] Change error bars on impulse-response plots from IQR to 95th-percentile bounds *(2026-05-08, done 2026-05-14)*
@@ -27,8 +27,13 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [x] Unify plot format across the four subpanels in the final figure *(2026-04-27, done per 2026-05-11)*
 - [x] Replace relative (normalized) power spectra with absolute power (ΔF/F²/Hz) *(2026-05-08, done per 2026-05-11)*
 
-### Manuscript — New Analyses (from 2026-05-11)
-- [ ] `2026-05-29.3` Apply log scale (or 1/f correction, or trial-vs-mean difference) to power spectra color axis in the pre-trial-variance trial-sorting figure to make the 2–4 Hz feature visually apparent *(2026-05-29)*
+### Manuscript — New Analyses
+- [ ] `2026-06-03.1` For each CL trial, subtract modeled laser effect (via TF fit from impulse/OL data) to get inferred "no-laser" trace; compare variance distribution of inferred traces to actual no-laser trials to validate approximate linearity; add shuffled-subtraction as null *(2026-06-03)*
+- [ ] `2026-06-03.2` Re-do MSE-vs-delta-power plot: OL/CL binned by **pre-stimulus delta-band fraction** (not total variance); match y-axes across panels *(2026-06-03)*
+- [ ] `2026-06-03.3` Compute instability frequency from full latency distribution (worst-case ~47 ms); plot predicted control-quality degradation vs. input frequency; show alongside delta-power MSE figure *(2026-06-03)*
+- [ ] `2026-06-03.4` Replace variance-binned x-axis in state-dependence figure with delta-band power fraction as primary sorting criterion *(2026-06-03)*
+- [ ] `2026-06-03.5` Produce heatmap of CL vs. OL trials with time on x-axis and trials sorted by delta-band fraction (Curto/Issa style, delta-fraction key) *(2026-06-03)*
+- [x] `2026-05-29.3` Apply log scale (or 1/f correction, or trial-vs-mean difference) to power spectra color axis in the pre-trial-variance trial-sorting figure to make the 2–4 Hz feature visually apparent *(2026-05-29, done 2026-06-11)*
 - [ ] `2026-05-29.4` Consult Joanne's Spiral paper (Fig. 3) for spatially-localized predictor-pixel maps; consider SVD-based left-hemisphere representation (vs. fixed pixels) to predict ipsilateral ROI; compare R² *(2026-05-29)*
 - [ ] Implement **Curto & Issa-style trial-sorting figure**: split trials into synchronized (high pre-stim variance) vs. desynchronized (low pre-stim variance) using ~1 s pre-stim window; sort within groups by absolute fluorescence at t = 0; display ΔF/F heatmaps *(2026-05-11)*
 - [ ] Confirm absolute power spectral plots complete; finalize narrative framing (motion + frequency → trial outcome) and produce summary figure *(2026-05-11)*
@@ -41,7 +46,8 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [ ] Determine what fraction of high-error closed-loop trials are attributable to 2–4 Hz spontaneous fluctuations vs. motion; prepare summary figure *(2026-05-08)*
 
 ### Spatial Spread Characterization
-- [ ] `2026-05-29.5` Use widefield GUI to step through open-loop trials frame-by-frame; characterize spatial spread of optogenetic effect over time (ping vs. sustained); discuss discrepancy with Whitefield Opto paper Fig. 1 with Anna *(2026-05-29)*
+- [ ] `2026-06-03.6` Produce 2D summary showing both response **amplitude and onset latency** as joint functions of distance from laser target *(2026-06-03)*
+- [x] `2026-05-29.5` Use widefield GUI to step through open-loop trials frame-by-frame; characterize spatial spread of optogenetic effect over time (ping vs. sustained); discuss discrepancy with Whitefield Opto paper Fig. 1 with Anna *(2026-05-29, confirmed done per 2026-06-03 meeting)*
 
 ### Latency Analysis
 - [ ] Optional: insert fixed 2 ms pause in processing code to verify ~14 ms minimum latency shifts *(2026-04-27)*
@@ -56,6 +62,7 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [x] Ask Anna to identify suitable GCaMP mice for new local viral injections *(2026-04-27, done — two mice now injected per 2026-05-11)*
 
 ### Collaboration
+- [ ] `2026-06-03.7` Chat with Anna about today's discussion: laser-subtraction approach, spatial spread characterization (amplitude + latency jointly) *(2026-06-03)*
 - [ ] `2026-05-29.7` Chat with Anna about contralateral spread observations; reconcile with existing spatial-spread characterization data *(2026-05-29)*
 - [ ] Follow up with Zilu on ARIMA/forecasting models for multi-region widefield forecasting *(2026-04-27)*
 - [ ] Prepare widefield dataset (impulse/step responses) for Tim Kim's latent-space forecasting model; arrange joint meeting *(2026-04-27)*
@@ -63,11 +70,31 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [x] Share CLAUDE.md and RESEARCH.md (or GitHub link) with Nick for departmental AI-tools presentation *(2026-05-08)*
 
 ### Nick's Items (not Aditya's)
+- [ ] `2026-06-03.8` **Nick**: Reply to Aditya's email *(2026-06-03)*
 - [ ] **Nick**: Create mouse catalog spreadsheet — proposed for lab meeting 2026-05-12 *(2026-04-27, recurring)*
 
 ---
 
 ## Meeting Entries
+
+---
+
+### 2026-06-03
+**Source:** `C:\Users\aditya\OneDrive\Notes\Adick meetings\June 6th.md`
+
+**Overview:** Reviewed Curto/Issa-style trial-sorting figure (largely complete; delta-band power column still needs integration). Nick raised that MSE-vs-variance plots conflate brain-state variance with laser-induced variance — cleaner approach is to subtract TF-modeled laser effect from each CL trial to recover a "no-laser" counterfactual, then reanalyse state-dependence. Key unexpected finding: delta power predicts MSE more strongly in closed-loop than open-loop, possibly due to phase-margin degradation near the instability frequency (~5 Hz given ~47 ms latency); Nick suggested computing predicted control quality from the power spectrum and latency-dependent phase margin directly. Spatial-spread walkthrough with frame-by-frame GUI confirmed similar timing across locations; Anna's suggestion is to characterise spread by amplitude and onset latency jointly. New mouse still in habituation; sine-wave sessions not yet started.
+
+**Key decisions:**
+- Laser subtraction: subtract TF-predicted laser effect from CL trials; compare residual variance distribution to actual no-laser trials (add shuffled-subtraction as null)
+- State-dependence sorting: switch from total pre-stim variance to **pre-stimulus delta-band fraction** as primary sorting criterion
+- Phase-margin analysis: compute instability frequency from full open-loop TF (PI + plant + delay), not just pure-delay approximation; plot predicted control degradation vs. input frequency
+- Spatial spread: characterise jointly by amplitude AND onset latency as functions of distance from target
+- Delta-band sorting during trial: must use pre-stimulus window or contralateral hemisphere to avoid confound with laser suppression
+
+**AI analysis flags (from transcript):**
+- ~5 Hz instability is approximate (pure 47 ms delay gives −85° at 5 Hz); must include PI controller and plant phase before reporting in paper
+- Linearity validation: add shuffled TF-subtraction as null control (matched vs. mismatched subtraction)
+- Delta sorting during trial confounded by laser — resolve with pre-stim window, contralateral proxy, or laser-subtracted trace
 
 ---
 

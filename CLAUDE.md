@@ -17,7 +17,63 @@ After **any** of the following, append an entry to the `## Change Log` section o
 **Next:** <what should be verified or done as a follow-up>
 ```
 
+### Airtight logging rules (non-negotiable)
+
+1. **Log immediately** after the triggering action — before starting the next task and before ending the turn. Never defer "until later".
+2. **One entry per logical change.** Never batch unrelated edits into one entry; never collapse a multi-script change into a single line.
+3. **All four fields required.** No blank `Why:` or `Next:`. If a follow-up is truly none, write `Next: none`.
+4. **Use today's real date** (`currentDate` in context), `YYYY-MM-DD`. Never guess or reuse a prior date.
+5. **Newest entry on top** of the `## Change Log` section, directly under the `## Change Log` header.
+6. **End-of-turn self-audit:** before finishing any turn that edited a script, ran an analysis, changed a figure, or found a bug — confirm a matching Change Log entry exists. If not, add it before replying.
+7. **Failures and dead-ends get logged too** (rejected approaches, bugs, "decided not to" — these are the most valuable entries to future-you).
+
 One entry per change. Do not skip — the log is the primary record between git commits.
+
+---
+
+## Git commit & push discipline
+
+The Change Log is the record *between* commits; commits + push are the durable record. Keep them tight.
+
+1. **Branch:** work on `alpha` (current). **Never commit directly to `main`.** If on `main`, create/switch to a feature branch first.
+2. **Commit at every logical unit** — a finished analysis, a working figure, a bug fix. Don't let the working tree accumulate a day's worth of unrelated changes in one commit.
+3. **Push after every commit** (or at minimum at the end of every working session). Unpushed work is unbacked-up work — this is a single-machine research repo, so push is the only backup.
+4. **Before committing:** stage intentionally (`git add` specific files, not blind `git add -A`); confirm the corresponding `RESEARCH.md` Change Log entry is included in the same commit so log and code move together.
+5. **Commit message:** imperative one-line summary (≤72 chars), matching the style of recent commits (e.g. `Add cl_mse_factors.m: CL MSE variance decomposition`). Body only if the why isn't obvious.
+6. **Never** `--force`, `--no-verify`, or rewrite pushed history unless the user explicitly asks.
+7. **End-of-session checklist:** (a) Change Log up to date → (b) commit staged work → (c) `git push`. State to the user whether the push succeeded.
+
+---
+
+## File size & rotation limits
+
+Keep the coordination files scannable. Check these at the **end of each session**; if a cap is exceeded, rotate before finishing.
+
+**RESEARCH.md — soft cap 1000 lines.**
+- When exceeded, move the **oldest** entries (keep the most recent ~50 entries / ~3 months in place) into `RESEARCH_archive_YYYYHn.md` (e.g. `RESEARCH_archive_2026H1.md`).
+- Leave a one-line pointer at the bottom of the live `## Change Log`: `<!-- older entries → RESEARCH_archive_2026H1.md -->`.
+- Never delete entries — archive only. Grep both live + archive when searching history.
+
+**TASKS.md — keep the whole file ≤ ~120 lines.**
+- `## ✅ Recently done`: **hard cap 10 items.** When adding an 11th, delete the oldest (it already lives in RESEARCH.md / FINDINGS.md, so nothing is lost).
+- `🟢 Deferred`: prune items that have gone stale or been superseded; don't let it grow unbounded.
+- Completed 🔴/🟡 items move to `✅ Recently done` (with date), they are not left checked in place.
+
+**FINDINGS.md — no line cap**, but a finding that is fully written into the manuscript and needs no further analysis may be marked `Status: CLOSED (in paper §X)` and is eligible to move to a `FINDINGS_archive.md` if the file gets unwieldy.
+
+---
+
+## Journal glean loop
+
+`JOURNAL.md` is the freeform diary (no template, newest on top). At session start,
+**read new JOURNAL.md entries** and glean from them:
+- action items → `TASKS.md` (assign 🔴/🟡/🟢 tier)
+- answered questions / results → `FINDINGS.md`
+- concrete script/figure changes → `RESEARCH.md` change log
+
+Never delete or rewrite the user's journal prose. After gleaning an entry, append a
+`↳ gleaned: TASKS#… / FINDINGS#…` line under it. When a TASKS item is completed, move
+it to the `## ✅ Recently done` section (with date) before pruning.
 
 ---
 
@@ -31,6 +87,8 @@ Then read the matching sub-area CLAUDE.md before starting work. Do not read more
 | impulse, TF fit, dose-response, AL_0041 | `impulse-analysis/CLAUDE.md` |
 | controller, plottingScript, CL vs OL, MSE, sessions | `controller-analysis/CLAUDE.md` |
 | manuscript, LaTeX, results_edit, paper, Overleaf | `paper-writing/CLAUDE.md` |
+| bilateral, AL_0048, dual opsin, excitatory, inhibitory, galvo, variable ref, tuning, grid sweep, gradient descent | `bilateral-analysis/CLAUDE.md` |
+| explore, staging, inspect, vibe, server root, list files | `explore/CLAUDE.md` |
 
 After reading the sub-area file, also check:
 - `TASKS.md` for the current priority tier
@@ -72,6 +130,7 @@ These are final — do not question or re-derive unless the user explicitly reop
 - Two mice: **AL_0033** (8 sessions), **AL_0039** (3 sessions), plus **AL_0041** for impulse experiments
 - 13 controller sessions total (m1–m13)
 - Reference level: `d.ref = −5` (percent ΔF/F), project-wide default
+- **AL_0048** — dual-opsin bilateral mouse; excitatory left, inhibitory right; sessions tracked in `bilateral-analysis/load_bilateral.m`; reference polarity switchable (`REF_L`, `REF_R`)
 
 ### Impulse analysis
 - Inhibition energy = mean ΔF/F over **0–200 ms** post-onset (`peak_mode = 3`), not peak trough
