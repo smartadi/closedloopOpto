@@ -34,6 +34,8 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Relax TF delay τ; report R² on held-out 20% test set (Nick, 2026-05-08)
 - [ ] Verify widebrain ARX R²_spont > 0.3; interpret OL vs CL residuals — `plottingScript.m`
 - [ ] Confirm Methods states both MSE windows: general trial MSE = t=0→+3 s; disturbance-rejection panel = t=+1→+3 s
+- [ ] Run low-frequency spectral attribution (Fig 4 section): on motion-clean trials (z-motion ≤1.5), fraction of top-quartile high-error CL trials with elevated pre-stim 1–4 Hz absolute power (`ncFreqPow`/`wcFreqPow`); write results into Fig-4 `\todo`. Methods done (`methods.tex` sec:disturbance)
+- [ ] Supplementary Fig S (`fig:lowfreq_examples`): AL to pick representative low-/high-error motion-clean CL trial spectra; placeholder in `methods.tex`
 
 ---
 

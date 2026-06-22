@@ -88,7 +88,12 @@ Then read the matching sub-area CLAUDE.md before starting work. Do not read more
 | controller, plottingScript, CL vs OL, MSE, sessions | `controller-analysis/CLAUDE.md` |
 | manuscript, LaTeX, results_edit, paper, Overleaf | `paper-writing/CLAUDE.md` |
 | bilateral, AL_0048, dual opsin, excitatory, inhibitory, galvo, variable ref, tuning, grid sweep, gradient descent | `bilateral-analysis/CLAUDE.md` |
+| controller grid, gain grid, gain sweep, Kp Ki sweep, cost surface, J(Kp,Ki), auto-tune, auto-tuning, tuning methodology | `controller-tuning/CLAUDE.md` |
 | explore, staging, inspect, vibe, server root, list files | `explore/CLAUDE.md` |
+
+> Disambiguation: AL_0034 / AL_0033 controller-gain grids + auto-tuning → `controller-tuning`.
+> AL_0048 dual-opsin Kp/Ki sweep + gradient descent → `bilateral-analysis`.
+> AL_0046 galvo photostim *site* grid (spatial mapping) → bilateral packaging scripts.
 
 After reading the sub-area file, also check:
 - `TASKS.md` for the current priority tier

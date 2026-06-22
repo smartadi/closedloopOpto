@@ -16,6 +16,34 @@ ideas, frustrations, half-decisions, "today I noticed…", questions for Nick, e
 Newest entry on top.
 
 ---
+### 2026-06-20
+The entries are not concrete, 
+
+
+### 2026-06-19 — LDS plan: universal input-driven state-space model for contra→ipsi impulse analysis
+
+Plan for `contra_lds.m` crystallised across two sessions. Key architectural decisions:
+
+**Model:** `x+ = Ax + Bu + w; z_c = C_c x + v_c; y = c_y'x + d·u + v_y`
+- u = laser amplitude at stim onset frames (physical units), 0 elsewhere
+- z_c = top nSV_lds contra SVD modes (OBSERVED by Kalman)
+- y = ipsi primary pixel (HELD OUT — never fed into filter)
+
+**Why driven (not spontaneous) training:** Spontaneous alone has nothing in the mean to learn — E[x]→0 for stable LTI with zero-mean input; only B and D require driven data. (A is constrained by spontaneous fluctuations via fluctuation-dissipation, but B/D need actual stim trials.)
+
+**Universal KF (not per-trial reset):** Single predictor runs over the full session. State at each trial onset reflects the real accumulated brain history from all prior contra observations — no artificial cold-start. This is both more principled and gives a cleaner test: does better contra-estimated brain state predict a better stim response?
+
+**The test that falls out:** Compare eig(A_spont) vs eig(A_evoked). Equality = LTI/relaxation (and GCaMP-is-just-indicator control). Inequality/state-variation = stimulus engages different dynamics = the actual finding.
+
+**Fork A chosen:** contra = observation, ipsi = held-out predicted output. K_c = K[:,1:nSV_lds] (drop ipsi column from Kalman gain so filter never sees ipsi).
+
+**Built up to LDS-KF.** Next sections pending:
+- LDS-STATE: same partialcorr(dev_stim, state | dev_pre) test as CP-RES but on the Kalman residual — does SS+KF reduce state-dependence below the static map?
+- LDS-EIG: complex z-plane figure comparing A_spont vs A_evoked eigenvalues
+
+**n_states sweep needed:** Try [5, 10, 15, 20]; select by held-out dip R². Default 15.
+
+---
 ### 2026-06-17 
 
 #### Realization
