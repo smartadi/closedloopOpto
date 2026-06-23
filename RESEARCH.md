@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-23 — debug_stimstarts.m: collapse to single axes, overlay input channels 638 & 594
+**Changed/Found:** `bilateral-analysis/debug_stimstarts.m` — removed the per-site/input subplot layout (and the second zoom figure); now one axes overlaying all dF/F site trace(s) plus selected `d.inpVals` channels (knob `IN_CH = [638 594]`) against `d.inpTime`, with `stimStarts`/`stimEnds` verticals (HandleVisibility off so they stay out of the legend) and a legend. `d.inpVals` is oriented to [time × channels] by matching `inpTime` length; out-of-range channels are skipped with a console note. `ZOOM_S` now just sets xlim on the single axes. Dropped unused `padlim`/`ternary` helpers; fixed a half-edited `plot(axI, it, d.,...)` line.
+**Why:** User asked to keep it simple — one plot, no subplots, overlaying input channels 638 and 594 directly with the dF and stim lines for a single-glance onset-alignment check.
+**Next:** Run on the loaded session; compare whether `stimStarts` lines sit on the inpVals(:,638/594) command edges vs the dF deflections to localise the onset-timing bug.
+
 ### 2026-06-23 — debug_stimstarts.m: add laser-input panel (d.inpVals vs d.inpTime)
 **Changed/Found:** `bilateral-analysis/debug_stimstarts.m` — added an input-trace subplot below the per-site dF panels (main + zoom figures): plots `d.inpVals` against `d.inpTime` with the same `stimStarts`/`stimEnds` vertical lines, length-guarded to `min(numel(inpVals),numel(inpTime))`. Added console diagnostic for inpTime (samples/range/dt/Fs). Factored the vertical-line drawing into `drawStimLines` and ylim padding into `padlim` (used by all panels).
 **Why:** User asked to also see the command input on the debug plot — comparing `stimStarts` alignment against the laser input onsets (high-rate inpTime) is a more direct check of onset timing than the dF deflection alone.

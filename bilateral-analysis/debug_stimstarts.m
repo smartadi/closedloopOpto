@@ -1,8 +1,9 @@
 % bilateral-analysis/debug_stimstarts.m
 % ------------------------------------------------------------------------
-% DEBUG: plot the whole-experiment dF/F trace for each controlled pixel with
-% vertical lines at d.stimStarts (and d.stimEnds, if present) overlaid, to
-% check that stim onset times line up with the stim-evoked deflections.
+% DEBUG: single plot of the whole-experiment dF/F trace(s) for the controlled
+% pixel(s) plus the input channels d.inpVals(:, IN_CH) (vs d.inpTime), with
+% vertical lines at d.stimStarts (and d.stimEnds) overlaid, to check that stim
+% onset times line up with the stim-evoked deflections / input commands.
 %
 % Uses the `d` struct already in the workspace (run a loader or
 % cl_ol_single_session.m first so `d` exists). Does NOT clear the workspace.
@@ -14,17 +15,24 @@ if ~isfolder('bilateral-analysis') && isfolder(fullfile('..','bilateral-analysis
 addpath(genpath('utils'));
 
 %% ---- knobs -------------------------------------------------------------
-MARK_ENDS = true;     % also draw d.stimEnds (if available)
-ZOOM_S    = 0;        % if > 0, add a second figure zoomed to first ZOOM_S seconds
+MARK_ENDS = true;        % also draw d.stimEnds (if available)
+ZOOM_S    = 0;           % if > 0, set xlim to the first ZOOM_S seconds
+IN_CH     = [638 594];   % d.inpVals channels (columns) to overlay
 % ------------------------------------------------------------------------
 
 t  = d.timeBlue(:)';
 ss = d.stimStarts(:)';
 if isfield(d,'stimEnds'); se = d.stimEnds(:)'; else; se = []; end
-if isfield(d,'inpVals'); iv = d.inpVals(:)'; else; iv = []; end
 if isfield(d,'inpTime'); it = d.inpTime(:)'; else; it = []; end
-n_in = min(numel(iv), numel(it));   % guard against length mismatch
-iv = iv(1:n_in); it = it(1:n_in);
+if isfield(d,'inpVals'); iv = d.inpVals; else; iv = []; end
+% orient iv to [time x channels] using the inpTime length
+if ~isempty(iv) && ~isempty(it) && size(iv,1) ~= numel(it) && size(iv,2) == numel(it)
+    iv = iv.';
+end
+if ~isempty(iv) && ~isempty(it)
+    nT = min(size(iv,1), numel(it));
+    iv = iv(1:nT, :); it = it(1:nT);
+end
 
 % --- console diagnostics -------------------------------------------------
 fprintf('timeBlue: %d samples, range [%.3f .. %.3f] s, dt=%.4f s (%.2f Hz)\n', ...
@@ -49,66 +57,38 @@ pix_all = double(d.params.pixel);
 if size(pix_all,2) ~= 2 && size(pix_all,1) == 2; pix_all = pix_all.'; end
 nSite = size(pix_all,1);
 
-%% ---- main figure: full experiment, dF per site + input trace -----------
-nRow = nSite + 1;   % extra row for the laser input trace
+%% ---- single plot: dF per site + input channels + stimStarts ------------
 figure('Name','debug stimStarts','Color','w');
+ax = axes; hold(ax,'on');
+
+% dF/F trace(s) for the controlled pixel(s)
 for s = 1:nSite
     dFoF = pixelDFoF_dbg(d, pix_all(s,:));
-    ax = subplot(nRow, 1, s);
-    plot(ax, t, dFoF, 'Color', [0.1 0.1 0.8], 'LineWidth', 0.4); hold(ax,'on');
-    yl = padlim([min(dFoF) max(dFoF)]);
-    drawStimLines(ax, ss, se, yl, MARK_ENDS);
-    hold(ax,'off');
-    xlim(ax, [t(1) t(end)]); ylim(ax, yl);
-    xlabel(ax,'Time (s)'); ylabel(ax,'\DeltaF/F (%)');
-    title(ax, sprintf('site %d  pixel [x=%d y=%d]   (red = stimStarts%s)', ...
-        s, round(pix_all(s,1)), round(pix_all(s,2)), ...
-        ternary(MARK_ENDS && ~isempty(se), ', green-- = stimEnds', '')), ...
-        'Interpreter','none');
+    plot(ax, t, dFoF, 'LineWidth', 0.5, ...
+        'DisplayName', sprintf('dF site %d [%d,%d]', s, round(pix_all(s,1)), round(pix_all(s,2))));
 end
 
-% --- input trace (d.inpVals vs d.inpTime) ---
-axI = subplot(nRow, 1, nRow);
+% input channels (columns of d.inpVals)
 if ~isempty(iv)
-    plot(axI, it, iv, 'Color', [0.4 0.4 0.4], 'LineWidth', 0.4); hold(axI,'on');
-    yl = padlim([min(iv) max(iv)]);
-    drawStimLines(axI, ss, se, yl, MARK_ENDS);
-    hold(axI,'off');
-    xlim(axI, [t(1) t(end)]); ylim(axI, yl);
-    xlabel(axI,'Time (s)'); ylabel(axI,'input (a.u.)');
-    title(axI, 'inputs: d.inpVals (red = stimStarts)', 'Interpreter','none');
-else
-    text(axI, 0.5, 0.5, 'no d.inpVals / d.inpTime', 'Units','normalized', ...
-        'HorizontalAlignment','center'); axis(axI,'off');
+    for c = IN_CH
+        if c >= 1 && c <= size(iv,2)
+            plot(ax, it, iv(:,c), 'LineWidth', 0.5, 'DisplayName', sprintf('inpVals(:,%d)', c));
+        else
+            fprintf('  skip input channel %d (d.inpVals has %d columns)\n', c, size(iv,2));
+        end
+    end
 end
 
-%% ---- optional zoom -----------------------------------------------------
-if ZOOM_S > 0
-    figure('Name','debug stimStarts (zoom)','Color','w');
-    for s = 1:nSite
-        dFoF = pixelDFoF_dbg(d, pix_all(s,:));
-        ax = subplot(nRow, 1, s);
-        plot(ax, t, dFoF, 'Color', [0.1 0.1 0.8], 'LineWidth', 0.6); hold(ax,'on');
-        yl = padlim([min(dFoF) max(dFoF)]);
-        drawStimLines(ax, ss, se, yl, MARK_ENDS);
-        hold(ax,'off');
-        xlim(ax, [t(1) t(1)+ZOOM_S]); ylim(ax, yl);
-        xlabel(ax,'Time (s)'); ylabel(ax,'\DeltaF/F (%)');
-        title(ax, sprintf('site %d (first %g s)', s, ZOOM_S));
-    end
-    axIz = subplot(nRow, 1, nRow);
-    if ~isempty(iv)
-        plot(axIz, it, iv, 'Color', [0.4 0.4 0.4], 'LineWidth', 0.6); hold(axIz,'on');
-        yl = padlim([min(iv) max(iv)]);
-        drawStimLines(axIz, ss, se, yl, MARK_ENDS);
-        hold(axIz,'off');
-        xlim(axIz, [t(1) t(1)+ZOOM_S]); ylim(axIz, yl);
-        xlabel(axIz,'Time (s)'); ylabel(axIz,'input (a.u.)');
-        title(axIz, sprintf('inputs (first %g s)', ZOOM_S), 'Interpreter','none');
-    else
-        axis(axIz,'off');
-    end
-end
+% stimStarts (red) / stimEnds (green dashed) verticals over the full y-range
+yl = ylim(ax);
+drawStimLines(ax, ss, se, yl, MARK_ENDS);
+ylim(ax, yl);
+if ZOOM_S > 0; xlim(ax, [t(1) t(1)+ZOOM_S]); else; xlim(ax, [t(1) t(end)]); end
+
+hold(ax,'off');
+xlabel(ax,'Time (s)'); ylabel(ax,'\DeltaF/F (%)  /  input');
+title(ax,'dF + inputs;  red = stimStarts, green-- = stimEnds','Interpreter','none');
+legend(ax,'show','Location','best');
 
 fprintf('debug_stimstarts.m done — %d site(s), %d stim onsets.\n', nSite, numel(ss));
 
@@ -120,18 +100,13 @@ function drawStimLines(ax, ss, se, yl, markEnds)
     if ~isempty(ss)
         xx = [ss; ss; nan(1,numel(ss))];
         yy = repmat([yl(1); yl(2); nan], 1, numel(ss));
-        plot(ax, xx(:), yy(:), 'r-', 'LineWidth', 0.5);
+        plot(ax, xx(:), yy(:), 'r-', 'LineWidth', 0.5, 'HandleVisibility','off');
     end
     if markEnds && ~isempty(se)
         xe = [se; se; nan(1,numel(se))];
         ye = repmat([yl(1); yl(2); nan], 1, numel(se));
-        plot(ax, xe(:), ye(:), 'Color',[0 0.6 0], 'LineStyle','--', 'LineWidth', 0.5);
+        plot(ax, xe(:), ye(:), 'Color',[0 0.6 0], 'LineStyle','--', 'LineWidth', 0.5, 'HandleVisibility','off');
     end
-end
-
-function yl = padlim(yl)
-% Guarantee a strictly increasing [lo hi] for ylim (handles flat traces).
-    if ~(yl(2) > yl(1)); yl = yl(1) + [-1 1]; end
 end
 
 function dFk = pixelDFoF_dbg(d, pixel)
@@ -149,8 +124,4 @@ function dFk = pixelDFoF_dbg(d, pixel)
         [~, dFk] = getpixel_dFoF(d, 1, [x y], 0);
     end
     dFk = double(dFk(:)');
-end
-
-function out = ternary(cond, a, b)
-    if cond; out = a; else; out = b; end
 end
