@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-23 — debug_stimstarts.m: add laser-input panel (d.inpVals vs d.inpTime)
+**Changed/Found:** `bilateral-analysis/debug_stimstarts.m` — added an input-trace subplot below the per-site dF panels (main + zoom figures): plots `d.inpVals` against `d.inpTime` with the same `stimStarts`/`stimEnds` vertical lines, length-guarded to `min(numel(inpVals),numel(inpTime))`. Added console diagnostic for inpTime (samples/range/dt/Fs). Factored the vertical-line drawing into `drawStimLines` and ylim padding into `padlim` (used by all panels).
+**Why:** User asked to also see the command input on the debug plot — comparing `stimStarts` alignment against the laser input onsets (high-rate inpTime) is a more direct check of onset timing than the dF deflection alone.
+**Next:** Run on the loaded session; if the red lines align with the input-command edges but not the dF deflections (or vice versa), that localises whether the offset is in stim detection vs the dF time base.
+
 ### 2026-06-23 — Add debug_stimstarts.m: overlay stimStarts on whole-experiment dF trace
 **Changed/Found:** `bilateral-analysis/debug_stimstarts.m` (new) — debug plot for misaligned stim onsets. Uses the `d` already in the workspace; reconstructs whole-experiment dF/F at each `d.params.pixel` site (SVD) and overlays `d.stimStarts` as red verticals (+ `d.stimEnds` green dashed) on `d.timeBlue`, one subplot per site. Prints diagnostics: timeBlue range/dt/Fs, stimStarts count/range, a heuristic flag if stimStarts look like sample indices rather than times, a warning if any onset falls outside the timeBlue range, and the median inter-stim interval. Optional `ZOOM_S` second figure.
 **Why:** User reports stimStarts are not properly set in the AL_0048 controller session; needed a quick visual to see whether onset markers line up with the stim-evoked deflections, which determines whether the bug is in `findStims`/units (times vs indices) vs trial selection.
