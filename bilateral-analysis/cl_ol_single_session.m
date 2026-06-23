@@ -41,30 +41,20 @@ REF_L = +5;
 REF_R = -5;
 
 %% ---- OL / CL trial flag  (VERIFY against the diagnostic printout!) ------
-% Classic controller sessions store the open/closed-loop flag in
-% input_params column 3 (0 = open-loop, 1 = closed-loop). For AL_0048 the
-% bilateral column map lists col 3 = trial_type and col 4 = hemisphere, so
-% the flag column for a *controller* session may differ. This script prints
-% the unique values of every input_params column on load — confirm which
-% column is the 0/1 OL-CL flag and set OLCL_COL / OL_CODE / CL_CODE here.
+% Open/closed-loop flag in input_params. Classic controller sessions use
+% column 3 (0 = open-loop, 1 = closed-loop). The script prints unique values
+% per input_params column on load — confirm and adjust if this session differs.
 OLCL_COL = 3;         % column holding the open/closed-loop flag
 OL_CODE  = 0;         % value meaning open-loop
 CL_CODE  = 1;         % value meaning closed-loop
 
-%% ---- Hemisphere (side) trial filter ------------------------------------
-% Bilateral sessions interleave left- and right-hemisphere stim trials. Each
-% side's controller is analysed only on its own trials. Set USE_SIDE_FILTER
-% = false to pool all trials against a single pixel (classic behaviour).
-USE_SIDE_FILTER = true;
-HEMI_COL        = 4;  % input_params column encoding hemisphere
-SIGN_L          = +1; % hemi*SIGN_L > 0  -> left ; < 0 -> right (flip if inverted)
-
-%% ---- Controlled-pixel location (per trial, in input_params) ------------
-% The stimulated/controlled pixel for each trial is stored in input_params
-% as image coordinates x (column) and y (row). Each side's dF/F is rebuilt
-% from the SVD at that side's controlled pixel — no separate pixel cache.
-PIX_X_COL = 15;       % input_params column: pixel x (image column)
-PIX_Y_COL = 16;       % input_params column: pixel y (image row)
+%% ---- Trial -> site assignment (only for multi-site sessions) ------------
+% Controlled-pixel locations come from d.params.pixel (handled below). If this
+% session controls more than one site AND trials are tagged per site in
+% input_params, set TRIAL_SITE_COL to that column (values 1..nSite, matching
+% the row order of d.params.pixel). Leave empty to use ALL trials for every
+% site — correct for a single-site session.
+TRIAL_SITE_COL = [];
 
 EXPORT_FIG = false;   % true -> PNGs to paper/images/bilateral/
 % ------------------------------------------------------------------------
@@ -81,48 +71,50 @@ if exist(cachePath, 'file') && r_load == 1
 else
     d = initialize_data(MN, EN, TD);
     if ~isfield(d, 'ref'); d.ref = -5; end
-    ip = d.input_params;
 
-    % --- Group trials into sides, take each side's controlled pixel ----------
-    % Side membership from the hemisphere column; the controlled pixel for a
-    % side is the modal (x,y) in input_params(:, [PIX_X_COL PIX_Y_COL]) over
-    % that side's trials. dF/F is reconstructed from the SVD at that pixel.
-    sides = struct('name', {}, 'ref', {}, 'pix', {}, 'mask', {}, 'dFoF', {});
+    % --- Controlled pixel(s) from d.params -------------------------------
+    % d.params.pixel              : Nsite x 2 actual image pixels [x y] (x=col, y=row)
+    % d.params.pixel_positions_mm : Nsite x 2 distance from bregma in mm
+    %     mm x < 0 -> left  hemisphere (excitatory, ref = REF_L)
+    %     mm x > 0 -> right hemisphere (inhibitory, ref = REF_R)
+    assert(isfield(d,'params') && isfield(d.params,'pixel') && ~isempty(d.params.pixel), ...
+        'd.params.pixel not found — cannot locate the controlled pixel(s).');
+    pix_all = double(d.params.pixel);
+    if size(pix_all,2) ~= 2 && size(pix_all,1) == 2; pix_all = pix_all.'; end
+    nSite = size(pix_all,1);
 
-    % Frame size (rows = H, cols = W) for pixel-coordinate validation.
+    if isfield(d.params,'pixel_positions_mm') && ~isempty(d.params.pixel_positions_mm)
+        mm_all = double(d.params.pixel_positions_mm);
+        if size(mm_all,2) ~= 2 && size(mm_all,1) == 2; mm_all = mm_all.'; end
+    else
+        mm_all = nan(nSite,2);
+    end
+
+    % Frame width for the (rare) mm-missing fallback side assignment.
     if isfield(d,'svd') && isfield(d.svd,'mimg') && ~isempty(d.svd.mimg)
-        [frmH, frmW] = size(d.svd.mimg);
-    elseif isfield(d,'svd') && isfield(d.svd,'U')
-        frmH = size(d.svd.U,1); frmW = size(d.svd.U,2);
+        frmW = size(d.svd.mimg,2);
     else
-        frmH = inf; frmW = inf;
-    end
-    try kpx = double(d.params.kernel); catch; kpx = 10; end
-    fprintf('SVD frame %g(H) x %g(W), kernel %g\n', frmH, frmW, kpx);
-
-    if USE_SIDE_FILTER && size(ip,2) >= HEMI_COL
-        hemi     = ip(:, HEMI_COL);
-        sideDefs = {};
-        if any(hemi * SIGN_L > 0); sideDefs{end+1} = 'left';  end
-        if any(hemi * SIGN_L < 0); sideDefs{end+1} = 'right'; end
-    else
-        sideDefs = {'all'};
+        frmW = 560;
     end
 
-    for s = 1:numel(sideDefs)
-        nm = sideDefs{s};
-        switch nm
-            case 'left';  mask = ip(:,HEMI_COL) * SIGN_L > 0; ref = REF_L;
-            case 'right'; mask = ip(:,HEMI_COL) * SIGN_L < 0; ref = REF_R;
-            otherwise;    mask = true(size(ip,1),1);          ref = REF_L;
+    sides = struct('name', {}, 'ref', {}, 'pix', {}, 'mm', {}, 'site', {}, 'dFoF', {});
+    for s = 1:nSite
+        pix = pix_all(s,:);
+        mm  = mm_all(min(s,size(mm_all,1)), :);
+        if ~isnan(mm(1))
+            isLeft = mm(1) < 0;                 % bregma-relative mm
+        else
+            isLeft = pix(1) < frmW/2;           % fallback: pixel column
         end
-        [px, pinfo] = resolvePixel(ip(mask, [PIX_X_COL PIX_Y_COL]), frmH, frmW, kpx, nm);
-        dFoF = pixelDFoF(d, px);
-        sides(end+1) = struct('name', nm, 'ref', ref, 'pix', px, ...
-                              'mask', mask, 'dFoF', dFoF); %#ok<SAGROW>
-        fprintf('[%s] %d trials, ref=%g | pixel candidates: %d unique, modal [%g %g] x%d -> using [x=%d y=%d]%s\n', ...
-            nm, nnz(mask), ref, pinfo.nUnique, pinfo.modal(1), pinfo.modal(2), ...
-            pinfo.count, px(1), px(2), pinfo.note);
+        if isLeft; base = 'left'; ref = REF_L; else; base = 'right'; ref = REF_R; end
+        nm = base;
+        if ~isempty(sides) && any(strcmp({sides.name}, nm)); nm = sprintf('%s%d', base, s); end
+
+        dFoF = pixelDFoF(d, pix);
+        sides(end+1) = struct('name', nm, 'ref', ref, 'pix', pix, ...
+                              'mm', mm, 'site', s, 'dFoF', dFoF); %#ok<SAGROW>
+        fprintf('[site %d] %s: pixel [x=%d y=%d], mm [%.2f %.2f], ref=%g\n', ...
+            s, nm, round(pix(1)), round(pix(2)), mm(1), mm(2), ref);
     end
 
     if ~exist('data', 'dir'); mkdir('data'); end
@@ -142,8 +134,10 @@ for c = 1:size(ip,2)
         fprintf('  col %d: %d unique (min %.3g, max %.3g)\n', c, numel(u), min(u), max(u));
     end
 end
-fprintf('Using OL/CL flag = col %d (OL=%g, CL=%g); side filter = col %d (%s)\n\n', ...
-    OLCL_COL, OL_CODE, CL_CODE, HEMI_COL, mat2str(USE_SIDE_FILTER));
+if isempty(TRIAL_SITE_COL); siteStr = 'all trials per site'; ...
+else; siteStr = sprintf('col %d', TRIAL_SITE_COL); end
+fprintf('Using OL/CL flag = col %d (OL=%g, CL=%g); trial->site = %s\n\n', ...
+    OLCL_COL, OL_CODE, CL_CODE, siteStr);
 
 
 %% ===== Per-side controller analysis ====================================
@@ -166,8 +160,17 @@ for si = 1:numel(sides)
             sd.name, numel(dFoF), numel(t));
     end
 
-    % --- trial selection: this side's trials, split by OL/CL --------------
-    sideMask = sd.mask(:);
+    % --- trial selection: this site's trials, split by OL/CL --------------
+    nTrials = size(ip, 1);
+    if ~isempty(TRIAL_SITE_COL) && numel(sides) > 1
+        sideMask = ip(:, TRIAL_SITE_COL) == sd.site;
+    else
+        sideMask = true(nTrials, 1);
+        if numel(sides) > 1 && si == 1
+            warning(['Multi-site session but TRIAL_SITE_COL is empty: using ALL ' ...
+                     'trials for every site. Set TRIAL_SITE_COL if trials are site-tagged.']);
+        end
+    end
     olMask = sideMask & ip(:, OLCL_COL) == OL_CODE;
     clMask = sideMask & ip(:, OLCL_COL) == CL_CODE;
     nc = find(olMask);   % open-loop trial indices
@@ -265,37 +268,6 @@ fprintf('\ncl_ol_single_session.m complete for %s %s exp %d.\n', MN, TD, EN);
 
 
 %% ===== Local helpers ===================================================
-function [px, info] = resolvePixel(ipxy, H, W, k, nm)
-% Resolve one side's controlled image pixel from its trials' [c15 c16]
-% coordinates. Drops non-positive / non-finite rows (placeholder pixels on
-% trials that did not target this site), takes the modal (x,y), and validates
-% it sits inside the frame with a k-pixel margin. If the modal pair is out of
-% frame but its transpose is valid, it auto-swaps (x<->y orientation).
-    raw  = ipxy;
-    good = all(isfinite(raw),2) & all(raw > 0, 2);
-    cand = round(raw(good, :));
-    if isempty(cand)
-        error(['[%s] no positive/finite pixel coords in input_params cols 15/16 ' ...
-               '(all zero or NaN). Check PIX_X_COL/PIX_Y_COL.'], nm);
-    end
-    [u, ~, ic] = unique(cand, 'rows');
-    cnt        = accumarray(ic, 1);
-    [mx, mi]   = max(cnt);
-    p          = u(mi, :);                      % modal [a b]
-    inb = @(x,y) x > k && x <= W - k && y > k && y <= H - k;
-    if inb(p(1), p(2))
-        px = [p(1) p(2)];  note = '';
-    elseif inb(p(2), p(1))
-        px = [p(2) p(1)];  note = '  (auto-swapped x<->y)';
-    else
-        error(['[%s] modal pixel [%g %g] is outside the SVD frame [%g(H) x %g(W)] ' ...
-               'with kernel %d. cols 15/16 may not be raw image pixels (mm? ' ...
-               'downsampled?). Unique pairs for this side:\n%s'], ...
-               nm, p(1), p(2), H, W, k, mat2str(u));
-    end
-    info = struct('modal', p, 'count', mx, 'nUnique', size(u,1), 'note', note);
-end
-
 function dFk = pixelDFoF(d, pixel)
 % Single-pixel dF/F (% of mean image) reconstructed from the session SVD at
 % image coordinate pixel = [x y] (x = column, y = row). Mirrors the SVD path
