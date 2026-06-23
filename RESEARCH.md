@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-23 — cl_ol_single_session.m: apply onset re-detection on every run (fix stale-cache)
+**Changed/Found:** `bilateral-analysis/cl_ol_single_session.m` — moved the `REDETECT_STIMS` onset override OUT of the recompute branch to run after the load/assemble block on every execution. Bug: with `r_load=1` the cached `d` (saved with the offset findStims onsets) was loaded and the override never ran, so the debug full-trace figure still showed the old/early stimStarts. Re-detection works on the cached `d` too (inpVals638/594 + inpTime are cached).
+**Why:** User: "figure2 debug did not make the stim start change I asked for" — the corrected onsets weren't applied on cached loads.
+**Next:** Re-run (cache is fine now); the full-trace red lines should sit on the input onsets. Cache still stores the raw findStims onsets; the override re-applies each run, so no need to clear it.
+
 ### 2026-06-23 — cl_ol_single_session.m: bake in debug figures (brain overlay, full trace, example trials)
 **Changed/Found:** `bilateral-analysis/cl_ol_single_session.m` — added a `DEBUG` block (knobs `DEBUG`, `N_EX`, `RUN_ANALYSIS`): (1) brain mean-image (`d.svd.mimg`) with each controlled pixel marked + kernel box, to check pixel/kernel; (2) full-experiment dF + combined input (`combinedInput`) + corrected `stimStarts` verticals per site (`drawStimVerticals`); (3) `plotExampleTrials` — N_EX evenly-spaced OL and CL example trials, dF on the left axis with the onset-windowed input on the right axis (yyaxis), ref + stim markers. `RUN_ANALYSIS=false` stops after debug (skips the CL/OL analysis figures via `continue`).
 **Why:** User sees no stim-evoked deflection in the cut trials although the full-trace debug shows a clear effect — need to verify, before controller analysis, whether the trial windows are aligned (residual stimStarts issue) and whether the pixel/kernel is correct. Example trials + input overlay test the cut; the brain overlay tests the pixel.

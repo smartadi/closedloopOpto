@@ -93,30 +93,6 @@ else
     d = initialize_data(MN, EN, TD);
     if ~isfield(d, 'ref'); d.ref = -5; end
 
-    % --- Re-detect stim onsets from the input command --------------------
-    % Override findStims mode-1 onsets (offset by a stale zero-buffer).
-    if REDETECT_STIMS
-        det = detectStimsFromInput(d, IN_FIELDS, IN_THRESH, MIN_GAP);
-        nTr = size(d.input_params, 1);
-        if isempty(det)
-            warning('REDETECT_STIMS: no input rising edges found — keeping findStims onsets.');
-        else
-            fprintf('Re-detected %d input onsets; first=%.3f s (findStims stimStarts(1)=%.3f s, offset=%+.3f s)\n', ...
-                numel(det), det(1), d.stimStarts(1), d.stimStarts(1)-det(1));
-            if numel(det) == nTr
-                d.stimStarts = det(:)';                 % one onset per trial, in order
-                d.stimEnds   = det(:)' + dur;           % dur seconds
-                fprintf('  -> replaced d.stimStarts with detected onsets (count matches %d trials).\n', nTr);
-            else
-                shift = det(1) - d.stimStarts(1);       % constant-offset fallback
-                d.stimStarts = d.stimStarts(:)' + shift;
-                if isfield(d,'stimEnds'); d.stimEnds = d.stimEnds(:)' + shift; end
-                warning(['detected %d onsets != %d trials; applied constant shift %+.3f s ' ...
-                         'to findStims onsets instead.'], numel(det), nTr, shift);
-            end
-        end
-    end
-
     % --- Controlled pixel(s) from d.params -------------------------------
     % d.params.pixel              : Nsite x 2 actual image pixels [x y] (x=col, y=row)
     % d.params.pixel_positions_mm : Nsite x 2 distance from bregma in mm
@@ -165,6 +141,32 @@ else
     if ~exist('data', 'dir'); mkdir('data'); end
     save(cachePath, 'd', 'sides', '-v7.3');
     fprintf('Saved assembled-session cache: %s\n', cachePath);
+end
+
+%% ===== Re-detect stim onsets from the input command ====================
+% Runs on EVERY execution (cached or freshly loaded) so a stale cache cannot
+% leave the offset findStims mode-1 onsets in place. Overrides d.stimStarts /
+% d.stimEnds; findStims itself (a do-not-modify util) is untouched.
+if REDETECT_STIMS
+    det = detectStimsFromInput(d, IN_FIELDS, IN_THRESH, MIN_GAP);
+    nTr = size(d.input_params, 1);
+    if isempty(det)
+        warning('REDETECT_STIMS: no input rising edges found — keeping findStims onsets.');
+    else
+        fprintf('Re-detected %d input onsets; first=%.3f s (findStims stimStarts(1)=%.3f s, offset=%+.3f s)\n', ...
+            numel(det), det(1), d.stimStarts(1), d.stimStarts(1)-det(1));
+        if numel(det) == nTr
+            d.stimStarts = det(:)';                 % one onset per trial, in order
+            d.stimEnds   = det(:)' + dur;           % dur seconds
+            fprintf('  -> replaced d.stimStarts with detected onsets (count matches %d trials).\n', nTr);
+        else
+            shift = det(1) - d.stimStarts(1);       % constant-offset fallback
+            d.stimStarts = d.stimStarts(:)' + shift;
+            if isfield(d,'stimEnds'); d.stimEnds = d.stimEnds(:)' + shift; end
+            warning(['detected %d onsets != %d trials; applied constant shift %+.3f s ' ...
+                     'to findStims onsets instead.'], numel(det), nTr, shift);
+        end
+    end
 end
 
 %% ===== input_params diagnostic =========================================
