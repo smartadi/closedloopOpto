@@ -1,9 +1,9 @@
 % bilateral-analysis/debug_stimstarts.m
 % ------------------------------------------------------------------------
 % DEBUG: single plot of the whole-experiment dF/F trace(s) for the controlled
-% pixel(s) plus the input channels d.inpVals(:, IN_CH) (vs d.inpTime), with
-% vertical lines at d.stimStarts (and d.stimEnds) overlaid, to check that stim
-% onset times line up with the stim-evoked deflections / input commands.
+% pixel(s) plus the input fields in IN_FIELDS (e.g. d.inpVals638, d.inpVals594)
+% vs d.inpTime, with vertical lines at d.stimStarts (and d.stimEnds) overlaid,
+% to check that stim onsets line up with the deflections / input commands.
 %
 % Uses the `d` struct already in the workspace (run a loader or
 % cl_ol_single_session.m first so `d` exists). Does NOT clear the workspace.
@@ -17,22 +17,13 @@ addpath(genpath('utils'));
 %% ---- knobs -------------------------------------------------------------
 MARK_ENDS = true;        % also draw d.stimEnds (if available)
 ZOOM_S    = 0;           % if > 0, set xlim to the first ZOOM_S seconds
-IN_CH     = [638 594];   % d.inpVals channels (columns) to overlay
+IN_FIELDS = {'inpVals638','inpVals594'};   % input fields of d to overlay (vs d.inpTime)
 % ------------------------------------------------------------------------
 
 t  = d.timeBlue(:)';
 ss = d.stimStarts(:)';
 if isfield(d,'stimEnds'); se = d.stimEnds(:)'; else; se = []; end
 if isfield(d,'inpTime'); it = d.inpTime(:)'; else; it = []; end
-if isfield(d,'inpVals'); iv = d.inpVals; else; iv = []; end
-% orient iv to [time x channels] using the inpTime length
-if ~isempty(iv) && ~isempty(it) && size(iv,1) ~= numel(it) && size(iv,2) == numel(it)
-    iv = iv.';
-end
-if ~isempty(iv) && ~isempty(it)
-    nT = min(size(iv,1), numel(it));
-    iv = iv(1:nT, :); it = it(1:nT);
-end
 
 % --- console diagnostics -------------------------------------------------
 fprintf('timeBlue: %d samples, range [%.3f .. %.3f] s, dt=%.4f s (%.2f Hz)\n', ...
@@ -68,15 +59,15 @@ for s = 1:nSite
         'DisplayName', sprintf('dF site %d [%d,%d]', s, round(pix_all(s,1)), round(pix_all(s,2))));
 end
 
-% input channels (columns of d.inpVals)
-if ~isempty(iv)
-    for c = IN_CH
-        if c >= 1 && c <= size(iv,2)
-            plot(ax, it, iv(:,c), 'LineWidth', 0.5, 'DisplayName', sprintf('inpVals(:,%d)', c));
-        else
-            fprintf('  skip input channel %d (d.inpVals has %d columns)\n', c, size(iv,2));
-        end
+% input fields (e.g. d.inpVals638, d.inpVals594) vs d.inpTime
+for f = 1:numel(IN_FIELDS)
+    fn = IN_FIELDS{f};
+    if ~isfield(d, fn)
+        fprintf('  skip input field d.%s (not present)\n', fn); continue;
     end
+    yv = d.(fn)(:)';
+    if isempty(it); xv = 1:numel(yv); else; n = min(numel(it), numel(yv)); xv = it(1:n); yv = yv(1:n); end
+    plot(ax, xv, yv, 'LineWidth', 0.5, 'DisplayName', sprintf('d.%s', fn));
 end
 
 % stimStarts (red) / stimEnds (green dashed) verticals over the full y-range
