@@ -89,6 +89,17 @@ else
     % that side's trials. dF/F is reconstructed from the SVD at that pixel.
     sides = struct('name', {}, 'ref', {}, 'pix', {}, 'mask', {}, 'dFoF', {});
 
+    % Frame size (rows = H, cols = W) for pixel-coordinate validation.
+    if isfield(d,'svd') && isfield(d.svd,'mimg') && ~isempty(d.svd.mimg)
+        [frmH, frmW] = size(d.svd.mimg);
+    elseif isfield(d,'svd') && isfield(d.svd,'U')
+        frmH = size(d.svd.U,1); frmW = size(d.svd.U,2);
+    else
+        frmH = inf; frmW = inf;
+    end
+    try kpx = double(d.params.kernel); catch; kpx = 10; end
+    fprintf('SVD frame %g(H) x %g(W), kernel %g\n', frmH, frmW, kpx);
+
     if USE_SIDE_FILTER && size(ip,2) >= HEMI_COL
         hemi     = ip(:, HEMI_COL);
         sideDefs = {};
@@ -105,12 +116,13 @@ else
             case 'right'; mask = ip(:,HEMI_COL) * SIGN_L < 0; ref = REF_R;
             otherwise;    mask = true(size(ip,1),1);          ref = REF_L;
         end
-        px   = [mode(ip(mask, PIX_X_COL)), mode(ip(mask, PIX_Y_COL))];  % [x y]
+        [px, pinfo] = resolvePixel(ip(mask, [PIX_X_COL PIX_Y_COL]), frmH, frmW, kpx, nm);
         dFoF = pixelDFoF(d, px);
         sides(end+1) = struct('name', nm, 'ref', ref, 'pix', px, ...
                               'mask', mask, 'dFoF', dFoF); %#ok<SAGROW>
-        fprintf('[%s] controlled pixel [x=%d y=%d], %d trials, ref=%g\n', ...
-            nm, px(1), px(2), nnz(mask), ref);
+        fprintf('[%s] %d trials, ref=%g | pixel candidates: %d unique, modal [%g %g] x%d -> using [x=%d y=%d]%s\n', ...
+            nm, nnz(mask), ref, pinfo.nUnique, pinfo.modal(1), pinfo.modal(2), ...
+            pinfo.count, px(1), px(2), pinfo.note);
     end
 
     if ~exist('data', 'dir'); mkdir('data'); end
@@ -253,6 +265,37 @@ fprintf('\ncl_ol_single_session.m complete for %s %s exp %d.\n', MN, TD, EN);
 
 
 %% ===== Local helpers ===================================================
+function [px, info] = resolvePixel(ipxy, H, W, k, nm)
+% Resolve one side's controlled image pixel from its trials' [c15 c16]
+% coordinates. Drops non-positive / non-finite rows (placeholder pixels on
+% trials that did not target this site), takes the modal (x,y), and validates
+% it sits inside the frame with a k-pixel margin. If the modal pair is out of
+% frame but its transpose is valid, it auto-swaps (x<->y orientation).
+    raw  = ipxy;
+    good = all(isfinite(raw),2) & all(raw > 0, 2);
+    cand = round(raw(good, :));
+    if isempty(cand)
+        error(['[%s] no positive/finite pixel coords in input_params cols 15/16 ' ...
+               '(all zero or NaN). Check PIX_X_COL/PIX_Y_COL.'], nm);
+    end
+    [u, ~, ic] = unique(cand, 'rows');
+    cnt        = accumarray(ic, 1);
+    [mx, mi]   = max(cnt);
+    p          = u(mi, :);                      % modal [a b]
+    inb = @(x,y) x > k && x <= W - k && y > k && y <= H - k;
+    if inb(p(1), p(2))
+        px = [p(1) p(2)];  note = '';
+    elseif inb(p(2), p(1))
+        px = [p(2) p(1)];  note = '  (auto-swapped x<->y)';
+    else
+        error(['[%s] modal pixel [%g %g] is outside the SVD frame [%g(H) x %g(W)] ' ...
+               'with kernel %d. cols 15/16 may not be raw image pixels (mm? ' ...
+               'downsampled?). Unique pairs for this side:\n%s'], ...
+               nm, p(1), p(2), H, W, k, mat2str(u));
+    end
+    info = struct('modal', p, 'count', mx, 'nUnique', size(u,1), 'note', note);
+end
+
 function dFk = pixelDFoF(d, pixel)
 % Single-pixel dF/F (% of mean image) reconstructed from the session SVD at
 % image coordinate pixel = [x y] (x = column, y = row). Mirrors the SVD path
@@ -264,6 +307,10 @@ function dFk = pixelDFoF(d, pixel)
         U = d.svd.U; V = d.svd.V; mimg = d.svd.mimg;
         nSV = size(U, 3);
         if size(V, 1) ~= nSV && size(V, 2) == nSV; V = V'; end   % want [nSV x T]
+        if x-k < 1 || y-k < 1 || x+k > size(U,2) || y+k > size(U,1)
+            error('pixelDFoF: pixel [x=%d y=%d] +/- kernel %d is outside U [%dx%d].', ...
+                x, y, k, size(U,1), size(U,2));
+        end
         imkernel = U(y-k:y+k, x-k:x+k, :);
         imstack  = reshape(mean(imkernel, [1, 2]), [1, nSV]);
         F        = imstack * V;                                  % 1 x T
