@@ -67,6 +67,16 @@ IN_FIELDS      = {'inpVals638','inpVals594'};  % input command fields (vs d.inpT
 IN_THRESH      = 0.1;   % rising-edge threshold
 MIN_GAP        = 2;     % s, minimum interval between detected onsets
 
+%% ---- Debug -------------------------------------------------------------
+% DEBUG shows: (1) brain image + controlled-pixel/kernel overlay, (2) full
+% experiment dF + input + corrected stimStarts, (3) N_EX example OL/CL trials
+% with the windowed input overlaid — to verify pixel/kernel and trial cutting
+% BEFORE trusting the CL/OL analysis. Set RUN_ANALYSIS = false to stop after
+% the debug figures.
+DEBUG        = true;
+N_EX         = 4;     % example trials per condition (OL / CL)
+RUN_ANALYSIS = true;  % false -> only debug figures, skip CL/OL analysis figures
+
 EXPORT_FIG = false;   % true -> PNGs to paper/images/bilateral/
 % ------------------------------------------------------------------------
 
@@ -184,6 +194,48 @@ n_err  = round(dur * fs_img);        % MSE window (0 .. dur)
 T      = (-n_pre : n_win) / fs_img;  % trace time axis
 Tref   = (0 : n_err) / fs_img;
 
+% combined input command (for debug overlays)
+[inT, inSig] = combinedInput(d, IN_FIELDS);
+
+%% ===== DEBUG: brain/pixel overlay + full-experiment traces =============
+if DEBUG
+    % (1) brain image + controlled-pixel / kernel box
+    if isfield(d,'svd') && isfield(d.svd,'mimg') && ~isempty(d.svd.mimg)
+        try kdbg = double(d.params.kernel); catch; kdbg = 10; end
+        figure('Name','DEBUG brain + pixel overlay','Color','w');
+        imagesc(d.svd.mimg); axis image off; colormap(gca,'gray'); hold on;
+        for si = 1:numel(sides)
+            px = sides(si).pix;
+            plot(px(1), px(2), 'r+', 'MarkerSize', 14, 'LineWidth', 1.5);
+            rectangle('Position', [px(1)-kdbg, px(2)-kdbg, 2*kdbg, 2*kdbg], ...
+                'EdgeColor','r', 'LineWidth', 1);
+            text(px(1)+kdbg+4, px(2), sprintf('%s [%d,%d]', sides(si).name, ...
+                round(px(1)), round(px(2))), 'Color','r', 'FontWeight','bold', 'Interpreter','none');
+        end
+        title(sprintf('mean image + controlled pixel(s), kernel=%d', kdbg));
+        hold off;
+    else
+        warning('DEBUG: d.svd.mimg not available — skipping brain overlay.');
+    end
+
+    % (2) full-experiment dF + input + corrected stimStarts, per site
+    for si = 1:numel(sides)
+        figure('Name', sprintf('DEBUG full trace | %s', sides(si).name), 'Color','w');
+        ax = axes; hold(ax,'on');
+        plot(ax, t, sides(si).dFoF, 'Color',[0.1 0.1 0.8], 'LineWidth',0.4, 'DisplayName','dF');
+        if ~isempty(inSig)
+            plot(ax, inT, inSig, 'Color',[0.5 0.5 0.5], 'LineWidth',0.4, 'DisplayName','input');
+        end
+        yl = ylim(ax);
+        drawStimVerticals(ax, d.stimStarts, yl, 'r');
+        ylim(ax, yl); xlim(ax, [t(1) t(end)]);
+        xlabel(ax,'Time (s)'); ylabel(ax,'\DeltaF/F (%) / input');
+        title(ax, sprintf('%s: full trace, red = stimStarts (corrected)', sides(si).name), ...
+            'Interpreter','none');
+        legend(ax,'show','Location','best'); hold(ax,'off');
+    end
+end
+
 results = struct();
 
 for si = 1:numel(sides)
@@ -229,6 +281,16 @@ for si = 1:numel(sides)
         sd.name, numel(nc), mean(er_nc,'omitnan'), median(er_nc,'omitnan'), ...
         numel(wc), mean(er_wc,'omitnan'), median(er_wc,'omitnan'), ...
         mean(er_nc,'omitnan')/mean(er_wc,'omitnan'));
+
+    %% ---- DEBUG: example OL/CL trials (dF + windowed input) -------------
+    if DEBUG
+        plotExampleTrials(T, ncTr, nc, d.stimStarts, inT, inSig, ref, dur, ...
+            PS.col_ol, sprintf('%s OL', sd.name), N_EX);
+        plotExampleTrials(T, wcTr, wc, d.stimStarts, inT, inSig, ref, dur, ...
+            PS.col_cl, sprintf('%s CL', sd.name), N_EX);
+    end
+
+    if ~RUN_ANALYSIS; continue; end
 
     %% ---- Fig 1: all trials + mean (OL | CL) ----------------------------
     f1 = paperFig(9, 4);
@@ -303,6 +365,55 @@ fprintf('\ncl_ol_single_session.m complete for %s %s exp %d.\n', MN, TD, EN);
 
 
 %% ===== Local helpers ===================================================
+function [inT, inSig] = combinedInput(d, fields)
+% Combined input command magnitude (max across fields) vs d.inpTime.
+    inT = []; inSig = [];
+    if ~isfield(d,'inpTime') || isempty(d.inpTime); return; end
+    inT = d.inpTime(:)';  inSig = zeros(1, numel(inT));
+    for f = 1:numel(fields)
+        if ~isfield(d, fields{f}); continue; end
+        yv = d.(fields{f})(:)';  n = min(numel(inT), numel(yv));
+        inSig(1:n) = max(inSig(1:n), abs(yv(1:n)));
+    end
+end
+
+function drawStimVerticals(ax, x, yl, color)
+% Vertical lines at x spanning yl, as one line object (NaN-separated).
+    x = x(:)';
+    if isempty(x); return; end
+    xx = [x; x; nan(1,numel(x))];
+    yy = repmat([yl(1); yl(2); nan], 1, numel(x));
+    plot(ax, xx(:), yy(:), '-', 'Color', color, 'LineWidth', 0.5, 'HandleVisibility','off');
+end
+
+function plotExampleTrials(T, traces, trialIdx, onsets, inT, inSig, ref, dur, col, condLabel, N_EX)
+% Plot up to N_EX evenly-spaced example trials: dF/F (left axis) + the
+% onset-windowed input command (right axis), with ref and stim markers.
+    if isempty(traces); fprintf('  no %s trials to show.\n', condLabel); return; end
+    sel = unique(round(linspace(1, size(traces,1), min(N_EX, size(traces,1)))));
+    figure('Name', sprintf('DEBUG examples | %s', condLabel), 'Color','w');
+    for e = 1:numel(sel)
+        r  = sel(e);
+        ax = subplot(1, numel(sel), e);
+        yyaxis(ax,'left');
+        plot(ax, T, traces(r,:), 'Color', col, 'LineWidth', 0.9); hold(ax,'on');
+        plot(ax, [0 dur], [ref ref], '--k', 'LineWidth', 0.8);
+        ylabel(ax,'\DeltaF/F (%)');
+        if ~isempty(inT)
+            yyaxis(ax,'right');
+            t0 = onsets(trialIdx(r));
+            m  = inT >= t0 - 3 & inT <= t0 + dur + 3;
+            plot(ax, inT(m) - t0, inSig(m), 'Color', [0.5 0.5 0.5], 'LineWidth', 0.5);
+            ylabel(ax,'input');
+        end
+        xline(ax, 0, 'k-', 'HandleVisibility','off');
+        xline(ax, dur, 'k:', 'HandleVisibility','off');
+        xlim(ax, [-3 dur+3]); xlabel(ax,'Time (s)');
+        title(ax, sprintf('%s tr %d', condLabel, trialIdx(r)), 'Interpreter','none');
+        hold(ax,'off');
+    end
+end
+
 function det = detectStimsFromInput(d, fields, thr, minGap)
 % Detect stim onsets as rising edges (> thr) of the combined input command in
 % `fields` (vs d.inpTime), deduped by a minGap-second refractory. Returns onset
