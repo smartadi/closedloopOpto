@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-23 — FOUND: stimStarts offset ~37 s — findStims mode-1 horizon subtraction (stale zero-buffer)
+**Changed/Found:** AL_0048 2026-06-20 controller session: `d.stimStarts(1)=42.41 s` but the real first input (d.inpVals638/594 rising edge) is at 79.44 s. Root cause: `initialize_data` calls `findStims(d,1)`; mode 1 computes `t(input_params(:,2) - horizon)` with `horizon=40*35=1400` samples (~40 s), which assumes a leading zero-buffer the file no longer has → all onsets land ~37–40 s early. `utils/findStims.m` is do-not-modify. Added a re-detection overlay to `bilateral-analysis/debug_stimstarts.m` (knobs `SHOW_DETECTED`/`IN_THRESH`/`MIN_GAP`): builds a combined input from IN_FIELDS, takes rising edges > IN_THRESH with a MIN_GAP refractory, draws them magenta, and prints first-onset offset vs stimStarts(1).
+**Why:** Confirm visually that input-derived onsets (mode-0 style) align with the command/dF while the mode-1 onsets are offset, before overriding stimStarts in the analysis.
+**Next:** If the magenta onsets sit on the input edges, add the same rising-edge detection to `cl_ol_single_session.m` to override `d.stimStarts`/`d.stimEnds` after `initialize_data` (do not edit findStims). Then re-run CL/OL analysis.
+
 ### 2026-06-23 — debug_stimstarts.m: plot d.inpVals638 / d.inpVals594 fields directly
 **Changed/Found:** `bilateral-analysis/debug_stimstarts.m` — `inpVals638`/`inpVals594` are literal struct FIELD names, not column indices into `d.inpVals`. Replaced the `IN_CH=[638 594]` matrix-indexing logic with `IN_FIELDS = {'inpVals638','inpVals594'}` and plot `d.(fn)` directly against `d.inpTime` (length-guarded, skip+warn if a field is absent). Removed the inpVals orientation/`iv` block.
 **Why:** Earlier versions misread the request as `d.inpVals(:,638)`; the data actually has separate fields `d.inpVals638` and `d.inpVals594`.

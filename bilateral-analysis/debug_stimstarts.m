@@ -8,16 +8,19 @@
 % Uses the `d` struct already in the workspace (run a loader or
 % cl_ol_single_session.m first so `d` exists). Does NOT clear the workspace.
 % ------------------------------------------------------------------------
-
+close all;
 assert(exist('d','var') == 1, ...
     'No `d` in workspace. Run cl_ol_single_session.m (or initialize_data) first.');
 if ~isfolder('bilateral-analysis') && isfolder(fullfile('..','bilateral-analysis')); cd('..'); end
 addpath(genpath('utils'));
 
 %% ---- knobs -------------------------------------------------------------
-MARK_ENDS = true;        % also draw d.stimEnds (if available)
-ZOOM_S    = 0;           % if > 0, set xlim to the first ZOOM_S seconds
-IN_FIELDS = {'inpVals638','inpVals594'};   % input fields of d to overlay (vs d.inpTime)
+MARK_ENDS     = true;    % also draw d.stimEnds (if available)
+ZOOM_S        = 0;       % if > 0, set xlim to the first ZOOM_S seconds
+IN_FIELDS     = {'inpVals638','inpVals594'};   % input fields of d to overlay (vs d.inpTime)
+SHOW_DETECTED = true;    % overlay onsets re-detected from the input fields (magenta)
+IN_THRESH     = 0.1;     % rising-edge threshold on the input command
+MIN_GAP       = 2;       % s, minimum interval between detected onsets
 % ------------------------------------------------------------------------
 
 t  = d.timeBlue(:)';
@@ -70,9 +73,37 @@ for f = 1:numel(IN_FIELDS)
     plot(ax, xv, yv, 'LineWidth', 0.5, 'DisplayName', sprintf('d.%s', fn));
 end
 
+% re-detect onsets from the input command (rising edge), to compare against
+% d.stimStarts — mode-1 onsets look offset by a stale leading zero-buffer.
+det = [];
+if SHOW_DETECTED && ~isempty(it)
+    sig = zeros(1, numel(it));
+    for f = 1:numel(IN_FIELDS)
+        fn = IN_FIELDS{f};
+        if ~isfield(d, fn); continue; end
+        yv = d.(fn)(:)';  n = min(numel(it), numel(yv));
+        sig(1:n) = max(sig(1:n), abs(yv(1:n)));
+    end
+    rise = sig(2:end) > IN_THRESH & sig(1:end-1) <= IN_THRESH;
+    on   = it([false, rise]);
+    if ~isempty(on); det = on([true, diff(on) > MIN_GAP]); end
+    if ~isempty(det)
+        fprintf('detected %d input onsets; first=%.3f s  (stimStarts(1)=%.3f s, offset=%+.3f s)\n', ...
+            numel(det), det(1), ss(1), ss(1)-det(1));
+    else
+        fprintf('SHOW_DETECTED: no rising edges above IN_THRESH=%.3g in %s\n', ...
+            IN_THRESH, strjoin(IN_FIELDS, ','));
+    end
+end
+
 % stimStarts (red) / stimEnds (green dashed) verticals over the full y-range
 yl = ylim(ax);
 drawStimLines(ax, ss, se, yl, MARK_ENDS);
+if ~isempty(det)
+    xd = [det; det; nan(1,numel(det))];
+    yd = repmat([yl(1); yl(2); nan], 1, numel(det));
+    plot(ax, xd(:), yd(:), 'm-', 'LineWidth', 0.75, 'DisplayName', 'detected onsets');
+end
 ylim(ax, yl);
 if ZOOM_S > 0; xlim(ax, [t(1) t(1)+ZOOM_S]); else; xlim(ax, [t(1) t(end)]); end
 
