@@ -59,6 +59,13 @@ USE_SIDE_FILTER = true;
 HEMI_COL        = 4;  % input_params column encoding hemisphere
 SIGN_L          = +1; % hemi*SIGN_L > 0  -> left ; < 0 -> right (flip if inverted)
 
+%% ---- Controlled-pixel location (per trial, in input_params) ------------
+% The stimulated/controlled pixel for each trial is stored in input_params
+% as image coordinates x (column) and y (row). Each side's dF/F is rebuilt
+% from the SVD at that side's controlled pixel — no separate pixel cache.
+PIX_X_COL = 15;       % input_params column: pixel x (image column)
+PIX_Y_COL = 16;       % input_params column: pixel y (image row)
+
 EXPORT_FIG = false;   % true -> PNGs to paper/images/bilateral/
 % ------------------------------------------------------------------------
 
@@ -74,27 +81,36 @@ if exist(cachePath, 'file') && r_load == 1
 else
     d = initialize_data(MN, EN, TD);
     if ~isfield(d, 'ref'); d.ref = -5; end
+    ip = d.input_params;
 
-    % --- Per-side pixel dF/F -------------------------------------------------
-    % Prefer the bilateral pixel cache (stores per-side dFoF directly); fall
-    % back to getpixel_dFoF on the stored pixel coordinates.
-    pixCache = fullfile('data', sprintf('%s_bil_pix_%s%s%d.mat', MN, TD(6:7), TD(9:10), EN));
-    sides = struct('name', {}, 'ref', {}, 'pix', {}, 'dFoF', {});
+    % --- Group trials into sides, take each side's controlled pixel ----------
+    % Side membership from the hemisphere column; the controlled pixel for a
+    % side is the modal (x,y) in input_params(:, [PIX_X_COL PIX_Y_COL]) over
+    % that side's trials. dF/F is reconstructed from the SVD at that pixel.
+    sides = struct('name', {}, 'ref', {}, 'pix', {}, 'mask', {}, 'dFoF', {});
 
-    if exist(pixCache, 'file')
-        P = load(pixCache);
-        for i = 1:numel(P.pixels)
-            px = P.pixels(i);
-            if ~ismember(px.side, {'left', 'right'}); continue; end
-            sides(end+1) = struct('name', px.side, ...
-                'ref', refForSide(px.side, REF_L, REF_R), ...
-                'pix', px.pix, 'dFoF', double(px.dFoF(:)')); %#ok<SAGROW>
-        end
-        fprintf('Loaded per-side dF/F from pixel cache: %s (%d sides)\n', ...
-            pixCache, numel(sides));
+    if USE_SIDE_FILTER && size(ip,2) >= HEMI_COL
+        hemi     = ip(:, HEMI_COL);
+        sideDefs = {};
+        if any(hemi * SIGN_L > 0); sideDefs{end+1} = 'left';  end
+        if any(hemi * SIGN_L < 0); sideDefs{end+1} = 'right'; end
     else
-        error(['No pixel cache %s found. Run the bilateral pixel-selection ' ...
-               'step first, or point this script at the correct pixel cache.'], pixCache);
+        sideDefs = {'all'};
+    end
+
+    for s = 1:numel(sideDefs)
+        nm = sideDefs{s};
+        switch nm
+            case 'left';  mask = ip(:,HEMI_COL) * SIGN_L > 0; ref = REF_L;
+            case 'right'; mask = ip(:,HEMI_COL) * SIGN_L < 0; ref = REF_R;
+            otherwise;    mask = true(size(ip,1),1);          ref = REF_L;
+        end
+        px   = [mode(ip(mask, PIX_X_COL)), mode(ip(mask, PIX_Y_COL))];  % [x y]
+        dFoF = pixelDFoF(d, px);
+        sides(end+1) = struct('name', nm, 'ref', ref, 'pix', px, ...
+                              'mask', mask, 'dFoF', dFoF); %#ok<SAGROW>
+        fprintf('[%s] controlled pixel [x=%d y=%d], %d trials, ref=%g\n', ...
+            nm, px(1), px(2), nnz(mask), ref);
     end
 
     if ~exist('data', 'dir'); mkdir('data'); end
@@ -138,19 +154,8 @@ for si = 1:numel(sides)
             sd.name, numel(dFoF), numel(t));
     end
 
-    % --- trial selection: hemisphere then OL/CL ---------------------------
-    nTr = size(ip, 1);
-    if USE_SIDE_FILTER && size(ip,2) >= HEMI_COL
-        hemi = ip(:, HEMI_COL);
-        if strcmp(sd.name, 'left')
-            sideMask = hemi * SIGN_L > 0;
-        else
-            sideMask = hemi * SIGN_L < 0;
-        end
-    else
-        sideMask = true(nTr, 1);
-    end
-
+    % --- trial selection: this side's trials, split by OL/CL --------------
+    sideMask = sd.mask(:);
     olMask = sideMask & ip(:, OLCL_COL) == OL_CODE;
     clMask = sideMask & ip(:, OLCL_COL) == CL_CODE;
     nc = find(olMask);   % open-loop trial indices
@@ -248,8 +253,26 @@ fprintf('\ncl_ol_single_session.m complete for %s %s exp %d.\n', MN, TD, EN);
 
 
 %% ===== Local helpers ===================================================
-function r = refForSide(side, refL, refR)
-    if strcmp(side, 'left'); r = refL; else; r = refR; end
+function dFk = pixelDFoF(d, pixel)
+% Single-pixel dF/F (% of mean image) reconstructed from the session SVD at
+% image coordinate pixel = [x y] (x = column, y = row). Mirrors the SVD path
+% of utils/getpixel_dFoF (mode 1). Falls back to getpixel_dFoF if d.svd is
+% absent (re-reads SVD from the server; r=0 forces recompute per pixel).
+    try k = double(d.params.kernel); catch; k = 10; end
+    x = round(pixel(1)); y = round(pixel(2));
+    if isfield(d, 'svd') && isfield(d.svd, 'U') && isfield(d.svd, 'V') && isfield(d.svd, 'mimg')
+        U = d.svd.U; V = d.svd.V; mimg = d.svd.mimg;
+        nSV = size(U, 3);
+        if size(V, 1) ~= nSV && size(V, 2) == nSV; V = V'; end   % want [nSV x T]
+        imkernel = U(y-k:y+k, x-k:x+k, :);
+        imstack  = reshape(mean(imkernel, [1, 2]), [1, nSV]);
+        F        = imstack * V;                                  % 1 x T
+        mI       = mean(mimg(y-k:y+k, x-k:x+k), 'all');
+        dFk      = F / mI * 100;
+    else
+        [~, dFk] = getpixel_dFoF(d, 1, [x y], 0);
+    end
+    dFk = double(dFk(:)');
 end
 
 function [traces, err] = sliceTrials(dFoF, t, stimStarts, idx, n_pre, n_win, n_err, ref)
