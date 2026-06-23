@@ -56,6 +56,17 @@ CL_CODE  = 1;         % value meaning closed-loop
 % site — correct for a single-site session.
 TRIAL_SITE_COL = [];
 
+%% ---- Stim-onset re-detection (fix findStims mode-1 buffer offset) -------
+% findStims mode 1 (used by initialize_data) computes onsets as
+% t(input_params(:,2) - horizon); the horizon subtraction assumes a leading
+% zero-buffer this session no longer has, so d.stimStarts land ~37-40 s early.
+% findStims is a do-not-modify util, so we re-derive onsets here from the
+% actual input command (rising edge), then override d.stimStarts/d.stimEnds.
+REDETECT_STIMS = true;
+IN_FIELDS      = {'inpVals638','inpVals594'};  % input command fields (vs d.inpTime)
+IN_THRESH      = 0.1;   % rising-edge threshold
+MIN_GAP        = 2;     % s, minimum interval between detected onsets
+
 EXPORT_FIG = false;   % true -> PNGs to paper/images/bilateral/
 % ------------------------------------------------------------------------
 
@@ -71,6 +82,30 @@ if exist(cachePath, 'file') && r_load == 1
 else
     d = initialize_data(MN, EN, TD);
     if ~isfield(d, 'ref'); d.ref = -5; end
+
+    % --- Re-detect stim onsets from the input command --------------------
+    % Override findStims mode-1 onsets (offset by a stale zero-buffer).
+    if REDETECT_STIMS
+        det = detectStimsFromInput(d, IN_FIELDS, IN_THRESH, MIN_GAP);
+        nTr = size(d.input_params, 1);
+        if isempty(det)
+            warning('REDETECT_STIMS: no input rising edges found — keeping findStims onsets.');
+        else
+            fprintf('Re-detected %d input onsets; first=%.3f s (findStims stimStarts(1)=%.3f s, offset=%+.3f s)\n', ...
+                numel(det), det(1), d.stimStarts(1), d.stimStarts(1)-det(1));
+            if numel(det) == nTr
+                d.stimStarts = det(:)';                 % one onset per trial, in order
+                d.stimEnds   = det(:)' + dur;           % dur seconds
+                fprintf('  -> replaced d.stimStarts with detected onsets (count matches %d trials).\n', nTr);
+            else
+                shift = det(1) - d.stimStarts(1);       % constant-offset fallback
+                d.stimStarts = d.stimStarts(:)' + shift;
+                if isfield(d,'stimEnds'); d.stimEnds = d.stimEnds(:)' + shift; end
+                warning(['detected %d onsets != %d trials; applied constant shift %+.3f s ' ...
+                         'to findStims onsets instead.'], numel(det), nTr, shift);
+            end
+        end
+    end
 
     % --- Controlled pixel(s) from d.params -------------------------------
     % d.params.pixel              : Nsite x 2 actual image pixels [x y] (x=col, y=row)
@@ -268,6 +303,24 @@ fprintf('\ncl_ol_single_session.m complete for %s %s exp %d.\n', MN, TD, EN);
 
 
 %% ===== Local helpers ===================================================
+function det = detectStimsFromInput(d, fields, thr, minGap)
+% Detect stim onsets as rising edges (> thr) of the combined input command in
+% `fields` (vs d.inpTime), deduped by a minGap-second refractory. Returns onset
+% TIMES (row vector). Mirrors findStims mode 0 but on the per-channel fields.
+    det = [];
+    if ~isfield(d,'inpTime') || isempty(d.inpTime); return; end
+    it  = d.inpTime(:)';
+    sig = zeros(1, numel(it));
+    for f = 1:numel(fields)
+        if ~isfield(d, fields{f}); continue; end
+        yv = d.(fields{f})(:)';  n = min(numel(it), numel(yv));
+        sig(1:n) = max(sig(1:n), abs(yv(1:n)));
+    end
+    rise = sig(2:end) > thr & sig(1:end-1) <= thr;
+    on   = it([false, rise]);
+    if ~isempty(on); det = on([true, diff(on) > minGap]); end
+end
+
 function dFk = pixelDFoF(d, pixel)
 % Single-pixel dF/F (% of mean image) reconstructed from the session SVD at
 % image coordinate pixel = [x y] (x = column, y = row). Mirrors the SVD path
