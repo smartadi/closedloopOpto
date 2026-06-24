@@ -25,7 +25,8 @@ function [R, S] = cp_residual_core(allExperiments, selExp, opts)
 %
 % Prereqs: load_experiments.m has been run. Helpers resolved from utils/.
 if nargin < 3 || isempty(opts), opts = struct(); end
-def = struct('decontam',true,'use_motion',true,'make_wide',false,'plot',false);
+def = struct('decontam',true,'use_motion',true,'make_wide',false,'plot',false, ...
+             'predictor','hemi');   % 'hemi' = [CP-HEMI] field->kernel map (default); 'ols' = legacy beta_cp
 ofn = fieldnames(def);
 for ofk = 1:numel(ofn)
     if ~isfield(opts, ofn{ofk}), opts.(ofn{ofk}) = def.(ofn{ofk}); end
@@ -35,6 +36,7 @@ use_motion     = opts.use_motion;
 make_wide      = opts.make_wide;
 make_inspector = make_wide;     % inspector traces built only when wide requested
 do_plot        = opts.plot;
+predictor      = opts.predictor;
 
 
 % Resolve folders relative to THIS function's location (utils/):
@@ -99,6 +101,7 @@ w_r      = horizon - 1;
 idx_r_cp = 1:nFrames;
 py_prim  = double(d_tmp.params.pixel(1));
 px_prim  = double(d_tmp.params.pixel(2));
+k_prim   = double(d_tmp.params.kernel);   % recording-kernel half-width (for HEMI predictor)
 mot_full = d_tmp.motion.motion_1(1:2:end);
 clear d_tmp
 
@@ -301,6 +304,30 @@ cv_mean = compute_r2(cell2mat(spont_y_cp(te_idx_q)), ...
 beta_cp = Phi_all \ y_all;
 fprintf('[CP-FIT] %d windows  nSV=%d  held-out R²=%.3f\n', nValid_cp, nPred_cp, cv_mean);
 
+% ---- Predictor of record: HEMI field->kernel map (default) or legacy OLS beta_cp --
+% predFun(g) returns the contra "Global" prediction of the primary pixel (%dF/F)
+% for frame indices g, as a column vector. HEMI uses the [CP-HEMI] shared-latent
+% field->kernel readout (cp_hemi_predictor); OLS uses the instantaneous beta_cp.
+useHemi = strcmpi(predictor, 'hemi');
+if useHemi
+    Hp = cp_hemi_predictor(struct( ...
+        'U_cp',U_cp,'V_cp',V_cp,'mimg_cp',mimg_cp,'nY_cp',nY_cp,'nX_cp',nX_cp, ...
+        'nSV_cp',nSV_cp,'V_c_full',V_c_full,'brain_mask_cp',brain_mask_cp, ...
+        'valid_cp_svd',valid_cp_svd,'py_prim',py_prim,'px_prim',px_prim, ...
+        'k_prim',k_prim,'y_full',y_full,'t_full',t_full, ...
+        'all_starts_cp',all_starts_cp,'nF_m',nF_m,'Fs',Fs,'path_cp',path_cp));
+    Kh       = Hp.K;
+    predFun  = @(g) V_c_full(1:Kh, g).' * Hp.bk + Hp.b0;   % [numel(g) x 1] %dF/F
+    decontam = false;     % bleed deferred: HEMI shared latents carry no onset bleed
+    cv_mean  = Hp.cv;     % held-out primary-pixel R^2 of the deployed map
+    fprintf('[CP-RES] predictor = HEMI field->kernel (rank %d, held-out R^2=%.3f); decontam OFF\n', ...
+        Hp.rankSel, Hp.cv);
+else
+    Hp      = [];
+    predFun = @(g) [ones(numel(g),1), X_cp_m(g,:)] * beta_cp;   % legacy OLS map
+    fprintf('[CP-RES] predictor = OLS beta_cp (%d modes); decontam=%d\n', nPred_cp, decontam);
+end
+
 %% [CP-IMP] Impulse-window contra prediction + stim-bleed negation (no TF)
 % Apply the spontaneous instantaneous contra map (beta_cp) across [-1,+1] s using
 % only concurrent contra -- no stimulus info, no TF.
@@ -408,7 +435,7 @@ for ia = 1:nAmp_imp
         g = ion-pre_imp : ion+post_imp;
         if g(1) < 1 || g(end) > min(nFrames, nF_m); continue; end
         Xw     = X_cp_m(g,:);
-        yp_raw = [ones(nImp,1), Xw] * beta_cp;
+        yp_raw = predFun(g);
         if decontam && strcmpi(decontam_mode,'pca')
             if pca_per_amp, Ab_use = Ab_pca_amp{ia}; else, Ab_use = Ab_pca; end
             seg   = X_cp_m(g, 1:nPred_cp);
@@ -421,7 +448,7 @@ for ia = 1:nAmp_imp
         elseif decontam
             Xw(:,1:nPred_cp) = Xw(:,1:nPred_cp) - art;
         end
-        yp_dec = [ones(nImp,1), Xw] * beta_cp;
+        if useHemi, yp_dec = yp_raw; else, yp_dec = [ones(nImp,1), Xw] * beta_cp; end
         ya   = y_full(g);
         bl_a = mean(ya(pre_bl),'omitnan');
         bl_p = mean(yp_raw(pre_bl),'omitnan');
@@ -444,7 +471,7 @@ for ia = find(uAmp_cp(:)'==0)
         [~, ion] = min(abs(t_full - starts(j)));
         g = ion-pre_imp : ion+post_imp;
         if g(1) < 1 || g(end) > min(nFrames, nF_m); continue; end
-        ya = y_full(g); yp = [ones(nImp,1), X_cp_m(g,:)]*beta_cp;
+        ya = y_full(g); yp = predFun(g);
         A0 = [A0; (ya - mean(ya(pre_bl),'omitnan'))'];
         P0 = [P0; (yp - mean(yp(pre_bl),'omitnan'))'];
     end
@@ -596,7 +623,7 @@ for ia = ia_res
                 ya   = y_full(gW);
                 bl_a = mean(y_full(ion-Fs:ion-1),'omitnan');
                 Xw   = X_cp_m(gW,:);
-                yp_r = [ones(Lw,1), Xw]*beta_cp;
+                yp_r = predFun(gW);
                 bl_p = mean(yp_r(t_w>=-1 & t_w<0),'omitnan');
                 Xdec = Xw;
                 if decontam && strcmpi(decontam_mode,'scaledkernel')
@@ -604,7 +631,7 @@ for ia = ia_res
                     artw(iw_dip(1:ndip),:) = kernel_alpha * art_tap_imp{ia}(it_dip(1:ndip),:);
                     Xdec(:,1:nPred_cp) = Xw(:,1:nPred_cp) - artw;
                 end
-                yp_d = [ones(Lw,1), Xdec]*beta_cp;
+                if useHemi, yp_d = yp_r; else, yp_d = [ones(Lw,1), Xdec]*beta_cp; end
                 actW(j,:) = (ya - bl_a)';
                 prdW(j,:) = (yp_d - bl_p)';
                 resW(j,:) = actW(j,:) - prdW(j,:);
@@ -686,6 +713,7 @@ R.t_imp = t_imp; R.iDip = iDip; R.ia_imp = ia_imp;
 R.uAmp = uAmp_cp; R.nzMask = nzMask_cp;
 R.act_imp = act_imp; R.prd_imp = prd_imp; R.prr_imp = prr_imp; R.res_imp = res_imp;
 R.beta_cp = beta_cp;
+R.predictor = predictor; R.Hp = Hp;   % 'hemi' (R.Hp = field->kernel map) or 'ols'
 R.resE = resE_all; R.devS = devS_all; R.devP = devP_all;
 R.mot = mot_all; R.pv = pv_all; R.dp = dp_all; R.amp = amp_all;
 R.okM = okM; R.okV = okV; R.okD = okD; R.motThr = motThr;

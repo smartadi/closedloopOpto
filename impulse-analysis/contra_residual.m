@@ -40,9 +40,10 @@ end
 if ~exist('selExp','var')     || isempty(selExp),     selExp     = 3;     end
 if ~exist('decontam','var')   || isempty(decontam),   decontam   = false; end
 if ~exist('use_motion','var') || isempty(use_motion), use_motion = false; end
+if ~exist('predictor','var')  || isempty(predictor),  predictor  = 'hemi'; end  % 'hemi' | 'ols'
 
 opts  = struct('decontam', decontam, 'use_motion', use_motion, ...
-               'make_wide', true, 'plot', false);
+               'make_wide', true, 'plot', false, 'predictor', predictor);
 [R, S] = cp_residual_core(allExperiments, selExp, opts);
 
 % Per-trial fig-6 deviation (z-within-amp) for Actual/Global/Local + pooled dip traces.
