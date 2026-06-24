@@ -99,6 +99,7 @@ w_r      = horizon - 1;
 idx_r_cp = 1:nFrames;
 py_prim  = double(d_tmp.params.pixel(1));
 px_prim  = double(d_tmp.params.pixel(2));
+k_prim   = double(d_tmp.params.kernel);   % recording-kernel half-width (for [CP-HEMI])
 mot_full = d_tmp.motion.motion_1(1:2:end);
 clear d_tmp
 
@@ -500,6 +501,237 @@ ylabel(cb_kmR,'Kernel weight (a.u.)','FontSize',5,'FontWeight','bold');
 hold(ax_sc,'off');
 paperExport(fig_kmR, fullfile(paper_root,'images','figure2','cp_rrr_kernel_map.png'));
 fprintf('[CP-RRR] Exported cp_rrr_kernel_map.png\n');
+
+%% [CP-HEMI] Whole-hemisphere reduced-rank prediction (Ye/Zhiwen replication)
+%
+% FAITHFUL PORT of Ye et al. 2023 spirals
+%   spirals_mirror/preprocessing/getReducedRankRegressionHEMI.m
+% to make OUR contra->ipsi prediction directly comparable to Zhiwen's ~0.99.
+%
+% KEY DIFFERENCE from [CP-FIT]/[CP-RRR]: the target is the WHOLE ipsi-hemisphere
+% PIXEL FIELD (not the single primary pixel). Zhiwen's 0.99-at-low-rank is a
+% variance-WEIGHTED pooled R^2 over all ipsi pixels x time, dominated by the few
+% bilaterally-mirrored modes. Reproduced here via reduced-rank regression
+% (utils/CanonCor2.m) scored with utils/sseExplainedCal.m, exactly as he does.
+%
+% We report THREE numbers from one fit:
+%   (1) pooled whole-ipsi-hemisphere R^2 vs rank   -> the Zhiwen-comparable curve
+%   (2) per-pixel R^2 map at a chosen rank         -> where prediction is good
+%   (3) PRIMARY-pixel R^2 vs rank = the predicted ipsi FIELD spatially AVERAGED
+%       over the recording-kernel footprint (getpixel_dFoF square, half-width
+%       d.params.kernel), scored against y_full (the real recorded trace). The
+%       kernel mean is reconstructed full-resolution from the ipsi SVD and read
+%       out through the SAME canonical latents as the field (no free OLS to
+%       y_full, and the pooled fit (1)/(2) is untouched -- see below). NB: because
+%       the readout and the kernel-average are both linear, this lands near the
+%       single-pixel ceiling (~0.85), well below the variance-weighted pooled
+%       number (1) -- by design, not a bug.
+%
+% PARITY CAVEATS (cannot fully match): no Allen-atlas sensory restriction (we use
+% the hand-drawn hemisphere polygon + its complement); confirm AL_0033 SVD is
+% hemodynamically corrected like his. Instantaneous (pX=0), matching our finding.
+%
+% Prereqs (run earlier sections first): U_cp, V_cp, V_c_full, valid_cp_svd,
+% brain_mask_cp, y_full, Fs, all_starts_cp/pre_frames (from [CP-FIT]).
+
+h_K        = 50;      % SVD modes per hemisphere (Zhiwen uses 50)
+h_maxPix   = 2000;    % cap ipsi pixels (CPU memory); pooled R^2 is ~invariant to it
+h_maxFrm   = 60000;   % cap total spontaneous frames used
+h_trainFrac= 2/3;     % contiguous early-train / late-test split (~Zhiwen 40k/20k)
+h_rankMark = 10;      % rank to highlight (Zhiwen reads ~0.99 here)
+h_win_mode = 'interstim'; % spontaneous windowing: 'interstim' = full post-settle gap
+                          % between stim starts (lever-1, long windows); 'prestim' = legacy
+h_settle_s = 1.0;     % s dropped after each stim for the response to settle (interstim)
+
+% --- ipsi (right) hemisphere mask = brain minus contra polygon ---
+h_ipsi_mask = brain_mask_cp & ~valid_cp_svd;
+h_idx_ipsi  = find(h_ipsi_mask(:));
+if numel(h_idx_ipsi) > h_maxPix          % even stride downsample
+    h_stride   = ceil(numel(h_idx_ipsi)/h_maxPix);
+    h_idx_ipsi = h_idx_ipsi(1:h_stride:end);
+end
+fprintf('[CP-HEMI] ipsi mask: %d pixels (after cap %d)\n', numel(h_idx_ipsi), h_maxPix);
+
+% --- ipsi SVD (redoSVD on ipsi pixels), cached like the contra side ---
+h_path_ipsi = strrep(path_cp, '.mat', '_svdraw_ipsi.mat');
+if exist(h_path_ipsi, 'file')
+    h_tmp        = load(h_path_ipsi, 'U_ipsi_raw', 'V_ipsi_full');
+    U_ipsi_raw   = h_tmp.U_ipsi_raw;
+    V_ipsi_full  = h_tmp.V_ipsi_full;
+    fprintf('[CP-HEMI] loaded ipsi SVD cache: %s\n', h_path_ipsi);
+else
+    h_Uflat   = reshape(U_cp, nY_cp*nX_cp, nSV_cp);
+    h_Uipsi   = double(h_Uflat(find(h_ipsi_mask(:)), :)); %#ok<FNDSB> full mask for SVD
+    fprintf('[CP-HEMI] running redoSVD on ipsi mask (%d px)...\n', size(h_Uipsi,1));
+    [U_ipsi_raw, V_ipsi_full] = redoSVD(h_Uipsi, double(V_cp));
+    U_ipsi_raw  = double(U_ipsi_raw);
+    V_ipsi_full = double(V_ipsi_full);
+    save(h_path_ipsi, 'U_ipsi_raw', 'V_ipsi_full', '-v7.3');
+    fprintf('[CP-HEMI] saved ipsi SVD cache: %s\n', h_path_ipsi);
+end
+% --- recording-kernel footprint around the primary pixel -------------------------
+% Mirror getpixel_dFoF / load_experiments EXACTLY: the recorded primary trace is
+% the mean over the square  mimg(pixel(2)-k:pixel(2)+k, pixel(1)-k:pixel(1)+k)
+% i.e. rows = px_prim+/-k, cols = py_prim+/-k, then F / mean(mimg_kernel) * 100.
+% The predicted primary pixel is therefore the predicted FIELD averaged over the
+% SAME footprint, /mean(mimg_kernel)*100, compared to y_full.
+if exist('k_prim','var') && ~isempty(k_prim)
+    h_kk = double(k_prim);
+else                                    % standalone-section fallback (setup not re-run)
+    try
+        h_dk = loadData(serverRoot, mn, td, en);  h_kk = double(h_dk.params.kernel);  clear h_dk
+    catch;  h_kk = 10;  end
+end
+h_kr = (px_prim - h_kk):(px_prim + h_kk);   h_kr = h_kr(h_kr>=1 & h_kr<=nY_cp);  % rows
+h_kc = (py_prim - h_kk):(py_prim + h_kk);   h_kc = h_kc(h_kc>=1 & h_kc<=nX_cp);  % cols
+[h_KR, h_KC]  = ndgrid(h_kr, h_kc);
+h_idx_kern_sq = sub2ind([nY_cp, nX_cp], h_KR(:), h_KC(:));   % full square footprint
+h_full_idx    = find(h_ipsi_mask(:));
+h_idx_kern    = intersect(h_idx_kern_sq, h_full_idx);        % footprint inside ipsi field
+h_mI_kern     = mean(mimg_cp(h_kr, h_kc), 'all');            % == y_full's mI(1) normalizer
+if isempty(h_idx_kern)
+    error('[CP-HEMI] primary-pixel kernel footprint falls outside the ipsi field mask.');
+elseif numel(h_idx_kern) < numel(h_idx_kern_sq)
+    fprintf(['[CP-HEMI] WARNING: %d/%d kernel pixels outside ipsi mask ' ...
+             '(brain edge/midline) -- averaging the in-field subset.\n'], ...
+             numel(h_idx_kern_sq)-numel(h_idx_kern), numel(h_idx_kern_sq));
+end
+
+% --- ipsi-SVD loading for the full-resolution kernel footprint (matches y_full) ---
+% The primary pixel already lives inside the ipsi field, so its kernel mean is
+% reconstructed straight from the ipsi SVD (full footprint, no downsampling) and
+% read out through the SAME canonical latents below. The whole-field RRR fit and
+% the pooled/map scoring are therefore left byte-identical to Zhiwen's pipeline.
+[~, h_sel_kern] = ismember(h_idx_kern, h_full_idx);   % rows of U_ipsi_raw for the kernel
+h_meanU = mean(U_ipsi_raw(h_sel_kern, 1:h_K), 1);     % [1 x K] mean ipsi-SVD loading over kernel
+fprintf('[CP-HEMI] kernel k=%d: %d footprint px in ipsi field\n', h_kk, numel(h_idx_kern));
+
+% --- U for the (downsampled) scoring pixel set (Zhiwen: all selected-area pixels) ---
+[~, h_sel] = ismember(h_idx_ipsi, h_full_idx);        % rows of U_ipsi_raw to keep
+h_Uips     = U_ipsi_raw(h_sel, 1:h_K);                % [P x K]
+
+% --- spontaneous frame set: post-settling inter-stim intervals (lever-1) ----------
+% No contiguous spontaneous recording exists, so to capture the slow global
+% fluctuations that carry bilateral coherence we use the FULL gap between
+% consecutive stim starts, dropping h_settle_s after each stim for the response to
+% settle, then using the rest. (Legacy short pre-stim windows: h_win_mode='prestim'.)
+% Any amplitude-0 gap-fill events that fall inside a gap are no-laser, so they stay
+% as spontaneous frames.
+h_onsets = zeros(numel(all_starts_cp),1);
+for j = 1:numel(all_starts_cp)
+    [~, h_onsets(j)] = min(abs(t_full - all_starts_cp(j)));
+end
+h_frames = [];
+switch h_win_mode
+    case 'interstim'
+        h_settle = round(h_settle_s * Fs);
+        for j = 1:numel(h_onsets)
+            i0 = h_onsets(j) + h_settle;                      % drop settling after this stim
+            if j < numel(h_onsets);  i1 = h_onsets(j+1) - 1;  % up to just before the next stim
+            else;                    i1 = nF_m;  end          % last stim -> tail to end
+            i0 = max(i0,1);  i1 = min(i1, nF_m);
+            if i1 >= i0;  h_frames = [h_frames, i0:i1];  end  %#ok<AGROW>
+        end
+    case 'prestim'
+        for j = 1:numel(h_onsets)
+            i0 = h_onsets(j) - pre_frames;  i1 = h_onsets(j) - 1;
+            if i0 >= 1 && i1 <= nF_m;  h_frames = [h_frames, i0:i1];  end %#ok<AGROW>
+        end
+    otherwise
+        error('[CP-HEMI] unknown h_win_mode: %s', h_win_mode);
+end
+h_frames = unique(h_frames);
+if numel(h_frames) > h_maxFrm
+    h_frames = h_frames(round(linspace(1, numel(h_frames), h_maxFrm)));
+end
+h_nF   = numel(h_frames);
+h_nTr  = floor(h_trainFrac * h_nF);
+h_tr   = h_frames(1:h_nTr);            % contiguous early frames -> train
+h_te   = h_frames(h_nTr+1:end);        % late frames -> test (state generalization)
+fprintf('[CP-HEMI] %s windows: %d gaps -> %d spont frames (%.1f s; %d train / %d test)\n', ...
+        h_win_mode, numel(all_starts_cp), h_nF, h_nF/Fs, numel(h_tr), numel(h_te));
+
+% --- regressors (contra modes, z-scored over time per mode; train/test indep) ---
+h_Xtr = zscore(V_c_full(1:h_K, h_tr), [], 2)';   % [nTr x K]
+h_Xte = zscore(V_c_full(1:h_K, h_te), [], 2)';   % [nTe x K]
+
+% --- target: ipsi-hemisphere pixel field (h_K-mode reconstruction) ---
+h_Ytr = (h_Uips * V_ipsi_full(1:h_K, h_tr))';    % [nTr x P]
+h_Yte = (h_Uips * V_ipsi_full(1:h_K, h_te))';    % [nTe x P]
+
+% --- reduced-rank regression (Zhiwen: CanonCor2(signal', regressor')) ---
+[h_a, h_b, ~] = CanonCor2({h_Ytr}, {h_Xtr});     % h_a:[P x K]  h_b:[K x K]
+
+% --- (1) pooled whole-hemisphere R^2 vs rank (= Zhiwen explained_var5) ---
+h_poolR2 = nan(h_K,1);
+for n = 1:h_K
+    h_Yhat = h_Xte * h_b(:,1:n) * h_a(:,1:n)';    % [nTe x P]
+    h_poolR2(n) = sseExplainedCal(h_Yte(:)', h_Yhat(:)');
+end
+
+% --- (3) PRIMARY-pixel R^2 vs rank = predicted ipsi FIELD averaged over the
+%     recording-kernel footprint, scored against y_full (the real trace).
+%   The kernel-mean ipsi signal is reconstructed full-resolution from the ipsi SVD
+%   (h_meanU * V_ipsi). Its field readout through the canonical latents IS the
+%   kernel-average of the per-pixel loadings: a_kern = scores \ kernel-mean.
+%   CanonCor2's canonical scores are orthonormal on the train set, so the rank-n
+%   truncation a_kern(1:n) matches the field's a(:,1:n) exactly -- i.e. this is
+%   "predict the field, then average the kernel pixels", not a free OLS to y_full.
+%   It does NOT enter the RRR fit, so (1)/(2) stay byte-identical.
+h_scoresTr = h_Xtr * h_b;                            % [nTr x K] canonical latents (orthonormal/train)
+h_scoresTe = h_Xte * h_b;                            % [nTe x K]
+h_sKernTr  = (h_meanU * V_ipsi_full(1:h_K, h_tr))';  % [nTr x 1] kernel-mean ipsi dF (train)
+h_aKern    = h_scoresTr \ h_sKernTr;                 % [K x 1] field loading for the kernel mean
+h_yte      = y_full(h_te);
+h_kernR2   = nan(h_K,1);
+for n = 1:h_K
+    h_yhatF     = h_scoresTe(:,1:n) * h_aKern(1:n);  % predicted kernel-mean raw dF [nTe x 1]
+    h_yhatdF    = h_yhatF / h_mI_kern * 100;         % -> %dF/F (getpixel_dFoF norm; cancels in R^2)
+    h_kernR2(n) = sseExplainedCal(h_yte(:)', h_yhatdF(:)');
+end
+
+% --- (2) per-pixel R^2 map at h_rankMark ---
+h_YhatM  = h_Xte * h_b(:,1:h_rankMark) * h_a(:,1:h_rankMark)';
+h_perpix = sseExplainedCal(h_Yte', h_YhatM');     % [P x 1]
+
+[h_poolPk, h_ipk] = max(h_poolR2);
+[h_kernPk, h_kpk] = max(h_kernR2);
+fprintf(['[CP-HEMI] POOLED ipsi-hemi R^2: rank%d=%.3f | peak=%.3f@rank%d  ' ...
+         '(Zhiwen ~0.99)\n'], h_rankMark, h_poolR2(h_rankMark), h_poolPk, h_ipk);
+fprintf(['[CP-HEMI] PRIMARY pixel (field->kernel-avg vs y_full) R^2: ' ...
+         'rank%d=%.3f | peak=%.3f@rank%d\n'], ...
+         h_rankMark, h_kernR2(h_rankMark), h_kernPk, h_kpk);
+
+% --- figure: R^2 vs rank (pooled hemi vs raw pixel) ---
+h_fig = paperFig(8, 6);
+h_ax  = axes(h_fig, 'Position', [0.14 0.16 0.82 0.78]); hold(h_ax,'on');
+plot(h_ax, 1:h_K, h_poolR2, '-o', 'Color',[0.1 0.5 0.8], 'MarkerSize',3, ...
+     'LineWidth',1.5, 'DisplayName','pooled ipsi-hemi');
+plot(h_ax, 1:h_K, h_kernR2,  '-s', 'Color',[0.85 0.3 0.1], 'MarkerSize',3, ...
+     'LineWidth',1.5, 'DisplayName','primary pixel (field\rightarrowkernel avg)');
+yline(h_ax, 0.99, 'k--', 'LineWidth',1.0, 'HandleVisibility','off');
+xline(h_ax, h_rankMark, ':', 'Color',[0.4 0.4 0.4], 'HandleVisibility','off');
+xlabel(h_ax, 'rank (# components)', 'FontWeight','bold','FontSize',6);
+ylabel(h_ax, 'held-out R^2', 'FontWeight','bold','FontSize',6);
+ylim(h_ax,[0 1]); xlim(h_ax,[1 h_K]);
+h_lg = legend(h_ax, 'Location','southeast', 'FontSize',5);
+h_lg.ItemTokenSize = [6 6];
+title(h_ax, 'Contra\rightarrowipsi prediction vs rank', 'FontSize',6,'FontWeight','bold');
+hold(h_ax,'off');
+paperExport(h_fig, fullfile(paper_root, 'cp_hemi_rank.png'));
+
+% --- figure: per-pixel R^2 map ---
+h_r2img = nan(nY_cp*nX_cp, 1);
+h_r2img(h_idx_ipsi) = h_perpix;
+h_fig2 = figure('Color','w','Name','[CP-HEMI] per-pixel R^2');
+h_fig2.Units='centimeters'; h_fig2.Position=[0 0 10 8];
+imagesc(reshape(h_r2img, nY_cp, nX_cp)', 'AlphaData', ~isnan(reshape(h_r2img,nY_cp,nX_cp)'));
+axis image off; colormap(parula); clim([0 1]);
+cb = colorbar; ylabel(cb, sprintf('R^2 (rank %d)', h_rankMark), 'FontWeight','bold');
+title(sprintf('[CP-HEMI] ipsi per-pixel R^2  (pooled=%.3f)', h_poolR2(h_rankMark)));
+paperExport(h_fig2, fullfile(paper_root, 'cp_hemi_r2map.png'));
+fprintf('[CP-HEMI] exported cp_hemi_rank.png + cp_hemi_r2map.png\n');
+
 
 %% [CP-BLEED] Impulse-bleed spatial map on contra hemisphere
 %
