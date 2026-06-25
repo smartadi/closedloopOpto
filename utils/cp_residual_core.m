@@ -39,8 +39,14 @@ do_plot        = opts.plot;
 predictor      = opts.predictor;
 
 
-% Resolve folders relative to THIS function's location (utils/):
+% Resolve folders relative to THIS function's location (utils/). Guard against
+% the editor-temp staging path (...\Temp\Editor_*) seen when a file is run with
+% unsaved changes, so caches never land in tempdir.
 core_path  = mfilename('fullpath');
+if isempty(core_path) || startsWith(core_path, tempdir)
+    w = which('cp_residual_core');
+    if ~isempty(w) && ~startsWith(w, tempdir), core_path = w; end
+end
 utilsDir   = fileparts(core_path);
 impulseDir = fullfile(utilsDir, '..', 'impulse-analysis');
 paperRoot  = fullfile(utilsDir, '..', 'paper');
@@ -62,7 +68,7 @@ nSV_load  = 500;    % SVD components to load from disk
 nSV_use   = 200;    % contra SVD components used as predictors (z-scored).
 spont_pre = 6;      % pre-trial spontaneous training window (s)
 dur_imp   = 3.0;    % trial window (s)
-redefine_roi  = false; % set true to force re-draw midline + contra polygon
+redefine_roi  = false; % set true to force re-draw brain outline + midline (cp_roi_masks)
 % Artifact baseline mode for build_onset_artifact:
 %   'none'           : subtract pre-stim mean only
 %   'shifted_window' : subtract matched spontaneous window shifted ~20 s before onset (Option C)
@@ -93,7 +99,7 @@ serverRoot    = expPath(mn, td, en);
 [U_cp, V_cp, ~, mimg_cp] = loadUVt(serverRoot, nSV_load);
 [nY_cp, nX_cp] = size(mimg_cp);
 nSV_cp         = size(U_cp, 3);
-brain_mask_cp  = mimg_cp > prctile(mimg_cp(:), 20);
+% brain_mask_cp / contra / ipsi masks are built from the ROI by cp_roi_masks below.
 
 d_tmp    = loadData(serverRoot, mn, td, en);
 horizon  = double(d_tmp.params.horizon);
@@ -105,116 +111,24 @@ k_prim   = double(d_tmp.params.kernel);   % recording-kernel half-width (for HEM
 mot_full = d_tmp.motion.motion_1(1:2:end);
 clear d_tmp
 
-%% Contra ROI definition
-% Interactive on first run (or if redefine_roi=true); cached afterward.
-roi_name = sprintf('cp_roi_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en);
+%% Brain mask + contra/ipsi split (full-brain mask bisected by the midline)
+% Single source of truth (utils/cp_roi_masks): draws the FULL-BRAIN outline + the
+% midline on first run / redefine_roi, bisects the brain by the midline, and tags
+% the side with the primary (recording) pixel as IPSI (target); other = CONTRA
+% (predictor). Same helper + ROI cache (cp_roi2_*) as contra_prediction.m, so the
+% benchmark and the residual share identical masks.
+roi_name = sprintf('cp_roi2_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en);
 roi_file = fullfile(dataDir, roi_name);
 fprintf('[CP] ROI cache expected at: %s\n', roi_file);
 
-% Migrate from any known legacy location into data/.
-if ~exist(roi_file, 'file')
-    for rsd = {impulseDir, pwd, fileparts(impulseDir)}
-        candidate = fullfile(rsd{1}, roi_name);
-        if ~strcmp(candidate, roi_file) && exist(candidate, 'file')
-            movefile(candidate, roi_file);
-            fprintf('[CP] Migrated ROI cache: %s\n  -> %s\n', candidate, roi_file);
-            break;
-        end
-    end
-end
-
-if redefine_roi && exist(roi_file,'file')
-    delete(roi_file);
-    fprintf('Deleted existing ROI: %s\n', roi_file);
-end
-
-if ~exist(roi_file,'file')
-    fig_roi = figure('Color','k','Name','contra_residual: define midline + contra ROI');
-    imagesc(mimg_cp'); colormap(fig_roi, gray);
-    clim([prctile(mimg_cp(:),1), prctile(mimg_cp(:),99)]);
-    axis image off; hold on;
-
-    title('STEP 1 -- Click 2 MIDLINE points, then Enter', ...
-        'Color','w','FontSize',10,'FontWeight','bold');
-    [xd1, yd1] = ginput(2);
-    x_ml = yd1; y_ml = xd1;
-    if abs(y_ml(2)-y_ml(1)) > abs(x_ml(2)-x_ml(1))
-        ml_cp.a = (x_ml(2)-x_ml(1))/(y_ml(2)-y_ml(1));
-        ml_cp.b = x_ml(1) - ml_cp.a*y_ml(1);
-        ml_cp.type = 'x_of_y';
-    else
-        ml_cp.a = (y_ml(2)-y_ml(1))/(x_ml(2)-x_ml(1));
-        ml_cp.b = y_ml(1) - ml_cp.a*x_ml(1);
-        ml_cp.type = 'y_of_x';
-    end
-    ml_cp.img_size = [nY_cp, nX_cp];
-
-    if strcmp(ml_cp.type,'x_of_y')
-        t_ml = linspace(1,nY_cp,300);
-        plot(t_ml, ml_cp.a*t_ml + ml_cp.b, 'w--','LineWidth',1.5);
-    else
-        t_ml = linspace(1,nX_cp,300);
-        plot(ml_cp.a*t_ml + ml_cp.b, t_ml, 'w--','LineWidth',1.5);
-    end
-
-    title('STEP 2 -- Click CONTRALATERAL hemisphere boundary, then Enter', ...
-        'Color','c','FontSize',10,'FontWeight','bold');
-    [xd2, yd2] = ginput;
-    xd2 = [xd2; xd2(1)]; yd2 = [yd2; yd2(1)];
-    plot(xd2, yd2, 'c-','LineWidth',1.5);
-    drawnow; pause(0.4);
-    close(fig_roi);
-
-    poly_col = yd2; poly_row = xd2;
-    save(roi_file, 'ml_cp','poly_col','poly_row');
-    fprintf('Saved ROI: [%s]\n', roi_file);
-else
-    tmp      = load(roi_file);
-    ml_cp    = tmp.ml_cp;
-    poly_col = tmp.poly_col;
-    poly_row = tmp.poly_row;
-    fprintf('Loaded ROI: [%s]\n', roi_file);
-end
-
-% Build contra mask from saved polygon
-[xg_s, yg_s] = meshgrid(1:nY_cp, 1:nX_cp);
-in_poly_s     = inpolygon(xg_s(:), yg_s(:), poly_row, poly_col);
-valid_cp_svd  = reshape(in_poly_s, nX_cp, nY_cp)' & brain_mask_cp;
-
-% -- Pixel map: show contra mask + primary pixel
-if do_plot
-fig_pmap = figure('Color','k','Name','contra_residual: contra ROI');
-fig_pmap.Units = 'centimeters'; fig_pmap.Position = [0 0 10 8];
-ax_pm = axes(fig_pmap,'Position',[0 0 1 0.88]);
-imagesc(ax_pm, mimg_cp'); colormap(ax_pm,gray);
-clim(ax_pm, [prctile(mimg_cp(:),1), prctile(mimg_cp(:),99)]);
-axis(ax_pm,'image','off'); hold(ax_pm,'on');
-
-if strcmp(ml_cp.type,'x_of_y')
-    t_ml2 = linspace(1,nY_cp,300);
-    plot(ax_pm, t_ml2, ml_cp.a*t_ml2+ml_cp.b, 'w--','LineWidth',1.2);
-else
-    t_ml2 = linspace(1,nX_cp,300);
-    plot(ax_pm, ml_cp.a*t_ml2+ml_cp.b, t_ml2, 'w--','LineWidth',1.2);
-end
-plot(ax_pm, poly_row, poly_col, 'c-','LineWidth',1.2);
-
-mask_overlay = double(valid_cp_svd);
-mask_overlay(~valid_cp_svd) = NaN;
-imagesc(ax_pm, mask_overlay', 'AlphaData', 0.25 * ~isnan(mask_overlay'));
-colormap(ax_pm, gray);
-
-scatter(ax_pm, py_prim, px_prim, 100, 's','filled', ...
-    'MarkerFaceColor',[1 0.3 0.3],'MarkerEdgeColor','w','LineWidth',1.5);
-legend(ax_pm, {'Midline','ROI outline','Primary pixel'}, ...
-    'TextColor','w','Color','none','EdgeColor','none','FontSize',6,'FontWeight','bold', ...
-    'Location','south','Orientation','horizontal');
-hold(ax_pm,'off');
-end   % do_plot (pixel map)
+M_cp = cp_roi_masks(mimg_cp, roi_file, px_prim, py_prim, ...
+                    struct('redefine', redefine_roi, 'thr_pctile', 20, 'plot', do_plot));
+valid_cp_svd  = M_cp.contra;    % CONTRA = predictor hemisphere
+ipsi_mask_cp  = M_cp.ipsi;      % IPSI   = target hemisphere (primary-pixel side)
 
 %% SVD extraction -- contra predictor signals (SVD-direct mode only)
 path_cp      = fullfile(dataDir, sprintf('%scp%s%s%d.mat', mn, td(6:7), td(9:10), en));
-path_svd_raw = strrep(path_cp, '.mat', '_svdraw.mat');
+path_svd_raw = strrep(path_cp, '.mat', '_svdraw_ml.mat');   % _ml = midline-split masks
 
 if exist(path_svd_raw, 'file')
     tmp       = load(path_svd_raw, 'U_svd_raw', 'V_c_full');
@@ -312,7 +226,7 @@ useHemi = strcmpi(predictor, 'hemi');
 if useHemi
     Hp = cp_hemi_predictor(struct( ...
         'U_cp',U_cp,'V_cp',V_cp,'mimg_cp',mimg_cp,'nY_cp',nY_cp,'nX_cp',nX_cp, ...
-        'nSV_cp',nSV_cp,'V_c_full',V_c_full,'brain_mask_cp',brain_mask_cp, ...
+        'nSV_cp',nSV_cp,'V_c_full',V_c_full,'ipsi_mask_cp',ipsi_mask_cp, ...
         'valid_cp_svd',valid_cp_svd,'py_prim',py_prim,'px_prim',px_prim, ...
         'k_prim',k_prim,'y_full',y_full,'t_full',t_full, ...
         'all_starts_cp',all_starts_cp,'nF_m',nF_m,'Fs',Fs,'path_cp',path_cp));

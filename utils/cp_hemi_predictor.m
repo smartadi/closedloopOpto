@@ -23,7 +23,7 @@ function H = cp_hemi_predictor(P)
 % INPUT  P (struct), required fields:
 %   U_cp,V_cp,mimg_cp,nY_cp,nX_cp,nSV_cp  -- session SVD (loadUVt)
 %   V_c_full                              -- redoSVD contra-mode timeseries [m x T]
-%   brain_mask_cp, valid_cp_svd           -- brain mask + contra(predictor) mask
+%   ipsi_mask_cp                          -- ipsi(target) hemisphere mask (cp_roi_masks)
 %   py_prim,px_prim,k_prim                -- primary pixel + recording-kernel half-width
 %   y_full,t_full,all_starts_cp,nF_m,Fs   -- primary trace, time, nonzero stim onsets
 %   path_cp                               -- cache stem (ipsi SVD cached alongside)
@@ -43,8 +43,8 @@ win_mode = getf(P,'win_mode','interstim');
 Fs       = P.Fs;
 rankMark = min(10, K);
 
-% ---- ipsi (target) hemisphere mask = brain minus contra --------------------------
-ipsi_mask = P.brain_mask_cp & ~P.valid_cp_svd;
+% ---- ipsi (target) hemisphere mask (midline-split, passed in) ---------------------
+ipsi_mask = P.ipsi_mask_cp;
 full_idx  = find(ipsi_mask(:));
 idx_ipsi  = full_idx;                                  % scored set (downsampled below)
 if numel(idx_ipsi) > maxPix
@@ -52,7 +52,7 @@ if numel(idx_ipsi) > maxPix
 end
 
 % ---- ipsi SVD (cached alongside the contra cache; same path as [CP-HEMI]) ---------
-path_ipsi = strrep(P.path_cp, '.mat', '_svdraw_ipsi.mat');
+path_ipsi = strrep(P.path_cp, '.mat', '_svdraw_ml_ipsi.mat');   % _ml = midline-split mask
 if exist(path_ipsi,'file')
     t = load(path_ipsi,'U_ipsi_raw','V_ipsi_full');
     U_ipsi_raw = t.U_ipsi_raw;  V_ipsi_full = t.V_ipsi_full;

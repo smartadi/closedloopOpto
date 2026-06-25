@@ -16,11 +16,21 @@ clc;
 
 
 % Resolve the script's own folder robustly (independent of cwd / MATLAB path):
-% mfilename('fullpath') is the abs path of THIS running script. Fall back to
-% which()/pwd only if pasted into the command window.
-cp_path    = mfilename('fullpath');
-if isempty(cp_path), cp_path = which('contra_prediction'); end
-if isempty(cp_path), cp_path = fullfile(pwd, 'contra_prediction.m'); end
+% mfilename('fullpath') is the abs path of THIS running script. BUT when the file
+% is run from the editor with UNSAVED changes, MATLAB executes a staged copy under
+% tempdir (...\Temp\Editor_*), so mfilename points there and every cache (ROI, SVD,
+% ipsi SVD) would be written to temp. Reject any tempdir path and fall back to
+% which()/pwd so the caches always land in impulse-analysis\data\.
+cp_path = mfilename('fullpath');
+if isempty(cp_path) || startsWith(cp_path, tempdir)
+    cp_path = which('contra_prediction');
+end
+if isempty(cp_path) || startsWith(cp_path, tempdir)
+    cands = {fullfile(pwd,'contra_prediction.m'), ...
+             fullfile(pwd,'impulse-analysis','contra_prediction.m')};
+    hit   = cands(cellfun(@(p) exist(p,'file')==2, cands));
+    if ~isempty(hit), cp_path = hit{1}; else, cp_path = cands{1}; end
+end
 impulseDir = fileparts(cp_path);
 paperRoot  = fullfile(impulseDir, '..', 'paper');
 utilsDir   = fullfile(impulseDir, '..', 'utils');
@@ -79,7 +89,7 @@ serverRoot    = expPath(mn, td, en);
 [U_cp, V_cp, ~, mimg_cp] = loadUVt(serverRoot, nSV_load);
 [nY_cp, nX_cp] = size(mimg_cp);
 nSV_cp         = size(U_cp, 3);
-brain_mask_cp  = mimg_cp > prctile(mimg_cp(:), 20);
+% brain_mask_cp / contra / ipsi masks are built from the ROI by cp_roi_masks below.
 
 d_tmp    = loadData(serverRoot, mn, td, en);
 horizon  = double(d_tmp.params.horizon);
@@ -91,114 +101,22 @@ k_prim   = double(d_tmp.params.kernel);   % recording-kernel half-width (for [CP
 mot_full = d_tmp.motion.motion_1(1:2:end);
 clear d_tmp
 
-%% Contra ROI definition
-% Interactive on first run (or if redefine_roi=true); cached afterward.
-% Only the midline and the contra polygon boundary are needed (no pixel grid).
-roi_name = sprintf('cp_roi_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en);
+%% Brain mask + contra/ipsi split (full-brain mask bisected by the midline)
+% Single source of truth: utils/cp_roi_masks draws the FULL-BRAIN outline + the
+% midline (first run / redefine_roi), bisects the brain by the midline, and tags
+% the side containing the primary (recording) pixel as IPSI (target); the other is
+% CONTRA (predictor). No hand-drawn hemisphere polygon, no "everything-else"
+% complement. cp_roi_masks also draws a verification overlay (contra=blue,
+% ipsi=red, primary=green +) so the split can be confirmed before trusting any R^2.
+roi_name = sprintf('cp_roi2_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en);
 roi_file = fullfile(dataDir, roi_name);
 fprintf('[CP] ROI cache expected at: %s\n', roi_file);
 
-% Migrate from any known legacy location into data/.
-% Checked in priority order: impulseDir, pwd (catches root-level saves when
-% mfilename resolved wrong), and parent of impulseDir.
-if ~exist(roi_file, 'file')
-    for rsd = {impulseDir, pwd, fileparts(impulseDir)}
-        candidate = fullfile(rsd{1}, roi_name);
-        if ~strcmp(candidate, roi_file) && exist(candidate, 'file')
-            movefile(candidate, roi_file);
-            fprintf('[CP] Migrated ROI cache: %s\n  -> %s\n', candidate, roi_file);
-            break;
-        end
-    end
-end
-
-if redefine_roi && exist(roi_file,'file')
-    delete(roi_file);
-    fprintf('Deleted existing ROI: %s\n', roi_file);
-end
-
-if ~exist(roi_file,'file')
-    fig_roi = figure('Color','k','Name','contra_prediction: define midline + contra ROI');
-    imagesc(mimg_cp'); colormap(fig_roi, gray);
-    clim([prctile(mimg_cp(:),1), prctile(mimg_cp(:),99)]);
-    axis image off; hold on;
-
-    title('STEP 1 -- Click 2 MIDLINE points, then Enter', ...
-        'Color','w','FontSize',10,'FontWeight','bold');
-    [xd1, yd1] = ginput(2);
-    x_ml = yd1; y_ml = xd1;
-    if abs(y_ml(2)-y_ml(1)) > abs(x_ml(2)-x_ml(1))
-        ml_cp.a = (x_ml(2)-x_ml(1))/(y_ml(2)-y_ml(1));
-        ml_cp.b = x_ml(1) - ml_cp.a*y_ml(1);
-        ml_cp.type = 'x_of_y';
-    else
-        ml_cp.a = (y_ml(2)-y_ml(1))/(x_ml(2)-x_ml(1));
-        ml_cp.b = y_ml(1) - ml_cp.a*x_ml(1);
-        ml_cp.type = 'y_of_x';
-    end
-    ml_cp.img_size = [nY_cp, nX_cp];
-
-    if strcmp(ml_cp.type,'x_of_y')
-        t_ml = linspace(1,nY_cp,300);
-        plot(t_ml, ml_cp.a*t_ml + ml_cp.b, 'w--','LineWidth',1.5);
-    else
-        t_ml = linspace(1,nX_cp,300);
-        plot(ml_cp.a*t_ml + ml_cp.b, t_ml, 'w--','LineWidth',1.5);
-    end
-
-    title('STEP 2 -- Click CONTRALATERAL hemisphere boundary, then Enter', ...
-        'Color','c','FontSize',10,'FontWeight','bold');
-    [xd2, yd2] = ginput;
-    xd2 = [xd2; xd2(1)]; yd2 = [yd2; yd2(1)];
-    plot(xd2, yd2, 'c-','LineWidth',1.5);
-    drawnow; pause(0.4);
-    close(fig_roi);
-
-    poly_col = yd2; poly_row = xd2;
-    save(roi_file, 'ml_cp','poly_col','poly_row');
-    fprintf('Saved ROI: [%s]\n', roi_file);
-else
-    tmp      = load(roi_file);
-    ml_cp    = tmp.ml_cp;
-    poly_col = tmp.poly_col;
-    poly_row = tmp.poly_row;
-    fprintf('Loaded ROI: [%s]\n', roi_file);
-end
-
-% Build contra mask from saved polygon
-[xg_s, yg_s] = meshgrid(1:nY_cp, 1:nX_cp);
-in_poly_s     = inpolygon(xg_s(:), yg_s(:), poly_row, poly_col);
-valid_cp_svd  = reshape(in_poly_s, nX_cp, nY_cp)' & brain_mask_cp;
-
-% -- Pixel map: show contra mask + primary pixel
-fig_pmap = figure('Color','k','Name','contra_prediction: contra ROI');
-fig_pmap.Units = 'centimeters'; fig_pmap.Position = [0 0 10 8];
-ax_pm = axes(fig_pmap,'Position',[0 0 1 0.88]);
-imagesc(ax_pm, mimg_cp'); colormap(ax_pm,gray);
-clim(ax_pm, [prctile(mimg_cp(:),1), prctile(mimg_cp(:),99)]);
-axis(ax_pm,'image','off'); hold(ax_pm,'on');
-
-if strcmp(ml_cp.type,'x_of_y')
-    t_ml2 = linspace(1,nY_cp,300);
-    plot(ax_pm, t_ml2, ml_cp.a*t_ml2+ml_cp.b, 'w--','LineWidth',1.2);
-else
-    t_ml2 = linspace(1,nX_cp,300);
-    plot(ax_pm, ml_cp.a*t_ml2+ml_cp.b, t_ml2, 'w--','LineWidth',1.2);
-end
-plot(ax_pm, poly_row, poly_col, 'c-','LineWidth',1.2);
-
-% Overlay the contra mask as a semi-transparent fill
-mask_overlay = double(valid_cp_svd);
-mask_overlay(~valid_cp_svd) = NaN;
-imagesc(ax_pm, mask_overlay', 'AlphaData', 0.25 * ~isnan(mask_overlay'));
-colormap(ax_pm, gray);
-
-scatter(ax_pm, py_prim, px_prim, 100, 's','filled', ...
-    'MarkerFaceColor',[1 0.3 0.3],'MarkerEdgeColor','w','LineWidth',1.5);
-legend(ax_pm, {'Midline','ROI outline','Primary pixel'}, ...
-    'TextColor','w','Color','none','EdgeColor','none','FontSize',6,'FontWeight','bold', ...
-    'Location','south','Orientation','horizontal');
-hold(ax_pm,'off');
+M_cp = cp_roi_masks(mimg_cp, roi_file, px_prim, py_prim, ...
+                    struct('redefine', redefine_roi, 'thr_pctile', 20, 'plot', true));
+brain_mask_cp = M_cp.brain;     % full-brain mask (outline AND intensity floor)
+valid_cp_svd  = M_cp.contra;    % CONTRA = predictor hemisphere (name kept for downstream)
+ipsi_mask_cp  = M_cp.ipsi;      % IPSI   = target hemisphere (primary-pixel side)
 
 %% SVD extraction -- contra predictor signals (V_c_full)
 % redoSVD on the full contra-hemisphere mask -> V_c_full (the [CP-HEMI] regressor
@@ -206,7 +124,7 @@ hold(ax_pm,'off');
 % Cached in *_svdraw.mat; computed once.
 
 path_cp      = fullfile(dataDir, sprintf('%scp%s%s%d.mat', mn, td(6:7), td(9:10), en));
-path_svd_raw = strrep(path_cp, '.mat', '_svdraw.mat');
+path_svd_raw = strrep(path_cp, '.mat', '_svdraw_ml.mat');   % _ml = midline-split masks
 
 if exist(path_svd_raw, 'file')
     tmp       = load(path_svd_raw, 'U_svd_raw', 'V_c_full');
@@ -275,12 +193,13 @@ pre_frames = round(spont_pre * Fs);
 %       single-pixel ceiling (~0.85), well below the variance-weighted pooled
 %       number (1) -- by design, not a bug.
 %
-% PARITY CAVEATS (cannot fully match): no Allen-atlas sensory restriction (we use
-% the hand-drawn hemisphere polygon + its complement); confirm AL_0033 SVD is
-% hemodynamically corrected like his. Instantaneous (pX=0), matching our finding.
+% PARITY CAVEATS (cannot fully match): no Allen-atlas sensory restriction -- contra
+% (predictor) and ipsi (target) are the two clean halves of the full-brain mask
+% bisected by the midline (cp_roi_masks), the side with the primary pixel = ipsi.
+% Confirm AL_0033 SVD is hemodynamically corrected like his. Instantaneous (pX=0).
 %
-% Prereqs (run earlier sections first): U_cp, V_cp, V_c_full, valid_cp_svd,
-% brain_mask_cp, y_full, Fs, all_starts_cp/pre_frames (from [CP-FIT]).
+% Prereqs (run earlier sections first): U_cp, V_cp, V_c_full, valid_cp_svd (contra),
+% ipsi_mask_cp, y_full, Fs, all_starts_cp/pre_frames.
 
 h_K        = 50;      % SVD modes per hemisphere (Zhiwen uses 50)
 h_maxPix   = 2000;    % cap ipsi pixels (CPU memory); pooled R^2 is ~invariant to it
@@ -291,8 +210,8 @@ h_win_mode = 'interstim'; % spontaneous windowing: 'interstim' = full post-settl
                           % between stim starts (lever-1, long windows); 'prestim' = legacy
 h_settle_s = 1.0;     % s dropped after each stim for the response to settle (interstim)
 
-% --- ipsi (right) hemisphere mask = brain minus contra polygon ---
-h_ipsi_mask = brain_mask_cp & ~valid_cp_svd;
+% --- ipsi (target) hemisphere mask (midline-split, from cp_roi_masks) ---
+h_ipsi_mask = ipsi_mask_cp;
 h_idx_ipsi  = find(h_ipsi_mask(:));
 if numel(h_idx_ipsi) > h_maxPix          % even stride downsample
     h_stride   = ceil(numel(h_idx_ipsi)/h_maxPix);
@@ -301,7 +220,7 @@ end
 fprintf('[CP-HEMI] ipsi mask: %d pixels (after cap %d)\n', numel(h_idx_ipsi), h_maxPix);
 
 % --- ipsi SVD (redoSVD on ipsi pixels), cached like the contra side ---
-h_path_ipsi = strrep(path_cp, '.mat', '_svdraw_ipsi.mat');
+h_path_ipsi = strrep(path_cp, '.mat', '_svdraw_ml_ipsi.mat');   % _ml = midline-split
 if exist(h_path_ipsi, 'file')
     h_tmp        = load(h_path_ipsi, 'U_ipsi_raw', 'V_ipsi_full');
     U_ipsi_raw   = h_tmp.U_ipsi_raw;
@@ -468,16 +387,97 @@ title(h_ax, 'Contra\rightarrowipsi prediction vs rank', 'FontSize',6,'FontWeight
 hold(h_ax,'off');
 paperExport(h_fig, fullfile(paper_root, 'cp_hemi_rank.png'));
 
-% --- figure: per-pixel R^2 map ---
+% --- figure: per-pixel R^2 map (nearest-fill the sparse scored pixels) ------------
+% h_perpix is scored on the DOWNSAMPLED ipsi set (~h_maxPix px); painting only
+% those sparse pixels left the map ~blank (each was 1/N of the image). Nearest-
+% neighbour fill to the full ipsi mask so the hemisphere renders as a dense map.
+h_full_ipsi      = find(h_ipsi_mask(:));
+[h_iy_s, h_ix_s] = ind2sub([nY_cp,nX_cp], h_idx_ipsi(:));
+[h_iy_a, h_ix_a] = ind2sub([nY_cp,nX_cp], h_full_ipsi);
+h_gd  = isfinite(h_perpix(:));
+h_Fnn = scatteredInterpolant(double(h_ix_s(h_gd)), double(h_iy_s(h_gd)), ...
+                             h_perpix(h_gd), 'nearest', 'nearest');
 h_r2img = nan(nY_cp*nX_cp, 1);
-h_r2img(h_idx_ipsi) = h_perpix;
-h_fig2 = figure('Color','w','Name','[CP-HEMI] per-pixel R^2');
+h_r2img(h_full_ipsi) = h_Fnn(double(h_ix_a), double(h_iy_a));
+h_r2map = reshape(h_r2img, nY_cp, nX_cp)';
+h_fig2  = figure('Color','w','Name','[CP-HEMI] per-pixel R^2');
 h_fig2.Units='centimeters'; h_fig2.Position=[0 0 10 8];
-imagesc(reshape(h_r2img, nY_cp, nX_cp)', 'AlphaData', ~isnan(reshape(h_r2img,nY_cp,nX_cp)'));
+h_im = imagesc(h_r2map); set(h_im, 'AlphaData', ~isnan(h_r2map));
 axis image off; colormap(parula); clim([0 1]);
 cb = colorbar; ylabel(cb, sprintf('R^2 (rank %d)', h_rankMark), 'FontWeight','bold');
 title(sprintf('[CP-HEMI] ipsi per-pixel R^2  (pooled=%.3f)', h_poolR2(h_rankMark)));
 paperExport(h_fig2, fullfile(paper_root, 'cp_hemi_r2map.png'));
-fprintf('[CP-HEMI] exported cp_hemi_rank.png + cp_hemi_r2map.png\n');
+
+% --- predicted vs actual PRIMARY-PIXEL trace over the held-out test block ----------
+% Predict the recording pixel (field->kernel readout) at the best held-out rank,
+% split the test block into fixed-length segments ("trials"), score each.
+h_kbest   = h_kpk;                                          % rank with best held-out R^2
+h_yhat_te = (h_scoresTe(:,1:h_kbest) * h_aKern(1:h_kbest)) / h_mI_kern * 100;  % [nTe x 1] %dF/F
+h_yact_te = y_full(h_te);                                   % actual primary pixel %dF/F
+h_segL   = round(3*Fs);
+h_nSeg   = floor(numel(h_te) / max(h_segL,1));
+h_segR2  = nan(max(h_nSeg,0),1);   % raw (offset penalised, matches h_kernR2)
+h_segR2b = nan(max(h_nSeg,0),1);   % per-segment baseline-removed ("shape", offset-invariant)
+h_numB = 0;  h_denB = 0;
+for s = 1:h_nSeg
+    idx = (s-1)*h_segL + (1:h_segL);
+    ya  = h_yact_te(idx);  yh = h_yhat_te(idx);
+    yac = ya - mean(ya,'omitnan');  yhc = yh - mean(yh,'omitnan');
+    h_segR2(s)  = 1 - sum((ya-yh).^2,'omitnan')   / max(sum(yac.^2,'omitnan'), eps);
+    h_segR2b(s) = 1 - sum((yac-yhc).^2,'omitnan') / max(sum(yac.^2,'omitnan'), eps);
+    h_numB = h_numB + sum((yac-yhc).^2,'omitnan');  h_denB = h_denB + sum(yac.^2,'omitnan');
+end
+h_poolB = 1 - h_numB / max(h_denB, eps);          % pooled baseline-removed primary-pixel R^2
+h_tseg  = (0:h_segL-1)/Fs;
+fprintf(['[CP-HEMI] PRIMARY pixel R^2: raw=%.3f | per-segment baseline-removed=%.3f\n' ...
+         '          (the gap is slow per-segment drift -> a level shift the residual\n' ...
+         '           pipeline removes per-trial, so the science is unaffected)\n'], ...
+         h_kernPk, h_poolB);
+
+if h_nSeg >= 2
+    % --- figure: prediction on example held-out segments --------------------------
+    h_pick = unique(round(linspace(1, h_nSeg, min(6,h_nSeg))));
+    h_fig3 = paperFig(20, 10);  h_nP = numel(h_pick);  h_nc = ceil(h_nP/2);
+    for kk = 1:h_nP
+        ax = subplot(2, h_nc, kk); hold(ax,'on');
+        s = h_pick(kk); idx = (s-1)*h_segL + (1:h_segL);
+        ya = h_yact_te(idx);  yh = h_yhat_te(idx);   % each centred on its OWN mean -> shape
+        plot(ax, h_tseg, ya-mean(ya,'omitnan'), 'Color',[0.1 0.1 0.1], 'LineWidth',1.2, 'DisplayName','actual');
+        plot(ax, h_tseg, yh-mean(yh,'omitnan'), 'Color',[0.85 0.3 0.1], 'LineWidth',1.2, 'DisplayName','contra pred');
+        title(ax, sprintf('seg %d   R^2=%.2f (shape %.2f)', s, h_segR2(s), h_segR2b(s)), 'FontSize',6,'FontWeight','bold');
+        set(ax,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+        if mod(kk-1,h_nc)==0, ylabel(ax,'\DeltaF/F (%)','FontSize',6,'FontWeight','bold'); end
+        if kk > h_nP-h_nc, xlabel(ax,'time (s)','FontSize',6,'FontWeight','bold'); end
+        if kk==1, lg=legend(ax,'Location','best','FontSize',5); lg.ItemTokenSize=[6 6]; end
+    end
+    sgtitle(h_fig3, sprintf('[CP-HEMI] contra->primary-pixel prediction, example held-out segments (rank %d)', h_kbest), ...
+        'FontSize',7,'FontWeight','bold','Interpreter','none');
+    paperExport(h_fig3, fullfile(paper_root, 'cp_hemi_examples.png'));
+
+    % --- figure: best vs worst held-out segments ---------------------------------
+    h_fin = find(isfinite(h_segR2));
+    [~, h_si] = sort(h_segR2(h_fin), 'descend');
+    h_ord = h_fin(h_si);
+    h_nbw = min(3, floor(numel(h_ord)/2));
+    h_bw  = [h_ord(1:h_nbw); h_ord(end-h_nbw+1:end)];
+    h_lbl = [repmat({'BEST'},h_nbw,1); repmat({'WORST'},h_nbw,1)];
+    h_fig4 = paperFig(20, 9);
+    for kk = 1:numel(h_bw)
+        ax = subplot(2, h_nbw, kk); hold(ax,'on');
+        s = h_bw(kk); idx = (s-1)*h_segL + (1:h_segL);
+        ya = h_yact_te(idx);  yh = h_yhat_te(idx);   % each centred on its OWN mean -> shape
+        plot(ax, h_tseg, ya-mean(ya,'omitnan'), 'Color',[0.1 0.1 0.1], 'LineWidth',1.2);
+        plot(ax, h_tseg, yh-mean(yh,'omitnan'), 'Color',[0.85 0.3 0.1], 'LineWidth',1.2);
+        title(ax, sprintf('%s seg %d   R^2=%.2f (shape %.2f)', h_lbl{kk}, s, h_segR2(s), h_segR2b(s)), 'FontSize',6,'FontWeight','bold');
+        set(ax,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+        if mod(kk-1,h_nbw)==0, ylabel(ax,'\DeltaF/F (%)','FontSize',6,'FontWeight','bold'); end
+        if kk > h_nbw, xlabel(ax,'time (s)','FontSize',6,'FontWeight','bold'); end
+    end
+    sgtitle(h_fig4, sprintf('[CP-HEMI] best vs worst segments (rank %d) -- traces on own mean; R^2 raw, shape=offset-removed', h_kbest), ...
+        'FontSize',7,'FontWeight','bold','Interpreter','none');
+    paperExport(h_fig4, fullfile(paper_root, 'cp_hemi_bestworst.png'));
+end
+
+fprintf('[CP-HEMI] exported cp_hemi_rank/r2map/examples/bestworst .png\n');
 
 
