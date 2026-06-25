@@ -275,7 +275,7 @@ close all
 % ---- Selection parameters -----------------------------------------------
 SEL_SIDES = {'left','right'};   % stim side(s): {'left'} | {'right'} | {'left','right'}
 SEL_AMPS  = 'all';              % amplitude(s): 'all' | numeric vector, e.g. [1] or [1 2]
-CALC_WIN  = [-1 4];             % (s) peri-event window
+CALC_WIN  = [-10 10];             % (s) peri-event window
 % -------------------------------------------------------------------------
 
 kk_all_v  = d.input_params(:, 2);
@@ -318,8 +318,8 @@ close all
 % ---- Selection parameters -----------------------------------------------
 r_mask     = 1;
 GRID_STEP  = 40;
-MINI_PRE   = 0.5;
-MINI_POST  = 2.0;
+MINI_PRE   = 2;
+MINI_POST  = 5;
 MINI_SCALE = 8;
 SEL_SIDES  = {'left','right'};   % sides to build: {'left'} | {'right'} | {'left','right'}
 % Amplitude is chosen on the brain-map GUI: every level present gets a button,
