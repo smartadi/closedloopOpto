@@ -34,12 +34,6 @@ Auto-tuning (mn, td, en):
   traces / variance / FFT, fits a `J(Kp,Ki)` surface (`linearinterp`) + 3D/contour view.
 - `scratch_grid/` — saved outputs (`grid_maps.mat`, overview/montage PNGs) from earlier runs.
 
-## Planned scripts (controller-tuning/ — run from brain_paper/ root)
-- `load_grid.m`      — session registry + column map + cost knobs (DONE, stub)
-- `gain_grid.m`      — per-node cost `J(Kp,Ki)`, cost surface, marked minimum (paper panel)
-- `auto_tune.m`      — gain trajectory + cost-vs-iteration convergence
-- `compare_tuning.m` — grid-optimal vs auto-tuned vs hand-picked gains (if in scope)
-
 ## Loading pipeline
 Reuse controller area: `initialize_data → getpixel_dFoF`; cache to `data/<key>.mat`.
 Proposed cache key: `sprintf('%s_grid_%s%d.mat', mn, td(6:7), en)` (mirrors `_bil`).
@@ -53,13 +47,13 @@ Proposed cache key: `sprintf('%s_grid_%s%d.mat', mn, td(6:7), en)` (mirrors `_bi
 | 6 | Ki (integral gain) | `unique(...,5:6)` |
 Auto-tune online-update columns: **TBD** (how the rig logs the adapting gains).
 
-## Cost function (RESOLVED 2026-06-22)
+## Cost function (RESOLVED 2026-06-24)
 - Window: `t = 0 s … +3 s` post-onset (matches controller-area default MSE window).
 - Metric: `mean_trials( ‖dF/F − ref‖₂ over window )` per (Kp,Ki) node.
 - **Reference: read per-session `d.ref`** — do NOT hard-code. Print/assert `d.ref` on load.
   (Prototype's −2 and the project −5 are both just fallbacks; the session value wins.)
 
-## Auto-tuning method (RESOLVED 2026-06-22)
+## Auto-tuning method (RESOLVED 2026-06-24)
 - **Zero-order / model-free optimization** — no plant model is identified; the optimizer
   perturbs gains and reads back the empirical cost.
 - The evolving **Kp/Ki are stored in `input_params` cols 5:6 per trial** (same columns as
@@ -69,10 +63,21 @@ Auto-tune online-update columns: **TBD** (how the rig logs the adapting gains).
 - Convergence figure = gain trajectory (Kp,Ki vs trial/iteration) + cost-vs-iteration,
   described empirically (don't assert a specific update rule unless confirmed).
 
-## Paper scope (RESOLVED 2026-06-22) — two proper paper figures
+## Paper scope (RESOLVED 2026-06-24) — two proper paper figures
 1. **Grid cost-function surface** — `J(Kp,Ki)` surface/contour with the minimum marked.
 2. **Auto-tuning convergence** — gains + cost converging (ideally toward the grid minimum).
-Both are real paper panels (paperFig/paperStyle, 6 pt bold, vector export).
+Both are real paper panels (paperFig/paperStyle, 6 pt bold; PNG until promoted in PAPER.md).
+
+## Scripts (BUILT 2026-06-24 — run from brain_paper/ root)
+1. `load_grid.m`  — RUN FIRST. Registry (6 grid + 3 auto-tune, each with explicit `ref`),
+   loads every session, computes per-trial cost, groups by unique (Kp,Ki), caches a compact
+   summary to `data/grid_tuning_cache.mat` → workspace structs **G** (grid) and **A** (auto-tune).
+2. `gain_grid.m`  — consumes G. Fig1 = cost surface `J(Kp,Ki)` + marked minimum (1D fallback
+   if only one gain varies); Fig2 = per-controller mean±std traces. Knob: `SEL` = grid session.
+3. `auto_tune.m`  — consumes A. Kp/Ki trajectory + per-trial cost + running-best vs iteration.
+   Knob: `SEL` = auto-tune session.
+Outputs → `paper/images/tuning/`.
+- `compare_tuning.m` — (future, if needed) grid-optimal vs auto-tuned vs hand-picked gains.
 
 ## Locked-in decisions (provisional until data confirms)
 - PI only (Kp, Ki); no Kd.
