@@ -71,7 +71,15 @@
       "Bash(pdflatex -interaction=nonstopmode -draftmode -halt-on-error main.tex)",
       "Bash(echo \"exit: $?\")",
       "Bash(find \"C:\\\\Users\\\\aditya\\\\Documents\\\\projects\\\\Closedloop_edit\" -name \"*.tex\" -type f)",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "Bash(git -C /c/Users/aditya/Documents/projects/Closedloop_edit fetch origin)",
+      "Bash(git -C /c/Users/aditya/Documents/projects/Closedloop_edit status -sb)",
+      "Bash(git -C /c/Users/aditya/Documents/projects/Closedloop_edit log --oneline HEAD..origin/main)",
+      "Bash(git -C /c/Users/aditya/Documents/projects/Closedloop_edit diff --stat HEAD origin/main)",
+      "Bash(git -C /c/Users/aditya/Documents/projects/brain_paper status -sb)",
+      "mcp__matlab__detect_matlab_toolboxes",
+      "Bash(rm -f _tmp_cphemi_run.m zz_cphemi_run.m)",
+      "Bash(ls -1 *cphemi_run.m)"
     ]
   },
   "hooks": {
