@@ -61,11 +61,17 @@ TRIAL_SITE_COL = [];
 % t(input_params(:,2) - horizon); the horizon subtraction assumes a leading
 % zero-buffer this session no longer has, so d.stimStarts land ~37-40 s early.
 % findStims is a do-not-modify util, so we re-derive onsets here from the
-% actual input command (rising edge), then override d.stimStarts/d.stimEnds.
+% actual input command (rising edge). Rather than blindly replacing onsets
+% with the detected edges (which silently mis-assigns trials if one edge is
+% missed/spurious), we estimate the constant findStims offset robustly and
+% then snap each trial to its own detected edge when one is close, else keep
+% the offset-corrected findStims onset. This always yields one onset per trial
+% in input_params order, and is robust to a few missed/extra detections.
 REDETECT_STIMS = true;
 IN_FIELDS      = {'inpVals638','inpVals594'};  % input command fields (vs d.inpTime)
 IN_THRESH      = 0.1;   % rising-edge threshold
 MIN_GAP        = 2;     % s, minimum interval between detected onsets
+SNAP_TOL       = 0.5;   % s, max gap to snap a trial onset to a detected edge
 
 %% ---- Debug -------------------------------------------------------------
 % DEBUG shows: (1) brain image + controlled-pixel/kernel overlay, (2) full
@@ -77,7 +83,7 @@ DEBUG        = true;
 N_EX         = 4;     % example trials per condition (OL / CL)
 RUN_ANALYSIS = true;  % false -> only debug figures, skip CL/OL analysis figures
 
-EXPORT_FIG = false;   % true -> PNGs to paper/images/bilateral/
+EXPORT_FIG = true;   % true -> PNGs to paper/images/bilateral/
 % ------------------------------------------------------------------------
 
 
@@ -153,19 +159,21 @@ if REDETECT_STIMS
     if isempty(det)
         warning('REDETECT_STIMS: no input rising edges found — keeping findStims onsets.');
     else
-        fprintf('Re-detected %d input onsets; first=%.3f s (findStims stimStarts(1)=%.3f s, offset=%+.3f s)\n', ...
-            numel(det), det(1), d.stimStarts(1), d.stimStarts(1)-det(1));
-        if numel(det) == nTr
-            d.stimStarts = det(:)';                 % one onset per trial, in order
-            d.stimEnds   = det(:)' + dur;           % dur seconds
-            fprintf('  -> replaced d.stimStarts with detected onsets (count matches %d trials).\n', nTr);
-        else
-            shift = det(1) - d.stimStarts(1);       % constant-offset fallback
-            d.stimStarts = d.stimStarts(:)' + shift;
-            if isfield(d,'stimEnds'); d.stimEnds = d.stimEnds(:)' + shift; end
-            warning(['detected %d onsets != %d trials; applied constant shift %+.3f s ' ...
-                     'to findStims onsets instead.'], numel(det), nTr, shift);
+        ss0 = d.stimStarts(:)';                     % findStims onsets (offset, correct spacing)
+        [onsets, oi] = correctOnsets(ss0, det, SNAP_TOL);
+        fprintf(['Re-detected %d input edges; robust offset %+.3f s ' ...
+                 '(findStims first onset %.3f s -> %.3f s).\n'], ...
+                 numel(det), oi.shift, ss0(1), onsets(1));
+        fprintf(['  per-trial onsets: %d snapped to a detected edge (max |resid| %.3f s), ' ...
+                 '%d kept offset-corrected findStims.\n'], ...
+                 oi.nSnapped, oi.maxResid, oi.nFallback);
+        if numel(onsets) ~= nTr
+            warning(['correctOnsets returned %d onsets != %d input_params trials — ' ...
+                     'downstream OL/CL indexing assumes one onset per trial.'], ...
+                     numel(onsets), nTr);
         end
+        d.stimStarts = onsets;
+        d.stimEnds   = onsets + dur;                % dur seconds
     end
 end
 
@@ -333,18 +341,20 @@ for si = 1:numel(sides)
     ax3 = axes(f3, 'Position', [0.18 0.15 0.77 0.75]);
     hold(ax3, 'on');
     hw = 0.3;
-    if numel(er_nc) > 1
-        [fA, yA] = ksdensity(er_nc); fA = fA / max(fA) * hw;
+    e_nc = er_nc(isfinite(er_nc));   % drop off-edge (NaN) trials — ksdensity rejects NaN
+    e_wc = er_wc(isfinite(er_wc));
+    if numel(e_nc) > 1
+        [fA, yA] = ksdensity(e_nc); fA = fA / max(fA) * hw;
         fill(ax3, [1 - fA, ones(1,numel(fA))], [yA, fliplr(yA)], PS.col_ol, ...
             'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
-        plot(ax3, 1 - 0.1, mean(er_nc,'omitnan'), '*', 'Color', PS.col_ol, ...
+        plot(ax3, 1 - 0.1, mean(e_nc), '*', 'Color', PS.col_ol, ...
             'MarkerSize', 5, 'LineWidth', 1, 'HandleVisibility','off');
     end
-    if numel(er_wc) > 1
-        [fB, yB] = ksdensity(er_wc); fB = fB / max(fB) * hw;
+    if numel(e_wc) > 1
+        [fB, yB] = ksdensity(e_wc); fB = fB / max(fB) * hw;
         fill(ax3, [1 + fB, ones(1,numel(fB))], [yB, fliplr(yB)], PS.col_cl, ...
             'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
-        plot(ax3, 1 + 0.1, mean(er_wc,'omitnan'), '*', 'Color', PS.col_cl, ...
+        plot(ax3, 1 + 0.1, mean(e_wc), '*', 'Color', PS.col_cl, ...
             'MarkerSize', 5, 'LineWidth', 1, 'HandleVisibility','off');
     end
     hold(ax3, 'off');
@@ -432,6 +442,49 @@ function det = detectStimsFromInput(d, fields, thr, minGap)
     rise = sig(2:end) > thr & sig(1:end-1) <= thr;
     on   = it([false, rise]);
     if ~isempty(on); det = on([true, diff(on) > minGap]); end
+end
+
+function [onsets, info] = correctOnsets(ss0, det, snapTol)
+% Build one corrected onset per trial from findStims onsets `ss0` (correct
+% relative spacing but globally offset by the findStims mode-1 horizon bug) and
+% detected rising-edge times `det` (correct absolute timing, but may miss real
+% edges or add spurious ones). Strategy:
+%   1. estimate the constant offset robustly as the median nearest-neighbour
+%      residual (det - nearest ss0) — robust to a minority of bad edges;
+%   2. shift ss0 by that offset, then snap each trial to its nearest detected
+%      edge when within snapTol, else keep the shifted findStims onset.
+% Returns onsets (1 x numel(ss0), input_params trial order) and an info struct.
+    ss0    = ss0(:)';
+    onsets = ss0;
+    info   = struct('shift', 0, 'nSnapped', 0, 'nFallback', numel(ss0), 'maxResid', NaN);
+    if isempty(det) || isempty(ss0); return; end
+    det = sort(det(:)).';
+
+    % robust global offset: median of (each detected edge - nearest findStims onset)
+    resid = arrayfun(@(x) x - ss0(min_idx(abs(ss0 - x))), det);
+    shift = median(resid);
+    shifted = ss0 + shift;
+
+    % per-trial: snap to nearest detected edge if within tolerance, else keep shifted
+    nSnap = 0; maxr = 0;
+    for j = 1:numel(shifted)
+        [dmin, k] = min(abs(det - shifted(j)));
+        if dmin <= snapTol
+            onsets(j) = det(k);
+            nSnap = nSnap + 1;
+            maxr  = max(maxr, dmin);
+        else
+            onsets(j) = shifted(j);
+        end
+    end
+    info.shift = shift; info.nSnapped = nSnap;
+    info.nFallback = numel(shifted) - nSnap;
+    info.maxResid  = maxr;
+end
+
+function k = min_idx(v)
+% Index of the minimum of v (small helper for arrayfun above).
+    [~, k] = min(v);
 end
 
 function dFk = pixelDFoF(d, pixel)
