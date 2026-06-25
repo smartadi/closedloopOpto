@@ -1,0 +1,14 @@
+﻿[Warning: Function system has the same name as a MATLAB built-in. We suggest you rename the function to avoid a potential name conflict.] 
+[> In path (line 109)
+In addpath (line 96)
+In compute_face_motion_AL0046 (line 13)
+In run (line 112)] 
+Face motion energy: 179685 frames, 2765.9..5332.8 s, ROI 455x265
+  3999/179685 (2%) 122s elapsed
+  43999/179685 (24%) 867s elapsed
+  83999/179685 (47%) 1608s elapsed
+  123999/179685 (69%) 2331s elapsed
+  163999/179685 (91%) 3086s elapsed
+decode done in 3399 s
+SHIPPED motion_energy: 89843 imaging frames | face raw 179685 frames | ROI=[488 136 752 590]
+motion_energy stats: min 0.25 median 0.34 max 7.94
