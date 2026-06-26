@@ -64,6 +64,10 @@ BASE_WIN = (-0.10, 0.0)      # s rel. onset, baseline frames
 STIM_WIN = (0.04, 0.12)      # s rel. onset, early-response frames
 SPATIAL_CLIM = 0.02          # +/- dF/F color scale (notebook clim)
 
+# per-site trial x time raster (notebook cell 19)
+RASTER = True
+RASTER_CLIM = 0.08           # +/- dF/F color scale
+
 OUTDIR = Path(__file__).resolve().parent / "grid_png"
 OUTDIR.mkdir(exist_ok=True)
 # ===================================================================
@@ -164,6 +168,7 @@ def main():
         return a * (1 - np.exp(-t / tau)) + off
 
     taus = {}
+    dff_by_site = {}
     fig = plt.figure(figsize=(8, 8))
     gs  = fig.add_gridspec(8, 8, wspace=0.3, hspace=0.3)
     for mx, my in sites:
@@ -179,6 +184,7 @@ def main():
         fluo = tr @ spat + mI
         base = np.nanmean(fluo[:, :base_ix])
         dff  = (fluo - base) / base
+        dff_by_site[(mx, my)] = dff
         m    = np.nanmedian(dff, 0)
         sem  = np.nanstd(dff, 0) / np.sqrt(dff.shape[0])
 
@@ -241,6 +247,24 @@ def main():
         fig.suptitle(f"{SUBJECT} {DATE} - dF/F image per site "
                      f"({STIM_WIN[0]*1000:.0f}-{STIM_WIN[1]*1000:.0f} ms, {power_lbl})")
         fig.savefig(OUTDIR / "grid_spatial.png", dpi=300, bbox_inches="tight"); plt.close(fig)
+
+    # ---- per-site trial x time raster (notebook cell 19) ----
+    if RASTER:
+        fig = plt.figure(figsize=(8, 8))
+        gs  = fig.add_gridspec(8, 8, wspace=0.2, hspace=0.2)
+        im0 = None
+        for mx, my in sites:
+            dff = dff_by_site[(mx, my)]
+            r, c = int(round(3 - my)), int(round(mx + 3.5))
+            ax = fig.add_subplot(gs[r, c])
+            im0 = ax.imshow(dff, cmap="bwr", clim=(-RASTER_CLIM, RASTER_CLIM), aspect="auto",
+                            extent=[window[0], window[-1], 0, dff.shape[0]])
+            ax.axvspan(0, 0.025, color="r", lw=0, alpha=0.5)        # 25 ms stim period
+            ax.set_xticks([]); ax.set_yticks([])
+        cb = fig.colorbar(im0, ax=fig.axes, shrink=0.5, ticks=[-RASTER_CLIM, RASTER_CLIM])
+        cb.set_label("dF/F"); cb.ax.set_yticklabels([f"{-RASTER_CLIM*100:.0f}%", f"{RASTER_CLIM*100:.0f}%"])
+        fig.suptitle(f"{SUBJECT} {DATE} - per-site trial x time dF/F ({LASER} nm, {power_lbl})")
+        fig.savefig(OUTDIR / "grid_raster.png", dpi=300, bbox_inches="tight"); plt.close(fig)
 
     print("wrote:", OUTDIR)
 

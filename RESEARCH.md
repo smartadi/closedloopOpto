@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-25 — Grid per-site trial×time raster (notebook cell 19)
+**Changed/Found:** Added the per-site raster to `scratch_grid/grid_analysis.py` (`RASTER` knob) — for each grid site an `imshow` of the per-trial dF/F matrix (trials × time, ±8% bwr, stim period marked), 8×8 layout. Reuses the per-trial `dff` already computed in the timecourse loop (stashed in `dff_by_site`), so no extra data load. Output `grid_png/grid_raster.png` shows the post-stim response bands + single-trial variability, consistent with the snapshot/timecourse polarity. Completes the port of all notebook analysis plots (cells 10/14/17/18/19); only the dropped probe cells remain unported.
+**Why:** User asked to also create the raster plot.
+**Next:** none — notebook grid analysis fully ported. (Open idea raised but not built: an aggregate stim→response causal/connectivity map across sites, beyond the per-site spatial snapshot.)
+
 ### 2026-06-25 — Grid spatial dF/F snapshot map: clean dual-opsin polarity
 **Changed/Found:** Added the spatial dF/F snapshot grid (notebook cell 10 port) to `scratch_grid/grid_analysis.py` — per-site full-frame response image (baseline window vs 40–120 ms post-stim, SVD-projected, ±2% bwr), 8×8 layout, stim site marked. Loads `U[:,:,:50]` once. Result (`grid_png/grid_spatial.png`) shows the expected **dual-opsin signature**: left-hemisphere sites (galvo x<0, excitatory opsin) give focal POSITIVE/red dF/F; right-hemisphere sites (x>0, inhibitory opsin) give NEGATIVE/blue dF/F, each localized near the stim site. End-to-end validation of the onset/position/calibration pipeline.
 **Why:** User asked to run the remaining notebook grid analysis and generate plots.
