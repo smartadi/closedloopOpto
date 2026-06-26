@@ -58,6 +58,12 @@ WIN_PRE   = 12 / 35
 WIN_DUR   = 1.5
 TAU_T0_IX = 32               # first sample used for the exp-rise fit (notebook start_ix)
 
+# spatial dF/F snapshot grid (notebook cell 10): a full-frame response image per site
+SPATIAL_SNAPSHOT = True
+BASE_WIN = (-0.10, 0.0)      # s rel. onset, baseline frames
+STIM_WIN = (0.04, 0.12)      # s rel. onset, early-response frames
+SPATIAL_CLIM = 0.02          # +/- dF/F color scale (notebook clim)
+
 OUTDIR = Path(__file__).resolve().parent / "grid_png"
 OUTDIR.mkdir(exist_ok=True)
 # ===================================================================
@@ -207,6 +213,34 @@ def main():
     cb = fig.colorbar(sc, ax=ax, shrink=0.7); cb.set_label(r"$\tau$ (s)")
     ax.set_title(f"{SUBJECT} {DATE} - rise " + r"$\tau$" + f" ({power_lbl})")
     fig.savefig(OUTDIR / "grid_tau.png", dpi=300, bbox_inches="tight"); plt.close(fig)
+
+    # ---- spatial dF/F snapshot grid (notebook cell 10) ----
+    if SPATIAL_SNAPSHOT:
+        print("  loading U[:, :, :%d] for spatial maps ..." % N_COMPS)
+        U50 = np.asarray(U[:, :, :N_COMPS])                         # (Y,X,nSV)
+        rb = np.arange(*BASE_WIN, 1 / FS_WIN)
+        rs = np.arange(*STIM_WIN, 1 / FS_WIN)
+        fig = plt.figure(figsize=(8, 8))
+        gs  = fig.add_gridspec(8, 8, wspace=0.1, hspace=0.1)
+        im0 = None
+        for mx, my in sites:
+            these = onset_t[(pos[:, 0] == mx) & (pos[:, 1] == my)]
+            base_v = np.nanmean(t2svd(these[:, None] + rb[None, :]), (0, 1))   # [nSV]
+            stim_v = np.nanmean(t2svd(these[:, None] + rs[None, :]), (0, 1))
+            base_im = np.einsum("yxc,c->yx", U50, base_v) + mimg
+            stim_im = np.einsum("yxc,c->yx", U50, stim_v) + mimg
+            dff_im  = (stim_im - base_im) / base_im
+            r, c = int(round(3 - my)), int(round(mx + 3.5))
+            ax = fig.add_subplot(gs[r, c])
+            im0 = ax.imshow(dff_im, cmap="bwr", clim=(-SPATIAL_CLIM, SPATIAL_CLIM))
+            cx, cy = site_px(mx, my)
+            ax.scatter(cx, cy, marker=".", c="m", s=6, lw=0)
+            ax.set_axis_off()
+        cb = fig.colorbar(im0, ax=fig.axes, shrink=0.5, ticks=[-SPATIAL_CLIM, SPATIAL_CLIM])
+        cb.set_label("dF/F"); cb.ax.set_yticklabels([f"{-SPATIAL_CLIM*100:.0f}%", f"{SPATIAL_CLIM*100:.0f}%"])
+        fig.suptitle(f"{SUBJECT} {DATE} - dF/F image per site "
+                     f"({STIM_WIN[0]*1000:.0f}-{STIM_WIN[1]*1000:.0f} ms, {power_lbl})")
+        fig.savefig(OUTDIR / "grid_spatial.png", dpi=300, bbox_inches="tight"); plt.close(fig)
 
     print("wrote:", OUTDIR)
 

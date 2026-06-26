@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-25 — Grid spatial dF/F snapshot map: clean dual-opsin polarity
+**Changed/Found:** Added the spatial dF/F snapshot grid (notebook cell 10 port) to `scratch_grid/grid_analysis.py` — per-site full-frame response image (baseline window vs 40–120 ms post-stim, SVD-projected, ±2% bwr), 8×8 layout, stim site marked. Loads `U[:,:,:50]` once. Result (`grid_png/grid_spatial.png`) shows the expected **dual-opsin signature**: left-hemisphere sites (galvo x<0, excitatory opsin) give focal POSITIVE/red dF/F; right-hemisphere sites (x>0, inhibitory opsin) give NEGATIVE/blue dF/F, each localized near the stim site. End-to-end validation of the onset/position/calibration pipeline.
+**Why:** User asked to run the remaining notebook grid analysis and generate plots.
+**Next:** Optional remaining notebook plot = the per-site trial×time raster (cell 19). `BASE_WIN`/`STIM_WIN` are knobs if a different response window is wanted.
+
 ### 2026-06-25 — Grid power split: only the 0.5 level fired; 0.25 sub-threshold (Block-aligned)
 **Changed/Found:** Added Block-based power labeling to `scratch_grid/grid_analysis.py` (loads session 3 `Block.mat`, greedy in-order alignment of detected onsets onto the randomized trial log by galvo-position fingerprint; new `AMP_SEL` knob). Finding: of the 2600 detected 638 onsets, **2541 are the 0.5-power condition and only 59 the 0.25** — and probing both light commands at the Block-predicted times shows 0.25-power trials produce **no 638 (or 594) pulse at all** (median peak −0.01 V, 0% over threshold) while 0.5 does. So the `laserAmp=[0.25,0.5]` design effectively delivered only the high power; **0.25 was sub-threshold and did not lase**. Block↔Timeline clock offset ≈ 98.9 s (std 0.2 s) — Block times carry ±0.2 s jitter, so hardware `lightCommand638` edges remain the accurate onsets. Script now defaults `AMP_SEL=0.5` → 2541 onsets, 52 sites, ~48 trials/site; figures relabeled "0.5 power".
 **Why:** User asked to proceed to the power split after confirming bregma. Turns out there is effectively one usable power, which is itself a data-quality finding worth recording.
