@@ -13,6 +13,8 @@
 %   Fig 1  all-trials + mean trace          (OL panel | CL panel)
 %   Fig 2  variance across trials over time  (OL vs CL)
 %   Fig 3  trial-MSE half-violin            (OL vs CL)
+%   Fig 4  input-command traces             (OL panel | CL panel, all + mean)
+%   Fig 5  mean instantaneous tracking err   (OL vs CL overlaid)
 % plus a console summary of MSE (mean / median) and the OL/CL ratio.
 %
 % Run from the brain_paper/ root (or from bilateral-analysis/ — it will cd up).
@@ -27,9 +29,14 @@ end
 addpath(genpath('utils'));
 
 %% ---- Session knobs -----------------------------------------------------
+% MN  = 'AL_0048';
+% TD  = '2026-06-20';   % YYYY-MM-DD
+% EN  = 2;              % experiment number
+
+
 MN  = 'AL_0048';
-TD  = '2026-06-20';   % YYYY-MM-DD
-EN  = 2;              % experiment number
+TD  = '2026-06-24';   % YYYY-MM-DD
+EN  = 5;              % experiment number
 
 dur    = 3;           % controller / MSE window (s): t = 0 to +dur post-onset
 fs_img = 35;          % imaging frame rate (Hz)
@@ -56,22 +63,37 @@ CL_CODE  = 1;         % value meaning closed-loop
 % site — correct for a single-site session.
 TRIAL_SITE_COL = [];
 
-%% ---- Stim-onset re-detection (fix findStims mode-1 buffer offset) -------
+%% ---- Trial range: warm-up exclusion ------------------------------------
+% Only the last USE_LAST_N trials feed the OL/CL comparison; the earlier
+% trials are session-start warm-up (controller settling — e.g. AL_0048 06-24
+% e5 opens with a CL block whose first trials carry pre-onset input/high
+% baseline). Set USE_LAST_N = Inf to use every trial.
+USE_LAST_N = 100;
+
+%% ---- Stim-onset derivation (fix findStims mode-1 buffer offset) ---------
 % findStims mode 1 (used by initialize_data) computes onsets as
 % t(input_params(:,2) - horizon); the horizon subtraction assumes a leading
 % zero-buffer this session no longer has, so d.stimStarts land ~37-40 s early.
-% findStims is a do-not-modify util, so we re-derive onsets here from the
-% actual input command (rising edge). Rather than blindly replacing onsets
-% with the detected edges (which silently mis-assigns trials if one edge is
-% missed/spurious), we estimate the constant findStims offset robustly and
-% then snap each trial to its own detected edge when one is close, else keep
-% the offset-corrected findStims onset. This always yields one onset per trial
-% in input_params order, and is robust to a few missed/extra detections.
-REDETECT_STIMS = true;
-IN_FIELDS      = {'inpVals638','inpVals594'};  % input command fields (vs d.inpTime)
-IN_THRESH      = 0.1;   % rising-edge threshold
-MIN_GAP        = 2;     % s, minimum interval between detected onsets
-SNAP_TOL       = 0.5;   % s, max gap to snap a trial onset to a detected edge
+% findStims is a do-not-modify util, so we re-derive onsets here. input_params
+% column 2 holds an imaging-frame index, but it is logged at TRIAL END, so
+% timeBlue at that frame is ONSET_LEAD_S seconds AFTER the true stim onset.
+% ONSET_LEAD_S = 2.918 s was measured from the OL input-pulse rising edges
+% (std 0.009 s across 51 trials); the true onset is timeBlue(frame) - lead.
+% This is exact and one onset per trial. (Rising-edge re-detection was tried
+% and rejected: the input is continuously active for CL trials, and the
+% nearest-neighbour offset estimate aliases when the offset (~37 s) exceeds
+% half the ~11 s trial spacing.)
+REDETECT_STIMS  = true;
+ONSET_FRAME_COL = 2;        % input_params column holding the (trial-end) frame index
+ONSET_LEAD_S    = 2.918;    % s, subtract from frame time to reach true stim onset
+% Per-condition lead override. ONSET_LEAD_S was measured on OL rising edges; CL
+% trials log the trial-end frame with a different lead (CL input is continuously
+% active), so reusing the OL lead lands the CL marker ~1 s late and the stim
+% appears at t = -1. Set ONSET_LEAD_S_CL to the CL-specific lead to realign CL
+% onsets to t = 0; leave [] to use ONSET_LEAD_S for every trial.
+ONSET_LEAD_S_CL = ONSET_LEAD_S + 1.0;   % [] -> same lead as OL
+% combined input command fields (vs d.inpTime) — used only for debug overlays
+IN_FIELDS       = {'inpVals638','inpVals594'};
 
 %% ---- Debug -------------------------------------------------------------
 % DEBUG shows: (1) brain image + controlled-pixel/kernel overlay, (2) full
@@ -149,32 +171,43 @@ else
     fprintf('Saved assembled-session cache: %s\n', cachePath);
 end
 
-%% ===== Re-detect stim onsets from the input command ====================
-% Runs on EVERY execution (cached or freshly loaded) so a stale cache cannot
-% leave the offset findStims mode-1 onsets in place. Overrides d.stimStarts /
-% d.stimEnds; findStims itself (a do-not-modify util) is untouched.
+%% ===== Stim onsets from input_params frame index ======================
+% input_params(:,ONSET_FRAME_COL) is an imaging-frame index logged at trial
+% END, so timeBlue at that frame is ONSET_LEAD_S after the true stim onset; we
+% subtract the lead to recover the onset (one per trial, in input_params order).
+% This bypasses findStims mode 1, which subtracts a horizon buffer this session
+% no longer has and lands onsets ~37 s early. Runs on EVERY execution so a stale
+% cache cannot leave the offset findStims onsets in place; findStims (a
+% do-not-modify util) is untouched.
 if REDETECT_STIMS
-    det = detectStimsFromInput(d, IN_FIELDS, IN_THRESH, MIN_GAP);
     nTr = size(d.input_params, 1);
-    if isempty(det)
-        warning('REDETECT_STIMS: no input rising edges found — keeping findStims onsets.');
-    else
-        ss0 = d.stimStarts(:)';                     % findStims onsets (offset, correct spacing)
-        [onsets, oi] = correctOnsets(ss0, det, SNAP_TOL);
-        fprintf(['Re-detected %d input edges; robust offset %+.3f s ' ...
-                 '(findStims first onset %.3f s -> %.3f s).\n'], ...
-                 numel(det), oi.shift, ss0(1), onsets(1));
-        fprintf(['  per-trial onsets: %d snapped to a detected edge (max |resid| %.3f s), ' ...
-                 '%d kept offset-corrected findStims.\n'], ...
-                 oi.nSnapped, oi.maxResid, oi.nFallback);
-        if numel(onsets) ~= nTr
-            warning(['correctOnsets returned %d onsets != %d input_params trials — ' ...
-                     'downstream OL/CL indexing assumes one onset per trial.'], ...
-                     numel(onsets), nTr);
-        end
-        d.stimStarts = onsets;
-        d.stimEnds   = onsets + dur;                % dur seconds
+    fr  = round(d.input_params(:, ONSET_FRAME_COL));
+    if any(fr < 1) || any(fr > numel(d.timeBlue))
+        warning(['ONSET_FRAME_COL=%d has %d frame indices outside timeBlue ' ...
+                 '[1..%d] — clamping.'], ONSET_FRAME_COL, ...
+                 sum(fr < 1 | fr > numel(d.timeBlue)), numel(d.timeBlue));
+        fr = min(max(fr, 1), numel(d.timeBlue));
     end
+    % per-trial lead: OL trials use ONSET_LEAD_S; CL trials use the CL-specific
+    % lead (if set) so their onset realigns to t = 0 instead of t = -1.
+    lead = repmat(ONSET_LEAD_S, nTr, 1);
+    nCL  = 0;
+    if ~isempty(ONSET_LEAD_S_CL)
+        clTr       = d.input_params(:, OLCL_COL) == CL_CODE;
+        lead(clTr) = ONSET_LEAD_S_CL;
+        nCL        = nnz(clTr);
+    end
+    d.stimStarts = d.timeBlue(fr).' - lead.';         % 1 x nTr, imaging clock
+    d.stimEnds   = d.stimStarts + dur;                % dur seconds
+    if isempty(ONSET_LEAD_S_CL)
+        leadCLStr = sprintf('CL %.3f s (same)', ONSET_LEAD_S);
+    else
+        leadCLStr = sprintf('CL %.3f s for %d trials', ONSET_LEAD_S_CL, nCL);
+    end
+    fprintf(['Stim onsets from input_params(:,%d) frame index - lead (OL %.3f s, ' ...
+             '%s): %d trials, first onset %.2f s, median trial gap %.2f s.\n'], ...
+             ONSET_FRAME_COL, ONSET_LEAD_S, leadCLStr, nTr, d.stimStarts(1), ...
+             median(diff(d.stimStarts)));
 end
 
 %% ===== input_params diagnostic =========================================
@@ -268,8 +301,17 @@ for si = 1:numel(sides)
                      'trials for every site. Set TRIAL_SITE_COL if trials are site-tagged.']);
         end
     end
-    olMask = sideMask & ip(:, OLCL_COL) == OL_CODE;
-    clMask = sideMask & ip(:, OLCL_COL) == CL_CODE;
+    % keep only the last USE_LAST_N trials (drop session-start warm-up)
+    useMask  = false(nTrials, 1);
+    firstUse = max(1, nTrials - USE_LAST_N + 1);
+    useMask(firstUse:nTrials) = true;
+    if si == 1
+        fprintf('Trial range: using last %d of %d trials (%d..%d); dropped first %d as warm-up.\n', ...
+            min(USE_LAST_N, nTrials), nTrials, firstUse, nTrials, firstUse - 1);
+    end
+
+    olMask = sideMask & useMask & ip(:, OLCL_COL) == OL_CODE;
+    clMask = sideMask & useMask & ip(:, OLCL_COL) == CL_CODE;
     nc = find(olMask);   % open-loop trial indices
     wc = find(clMask);   % closed-loop trial indices
 
@@ -363,6 +405,48 @@ for si = 1:numel(sides)
     title(ax3, sprintf('%s', sd.name), 'FontSize', PS.fs, 'FontWeight', PS.fw);
     set(ax3, 'Box','off', 'TickDir','out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
 
+    %% ---- Fig 4: input-command traces (OL | CL), all trials + mean ------
+    % Window the combined input command per trial onto a common onset-relative
+    % axis (its own sample rate, not the imaging grid) and overlay every trial
+    % plus the across-trial mean — OL pulses vs CL continuous drive.
+    f4 = [];
+    if ~isempty(inSig)
+        dt_in = median(diff(inT));
+        Tin   = (-3 : dt_in : dur + 3);
+        ncIn  = sliceInputTrials(inT, inSig, d.stimStarts, nc, Tin);
+        wcIn  = sliceInputTrials(inT, inSig, d.stimStarts, wc, Tin);
+
+        f4 = paperFig(9, 4);
+        set(f4, 'Name', sprintf('CLvsOL input | %s | %s', sd.name, MN));
+        axOLi = axes(f4, 'Position', [0.08 0.14 0.42 0.74]);
+        axCLi = axes(f4, 'Position', [0.55 0.14 0.42 0.74]);
+        drawInputPanel(axOLi, Tin, ncIn, dur, PS.col_ol, PS, sprintf('OL input (%s)', sd.name));
+        drawInputPanel(axCLi, Tin, wcIn, dur, PS.col_cl, PS, sprintf('CL input (%s)', sd.name));
+        linkaxes([axOLi axCLi], 'xy');
+    else
+        fprintf('[%s] no input command (d.inpTime empty) — skipping input-trace figure.\n', sd.name);
+    end
+
+    %% ---- Fig 5: mean instantaneous tracking error (OL vs CL) -----------
+    % |dF/F - ref| averaged across trials at each time point, OL and CL on the
+    % same axes (+/- SEM ribbon). CL should pull the post-onset error below OL.
+    f5 = paperFig(6, 4);
+    set(f5, 'Name', sprintf('CLvsOL tracking error | %s | %s', sd.name, MN));
+    ax5 = axes(f5, 'Position', [0.15 0.14 0.80 0.78]);
+    hold(ax5, 'on');
+    plotMeanErr(ax5, T, ncTr, ref, PS.col_ol, PS, 'OL');
+    plotMeanErr(ax5, T, wcTr, ref, PS.col_cl, PS, 'CL');
+    xline(ax5, 0, 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
+    xline(ax5, dur, 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
+    addStimPatch(ax5, 0, dur);
+    uistack(findobj(ax5,'Type','line'), 'top');
+    hold(ax5, 'off');
+    xlim(ax5, [-3 dur+3]);
+    xlabel(ax5, 'Time (s)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    ylabel(ax5, 'Mean |\DeltaF/F - ref| (%)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    title(ax5, sprintf('%s | %s', sd.name, MN), 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    lgd5 = legend(ax5, 'Location', 'best'); paperLegend(lgd5);
+
     %% ---- Optional export -----------------------------------------------
     if EXPORT_FIG
         outDir = fullfile('paper', 'images', 'bilateral');
@@ -370,6 +454,10 @@ for si = 1:numel(sides)
         exportgraphics(f1, fullfile(outDir, sprintf('clol_traces_%s_%s.png', MN, sd.name)), 'Resolution', 300);
         exportgraphics(f2, fullfile(outDir, sprintf('clol_variance_%s_%s.png', MN, sd.name)), 'Resolution', 300);
         exportgraphics(f3, fullfile(outDir, sprintf('clol_mse_%s_%s.png', MN, sd.name)), 'Resolution', 300);
+        if ~isempty(f4)
+            exportgraphics(f4, fullfile(outDir, sprintf('clol_input_%s_%s.png', MN, sd.name)), 'Resolution', 300);
+        end
+        exportgraphics(f5, fullfile(outDir, sprintf('clol_trackerr_%s_%s.png', MN, sd.name)), 'Resolution', 300);
     end
 end
 
@@ -426,66 +514,6 @@ function plotExampleTrials(T, traces, trialIdx, onsets, inT, inSig, ref, dur, co
     end
 end
 
-function det = detectStimsFromInput(d, fields, thr, minGap)
-% Detect stim onsets as rising edges (> thr) of the combined input command in
-% `fields` (vs d.inpTime), deduped by a minGap-second refractory. Returns onset
-% TIMES (row vector). Mirrors findStims mode 0 but on the per-channel fields.
-    det = [];
-    if ~isfield(d,'inpTime') || isempty(d.inpTime); return; end
-    it  = d.inpTime(:)';
-    sig = zeros(1, numel(it));
-    for f = 1:numel(fields)
-        if ~isfield(d, fields{f}); continue; end
-        yv = d.(fields{f})(:)';  n = min(numel(it), numel(yv));
-        sig(1:n) = max(sig(1:n), abs(yv(1:n)));
-    end
-    rise = sig(2:end) > thr & sig(1:end-1) <= thr;
-    on   = it([false, rise]);
-    if ~isempty(on); det = on([true, diff(on) > minGap]); end
-end
-
-function [onsets, info] = correctOnsets(ss0, det, snapTol)
-% Build one corrected onset per trial from findStims onsets `ss0` (correct
-% relative spacing but globally offset by the findStims mode-1 horizon bug) and
-% detected rising-edge times `det` (correct absolute timing, but may miss real
-% edges or add spurious ones). Strategy:
-%   1. estimate the constant offset robustly as the median nearest-neighbour
-%      residual (det - nearest ss0) — robust to a minority of bad edges;
-%   2. shift ss0 by that offset, then snap each trial to its nearest detected
-%      edge when within snapTol, else keep the shifted findStims onset.
-% Returns onsets (1 x numel(ss0), input_params trial order) and an info struct.
-    ss0    = ss0(:)';
-    onsets = ss0;
-    info   = struct('shift', 0, 'nSnapped', 0, 'nFallback', numel(ss0), 'maxResid', NaN);
-    if isempty(det) || isempty(ss0); return; end
-    det = sort(det(:)).';
-
-    % robust global offset: median of (each detected edge - nearest findStims onset)
-    resid = arrayfun(@(x) x - ss0(min_idx(abs(ss0 - x))), det);
-    shift = median(resid);
-    shifted = ss0 + shift;
-
-    % per-trial: snap to nearest detected edge if within tolerance, else keep shifted
-    nSnap = 0; maxr = 0;
-    for j = 1:numel(shifted)
-        [dmin, k] = min(abs(det - shifted(j)));
-        if dmin <= snapTol
-            onsets(j) = det(k);
-            nSnap = nSnap + 1;
-            maxr  = max(maxr, dmin);
-        else
-            onsets(j) = shifted(j);
-        end
-    end
-    info.shift = shift; info.nSnapped = nSnap;
-    info.nFallback = numel(shifted) - nSnap;
-    info.maxResid  = maxr;
-end
-
-function k = min_idx(v)
-% Index of the minimum of v (small helper for arrayfun above).
-    [~, k] = min(v);
-end
 
 function dFk = pixelDFoF(d, pixel)
 % Single-pixel dF/F (% of mean image) reconstructed from the session SVD at
@@ -525,6 +553,52 @@ function [traces, err] = sliceTrials(dFoF, t, stimStarts, idx, n_pre, n_win, n_e
         seg         = dFoF(i0 : i0 + n_err);
         err(j)      = norm(seg - ref);
     end
+end
+
+function inTr = sliceInputTrials(inT, inSig, onsets, idx, Tin)
+% Interpolate the combined input command onto the common onset-relative axis
+% Tin (one row per trial). Uses the input's own time base (inT), so it is not
+% downsampled to the imaging grid. NaN outside each trial's available range.
+    inTr = NaN(numel(idx), numel(Tin));
+    for j = 1:numel(idx)
+        t0 = onsets(idx(j));
+        inTr(j,:) = interp1(inT - t0, inSig, Tin, 'linear', NaN);
+    end
+end
+
+function drawInputPanel(ax, T, traces, dur, col, PS, ttl)
+% All-trials (faint) + across-trial mean input command, with stim patch. No
+% reference line (input has no setpoint).
+    hold(ax, 'on');
+    if ~isempty(traces)
+        mu = mean(traces, 1, 'omitnan');
+        plot(ax, T, traces', 'Color', [0.7 0.7 0.7], 'LineWidth', PS.lw_trial, 'HandleVisibility','off');
+        plot(ax, T, mu, 'Color', col, 'LineWidth', PS.lw_mean, 'HandleVisibility','off');
+    end
+    xline(ax, 0, 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
+    xline(ax, dur, 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
+    addStimPatch(ax, 0, dur);
+    uistack(findobj(ax,'Type','line'), 'top');
+    hold(ax, 'off');
+    xlim(ax, [-3 dur+3]);
+    xlabel(ax, 'Time (s)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    ylabel(ax, 'Input command', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    title(ax, ttl, 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    set(ax, 'Box','off', 'TickDir','out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+end
+
+function plotMeanErr(ax, T, traces, ref, col, PS, lbl)
+% Mean instantaneous absolute tracking error |dF/F - ref| across trials at each
+% time point, with a faint +/- SEM ribbon. Drawn onto the shared axes so OL and
+% CL overlay directly.
+    if isempty(traces); return; end
+    e   = abs(traces - ref);
+    mu  = mean(e, 1, 'omitnan');
+    n   = sum(isfinite(e), 1);
+    sem = std(e, 0, 1, 'omitnan') ./ sqrt(max(n, 1));
+    fill(ax, [T fliplr(T)], [mu+sem fliplr(mu-sem)], col, ...
+        'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
+    plot(ax, T, mu, 'Color', col, 'LineWidth', PS.lw_mean, 'DisplayName', lbl);
 end
 
 function drawTracePanel(ax, T, traces, ref, dur, col, PS, ttl)
