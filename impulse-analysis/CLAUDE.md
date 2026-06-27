@@ -13,6 +13,37 @@
 - `prestim_variance.m` — pre-trial variance vs peak deviation, paper figure
 - `spatial_spread.m` — spatial spread vs amplitude
 
+## Residual / state-dependence workbench — PRIMARY ACTIVE STREAM (2026-06)
+`contra_residual.m` — SECTIONED MATLAB workbench. Isolates the LOCAL stim effect = actual ipsi dip
+− contra prediction (contra predicts the GLOBAL network activity flowing into the ipsi kernel), then
+tests its brain-state dependence. Shared compute: `utils/cp_residual_core.m`. Run order:
+1. `load_experiments.m` (builds `allExperiments`; reads SVD from server — slow).
+2. `[CP-SETUP]` — builds `R`,`S` + the Actual/Global/Local decomposition. RUN FIRST.
+3. then any section, in any order: `[CP-RESi]` (clickable per-trial inspector),
+   `[CP-LOCAL]` (state×Actual/Global/Local overview), `[CP-MOTION]` (No-motion vs Motion),
+   `[CP-MOTION-AMP]` (per-amplitude, fig-3 style, `amp_sig`='Actual'|'Global'|'Local'),
+   `[CP-VAR]`, `[CP-DELTA]`.
+- Helpers (utils/): `cp_agl.m`, `cp_cont_state.m`, `cp_motion_amp.m`, `cp_res_inspector.m`.
+- Cross-session batch: `cp_state_batch.m`. Absolute dose-response (bleed comp ON): `cp_doseresponse.m`.
+- selExp=3 (AL_0033) ROI cached in `impulse-analysis/data/`; AL_0041 e1/e2 need interactive ROI draw on first run.
+
+### Residual-stream design decisions (do not silently change)
+- `decontam=false` for STATE — stim-bleed comp subtracts a per-amplitude CONSTANT that CANCELS in
+  within-amp deviations → state results identical with/without it. decontam=true ONLY for absolute
+  magnitude (`cp_doseresponse.m`). Raw residual recovers ~21% of the dip (contra absorbs ~79% as bleed).
+- `use_motion=false` — keep motion OUT of the contra map so it can be tested as a state.
+- Inhibition-energy / dip window = **0–200 ms** (trough at 114 ms; 200–300 ms is post-dip REBOUND, not inhibition).
+- DV = per-trial deviation from amp-mean (`dev_stim`). L1 (total abs deviation) is a cleaner PROPOSED
+  replacement (var partial 0.100 p=0.007, delta 0.085 p=0.023) — NOT yet adopted; see RESEARCH 2026-06-20.
+
+### Headline finding (AL_0033 single session — REPLICATION ON AL_0041 PENDING)
+The LOCAL stim effect is state-ROBUST to motion. The "motion→more predictable" effect (motion_analysis
+fig 6: median |Peak dev| No-mot 1.23 vs Mot 0.59, p=9e-11, a THRESHOLD effect) is GLOBAL — splitting via
+contra puts it all in the Global component; the LOCAL residual is motion-NULL (partial ρ=+0.003 p=0.93,
+inverts at high amp). Local effect's only retained state-dependence: weak pre-stim VARIANCE (partial
+ρ=0.085 p=0.022) + borderline DELTA (0.073 p=0.051). Bridges the controller (CL motion→lower MSE) via the
+low-variance desynchronized global state (motion↔variance ρ=−0.20). Full record: FINDINGS.md + RESEARCH.md 2026-06-19/20/22.
+
 ## Data
 - 3 sessions: AL_0041 (experiments 1 & 2), AL_0033 (experiment 3, 2025-01-29)
 - AL_0041 → stim mode 2 (`input_params(:,2)` = absolute sample index)

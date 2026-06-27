@@ -83,6 +83,25 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Paper claim:** Trials with higher peri-stimulus motion show greater deviation from the mean impulse response, suggesting motion as a source of trial-to-trial variability.
 **Figure:** `paper/images/figure2/imp_motion_devscatter_*.pdf` (panel 2F single), `paper/images/figure2/imp_motion_devscatter_all_sessions.pdf` (panel 2F-pool)
 **Status:** Analysis done. Figures promoted to paper panel 2F. Manuscript integration pending.
+**⚠ 2026-06-22 TENSION:** the contra-residual stream's reproduced fig 6 (peakdev, pooled n=1467) shows motion → *less* |Peak dev| (more predictable: median No-motion 1.23 vs Motion 0.59, ranksum p=9e-11) — the OPPOSITE sign to this entry's "motion → greater deviation." Reconcile before relying on panel 2F (likely a metric difference — peakdev here vs the `dev_metric='cperr'` default this entry may have used — or a sign/interpretation error). See the next finding.
+
+---
+
+## PARTIAL: Local photoinhibition response is state-robust to motion; state-dependence lives in GLOBAL activity
+**Status:** Single session (AL_0033 2025-01-29, n=748); **replication on AL_0041 e1/e2 PENDING** (needs interactive ROI draw). Stream = `impulse-analysis/contra_residual.m` (sectioned workbench) + `utils/cp_residual_core.m`. Full chronological detail: RESEARCH.md 2026-06-17 → 2026-06-22.
+
+**Question:** Is the trial-to-trial variability of the LOCAL photoinhibition response brain-state dependent? Motivated by (a) the controller result — CL motion trials have lower MSE / are more "steerable"; and (b) the "Motion predicts impulse response deviation" finding above (fig 6), which is on the RAW ipsi signal (global + local mixed).
+
+**Approach:** Predict the ipsi primary-pixel from contralateral SVD activity (instantaneous map, no lags, held-out R²≈0.90). Contra captures the GLOBAL/network activity into the ipsi kernel; residual = actual − contra = the LOCAL stim effect (orthogonal to concurrent contra). Per trial, take `|dip − amplitude-mean|` (the fig-6 deviation; lower = more predictable) for **Actual** (=fig 6), **Global** (contra pred), **Local** (residual); test vs motion, pre-stim variance, pre-stim 1–4 Hz delta. Decisive test = `partial(dev_stim, state | dev_pre)` (controls baseline contra-prediction quality). DVs z-within-amplitude.
+
+**Results (AL_0033):**
+- **Motion→predictability is REAL but GLOBAL, not local.** Pooled actual: median |Peak dev| No-motion 1.23 vs Motion 0.59 (ranksum p=9e-11) — a THRESHOLD/tail effect (high-motion trials avoid the bad-prediction tail; continuous r weak because motion is zero-inflated, ~8% of trials). Splitting the deviation by contra: the effect sits entirely in the **Global** component; the **Local** residual is motion-**NULL** (partial ρ=+0.003 p=0.93; per-amplitude even inverts at high amp — the biggest 4.90 V local deviation is a high-motion trial).
+- **Local effect retains WEAK genuine state-dependence:** pre-stim VARIANCE partial ρ=+0.085 (p=0.022, survives), DELTA ρ=+0.073 (p=0.051, borderline). Synchronized/high-variance → larger local deviation; low-variance/desynchronized → more reproducible.
+- **Mechanism / controller bridge:** motion indexes a low-variance, desynchronized global state (motion↔variance ρ=−0.20). That regime makes GLOBAL activity more reproducible → actual response more predictable, and (in CL) the controller faces less disturbance → lower MSE. The LOCAL stim response is state-robust except for the weak variance modulation.
+
+**Claim (provisional, pending AL_0041):** The local photoinhibition response is largely state-invariant; the apparent state/motion dependence is a property of the GLOBAL cortical state (readable from the contralateral hemisphere), not of the local stimulus response. Pre-stim variance weakly modulates local reproducibility. This supplies the open-loop mechanism for the controller's motion→lower-MSE result.
+
+**Caveats:** Single session. Raw residual recovers only ~21% of the dip magnitude (contra absorbs ~79% as stim bleed) — a lower bound on the local effect; irrelevant to the within-amp STATE result (per-amp constant cancels) but matters for absolute magnitude (use `decontam=true` / `cp_doseresponse.m`). `dev_stim` is a mean-squared deviation; **L1 (total absolute deviation) is a cleaner proposed DV** (var partial 0.100 p=0.007, delta 0.085 p=0.023) — not yet adopted. Inhibition-energy window stays 0–200 ms (trough 114 ms; 200–300 ms is rebound).
 
 ---
 
