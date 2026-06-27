@@ -52,6 +52,20 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Run `cl_sinewave.m` → feedforward benefit quantification
 - [ ] Run `compare_sides.m` → cross-side summary figure
 
+### AL_0048 galvo photostim site-grid (`opto_brainGrid638`) — see `scratch_grid/README.md`
+- [x] 2026-06-25 — Python port `scratch_grid/grid_analysis.py` runs end-to-end on 2026-06-24/2 (all notebook analysis plots: sites/timecourses/τ/spatial/raster). Onsets+positions derived from raw Timeline + rig calibration; bregma dial-in confirmed; power split done (only 0.5 fired)
+- [ ] (optional) aggregate stim→response **causal/connectivity map** across the 52 sites (N×N or per-region readout) — beyond per-site `grid_spatial.png`; per-trial dF/F already stashed in `dff_by_site`
+- [ ] 0.25-power map not recoverable here (laser sub-threshold) — if low-power data wanted, need a session where the 638 command clears the lasing threshold at 0.25; confirm with experimenter whether 0.25 was expected to fire
+- [ ] (optional) parameterize loader for other `opto_brainGrid` sessions / the 594 line
+- [ ] if promoted to a paper panel: move outputs out of `scratch_grid/grid_png` and apply `paperFig`/`paperStyle`
+
+### Controller tuning — gain grid + auto-tuning (new sub-area, secondary analysis)
+Full state + data-layout findings → `controller-tuning/CLAUDE.md` (read its ⛔ STATUS block first).
+- [ ] **BLOCKED — ask user** the 5 "Open rig questions" in `controller-tuning/CLAUDE.md`: states.csv semantics/units/rate; AL_0034 7-col input_params + onset source; AL_0033 col2 onset sample-space; AL_0034 10-25 e2 source; zero-order rule.
+- [ ] Rewire `ct_process_set.m` `ct_load_session` to use **states.csv** as the output `y` (uniform, SVD-free) + a **per-mouse column map** (AL_0033 8-col onset@2/Kp@5/Ki@6; AL_0034 7-col gains@2:3, no onset col → detect from input_amps.csv).
+- [ ] Re-test on AL_0033 sessions first (cleanest), verify `align-check`, then `gain_grid.m` (cost surface) + `auto_tune.m` (convergence).
+- [ ] Speed already fixed (no `initialize_data`/face decode). Scripts built + lint-clean.
+
 ### Contra→ipsi prediction framework (impulse) — from JOURNAL 2026-06-16
 - [ ] Solidify ONE prediction approach on non-stim data: benchmark current instantaneous OLS vs Zhiwen Ye 2023 method vs PCA-based; pick the winner on held-out spontaneous R² — `impulse-analysis/contra_prediction.m`
 - [ ] Compare against Ye et al. 2023 instantaneous contra→ipsi code/method directly (`C:\Users\aditya\Documents\projects\YE-et-al-2023-spirals\`) — confirm our pX=0 map matches their formulation

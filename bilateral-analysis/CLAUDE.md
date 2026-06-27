@@ -8,6 +8,13 @@
 ## Sub-area trigger words
 bilateral, AL_0048, dual opsin, excitatory left, inhibitory right, galvo position, variable ref, controller tuning, grid sweep, gradient descent
 
+## Related: AL_0048 galvo photostim site-grid (`opto_brainGrid638`)
+Separate from the CL/OL controller work above: a 52-position 638 nm photostim *spatial-mapping*
+grid. Python analysis (runs in repo `.venv`, not MATLAB) → **`scratch_grid/grid_analysis.py`**;
+full handoff in **`scratch_grid/README.md`**. Confirmed dual-opsin polarity (excit-left +/red,
+inhib-right −/blue); only the 0.5 laser power fired (0.25 sub-threshold). Run on AL_0048
+2026-06-24/2 (widefield+Timeline) with exp 3 = Block/expDef/hardwareInfo (calibration).
+
 ## Scripts (run from brain_paper/ root)
 - `load_bilateral.m`     — session registry, per-side pixel coords, data loading + caching
 - `ol_characterization.m` — OL impulse + step response, both sides
