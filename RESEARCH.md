@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-26 — Scoped the utils/ "DO NOT MODIFY" rule to vendored subfolders only
+**Changed/Found:** `CLAUDE.md` (project layout) — the blanket `utils/ ← DO NOT MODIFY` label was wrong; the rule only ever applied to the four vendored deps (`npy-matlab/`, `Rigbox/`, `widefield/`, `Pipelines/`). Reworded so those four are marked DO NOT MODIFY and the rest of `utils/` (e.g. `cp_*.m`, `paperFig.m`) is explicitly project-owned/editable.
+**Why:** Audit of uncommitted work flagged `utils/cp_*.m` edits as rule violations; user clarified the prohibition is scoped to the four subfolders only (which are also already `.gitignore`d).
+**Next:** none.
+
 ### 2026-06-26 — Restored deleted contra_residual.m; excluded concurrent cp_residual_core edit from commit
 **Changed/Found:** `impulse-analysis/contra_residual.m` had been **deleted from disk** mid-session (session-start `git status` already showed it staged `D`; a concurrent session's git clean/checkout removed the untracked workbench). Recreated the full sectioned workbench from this session's authored content ([CP-SETUP]/[CP-RESi]/[CP-LOCAL]/[CP-MOTION]/[CP-MOTION-AMP]/[CP-VAR]/[CP-DELTA]). Also found `utils/cp_residual_core.m` carries an **uncommitted concurrent edit dated today** ("per user 2026-06-26"): the MOTION / VARIANCE / DELTA state-covariate windows were moved from pure pre-stim to **peri-stim spanning the onset** (var/delta `[-1,+0.5] s`, motion total |z| `[-2,+0.5] s`), with an in-code note acknowledging "mild circularity vs the DV; partialcorr(dev_stim|dev_pre) is the safeguard." The committed state-dependence numbers (motion partial +0.003, var 0.085, delta 0.073) were computed on the OLD pre-stim windows.
 **Why:** Committed only my own deliverable (contra_residual.m) + handoff docs (CLAUDE.md/FINDINGS/RESEARCH/TASKS). Deliberately left `cp_residual_core.m` **uncommitted** — it is a concurrent session's in-flight work; committing it would capture their WIP and silently change the methodology underneath the documented findings. The helpers (cp_agl/cp_cont_state/cp_motion_amp/cp_res_inspector) were already committed by the concurrent session, so the workbench's deps are tracked.

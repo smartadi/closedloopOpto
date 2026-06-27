@@ -181,7 +181,9 @@ brain_paper/
     CLAUDE.md            ← controller context (~35 lines, load for CL/OL sessions)
   paper-writing/
     CLAUDE.md            ← manuscript context (~35 lines, load for writing sessions)
-  utils/                 ← external dependencies — DO NOT MODIFY
+  utils/                 ← project helpers + vendored deps
+    npy-matlab/ Rigbox/ widefield/ Pipelines/  ← external deps — DO NOT MODIFY
+    (everything else, e.g. cp_*.m, paperFig.m — project-owned, editable)
   paper/                 ← exported figures
   Closedloop_edit/       ← local LaTeX snapshot (sibling dir, not in repo)
 ```
