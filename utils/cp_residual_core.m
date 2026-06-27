@@ -492,8 +492,14 @@ end   % do_plot (CP-IMP figure)
 % confound); state covariates z-scored across the session (matches motThresh=1.5).
 
 iPre_dev = find(t_imp >= -0.2 & t_imp < 0);        % matched pre-onset control window
-win_r  = hann(numel(pre_bl)); W_r = sum(win_r.^2); % pre-stim spectral setup (1 s)
-nfft_r = 2^nextpow2(numel(pre_bl));
+% --- state windows (peri-stim, per user 2026-06-26): MOTION [-2,+0.5]s total |z|,
+%     VARIANCE & DELTA [-1,+0.5]s. NB these SPAN the onset (+0.5 s into the stim
+%     response) -> mild circularity vs the DV; partialcorr(dev_stim|dev_pre) is the
+%     safeguard. (was: pure pre-stim 1 s window ending at onset.)
+vd_preN = round(1*Fs);  vd_postN = round(0.5*Fs);  nWvd = vd_preN+vd_postN+1;
+motPreN = round(2*Fs);  motPostN = round(0.5*Fs);
+win_r  = hann(nWvd); W_r = sum(win_r.^2);          % spectral setup sized to var/delta window
+nfft_r = 2^nextpow2(nWvd);
 fr     = (0:nfft_r-1)'/nfft_r * Fs; nB_r = floor(nfft_r/2)+1;
 delta_r = fr(1:nB_r) >= 1 & fr(1:nB_r) <= 4;
 zf = @(x) (x - mean(x,'omitnan')) ./ max(std(x,'omitnan'), eps);
@@ -521,16 +527,17 @@ for ia = ia_res
         resE(j) = mean(R(j,iDip), 'omitnan');
         devS(j) = mean((R(j,iDip)     - muD).^2, 'omitnan');
         devP(j) = mean((R(j,iPre_dev) - muP).^2, 'omitnan');
-        if j <= numel(motA); mt(j) = motA(j); end
         [~, ion] = min(abs(t_full - starts(j)));
-        gp = ion-numel(pre_bl) : ion-1;
-        if gp(1) >= 1
+        gp = ion-vd_preN : ion+vd_postN;            % var/delta window [-1,+0.5]s (peri-stim)
+        if gp(1) >= 1 && gp(end) <= min(nFrames,nF_m)
             sp = y_full(gp);
             pv(j) = var(sp, 'omitnan');
             Xf = fft(sp(:).*win_r, nfft_r);
             pw = abs(Xf(1:nB_r)).^2 * 2/(Fs*W_r);
             dp(j) = mean(pw(delta_r), 'omitnan');
         end
+        mw = ion-motPreN : ion+motPostN;            % motion = total |z| over [-2,+0.5]s
+        if mw(1) >= 1 && mw(end) <= numel(motz_full); mt(j) = sum(abs(motz_full(mw))); end
         if make_inspector
             gW = ion-pre_w : ion+post_w;
             if gW(1) >= 1 && gW(end) <= min(nFrames, nF_m)

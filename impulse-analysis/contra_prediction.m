@@ -481,3 +481,406 @@ end
 fprintf('[CP-HEMI] exported cp_hemi_rank/r2map/examples/bestworst .png\n');
 
 
+%% [CP-KERNEL] Contra weight map: pixels most predictive of the ipsi primary pixel
+% Back-project the deployed HEMI readout's contra-mode weights into pixel space
+% (Ye et al. 2023 Fig 3D-G analog). The readout at rank n is
+%   yhat = (X_zscored * h_b(:,1:n)) * h_aKern(1:n),
+% so the weight on the z-scored contra modes is h_b(:,1:n)*h_aKern(1:n); dividing by
+% the train per-mode std expresses it on the RAW V_c_full modes -> the same basis as
+% the cached contra spatial loadings U_svd_raw, giving a signed per-pixel weight map.
+h_nmap  = h_kbest;                                         % deployed rank (best held-out R^2)
+h_sdtr  = std(V_c_full(1:h_K, h_tr), [], 2);  h_sdtr(h_sdtr==0) = 1;
+h_wz    = h_b(:, 1:h_nmap) * h_aKern(1:h_nmap);           % weight on z-scored modes  [K x 1]
+h_wraw  = h_wz ./ h_sdtr;                                 % weight on RAW contra modes [K x 1]
+h_idx_c = find(valid_cp_svd(:));                          % contra pixels (== U_svd_raw rows)
+h_pixw  = U_svd_raw(:, 1:h_K) * h_wraw;                   % [nPix_contra x 1] signed
+h_km    = nan(nY_cp, nX_cp);  h_km(h_idx_c) = h_pixw;
+
+[h_figK, ~, h_axK] = brain_overlay_fig(mimg_cp, 8, 6);
+h_wlim   = prctile(abs(h_pixw), 99);  if h_wlim < eps; h_wlim = 1; end
+h_kmT    = h_km';                                         % transposed display (matches brain bg)
+h_alphaK = min(1, abs(h_kmT)./h_wlim);  h_alphaK(isnan(h_alphaK)) = 0;
+h_imK = imagesc(h_axK, h_kmT);  set(h_imK, 'AlphaData', h_alphaK);
+nC = 256; nHalf = ceil(nC/2);                            % blue->white->red diverging (no toolbox)
+h_cmapK = [ linspace(0.23,1,nHalf)', linspace(0.30,1,nHalf)', linspace(0.75,1,nHalf)'; ...
+            linspace(1,0.80,nC-nHalf)', linspace(1,0.10,nC-nHalf)', linspace(1,0.10,nC-nHalf)' ];
+colormap(h_axK, h_cmapK);  clim(h_axK, [-h_wlim, h_wlim]);
+plot(h_axK, py_prim, px_prim, 'k+', 'MarkerSize',8, 'LineWidth',1.5, 'HandleVisibility','off');
+title(h_axK, sprintf('Contra weights predictive of ipsi primary pixel (rank %d)', h_nmap), ...
+    'FontSize',6,'FontWeight','bold');
+h_cbK = colorbar(h_axK, 'Position',[0.80 0.12 0.05 0.72]);
+ylabel(h_cbK, 'predictive weight (a.u.)', 'FontSize',5,'FontWeight','bold');
+hold(h_axK,'off');
+paperExport(h_figK, fullfile(paper_root, 'cp_hemi_kernel_map.png'));
+fprintf('[CP-KERNEL] exported cp_hemi_kernel_map.png (rank %d, |w| 99pct=%.3g)\n', h_nmap, h_wlim);
+
+% --- secondary: squared "energy" map (sign-agnostic localization; sharpens focal vs diffuse) ---
+h_pixw2 = h_pixw.^2;
+h_km2   = nan(nY_cp, nX_cp);  h_km2(h_idx_c) = h_pixw2;
+[h_figK2, ~, h_axK2] = brain_overlay_fig(mimg_cp, 8, 6);
+h_wlim2  = prctile(h_pixw2, 99);  if h_wlim2 < eps; h_wlim2 = 1; end
+h_km2T   = h_km2';
+h_alpha2 = min(1, h_km2T ./ h_wlim2);  h_alpha2(isnan(h_alpha2)) = 0;
+h_imK2 = imagesc(h_axK2, h_km2T);  set(h_imK2, 'AlphaData', h_alpha2);
+h_cmap2 = [linspace(1,0.85,256)', linspace(1,0.10,256)', linspace(1,0.10,256)'];   % white -> red
+colormap(h_axK2, h_cmap2);  clim(h_axK2, [0, h_wlim2]);
+plot(h_axK2, py_prim, px_prim, 'k+', 'MarkerSize',8, 'LineWidth',1.5, 'HandleVisibility','off');
+title(h_axK2, sprintf('Contra predictive ENERGY (w^2, rank %d)', h_nmap), 'FontSize',6,'FontWeight','bold');
+h_cbK2 = colorbar(h_axK2, 'Position',[0.80 0.12 0.05 0.72]);
+ylabel(h_cbK2, 'weight^2 (a.u.)', 'FontSize',5,'FontWeight','bold');
+hold(h_axK2,'off');
+paperExport(h_figK2, fullfile(paper_root, 'cp_hemi_kernel_map_sq.png'));
+fprintf('[CP-KERNEL] exported cp_hemi_kernel_map_sq.png (secondary energy view)\n');
+
+% --- dump compact rank-K fit products for the interactive kernel explorer ----------
+% cp_kernel_explorer(matfile) back-projects ANY clicked ipsi pixel's contra weight
+% map through these (pixel-agnostic) products -- one matvec per click, ~70 MB, no raw
+% SVD. Chain: aKern = M1*meanU';  w = (h_b(:,1:n)*aKern(1:n))./sd;  pixw = U_svd_raw*w.
+h_M1 = h_scoresTr \ (V_ipsi_full(1:h_K, h_tr)).';          % [K x K]  (aKern = M1*meanU')
+expl = struct( ...
+    'U_svd_raw_K',  U_svd_raw(:, 1:h_K), ...               % [nContra x K] contra spatial loadings
+    'U_ipsi_raw_K', U_ipsi_raw(:, 1:h_K), ...              % [nIpsi   x K] ipsi  spatial loadings
+    'M1',           h_M1, ...                              % [K x K]
+    'h_b_K',        h_b(:, 1:h_K), ...                     % [K x K] CanonCor2 b
+    'sd_tr',        h_sdtr(:), ...                         % [K x 1] train per-mode std
+    'idx_contra',   h_idx_c, ...                           % contra linear idx (U_svd_raw rows)
+    'full_idx',     h_full_idx, ...                        % ipsi  linear idx (U_ipsi_raw rows)
+    'mimg',         mimg_cp, 'nY', nY_cp, 'nX', nX_cp, ...
+    'k_prim',       k_prim, 'px_prim', px_prim, 'py_prim', py_prim, ...
+    'nmap',         h_nmap, 'K', h_K);
+h_expl_file = fullfile(dataDir, sprintf('cp_kernel_explorer_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+save(h_expl_file, '-struct', 'expl', '-v7.3');
+fprintf('[CP-KERNEL] explorer products -> %s\n', h_expl_file);
+fprintf('           launch:  cp_kernel_explorer(''%s'')\n', h_expl_file);
+
+
+%% [CP-BLEED] Impulse-bleed map: which contra pixels are input-affected, and how far
+% For every contra pixel, test whether its trial-averaged peri-stim response is
+% amplitude-graded -- the dose-response slope beta over amps 0..5 is the input-effect
+% strength. Significance from an amplitude-LABEL permutation null (shuffles the amp
+% tag across trials, breaking the amp<->response link while keeping each trial's
+% response + its slow-signal autocorrelation intact), then Benjamini-Hochberg FDR
+% across pixels. Response = mean dF/F over [0,200] ms post-onset minus a [-500,0] ms
+% pre-onset baseline (same 0-200 ms window as the inhibition energy). Expectation:
+% |beta| decays with distance from the primary pixel.
+
+b_post_s = 0.200;     % post-onset response window (s) -- inhibition-energy window
+b_pre_s  = 0.500;     % pre-onset baseline window (s)
+b_nPerm  = 1000;      % amplitude-label permutations for the null
+b_q      = 0.05;      % BH-FDR level
+rng(7);               % reproducible permutations
+
+% --- per-amp stim onsets INCLUDING amp 0 (catch); times -> frame indices ----------
+b_onset_t = [];  b_amp = [];
+for ia = 1:numel(uAmp_cp)
+    bs = imp_data.startTimes{ia}(:);
+    b_onset_t = [b_onset_t; bs];                                          %#ok<AGROW>
+    b_amp     = [b_amp; repmat(double(uAmp_cp(ia)), numel(bs), 1)];       %#ok<AGROW>
+end
+b_onf = zeros(numel(b_onset_t), 1);
+for j = 1:numel(b_onset_t)
+    [~, b_onf(j)] = min(abs(t_full - b_onset_t(j)));
+end
+b_post = round(b_post_s * Fs);
+b_pre  = round(b_pre_s  * Fs);
+b_Tend = min(nF_m, size(V_cp, 2));
+b_keep = (b_onf - b_pre >= 1) & (b_onf + b_post <= b_Tend);
+b_onf  = b_onf(b_keep);  b_amp = b_amp(b_keep);
+nTrial = numel(b_onf);
+
+% --- per-trial response in contra-mode space: dv = mean(V_post) - mean(V_pre) ------
+% r(pixel,trial) = (U_contra * dv) ./ mimg_contra * 100   (getpixel_dFoF mode-1 dF/F)
+b_idx_c = find(valid_cp_svd(:));
+Uflat   = reshape(U_cp, nY_cp*nX_cp, nSV_cp);
+b_Uc    = double(Uflat(b_idx_c, :));                 % [nContra x nSV]
+b_mI    = mimg_cp(b_idx_c);  b_mI(b_mI == 0) = eps;  % [nContra x 1]
+b_dv = zeros(nSV_cp, nTrial);
+for j = 1:nTrial
+    o = b_onf(j);
+    b_dv(:,j) = mean(double(V_cp(:, o:o+b_post)), 2) - mean(double(V_cp(:, o-b_pre:o-1)), 2);
+end
+b_R  = (b_Uc * b_dv) ./ b_mI * 100;                  % [nContra x nTrial] dF/F response
+b_Rc = b_R - mean(b_R, 2);                           % center over trials
+clear b_R
+
+% --- dose-response slope beta per contra pixel ------------------------------------
+b_ac    = b_amp - mean(b_amp);                       % [nTrial x 1]
+b_den   = b_ac.' * b_ac;
+b_beta  = (b_Rc * b_ac) / b_den;                     % [nContra x 1]
+b_abeta = abs(b_beta);
+
+% --- amplitude-label permutation null -> two-tailed p -----------------------------
+b_cnt = zeros(size(b_beta));
+for s = 1:b_nPerm
+    ac    = b_amp(randperm(nTrial)) - mean(b_amp);
+    bs    = (b_Rc * ac) / (ac.' * ac);
+    b_cnt = b_cnt + (abs(bs) >= b_abeta);
+end
+b_p = (b_cnt + 1) / (b_nPerm + 1);
+
+% --- sanity: primary pixel (ipsi) should be strongly amp-graded (positive control) -
+b_kr = (px_prim-k_prim):(px_prim+k_prim);  b_kr = b_kr(b_kr>=1 & b_kr<=nY_cp);
+b_kc = (py_prim-k_prim):(py_prim+k_prim);  b_kc = b_kc(b_kc>=1 & b_kc<=nX_cp);
+[BKR,BKC] = ndgrid(b_kr, b_kc);
+b_pidx = sub2ind([nY_cp,nX_cp], BKR(:), BKC(:));
+b_mIp  = mean(mimg_cp(b_kr,b_kc), 'all');
+b_rp   = (mean(double(Uflat(b_pidx,:)),1) * b_dv) / b_mIp * 100;   % [1 x nTrial]
+b_rpc  = b_rp - mean(b_rp);
+b_bp   = (b_rpc * b_ac) / b_den;
+b_cps  = 0;
+for s = 1:b_nPerm
+    ac = b_amp(randperm(nTrial)) - mean(b_amp);
+    b_cps = b_cps + (abs((b_rpc*ac)/(ac.'*ac)) >= abs(b_bp));
+end
+clear b_Uc b_dv
+
+% --- Benjamini-Hochberg FDR across contra pixels ----------------------------------
+[b_ps, b_oi] = sort(b_p);
+b_m   = numel(b_p);
+b_thr = (1:b_m).' / b_m * b_q;
+b_cut = find(b_ps <= b_thr, 1, 'last');
+b_sig = false(b_m, 1);
+if ~isempty(b_cut);  b_sig(b_oi(1:b_cut)) = true;  end
+fprintf('[CP-BLEED] %d trials (amps %s) | %d/%d contra px input-affected (FDR q<%.2f)\n', ...
+        nTrial, num2str(unique(b_amp).'), nnz(b_sig), b_m, b_q);
+fprintf('[CP-BLEED] sanity: primary-pixel beta=%.3g (p=%.4f) -- positive control\n', ...
+        b_bp, (b_cps+1)/(b_nPerm+1));
+
+% --- map: signed dose-response slope; FDR-significant pixels opaque ----------------
+b_km  = nan(nY_cp, nX_cp);  b_km(b_idx_c) = b_beta;
+[b_fig1, ~, b_ax1] = brain_overlay_fig(mimg_cp, 8, 6);
+b_lim = prctile(abs(b_beta), 99);  if b_lim < eps; b_lim = 1; end
+b_kmT = b_km';
+b_al  = zeros(nY_cp, nX_cp);  b_al(b_idx_c) = 0.30;  b_al(b_idx_c(b_sig)) = 1.0;
+b_alT = b_al';  b_alT(isnan(b_kmT)) = 0;
+b_im1 = imagesc(b_ax1, b_kmT);  set(b_im1, 'AlphaData', b_alT);
+nCb = 256; nHb = ceil(nCb/2);                        % blue->white->red diverging
+b_cmap = [ linspace(0.23,1,nHb)', linspace(0.30,1,nHb)', linspace(0.75,1,nHb)'; ...
+           linspace(1,0.80,nCb-nHb)', linspace(1,0.10,nCb-nHb)', linspace(1,0.10,nCb-nHb)' ];
+colormap(b_ax1, b_cmap);  clim(b_ax1, [-b_lim, b_lim]);
+plot(b_ax1, py_prim, px_prim, 'g+', 'MarkerSize',8, 'LineWidth',1.5, 'HandleVisibility','off');
+title(b_ax1, 'Impulse-bleed: dose-response slope \beta (opaque = FDR sig.)', ...
+      'FontSize',6, 'FontWeight','bold');
+b_cb = colorbar(b_ax1, 'Position',[0.80 0.12 0.05 0.72]);
+ylabel(b_cb, '\beta (dF/F per amp)', 'FontSize',5, 'FontWeight','bold');
+hold(b_ax1, 'off');
+paperExport(b_fig1, fullfile(paper_root, 'cp_bleed_slope_map.png'));
+
+% --- decay: |beta| and % FDR-significant vs distance from the primary pixel --------
+[b_rr, b_cc] = ind2sub([nY_cp, nX_cp], b_idx_c);
+b_dist  = hypot(b_rr - px_prim, b_cc - py_prim);     % px from primary pixel
+b_edges = linspace(0, max(b_dist), 16);
+b_ctr   = 0.5*(b_edges(1:end-1) + b_edges(2:end));
+b_mB = nan(numel(b_ctr),1);  b_sB = nan(numel(b_ctr),1);  b_fS = nan(numel(b_ctr),1);
+for k = 1:numel(b_ctr)
+    mm = b_dist >= b_edges(k) & b_dist < b_edges(k+1);
+    if any(mm)
+        b_mB(k) = mean(b_abeta(mm));
+        b_sB(k) = std(b_abeta(mm)) / sqrt(nnz(mm));
+        b_fS(k) = 100 * mean(b_sig(mm));
+    end
+end
+b_fig2 = paperFig(8, 6);  b_ax2 = axes('Parent', b_fig2);
+yyaxis(b_ax2, 'left');
+errorbar(b_ax2, b_ctr, b_mB, b_sB, 'o-', 'LineWidth',1.2, 'MarkerSize',3);
+ylabel(b_ax2, 'mean |\beta|  (dF/F per amp)', 'FontSize',6, 'FontWeight','bold');
+yyaxis(b_ax2, 'right');
+plot(b_ax2, b_ctr, b_fS, 's--', 'LineWidth',1.0, 'MarkerSize',3);
+ylabel(b_ax2, '% pixels FDR-significant', 'FontSize',6, 'FontWeight','bold');
+xlabel(b_ax2, 'distance from primary pixel (px)', 'FontSize',6, 'FontWeight','bold');
+title(b_ax2, 'Impulse-bleed decay vs distance', 'FontSize',6, 'FontWeight','bold');
+set(b_ax2, 'FontSize',6, 'FontWeight','bold');
+paperExport(b_fig2, fullfile(paper_root, 'cp_bleed_decay.png'));
+fprintf('[CP-BLEED] exported cp_bleed_slope_map.png + cp_bleed_decay.png\n');
+
+% --- params for the interactive WHOLE-BRAIN bleed explorer (uses the FLIPPED primary) ---
+% cp_bleed_explorer reloads the SVD and recomputes beta per pixel for any time window
+% live (cumsum-of-V window means -> one matvec/update); permutation+FDR on a button.
+% The flipped primary (row<->col swap) is the marker + distance reference, per the
+% user's decision to treat the transposed pixel as the recording site.
+bx = struct('mn',mn, 'td',td, 'en',en, 'nSV_load',nSV_load, ...
+            'onf',b_onf, 'amp',b_amp, 'brain_idx',find(brain_mask_cp(:)), ...
+            'prim_row',py_prim, 'prim_col',px_prim, ...   % FLIPPED: row=py_prim, col=px_prim
+            'k_prim',k_prim, 'Fs',Fs, 'nY',nY_cp, 'nX',nX_cp, 'dur_imp',dur_imp);
+bx_file = fullfile(dataDir, sprintf('cp_bleed_explorer_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+save(bx_file, '-struct', 'bx');
+fprintf('[CP-BLEED] explorer params -> %s\n', bx_file);
+fprintf('           launch:  cp_bleed_explorer(''%s'')\n', bx_file);
+
+
+%%
+
+% kernel explorer (self-contained ~70 MB .mat, opens instantly)
+cp_kernel_explorer('C:\Users\aditya\Documents\projects\brain_paper\impulse-analysis\data\cp_kernel_explorer_AL_0033_0129_e1.mat')
+%%
+% bleed explorer (reloads the SVD via loadUVt -> ~30 s to open)
+cp_bleed_explorer('C:\Users\aditya\Documents\projects\brain_paper\impulse-analysis\data\cp_bleed_explorer_AL_0033_0129_e1.mat')
+
+
+% =====================================================================================
+% RESIDUAL + STATE-DEPENDENCE WORKBENCH  (merged from contra_residual.m, 2026-06-26)
+% =====================================================================================
+% Sectioned residual-analysis workbench for the contra->ipsi LOCAL stim effect.
+% Run [CP-SETUP] first (builds R, S, and the Actual/Global/Local decomposition),
+% then run any section below on its own (Ctrl+Enter), in any order:
+%   [CP-RESi]   clickable per-trial inspector (actual / contra-pred / residual / motion)
+%   [CP-LOCAL]  overview: where each state's effect lives (GLOBAL=contra vs LOCAL=residual)
+%   [CP-MOTION] motion-only effect (No-motion vs Motion: predictability + mean dip)
+%   [CP-MOTION-AMP] per-amplitude motion vs |dip dev| (fig-3 style, large fonts; amp_sig switch)
+%   [CP-VAR]    pre-stim variance-only effect (scatter + dose-response + partial)
+%   [CP-DELTA]  pre-stim 1-4 Hz delta-only effect
+%
+% Shared pipeline: utils/cp_residual_core.m (the SAME cp_hemi_predictor field->kernel
+% map used by [CP-HEMI] above — no separate prediction). Helpers: utils/cp_agl.m
+% (decomposition), utils/cp_cont_state.m (continuous-state figure), utils/cp_res_inspector.m.
+% Cross-session batch: cp_state_batch.m.
+% Concept: the trial-average ipsi dip ~ a low-dim LTI/SISO impulse response; contra
+% predicts the GLOBAL activity flowing into the ipsi kernel; residual = LOCAL stim
+% effect; the question is whether that local effect is brain-state dependent.
+%
+% Metric (ported from motion_analysis.m fig 6): |dip - amplitude-mean| = single-trial
+% deviation from the trial-average (lower = more predictable). Split per trial into
+%   dA = actual (= fig 6, global+local) | dG = contra pred (GLOBAL) | dL = residual (LOCAL).
+%
+% Presettable before [CP-SETUP]:
+%   selExp     (3)     — experiment index
+%   decontam   (false) — bleed comp OFF (cancels in within-amp state metrics)
+%   use_motion (false) — keep motion OUT of the contra map so it can be tested as a
+%                        state in [CP-MOTION]; variance/delta unaffected (R² 0.899 vs 0.900)
+
+%% [CP-SETUP] Build residual + Actual/Global/Local decomposition — RUN THIS FIRST
+close all;
+wrap_path = mfilename('fullpath');
+if isempty(wrap_path), wrap_path = fullfile(pwd, 'contra_prediction.m'); end
+addpath(genpath(fullfile(fileparts(wrap_path), '..', 'utils')));
+
+if ~exist('allExperiments','var') || isempty(allExperiments)
+    error('contra_prediction [CP-SETUP]: run load_experiments.m first.');
+end
+if ~exist('selExp','var')     || isempty(selExp),     selExp     = 3;     end
+if ~exist('decontam','var')   || isempty(decontam),   decontam   = false; end
+if ~exist('use_motion','var') || isempty(use_motion), use_motion = false; end
+if ~exist('predictor','var')  || isempty(predictor),  predictor  = 'hemi'; end  % 'hemi' | 'ols'
+
+opts  = struct('decontam', decontam, 'use_motion', use_motion, ...
+               'make_wide', true, 'plot', false, 'predictor', predictor);
+[R, S] = cp_residual_core(allExperiments, selExp, opts);
+
+% Per-trial fig-6 deviation (z-within-amp) for Actual/Global/Local + pooled dip traces.
+[dA, dG, dL, trA, trG, trL] = cp_agl(R);
+AGL = {'Actual (fig6)', dA; 'Global (contra)', dG; 'Local (residual)', dL};
+
+if R.use_motion
+    warning(['[CP-SETUP] use_motion=true regresses motion out of the residual; the ' ...
+             '[CP-MOTION] test will be biased. Set use_motion=false and re-run.']);
+end
+fprintf('\n[CP-SETUP] %s %s e%d | decontam=%d motion=%d | held-out R²=%.3f\n', ...
+    R.mn, R.td, R.en, R.decontam, R.use_motion, R.cv_mean);
+fprintf('  partial(dev_stim, state | dev_pre):  Motion %+.3f (p=%.3g) | PreVar %+.3f (p=%.3g) | PreDelta %+.3f (p=%.3g)\n', ...
+    S.r_partial(1), S.p_partial(1), S.r_partial(2), S.p_partial(2), S.r_partial(3), S.p_partial(3));
+fprintf('  -> now run any of: [CP-RESi] [CP-LOCAL] [CP-MOTION] [CP-VAR] [CP-DELTA]\n');
+
+%% [CP-RESi] Clickable inspector — click a trial: actual / contra-pred / residual / motion
+if ~exist('R','var'), error('Run [CP-SETUP] first.'); end
+if isempty(R.Sin)
+    warning('[CP-RESi] no inspector payload (make_wide was off). Re-run [CP-SETUP].');
+else
+    cp_res_inspector(R.Sin);
+    fprintf('[CP-RESi] Inspector open — click a scatter point (snaps to nearest trial).\n');
+end
+
+%% [CP-LOCAL] Overview: where each state effect lives (GLOBAL contra vs LOCAL residual)
+if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
+states = {'Motion',  'Motion (z)',         R.mot, R.okM; ...
+          'PreVar',  'Pre-stim var (z)',   R.pv,  R.okV; ...
+          'PreDelta','Pre-stim \delta (z)',R.dp,  R.okD};
+fprintf('\n[CP-LOCAL] Spearman rho of |dip dev| with each state (z-within-amp):\n');
+fprintf('  %-9s  Actual   Global   Local\n', 'state');
+for s = 1:3
+    rr = nan(1,3);
+    for c = 1:3
+        m = states{s,4} & isfinite(AGL{c,2});
+        rr(c) = corr(AGL{c,2}(m), states{s,3}(m), 'type','Spearman','rows','complete');
+    end
+    fprintf('  %-9s  %+.3f   %+.3f   %+.3f\n', states{s,1}, rr(1), rr(2), rr(3));
+end
+figL = paperFig(18, 14);
+for s = 1:3
+    for c = 1:3
+        axL = subplot(3,3,(s-1)*3+c); hold(axL,'on');
+        m = states{s,4} & isfinite(AGL{c,2}); xv = states{s,3}(m); yv = AGL{c,2}(m);
+        scatter(axL, xv, yv, 6, [0.5 0.5 0.5], 'filled', 'MarkerFaceAlpha',0.3);
+        if numel(xv) > 2
+            pc = polyfit(xv,yv,1); xl = [min(xv) max(xv)];
+            plot(axL, xl, polyval(pc,xl), 'r-', 'LineWidth',1.0);
+            [rv,pp] = corr(xv,yv,'type','Spearman');
+            title(axL, sprintf('%s  \\rho=%+.2f p=%.2g', AGL{c,1}, rv, pp), 'FontSize',5,'FontWeight','bold');
+        end
+        set(axL,'Box','off','TickDir','out','FontSize',5,'FontWeight','bold');
+        if s==3, xlabel(axL, states{s,2}, 'FontSize',5,'FontWeight','bold'); end
+        if c==1, ylabel(axL, sprintf('%s\n|dip dev| (z)', states{s,2}), 'FontSize',5,'FontWeight','bold'); end
+    end
+end
+sgtitle(figL, sprintf('CP-LOCAL overview  %s %s e%d  (rows=state, cols=Actual/Global/Local)', ...
+    R.mn, R.td, R.en), 'FontSize',6,'FontWeight','bold','Interpreter','tex');
+paperExport(figL, fullfile(R.paper_root,'images','figure2','cp_local_state.png'));
+fprintf('[CP-LOCAL] Exported cp_local_state.png\n');
+
+%% [CP-MOTION] Motion-only: predictability (No-motion vs Motion) + mean dip trace
+if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
+mot = R.mot;  noM = mot <= 0.5;  yesM = mot > 0.5;   % binary split (motion z is zero-inflated; lab motThr_hi=0.5)
+[rp,pp_] = partialcorr(R.devS(R.okM), mot(R.okM), R.devP(R.okM), 'type','Spearman','rows','complete');
+fprintf('\n[CP-MOTION] partial(dev_stim, motion | dev_pre) rho=%+.3f p=%.3g | n(No/Mot)=%d/%d\n', ...
+    rp, pp_, sum(noM), sum(yesM));
+clsCol = [0.3 0.55 0.85; 0.85 0.2 0.2];  clsLab = {'No motion','Motion'};  TR = {trA, trG, trL};
+figM = paperFig(18, 11);
+for c = 1:3
+    d = AGL{c,2};  T = TR{c};
+    axt = subplot(2,3,c); hold(axt,'on');               % top: |dip dev| No-motion vs Motion
+    grp = {d(noM & isfinite(d)), d(yesM & isfinite(d))};
+    for q = 1:2
+        v = grp{q};  mu = mean(v);  se = std(v)/sqrt(max(numel(v),1));
+        bar(axt, q, mu, 0.6, 'FaceColor',clsCol(q,:), 'FaceAlpha',0.55, 'EdgeColor','none');
+        errorbar(axt, q, mu, se, 'k', 'LineWidth',1, 'CapSize',5);
+    end
+    pr = ranksum(grp{1}, grp{2});
+    set(axt,'XTick',1:2,'XTickLabel',clsLab,'XLim',[0.4 2.6],'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+    title(axt, sprintf('%s  ranksum p=%.2g', AGL{c,1}, pr), 'FontSize',6,'FontWeight','bold');
+    if c==1, ylabel(axt, '|dip dev| (z) [lower=predictable]','FontSize',6,'FontWeight','bold'); end
+    axb = subplot(2,3,3+c); hold(axb,'on');             % bottom: mean dip trace by motion class
+    cls = {noM, yesM};
+    for q = 1:2
+        idx = cls{q} & any(isfinite(T),2);
+        m  = mean(T(idx,:),1,'omitnan');  se = std(T(idx,:),0,1,'omitnan')/sqrt(max(sum(idx),1));
+        patch(axb,[R.t_imp,fliplr(R.t_imp)],[m+se,fliplr(m-se)],clsCol(q,:),'FaceAlpha',0.15,'EdgeColor','none','HandleVisibility','off');
+        plot(axb, R.t_imp, m, 'Color',clsCol(q,:), 'LineWidth',1.2, 'DisplayName',sprintf('%s (n=%d)',clsLab{q},sum(idx)));
+    end
+    xline(axb,0,'k:','LineWidth',0.5,'HandleVisibility','off'); yline(axb,0,'k--','LineWidth',0.4,'HandleVisibility','off');
+    set(axb,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold'); xlabel(axb,'Time re onset (s)','FontSize',6,'FontWeight','bold');
+    if c==1, ylabel(axb,'\DeltaF/F (%)','FontSize',6,'FontWeight','bold'); lg=legend(axb,'Location','south','Box','off','FontSize',5); lg.ItemTokenSize=[6 6]; end
+end
+sgtitle(figM, sprintf('CP-MOTION  %s %s e%d  (top: predictability | bottom: mean dip)  by motion class', ...
+    R.mn, R.td, R.en), 'FontSize',6,'FontWeight','bold','Interpreter','tex');
+paperExport(figM, fullfile(R.paper_root,'images','figure2','cp_motion_residual.png'));
+fprintf('[CP-MOTION] Exported cp_motion_residual.png\n');
+
+%% [CP-MOTION-AMP] Per-amplitude motion vs |dip dev| (figure-3 style, large fonts)
+% One subplot per amplitude (within-amp r controls for amplitude). Pick the signal:
+%   amp_sig = 'Actual' (= motion_analysis fig 3) | 'Global' (contra) | 'Local' (residual)
+if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
+if ~exist('amp_sig','var') || isempty(amp_sig), amp_sig = 'Actual'; end
+imp_amp = allExperiments(R.selExp).imp;
+switch lower(amp_sig)
+    case 'global', SIGc = R.prr_imp;  sName = 'Global (contra)';
+    case 'local',  SIGc = R.res_imp;  sName = 'Local (residual)';
+    otherwise,     SIGc = R.act_imp;  sName = 'Actual (fig3)';  amp_sig = 'Actual';
+end
+cp_motion_amp(R, imp_amp, SIGc, sName, sprintf('cp_motion_amp_%s.png', lower(amp_sig)));
+
+%% [CP-VAR] Pre-stim variance-only effect (A/G/L scatter + Local dose-response + partial)
+if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
+cp_cont_state('PreVar', 'Pre-stim var (z)', R.pv, AGL, R.devS, R.devP, R.okV, R, 'cp_var_residual.png');
+
+%% [CP-DELTA] Pre-stim 1-4 Hz delta-only effect (A/G/L scatter + Local dose-response + partial)
+if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
+cp_cont_state('PreDelta', 'Pre-stim \delta (z)', R.dp, AGL, R.devS, R.devP, R.okD, R, 'cp_delta_residual.png');
