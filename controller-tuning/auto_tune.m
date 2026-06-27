@@ -61,8 +61,9 @@ plot(ax2, trial(jStar), cost(jStar), 'p', 'MarkerSize',9, ...
     'MarkerFaceColor','w', 'MarkerEdgeColor','k', 'LineWidth',0.6);
 xlim(ax2, [trial(1) trial(end)]);
 xlabel(ax2, 'trial (iteration)'); ylabel(ax2, 'cost  J');
-legend(ax2, {'per-trial','running best'}, 'Box','off', ...
-    'ItemTokenSize', PS.lgd_token, 'Location','northeast', 'FontSize', PS.fs);
+lg = legend(ax2, {'per-trial','running best'}, 'Box','off', ...
+    'Location','northeast', 'FontSize', PS.fs);
+lg.ItemTokenSize = PS.lgd_token;
 
 paperExport(fig, fullfile(out_dir, sprintf('autotune_convergence_%s.png', tag)));
 fprintf('auto_tune: exported convergence figure to %s\n', out_dir);

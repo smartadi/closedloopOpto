@@ -15,43 +15,33 @@ This is a *unilateral* analysis on the main controller mice. Do **not** confuse 
 
 ---
 
-## ⛔ CURRENT STATUS (2026-06-26) — READ FIRST (HANDOFF)
-Scripts are written + `check_matlab_code`-clean, but the loader's **data-source and column
-assumptions FAILED on the first real run**. Do **not** trust `G`/`A` output yet.
+## ✅ CURRENT STATUS (2026-06-27) — DATA MODEL RESOLVED, loader rewired
+The 2026-06-26 first-run failures are fixed. `ct_load_session` was rewired and verified against
+the share; `G`/`A` output is now trustworthy. **7 of 9 sessions run** (4 grid + 3 autotune);
+`gain_grid.m` + `auto_tune.m` export figures to `paper/images/tuning/`.
 
-**Solved:** speed. The loader no longer calls `initialize_data`, so the `face.mp4` decode that
-made it crawl is gone — sessions load in seconds.
+**Resolved data model (verified from files, see RESEARCH 2026-06-27 + FINDINGS):**
+- **y = `states.csv`** — regulated kernel-mean signal in **% ΔF/F**, logged at **35 Hz**
+  (laser-on run = 105 samples = `dur`=3 s; `params.mat` has `dur/horizon/kernel`), 300000-sample
+  buffer, median ≈0. A few hundred logging-glitch samples (|y| up to 1e5) are NaN'd via
+  `cfg.YCLIP=80`. Read with a robust `textscan` row reader (`readmatrix` → 1×1 NaN on these
+  single-row sci-notation files). `mean_states.csv` = F/F₀ ratio (≈1) — NOT used. Bare `pixel*.mat`
+  caches = raw F — NOT used.
+- **input_params layout is per RIG-VERSION (detect by #columns), not per mouse:**
+  - **8-col** (7 of 9 sessions, incl. BOTH AL_0034 10-25 autotune): onset=**col2** (index into the
+    SAME 35 Hz states axis — matches `input_amps.csv` rising edge off-by-1), Kp=**col5**, Ki=**col6**,
+    |ref|=**col7** (=5). `col1`=trial counter, `col3`=type, `col4`=step amp, `col8`=dur(3).
+  - **7-col** (only AL_0034 2024-10-17 e30, 2024-10-18 e1): gains=**col2:3**, |ref|=col4, `col6`=trial
+    counter — **NO onset column** and **no input_amps.csv** → onsets unavailable → `status='hold'`.
+- **ref = −|col7| = −5** for all 8-col sessions (settled t=2–3 s median −4.3…−5.2). Overrides the
+  stale registry `ref=−2`; ref is now derived from the data in the loader.
 
-**Broken / discovered on first run (AL_0033 vs AL_0034 differ — see RESEARCH 2026-06-26):**
-1. **`input_params` column layout differs by mouse** (both space-delimited; `readmatrix` parses):
-   AL_0033 = **8 cols** (onset@2, Kp@5, Ki@6 — prototype map is right *for AL_0033*);
-   AL_0034 = **7 cols** (gains look like @2/@3, `col6`=0-based trial counter, `col4`=|ref|=5,
-   **no onset-frame column**). The loader's fixed `KP_COL=5/KI_COL=6/ONSET_COL=2` produced
-   garbage for AL_0034 (read the trial counter as "Ki 0–204", onset=0 → all trials skipped, J=NaN).
-2. **Output units differ by source.** Bare `pixel*.mat` caches hold **raw F (~1300)**, NOT dF/F →
-   `pick_trace` is unreliable. `mean_states.csv` ≈ 1.0 → **F/F₀ ratio**. The crash on session 2
-   was empty `y` from a bad column pick on the single-row `mean_states.csv`.
-3. **`states.csv` (1×300000) exists for EVERY session** (root, or `data/` for subdir sessions),
-   starts at 0 → the **regulated dF/F signal**; `input_amps.csv` (1×300000) = control input.
-   This is the clean **uniform** output source — no SVD, no video, no unreliable caches.
-
-**PLAN (NOT yet implemented — do this next):** rewire `ct_load_session` to use **`states.csv`**
-as `y` for all sessions; add a **per-mouse column map**; derive AL_0034 onsets (no onset col)
-by detecting laser-on in `input_amps.csv`. Then re-test on AL_0033 first (cleanest).
-
-**BLOCKING — ask the user before rewiring (see "Open rig questions" below).** Wrong guesses
-on units/rate/onset-space cost a full run. The user paused here to checkpoint for a fresh session.
-
-## Open rig questions — ASK THE USER FIRST (blocking)
-1. **states.csv** = the controller's regulated output (kernel-mean dF/F)? Its **units** (% like
-   `ref=−5`, or fraction) and **sample rate** (300000 samples = ? Hz; what session duration)?
-2. **AL_0034 input_params (7-col)** — confirm gains = cols **2:3** (Kp,Ki), `col4`=|ref|, `col6`=trial
-   counter, `col7`=type, `col1`=? ; and since there's **no onset column**, where do AL_0034 trial
-   onsets come from — detect from `input_amps.csv` (laser-on), or a separate stims file?
-3. **AL_0033 input_params (8-col)** — confirm `col2`=onset index, and whether it indexes the
-   **states.csv sample space (300000)** or the imaging frames (~140975).
-4. **AL_0034 10-25 e2** — no cache/`mean_states`/root `blue/`: any output source, or drop it?
-5. (minor) exact zero-order update rule, for one Methods sentence (figures don't depend on it).
+**Open follow-ups (not blocking):**
+1. **7-col AL_0034 onset adapter** — derive onsets from Timeline (`lightCommand`/`galvo` @2 kHz,
+   `daqSampleRate=2000`) mapped to the 35 Hz states axis, to unblock the 2 held grid sessions.
+2. Grid-min sits at the swept **boundary** (Kp=Ki=0.2); autotune does **not** visibly converge to it
+   — decide framing / check the other sessions (FINDINGS.md).
+3. (minor) exact zero-order update rule, for one Methods sentence (figures don't depend on it).
 
 ---
 

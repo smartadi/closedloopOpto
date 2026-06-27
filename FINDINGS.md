@@ -8,6 +8,22 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
+## Finding: Controller-gain grid cost surface has its minimum at the swept boundary
+**Question:** Does sweeping a grid of fixed PI controllers (Kp,Ki) yield a cost surface J(Kp,Ki) with a clear minimum that justifies the gains used in the main CL analysis?
+**Analysis:** `controller-tuning/load_grid.m` → `gain_grid.m` on AL_0033 2025-03-03 e2 (13 nodes, 4 Kp × 5 Ki). y = `states.csv` (% ΔF/F @35 Hz), cost = ||y−ref||₂ over t=0–3 s post-onset, ref=−5, glitch-clipped, trials gated on |y(onset)|≤2.
+**Result:** J ranges ≈17–24; the no-control node (0,0) is worst (J≈24); J **decreases with gain** and the minimum (J=17.4) sits at the grid **corner (Kp=0.2, Ki=0.2)** — i.e. the optimum is at/beyond the swept boundary, with a flat low basin (J≈17–19) across the higher-gain nodes. Node-mean traces confirm higher gains drive dF/F to the −5 setpoint faster.
+**Paper claim:** (tentative) A grid of fixed PI controllers produces a cost surface whose error decreases with gain; this session's optimum lies at its high-gain boundary. NOTE — a clean *interior* minimum is not demonstrated here; framing must be honest about the boundary optimum (or a wider sweep located).
+**Figure:** `paper/images/tuning/gain_cost_surface_AL_0033_0303e2.png` (+ `gain_node_traces_*.png`)
+**Status:** Analysis done (single session). Open: check the other 3 grid sessions; decide framing / wider grid.
+
+## Finding: Online auto-tuning does not visibly converge to the grid optimum
+**Question:** Does the zero-order/model-free auto-tuner drive (Kp,Ki) toward the grid cost-minimum region?
+**Analysis:** `controller-tuning/auto_tune.m` on AL_0034 2024-10-25 e1 (136 trials, gains adapt online); per-trial cost = same ||y−ref||₂ metric as the grid.
+**Result:** Running-best cost reaches 15.6 at trial 55 (gains Kp=0.042, Ki=0.137) — a **different region** than the grid corner-min (0.2, 0.2). Gains keep wandering over the whole session (exploration) and the per-trial cost cloud shows **no clear downward trend**; convergence toward the grid optimum is not evident in this session.
+**Paper claim:** (tentative, needs replication) Online zero-order tuning explores the gain space; clean convergence to the grid optimum is not yet demonstrated.
+**Figure:** `paper/images/tuning/autotune_convergence_AL_0034_1025e1.png`
+**Status:** Analysis done (single session). Open: verify the running-best/cost metric; check A(2)=AL_0034 10-25 e2 and A(3)=AL_0033 12-19 for cleaner convergence. (AL_0034 *grid* not yet available — 7-col onset blocker.)
+
 ## Finding: Dual-opsin photostim grid shows opposite-polarity responses by hemisphere
 **Question:** Does the AL_0048 638 nm photostim site-grid (`opto_brainGrid638`) evoke the expected dual-opsin response polarity — excitatory left vs inhibitory right?
 **Analysis:** `scratch_grid/grid_analysis.py` (Python port) on AL_0048 2026-06-24/2. Per-site dF/F maps from 52 galvo positions × 50 reps (0.5 power), onsets/positions derived from raw Timeline + rig calibration. See `scratch_grid/README.md`.

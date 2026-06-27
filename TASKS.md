@@ -60,11 +60,10 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] if promoted to a paper panel: move outputs out of `scratch_grid/grid_png` and apply `paperFig`/`paperStyle`
 
 ### Controller tuning — gain grid + auto-tuning (new sub-area, secondary analysis)
-Full state + data-layout findings → `controller-tuning/CLAUDE.md` (read its ⛔ STATUS block first).
-- [ ] **BLOCKED — ask user** the 5 "Open rig questions" in `controller-tuning/CLAUDE.md`: states.csv semantics/units/rate; AL_0034 7-col input_params + onset source; AL_0033 col2 onset sample-space; AL_0034 10-25 e2 source; zero-order rule.
-- [ ] Rewire `ct_process_set.m` `ct_load_session` to use **states.csv** as the output `y` (uniform, SVD-free) + a **per-mouse column map** (AL_0033 8-col onset@2/Kp@5/Ki@6; AL_0034 7-col gains@2:3, no onset col → detect from input_amps.csv).
-- [ ] Re-test on AL_0033 sessions first (cleanest), verify `align-check`, then `gain_grid.m` (cost surface) + `auto_tune.m` (convergence).
-- [ ] Speed already fixed (no `initialize_data`/face decode). Scripts built + lint-clean.
+Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model RESOLVED 2026-06-27 (RESEARCH).
+- [x] 2026-06-27 — Rig data model resolved from the share + `ct_load_session` rewired: y=`states.csv` (% ΔF/F @35 Hz, glitch-clipped); layout auto-detected by #cols (8-col onset@2/Kp@5/Ki@6/ref=−col7; 7-col no onset). 7 of 9 sessions now run (4 grid + 3 autotune, incl. both AL_0034 10-25); `gain_grid.m`+`auto_tune.m` export figures → FINDINGS.md (boundary grid-min; autotune non-convergence).
+- [ ] **Onset adapter for the 2 7-col AL_0034 grid sessions** (2024-10-17 e30, 2024-10-18 e1): no onset col, no input_amps → derive onsets from Timeline (lightCommand/galvo @2 kHz → 35 Hz states axis). Currently `status='hold'`.
+- [ ] Check the other 3 grid sessions + the 2 remaining autotune sessions (A(2)/A(3)); decide grid-min framing (boundary optimum vs wider sweep) and verify autotune convergence metric.
 
 ### Contra→ipsi prediction framework (impulse) — from JOURNAL 2026-06-16
 > **STATE (2026-06-22):** the residual workbench `impulse-analysis/contra_residual.m` (sectioned: `[CP-SETUP]`→`[CP-RESi]`/`[CP-LOCAL]`/`[CP-MOTION]`/`[CP-MOTION-AMP]`/`[CP-VAR]`/`[CP-DELTA]`; core `utils/cp_residual_core.m`) is BUILT and is the active version. It supersedes the old CP-4 `err4` per-trial-error route. Findings + design in FINDINGS.md ("Local photoinhibition response is state-robust to motion") and `impulse-analysis/CLAUDE.md`.

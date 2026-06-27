@@ -13,7 +13,7 @@ setPaperDefaults();
 PS = paperStyle();
 
 %% ---- knobs --------------------------------------------------------------
-SEL      = 4;                                   % grid session index into G (4 = prototype AL_0033 03-03)
+SEL      = 2;                                   % grid session index into G (2 = AL_0033 03-03, 13-node 2D grid)
 out_dir  = fullfile('paper','images','tuning');
 if ~isfolder(out_dir); mkdir(out_dir); end
 g = G(SEL);
