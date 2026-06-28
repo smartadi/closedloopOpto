@@ -8,13 +8,18 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
-## Finding: Controller-gain grid cost surface has its minimum at the swept boundary
+## Finding: Cleaner grid sessions show an interior cost minimum at moderate PI gains
 **Question:** Does sweeping a grid of fixed PI controllers (Kp,Ki) yield a cost surface J(Kp,Ki) with a clear minimum that justifies the gains used in the main CL analysis?
-**Analysis:** `controller-tuning/load_grid.m` → `gain_grid.m` on AL_0033 2025-03-03 e2 (13 nodes, 4 Kp × 5 Ki). y = `states.csv` (% ΔF/F @35 Hz), cost = ||y−ref||₂ over t=0–3 s post-onset, ref=−5, glitch-clipped, trials gated on |y(onset)|≤2.
-**Result:** J ranges ≈17–24; the no-control node (0,0) is worst (J≈24); J **decreases with gain** and the minimum (J=17.4) sits at the grid **corner (Kp=0.2, Ki=0.2)** — i.e. the optimum is at/beyond the swept boundary, with a flat low basin (J≈17–19) across the higher-gain nodes. Node-mean traces confirm higher gains drive dF/F to the −5 setpoint faster.
-**Paper claim:** (tentative) A grid of fixed PI controllers produces a cost surface whose error decreases with gain; this session's optimum lies at its high-gain boundary. NOTE — a clean *interior* minimum is not demonstrated here; framing must be honest about the boundary optimum (or a wider sweep located).
-**Figure:** `paper/images/tuning/gain_cost_surface_AL_0033_0303e2.png` (+ `gain_node_traces_*.png`)
-**Status:** Analysis done (single session). Open: check the other 3 grid sessions; decide framing / wider grid.
+**Analysis:** `controller-tuning/load_grid.m` → `gain_grid.m` on all 4 AL_0033 grid sessions. y = `states.csv` (% ΔF/F @35 Hz), cost = ||y−ref||₂ over t=0–3 s post-onset, ref=−5, glitch-clipped, trials gated on |y(onset)|≤2.
+**Result:** Optima differ by session, and the cleaner ones agree:
+  - 2025-01-10 e2 (5 nodes, sparse 3×3): min at **(0,0)** J=23.7 — degenerate; the few high-gain nodes oscillate so no-control "wins". Too sparse to trust.
+  - 2025-03-03 e2 (13 nodes, 4×5): min at **corner (0.2,0.2)** J=17.4 — coarse, high-gain-only sweep → optimum at boundary.
+  - 2025-03-05 e1 (10 nodes, 4×4): clean **interior** min at **(0.05,0.1)** J=16.1; high-Kp nodes visibly oscillate.
+  - 2025-03-17 e3 (10 nodes, **scattered/2 clusters — likely an optimization trajectory, not a regular grid**; node (0.05,0.05)=NaN): interior min at **(0.068,0.064)** J=15.1.
+  The two denser/cleaner sessions (03-05, 03-17) converge on an **interior optimum at moderate gains: Kp≈0.05–0.07, Ki≈0.06–0.1** — oscillation at high Kp, offset at low gain. This mitigates the apparent boundary-minimum in 03-03 (an artifact of its coarse high-gain grid).
+**Paper claim:** (tentative) A grid of fixed PI controllers yields a cost surface with an interior minimum at moderate gains (Kp≈0.05–0.07, Ki≈0.06–0.1); too-high gains oscillate and too-low gains leave a steady offset. Use the denser 03-05/03-17 sessions for the figure; 03-03 (coarse) and 01-10 (sparse) are weaker.
+**Figure:** `controller-tuning/paper/images/tuning/gain_cost_surface_AL_0033_{0305e1,0317e3}.png` (+ `gain_node_traces_*.png`)
+**Status:** Analysis done (4 sessions). Open: confirm 03-17 is grid vs trajectory; pick the canonical panel session; cross-check vs autotune.
 
 ## Finding: Online auto-tuning does not visibly converge to the grid optimum
 **Question:** Does the zero-order/model-free auto-tuner drive (Kp,Ki) toward the grid cost-minimum region?
