@@ -20,13 +20,15 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Figure:** `controller-tuning/paper/images/tuning/grid_cost_surfaces_4sessions.png` (2×2 headline) + per-session `gain_cost_surface_*.png` / `gain_node_traces_*.png`
 **Status:** Analysis done (4 sessions, wrapping up). Open: pick primary panel + promote to PAPER.md/PDF; decide 10-17 cost window (dur=4).
 
-## Finding: Online auto-tuning does not visibly converge to the grid optimum
-**Question:** Does the zero-order/model-free auto-tuner drive (Kp,Ki) toward the grid cost-minimum region?
-**Analysis:** `controller-tuning/auto_tune.m` on AL_0034 2024-10-25 e1 (136 trials, gains adapt online); per-trial cost = same ||y−ref||₂ metric as the grid.
-**Result:** Running-best cost reaches 15.6 at trial 55 (gains Kp=0.042, Ki=0.137) — a **different region** than the grid corner-min (0.2, 0.2). Gains keep wandering over the whole session (exploration) and the per-trial cost cloud shows **no clear downward trend**; convergence toward the grid optimum is not evident in this session.
-**Paper claim:** (tentative, needs replication) Online zero-order tuning explores the gain space; clean convergence to the grid optimum is not yet demonstrated.
-**Figure:** `paper/images/tuning/autotune_convergence_AL_0034_1025e1.png`
-**Status:** Analysis done (single session). Open: verify the running-best/cost metric; check A(2)=AL_0034 10-25 e2 and A(3)=AL_0033 12-19 for cleaner convergence. (AL_0034 *grid* not yet available — 7-col onset blocker.)
+## Finding: Online auto-tuning vs grid optimum — compared WITHIN MOUSE only
+**Question:** Does the zero-order/model-free auto-tuner drive (Kp,Ki) toward the grid cost-minimum region — judged *same-mouse* (cross-mouse grid↔autotune comparisons are not meaningful; rule per AL 2026-06-29)?
+**Analysis:** `controller-tuning/auto_tune.m`, per-trial cost = same ||y−ref||₂ metric as the grid. Pair each mouse's autotune sessions only against THAT mouse's grid.
+**Result (same-mouse):**
+  - **AL_0033** — grid basin (03-05 interior min ≈ (0.05,0.1), broad low-cost region): autotune **03-17 → (0.068,0.064)** lands squarely in that basin (running-best 17→10.8, clear descent); **12-19 → (0.148,0.083)** higher-Kp but still in the broad low-cost region. → AL_0033 autotune converges into the AL_0033 grid's moderate-gain basin.
+  - **AL_0034** — grid basin (10-17 min (0.3,0.02), broad/flat): autotune **10-25 e1 → (0.042,0.137)** and **e2 → (0.050,0.002)**; gains wander (e1) / settle low-Ki (e2), no tight convergence to the 10-17 min. The flat basin makes a strong convergence claim unsupported here.
+**Paper claim:** (tentative) Within mouse, model-free auto-tuning settles into the grid's low-cost basin (clearest in AL_0033 03-17); it explores rather than pinpoints when the basin is broad/flat (AL_0034). Do NOT compare an autotune session to a different mouse's grid.
+**Figure:** `paper/images/tuning/autotune_convergence_{AL_0033_0317e3,AL_0033_1219e1,AL_0034_1025e1,AL_0034_1025e2}.png`
+**Status:** Analysis done (4 autotune sessions). Open: pick the companion paper panel (AL_0033 03-17 cleanest) — keep it same-mouse with the chosen grid panel.
 
 ## Finding: Dual-opsin photostim grid shows opposite-polarity responses by hemisphere
 **Question:** Does the AL_0048 638 nm photostim site-grid (`opto_brainGrid638`) evoke the expected dual-opsin response polarity — excitatory left vs inhibitory right?

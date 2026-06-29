@@ -109,6 +109,10 @@ Outputs → `paper/images/tuning/`.
 ## Locked-in decisions
 - PI only (Kp, Ki); no Kd. Offline; **motion never loaded** (no `initialize_data`).
 - Export PNG by default; PDF only when a panel is listed in PAPER.md.
+- **Compare grid ↔ autotune WITHIN THE SAME MOUSE only** (AL 2026-06-29). Valid pairs:
+  AL_0033 grid {01-10,03-03,03-05} ↔ AL_0033 autotune {12-19,03-17};
+  AL_0034 grid {10-17} ↔ AL_0034 autotune {10-25 e1/e2}. Never cross mice.
+  Implication for the paper: the strong same-mouse story is **AL_0033 grid 03-05 + autotune 03-17**.
 
 ## Export paths
 `paper/images/tuning/` — panels TUNE-* (create on first export).
