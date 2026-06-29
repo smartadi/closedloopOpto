@@ -45,8 +45,10 @@ def build(amp_sel=cfg.AMP_SEL, cache=True):
         spat[j] = np.asarray(U[y0:y1, x0:x1, :cfg.N_COMPS]).mean((0, 1))
         mI[j] = mimg[y0:y1, x0:x1].mean()
 
-    # for each stim site, interpolate its trials once, then project onto every readout ROI
+    # for each stim site, interpolate its trials once, then project onto every readout ROI.
+    # H = trial MEAN (min-variance estimator of the impulse response, smooth); Hsem = ±SEM.
     H = np.full((nS, nS, nW), np.nan)
+    Hsem = np.full((nS, nS, nW), np.nan)
     ntri = np.zeros(nS, int)
     for i, (mx, my) in enumerate(sites):
         these = onset_t[(pos[:, 0] == mx) & (pos[:, 1] == my)]
@@ -56,14 +58,15 @@ def build(amp_sel=cfg.AMP_SEL, cache=True):
             fluo = tr @ spat[j] + mI[j]                        # (nTrials, nW)
             base = np.nanmean(fluo[:, :base_ix])
             dff = (fluo - base) / base
-            H[i, j] = np.nanmedian(dff, 0)
+            H[i, j] = np.nanmean(dff, 0)
+            Hsem[i, j] = np.nanstd(dff, 0) / np.sqrt(dff.shape[0])
         print(f"  stim {i+1:2d}/{nS}  site=({mx:+.1f},{my:+.0f})  n={ntri[i]} trials", end="\r")
     print()
-    print(f"built H {H.shape}  ({label}; {ntri.min()}-{ntri.max()} trials/site)")
+    print(f"built H {H.shape}  ({label}; {ntri.min()}-{ntri.max()} trials/site; trial MEAN±SEM)")
 
     if cache:
         CACHE.parent.mkdir(exist_ok=True)
-        np.savez(CACHE, H=H, sites=sites, window=window, label=label,
+        np.savez(CACHE, H=H, Hsem=Hsem, sites=sites, window=window, label=label,
                  base_ix=base_ix, ntri=ntri, fs_win=cfg.FS_WIN)
         print("cached ->", CACHE)
     return H, sites, window, label

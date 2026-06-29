@@ -92,6 +92,7 @@ def fit_all(orders=ORDERS, criterion="bic", cache=True):
     """
     z = cross_response.load_cached()
     H, sites, window = z["H"], z["sites"], z["window"]
+    Hsem = z["Hsem"] if "Hsem" in z else np.zeros_like(H)
     label = str(z["label"])
     nS, nW = len(sites), len(window)
     yhat = np.zeros((nS, nS, nW))
@@ -99,23 +100,27 @@ def fit_all(orders=ORDERS, criterion="bic", cache=True):
     r2 = np.full((nS, nS), np.nan)
     gain = np.zeros((nS, nS))
     delay = np.zeros((nS, nS))
-    tau = np.full((nS, nS, max(ORDERS)), np.nan)
+    tau = np.full((nS, nS, max(ORDERS)), np.nan)     # poles (s), sorted ascending
+    Amp = np.full((nS, nS, max(ORDERS)), np.nan)     # residues, aligned to tau
     for s in range(nS):
         for r in range(nS):
             f = fit_lti(window, H[s, r], orders=orders, criterion=criterion)
             yhat[s, r] = _impulse(window, f["theta"], f["A"], f["tau"])
             order[s, r] = f["order"]; r2[s, r] = f["r2"]; gain[s, r] = f["gain"]
-            delay[s, r] = f["theta"]; tau[s, r, :len(f["tau"])] = np.sort(f["tau"])
+            delay[s, r] = f["theta"]
+            n = len(f["tau"]); o = np.argsort(f["tau"])
+            tau[s, r, :n] = np.asarray(f["tau"])[o]
+            Amp[s, r, :n] = np.asarray(f["A"])[o]
         print(f"  fit stim {s+1:2d}/{nS}  median R2(row)={np.nanmedian(r2[s]):.2f}", end="\r")
     print()
     print(f"fit all {nS}x{nS}; order hist {np.bincount(order.ravel(), minlength=6)[1:]}, "
           f"median R2={np.nanmedian(r2):.2f}")
     if cache:
-        np.savez(CACHE_TF, H=H, yhat=yhat, sites=sites, window=window, label=label,
-                 order=order, r2=r2, gain=gain, delay=delay, tau=tau)
+        np.savez(CACHE_TF, H=H, Hsem=Hsem, yhat=yhat, sites=sites, window=window, label=label,
+                 order=order, r2=r2, gain=gain, delay=delay, tau=tau, A=Amp)
         print("cached ->", CACHE_TF)
-    return dict(H=H, yhat=yhat, sites=sites, window=window, order=order,
-                r2=r2, gain=gain, delay=delay, tau=tau, label=label)
+    return dict(H=H, Hsem=Hsem, yhat=yhat, sites=sites, window=window, order=order,
+                r2=r2, gain=gain, delay=delay, tau=tau, A=Amp, label=label)
 
 
 # --------------------------------------------------------------------------- #

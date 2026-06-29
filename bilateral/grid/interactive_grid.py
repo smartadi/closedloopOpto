@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 """interactive_grid.py — click a site to set it as the STIM; every site then shows its
-response (trial-avg + TF-predicted) to stimulation at the clicked site, laid out at its
-TRUE cortical position over the mean brain image.
+response (trial-MEAN ±SEM + TF-predicted) to stimulation at the clicked site, laid out at
+its TRUE cortical position over the mean brain image.
 
 Loads the cached TF fits (`tf_fit.py all`) + the brain cache (`cross_response.py brain`).
-Each site's mini-plot is placed at its real pixel location on the 560x560 mean image, so
-the panel is a spatial map: click any site -> it becomes the stim site -> every panel
-redraws its trial-avg dF/F (blue) + LTI/TF prediction (orange) for that stim condition.
-Shared y-limits show how response amplitude falls off with distance. Stim panel = red.
+Each site's mini-plot sits at its real pixel location on the 560x560 mean image, so the
+panel is a spatial map: click any site -> it becomes the stim site -> every panel redraws
+its trial mean (blue) ±SEM (band) + LTI/TF prediction (orange) for that stim. Each panel
+is annotated with a decay TIME CONSTANT (1/e fall time of the prediction, ms). Shared
+y-limits show amplitude falloff with distance. Stim panel = red frame. The bottom-left
+panel carries a corner scale bar (time + dF/F); all other panels are frameless.
 
-Run (interactive):
-    .venv/Scripts/python.exe bilateral/grid/interactive_grid.py
-Run (dump a static preview PNG for the default stim site, no window):
-    .venv/Scripts/python.exe bilateral/grid/interactive_grid.py save
+Run (interactive):   .venv/Scripts/python.exe bilateral/grid/interactive_grid.py
+Run (static PNG):     .venv/Scripts/python.exe bilateral/grid/interactive_grid.py save
 """
 import sys
 from pathlib import Path
@@ -36,6 +36,33 @@ TF_CACHE = DATA / "grid_tf_fits.npz"
 BRAIN_CACHE = DATA / "grid_brain.npz"
 
 
+def tau_decay(t, y):
+    """Model-free decay time constant: time from the response peak until |y| falls to
+    peak/e. Returns (tau_seconds, censored_bool). censored = no 1/e fall within window."""
+    post = t >= 0
+    tp, yp = t[post], y[post]
+    k = int(np.argmax(np.abs(yp)))
+    peak = yp[k]
+    if abs(peak) < 1e-9 or k >= len(tp) - 3:   # flat, or still rising at window end
+        return np.nan, False
+    below = np.where(np.abs(yp[k:]) <= abs(peak) / np.e)[0]
+    if len(below) == 0:
+        return tp[-1] - tp[k], True
+    return tp[k + below[0]] - tp[k], False
+
+
+def corner_scale(ax, t0, ymax, dt=0.5):
+    """Draw an L-shaped scale bar in the lower-left of `ax`: horizontal = dt seconds,
+    vertical = ymax dF/F. Labels in s and %."""
+    x0 = t0 + 0.04
+    y0 = -ymax * 0.92
+    ax.plot([x0, x0], [y0, y0 + ymax], c="k", lw=1.1)          # amplitude
+    ax.plot([x0, x0 + dt], [y0, y0], c="k", lw=1.1)            # time
+    ax.text(x0 + dt / 2, y0 - ymax * 0.14, f"{dt:g} s", ha="center", va="top", fontsize=6)
+    ax.text(x0 - dt * 0.10, y0 + ymax / 2, f"{ymax*100:.2f}%", ha="right", va="center",
+            fontsize=6, rotation=90)
+
+
 def main():
     if not TF_CACHE.exists():
         raise SystemExit(f"{TF_CACHE} missing — run: "
@@ -45,29 +72,27 @@ def main():
                          f".venv/Scripts/python.exe bilateral/grid/cross_response.py brain")
     z = np.load(TF_CACHE, allow_pickle=True)
     H, yhat, sites, window = z["H"], z["yhat"], z["sites"], z["window"]
-    r2, gain = z["r2"], z["gain"]
+    Hsem = z["Hsem"] if "Hsem" in z.files else np.zeros_like(H)
+    gain = z["gain"]
     bz = np.load(BRAIN_CACHE, allow_pickle=True)
     mimg, px, sp, ny, nx = bz["mimg"], bz["px"], float(bz["sp"]), int(bz["ny"]), int(bz["nx"])
     nS = len(sites)
 
-    # square figure; background axes fills it with the mean image (correct size)
     fig = plt.figure(figsize=(11, 11))
     bg = fig.add_axes([0, 0, 1, 1])
     bg.imshow(mimg, cmap="gray", extent=[0, nx, ny, 0], aspect="auto")
     bg.set_xlim(0, nx); bg.set_ylim(ny, 0); bg.axis("off")
 
-    # one mini-axes per site, placed at its true pixel location (figure fractions)
     w = (sp * 0.92) / nx
     h = (sp * 0.92) / ny
+    fxy = np.column_stack([px[:, 0] / nx, 1.0 - px[:, 1] / ny])   # figure fractions
     axes, ax_site = {}, {}
-    for j, (cx, cy) in enumerate(px):
-        fx, fy = cx / nx, 1.0 - cy / ny           # image y is top-down -> flip for figure
-        ax = fig.add_axes([fx - w / 2, fy - h / 2, w, h])
-        ax.patch.set_facecolor("white"); ax.patch.set_alpha(0.55)
+    for j in range(nS):
+        ax = fig.add_axes([fxy[j, 0] - w / 2, fxy[j, 1] - h / 2, w, h])
         axes[j] = ax; ax_site[ax] = j
+    bl = int(np.argmin(fxy[:, 0] + fxy[:, 1]))                    # bottom-left panel
 
-    diag = gain[np.arange(nS), np.arange(nS)]
-    state = {"stim": int(np.nanargmax(np.abs(diag)))}
+    state = {"stim": int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)])))}
 
     def draw(stim):
         post = window >= 0
@@ -75,23 +100,35 @@ def main():
         ymax = ymax if ymax > 0 else 0.01
         for j, ax in axes.items():
             ax.clear()
-            ax.patch.set_facecolor("white"); ax.patch.set_alpha(0.55)
+            ax.patch.set_facecolor("white"); ax.patch.set_alpha(0.5)
             ax.axhline(0, c="0.4", lw=0.3); ax.axvline(0, c="0.4", lw=0.3)
-            ax.plot(window, H[stim, j], c="dodgerblue", lw=0.8)
+            ax.fill_between(window, H[stim, j] - Hsem[stim, j], H[stim, j] + Hsem[stim, j],
+                            color="dodgerblue", alpha=0.25, lw=0)
+            ax.plot(window, H[stim, j], c="dodgerblue", lw=0.9)
             ax.plot(window, yhat[stim, j], c="orange", lw=1.0, ls="--")
             ax.set_ylim(-ymax, ymax); ax.set_xticks([]); ax.set_yticks([])
-            ax.text(0.04, 0.96, f"{r2[stim, j]:.2f}", transform=ax.transAxes,
-                    fontsize=5, va="top", ha="left", c="0.25")
-            red = (j == stim)
-            for sp_ in ax.spines.values():
-                sp_.set_color("red" if red else "0.7")
-                sp_.set_linewidth(2.2 if red else 0.5)
-            if red:
+            for spn in ax.spines.values():
+                spn.set_visible(False)
+
+            # time constant (only where there is real signal)
+            if np.nanmax(np.abs(H[stim, j][post])) > 0.12 * ymax:
+                td, cens = tau_decay(window, yhat[stim, j])
+                if np.isfinite(td):
+                    ax.text(0.04, 0.96, f"{'>' if cens else ''}{td*1000:.0f} ms",
+                            transform=ax.transAxes, fontsize=5.5, va="top", ha="left",
+                            c="0.15")
+
+            if j == stim:
+                for spn in ax.spines.values():
+                    spn.set_visible(True); spn.set_color("red"); spn.set_linewidth(2.2)
                 ax.text(0.5, 0.5, "STIM", transform=ax.transAxes, fontsize=7,
                         color="red", ha="center", va="center", alpha=0.7, weight="bold")
+            if j == bl:
+                corner_scale(ax, window[0], ymax)
+
         fig.suptitle(f"STIM ({sites[stim, 0]:+.1f}, {sites[stim, 1]:+.0f})   "
-                     f"blue = trial-avg dF/F   orange = TF prediction   "
-                     f"y = ±{ymax:.3f}   (number = R²)   [click a site to restim]",
+                     f"blue = trial mean ±SEM   orange = TF prediction   "
+                     f"label = decay τ (1/e)   [click a site to restim]",
                      fontsize=11, y=0.995)
         fig.canvas.draw_idle()
 
