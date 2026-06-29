@@ -97,7 +97,7 @@ Resolved facts: `mean_states.csv` = kernel-mean (F/F₀ ratio, ≈1); `Kr.npy` =
   `statedf` not the dead `self.er`; (2) cost = full deviation trace → `mean(‖y−ref‖₂)` (RMS, penalises
   oscillation) not `|mean err|`; (3) step-size annealing added. `N_tune` small = testing.
 - **Same-mouse rule:** compare autotune ↔ grid only within a mouse (AL_0033 03-17 ↔ grid 03-05).
-- Convergence figure = accepted (Kp,Ki) path + Kval-vs-iteration (paper panel **T-C**).
+- Convergence figure (paper panel **T-C**) = accepted (Kp,Ki) path + Kval-vs-iteration, **both mice side-by-side** (AL_0033 03-17 + AL_0034 10-25 e1) → cross-mouse replication that the tuner descends. Source `autotune_convergence_both.pdf`.
 
 ## Paper scope (RESOLVED 2026-06-24) — two proper paper figures
 1. **Grid cost-function surface** — `J(Kp,Ki)` surface/contour with the minimum marked.
