@@ -14,6 +14,8 @@ panel carries a corner scale bar (time + dF/F); all other panels are frameless.
 
 Run (interactive):   .venv/Scripts/python.exe bilateral/grid/interactive_grid.py
 Run (static PNG):     .venv/Scripts/python.exe bilateral/grid/interactive_grid.py save
+Set display window:  ... interactive_grid.py --xlim -1 1      (zoom within the cached range)
+  (the cached data range is set when building the tensor: cross_response.py --win -2 2)
 """
 import sys
 from pathlib import Path
@@ -67,9 +69,9 @@ def corner_scale(ax, t0, ymax, dt=0.5):
     ax.plot([x0, x0], [y0, y0 + ymax], c="white", lw=1.8, path_effects=st, clip_on=False)
     ax.plot([x0, x0 + dt], [y0, y0], c="white", lw=1.8, path_effects=st, clip_on=False)
     ax.text(x0 + dt / 2, y0 - ymax * 0.34, f"{dt:g} s", ha="center", va="top",
-            fontsize=8, fontweight="bold", color="white", path_effects=st, clip_on=False)
-    ax.text(x0 - dt * 0.28, y0 + ymax / 2, f"{ymax*100:.1f}%", ha="right", va="center",
-            fontsize=8, fontweight="bold", color="white", rotation=90,
+            fontsize=7, fontweight="bold", color="white", path_effects=st, clip_on=False)
+    ax.text(x0 - dt * 0.22, y0 + ymax / 2, f"{ymax*100:.1f}%", ha="right", va="center",
+            fontsize=7, fontweight="bold", color="white", rotation=90,
             path_effects=st, clip_on=False)
 
 
@@ -110,6 +112,14 @@ def main():
     YMAX = float(np.nanpercentile(np.abs(H[:, :, post]), 99.5)) or 0.01
     print(f"fixed y-scale: ±{YMAX:.4f} dF/F (global 99.5th pct of |response|)")
 
+    # optional display window: `--xlim T0 T1` (clamped to the cached data range)
+    XLIM = None
+    if "--xlim" in sys.argv:
+        i = sys.argv.index("--xlim")
+        XLIM = (max(float(sys.argv[i + 1]), float(window[0])),
+                min(float(sys.argv[i + 2]), float(window[-1])))
+    xlo = XLIM[0] if XLIM is not None else float(window[0])
+
     state = {"stim": int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)]))), "dot": None}
 
     def report(stim):
@@ -136,6 +146,8 @@ def main():
             ax.plot(window, H[stim, j], c="dodgerblue", lw=0.9)
             ax.plot(window, yhat[stim, j], c="orange", lw=1.0, ls="--")
             ax.set_ylim(-YMAX, YMAX); ax.set_xticks([]); ax.set_yticks([])
+            if XLIM is not None:
+                ax.set_xlim(*XLIM)
             for spn in ax.spines.values():
                 spn.set_visible(False)
 
@@ -150,7 +162,7 @@ def main():
                 ax.text(0.5, 0.5, "STIM", transform=ax.transAxes, fontsize=7,
                         color="red", ha="center", va="center", alpha=0.7, weight="bold")
             if j == bl:
-                corner_scale(ax, window[0], YMAX)
+                corner_scale(ax, xlo, YMAX, dt=1.0)
 
         # ring the currently-selected stim spot on the cortex
         if state["dot"] is not None:

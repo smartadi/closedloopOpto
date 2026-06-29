@@ -18,6 +18,8 @@ import cross_response
 DELAY_MAX = 0.12   # s — upper bound on the transport delay theta (was 0.30; cortical
                    # propagation + indicator onset is fast, so cap it tighter)
 ORDERS = (1, 2, 3, 4, 5)   # pole counts to try (BIC selects among them)
+FIT_TMAX = 1.0     # s — fit only t in [0, FIT_TMAX]; beyond ~1 s the trial average is
+                   # contaminated by neighbor stims (ITI ~0.71 s), so don't fit the tail.
 
 
 def _impulse(t, theta, A, tau):
@@ -56,7 +58,7 @@ def fit_lti(t, h, orders=ORDERS, criterion="bic"):
     with order, poles (1/tau), tau, residues A, delay, gain, r2, ic, and the curve yhat.
     Robust to flat/weak pairs.
     """
-    post = t >= 0
+    post = (t >= 0) & (t <= FIT_TMAX)        # fit only the clean early window
     tp, hp = t[post], h[post]
     n_obs = hp.size
     peak = hp[np.argmax(np.abs(hp))]

@@ -23,15 +23,19 @@ import analysis
 CACHE = Path(__file__).resolve().parents[2] / "data" / "grid_cross_response.npz"
 
 
-def build(amp_sel=cfg.AMP_SEL, cache=True):
-    """Return (H, sites, window, label). H is (nStim, nReadout, nWin) dF/F medians."""
+def build(amp_sel=cfg.AMP_SEL, win=None, cache=True):
+    """Return (H, sites, window, label). H is (nStim, nReadout, nWin) trial-mean dF/F.
+    `win` = (t0, t1) seconds rel. onset (default cfg.CROSS_WIN)."""
     U, mimg, V, svdT, ny, nx = loader.load_svd(cfg.EXPDIR, cfg.N_COMPS)
     onset_t, pos = loader.derive_onsets_positions(
         cfg.EXPDIR, cfg.LASER, cfg.LASER_THR, cfg.DEBOUNCE_S, cfg.FS_DAQ,
         cfg.BREGMA_OFFSET_X, cfg.BREGMA_OFFSET_Y, cfg.MM_PER_V_X, cfg.MM_PER_V_Y)
     onset_t, pos, sites, label = loader.select_power(
         onset_t, pos, amp_sel, cfg.SUBJECT, cfg.DATE, cfg.BLOCK_EXP, cfg.SERVER)
-    window, base_ix = analysis.trial_window(cfg.WIN_DUR, cfg.FS_WIN, cfg.WIN_PRE)
+    t0, t1 = win if win is not None else cfg.CROSS_WIN
+    window = np.arange(t0, t1, 1.0 / cfg.FS_WIN)
+    base_ix = int(np.argmin(np.abs(window)))
+    print(f"window {t0:+.2f}..{t1:+.2f}s @ {cfg.FS_WIN:.0f}Hz -> {len(window)} samples, base_ix={base_ix}")
     t2svd = analysis.make_t2svd(svdT, V)
     nS, nW = len(sites), len(window)
 
@@ -99,7 +103,11 @@ def cache_brain():
 
 if __name__ == "__main__":
     import sys
-    if "brain" in sys.argv:
+    argv = sys.argv
+    if "brain" in argv:
         cache_brain()
     else:
-        build()
+        win = None
+        if "--win" in argv:
+            i = argv.index("--win"); win = (float(argv[i + 1]), float(argv[i + 2]))
+        build(win=win)

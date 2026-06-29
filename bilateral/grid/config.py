@@ -45,6 +45,11 @@ WIN_PRE = 12 / 35
 WIN_DUR = 1.5
 TAU_T0_IX = 32               # first sample used for the exp-rise fit (notebook start_ix)
 
+# cross-response tensor / TF viewer display window (s rel. onset). NOTE: ITI ~0.71 s, so
+# windows beyond ~±0.7 s overlap neighbor stims (avg ~3.6 others within ±2 s); the trial
+# average smears those out but the tails carry a residual ripple. TF fit is capped tighter.
+CROSS_WIN = (-2.0, 2.0)
+
 # spatial dF/F snapshot grid (notebook cell 10): a full-frame response image per site
 SPATIAL_SNAPSHOT = True
 BASE_WIN = (-0.10, 0.0)      # s rel. onset, baseline frames

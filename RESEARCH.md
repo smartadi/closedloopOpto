@@ -16,6 +16,26 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-29 — Grid: display window ±2 s (configurable), TF fit capped to clean ≤1 s window
+**Changed/Found:** `config.CROSS_WIN=(-2,2)`; `cross_response.build` takes a `win` arg + `--win T0 T1` CLI; rebuilt tensor at ±2 s (280 samples). `tf_fit.FIT_TMAX=1.0` — TF now fit only on t∈[0,1] s because ITI≈0.71 s means a ±2 s average overlaps ~3.6 neighbor stims (verified) and the tail is contaminated; refit order hist [123,342,920,812,507], median R²=0.73. `interactive_grid.py`: `--xlim T0 T1` to zoom the display within the cached range; corner scale `dt=1 s`, label font 7, **verified honest** (vertical bar = YMAX dF/F → label YMAX·100%, horizontal = dt s). Fixed y-scale now ±0.0192.
+**Why:** User asked for a ±2 s display window + a control (arg) for it, and to recheck the corner-scale measurement. The ±2 s display reveals neighbor-stim contamination in the tails (real, not noise) — hence the fit-window cap.
+**Next:** Phase 2 network/graph model (DMDc) + leave-one-stim-out vs independent TFs. Pending: FINDINGS/README "sub-threshold" wording fix.
+
+### 2026-06-29 — [CP-BLEED] now auto-launches the interactive cp_bleed_explorer in-section
+**Changed/Found:** Moved the interactive whole-brain bleed explorer launch into `[CP-BLEED]` (knob `b_launch_explorer=true`; `clear cp_bleed_explorer; rehash` guard; reloads the SVD via loadUVt, ~30 s), and removed the redundant bottom-of-script `%%` cell that launched it with a hardcoded path. Mirrors the `[CP-KERNEL]` in-section launch. Verified: launches clean, `prim_row=373 prim_col=353`, 944 onsets; the magenta `+` (data site) sits dead-centre in the blue dose-response (negative β) inhibition blob in the correct vertical orientation — the bleed is strongest at the stim site and decays outward. check_matlab_code clean (only the pre-existing warnings). No end-of-script launcher cells remain (both explorers now fire from their own sections).
+**Why:** User: move the interactive bleed plot into the `[CP-BLEED]` section (parallels the kernel-explorer move).
+**Next:** none. Commit with the other cp_* deliverables.
+
+### 2026-06-29 — cp_kernel_explorer opens in squared/energy view; removed redundant end-of-script launcher
+**Changed/Found:** Per user: (1) `utils/cp_kernel_explorer.m` gained an optional 2nd arg `start_sq` (default false) — when true it opens in the squared "energy" (w²) view (sets `st.sq` + pre-checks the "squared" checkbox); (2) `[CP-KERNEL]` launch now calls `cp_kernel_explorer(h_expl_file, true)` (squared); (3) deleted the redundant bottom-of-script `%%` cell that manually launched the kernel explorer with a hardcoded path (it now auto-launches in-section). The bottom bleed-explorer cell stays. Verified: explorer opens with checkbox Value=1, right panel titled "contra ENERGY (w²) | pixel (r373,c353) | rank 17", focal red energy patch on the contra hemisphere homotopic to the green+ ipsi site. check_matlab_code clean for cp_kernel_explorer (script only the pre-existing warnings).
+**Why:** User wanted the interactive plot to default to squared weights (sharper focal localization than the signed map) and the launch consolidated into `[CP-KERNEL]` rather than a separate end cell.
+**Next:** none. Commit with the other cp_* deliverables.
+
+### 2026-06-29 — [CP-KERNEL] now auto-launches the interactive cp_kernel_explorer
+**Changed/Found:** `contra_prediction.m` `[CP-KERNEL]` previously only saved the explorer `.mat` + printed the launch command — the interactive click-a-pixel→contra-weight-map plot only ran from a separate `%%` cell at the script bottom (hardcoded path). Added an in-section launch (knob `h_launch_explorer=true`; `clear cp_kernel_explorer; rehash` first per the GUI-reload gotcha) so running the section opens the explorer directly. Verified: launches clean, stored primary = px_prim 373 / py_prim 353 (right panel titled "pixel (r373,c353)"), green+ on ipsi cortex, contra weights homotopic on the left hemisphere, full brain renders gray. check_matlab_code clean (restructured to print-then-conditionally-launch so no dead-else "unreachable" warning).
+**Why:** User: the interactive explorer wasn't running from `[CP-KERNEL]`, only the stationary maps. The separate bottom cell with a hardcoded path was easy to miss.
+**Next:** none. (The bottom `%%` manual-launch cells for kernel/bleed explorers remain as optional relaunchers.)
+
 ### 2026-06-29 — Grid viewer: fixed y-scale, transparent panels, red stim line, bolder corner scale
 **Changed/Found:** `interactive_grid.py` — y-scale is now FIXED globally (±99.5th-pct of |response| ≈ ±0.022 dF/F) across all stim/panels instead of per-stim adaptive, so amplitudes are comparable everywhere; panel backgrounds set transparent (brain shows through); removed the vertical y-axis and faint v-line, added a **red vertical line at stim onset (t=0)** in every panel (+ faint dotted dF/F=0 baseline kept); corner scale bar labels now bold white with dark stroke, pushed out beyond the bottom-left corner.
 **Why:** User UI requests — comparable fixed scale, transparent panels, red stim-time marker, clearer corner labels.
