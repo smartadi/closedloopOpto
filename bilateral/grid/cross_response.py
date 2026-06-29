@@ -77,5 +77,26 @@ def load_cached():
     return {k: z[k] for k in z.files}
 
 
+BRAIN_CACHE = CACHE.parent / "grid_brain.npz"
+
+
+def cache_brain():
+    """Fetch the mean image (small — not the SVD) + each site's true pixel coords and
+    inter-site pixel spacing, cache to data/grid_brain.npz for the spatial viewer."""
+    z = load_cached()
+    sites = z["sites"]
+    mimg = np.asarray(np.load(cfg.EXPDIR / "blue/meanImage.npy"))   # (ny, nx), ~1 MB
+    ny, nx = mimg.shape
+    px = np.array([analysis.site_px(mx, my, cfg.BREGMA_PX, cfg.PX_PER_MM_X, cfg.PX_PER_MM_Y)
+                   for mx, my in sites])                            # (nS, 2) = (cx, cy)
+    sp = float(abs(cfg.PX_PER_MM_X))                                # px per 1 mm grid step
+    np.savez(BRAIN_CACHE, mimg=mimg, px=px, sp=sp, ny=ny, nx=nx, sites=sites)
+    print(f"cached brain image {mimg.shape} + {len(px)} site coords -> {BRAIN_CACHE}")
+
+
 if __name__ == "__main__":
-    build()
+    import sys
+    if "brain" in sys.argv:
+        cache_brain()
+    else:
+        build()

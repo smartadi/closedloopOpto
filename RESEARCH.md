@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-29 — Grid TF: max order 1→5, delay cap 0.30→0.12 s, spatial brain-aligned viewer
+**Changed/Found:** `tf_fit.py` ORDERS=(1..5), `DELAY_MAX=0.12`; refit all 52×52 — order hist [240,420,792,803,449], median R² 0.51→**0.63** (extra poles capture the multi-timescale response; BIC still spreads order). `cross_response.py brain` caches the 560×560 mean image + each site's true pixel coords to `data/grid_brain.npz`. `interactive_grid.py` rewritten: mini-plots are now placed at their real cortical pixel positions over the mean image (correct size), translucent panels, click-to-restim, blue=avg / orange=TF pred / R² per cell.
+**Why:** User asked for higher max order, a tighter delay bound, and a correctly-sized brain image behind the viewer (→ spatial layout, not a schematic 8×8 grid).
+**Next:** Phase 2 network/graph model (DMDc) + leave-one-stim-out comparison vs the independent TFs. Pending: FINDINGS/README "sub-threshold" wording fix.
+
 ### 2026-06-29 — Per-session cost window: 10-17 kept as a dur=4 grid variant (panel T-B)
 **Changed/Found:** `controller-tuning/load_grid.m` — added per-session `cwin` field (`[grid_sess.cwin]=deal([0 3]); [tune_sess.cwin]=deal([0 3]); grid_sess(4).cwin=[0 4]` for AL_0034 10-17) and widened `cfg.PLOT_WIN` to `[-0.5 4.5]`. `ct_process_set.m` now reads `s.cwin` for the cost-window length (`n3`) and stores `rec.cwin`. `gain_grid.m` draws the stim-off xline at `g.cwin(2)` instead of hardcoded 3. Re-ran the pipeline; 10-17 scored over [0 4] s → min J=30.2 at (Kp=0.3,Ki=0.02). Regenerated panel T-B PDF `paper/images/tuning/grid_cost_surface_AL_0034_1017.pdf` (26.5 KB) + node-trace PNG (now showing the 4 s plateau).
 **Why:** User confirmed 10-17 genuinely ran dur=4 ("I never use dur=4"; verified 4.00 s on all 205 trials) and chose to keep it "with cost over 4 s as a variant showing parameter dependence" rather than discard it or force a 3 s window.

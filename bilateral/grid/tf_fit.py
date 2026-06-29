@@ -15,6 +15,10 @@ import scipy.optimize
 
 import cross_response
 
+DELAY_MAX = 0.12   # s — upper bound on the transport delay theta (was 0.30; cortical
+                   # propagation + indicator onset is fast, so cap it tighter)
+ORDERS = (1, 2, 3, 4, 5)   # pole counts to try (BIC selects among them)
+
 
 def _impulse(t, theta, A, tau):
     """Sum-of-exponentials impulse response, zero before the delay theta."""
@@ -30,9 +34,9 @@ def _fit_order(t, h, n, peak):
     sign = np.sign(peak) or 1.0
     A0 = [sign * abs(peak)] + [-sign * abs(peak) * 0.5] * (n - 1)   # rise/decay seed
     tau0 = list(np.geomspace(0.05, 0.4, n))
-    p0 = [0.02] + A0 + tau0
+    p0 = [min(0.02, DELAY_MAX)] + A0 + tau0
     lo = [0.0] + [-1.0] * n + [1e-3] * n
-    hi = [0.30] + [1.0] * n + [3.0] * n
+    hi = [DELAY_MAX] + [1.0] * n + [3.0] * n
 
     def resid(p):
         theta, A, tau = p[0], p[1:1 + n], p[1 + n:]
@@ -44,7 +48,7 @@ def _fit_order(t, h, n, peak):
     return dict(theta=theta, A=A, tau=tau), yhat, float(np.sum((yhat - h) ** 2))
 
 
-def fit_lti(t, h, orders=(1, 2, 3), criterion="bic"):
+def fit_lti(t, h, orders=ORDERS, criterion="bic"):
     """Fit orders 1..3 to a post-onset impulse response h(t); select by BIC (default) or AIC.
 
     BIC penalizes order more strongly (k*ln(n) vs 2k) — chosen because the smooth,
@@ -80,7 +84,7 @@ def fit_lti(t, h, orders=(1, 2, 3), criterion="bic"):
 CACHE_TF = cross_response.CACHE.parent / "grid_tf_fits.npz"
 
 
-def fit_all(orders=(1, 2, 3), criterion="bic", cache=True):
+def fit_all(orders=ORDERS, criterion="bic", cache=True):
     """Fit a TF to every (stim, readout) pair; cache predictions + params for the viewer.
 
     Caches H, yhat (full-window predicted curves), and per-pair order/r2/gain/delay/tau to
@@ -95,7 +99,7 @@ def fit_all(orders=(1, 2, 3), criterion="bic", cache=True):
     r2 = np.full((nS, nS), np.nan)
     gain = np.zeros((nS, nS))
     delay = np.zeros((nS, nS))
-    tau = np.full((nS, nS, 3), np.nan)
+    tau = np.full((nS, nS, max(ORDERS)), np.nan)
     for s in range(nS):
         for r in range(nS):
             f = fit_lti(window, H[s, r], orders=orders, criterion=criterion)
@@ -104,7 +108,7 @@ def fit_all(orders=(1, 2, 3), criterion="bic", cache=True):
             delay[s, r] = f["theta"]; tau[s, r, :len(f["tau"])] = np.sort(f["tau"])
         print(f"  fit stim {s+1:2d}/{nS}  median R2(row)={np.nanmedian(r2[s]):.2f}", end="\r")
     print()
-    print(f"fit all {nS}x{nS}; order hist {np.bincount(order.ravel(), minlength=4)[1:]}, "
+    print(f"fit all {nS}x{nS}; order hist {np.bincount(order.ravel(), minlength=6)[1:]}, "
           f"median R2={np.nanmedian(r2):.2f}")
     if cache:
         np.savez(CACHE_TF, H=H, yhat=yhat, sites=sites, window=window, label=label,
@@ -161,7 +165,7 @@ def prototype(save="grid_png/tf_prototype.png"):
     print(f"{'pair':<16}{'order':>6}{'R2':>8}{'delay_ms':>10}{'tau_ms (poles)':>22}{'gain':>10}")
     for ax, (s, r, lab) in zip(axes.ravel(), cases):
         h = H[s, r]
-        fit = fit_lti(window, h, orders=(1, 2, 3, 4))
+        fit = fit_lti(window, h, orders=ORDERS)
         ax.axhline(0, c="k", lw=0.4, ls="--")
         ax.axvline(0, c="grey", lw=0.4)
         ax.plot(window, h, c="dodgerblue", lw=1.2, label="empirical")
