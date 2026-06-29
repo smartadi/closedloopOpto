@@ -105,6 +105,10 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 4C | Fig4 | *(trial avg input OL/CL — sine wave)* | — | vector | — | pending |
 | 4D | Fig4 | *(variance across trials — sine wave)* | — | vector | — | pending |
 | 4E | Fig4 | *(trial MSE dist — sine wave)* | — | vector | — | pending |
+| T-A | Tune (Fig# TBD) | paper/images/tuning/grid_cost_surface_AL_0033_0305.pdf | 6 × 5 | vector | — | gain_grid.m — PI gain-grid cost surface J(Kp,Ki), AL_0033 03-05 (PRIMARY: clean interior min ~0.05,0.1) |
+| T-B | Tune (Fig# TBD) | paper/images/tuning/grid_cost_surface_AL_0034_1017.pdf | 6 × 5 | vector | — | gain_grid.m — same, AL_0034 10-17 (CROSS-MOUSE replication of low-cost basin) |
+
+> Secondary-analysis "controller tuning" figure (gain grid + auto-tuning); figure number TBD. Companion autotune-convergence panels: `paper/images/tuning/autotune_convergence_*.png` (not yet promoted to PDF).
 
 ---
 

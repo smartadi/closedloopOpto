@@ -14,7 +14,7 @@ setPaperDefaults();
 PS = paperStyle();
 
 %% ---- knobs --------------------------------------------------------------
-SEL     = 1;                                    % auto-tune session index into A
+if ~exist('SEL','var'); SEL = 1; end            % auto-tune session index into A; honors a pre-set SEL for batch runs
 out_dir = fullfile('paper','images','tuning');
 if ~isfolder(out_dir); mkdir(out_dir); end
 a = A(SEL);
