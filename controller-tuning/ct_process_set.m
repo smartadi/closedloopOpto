@@ -141,8 +141,13 @@ lc = rdN('lightCommand.raw.npy');      lc = lc(:);
 we = rdN('widefieldExposure.raw.npy'); we = we(:);
 bl = rdN('blueLEDmonitor.raw.npy');    bl = bl(:);
 
-expRise = find(diff([0; we > 0.5*max(we)]) == 1);   % all exposures (blue + violet)
-blueFrameSamp = expRise(bl(expRise) > 0.5*max(bl));  % keep exposures with blue LED on
+expRise = find(diff([0; we > 0.5*max(we)]) == 1);   % all exposures (blue + violet, strictly alternating)
+% Blue frames = every OTHER exposure (parity), seeded by which LED is on at exposure 1.
+% More robust than per-frame LED thresholding, which drops ambiguous frames and causes
+% cumulative onset drift (AL_0034 10-18: thresholding lost 406 frames; parity matches
+% states.csv length exactly for both 10-17 and 10-18).
+st = 1; if ~(bl(expRise(1)) > 0.5*max(bl)); st = 2; end
+blueFrameSamp = expRise(st:2:end);
 nF = numel(blueFrameSamp);
 
 rise = find(diff([0; lc > cfg.LASER_THR]) == 1);     % every laser rising edge

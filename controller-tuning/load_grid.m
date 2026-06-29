@@ -42,7 +42,7 @@ grid_sess(3) = mk('AL_0033','2025-03-05', 1,'root','ready','');                 
 grid_sess(4) = mk('AL_0033','2025-03-17', 3,'root','ready','');                  % 8-col
 grid_sess(5) = mk('AL_0034','2024-10-17',30,'data','ready','');                  % 7-col; Timeline onsets + auto-calibrated states lag (~71 frames)
 grid_sess(6) = mk('AL_0034','2024-10-18', 1,'root','hold', ...
-    '7-col; Timeline onsets load but controller barely regulates (settled ~0.7, 8% of trials <-3) + onset count 456!=460 rows -> unreliable gain mapping; excluded');
+    '7-col; NO stim-locked inhibition this session: trial-avg window mean +0.66 at every lag, and NO dose-response (Kp=0 dips same -2.9 as Kp=0.3) -> photoinhibition did not work (prep/site/power), not an alignment issue; unusable for a cost surface');
 
 % --- AUTO-TUNE sessions (gains adapt online; (Kp,Ki) form a trajectory) ---
 tune_sess(1) = mk('AL_0034','2024-10-25', 1,'root','ready','');                  % 8-col
