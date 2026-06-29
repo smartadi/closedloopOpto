@@ -34,15 +34,15 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ## Finding: Dual-opsin photostim grid shows opposite-polarity responses by hemisphere
 **Question:** Does the AL_0048 638 nm photostim site-grid (`opto_brainGrid638`) evoke the expected dual-opsin response polarity — excitatory left vs inhibitory right?
-**Analysis:** `scratch_grid/grid_analysis.py` (Python port) on AL_0048 2026-06-24/2. Per-site dF/F maps from 52 galvo positions × 50 reps (0.5 power), onsets/positions derived from raw Timeline + rig calibration. See `scratch_grid/README.md`.
+**Analysis:** `bilateral/grid/run_grid.py` (Python module) on AL_0048 2026-06-24/2. Per-site dF/F maps from 52 galvo positions × 50 reps (0.5 power), onsets/positions derived from raw Timeline + rig calibration. See `bilateral/grid/README.md`.
 **Result:** Left-hemisphere sites (galvo x<0, excitatory opsin) give focal POSITIVE/red dF/F; right-hemisphere sites (x>0, inhibitory opsin) give NEGATIVE/blue, each localized near the stim site. Polarity flips cleanly across the midline.
 **Paper claim:** (not yet in manuscript) Bilateral dual-opsin photostimulation produces spatially focal, opposite-sign cortical responses consistent with excitatory (left) and inhibitory (right) opsin expression.
-**Figure:** `scratch_grid/grid_png/grid_spatial.png` (exploratory PNG; not yet a paper panel)
+**Figure:** `bilateral/grid/grid_png/grid_spatial.png` (exploratory PNG; not yet a paper panel)
 **Status:** Analysis done; end-to-end pipeline validation. Not yet promoted to a paper figure.
 
 ## Finding: opto_brainGrid638 low power (0.25) did not lase
 **Question:** The grid design specified two laser powers (`laserAmp` = [0.25, 0.5]); did both deliver stimulation in AL_0048 2026-06-24/2?
-**Analysis:** `scratch_grid/grid_analysis.py` Block-aligned power labeling + direct probing of `lightCommand638`/`lightCommand594` at Block-predicted times.
+**Analysis:** `bilateral/grid/` Block-aligned power labeling (`loader.block_power_per_onset`) + direct probing of `lightCommand638`/`lightCommand594` at Block-predicted times.
 **Result:** Of 2600 detected 638 pulses, 2541 are 0.5-power and only 59 are 0.25. At the predicted times, 0.25-power trials show NO 638 or 594 command pulse (median peak −0.01 V, 0% over threshold) while 0.5 fires (~1.38 V gate). The 0.25 level was sub-threshold and did not lase.
 **Paper claim:** (data-quality note, not a manuscript claim) Only the high-power condition produced usable photostim this session.
 **Figure:** none (diagnostic)

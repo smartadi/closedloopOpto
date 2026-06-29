@@ -1,4 +1,4 @@
-% bilateral-analysis/cl_tuning.m
+% bilateral/cl_tuning.m
 % Offline controller tuning: Kp x Ki grid sweep + gradient descent.
 % Requires: load_bilateral.m has been run. Sessions must have exp_type 'cl_tune'.
 %

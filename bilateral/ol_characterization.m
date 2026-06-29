@@ -1,4 +1,4 @@
-% bilateral-analysis/ol_characterization.m
+% bilateral/ol_characterization.m
 % OL impulse + step response characterization for both hemispheres.
 % Requires: load_bilateral.m has been run (sessions struct in workspace).
 

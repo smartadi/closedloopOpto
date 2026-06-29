@@ -1,4 +1,4 @@
-% bilateral-analysis/cl_ol_single_session.m
+% bilateral/cl_ol_single_session.m
 % ------------------------------------------------------------------------
 % STANDALONE single-session controller analysis (CL vs OL) for one AL_0048
 % bilateral session. Self-contained: does NOT depend on load_bilateral.m or
@@ -17,13 +17,13 @@
 %   Fig 5  mean instantaneous tracking err   (OL vs CL overlaid)
 % plus a console summary of MSE (mean / median) and the OL/CL ratio.
 %
-% Run from the brain_paper/ root (or from bilateral-analysis/ — it will cd up).
+% Run from the brain_paper/ root (or from bilateral/ — it will cd up).
 % Requires server access for initialize_data (same as load_bilateral.m).
 % ------------------------------------------------------------------------
 
 %% ---- Workspace ---------------------------------------------------------
 clc; close all; clear all;
-if ~isfolder('bilateral-analysis') && isfolder(fullfile('..', 'bilateral-analysis'))
+if ~isfolder('bilateral') && isfolder(fullfile('..', 'bilateral'))
     cd('..');
 end
 addpath(genpath('utils'));

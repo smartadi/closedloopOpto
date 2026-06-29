@@ -8,20 +8,24 @@
 ## Sub-area trigger words
 bilateral, AL_0048, dual opsin, excitatory left, inhibitory right, galvo position, variable ref, controller tuning, grid sweep, gradient descent
 
-## Related: AL_0048 galvo photostim site-grid (`opto_brainGrid638`)
-Separate from the CL/OL controller work above: a 52-position 638 nm photostim *spatial-mapping*
-grid. Python analysis (runs in repo `.venv`, not MATLAB) → **`scratch_grid/grid_analysis.py`**;
-full handoff in **`scratch_grid/README.md`**. Confirmed dual-opsin polarity (excit-left +/red,
-inhib-right −/blue); only the 0.5 laser power fired (0.25 sub-threshold). Run on AL_0048
-2026-06-24/2 (widefield+Timeline) with exp 3 = Block/expDef/hardwareInfo (calibration).
+## Sub-folder: `grid/` — AL_0048 galvo photostim site-grid (`opto_brainGrid638`)
+Separate from the CL/OL controller work below: a 52-position 638 nm photostim *spatial-mapping*
+grid. **Python**, runs in the repo-root `.venv` (not MATLAB). Clean module under
+**`bilateral/grid/`** (`config`/`loader`/`analysis`/`plots`/`run_grid`); full handoff in
+**`bilateral/grid/README.md`**. New grid coding goes in Python here. Run:
+`.venv/Scripts/python.exe bilateral/grid/run_grid.py`. Confirmed dual-opsin polarity
+(excit-left +/red, inhib-right −/blue); only the 0.5 laser power fired (0.25 sub-threshold).
+Run on AL_0048 2026-06-24/2 (widefield+Timeline) with exp 3 = Block/expDef/hardwareInfo
+(calibration). Pre-refactor monolith + MATLAB port + source notebook in `grid/legacy/`.
 
-## Scripts (run from brain_paper/ root)
+## Scripts (MATLAB controller work — run from brain_paper/ root)
 - `load_bilateral.m`     — session registry, per-side pixel coords, data loading + caching
 - `ol_characterization.m` — OL impulse + step response, both sides
 - `cl_constant_ref.m`    — CL constant-reference controller, both sides
 - `cl_tuning.m`          — Kp/Ki grid sweep + gradient descent on top, both sides
 - `cl_sinewave.m`        — feedforward/preview sine-wave controller, both sides
 - `compare_sides.m`      — cross-side summary figures
+- `package_grid_for_collab.m`, `compute_face_motion_AL0046.m` — AL_0046 grid-export helpers
 
 ## Session loading pipeline
 Same as controller area: `initialize_data → getpixel_dFoF → bilateralData → cache to data/<session>_bil.mat`

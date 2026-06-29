@@ -1,4 +1,4 @@
-% bilateral-analysis/load_bilateral.m
+% bilateral/load_bilateral.m
 % Loads and caches sessions for AL_0048 bilateral dual-opsin experiments.
 % Run from brain_paper/ root directory.
 % After this runs, all downstream scripts consume the `sessions` struct.
@@ -14,7 +14,7 @@
 %% Workspace
 clc; close all; clear all;
 
-if ~isfolder('bilateral-analysis') && isfolder(fullfile('..', 'bilateral-analysis'))
+if ~isfolder('bilateral') && isfolder(fullfile('..', 'bilateral'))
     cd('..');
 end
 addpath(genpath('utils'));

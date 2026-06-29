@@ -1,4 +1,4 @@
-% bilateral-analysis/compare_sides.m
+% bilateral/compare_sides.m
 % Cross-side summary: OL time constants, CL MSE, tuning optima.
 % Requires: all upstream scripts have been run in this workspace.
 

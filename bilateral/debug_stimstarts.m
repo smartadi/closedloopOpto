@@ -1,4 +1,4 @@
-% bilateral-analysis/debug_stimstarts.m
+% bilateral/debug_stimstarts.m
 % ------------------------------------------------------------------------
 % DEBUG: single plot of the whole-experiment dF/F trace(s) for the controlled
 % pixel(s) plus the input fields in IN_FIELDS (e.g. d.inpVals638, d.inpVals594)
@@ -11,7 +11,7 @@
 close all;
 assert(exist('d','var') == 1, ...
     'No `d` in workspace. Run cl_ol_single_session.m (or initialize_data) first.');
-if ~isfolder('bilateral-analysis') && isfolder(fullfile('..','bilateral-analysis')); cd('..'); end
+if ~isfolder('bilateral') && isfolder(fullfile('..','bilateral')); cd('..'); end
 addpath(genpath('utils'));
 
 %% ---- knobs -------------------------------------------------------------

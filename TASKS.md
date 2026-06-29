@@ -9,6 +9,11 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-06-29 — Manuscript: variance-onset claim rewritten with −0.57 slope (`results.tex` L59)
+- [x] 2026-06-29 — Manuscript: Kp/Ki/Kr placeholders filled (Kr=0.1, Kp=0.07, Ki=0.1; `results.tex` L96)
+- [x] 2026-06-29 — Manuscript: variance-convergence paragraph now shows per-trial mean stationarity, not just shrinking variance (`results.tex` L61)
+- [x] 2026-06-29 — Manuscript: linearity claim softened to "well approximated by a linear relationship" (`results.tex` L57)
+- [x] 2026-06-29 — Manuscript: broken cross-refs `(??)`/`(Section )`/`Algorithm ??` all resolved (grep-clean)
 - [x] 2026-06-15 — Set up JOURNAL.md diary layer + Recently-done section (project-management refactor)
 
 ---
@@ -21,13 +26,11 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## 🔴 Blocking submission
 
 ### Manuscript text
-- [ ] Fix "stimulation onset did not affect variance" claim — rewrite using FINDINGS.md result (post-onset slope −0.57 ± 0.24) — `results_edit.tex` L50
-- [ ] Soften linearity claim to "peak response scales approximately linearly" — `results_edit.tex` linearity paragraph
-- [ ] Fix step-response tension: state window too short to observe steady state — `results_edit.tex` L49
-- [ ] Fix variance-convergence paragraph: show batch mean stabilises, not just shrinking variance — `results_edit.tex` L52
-- [ ] Fill in actual Kp and Ki gain values (currently [X] placeholders) — `results_edit.tex` L89
-- [ ] Fix all broken cross-references `(Section )`, `(??)`, `Algorithm ??` throughout draft
-- [ ] Fill in author names and affiliations — `main.tex` L63–67
+> NOTE: primary results file is now `results.tex` (the old `results_edit.tex` name is retired). Most manuscript-text 🔴 items verified done 2026-06-29 → see ✅ Recently done.
+- [ ] Step-response paragraph (`results.tex` L59): rewritten + integral-term motivation present, but does NOT explicitly state the 3 s window is too short to observe steady state. Confirm whether that caveat is still wanted; add one sentence if so.
+- [ ] Fill in author names and affiliations — `main.tex` L62 (blocked on AL input)
+- [ ] Three remaining content `\todo` gaps in `results.tex`: §pre-stim brain state (L64–68), §low-freq spectral attribution (L112), §contra→ipsi prediction (L130) — see "Analysis still needed" below.
+- [ ] Add Chrimson spatial-spread citation — `methods_edit.tex` L292 `\todo` (Nuo Li / Svoboda). NOT in refs.bib yet; needs exact paper from AL before adding a bib entry (do not fabricate).
 
 ### Analysis still needed for text
 - [ ] Run TF fit across all 3 impulse sessions; compare poles/time constants between sessions — `Impulse_mouseDataAnalysis_all.m`
@@ -42,7 +45,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## 🟡 Next sprint
 
 ### Bilateral analysis — AL_0048 (new sub-area)
-- [ ] Fill in session registry in `bilateral-analysis/load_bilateral.m` as experiments are collected
+- [ ] Fill in session registry in `bilateral/load_bilateral.m` as experiments are collected
 - [ ] Confirm `BREGMA_COL` (input_params column for galvo bregma X) and set in `load_bilateral.m`
 - [ ] Decide stim detection mode (`STIM_MODE`: A / B / C) once first session is inspected
 - [ ] Confirm reference polarity from first experiment; adjust `SIGN_L` / `SIGN_R` if needed
@@ -52,12 +55,13 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Run `cl_sinewave.m` → feedforward benefit quantification
 - [ ] Run `compare_sides.m` → cross-side summary figure
 
-### AL_0048 galvo photostim site-grid (`opto_brainGrid638`) — see `scratch_grid/README.md`
-- [x] 2026-06-25 — Python port `scratch_grid/grid_analysis.py` runs end-to-end on 2026-06-24/2 (all notebook analysis plots: sites/timecourses/τ/spatial/raster). Onsets+positions derived from raw Timeline + rig calibration; bregma dial-in confirmed; power split done (only 0.5 fired)
-- [ ] (optional) aggregate stim→response **causal/connectivity map** across the 52 sites (N×N or per-region readout) — beyond per-site `grid_spatial.png`; per-trial dF/F already stashed in `dff_by_site`
+### AL_0048 galvo photostim site-grid (`opto_brainGrid638`) — see `bilateral/grid/README.md`
+- [x] 2026-06-25 — Python analysis runs end-to-end on 2026-06-24/2 (all notebook plots: sites/timecourses/τ/spatial/raster). Onsets+positions derived from raw Timeline + rig calibration; bregma dial-in confirmed; power split done (only 0.5 fired)
+- [x] 2026-06-29 — Consolidated into `bilateral/grid/` and refactored the monolith into a clean Python module (`config`/`loader`/`analysis`/`plots`/`run_grid`); old script kept in `grid/legacy/`
+- [ ] (optional) aggregate stim→response **causal/connectivity map** across the 52 sites (N×N or per-region readout) — beyond per-site `grid_spatial.png`; per-trial dF/F available via `analysis.compute_site_responses`
 - [ ] 0.25-power map not recoverable here (laser sub-threshold) — if low-power data wanted, need a session where the 638 command clears the lasing threshold at 0.25; confirm with experimenter whether 0.25 was expected to fire
 - [ ] (optional) parameterize loader for other `opto_brainGrid` sessions / the 594 line
-- [ ] if promoted to a paper panel: move outputs out of `scratch_grid/grid_png` and apply `paperFig`/`paperStyle`
+- [ ] if promoted to a paper panel: move outputs out of `bilateral/grid/grid_png` and apply `paperFig`/`paperStyle`
 
 ### Controller tuning — gain grid + auto-tuning (new sub-area, secondary analysis)
 Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model RESOLVED 2026-06-27 (RESEARCH). **Wrapping up.**

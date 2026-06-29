@@ -8,7 +8,7 @@
 
 d   = '\\sahale.biostr.washington.edu\data\Subjects\AL_0046\2026-02-22\1';
 out = 'C:\Users\aditya\Documents\projects\collab_export_AL0046_grid';
-ckpt= 'C:\Users\aditya\Documents\projects\brain_paper\scratch_grid\face_me_ckpt.mat';
+ckpt= 'C:\Users\aditya\Documents\projects\brain_paper\bilateral\grid\face_me_ckpt.mat';
 thisDir=fileparts(mfilename('fullpath')); if isempty(thisDir),thisDir=pwd;end
 addpath(genpath(fullfile(thisDir,'..','utils')));
 roi = [488 136 752 590];                 % [x1 y1 x2 y2] from face_ROI.mat

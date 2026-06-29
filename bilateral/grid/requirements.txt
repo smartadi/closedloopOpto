@@ -1,0 +1,7 @@
+# Deps for the grid analysis (already present in the repo-root .venv, Python 3.14).
+# Install into that env, do not create a second venv:
+#   .venv/Scripts/python.exe -m pip install -r bilateral/grid/requirements.txt
+numpy
+scipy
+matplotlib
+colorcet

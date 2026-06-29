@@ -1,4 +1,4 @@
-% bilateral-analysis/cl_sinewave.m
+% bilateral/cl_sinewave.m
 % Feedforward / preview sine-wave controller analysis, both sides.
 % Requires: load_bilateral.m has been run. exp_type = 'sinewave'.
 

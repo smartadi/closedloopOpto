@@ -17,6 +17,10 @@ utils/Pipelines/
 utils/Rigbox/
 utils/widefield/
 
+# Python
+__pycache__/
+*.pyc
+
 # VS Code
 .vscode/
 *.code-workspace

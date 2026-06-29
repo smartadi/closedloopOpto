@@ -1,4 +1,4 @@
-% bilateral-analysis/cl_constant_ref.m
+% bilateral/cl_constant_ref.m
 % CL constant-reference controller analysis, both sides.
 % Requires: load_bilateral.m has been run.
 

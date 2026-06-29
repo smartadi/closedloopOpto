@@ -1,6 +1,6 @@
 # Explore — Staging / Data Inspection
 
-Lightweight area for loading sessions, listing server files, and vibe-checking data before committing to bilateral-analysis scripts.
+Lightweight area for loading sessions, listing server files, and vibe-checking data before committing to bilateral scripts.
 
 ## Trigger words
 explore, staging, inspect, vibe, what's in the data, server root, list files
@@ -10,5 +10,5 @@ explore, staging, inspect, vibe, what's in the data, server root, list files
 
 ## Rules
 - No exports, no caching, no paper figures
-- Scratch code goes here, not in bilateral-analysis/
+- Scratch code goes here, not in bilateral/
 - Nothing in this area is a source of truth — move findings to RESEARCH.md manually

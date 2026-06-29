@@ -1,13 +1,14 @@
-# Galvo photostim site-grid analysis — handoff (`grid_analysis.py`)
+# Galvo photostim site-grid analysis — handoff (`bilateral/grid/`)
 
 Self-contained record so a fresh session can carry this over with no prior context.
-Last updated 2026-06-25.
+Last updated 2026-06-29 (consolidated into `bilateral/grid/` + refactored the monolith
+into a clean Python module — see Module layout below).
 
 ## What this is
-Python port of the notebook `scratch_grid/2025-10-29_AL41_grid.ipynb` (originally an
-AL_0041 galvo photostim *site-grid* / spatial-mapping experiment), adapted to run on
-**AL_0048 2026-06-24** in the repo `.venv` instead of MATLAB. It maps the cortical dF/F
-response evoked by 638 nm optogenetic stimulation at each of 52 galvo grid positions.
+Python analysis (originally ported from the AL_0041 notebook
+`legacy/2025-10-29_AL41_grid.ipynb`), adapted to run on **AL_0048 2026-06-24** in the repo
+`.venv` instead of MATLAB. It maps the cortical dF/F response evoked by 638 nm optogenetic
+stimulation at each of 52 galvo grid positions.
 
 The experiment is `opto_brainGrid638` (Signals expDef): a 52-position brain grid,
 `laserDur` = 25 ms, `laserAmp` = [0.25, 0.5], `numRepeats` = 50.
@@ -16,16 +17,26 @@ All notebook **analysis** cells are ported; all **probe/exploration** cells are 
 (ipywidgets slider, single-site probe, `rastermap`, mp4 animation, the unused
 `widefield_deconv.deconvolve`, and the multi-session `os.walk`/`.npy` round-trip).
 
+## Module layout
+New grid coding goes here (Python). The analysis is split into single-responsibility modules:
+- `config.py`   — all session / calibration / window constants (edit this to change a session)
+- `loader.py`   — read raw session, derive onsets + galvo positions, Block power alignment
+- `analysis.py` — per-site dF/F extraction, rise-τ fit, spatial snapshots (pure compute)
+- `plots.py`    — render the 5 figures
+- `run_grid.py` — entry point wiring config → loader → analysis → plots
+- `legacy/`     — pre-refactor monolith (`grid_analysis_monolith.py`), the MATLAB port
+  (`grid_analysis.m`, for already-preprocessed sessions), and the source notebook. Frozen.
+
 ## How to run
 ```bash
-.venv/Scripts/python.exe scratch_grid/grid_analysis.py
+.venv/Scripts/python.exe bilateral/grid/run_grid.py
 ```
-- `.venv` (Python 3.14) already has the only deps needed: **numpy, scipy, matplotlib, colorcet**.
-  (`colorcet` was pip-installed into `.venv`; the rest were present. Every other notebook
-  import — `pytoolsAL`, `rastermap`, `ipywidgets`, `widefield_deconv` — is in the dropped layer.)
+- `.venv` (Python 3.14, at the repo root) already has the only deps needed: **numpy, scipy,
+  matplotlib, colorcet** (also pinned in `requirements.txt`). Every other notebook import —
+  `pytoolsAL`, `rastermap`, `ipywidgets`, `widefield_deconv` — is in the dropped layer.
 - Reads data live from the sahale share (≈320 MB + a ~1.25 GB strided read of `U[:,:,:50]`
   for the spatial map). One run takes a couple of minutes over the network.
-- Outputs → `scratch_grid/grid_png/` (**gitignored** — regenerable).
+- Outputs → `bilateral/grid/grid_png/` (**gitignored** — regenerable).
 
 ## Session & data layout (important: this session is RAW)
 Server root: `\\sahale.biostr.washington.edu\data\Subjects\AL_0048\2026-06-24\`
@@ -92,16 +103,16 @@ all 5200 planned trials). The Block↔Timeline clock offset is ≈ **98.9 s (std
 the ±0.2 s jitter means Block times are NOT frame-accurate, so the hardware `lightCommand638`
 edges remain the onsets used for dF/F.
 
-## Outputs (`scratch_grid/grid_png/`, gitignored)
-| File | Notebook cell | Content |
+## Outputs (`bilateral/grid/grid_png/`, gitignored)
+| File | `plots.py` fn | Content |
 |---|---|---|
-| `grid_sites.png` | 7  | bregma/site overlay on the mean image (Fig 0 dial-in) |
-| `grid_timecourses.png` | 14/17 | per-site ROI dF/F median±SEM + exp-rise τ fit, 8×8 |
-| `grid_tau.png` | 18 | rise-τ spatial map (colorcet `cet_CET_L4`) |
-| `grid_spatial.png` | 10 | full-frame dF/F image per site, 40–120 ms post-stim |
-| `grid_raster.png` | 19 | per-site trial×time dF/F raster (±8%) |
+| `grid_sites.png` | `plot_sites` | bregma/site overlay on the mean image (Fig 0 dial-in) |
+| `grid_timecourses.png` | `plot_timecourses` | per-site ROI dF/F median±SEM + exp-rise τ fit, 8×8 |
+| `grid_tau.png` | `plot_tau` | rise-τ spatial map (colorcet `cet_CET_L4`) |
+| `grid_spatial.png` | `plot_spatial` | full-frame dF/F image per site, 40–120 ms post-stim |
+| `grid_raster.png` | `plot_raster` | per-site trial×time dF/F raster (±8%) |
 
-## Key knobs (top of `grid_analysis.py`)
+## Key knobs (all in `config.py`)
 `SUBJECT/DATE/WF_EXP/BLOCK_EXP`, `LASER="638"`, `AMP_SEL=0.5` (None→pool),
 `N_COMPS=50`, `LASER_THR=0.3`, `BREGMA_PX`, `PX_PER_MM_X/Y`, `ROI_RAD=10`,
 window (`FS_WIN`, `WIN_PRE=12/35`, `WIN_DUR=1.5`, `TAU_T0_IX=32`),
@@ -116,15 +127,18 @@ window (`FS_WIN`, `WIN_PRE=12/35`, `WIN_DUR=1.5`, `TAU_T0_IX=32`),
 ## Open items / next steps
 - (optional) aggregate stim→response **causal/connectivity map** across the 52 sites (an N×N
   matrix or per-cortical-region readout), beyond the per-site spatial snapshot. Nothing like
-  this exists yet; the per-trial dF/F is already computed and stashed in `dff_by_site`.
+  this exists yet; the per-trial dF/F is returned per site by `analysis.compute_site_responses`.
 - 0.25-power map needs a session where the 638 command clears the lasing threshold at 0.25.
 - (optional) parameterize loader for other `opto_brainGrid` sessions / the 594 line.
-- If promoted to a paper panel: move outputs out of `scratch_grid/grid_png` and apply
+- If promoted to a paper panel: move outputs out of `bilateral/grid/grid_png` and apply
   `paperFig`/`paperStyle` (currently exploratory PNGs only).
 
 ## Files
-- `grid_analysis.py` — the working Python analysis (this is the live deliverable).
-- `grid_analysis.m` — earlier MATLAB port; assumes a **preprocessed** session
-  (`laserOnTimes.npy`, `galvoXPositions_mm.npy`, …). Superseded by the `.py` for this raw
-  session; keep for sessions that already have those derived files.
-- `2025-10-29_AL41_grid.ipynb` — the source notebook (AL_0041).
+- `config.py` / `loader.py` / `analysis.py` / `plots.py` / `run_grid.py` — the live module
+  (see Module layout above). `run_grid.py` is the entry point.
+- `legacy/grid_analysis_monolith.py` — the pre-refactor single-file version, kept as a
+  behavioral reference to diff against (the module is a faithful split of it).
+- `legacy/grid_analysis.m` — earlier MATLAB port; assumes a **preprocessed** session
+  (`laserOnTimes.npy`, `galvoXPositions_mm.npy`, …). Keep for sessions that already have
+  those derived files.
+- `legacy/2025-10-29_AL41_grid.ipynb` — the source notebook (AL_0041).

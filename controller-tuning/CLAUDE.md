@@ -10,8 +10,8 @@ shows the *tuning methodology* behind the gains used elsewhere:
   read back to show convergence (ideally toward the grid minimum).
 
 This is a *unilateral* analysis on the main controller mice. Do **not** confuse with:
-- the **AL_0046 photostim spatial grid** (galvo X/Y site mapping → `package_grid_for_collab.m`)
-- the **AL_0048 bilateral** Kp/Ki sweep + gradient descent (`bilateral-analysis/cl_tuning.m`)
+- the **AL_0046/AL_0048 photostim spatial grid** (galvo X/Y site mapping → `bilateral/grid/`, Python)
+- the **AL_0048 bilateral** Kp/Ki sweep + gradient descent (`bilateral/cl_tuning.m`)
 
 ---
 
