@@ -158,10 +158,11 @@ def main():
         state["dot"] = bg.scatter([px[stim, 0]], [px[stim, 1]], s=130, facecolors="none",
                                   edgecolors="red", linewidths=2.0, zorder=4)
 
-        fig.suptitle(f"STIM ({sites[stim, 0]:+.1f}, {sites[stim, 1]:+.0f})   "
-                     f"blue = trial mean ±SEM   orange = TF prediction   "
-                     f"n = model order (poles/zeros → console)   [click a site to restim]",
-                     fontsize=11, y=0.995)
+        t = fig.suptitle(f"STIM ({sites[stim, 0]:+.1f}, {sites[stim, 1]:+.0f})   "
+                         f"blue = trial mean ±SEM   orange = TF prediction   "
+                         f"n = model order (poles/zeros → console)   [click a site to restim]",
+                         fontsize=11, y=0.995, color="white")
+        t.set_path_effects([pe.withStroke(linewidth=2.0, foreground="black")])
         report(stim)
         fig.canvas.draw_idle()
 
