@@ -39,15 +39,17 @@ mk = @(mn,td,en,ip,status,note) struct( ...
 grid_sess(1) = mk('AL_0033','2025-01-10', 2,'data','ready','');                  % 8-col, data/ subdir
 grid_sess(2) = mk('AL_0033','2025-03-03', 2,'root','ready','');                  % 8-col, prototype
 grid_sess(3) = mk('AL_0033','2025-03-05', 1,'root','ready','');                  % 8-col, "with rewards"
-grid_sess(4) = mk('AL_0033','2025-03-17', 3,'root','ready','');                  % 8-col
-grid_sess(5) = mk('AL_0034','2024-10-17',30,'data','ready','');                  % 7-col; Timeline onsets + auto-calibrated states lag (~71 frames)
-grid_sess(6) = mk('AL_0034','2024-10-18', 1,'root','hold', ...
+grid_sess(4) = mk('AL_0034','2024-10-17',30,'data','ready','');                  % 7-col; Timeline onsets + auto-calibrated states lag (~71 frames)
+grid_sess(5) = mk('AL_0034','2024-10-18', 1,'root','hold', ...
     '7-col; controlled signal (states.csv = ONLINE dF/F) not regulatable: no dip at any lag, no dose-response (Kp=0 dips same -2.9 as Kp=0.3). Laser pushed as hard as 10-17 (same pixel/kernel) but signal flat. Cause undetermined (biology vs online-dF/F targeting) -> needs getdfof recompute from raw (165GB .rar, not extracted). Unusable for cost surface regardless');
+% NOTE: AL_0033 2025-03-17 moved to tune_sess below -- its (Kp,Ki) points are a
+% scattered 2-cluster trajectory (continuous optimization), not a regular lattice.
 
 % --- AUTO-TUNE sessions (gains adapt online; (Kp,Ki) form a trajectory) ---
-tune_sess(1) = mk('AL_0034','2024-10-25', 1,'root','ready','');                  % 8-col
-tune_sess(2) = mk('AL_0034','2024-10-25', 2,'root','ready','');                  % 8-col
-tune_sess(3) = mk('AL_0033','2024-12-19', 1,'root','ready','');                  % 8-col
+tune_sess(1) = mk('AL_0034','2024-10-25', 1,'root','ready','');                  % 8-col, discrete zero-order
+tune_sess(2) = mk('AL_0034','2024-10-25', 2,'root','ready','');                  % 8-col, discrete zero-order
+tune_sess(3) = mk('AL_0033','2024-12-19', 1,'root','ready','');                  % 8-col, discrete zero-order
+tune_sess(4) = mk('AL_0033','2025-03-17', 3,'root','ready','');                  % 8-col; continuous trajectory (reclassified from grid)
 
 %% ---- knobs --------------------------------------------------------------
 cfg.ONSET_OFF = 0;        % add to onset index if alignment is off (e.g. -horizon)

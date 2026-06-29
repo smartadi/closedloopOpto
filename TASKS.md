@@ -60,10 +60,12 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] if promoted to a paper panel: move outputs out of `scratch_grid/grid_png` and apply `paperFig`/`paperStyle`
 
 ### Controller tuning — gain grid + auto-tuning (new sub-area, secondary analysis)
-Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model RESOLVED 2026-06-27 (RESEARCH).
-- [x] 2026-06-27 — Rig data model resolved from the share + `ct_load_session` rewired: y=`states.csv` (% ΔF/F @35 Hz, glitch-clipped); layout auto-detected by #cols (8-col onset@2/Kp@5/Ki@6/ref=−col7; 7-col no onset). 7 of 9 sessions now run (4 grid + 3 autotune, incl. both AL_0034 10-25); `gain_grid.m`+`auto_tune.m` export figures → FINDINGS.md (boundary grid-min; autotune non-convergence).
-- [ ] **Onset adapter for the 2 7-col AL_0034 grid sessions** (2024-10-17 e30, 2024-10-18 e1): no onset col, no input_amps → derive onsets from Timeline (lightCommand/galvo @2 kHz → 35 Hz states axis). Currently `status='hold'`.
-- [ ] Check the other 3 grid sessions + the 2 remaining autotune sessions (A(2)/A(3)); decide grid-min framing (boundary optimum vs wider sweep) and verify autotune convergence metric.
+Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model RESOLVED 2026-06-27 (RESEARCH). **Wrapping up.**
+- [x] 2026-06-27 — Rig data model resolved + `ct_load_session` rewired: y=`states.csv` (% ΔF/F @35 Hz, glitch-clipped); layout auto-detected by #cols (8-col onset@2/Kp@5/Ki@6/ref=−col7; 7-col Timeline onsets w/ auto-calibrated states lag).
+- [x] 2026-06-28 — Final grid set = **4** (AL_0033 01-10/03-03/03-05 + AL_0034 10-17 cross-mouse); 03-17 → autotune (trajectory); 10-18 held (signal not regulatable). Headline panel `grid_cost_surfaces_4sessions.png`.
+- [ ] **Pick the primary cost-surface paper panel** (recommend 03-05 interior min; 03-03 fuller coverage; 10-17 cross-mouse) → add to PAPER.md, export PDF, write Results/Methods sentences.
+- [ ] **Decide cost window for 10-17** (dur=4 there) — keep [0 3] s for consistency, or [0 4].
+- [ ] **[deferred] getdfof recompute for AL_0034 10-18** — extract the raw widefield from the 165 GB `.rar`, recompute kernel-mean dF/F at pixel[390,390] via getdfof (independent of the online states.csv), re-test for a stim-locked dip / dose-response → settle biology-vs-online-pipeline. Only if 10-18 is specifically needed.
 
 ### Contra→ipsi prediction framework (impulse) — from JOURNAL 2026-06-16
 > **STATE (2026-06-22):** the residual workbench `impulse-analysis/contra_residual.m` (sectioned: `[CP-SETUP]`→`[CP-RESi]`/`[CP-LOCAL]`/`[CP-MOTION]`/`[CP-MOTION-AMP]`/`[CP-VAR]`/`[CP-DELTA]`; core `utils/cp_residual_core.m`) is BUILT and is the active version. It supersedes the old CP-4 `err4` per-trial-error route. Findings + design in FINDINGS.md ("Local photoinhibition response is state-robust to motion") and `impulse-analysis/CLAUDE.md`.
