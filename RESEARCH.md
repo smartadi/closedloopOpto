@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-29 — Verified refactored grid module reproduces the monolith end-to-end
+**Changed/Found:** Ran `.venv/Scripts/python.exe bilateral/grid/run_grid.py` against the live AL_0048 2026-06-24/2 session. Console output matches documented findings exactly: 2600 detected 638 onsets, power split 2541×0.5 / 59×0.25, 52 sites, 48 trials/site. All 5 figures regenerated correctly — `grid_spatial.png` shows the clean dual-opsin polarity (red/excitatory left, blue/inhibitory right); sites/timecourses/τ/raster all sensible.
+**Why:** Close out the prior entry's open `Next:` — confirm the config/loader/analysis/plots split is behavior-equivalent to the original monolith before building new grid analysis on it.
+**Next:** none — module is the trusted base for new grid coding. Candidate next analysis: stim→response causal/connectivity map across the 52 sites (per-trial dF/F via `analysis.compute_site_responses`).
+
 ### 2026-06-29 — Consolidated all bilateral-mouse work into `bilateral/` + refactored grid into a clean Python module
 **Changed/Found:** Renamed `bilateral-analysis/` → `bilateral/` (git mv, history preserved) and moved the repo-root `scratch_grid/` into `bilateral/grid/`. Refactored the grid monolith `grid_analysis.py` into a clean Python module — `config.py` (constants), `loader.py` (raw→onsets/positions, Block power alignment), `analysis.py` (per-site dF/F, τ fit, spatial snapshots), `plots.py` (5 figures), `run_grid.py` (entry). Original kept verbatim as `grid/legacy/grid_analysis_monolith.py` alongside the MATLAB port + source notebook. Updated all live references (root `CLAUDE.md` routing/disambiguation, `bilateral/CLAUDE.md`, `controller-tuning/CLAUDE.md`, `explore/CLAUDE.md`, `TASKS.md`, `FINDINGS.md`), in-code folder guards + header comments in the `.m` scripts, the `compute_face_motion_AL0046.m` checkpoint path, and `bilateral/grid/README.md`. Added `__pycache__/`/`*.pyc` to `.gitignore`.
 **Why:** User asked to combine all bilateral-mouse work (controller CL/OL + the photostim site-grid) into one folder and to base new grid analysis on Python. Single folder removes the bilateral-analysis/scratch_grid split; the module gives a clean base for new grid coding instead of extending a 270-line script.
