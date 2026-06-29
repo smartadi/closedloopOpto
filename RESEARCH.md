@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-29 — Grid viewer: fixed y-scale, transparent panels, red stim line, bolder corner scale
+**Changed/Found:** `interactive_grid.py` — y-scale is now FIXED globally (±99.5th-pct of |response| ≈ ±0.022 dF/F) across all stim/panels instead of per-stim adaptive, so amplitudes are comparable everywhere; panel backgrounds set transparent (brain shows through); removed the vertical y-axis and faint v-line, added a **red vertical line at stim onset (t=0)** in every panel (+ faint dotted dF/F=0 baseline kept); corner scale bar labels now bold white with dark stroke, pushed out beyond the bottom-left corner.
+**Why:** User UI requests — comparable fixed scale, transparent panels, red stim-time marker, clearer corner labels.
+**Next:** Phase 2 network/graph model (DMDc) + leave-one-stim-out vs independent TFs. Pending: FINDINGS/README "sub-threshold" wording fix.
+
 ### 2026-06-29 — Grid viewer: report model order + poles/zeros (replace τ label); site dots; white labels
 **Changed/Found:** `interactive_grid.py` — per-panel label is now the fitted **model order** `n` (white text, dark stroke) instead of the decay τ; on each click it prints a per-readout **poles & zeros** table to the console (`poles_zeros()`: poles = −1/τᵢ real; zeros = roots of N(s)=Σ Aᵢ∏_{j≠i}(s+1/τⱼ), up to n−1, generally complex; units 1/s; sorted by |gain|). Added red **site dots** on the cortex (all sites) + a red ring on the selected stim spot; panel alpha 0.5→0.4 so dots show through. Some pairs show right-half-plane (non-minimum-phase) zeros — legitimate for biphasic responses.
 **Why:** User asked to report model order + (poles/zeros, since it's a TF) on click rather than a single time constant, plus visible site markers and higher-contrast labels.

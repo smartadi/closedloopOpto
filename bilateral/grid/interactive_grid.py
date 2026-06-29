@@ -60,15 +60,17 @@ def poles_zeros(tau, A):
 
 
 def corner_scale(ax, t0, ymax, dt=0.5):
-    """Draw an L-shaped scale bar in the lower-left of `ax`: horizontal = dt seconds,
-    vertical = ymax dF/F. Labels in s and %."""
-    x0 = t0 + 0.04
-    y0 = -ymax * 0.92
-    ax.plot([x0, x0], [y0, y0 + ymax], c="k", lw=1.1)          # amplitude
-    ax.plot([x0, x0 + dt], [y0, y0], c="k", lw=1.1)            # time
-    ax.text(x0 + dt / 2, y0 - ymax * 0.14, f"{dt:g} s", ha="center", va="top", fontsize=6)
-    ax.text(x0 - dt * 0.10, y0 + ymax / 2, f"{ymax*100:.2f}%", ha="right", va="center",
-            fontsize=6, rotation=90)
+    """L-shaped scale bar at the far lower-left of `ax` (drawn outside the panel):
+    horizontal = dt seconds, vertical = ymax dF/F. Bold white labels with a dark stroke."""
+    st = [pe.withStroke(linewidth=2.0, foreground="black")]
+    x0, y0 = t0 - 0.08, -ymax * 1.10            # pushed down-and-left, beyond the panel
+    ax.plot([x0, x0], [y0, y0 + ymax], c="white", lw=1.8, path_effects=st, clip_on=False)
+    ax.plot([x0, x0 + dt], [y0, y0], c="white", lw=1.8, path_effects=st, clip_on=False)
+    ax.text(x0 + dt / 2, y0 - ymax * 0.34, f"{dt:g} s", ha="center", va="top",
+            fontsize=8, fontweight="bold", color="white", path_effects=st, clip_on=False)
+    ax.text(x0 - dt * 0.28, y0 + ymax / 2, f"{ymax*100:.1f}%", ha="right", va="center",
+            fontsize=8, fontweight="bold", color="white", rotation=90,
+            path_effects=st, clip_on=False)
 
 
 def main():
@@ -102,6 +104,12 @@ def main():
         axes[j] = ax; ax_site[ax] = j
     bl = int(np.argmin(fxy[:, 0] + fxy[:, 1]))                    # bottom-left panel
 
+    # FIXED y-scale across all stim conditions + all panels (not adaptive), so amplitudes
+    # are directly comparable everywhere.
+    post = window >= 0
+    YMAX = float(np.nanpercentile(np.abs(H[:, :, post]), 99.5)) or 0.01
+    print(f"fixed y-scale: ±{YMAX:.4f} dF/F (global 99.5th pct of |response|)")
+
     state = {"stim": int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)]))), "dot": None}
 
     def report(stim):
@@ -118,18 +126,16 @@ def main():
                   f"{gain[stim,r]:>9.4f}   [{ps}] | [{zs}]")
 
     def draw(stim):
-        post = window >= 0
-        ymax = np.nanpercentile(np.abs(H[stim][:, post]), 99) * 1.05
-        ymax = ymax if ymax > 0 else 0.01
         for j, ax in axes.items():
             ax.clear()
-            ax.patch.set_facecolor("white"); ax.patch.set_alpha(0.4)
-            ax.axhline(0, c="0.4", lw=0.3); ax.axvline(0, c="0.4", lw=0.3)
+            ax.patch.set_alpha(0)                              # transparent (brain shows through)
+            ax.axhline(0, c="0.6", lw=0.4, ls=":", alpha=0.7, zorder=1)   # faint dF/F=0 baseline
+            ax.axvline(0, c="red", lw=0.9, zorder=1)           # stim onset (red), replaces y-axis
             ax.fill_between(window, H[stim, j] - Hsem[stim, j], H[stim, j] + Hsem[stim, j],
                             color="dodgerblue", alpha=0.25, lw=0)
             ax.plot(window, H[stim, j], c="dodgerblue", lw=0.9)
             ax.plot(window, yhat[stim, j], c="orange", lw=1.0, ls="--")
-            ax.set_ylim(-ymax, ymax); ax.set_xticks([]); ax.set_yticks([])
+            ax.set_ylim(-YMAX, YMAX); ax.set_xticks([]); ax.set_yticks([])
             for spn in ax.spines.values():
                 spn.set_visible(False)
 
@@ -144,7 +150,7 @@ def main():
                 ax.text(0.5, 0.5, "STIM", transform=ax.transAxes, fontsize=7,
                         color="red", ha="center", va="center", alpha=0.7, weight="bold")
             if j == bl:
-                corner_scale(ax, window[0], ymax)
+                corner_scale(ax, window[0], YMAX)
 
         # ring the currently-selected stim spot on the cortex
         if state["dot"] is not None:
