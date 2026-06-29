@@ -82,11 +82,22 @@ Resolved facts: `mean_states.csv` = kernel-mean (F/F₀ ratio, ≈1); `Kr.npy` =
 - Metric: `mean_trials( ‖y − ref‖₂ over window )` per (Kp,Ki) node; `y` = regulated dF/F.
 - Reference per-session (registry `ref`); units must match `y` (resolve via Q1).
 
-## Auto-tuning method (RESOLVED 2026-06-24)
-- **Zero-order / model-free optimization** — no plant model; perturb gains, read back empirical cost.
-- Evolving Kp/Ki stored in `input_params` per trial (column index per the per-mouse map above).
-  Grid session = small set of fixed (Kp,Ki) each repeated; auto-tune = (Kp,Ki) trajectory over trials.
-- Convergence figure = gain trajectory + cost-vs-iteration, described empirically.
+## Auto-tuning method (RESOLVED 2026-06-29) — METHODS-READY
+- **Zero-order / model-free, greedy accept-if-lowered.** No plant model. Each iteration: apply a
+  candidate (Kp,Ki) for `N_tune` reps, average its cost; **if cost ≥ best-so-far, REVERT** to the
+  previous gains; else accept. Next candidate = accepted point + a random step (unit direction ×
+  [STEP_KP, STEP_KI], step annealed geometrically). Source: `rainier/StLab_Rainier/Main_experiment.py`
+  (+ `experiment_core/base_controller.py`).
+- **Trajectory data:** the per-trial `input_params` logs EVERY applied candidate incl. rejected probes —
+  for analysis/figures use the saved **accepted** gains `Kdata.npy` + costs `Kval.npy`, NOT input_params.
+- **Recorded-session validity (verified from Kval):** only sessions with a LIVE online cost converge —
+  **AL_0033 03-17 (Kval 16.6→12.3 → 0.068,0.064)** and **AL_0034 10-25 e1 (11.9→4.57)**. AL_0033 12-19
+  had Kval≡0 (dead online error → random walk); AL_0034 10-25 e2 stuck at (0,0). See FINDINGS.md.
+- **Rig fixes (2026-06-29, StLab_Rainier — affect FUTURE runs only):** (1) cost now from synced
+  `statedf` not the dead `self.er`; (2) cost = full deviation trace → `mean(‖y−ref‖₂)` (RMS, penalises
+  oscillation) not `|mean err|`; (3) step-size annealing added. `N_tune` small = testing.
+- **Same-mouse rule:** compare autotune ↔ grid only within a mouse (AL_0033 03-17 ↔ grid 03-05).
+- Convergence figure = accepted (Kp,Ki) path + Kval-vs-iteration (paper panel **T-C**).
 
 ## Paper scope (RESOLVED 2026-06-24) — two proper paper figures
 1. **Grid cost-function surface** — `J(Kp,Ki)` surface/contour with the minimum marked.

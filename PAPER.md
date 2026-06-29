@@ -107,8 +107,11 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 4E | Fig4 | *(trial MSE dist — sine wave)* | — | vector | — | pending |
 | T-A | Tune (Fig# TBD) | paper/images/tuning/grid_cost_surface_AL_0033_0305.pdf | 6 × 5 | vector | — | gain_grid.m — PI gain-grid cost surface J(Kp,Ki), AL_0033 03-05 (PRIMARY: clean interior min ~0.05,0.1) |
 | T-B | Tune (Fig# TBD) | paper/images/tuning/grid_cost_surface_AL_0034_1017.pdf | 6 × 5 | vector | — | gain_grid.m — same, AL_0034 10-17 (CROSS-MOUSE replication of low-cost basin) |
+| T-C | Tune (Fig# TBD) | paper/images/tuning/autotune_convergence_AL_0033_0317.pdf | 6 × 8 | vector | — | AUTO-TUNE convergence, AL_0033 03-17 (SAME-MOUSE with T-A); accepted Kdata/Kval — (Kp,Ki) path + cost 16.6→12.3, settles (0.068,0.064) |
 
-> Secondary-analysis "controller tuning" figure (gain grid + auto-tuning); figure number TBD. Companion autotune-convergence panels: `paper/images/tuning/autotune_convergence_*.png` (not yet promoted to PDF).
+> Secondary-analysis "controller tuning" figure (gain grid + auto-tuning); figure number TBD.
+> **Paper-ready panel set:** T-A grid cost surface (AL_0033 03-05) + T-C autotune convergence (AL_0033 03-17) = the SAME-MOUSE grid↔autotune story (tuner settles into the grid basin); T-B (AL_0034 10-17) = cross-mouse grid replication.
+> **Methods/claims caveats (read before writing):** (a) cost = `mean(||y−ref||₂)` over t=0–3 s, y=`states.csv` (% ΔF/F, online kernel-mean), ref=−5; (b) autotune = greedy zero-order, accept-if-cost-lowered; show trajectories from accepted `Kdata`/`Kval`, NOT `input_params` (which logs rejected probes); (c) only 03-17 (+10-25 e1) are valid convergence demos — 12-19 had a dead online cost (random walk), 10-25 e2 stuck at (0,0); (d) grid↔autotune comparisons are SAME-MOUSE only; (e) the rig autotune cost/annealing was fixed 2026-06-29 (StLab_Rainier) for FUTURE runs — recorded sessions predate it. Full detail: FINDINGS.md + controller-tuning/CLAUDE.md.
 
 ---
 
