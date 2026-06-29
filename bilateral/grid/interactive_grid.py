@@ -30,6 +30,7 @@ else:
         except Exception:
             continue
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as pe
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 TF_CACHE = DATA / "grid_tf_fits.npz"
@@ -82,6 +83,8 @@ def main():
     bg = fig.add_axes([0, 0, 1, 1])
     bg.imshow(mimg, cmap="gray", extent=[0, nx, ny, 0], aspect="auto")
     bg.set_xlim(0, nx); bg.set_ylim(ny, 0); bg.axis("off")
+    # mark every photostim/readout site location on the cortex
+    bg.scatter(px[:, 0], px[:, 1], s=14, c="red", edgecolors="white", linewidths=0.4, zorder=3)
 
     w = (sp * 0.92) / nx
     h = (sp * 0.92) / ny
@@ -92,7 +95,7 @@ def main():
         axes[j] = ax; ax_site[ax] = j
     bl = int(np.argmin(fxy[:, 0] + fxy[:, 1]))                    # bottom-left panel
 
-    state = {"stim": int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)])))}
+    state = {"stim": int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)]))), "dot": None}
 
     def draw(stim):
         post = window >= 0
@@ -100,7 +103,7 @@ def main():
         ymax = ymax if ymax > 0 else 0.01
         for j, ax in axes.items():
             ax.clear()
-            ax.patch.set_facecolor("white"); ax.patch.set_alpha(0.5)
+            ax.patch.set_facecolor("white"); ax.patch.set_alpha(0.4)
             ax.axhline(0, c="0.4", lw=0.3); ax.axvline(0, c="0.4", lw=0.3)
             ax.fill_between(window, H[stim, j] - Hsem[stim, j], H[stim, j] + Hsem[stim, j],
                             color="dodgerblue", alpha=0.25, lw=0)
@@ -116,7 +119,8 @@ def main():
                 if np.isfinite(td):
                     ax.text(0.04, 0.96, f"{'>' if cens else ''}{td*1000:.0f} ms",
                             transform=ax.transAxes, fontsize=5.5, va="top", ha="left",
-                            c="0.15")
+                            color="white",
+                            path_effects=[pe.withStroke(linewidth=1.4, foreground="black")])
 
             if j == stim:
                 for spn in ax.spines.values():
@@ -125,6 +129,12 @@ def main():
                         color="red", ha="center", va="center", alpha=0.7, weight="bold")
             if j == bl:
                 corner_scale(ax, window[0], ymax)
+
+        # ring the currently-selected stim spot on the cortex
+        if state["dot"] is not None:
+            state["dot"].remove()
+        state["dot"] = bg.scatter([px[stim, 0]], [px[stim, 1]], s=130, facecolors="none",
+                                  edgecolors="red", linewidths=2.0, zorder=4)
 
         fig.suptitle(f"STIM ({sites[stim, 0]:+.1f}, {sites[stim, 1]:+.0f})   "
                      f"blue = trial mean ±SEM   orange = TF prediction   "
