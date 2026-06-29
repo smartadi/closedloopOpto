@@ -7,8 +7,9 @@ Loads the cached TF fits (`tf_fit.py all`) + the brain cache (`cross_response.py
 Each site's mini-plot sits at its real pixel location on the 560x560 mean image, so the
 panel is a spatial map: click any site -> it becomes the stim site -> every panel redraws
 its trial mean (blue) ±SEM (band) + LTI/TF prediction (orange) for that stim. Each panel
-is annotated with a decay TIME CONSTANT (1/e fall time of the prediction, ms). Shared
-y-limits show amplitude falloff with distance. Stim panel = red frame. The bottom-left
+is labelled with the fitted MODEL ORDER (n = number of poles); the full poles & zeros per
+readout are printed to the console on each click. Shared y-limits show amplitude falloff
+with distance. Stim panel = red frame. The bottom-left
 panel carries a corner scale bar (time + dF/F); all other panels are frameless.
 
 Run (interactive):   .venv/Scripts/python.exe bilateral/grid/interactive_grid.py
@@ -37,19 +38,25 @@ TF_CACHE = DATA / "grid_tf_fits.npz"
 BRAIN_CACHE = DATA / "grid_brain.npz"
 
 
-def tau_decay(t, y):
-    """Model-free decay time constant: time from the response peak until |y| falls to
-    peak/e. Returns (tau_seconds, censored_bool). censored = no 1/e fall within window."""
-    post = t >= 0
-    tp, yp = t[post], y[post]
-    k = int(np.argmax(np.abs(yp)))
-    peak = yp[k]
-    if abs(peak) < 1e-9 or k >= len(tp) - 3:   # flat, or still rising at window end
-        return np.nan, False
-    below = np.where(np.abs(yp[k:]) <= abs(peak) / np.e)[0]
-    if len(below) == 0:
-        return tp[-1] - tp[k], True
-    return tp[k + below[0]] - tp[k], False
+def poles_zeros(tau, A):
+    """Poles and zeros of the fitted TF for one (stim,readout) pair.
+
+    The model is H(s) = sum_i A_i / (s + 1/tau_i) — an all-pole sum-of-exponentials with
+    residues. Poles are real at s = -1/tau_i. Re-expressed as N(s)/D(s) with
+    D(s)=prod_i(s+1/tau_i), the numerator N(s)=sum_i A_i*prod_{j!=i}(s+1/tau_j) has degree
+    n-1, so there are up to n-1 zeros (roots of N), generally complex. Units: 1/s.
+    """
+    tau = tau[~np.isnan(tau)]
+    A = A[~np.isnan(A)]
+    a = 1.0 / tau                      # 1/tau_i
+    poles = -a
+    n = len(a)
+    if n <= 1:
+        return poles, np.array([])
+    ncoef = np.zeros(n)               # numerator, degree n-1 -> n coeffs
+    for i in range(n):
+        ncoef += A[i] * np.poly(-np.delete(a, i))   # prod_{j!=i}(s + a_j)
+    return poles, np.roots(ncoef)
 
 
 def corner_scale(ax, t0, ymax, dt=0.5):
@@ -74,7 +81,7 @@ def main():
     z = np.load(TF_CACHE, allow_pickle=True)
     H, yhat, sites, window = z["H"], z["yhat"], z["sites"], z["window"]
     Hsem = z["Hsem"] if "Hsem" in z.files else np.zeros_like(H)
-    gain = z["gain"]
+    gain, order, tau, A = z["gain"], z["order"], z["tau"], z["A"]
     bz = np.load(BRAIN_CACHE, allow_pickle=True)
     mimg, px, sp, ny, nx = bz["mimg"], bz["px"], float(bz["sp"]), int(bz["ny"]), int(bz["nx"])
     nS = len(sites)
@@ -97,6 +104,19 @@ def main():
 
     state = {"stim": int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)]))), "dot": None}
 
+    def report(stim):
+        """Print the fitted TF (order, poles, zeros) for every readout of this stim."""
+        print(f"\n=== STIM ({sites[stim,0]:+.1f},{sites[stim,1]:+.0f}) - fitted TF per readout"
+              f"  (poles & zeros in 1/s, sorted by |gain|) ===")
+        print(f"{'readout':>12} {'order':>5} {'gain':>9}   poles | zeros")
+        for r in np.argsort(-np.abs(gain[stim])):
+            p, zr = poles_zeros(tau[stim, r], A[stim, r])
+            ps = ", ".join(f"{v:.1f}" for v in p)
+            zs = ", ".join((f"{v.real:.1f}" if abs(v.imag) < 1e-6
+                            else f"{v.real:.1f}{v.imag:+.1f}j") for v in zr)
+            print(f"  ({sites[r,0]:+.1f},{sites[r,1]:+.0f}) {int(order[stim,r]):>5} "
+                  f"{gain[stim,r]:>9.4f}   [{ps}] | [{zs}]")
+
     def draw(stim):
         post = window >= 0
         ymax = np.nanpercentile(np.abs(H[stim][:, post]), 99) * 1.05
@@ -113,14 +133,10 @@ def main():
             for spn in ax.spines.values():
                 spn.set_visible(False)
 
-            # time constant (only where there is real signal)
-            if np.nanmax(np.abs(H[stim, j][post])) > 0.12 * ymax:
-                td, cens = tau_decay(window, yhat[stim, j])
-                if np.isfinite(td):
-                    ax.text(0.04, 0.96, f"{'>' if cens else ''}{td*1000:.0f} ms",
-                            transform=ax.transAxes, fontsize=5.5, va="top", ha="left",
-                            color="white",
-                            path_effects=[pe.withStroke(linewidth=1.4, foreground="black")])
+            # model order (number of poles); poles/zeros printed to console on click
+            ax.text(0.04, 0.96, f"n{int(order[stim, j])}", transform=ax.transAxes,
+                    fontsize=6, va="top", ha="left", color="white",
+                    path_effects=[pe.withStroke(linewidth=1.4, foreground="black")])
 
             if j == stim:
                 for spn in ax.spines.values():
@@ -138,8 +154,9 @@ def main():
 
         fig.suptitle(f"STIM ({sites[stim, 0]:+.1f}, {sites[stim, 1]:+.0f})   "
                      f"blue = trial mean ±SEM   orange = TF prediction   "
-                     f"label = decay τ (1/e)   [click a site to restim]",
+                     f"n = model order (poles/zeros → console)   [click a site to restim]",
                      fontsize=11, y=0.995)
+        report(stim)
         fig.canvas.draw_idle()
 
     draw(state["stim"])
