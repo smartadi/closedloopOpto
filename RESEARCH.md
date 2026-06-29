@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-29 — Full 52×52 TF fit (BIC, cap-3) + interactive click-to-restim grid viewer
+**Changed/Found:** `tf_fit.py` gains BIC selection + `fit_all()`; ran all 2704 (stim,readout) pairs (2m49s), cached H/predictions/params to `data/grid_tf_fits.npz`. BIC now spreads model order — order hist [1:313, 2:772, 3:1619] (vs AIC railing at max); median R²=0.51 over ALL pairs (diagonal/near 0.65–0.87, far/contra lower as expected). New `bilateral/grid/interactive_grid.py`: 8×8 brain-grid viewer where clicking a cell sets it as the stim site and every cell redraws its trial-avg dF/F (blue) + TF prediction (orange) for that stim, shared y-lims showing amplitude falloff. `... save` dumps a static preview PNG.
+**Why:** Phase-1 deliverable per user decisions (ROI-mean readout kept as-is; BIC cap order 3); interactive explorer to inspect how each stim site's input propagates.
+**Next:** Phase 2 — fit the network/graph dynamical model (DMDc / regularized A) jointly to all 52 perturbations and compare to the independent-TF baseline (leave-one-stim-site-out generalization). Optional: correct the FINDINGS/README "sub-threshold" wording (still pending).
+
 ### 2026-06-29 — Grid LTI program: built cross-response tensor + TF-fit prototype (subset)
 **Changed/Found:** New `bilateral/grid/cross_response.py` builds & caches the 52×52×105 stim→readout impulse-response tensor `H[s,r,t]` (trial-avg dF/F, 0.5 power, 47–50 trials/site) to `data/grid_cross_response.npz` (one SVD pass; downstream reads the cache). New `bilateral/grid/tf_fit.py` fits delayed all-pole TFs (sum-of-exponentials, orders 1–4, AIC) per (s,r); prototype on representative pairs. **Result:** low-order LTI fits the s→r impulse responses well — lateral excitatory stim (−2.5,−2)→own R²=0.76 gain +0.037 (correct +), inhibitory (+1.5,−1)→own R²=0.75 gain −0.041; off-diagonal delays 43–100 ms; cross-midline sign flip reproduced. Model class validated.
 **Why:** Phase-1 of the perturbative dynamic-connectivity plan (per-site LTI characterization), prototyped on a subset before scaling to all 2704 pairs / the network model.

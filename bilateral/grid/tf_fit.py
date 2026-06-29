@@ -44,11 +44,13 @@ def _fit_order(t, h, n, peak):
     return dict(theta=theta, A=A, tau=tau), yhat, float(np.sum((yhat - h) ** 2))
 
 
-def fit_lti(t, h, orders=(1, 2, 3)):
-    """Fit orders 1..3 to a post-onset impulse response h(t); AIC-select the best.
+def fit_lti(t, h, orders=(1, 2, 3), criterion="bic"):
+    """Fit orders 1..3 to a post-onset impulse response h(t); select by BIC (default) or AIC.
 
-    Returns dict with order, poles (1/tau, rad/s), tau, residues A, delay, gain (peak of
-    |yhat|), r2, aic, and the fitted curve yhat. Robust to flat/weak pairs.
+    BIC penalizes order more strongly (k*ln(n) vs 2k) — chosen because the smooth,
+    autocorrelated dF/F residual makes naive AIC always grab the max order. Returns dict
+    with order, poles (1/tau), tau, residues A, delay, gain, r2, ic, and the curve yhat.
+    Robust to flat/weak pairs.
     """
     post = t >= 0
     tp, hp = t[post], h[post]
@@ -63,15 +65,53 @@ def fit_lti(t, h, orders=(1, 2, 3)):
         except Exception:
             continue
         k = 1 + 2 * n                                   # theta + (A,tau) per pole
-        aic = n_obs * np.log(sse / n_obs + 1e-30) + 2 * k
+        pen = k * np.log(n_obs) if criterion == "bic" else 2 * k
+        ic = n_obs * np.log(sse / n_obs + 1e-30) + pen
         r2 = 1.0 - sse / ss_tot
-        cand = dict(order=n, aic=aic, r2=r2, sse=sse, theta=params["theta"],
+        cand = dict(order=n, ic=ic, r2=r2, sse=sse, theta=params["theta"],
                     tau=np.asarray(params["tau"]), A=np.asarray(params["A"]),
                     poles=-1.0 / np.asarray(params["tau"]),
                     gain=yhat[np.argmax(np.abs(yhat))], yhat=yhat, t=tp)
-        if best is None or aic < best["aic"]:
+        if best is None or ic < best["ic"]:
             best = cand
     return best
+
+
+CACHE_TF = cross_response.CACHE.parent / "grid_tf_fits.npz"
+
+
+def fit_all(orders=(1, 2, 3), criterion="bic", cache=True):
+    """Fit a TF to every (stim, readout) pair; cache predictions + params for the viewer.
+
+    Caches H, yhat (full-window predicted curves), and per-pair order/r2/gain/delay/tau to
+    data/grid_tf_fits.npz so the interactive viewer loads instantly.
+    """
+    z = cross_response.load_cached()
+    H, sites, window = z["H"], z["sites"], z["window"]
+    label = str(z["label"])
+    nS, nW = len(sites), len(window)
+    yhat = np.zeros((nS, nS, nW))
+    order = np.zeros((nS, nS), int)
+    r2 = np.full((nS, nS), np.nan)
+    gain = np.zeros((nS, nS))
+    delay = np.zeros((nS, nS))
+    tau = np.full((nS, nS, 3), np.nan)
+    for s in range(nS):
+        for r in range(nS):
+            f = fit_lti(window, H[s, r], orders=orders, criterion=criterion)
+            yhat[s, r] = _impulse(window, f["theta"], f["A"], f["tau"])
+            order[s, r] = f["order"]; r2[s, r] = f["r2"]; gain[s, r] = f["gain"]
+            delay[s, r] = f["theta"]; tau[s, r, :len(f["tau"])] = np.sort(f["tau"])
+        print(f"  fit stim {s+1:2d}/{nS}  median R2(row)={np.nanmedian(r2[s]):.2f}", end="\r")
+    print()
+    print(f"fit all {nS}x{nS}; order hist {np.bincount(order.ravel(), minlength=4)[1:]}, "
+          f"median R2={np.nanmedian(r2):.2f}")
+    if cache:
+        np.savez(CACHE_TF, H=H, yhat=yhat, sites=sites, window=window, label=label,
+                 order=order, r2=r2, gain=gain, delay=delay, tau=tau)
+        print("cached ->", CACHE_TF)
+    return dict(H=H, yhat=yhat, sites=sites, window=window, order=order,
+                r2=r2, gain=gain, delay=delay, tau=tau, label=label)
 
 
 # --------------------------------------------------------------------------- #
@@ -141,4 +181,8 @@ def prototype(save="grid_png/tf_prototype.png"):
 
 
 if __name__ == "__main__":
-    prototype()
+    import sys
+    if "all" in sys.argv:
+        fit_all()
+    else:
+        prototype()
