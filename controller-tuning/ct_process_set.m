@@ -38,7 +38,9 @@ for si = 1:numel(sessList)
     gains = round(gains(1:nUse,:), 6);
     onset = round(onset(1:nUse)) + cfg.ONSET_OFF;
 
-    n3   = round(cfg.COST_WIN(2)*cfg.FS);
+    cwin = cfg.COST_WIN;                               % default cost window [s]
+    if isfield(s,'cwin') && ~isempty(s.cwin); cwin = s.cwin; end  % per-session override (e.g. 10-17 dur=4)
+    n3   = round(cwin(2)*cfg.FS);
     nPre = round(-cfg.PLOT_WIN(1)*cfg.FS);
     nPost= round( cfg.PLOT_WIN(2)*cfg.FS);
 
@@ -77,7 +79,7 @@ for si = 1:numel(sessList)
     end
 
     rec = struct();
-    rec.mn=s.mn; rec.td=s.td; rec.en=s.en; rec.ref=ref; rec.fs=cfg.FS;
+    rec.mn=s.mn; rec.td=s.td; rec.en=s.en; rec.ref=ref; rec.fs=cfg.FS; rec.cwin=cwin;
     rec.tt = (-nPre:nPost)/cfg.FS;
     rec.C=C; rec.J=J; rec.Jsem=Jsem; rec.nNode=nNode;
     rec.nodeMean=nodeMean; rec.nodeStd=nodeStd;

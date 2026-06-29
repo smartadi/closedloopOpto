@@ -81,7 +81,7 @@ for k = 1:nNodes
     end
     yline(axk, g.ref, '--', 'Color', PS.col_zero, 'LineWidth', PS.lw_ref);
     xline(axk, 0, 'Color', PS.col_zero, 'LineWidth', PS.lw_zero);
-    xline(axk, 3, 'Color', PS.col_zero, 'LineWidth', PS.lw_zero);
+    xline(axk, g.cwin(2), 'Color', PS.col_zero, 'LineWidth', PS.lw_zero);  % stim-off / cost-window end (4 s for 10-17 dur=4)
     xlim(axk, [tt(1) tt(end)]); ylim(axk, [-8 4]);
     title(axk, sprintf('(%.2g,%.2g) J=%.2g', Kp(k), Ki(k), J(k)), ...
         'FontSize', PS.fs, 'FontWeight', PS.fw);

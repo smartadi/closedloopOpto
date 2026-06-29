@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-29 — Per-session cost window: 10-17 kept as a dur=4 grid variant (panel T-B)
+**Changed/Found:** `controller-tuning/load_grid.m` — added per-session `cwin` field (`[grid_sess.cwin]=deal([0 3]); [tune_sess.cwin]=deal([0 3]); grid_sess(4).cwin=[0 4]` for AL_0034 10-17) and widened `cfg.PLOT_WIN` to `[-0.5 4.5]`. `ct_process_set.m` now reads `s.cwin` for the cost-window length (`n3`) and stores `rec.cwin`. `gain_grid.m` draws the stim-off xline at `g.cwin(2)` instead of hardcoded 3. Re-ran the pipeline; 10-17 scored over [0 4] s → min J=30.2 at (Kp=0.3,Ki=0.02). Regenerated panel T-B PDF `paper/images/tuning/grid_cost_surface_AL_0034_1017.pdf` (26.5 KB) + node-trace PNG (now showing the 4 s plateau).
+**Why:** User confirmed 10-17 genuinely ran dur=4 ("I never use dur=4"; verified 4.00 s on all 205 trials) and chose to keep it "with cost over 4 s as a variant showing parameter dependence" rather than discard it or force a 3 s window.
+**Next:** None blocking. Caveat recorded everywhere (PAPER.md T-B, FINDINGS, CLAUDE.md): dur & mouse covary, so T-B is a variant exhibit, not a clean dur-controlled comparison. Paper-writing sessions assign the tuning figure a number + write Methods.
+
 ### 2026-06-29 — Full 52×52 TF fit (BIC, cap-3) + interactive click-to-restim grid viewer
 **Changed/Found:** `tf_fit.py` gains BIC selection + `fit_all()`; ran all 2704 (stim,readout) pairs (2m49s), cached H/predictions/params to `data/grid_tf_fits.npz`. BIC now spreads model order — order hist [1:313, 2:772, 3:1619] (vs AIC railing at max); median R²=0.51 over ALL pairs (diagonal/near 0.65–0.87, far/contra lower as expected). New `bilateral/grid/interactive_grid.py`: 8×8 brain-grid viewer where clicking a cell sets it as the stim site and every cell redraws its trial-avg dF/F (blue) + TF prediction (orange) for that stim, shared y-lims showing amplitude falloff. `... save` dumps a static preview PNG.
 **Why:** Phase-1 deliverable per user decisions (ROI-mean readout kept as-is; BIC cap order 3); interactive explorer to inspect how each stim site's input propagates.

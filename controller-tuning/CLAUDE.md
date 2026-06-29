@@ -77,10 +77,16 @@ Resolved facts: `mean_states.csv` = kernel-mean (F/F₀ ratio, ≈1); `Kr.npy` =
 **AL_0034 (7 cols):** `1`=?(0.125) · `2`=**Kp?** · `3`=**Ki?** · `4`=|ref|(=5) · `5`=?(4/3) ·
 `6`=trial counter(0-based) · `7`=type · (no onset-frame column)
 
-## Cost function (RESOLVED 2026-06-24)
-- Window: `t = 0 s … +3 s` post-onset (matches controller-area MSE window).
-- Metric: `mean_trials( ‖y − ref‖₂ over window )` per (Kp,Ki) node; `y` = regulated dF/F.
-- Reference per-session (registry `ref`); units must match `y` (resolve via Q1).
+## Cost function (RESOLVED 2026-06-24; per-session window added 2026-06-29)
+- Window: per-session `cwin` (registry field, set in `load_grid.m`). Default `t = 0 s … +3 s`
+  post-onset (matches controller-area MSE window). **AL_0034 10-17 = `[0 4]` s** because it ran a
+  4 s stim (dur=4, confirmed 4.00 s on all 205 trials) → scored as a **dur=4 variant** (parameter
+  dependence; panel T-B). `ct_process_set` reads `s.cwin` and stores `rec.cwin`; `gain_grid.m`
+  draws the stim-off line at `g.cwin(2)`. `cfg.PLOT_WIN=[-0.5 4.5]` so the 4 s plateau is visible.
+- Metric: `mean_trials( ‖y − ref‖₂ over window )` per (Kp,Ki) node; `y` = regulated dF/F (states.csv).
+- Reference per-session = −|input_params col7| = −5 (derived from data).
+- CAVEAT for 10-17: dur & mouse covary (only dur=4 AND only AL_0034 grid) → variant exhibit, not a
+  clean dur-controlled comparison.
 
 ## Auto-tuning method (RESOLVED 2026-06-29) — METHODS-READY
 - **Zero-order / model-free, greedy accept-if-lowered.** No plant model. Each iteration: apply a

@@ -51,11 +51,19 @@ tune_sess(2) = mk('AL_0034','2024-10-25', 2,'root','ready','');                 
 tune_sess(3) = mk('AL_0033','2024-12-19', 1,'root','ready','');                  % 8-col, discrete zero-order
 tune_sess(4) = mk('AL_0033','2025-03-17', 3,'root','ready','');                  % 8-col; continuous trajectory (reclassified from grid)
 
+% per-session cost window [s] (default 0-3 s); AL_0034 10-17 ran dur=4 -> score over its
+% full 4 s stim and present it as a dur=4 VARIANT (parameter dependence). NOTE: dur & mouse
+% covary here (10-17 is the only dur=4 AND only AL_0034 grid) -> variant exhibit, not a
+% clean dur-controlled comparison.
+[grid_sess.cwin] = deal([0 3]);
+[tune_sess.cwin] = deal([0 3]);
+grid_sess(4).cwin = [0 4];      % AL_0034 10-17 (dur=4)
+
 %% ---- knobs --------------------------------------------------------------
 cfg.ONSET_OFF = 0;        % add to onset index if alignment is off (e.g. -horizon)
 cfg.FS        = 35;       % states.csv sample rate (Hz) = imaging rate (105 samp = 3 s dur)
 cfg.COST_WIN  = [0 3];    % seconds post-onset (controller-area MSE window)
-cfg.PLOT_WIN  = [-0.5 3.5];% seconds, for stored per-node mean traces
+cfg.PLOT_WIN  = [-0.5 4.5];% seconds, for stored per-node mean traces (covers 10-17 dur=4 plateau)
 cfg.IC_GATE   = 2;        % drop trials with |y at onset| > IC_GATE (bad baseline / glitch); Inf disables
 cfg.YCLIP     = 80;       % |states| above this = logging glitch -> NaN'd before cost
 % -- 7-col Timeline onset recovery (ct_timeline_onsets) --
