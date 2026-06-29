@@ -40,8 +40,7 @@ grid_sess(1) = mk('AL_0033','2025-01-10', 2,'data','ready','');                 
 grid_sess(2) = mk('AL_0033','2025-03-03', 2,'root','ready','');                  % 8-col, prototype
 grid_sess(3) = mk('AL_0033','2025-03-05', 1,'root','ready','');                  % 8-col, "with rewards"
 grid_sess(4) = mk('AL_0033','2025-03-17', 3,'root','ready','');                  % 8-col
-grid_sess(5) = mk('AL_0034','2024-10-17',30,'data','hold', ...
-    '7-col; Timeline lightCommand gives clean 205/205 trial onsets, but states.csv dip lags the laser by ~2s (75 frames) with trial jitter, and even a constant +75 shift rebounds mid-stim -> states<->Timeline anchor unresolved; alignment untrustworthy');
+grid_sess(5) = mk('AL_0034','2024-10-17',30,'data','ready','');                  % 7-col; Timeline onsets + auto-calibrated states lag (~71 frames)
 grid_sess(6) = mk('AL_0034','2024-10-18', 1,'root','hold', ...
     '7-col; Timeline onsets load but controller barely regulates (settled ~0.7, 8% of trials <-3) + onset count 456!=460 rows -> unreliable gain mapping; excluded');
 
@@ -61,6 +60,7 @@ cfg.YCLIP     = 80;       % |states| above this = logging glitch -> NaN'd before
 cfg.FS_TL     = 2000;     % Timeline DAQ sample rate (Hz)
 cfg.LASER_THR = 0.1;      % lightCommand laser-on threshold (V, abs); low so small regulated pulses count
 cfg.TRIAL_GAP_S = 5;      % min ITI gap (s) to separate trials (merges intra-trial laser dropouts)
+cfg.LAG_MAX   = 140;      % max states-vs-laser logging lag to auto-calibrate (frames)
 
 %% ---- cache --------------------------------------------------------------
 r_grid    = 0;            % 0 = recompute (use after editing this file); 1 = load summary cache

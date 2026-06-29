@@ -100,6 +100,13 @@ ipPath = find_session_file(s, 'input_params.csv');
 IP = readmatrix(ipPath);
 ncol = size(IP,2);
 
+% --- output trace y(t) = states.csv (% dF/F @35 Hz), glitch-clipped ---
+% (loaded before onsets: 7-col Timeline recovery auto-calibrates its lag against y)
+yPath = find_session_file(s, 'states.csv');
+y = read_csv_row(yPath);
+y(abs(y) > cfg.YCLIP) = NaN;                      % NaN sparse logging glitches
+y = double(y(:)).';
+
 switch ncol
     case num2cell(8:20)                          % 8(+)-col rig version
         onset = IP(:,2);                         % onset index in the 35 Hz states axis
@@ -108,28 +115,26 @@ switch ncol
     case 7                                       % old rig version: no onset col -> derive from Timeline
         gains = IP(:,[2 3]);                     % Kp, Ki
         ref   = -abs(IP(1,4));                   % col4 = |ref|
-        onset = ct_timeline_onsets(s, cfg);      % lightCommand laser onsets -> states 35 Hz frame index
+        onset = ct_timeline_onsets(s, cfg, y);   % lightCommand laser onsets -> states 35 Hz frame index
     otherwise
         error('ct:badIP', 'unexpected input_params width: %d cols', ncol);
 end
-
-% --- output trace y(t) = states.csv (% dF/F @35 Hz), glitch-clipped ---
-yPath = find_session_file(s, 'states.csv');
-y = read_csv_row(yPath);
-y(abs(y) > cfg.YCLIP) = NaN;                      % NaN sparse logging glitches
-y = double(y(:)).';
 end
 
 
-function onsetFrame = ct_timeline_onsets(s, cfg)
+function onset = ct_timeline_onsets(s, cfg, y)
 % Derive trial onsets for 7-col (no-onset-column) sessions from the rig Timeline.
 % The laser command (`lightCommand`) marks each firing trial; map its onset time
 % to the states.csv axis by counting BLUE imaging frames (states.csv = 1 sample per
-% blue frame @35 Hz). Blue frames = widefieldExposure rising edges while the blue
-% LED is on. Verified on AL_0034 2024-10-17 e30 (205 onsets = 205 IP rows).
+% blue frame @35 Hz; blue frames = widefieldExposure rising edges while the blue LED
+% is on). The states.csv signal is logged with a fixed processing DELAY relative to
+% the laser/imaging clock (AL_0034 2024-10-17 e30: ~71 frames / 2.0 s), so the lag is
+% AUTO-CALIBRATED here by cross-correlating the per-frame laser envelope against the
+% inhibition (-dF/F) and taking the best positive lag.
 %   cfg.LASER_THR (V, abs)  - low so small regulated pulses still count (NOT 0.5*max)
 %   cfg.TRIAL_GAP_S         - min gap (s) between trials; merges intra-trial laser dropouts
 %   cfg.FS_TL               - Timeline DAQ rate (Hz)
+%   cfg.LAG_MAX             - max states-vs-laser lag to search (frames)
 root = expPath(s.mn, s.td, s.en);
 rdN = @(n) double(readNPY(fullfile(root, n)));
 lc = rdN('lightCommand.raw.npy');      lc = lc(:);
@@ -138,12 +143,29 @@ bl = rdN('blueLEDmonitor.raw.npy');    bl = bl(:);
 
 expRise = find(diff([0; we > 0.5*max(we)]) == 1);   % all exposures (blue + violet)
 blueFrameSamp = expRise(bl(expRise) > 0.5*max(bl));  % keep exposures with blue LED on
+nF = numel(blueFrameSamp);
 
 rise = find(diff([0; lc > cfg.LASER_THR]) == 1);     % every laser rising edge
 gaps = [inf; diff(rise)];
 trialOn = rise(gaps > cfg.TRIAL_GAP_S * cfg.FS_TL);  % new trial = first rise after the ITI gap
+onsetFrame = arrayfun(@(t) nnz(blueFrameSamp <= t), trialOn);   % laser onset in frame index
 
-onsetFrame = arrayfun(@(t) nnz(blueFrameSamp <= t), trialOn);   % -> states.csv sample index
+% per-blue-frame laser amplitude (1:1 with states sample i)
+edges  = [blueFrameSamp; blueFrameSamp(end) + round(median(diff(blueFrameSamp)))];
+laserF = zeros(1, nF);
+for i = 1:nF; laserF(i) = mean(lc(edges(i):edges(i+1)-1)); end
+
+% auto-calibrate the states.csv logging lag: xcorr(laser-on envelope, -dF/F)
+m  = min(nF, numel(y));
+L  = double(laserF(1:m) > 0.5*max(laserF));  L = L - mean(L);
+yy = y(1:m); yy(isnan(yy)) = 0;  S = -yy - mean(-yy);
+[c, lags] = xcorr(S, L, cfg.LAG_MAX, 'coeff');
+c(lags < 0) = -inf;                                  % states can only LAG the laser
+[rpk, ix] = max(c);  lag = lags(ix);
+fprintf('  timeline-onsets: %d trials | states lag = %d frames (%.2fs, r=%.2f)\n', ...
+    numel(onsetFrame), lag, lag/cfg.FS, rpk);
+
+onset = onsetFrame(:) + lag;                          % shift into the delayed states axis
 end
 
 
