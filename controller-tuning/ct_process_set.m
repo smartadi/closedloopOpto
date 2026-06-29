@@ -105,10 +105,10 @@ switch ncol
         onset = IP(:,2);                         % onset index in the 35 Hz states axis
         gains = IP(:,[5 6]);                     % Kp, Ki
         ref   = -abs(IP(1,7));                   % setpoint from data (col7 = |ref|)
-    case 7                                       % old rig version: no onset column
-        gains = IP(:,[2 3]);                     %#ok<NASGU> % Kp, Ki
-        error('ct:noOnset', ...
-            '7-col input_params has no onset column and no input_amps.csv -- mark status=hold');
+    case 7                                       % old rig version: no onset col -> derive from Timeline
+        gains = IP(:,[2 3]);                     % Kp, Ki
+        ref   = -abs(IP(1,4));                   % col4 = |ref|
+        onset = ct_timeline_onsets(s, cfg);      % lightCommand laser onsets -> states 35 Hz frame index
     otherwise
         error('ct:badIP', 'unexpected input_params width: %d cols', ncol);
 end
@@ -118,6 +118,32 @@ yPath = find_session_file(s, 'states.csv');
 y = read_csv_row(yPath);
 y(abs(y) > cfg.YCLIP) = NaN;                      % NaN sparse logging glitches
 y = double(y(:)).';
+end
+
+
+function onsetFrame = ct_timeline_onsets(s, cfg)
+% Derive trial onsets for 7-col (no-onset-column) sessions from the rig Timeline.
+% The laser command (`lightCommand`) marks each firing trial; map its onset time
+% to the states.csv axis by counting BLUE imaging frames (states.csv = 1 sample per
+% blue frame @35 Hz). Blue frames = widefieldExposure rising edges while the blue
+% LED is on. Verified on AL_0034 2024-10-17 e30 (205 onsets = 205 IP rows).
+%   cfg.LASER_THR (V, abs)  - low so small regulated pulses still count (NOT 0.5*max)
+%   cfg.TRIAL_GAP_S         - min gap (s) between trials; merges intra-trial laser dropouts
+%   cfg.FS_TL               - Timeline DAQ rate (Hz)
+root = expPath(s.mn, s.td, s.en);
+rdN = @(n) double(readNPY(fullfile(root, n)));
+lc = rdN('lightCommand.raw.npy');      lc = lc(:);
+we = rdN('widefieldExposure.raw.npy'); we = we(:);
+bl = rdN('blueLEDmonitor.raw.npy');    bl = bl(:);
+
+expRise = find(diff([0; we > 0.5*max(we)]) == 1);   % all exposures (blue + violet)
+blueFrameSamp = expRise(bl(expRise) > 0.5*max(bl));  % keep exposures with blue LED on
+
+rise = find(diff([0; lc > cfg.LASER_THR]) == 1);     % every laser rising edge
+gaps = [inf; diff(rise)];
+trialOn = rise(gaps > cfg.TRIAL_GAP_S * cfg.FS_TL);  % new trial = first rise after the ITI gap
+
+onsetFrame = arrayfun(@(t) nnz(blueFrameSamp <= t), trialOn);   % -> states.csv sample index
 end
 
 

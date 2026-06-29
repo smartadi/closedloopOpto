@@ -41,9 +41,9 @@ grid_sess(2) = mk('AL_0033','2025-03-03', 2,'root','ready','');                 
 grid_sess(3) = mk('AL_0033','2025-03-05', 1,'root','ready','');                  % 8-col, "with rewards"
 grid_sess(4) = mk('AL_0033','2025-03-17', 3,'root','ready','');                  % 8-col
 grid_sess(5) = mk('AL_0034','2024-10-17',30,'data','hold', ...
-    '7-col input_params (no onset col) + no input_amps.csv -- needs Timeline onset adapter');
+    '7-col; Timeline lightCommand gives clean 205/205 trial onsets, but states.csv dip lags the laser by ~2s (75 frames) with trial jitter, and even a constant +75 shift rebounds mid-stim -> states<->Timeline anchor unresolved; alignment untrustworthy');
 grid_sess(6) = mk('AL_0034','2024-10-18', 1,'root','hold', ...
-    '7-col input_params (no onset col) + no input_amps.csv -- needs Timeline onset adapter');
+    '7-col; Timeline onsets load but controller barely regulates (settled ~0.7, 8% of trials <-3) + onset count 456!=460 rows -> unreliable gain mapping; excluded');
 
 % --- AUTO-TUNE sessions (gains adapt online; (Kp,Ki) form a trajectory) ---
 tune_sess(1) = mk('AL_0034','2024-10-25', 1,'root','ready','');                  % 8-col
@@ -57,6 +57,10 @@ cfg.COST_WIN  = [0 3];    % seconds post-onset (controller-area MSE window)
 cfg.PLOT_WIN  = [-0.5 3.5];% seconds, for stored per-node mean traces
 cfg.IC_GATE   = 2;        % drop trials with |y at onset| > IC_GATE (bad baseline / glitch); Inf disables
 cfg.YCLIP     = 80;       % |states| above this = logging glitch -> NaN'd before cost
+% -- 7-col Timeline onset recovery (ct_timeline_onsets) --
+cfg.FS_TL     = 2000;     % Timeline DAQ sample rate (Hz)
+cfg.LASER_THR = 0.1;      % lightCommand laser-on threshold (V, abs); low so small regulated pulses count
+cfg.TRIAL_GAP_S = 5;      % min ITI gap (s) to separate trials (merges intra-trial laser dropouts)
 
 %% ---- cache --------------------------------------------------------------
 r_grid    = 0;            % 0 = recompute (use after editing this file); 1 = load summary cache
