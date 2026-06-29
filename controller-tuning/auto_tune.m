@@ -30,9 +30,13 @@ for j = 1:numel(cost)
     if valid(j) && cost(j) < cur; cur = cost(j); end
     bestCost(j) = cur;
 end
-[~, jStar] = min(cost + ~valid*1e9);            % trial achieving global min cost
-fprintf('auto_tune: %s | %d trials | converged ~ (Kp=%g, Ki=%g) cost=%.3g at trial %d\n', ...
-    tag, numel(trial), Kp(jStar), Ki(jStar), cost(jStar), trial(jStar));
+[~, jStar] = min(cost + ~valid*1e9);            % trial achieving global min single-trial cost (optimistic)
+[Jbest, kbest] = min(a.J);                       % BEST CONTROLLER by AVERAGE cost (the fair evaluation)
+fprintf('auto_tune: %s | %d trials\n', tag, numel(trial));
+fprintf('  best controller (avg cost): (Kp=%g, Ki=%g) avgJ=%.3g over n=%d trials\n', ...
+    a.C(kbest,1), a.C(kbest,2), Jbest, a.nNode(kbest));
+fprintf('  (best single trial: (Kp=%g, Ki=%g) J=%.3g at trial %d -- optimistic, for reference)\n', ...
+    Kp(jStar), Ki(jStar), cost(jStar), trial(jStar));
 
 %% ---- Figure: gains + cost vs iteration ---------------------------------
 fig = paperFig(6, 6);
@@ -56,12 +60,17 @@ plot(ax2, trial(~valid), cost(~valid), 'o', 'MarkerSize',2.5, ...
     'MarkerEdgeColor',[0.7 0.7 0.7], 'HandleVisibility','off');     % gated-out, faint
 plot(ax2, trial(valid),  cost(valid),  'o', 'MarkerSize',2.5, ...
     'MarkerFaceColor',[0.4 0.4 0.4], 'MarkerEdgeColor','none');     % evaluated
+% per-controller AVERAGE cost (the active controller's mean over its trials)
+[~, icn] = ismember(round([Kp Ki],6), round(a.C,6), 'rows');
+ctrlMean = nan(size(cost)); ok = icn>0; ctrlMean(ok) = a.J(icn(ok));
+stairs(ax2, trial, ctrlMean, '-', 'Color', PS.col_fit, 'LineWidth', PS.lw_mean);
+yline(ax2, Jbest, ':', 'Color', PS.col_zero, 'LineWidth', PS.lw_ref);   % best per-controller avg cost
 plot(ax2, trial, bestCost, '-', 'Color', PS.col_cl, 'LineWidth', PS.lw_mean);
 plot(ax2, trial(jStar), cost(jStar), 'p', 'MarkerSize',9, ...
     'MarkerFaceColor','w', 'MarkerEdgeColor','k', 'LineWidth',0.6);
 xlim(ax2, [trial(1) trial(end)]);
 xlabel(ax2, 'trial (iteration)'); ylabel(ax2, 'cost  J');
-lg = legend(ax2, {'per-trial','running best'}, 'Box','off', ...
+lg = legend(ax2, {'per-trial','controller avg','running best'}, 'Box','off', ...
     'Location','northeast', 'FontSize', PS.fs);
 lg.ItemTokenSize = PS.lgd_token;
 
