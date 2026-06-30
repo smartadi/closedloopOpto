@@ -85,7 +85,12 @@ def main():
     nS = len(sites)
 
     post = window >= 0
-    YMAX = float(np.nanpercentile(np.abs(H[:, :, post]), 99.5)) or 0.01
+    # fixed ±5% dF/F scale across ALL panels (comparable). The old per-sample 99.5th-pct
+    # scale (~±1.9%) was dominated by near-zero samples and clipped 14% of pairs' peaks
+    # (real responses reach 4-7%); ±5% clips only ~0.1%. Override with --ymax.
+    YMAX = 0.05
+    if "--ymax" in sys.argv:
+        YMAX = float(sys.argv[sys.argv.index("--ymax") + 1])
     XLIM = None
     if "--xlim" in sys.argv:
         i = sys.argv.index("--xlim")
