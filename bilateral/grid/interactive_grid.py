@@ -153,7 +153,8 @@ def main():
 
     eff = build_brain()
     views = {"aff": None, "trials": None}
-    state = {"stim": int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)]))), "mode": "stim"}
+    state = {"stim": int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)]))),
+             "readout": None, "mode": "stim", "live": False}
 
     def draw_efferent(X):
         render(eff, lambda j: H[X, j], lambda j: Hstd[X, j], lambda j: yhat[X, j],
@@ -165,6 +166,8 @@ def main():
     def draw_afferent(Y, X):
         if views["aff"] is None or not plt.fignum_exists(views["aff"]["fig"].number):
             views["aff"] = build_brain()
+            if state.get("live"):
+                views["aff"]["fig"].show()
         render(views["aff"], lambda j: H[j, Y], lambda j: Hstd[j, Y], lambda j: yhat[j, Y],
                lambda j: order[j, Y], {Y: "red", X: "cyan"}, Y,
                f"AFFERENT — readout {coord(Y)} ← stim at every site   "
@@ -177,6 +180,8 @@ def main():
         if views["trials"] is None or not plt.fignum_exists(views["trials"]["fig"].number):
             f, axx = plt.subplots(10, 5, figsize=(11, 13))
             views["trials"] = dict(fig=f, axes=axx.ravel())
+            if state.get("live"):
+                f.show()
         f, axx = views["trials"]["fig"], views["trials"]["axes"]
         for k, ax in enumerate(axx):
             ax.clear(); ax.set_xticks([]); ax.set_yticks([])
@@ -209,6 +214,16 @@ def main():
         print("wrote view_efferent.png, view_afferent.png, view_trials.png")
         return
 
+    # open the two secondary windows up front (default readout = strongest non-self of X0),
+    # so they stay open and just update on each click.
+    state["readout"] = int(np.argsort(-np.abs(H[state["stim"], :, post]).max(1))[1])
+
+    def refresh_secondary():
+        draw_afferent(state["readout"], state["stim"])
+        show_trials(state["stim"], state["readout"])
+
+    refresh_secondary()
+
     # --- button to arm readout selection ---
     ax_btn = eff["fig"].add_axes([0.83, 0.965, 0.15, 0.028])
     button = Button(ax_btn, "Inspect Y (then click)")
@@ -217,7 +232,7 @@ def main():
 
     def arm(_):
         state["mode"] = "readout"
-        status.set_text("→ click a node to inspect as readout Y")
+        status.set_text("→ click a node to set readout Y")
         eff["fig"].canvas.draw_idle()
     button.on_clicked(arm)
 
@@ -225,15 +240,16 @@ def main():
         if event.inaxes not in eff["axs"]:
             return
         j = eff["axs"][event.inaxes]
-        if state["mode"] == "readout":
+        if state["mode"] == "readout":     # picking a new readout Y
             state["mode"] = "stim"; status.set_text("")
-            draw_afferent(j, state["stim"])
-            show_trials(state["stim"], j)
-        else:
+            state["readout"] = j
+        else:                              # picking a new stim X
             state["stim"] = j
             draw_efferent(j)
-
+        refresh_secondary()                # both windows track X and Y
     eff["fig"].canvas.mpl_connect("button_press_event", on_click)
+
+    state["live"] = True
     plt.show()
 
 

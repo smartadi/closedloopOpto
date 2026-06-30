@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-30 — Grid viewer fix: secondary windows persist + live-update on every click
+**Changed/Found:** `interactive_grid.py` — the afferent + trials windows weren't appearing because they were created inside the click callback after `plt.show()` (TkAgg needs them created up front or an explicit `fig.show()`). Now both secondary windows are created at launch and `refresh_secondary()` updates them in place on EVERY click — both when changing stim X and when picking readout Y (via "Inspect Y" button). Added `state['live']` guard so a closed window is re-shown via `fig.show()` only during the running loop (not in SAVE/Agg).
+**Why:** User: secondary plots didn't pop up on click; wants them to stay open and update as Y (and X) change.
+**Next:** Phase 2 network model; FINDINGS/README "sub-threshold" wording fix (both still pending).
+
 ### 2026-06-30 — Grid viewer: afferent map + 50-trial sanity window + ±2 SD shading; averaging verified
 **Changed/Found:** `cross_response.py` now caches `Hstd` (trial std) and a `grid_trials.npz` (per-ROI full time-series `roi_ts` 95248×52 f32 + onsets) so single trials for any (s,r) reconstruct with no network; added `extract_trials()`. **VERIFIED averaging:** reconstructed single-trial mean reproduces cached `H[s,r]` to 1.4e-8 (f32 precision) across 6 pairs, n=47–50. `interactive_grid.py` rewritten into 3 linked windows: EFFERENT (existing, click X → H[X,·]), **AFFERENT** (button "Inspect Y" → click Y → column H[·,Y]: Y's response to each stim, placed at the stim's location; Y red, current stim X cyan), **TRIALS** (10×5 = all individual trials of (X,Y) with mean overlaid). Shading switched from ±SEM to **±2 SD** (trial spread). `tf_fit.fit_all` passes `Hstd` through.
 **Why:** User wants to verify trial averaging and inspect input (afferent) maps + raw single trials per pair; ±2 SD shows trial-to-trial variability.
