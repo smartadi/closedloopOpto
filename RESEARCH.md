@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-30 — Grid viewer: afferent map + 50-trial sanity window + ±2 SD shading; averaging verified
+**Changed/Found:** `cross_response.py` now caches `Hstd` (trial std) and a `grid_trials.npz` (per-ROI full time-series `roi_ts` 95248×52 f32 + onsets) so single trials for any (s,r) reconstruct with no network; added `extract_trials()`. **VERIFIED averaging:** reconstructed single-trial mean reproduces cached `H[s,r]` to 1.4e-8 (f32 precision) across 6 pairs, n=47–50. `interactive_grid.py` rewritten into 3 linked windows: EFFERENT (existing, click X → H[X,·]), **AFFERENT** (button "Inspect Y" → click Y → column H[·,Y]: Y's response to each stim, placed at the stim's location; Y red, current stim X cyan), **TRIALS** (10×5 = all individual trials of (X,Y) with mean overlaid). Shading switched from ±SEM to **±2 SD** (trial spread). `tf_fit.fit_all` passes `Hstd` through.
+**Why:** User wants to verify trial averaging and inspect input (afferent) maps + raw single trials per pair; ±2 SD shows trial-to-trial variability.
+**Next:** Note ±2 SD (~±5%) far exceeds the fixed ±1.9% panel scale so bands clip — fine (spread ≫ mean), revisit scale if wanted. Phase 2 network model still pending; FINDINGS/README "sub-threshold" wording fix pending.
+
 ### 2026-06-29 — Grid: display window ±2 s (configurable), TF fit capped to clean ≤1 s window
 **Changed/Found:** `config.CROSS_WIN=(-2,2)`; `cross_response.build` takes a `win` arg + `--win T0 T1` CLI; rebuilt tensor at ±2 s (280 samples). `tf_fit.FIT_TMAX=1.0` — TF now fit only on t∈[0,1] s because ITI≈0.71 s means a ±2 s average overlaps ~3.6 neighbor stims (verified) and the tail is contaminated; refit order hist [123,342,920,812,507], median R²=0.73. `interactive_grid.py`: `--xlim T0 T1` to zoom the display within the cached range; corner scale `dt=1 s`, label font 7, **verified honest** (vertical bar = YMAX dF/F → label YMAX·100%, horizontal = dt s). Fixed y-scale now ±0.0192.
 **Why:** User asked for a ±2 s display window + a control (arg) for it, and to recheck the corner-scale measurement. The ±2 s display reveals neighbor-stim contamination in the tails (real, not noise) — hence the fit-window cap.

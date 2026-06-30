@@ -95,6 +95,7 @@ def fit_all(orders=ORDERS, criterion="bic", cache=True):
     z = cross_response.load_cached()
     H, sites, window = z["H"], z["sites"], z["window"]
     Hsem = z["Hsem"] if "Hsem" in z else np.zeros_like(H)
+    Hstd = z["Hstd"] if "Hstd" in z else np.zeros_like(H)
     label = str(z["label"])
     nS, nW = len(sites), len(window)
     yhat = np.zeros((nS, nS, nW))
@@ -118,10 +119,10 @@ def fit_all(orders=ORDERS, criterion="bic", cache=True):
     print(f"fit all {nS}x{nS}; order hist {np.bincount(order.ravel(), minlength=6)[1:]}, "
           f"median R2={np.nanmedian(r2):.2f}")
     if cache:
-        np.savez(CACHE_TF, H=H, Hsem=Hsem, yhat=yhat, sites=sites, window=window, label=label,
-                 order=order, r2=r2, gain=gain, delay=delay, tau=tau, A=Amp)
+        np.savez(CACHE_TF, H=H, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window,
+                 label=label, order=order, r2=r2, gain=gain, delay=delay, tau=tau, A=Amp)
         print("cached ->", CACHE_TF)
-    return dict(H=H, Hsem=Hsem, yhat=yhat, sites=sites, window=window, order=order,
+    return dict(H=H, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window, order=order,
                 r2=r2, gain=gain, delay=delay, tau=tau, A=Amp, label=label)
 
 

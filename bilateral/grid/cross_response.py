@@ -50,9 +50,10 @@ def build(amp_sel=cfg.AMP_SEL, win=None, cache=True):
         mI[j] = mimg[y0:y1, x0:x1].mean()
 
     # for each stim site, interpolate its trials once, then project onto every readout ROI.
-    # H = trial MEAN (min-variance estimator of the impulse response, smooth); Hsem = ±SEM.
+    # H = trial MEAN; Hstd = trial STD (for ±2 SD shading); Hsem = ±SEM.
     H = np.full((nS, nS, nW), np.nan)
     Hsem = np.full((nS, nS, nW), np.nan)
+    Hstd = np.full((nS, nS, nW), np.nan)
     ntri = np.zeros(nS, int)
     for i, (mx, my) in enumerate(sites):
         these = onset_t[(pos[:, 0] == mx) & (pos[:, 1] == my)]
@@ -63,16 +64,24 @@ def build(amp_sel=cfg.AMP_SEL, win=None, cache=True):
             base = np.nanmean(fluo[:, :base_ix])
             dff = (fluo - base) / base
             H[i, j] = np.nanmean(dff, 0)
-            Hsem[i, j] = np.nanstd(dff, 0) / np.sqrt(dff.shape[0])
+            Hstd[i, j] = np.nanstd(dff, 0)
+            Hsem[i, j] = Hstd[i, j] / np.sqrt(dff.shape[0])
         print(f"  stim {i+1:2d}/{nS}  site=({mx:+.1f},{my:+.0f})  n={ntri[i]} trials", end="\r")
     print()
-    print(f"built H {H.shape}  ({label}; {ntri.min()}-{ntri.max()} trials/site; trial MEAN±SEM)")
+    print(f"built H {H.shape}  ({label}; {ntri.min()}-{ntri.max()} trials/site; trial MEAN/STD/SEM)")
+
+    # per-ROI full time-series (SVD-rate) so single trials for ANY (stim,readout) pair can
+    # be reconstructed later with no network read (drives the trials viewer + avg check).
+    roi_ts = (V @ spat.T) + mI[None, :]                       # (T, nS)
 
     if cache:
         CACHE.parent.mkdir(exist_ok=True)
-        np.savez(CACHE, H=H, Hsem=Hsem, sites=sites, window=window, label=label,
+        np.savez(CACHE, H=H, Hsem=Hsem, Hstd=Hstd, sites=sites, window=window, label=label,
                  base_ix=base_ix, ntri=ntri, fs_win=cfg.FS_WIN)
         print("cached ->", CACHE)
+        np.savez(TRIALS_CACHE, roi_ts=roi_ts.astype(np.float32), svdT=svdT, onset_t=onset_t,
+                 pos=pos, sites=sites, window=window, base_ix=base_ix)
+        print(f"cached -> {TRIALS_CACHE}  (roi_ts {roi_ts.shape})")
     return H, sites, window, label
 
 
@@ -85,6 +94,27 @@ def load_cached():
 
 
 BRAIN_CACHE = CACHE.parent / "grid_brain.npz"
+TRIALS_CACHE = CACHE.parent / "grid_trials.npz"
+
+
+def extract_trials(roi_ts, svdT, onset_t, pos, sites, window, base_ix, s_idx, r_idx):
+    """Reconstruct the individual single-trial dF/F for stim site s_idx, readout r_idx.
+    Returns (dff, mean) where dff is (nTrials, nWin). Mean reproduces the cached H[s,r]
+    exactly (same scalar baseline convention), which is the averaging sanity check."""
+    import scipy.interpolate
+    these = onset_t[(pos[:, 0] == sites[s_idx, 0]) & (pos[:, 1] == sites[s_idx, 1])]
+    f = scipy.interpolate.interp1d(svdT, roi_ts[:, r_idx], bounds_error=False, fill_value=np.nan)
+    fluo = f(window[None, :] + these[:, None])                # (nTrials, nWin)
+    base = np.nanmean(fluo[:, :base_ix])
+    dff = (fluo - base) / base
+    return dff, np.nanmean(dff, 0)
+
+
+def load_trials():
+    if not TRIALS_CACHE.exists():
+        raise FileNotFoundError(f"{TRIALS_CACHE} missing — run cross_response.py first")
+    z = np.load(TRIALS_CACHE, allow_pickle=True)
+    return {k: z[k] for k in z.files}
 
 
 def cache_brain():
