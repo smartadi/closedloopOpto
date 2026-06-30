@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 """interactive_grid.py — interactive perturbation-response explorer over the brain.
 
-THREE linked views (separate windows):
+THREE linked windows, driven by clicks:
   • EFFERENT (primary brain map): click a node X -> every site shows H[X, ·], the
-    trial-mean dF/F response to stimulating X (blue), ±2 SD band, TF prediction (orange),
-    model order label, red stim line at t=0. Poles/zeros printed to the console on click.
-  • Press the "Inspect Y" button, then click a node Y ->
-      - AFFERENT brain map (2nd window): at each STIM site's location, Y's trial-mean
-        response to that stim, i.e. column H[·, Y]. Y's own panel framed red, the current
-        stim X framed cyan.
-      - TRIALS window (3rd): a 10×5 grid of all individual trials for (stim X, readout Y),
-        each with the trial mean overlaid — the averaging sanity check.
+    trial-mean dF/F response to stimulating X (thick blue), ±2 SD band (faint),
+    TF prediction (orange), model-order label, red stim line at t=0. The SAME click also
+    refreshes the afferent map below. Poles/zeros printed to the console.
+  • AFFERENT (2nd brain map): keyed off the same X -> column H[·, X]: each site Y shows
+    X's trial-mean response WHEN Y was stimmed. X's own panel framed red. Click any node Y
+    on THIS map ->
+  • TRIALS (3rd window): a 10×5 grid of every individual trial for (stim Y -> readout X),
+    each with the trial mean overlaid (same mean as the brain map) — the averaging check.
+    The inspected Y is framed green on the afferent map.
 
 Data: cached TF fits (`tf_fit.py all`) + brain image (`cross_response.py brain`) +
 ROI time-series (`cross_response.py`, the trials cache). Single trials reconstruct with
@@ -37,7 +38,6 @@ else:
             continue
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
-from matplotlib.widgets import Button
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cross_response as cr
@@ -119,8 +119,8 @@ def main():
             ax.axhline(0, c="0.6", lw=0.4, ls=":", alpha=0.7, zorder=1)
             ax.axvline(0, c="red", lw=0.9, zorder=1)
             tr, sd = trace_fn(j), std_fn(j)
-            ax.fill_between(window, tr - 2 * sd, tr + 2 * sd, color="dodgerblue", alpha=0.18, lw=0)
-            ax.plot(window, tr, c="dodgerblue", lw=0.9)
+            ax.fill_between(window, tr - 2 * sd, tr + 2 * sd, color="deepskyblue", alpha=0.10, lw=0)
+            ax.plot(window, tr, c="blue", lw=1.7)             # trial MEAN — prominent
             ax.plot(window, pred_fn(j), c="orange", lw=1.0, ls="--")
             ax.set_ylim(-YMAX, YMAX); ax.set_xticks([]); ax.set_yticks([])
             if XLIM is not None:
@@ -153,28 +153,33 @@ def main():
 
     eff = build_brain()
     views = {"aff": None, "trials": None}
-    state = {"stim": int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)]))),
-             "readout": None, "mode": "stim", "live": False}
+    X0 = int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)])))
+    state = {"X": X0, "Y": None, "live": False, "on_sec": None}
 
     def draw_efferent(X):
         render(eff, lambda j: H[X, j], lambda j: Hstd[X, j], lambda j: yhat[X, j],
                lambda j: order[X, j], {X: "red"}, X,
                f"EFFERENT — stim {coord(X)} → response at every site   "
-               f"blue=mean ±2SD  orange=TF  [Inspect Y, then click a node]")
+               f"blue=trial mean  band=±2SD  orange=TF")
         report(X)
 
-    def draw_afferent(Y, X):
+    def draw_afferent(X, Ysel=None):
         if views["aff"] is None or not plt.fignum_exists(views["aff"]["fig"].number):
             views["aff"] = build_brain()
+            if state.get("on_sec"):
+                views["aff"]["fig"].canvas.mpl_connect("button_press_event", state["on_sec"])
             if state.get("live"):
                 views["aff"]["fig"].show()
-        render(views["aff"], lambda j: H[j, Y], lambda j: Hstd[j, Y], lambda j: yhat[j, Y],
-               lambda j: order[j, Y], {Y: "red", X: "cyan"}, Y,
-               f"AFFERENT — readout {coord(Y)} ← stim at every site   "
-               f"red=Y's location  cyan=current stim {coord(X)}")
+        frames = {X: "red"}
+        if Ysel is not None:
+            frames[Ysel] = "lime"
+        render(views["aff"], lambda j: H[j, X], lambda j: Hstd[j, X], lambda j: yhat[j, X],
+               lambda j: order[j, X], frames, X,
+               f"AFFERENT — node {coord(X)}: each site = {coord(X)}'s response when THAT site "
+               f"is stimmed   red={coord(X)}  green=trials shown   [click a node for its trials]")
 
-    def show_trials(X, Y):
-        dff, m = cr.extract_trials(roi_ts, svdT, onset_t, pos, sites, twin, base_ix, X, Y)
+    def show_trials(s, r):
+        dff, m = cr.extract_trials(roi_ts, svdT, onset_t, pos, sites, twin, base_ix, s, r)
         n = dff.shape[0]
         yl = float(np.nanpercentile(np.abs(dff[:, post]), 99) * 1.15) or YMAX
         if views["trials"] is None or not plt.fignum_exists(views["trials"]["fig"].number):
@@ -189,24 +194,28 @@ def main():
                 ax.axhline(0, c="0.7", lw=0.3, ls=":")
                 ax.axvline(0, c="red", lw=0.6)
                 ax.plot(twin, dff[k], c="dodgerblue", lw=0.6)
-                ax.plot(twin, m, c="orange", lw=1.1)
+                ax.plot(twin, m, c="orange", lw=1.3)         # same mean as the brain map
                 ax.set_ylim(-yl, yl)
                 if XLIM is not None:
                     ax.set_xlim(*XLIM)
                 ax.text(0.03, 0.97, f"{k+1}", transform=ax.transAxes, fontsize=5, va="top", c="0.4")
             else:
                 ax.axis("off")
-        f.suptitle(f"All {n} trials — stim {coord(X)} → readout {coord(Y)}   "
-                   f"blue = single trial   orange = mean (±{yl*100:.1f}% scale)", fontsize=11)
+        f.suptitle(f"All {n} trials — stim {coord(s)} → readout {coord(r)}   "
+                   f"blue = single trial   orange = trial mean (±{yl*100:.1f}% scale)", fontsize=11)
         f.tight_layout(rect=[0, 0, 1, 0.98])
         f.canvas.draw_idle()
 
-    draw_efferent(state["stim"])
+    draw_efferent(X0)
+    # default trials pair: the OTHER stim site whose response at X0 is strongest (afferent
+    # col of X0, excluding X0 itself so the preview/default is a genuine cross pair)
+    col = np.abs(H[:, X0, post]).max(1).copy(); col[X0] = -np.inf
+    Y0 = int(np.argmax(col))
+    state["Y"] = Y0
 
     if SAVE:
-        Y0 = int(np.argsort(-np.abs(H[state["stim"], :, post]).max(1))[1])  # strongest non-self readout
-        draw_afferent(Y0, state["stim"])
-        show_trials(state["stim"], Y0)
+        draw_afferent(X0, Y0)
+        show_trials(Y0, X0)
         outdir = Path(__file__).resolve().parent / "grid_png"; outdir.mkdir(exist_ok=True)
         eff["fig"].savefig(outdir / "view_efferent.png", dpi=130)
         views["aff"]["fig"].savefig(outdir / "view_afferent.png", dpi=130)
@@ -214,41 +223,27 @@ def main():
         print("wrote view_efferent.png, view_afferent.png, view_trials.png")
         return
 
-    # open the two secondary windows up front (default readout = strongest non-self of X0),
-    # so they stay open and just update on each click.
-    state["readout"] = int(np.argsort(-np.abs(H[state["stim"], :, post]).max(1))[1])
+    # secondary (afferent) map: click a node Y on it -> trials of (stim Y -> readout X)
+    def on_secondary(event):
+        if views["aff"] is None or event.inaxes not in views["aff"]["axs"]:
+            return
+        state["Y"] = views["aff"]["axs"][event.inaxes]
+        draw_afferent(state["X"], state["Y"])
+        show_trials(state["Y"], state["X"])
+    state["on_sec"] = on_secondary
 
-    def refresh_secondary():
-        draw_afferent(state["readout"], state["stim"])
-        show_trials(state["stim"], state["readout"])
-
-    refresh_secondary()
-
-    # --- button to arm readout selection ---
-    ax_btn = eff["fig"].add_axes([0.83, 0.965, 0.15, 0.028])
-    button = Button(ax_btn, "Inspect Y (then click)")
-    status = eff["fig"].text(0.5, 0.965, "", color="yellow", fontsize=11, ha="center",
-                             path_effects=ST)
-
-    def arm(_):
-        state["mode"] = "readout"
-        status.set_text("→ click a node to set readout Y")
-        eff["fig"].canvas.draw_idle()
-    button.on_clicked(arm)
-
-    def on_click(event):
+    # primary (efferent) map: click a node X -> efferent H[X,:] AND afferent H[:,X] both update
+    def on_primary(event):
         if event.inaxes not in eff["axs"]:
             return
-        j = eff["axs"][event.inaxes]
-        if state["mode"] == "readout":     # picking a new readout Y
-            state["mode"] = "stim"; status.set_text("")
-            state["readout"] = j
-        else:                              # picking a new stim X
-            state["stim"] = j
-            draw_efferent(j)
-        refresh_secondary()                # both windows track X and Y
-    eff["fig"].canvas.mpl_connect("button_press_event", on_click)
+        state["X"] = eff["axs"][event.inaxes]
+        draw_efferent(state["X"])
+        draw_afferent(state["X"], state["Y"])
+        show_trials(state["Y"], state["X"])
+    eff["fig"].canvas.mpl_connect("button_press_event", on_primary)
 
+    draw_afferent(X0, Y0)          # creates the afferent window (+ connects on_secondary)
+    show_trials(Y0, X0)
     state["live"] = True
     plt.show()
 

@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-06-30 — Grid viewer simplified to single-click 2-map design + mean made prominent
+**Changed/Found:** `interactive_grid.py` — (1) Simplified per user: one click X on the PRIMARY map now drives BOTH the efferent map (H[X,·]) and the AFFERENT map (column H[·,X]: each site Y = X's response when Y was stimmed); clicking a node Y on the afferent map opens the 50-trial grid for (stim Y → readout X). Removed the "Inspect Y" button/mode. (2) Fixed the user-reported "brain maps look like single trials": the thin blue mean was the same colour as and buried under the huge ±2 SD band — made the mean a thick (lw 1.7) solid blue line over a faint (alpha 0.10) band, so the trial average is unmistakable. Confirmed the brain-map blue IS H (= the trials-window orange mean) to 1e-8. (3) Fixed a default-pair bug: preview Y0 was landing on X0 (self), collapsing the red+green frames into one — now forced to the strongest NON-self afferent driver.
+**Why:** User wanted a simpler two-map flow keyed off one click, and noticed the averaged response wasn't reading as an average on the brain panels.
+**Next:** Residual blue wiggle past ~±0.7 s is real neighbour-stim contamination (ITI ~0.71 s), already handled by the ≤1 s TF-fit cap — leave as honest display. Phase 2 network model still pending.
+
 ### 2026-06-30 — Grid viewer fix: secondary windows persist + live-update on every click
 **Changed/Found:** `interactive_grid.py` — the afferent + trials windows weren't appearing because they were created inside the click callback after `plt.show()` (TkAgg needs them created up front or an explicit `fig.show()`). Now both secondary windows are created at launch and `refresh_secondary()` updates them in place on EVERY click — both when changing stim X and when picking readout Y (via "Inspect Y" button). Added `state['live']` guard so a closed window is re-shown via `fig.show()` only during the running loop (not in SAVE/Agg).
 **Why:** User: secondary plots didn't pop up on click; wants them to stay open and update as Y (and X) change.
