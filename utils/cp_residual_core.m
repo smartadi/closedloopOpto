@@ -19,14 +19,20 @@ function [R, S] = cp_residual_core(allExperiments, selExp, opts)
 %
 % OUTPUTS
 %   R — data struct: res_imp/act_imp/prd_imp/prr_imp, t_imp, iDip, per-trial DVs
-%       (resE/devS/devP) + covariates (mot/pv/dp/amp) + masks, beta_cp, R.Sin
-%       (inspector payload when make_wide), metadata (mn/td/en/Fs/cv_mean).
-%   S — state stats: r/p for dev_stim, dev_pre, partial(stim|pre), res_E per state.
+%       gain (PRIMARY = template-gain), devL1 (SECONDARY = L1-dev), resE (signed
+%       magnitude), devS (old squared-dev, ref), devP (pre-stim control) +
+%       covariates (mot/pv/dp/amp) + masks, beta_cp, R.Sin (inspector payload when
+%       make_wide), metadata (mn/td/en/Fs/cv_mean).
+%   S — state stats: r_partial/p_partial = partial(GAIN, state | dev_pre) [primary];
+%       r_L1/p_L1 = partial(L1-dev|pre) [secondary]; r_devSq = old squared-dev;
+%       r_stim = corr(gain,state); r_resE = corr(res_E,state); per state.
 %
 % Prereqs: load_experiments.m has been run. Helpers resolved from utils/.
 if nargin < 3 || isempty(opts), opts = struct(); end
 def = struct('decontam',true,'use_motion',true,'make_wide',false,'plot',false, ...
-             'predictor','hemi');   % 'hemi' = [CP-HEMI] field->kernel map (default); 'ols' = legacy beta_cp
+             'predictor','hemi', ...   % 'hemi' = [CP-HEMI] field->kernel map (default); 'ols' = legacy beta_cp
+             'use_data_site',true, ... % A2: retarget y_full + kernel to the localized laser center (else params.pixel rim)
+             'state_win','peri');      % A4: var/delta state window 'peri' [-1,+0.5]s (default) | 'pre' [-1,0]s (robustness)
 ofn = fieldnames(def);
 for ofk = 1:numel(ofn)
     if ~isfield(opts, ofn{ofk}), opts.(ofn{ofk}) = def.(ofn{ofk}); end
@@ -37,6 +43,8 @@ make_wide      = opts.make_wide;
 make_inspector = make_wide;     % inspector traces built only when wide requested
 do_plot        = opts.plot;
 predictor      = opts.predictor;
+use_data_site  = opts.use_data_site;   % A2: use localized laser center as primary pixel
+state_win      = opts.state_win;       % A4: 'peri' (default) | 'pre' (strictly pre-onset)
 
 
 % Resolve folders relative to THIS function's location (utils/). Guard against
@@ -110,6 +118,33 @@ px_prim  = double(d_tmp.params.pixel(2));
 k_prim   = double(d_tmp.params.kernel);   % recording-kernel half-width (for HEMI predictor)
 mot_full = d_tmp.motion.motion_1(1:2:end);
 clear d_tmp
+
+%% [A2] Retarget primary pixel to the DATA-DERIVED laser center (cp_find_stim_site)
+% params.pixel is flip-prone and lands on the inhibition RIM; the localized laser
+% center is an ARRAY [row col] (display-invariant). Set px_prim:=row, py_prim:=col
+% (matching contra_prediction [CP-SITE] + cp_hemi_predictor footprint rows=px_prim,
+% cols=py_prim), and re-extract y_full there via the recording-kernel mean %dF/F
+% (getpixel_dFoF: F over mimg(row+/-k,col+/-k) / mean(mimg_kernel) * 100). Falls back
+% to params.pixel with a warning if the session has no site cache (e.g. AL_0041 TODO).
+if use_data_site
+    site_file = fullfile(dataDir, sprintf('cp_stim_site_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+    if exist(site_file, 'file')
+        SS = load(site_file);  stim_rc = double(SS.rowcol);
+        px_prim = stim_rc(1);  py_prim = stim_rc(2);         % ROW, COL (canonical transposed-view site)
+        kref = double(k_prim);
+        kr   = max(1,px_prim-kref):min(nY_cp,px_prim+kref);
+        kc   = max(1,py_prim-kref):min(nX_cp,py_prim+kref);
+        [KR,KC] = ndgrid(kr,kc);  kidx = sub2ind([nY_cp,nX_cp],KR(:),KC(:));
+        Ur_cp  = reshape(U_cp, nY_cp*nX_cp, nSV_cp);  mI_st = mean(mimg_cp(kr,kc),'all');
+        y_full = ((mean(Ur_cp(kidx,:),1) * double(V_cp)) / mI_st * 100).';
+        nFrames = numel(y_full);  clear Ur_cp KR KC kidx
+        fprintf('[A2] retargeted primary pixel -> data site [row %d col %d]; y_full re-extracted (mI=%.3g)\n', ...
+                px_prim, py_prim, mI_st);
+    else
+        fprintf('[A2] use_data_site: no site cache (%s)\n     -> keeping params.pixel [row %d col %d] (rim)\n', ...
+                site_file, px_prim, py_prim);
+    end
+end
 
 %% Brain mask + contra/ipsi split (full-brain mask bisected by the midline)
 % Single source of truth (utils/cp_roi_masks): draws the FULL-BRAIN outline + the
@@ -496,8 +531,10 @@ iPre_dev = find(t_imp >= -0.2 & t_imp < 0);        % matched pre-onset control w
 %     VARIANCE & DELTA [-1,+0.5]s. NB these SPAN the onset (+0.5 s into the stim
 %     response) -> mild circularity vs the DV; partialcorr(dev_stim|dev_pre) is the
 %     safeguard. (was: pure pre-stim 1 s window ending at onset.)
-vd_preN = round(1*Fs);  vd_postN = round(0.5*Fs);  nWvd = vd_preN+vd_postN+1;
+vd_preN = round(1*Fs);  vd_postN = round(0.5*Fs);
 motPreN = round(2*Fs);  motPostN = round(0.5*Fs);
+if strcmpi(state_win,'pre'), vd_postN = 0; motPostN = 0; end   % A4: strictly pre-onset (no onset span -> kills residual circularity)
+nWvd = vd_preN+vd_postN+1;
 win_r  = hann(nWvd); W_r = sum(win_r.^2);          % spectral setup sized to var/delta window
 nfft_r = 2^nextpow2(nWvd);
 fr     = (0:nfft_r-1)'/nfft_r * Fs; nB_r = floor(nfft_r/2)+1;
@@ -512,22 +549,33 @@ ndip   = min(numel(iw_dip), numel(it_dip));
 motz_full = (mot_full - mean(mot_full,'omitnan')) / max(std(mot_full,'omitnan'),eps);
 
 ia_res = find(nzMask_cp(:))';
-resE_all=[]; devS_all=[]; devP_all=[]; mot_all=[]; pv_all=[]; dp_all=[]; amp_all=[];
+resE_all=[]; devS_all=[]; devP_all=[]; gain_all=[]; devL1_all=[]; mot_all=[]; pv_all=[]; dp_all=[]; amp_all=[];
 actW_all=[]; prdW_all=[]; resW_all=[]; motW_all=[];
+cvB_all = [];                                       % per-trial contra dip response (mode space) for the bleed axis
+dipN = round(0.2*Fs);  blN = round(0.5*Fs);         % contra bleed windows: 0-200 ms post vs 500 ms pre
 for ia = ia_res
     R  = res_imp{ia};  nT = size(R,1);
-    muD = mean(R(:,iDip),     1, 'omitnan');
+    muD = mean(R(:,iDip),     1, 'omitnan');   % amp-mean dip = response TEMPLATE
     muP = mean(R(:,iPre_dev), 1, 'omitnan');
+    denD = max(sum(muD.^2,'omitnan'), eps);    % template energy (for gain projection)
     resE = nan(nT,1); devS = nan(nT,1); devP = nan(nT,1);
+    gain = nan(nT,1); devL1 = nan(nT,1);
     pv = nan(nT,1); dp = nan(nT,1); mt = nan(nT,1);
     actW = nan(nT,Lw); prdW = nan(nT,Lw); resW = nan(nT,Lw); motW = nan(nT,Lw);
+    cvB  = nan(nSV_cp, nT);                          % contra dip response per trial (bleed source)
     starts = imp_data.startTimes{ia}(:);  motA = imp_data.mot{ia}(:);
     for j = 1:nT
         if all(isnan(R(j,:))); continue; end
         resE(j) = mean(R(j,iDip), 'omitnan');
-        devS(j) = mean((R(j,iDip)     - muD).^2, 'omitnan');
-        devP(j) = mean((R(j,iPre_dev) - muP).^2, 'omitnan');
+        rj = R(j,iDip);  gd = isfinite(rj) & isfinite(muD);         % nan-safe template ops
+        gain(j)  = sum(rj(gd).*muD(gd)) / denD;                     % PRIMARY: template-gain (response size vs amp-mean; 1=avg)
+        devL1(j) = mean(abs(rj(gd) - muD(gd)), 'omitnan');          % SECONDARY: L1 deviation (robust predictability)
+        devS(j)  = mean((R(j,iDip)     - muD).^2, 'omitnan');       % reference: squared deviation (old DV)
+        devP(j)  = mean((R(j,iPre_dev) - muP).^2, 'omitnan');       % control: pre-stim prediction quality
         [~, ion] = min(abs(t_full - starts(j)));
+        if ion-blN >= 1 && ion+dipN <= size(V_cp,2) % contra dip response (mode space) -> bleed axis
+            cvB(:,j) = mean(V_cp(:,ion:ion+dipN),2) - mean(V_cp(:,ion-blN:ion-1),2);
+        end
         gp = ion-vd_preN : ion+vd_postN;            % var/delta window [-1,+0.5]s (peri-stim)
         if gp(1) >= 1 && gp(end) <= min(nFrames,nF_m)
             sp = y_full(gp);
@@ -561,38 +609,89 @@ for ia = ia_res
         end
     end
     resE_all=[resE_all; zf(resE)]; devS_all=[devS_all; zf(devS)]; devP_all=[devP_all; zf(devP)];
+    gain_all=[gain_all; zf(gain)]; devL1_all=[devL1_all; zf(devL1)];   %#ok<AGROW>
     mot_all=[mot_all; mt]; pv_all=[pv_all; pv]; dp_all=[dp_all; dp];
     amp_all=[amp_all; repmat(uAmp_cp(ia), nT, 1)];   %#ok<AGROW>
     actW_all=[actW_all; actW]; prdW_all=[prdW_all; prdW];   %#ok<AGROW>
     resW_all=[resW_all; resW]; motW_all=[motW_all; motW];   %#ok<AGROW>
+    cvB_all = [cvB_all, cvB];                               %#ok<AGROW>
 end
 mot_all = zf(mot_all); pv_all = zf(pv_all); dp_all = zf(dp_all);   % session-z covariates
 
+% ---- Per-trial contra bleed (ipsi->contra leakage), aligned to the DVs -------
+% Bleed axis = amplitude-graded contra dip response in mode space; per-trial bleed
+% = projection onto that axis, z-scored WITHIN amplitude. This lets cp_bleed_control
+% test whether the residual state-dependence is confounded by state-modulated bleed.
+gB = all(isfinite(cvB_all),1);                       % trials with a valid contra window
+bleed_all = nan(size(amp_all));  bdir = zeros(nSV_cp,1);
+if any(gB)
+    acB  = amp_all(gB) - mean(amp_all(gB));
+    bdir = cvB_all(:,gB) * acB / max(acB.'*acB, eps); % [nSV x 1] mode-space bleed axis
+    nb   = norm(bdir);  if nb > 0, bdir = bdir / nb; end
+    braw = nan(size(amp_all));  braw(gB) = (cvB_all(:,gB).' * bdir);
+    for ua = unique(amp_all).'                        % z within amplitude (removes amp)
+        sel = amp_all==ua & isfinite(braw);
+        if any(sel), bleed_all(sel) = zf(braw(sel)); end
+    end
+end
+
+% ---- Catch-trial (amp 0) null: state-dependence must VANISH without stim ------
+% Same state windows + residual dip energy + bleed-axis projection, on no-stim trials.
+cpv=[]; cdp=[]; cres=[]; cbl=[];
+for ia0 = find(uAmp_cp(:)'==0)
+    starts0 = imp_data.startTimes{ia0}(:);
+    for j = 1:numel(starts0)
+        [~, ion] = min(abs(t_full - starts0(j)));
+        g = ion-pre_imp : ion+post_imp;
+        if g(1) < 1 || g(end) > min(nFrames,nF_m), continue; end
+        ya = y_full(g);  yp = predFun(g);
+        rr0 = (ya - mean(ya(pre_bl),'omitnan')) - (yp - mean(yp(pre_bl),'omitnan'));
+        cres = [cres; mean(rr0(iDip),'omitnan')];     %#ok<AGROW> residual dip energy (no stim)
+        gp = ion-vd_preN : ion+vd_postN;  pvj=NaN; dpj=NaN;
+        if gp(1)>=1 && gp(end)<=min(nFrames,nF_m)
+            sp = y_full(gp);  pvj = var(sp,'omitnan');
+            Xf = fft(sp(:).*win_r, nfft_r);  pw = abs(Xf(1:nB_r)).^2*2/(Fs*W_r);
+            dpj = mean(pw(delta_r),'omitnan');
+        end
+        cpv=[cpv;pvj]; cdp=[cdp;dpj];                  %#ok<AGROW>
+        bj = NaN;
+        if any(gB) && ion-blN>=1 && ion+dipN<=size(V_cp,2)
+            cvj = mean(V_cp(:,ion:ion+dipN),2) - mean(V_cp(:,ion-blN:ion-1),2);
+            bj  = cvj.' * bdir;
+        end
+        cbl=[cbl;bj];                                  %#ok<AGROW>
+    end
+end
+R_catch = struct('pv',zf(cpv),'dp',zf(cdp),'res',cres,'bleed',cbl,'n',numel(cres));
+
 motThr = 1.5;
-okM = isfinite(mot_all) & isfinite(devS_all) & isfinite(devP_all);
+okM = isfinite(mot_all) & isfinite(gain_all) & isfinite(devL1_all) & isfinite(devP_all);
 okV = okM & mot_all <= motThr & isfinite(pv_all);
 okD = okM & mot_all <= motThr & isfinite(dp_all);
 
-fprintf('[CP-RES] dev_stim & dev_pre vs state (Spearman; DV z-within-amp):\n');
+fprintf('[CP-RES] state window = %s  (var/delta [-1,%.2f]s, motion [-2,%.2f]s) | primary pixel [row %d col %d]\n', ...
+    state_win, vd_postN/Fs, motPostN/Fs, px_prim, py_prim);
+fprintf('[CP-RES] DV vs state (Spearman; DV z-within-amp; PARTIAL controls dev_pre):\n');
+fprintf('         PRIMARY = L1-dev (predictability) | SECONDARY = template-gain (size) | (dev_sq = old DV, ref)\n');
 states_rs = {'Motion', mot_all, okM; 'PreVar', pv_all, okV; 'PreDelta', dp_all, okD};
 for q = 1:3
     nm = states_rs{q,1}; xs = states_rs{q,2}; m = states_rs{q,3};
-    [rS,pS] = corr(devS_all(m), xs(m), 'type','Spearman', 'rows','complete');
-    [rP,pP] = corr(devP_all(m), xs(m), 'type','Spearman', 'rows','complete');
-    [rA,pA] = partialcorr(devS_all(m), xs(m), devP_all(m), 'type','Spearman', 'rows','complete');
-    fprintf('  %-8s: dev_stim rho=%+.3f p=%.3g | dev_pre rho=%+.3f p=%.3g | PARTIAL(stim|pre) rho=%+.3f p=%.3g  n=%d\n', ...
-        nm, rS, pS, rP, pP, rA, pA, sum(m));
+    [rL,pL] = partialcorr(devL1_all(m), xs(m), devP_all(m), 'type','Spearman', 'rows','complete');
+    [rG,pG] = partialcorr(gain_all(m),  xs(m), devP_all(m), 'type','Spearman', 'rows','complete');
+    [rD,~ ] = partialcorr(devS_all(m),  xs(m), devP_all(m), 'type','Spearman', 'rows','complete');
+    fprintf('  %-8s: L1(partial) rho=%+.3f p=%.3g | gain(partial) rho=%+.3f p=%.3g | dev_sq rho=%+.3f  n=%d\n', ...
+        nm, rL, pL, rG, pG, rD, sum(m));
 end
 [reM,~] = corr(resE_all(okM), mot_all(okM), 'type','Spearman', 'rows','complete');
 [reV,~] = corr(resE_all(okV), pv_all(okV),  'type','Spearman', 'rows','complete');
 [reD,~] = corr(resE_all(okD), dp_all(okD),  'type','Spearman', 'rows','complete');
-fprintf('  res_E (magnitude) vs: motion rho=%+.3f | var rho=%+.3f | delta rho=%+.3f\n', reM, reV, reD);
+fprintf('  res_E (signed magnitude) vs: motion rho=%+.3f | var rho=%+.3f | delta rho=%+.3f\n', reM, reV, reD);
 
 if do_plot
 % figure: top row dev_stim vs state, bottom row dev_pre vs state (control)
 fig_rs = paperFig(20, 12);
 sdc = {mot_all,'Motion (z)',okM; pv_all,'Pre-stim var (z)',okV; dp_all,'Pre-stim \delta (z)',okD};
-dvc = {devS_all,'dev_{stim} (z)'; devP_all,'dev_{pre} (z)'};
+dvc = {devL1_all,'L1-dev (z) [primary]'; gain_all,'gain (z) [secondary]'};
 for rr = 1:2
     for cc = 1:3
         axr = subplot(2,3,(rr-1)*3+cc); hold(axr,'on');
@@ -610,7 +709,7 @@ for rr = 1:2
         if cc==1, ylabel(axr, dvc{rr,2}, 'FontSize',6,'FontWeight','bold'); end
     end
 end
-sgtitle(fig_rs, sprintf('CP-RES residual state-dep  %s %s e%d  (top=stim resp, bottom=pre-stim control)', ...
+sgtitle(fig_rs, sprintf('CP-RES residual state-dep  %s %s e%d  (top=L1-dev [primary], bottom=template-gain [secondary]; dev_pre partialled)', ...
     mn, td, en), 'FontSize',6,'FontWeight','bold');
 paperExport(fig_rs, fullfile(paper_root,'images','figure2','cp_res_state.png'));
 fprintf('[CP-RES] Exported cp_res_state.png\n');
@@ -622,13 +721,14 @@ if make_inspector
     Sin = struct();
     Sin.stateX = {mot_all, pv_all, dp_all};
     Sin.stateL = {'Motion (z)', 'Pre-stim var (z)', 'Pre-stim \delta (z)'};
-    Sin.devS = devS_all;  Sin.amp = amp_all;  Sin.tW = t_w;
+    Sin.devS = devL1_all;  Sin.gain = gain_all;  Sin.devL1 = devL1_all;  Sin.amp = amp_all;  Sin.tW = t_w;   % devS=primary (L1)
     Sin.actW = actW_all;  Sin.prdW = prdW_all;  Sin.resW = resW_all;  Sin.motW = motW_all;
 end
 
 % ---- Package data outputs (R) -----------------------------------------------
 R = struct();
 R.mn = mn; R.td = td; R.en = en; R.selExp = selExp; R.Fs = Fs;
+R.px_prim = px_prim; R.py_prim = py_prim; R.use_data_site = use_data_site; R.state_win = state_win;   % A2/A4 provenance
 R.paper_root = paper_root; R.cv_mean = cv_mean; R.nValid = nValid_cp; R.nPred = nPred_cp;
 R.t_imp = t_imp; R.iDip = iDip; R.ia_imp = ia_imp;
 R.uAmp = uAmp_cp; R.nzMask = nzMask_cp;
@@ -636,7 +736,9 @@ R.act_imp = act_imp; R.prd_imp = prd_imp; R.prr_imp = prr_imp; R.res_imp = res_i
 R.beta_cp = beta_cp;
 R.predictor = predictor; R.Hp = Hp;   % 'hemi' (R.Hp = field->kernel map) or 'ols'
 R.resE = resE_all; R.devS = devS_all; R.devP = devP_all;
+R.gain = gain_all; R.devL1 = devL1_all;   % primary (template-gain) + secondary (L1-dev) DVs
 R.mot = mot_all; R.pv = pv_all; R.dp = dp_all; R.amp = amp_all;
+R.bleed = bleed_all; R.catch = R_catch;   % per-trial ipsi->contra bleed + catch-trial null (cp_bleed_control)
 R.okM = okM; R.okV = okV; R.okD = okD; R.motThr = motThr;
 R.decontam = decontam; R.use_motion = use_motion;
 R.Sin = Sin;
@@ -646,14 +748,22 @@ S = struct();
 S.label = {'Motion','PreVar','PreDelta'};
 sttS = {mot_all, okM; pv_all, okV; dp_all, okD};
 S.r_stim=nan(1,3); S.p_stim=nan(1,3); S.r_pre=nan(1,3); S.p_pre=nan(1,3);
-S.r_partial=nan(1,3); S.p_partial=nan(1,3); S.r_resE=nan(1,3); S.n=nan(1,3);
+S.r_partial=nan(1,3); S.p_partial=nan(1,3); S.r_resE=nan(1,3); S.n=nan(1,3);   % r_partial = template-gain (now SECONDARY)
+S.r_L1=nan(1,3); S.p_L1=nan(1,3); S.r_devSq=nan(1,3); S.p_devSq=nan(1,3);      % r_L1 = L1-dev (now PRIMARY) + old-DV ref
 for qq = 1:3
     xs = sttS{qq,1}; mm = sttS{qq,2};
-    [S.r_stim(qq),    S.p_stim(qq)]    = corr(devS_all(mm), xs(mm), 'type','Spearman','rows','complete');
+    % PRIMARY DV = L1-dev (predictability); SECONDARY = template-gain (size); r_partial kept = gain
+    [S.r_stim(qq),    S.p_stim(qq)]    = corr(gain_all(mm), xs(mm), 'type','Spearman','rows','complete');
     [S.r_pre(qq),     S.p_pre(qq)]     = corr(devP_all(mm), xs(mm), 'type','Spearman','rows','complete');
-    [S.r_partial(qq), S.p_partial(qq)] = partialcorr(devS_all(mm), xs(mm), devP_all(mm), 'type','Spearman','rows','complete');
+    [S.r_partial(qq), S.p_partial(qq)] = partialcorr(gain_all(mm), xs(mm), devP_all(mm), 'type','Spearman','rows','complete');
+    [S.r_L1(qq),      S.p_L1(qq)]      = partialcorr(devL1_all(mm), xs(mm), devP_all(mm), 'type','Spearman','rows','complete');
+    [S.r_devSq(qq),   S.p_devSq(qq)]   = partialcorr(devS_all(mm),  xs(mm), devP_all(mm), 'type','Spearman','rows','complete');
     S.r_resE(qq) = corr(resE_all(mm), xs(mm), 'type','Spearman','rows','complete');
     S.n(qq) = sum(mm);
 end
+% explicit primary/secondary pointers (primacy swapped 2026-07-01: L1-dev is robust at the true site)
+S.r_primary   = S.r_L1;      S.p_primary   = S.p_L1;       % PRIMARY   = L1-dev
+S.r_secondary = S.r_partial; S.p_secondary = S.p_partial;  % SECONDARY = template-gain
+S.dv_primary  = 'L1-dev';    S.dv_secondary = 'template-gain';
 S.mn = mn; S.td = td; S.en = en; S.selExp = selExp; S.cv_mean = cv_mean;
 end

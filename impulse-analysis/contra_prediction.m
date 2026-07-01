@@ -101,6 +101,48 @@ k_prim   = double(d_tmp.params.kernel);   % recording-kernel half-width (for [CP
 mot_full = d_tmp.motion.motion_1(1:2:end);
 clear d_tmp
 
+%% [CP-SITE] Data-derived photostim site (overrides flip-prone params.pixel)
+% The laser/recording site is localised from the DATA (deepest focal inhibition in
+% the trial-averaged peri-stim map; utils/cp_find_stim_site), NOT params.pixel,
+% which the load/save schemes keep x<->y flipping. The site is an ARRAY [row col]
+% (invariant to how it is displayed). The CORRECT view is TRANSPOSED (brain
+% vertical, imagesc(mimg')) -- in that frame an array pixel (row,col) is marked
+% with plot(row,col) = plot(px_prim,py_prim). px_prim := row, py_prim := col below,
+% so the [CP-HEMI] footprint mimg(px_prim+/-k, py_prim+/-k) lands on the true site.
+% Set USE_DATA_SITE=false to revert to the raw params.pixel (rim, ~60px off).
+USE_DATA_SITE = true;
+if USE_DATA_SITE
+    site_file = fullfile(dataDir, sprintf('cp_stim_site_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+    if exist(site_file, 'file')
+        SS = load(site_file);  stim_rc = double(SS.rowcol);
+        fprintf('[CP-SITE] loaded canonical site: [row %d col %d]  (%s)\n', stim_rc, site_file);
+    else
+        sv_file = fullfile(dataDir, sprintf('stim_vars_%s_%s_en%d.mat', mn, td, en));
+        SV  = load(sv_file);
+        st_ = SV.stimStarts(SV.idxByAmp{end});                       % strongest-amp onsets
+        onF = round((st_(:) - t_full(1)) * Fs) + 1;
+        st  = cp_find_stim_site(U_cp, double(V_cp), mimg_cp, onF, 'fs', Fs);
+        stim_rc = double(st.rowcol);
+        save(site_file, '-struct', 'st');
+        fprintf('[CP-SITE] computed + cached site: [row %d col %d]\n', stim_rc);
+    end
+    px_prim = stim_rc(1);            % ROW  -> footprint rows = px_prim +/- k
+    py_prim = stim_rc(2);            % COL  -> footprint cols = py_prim +/- k
+    % re-extract the target trace y_full AT the true site (kernel-mean %dF/F,
+    % matching getpixel_dFoF: F over mimg(row+/-k, col+/-k) / mean(mimg_kernel)*100)
+    kref = double(k_prim);
+    kr   = max(1, px_prim-kref):min(nY_cp, px_prim+kref);
+    kc   = max(1, py_prim-kref):min(nX_cp, py_prim+kref);
+    [KR, KC] = ndgrid(kr, kc);
+    kidx   = sub2ind([nY_cp, nX_cp], KR(:), KC(:));
+    Ur_cp  = reshape(U_cp, nY_cp*nX_cp, nSV_cp);
+    mI_st  = mean(mimg_cp(kr, kc), 'all');
+    y_full = ((mean(Ur_cp(kidx, :), 1) * double(V_cp)) / mI_st * 100).';
+    nFrames = numel(y_full);
+    clear Ur_cp KR KC kidx
+    fprintf('[CP-SITE] retargeted y_full at site (n=%d frames, mI=%.3g)\n', nFrames, mI_st);
+end
+
 %% Brain mask + contra/ipsi split (full-brain mask bisected by the midline)
 % Single source of truth: utils/cp_roi_masks draws the FULL-BRAIN outline + the
 % midline (first run / redefine_roi), bisects the brain by the midline, and tags
@@ -416,23 +458,31 @@ h_yhat_te = (h_scoresTe(:,1:h_kbest) * h_aKern(1:h_kbest)) / h_mI_kern * 100;  %
 h_yact_te = y_full(h_te);                                   % actual primary pixel %dF/F
 h_segL   = round(3*Fs);
 h_nSeg   = floor(numel(h_te) / max(h_segL,1));
+h_anchor_s = 1.0;                                  % causal lead-in (s) for DC re-anchoring
+h_anchor   = max(1, round(h_anchor_s*Fs));         % anchor window length (frames)
 h_segR2  = nan(max(h_nSeg,0),1);   % raw (offset penalised, matches h_kernR2)
-h_segR2b = nan(max(h_nSeg,0),1);   % per-segment baseline-removed ("shape", offset-invariant)
-h_numB = 0;  h_denB = 0;
+h_segR2a = nan(max(h_nSeg,0),1);   % DC re-anchored on the causal lead-in (cp_anchor_pred)
+h_segR2b = nan(max(h_nSeg,0),1);   % per-segment baseline-removed ("shape" ceiling, non-causal)
+h_numB = 0;  h_denB = 0;  h_numA = 0;
 for s = 1:h_nSeg
     idx = (s-1)*h_segL + (1:h_segL);
     ya  = h_yact_te(idx);  yh = h_yhat_te(idx);
+    yha = cp_anchor_pred(ya, yh, 1:h_anchor);                  % DC-anchor on first h_anchor_s s
     yac = ya - mean(ya,'omitnan');  yhc = yh - mean(yh,'omitnan');
-    h_segR2(s)  = 1 - sum((ya-yh).^2,'omitnan')   / max(sum(yac.^2,'omitnan'), eps);
-    h_segR2b(s) = 1 - sum((yac-yhc).^2,'omitnan') / max(sum(yac.^2,'omitnan'), eps);
+    den = max(sum(yac.^2,'omitnan'), eps);
+    h_segR2(s)  = 1 - sum((ya-yh).^2,'omitnan')   / den;
+    h_segR2a(s) = 1 - sum((ya-yha).^2,'omitnan')  / den;
+    h_segR2b(s) = 1 - sum((yac-yhc).^2,'omitnan') / den;
     h_numB = h_numB + sum((yac-yhc).^2,'omitnan');  h_denB = h_denB + sum(yac.^2,'omitnan');
+    h_numA = h_numA + sum((ya-yha).^2,'omitnan');
 end
-h_poolB = 1 - h_numB / max(h_denB, eps);          % pooled baseline-removed primary-pixel R^2
+h_poolB = 1 - h_numB / max(h_denB, eps);          % pooled baseline-removed (shape ceiling)
+h_poolA = 1 - h_numA / max(h_denB, eps);          % pooled DC-anchored (causal) R^2
 h_tseg  = (0:h_segL-1)/Fs;
-fprintf(['[CP-HEMI] PRIMARY pixel R^2: raw=%.3f | per-segment baseline-removed=%.3f\n' ...
-         '          (the gap is slow per-segment drift -> a level shift the residual\n' ...
-         '           pipeline removes per-trial, so the science is unaffected)\n'], ...
-         h_kernPk, h_poolB);
+fprintf(['[CP-HEMI] PRIMARY pixel R^2: raw=%.3f | DC-anchored(%.1fs lead)=%.3f | shape=%.3f\n' ...
+         '          (raw->anchored gap = uncalibrated DC offset; cp_anchor_pred removes it\n' ...
+         '           causally -- the same pre-stim anchoring the stim residual will use)\n'], ...
+         h_kernPk, h_anchor_s, h_poolA, h_poolB);
 
 if h_nSeg >= 2
     % --- figure: prediction on example held-out segments --------------------------
@@ -441,16 +491,21 @@ if h_nSeg >= 2
     for kk = 1:h_nP
         ax = subplot(2, h_nc, kk); hold(ax,'on');
         s = h_pick(kk); idx = (s-1)*h_segL + (1:h_segL);
-        ya = h_yact_te(idx);  yh = h_yhat_te(idx);   % each centred on its OWN mean -> shape
-        plot(ax, h_tseg, ya-mean(ya,'omitnan'), 'Color',[0.1 0.1 0.1], 'LineWidth',1.2, 'DisplayName','actual');
-        plot(ax, h_tseg, yh-mean(yh,'omitnan'), 'Color',[0.85 0.3 0.1], 'LineWidth',1.2, 'DisplayName','contra pred');
-        title(ax, sprintf('seg %d   R^2=%.2f (shape %.2f)', s, h_segR2(s), h_segR2b(s)), 'FontSize',6,'FontWeight','bold');
+        ya = h_yact_te(idx);  yh = h_yhat_te(idx);
+        yha = cp_anchor_pred(ya, yh, 1:h_anchor);    % DC-anchored on the lead-in
+        % raw pred (dashed) sits at an uncalibrated DC level; the anchored pred
+        % (bold) re-levels it causally on the first h_anchor_s s and tracks actual.
+        plot(ax, h_tseg, ya,  'Color',[0.1 0.1 0.1], 'LineWidth',1.2, 'DisplayName','actual');
+        plot(ax, h_tseg, yh,  '--','Color',[0.85 0.3 0.1], 'LineWidth',0.8, 'DisplayName','pred (raw)');
+        plot(ax, h_tseg, yha, 'Color',[0.1 0.35 0.9], 'LineWidth',1.4, 'DisplayName','pred (DC-anchored)');
+        xline(ax, h_anchor_s, ':', 'Color',[0.5 0.5 0.5], 'HandleVisibility','off');   % anchor window edge
+        title(ax, sprintf('seg %d   R^2 raw %.2f | anch %.2f | shape %.2f', s, h_segR2(s), h_segR2a(s), h_segR2b(s)), 'FontSize',6,'FontWeight','bold');
         set(ax,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
         if mod(kk-1,h_nc)==0, ylabel(ax,'\DeltaF/F (%)','FontSize',6,'FontWeight','bold'); end
         if kk > h_nP-h_nc, xlabel(ax,'time (s)','FontSize',6,'FontWeight','bold'); end
         if kk==1, lg=legend(ax,'Location','best','FontSize',5); lg.ItemTokenSize=[6 6]; end
     end
-    sgtitle(h_fig3, sprintf('[CP-HEMI] contra->primary-pixel prediction, example held-out segments (rank %d)', h_kbest), ...
+    sgtitle(h_fig3, sprintf('[CP-HEMI] contra->primary-pixel prediction, example segments (rank %d); pred raw (dashed) vs DC-anchored on %.1fs lead (bold)', h_kbest, h_anchor_s), ...
         'FontSize',7,'FontWeight','bold','Interpreter','none');
     paperExport(h_fig3, fullfile(paper_root, 'cp_hemi_examples.png'));
 
@@ -465,15 +520,21 @@ if h_nSeg >= 2
     for kk = 1:numel(h_bw)
         ax = subplot(2, h_nbw, kk); hold(ax,'on');
         s = h_bw(kk); idx = (s-1)*h_segL + (1:h_segL);
-        ya = h_yact_te(idx);  yh = h_yhat_te(idx);   % each centred on its OWN mean -> shape
-        plot(ax, h_tseg, ya-mean(ya,'omitnan'), 'Color',[0.1 0.1 0.1], 'LineWidth',1.2);
-        plot(ax, h_tseg, yh-mean(yh,'omitnan'), 'Color',[0.85 0.3 0.1], 'LineWidth',1.2);
-        title(ax, sprintf('%s seg %d   R^2=%.2f (shape %.2f)', h_lbl{kk}, s, h_segR2(s), h_segR2b(s)), 'FontSize',6,'FontWeight','bold');
+        ya = h_yact_te(idx);  yh = h_yhat_te(idx);
+        yha = cp_anchor_pred(ya, yh, 1:h_anchor);    % DC-anchored on the lead-in
+        % the WORST raw segments are level-offset cases: raw pred (dashed) is at the
+        % wrong DC; the anchored pred (bold) re-levels causally and recovers them.
+        plot(ax, h_tseg, ya,  'Color',[0.1 0.1 0.1], 'LineWidth',1.2, 'DisplayName','actual');
+        plot(ax, h_tseg, yh,  '--','Color',[0.85 0.3 0.1], 'LineWidth',0.8, 'DisplayName','pred (raw)');
+        plot(ax, h_tseg, yha, 'Color',[0.1 0.35 0.9], 'LineWidth',1.4, 'DisplayName','pred (DC-anchored)');
+        xline(ax, h_anchor_s, ':', 'Color',[0.5 0.5 0.5], 'HandleVisibility','off');   % anchor window edge
+        title(ax, sprintf('%s seg %d   R^2 raw %.2f | anch %.2f | shape %.2f', h_lbl{kk}, s, h_segR2(s), h_segR2a(s), h_segR2b(s)), 'FontSize',6,'FontWeight','bold');
         set(ax,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
         if mod(kk-1,h_nbw)==0, ylabel(ax,'\DeltaF/F (%)','FontSize',6,'FontWeight','bold'); end
         if kk > h_nbw, xlabel(ax,'time (s)','FontSize',6,'FontWeight','bold'); end
+        if kk==1, lg=legend(ax,'Location','best','FontSize',5); lg.ItemTokenSize=[6 6]; end
     end
-    sgtitle(h_fig4, sprintf('[CP-HEMI] best vs worst segments (rank %d) -- traces on own mean; R^2 raw, shape=offset-removed', h_kbest), ...
+    sgtitle(h_fig4, sprintf('[CP-HEMI] best vs worst raw segments (rank %d) -- pred raw (dashed) vs DC-anchored on %.1fs lead (bold); worst = level-offset, recovered by anchoring', h_kbest, h_anchor_s), ...
         'FontSize',7,'FontWeight','bold','Interpreter','none');
     paperExport(h_fig4, fullfile(paper_root, 'cp_hemi_bestworst.png'));
 end
@@ -496,16 +557,17 @@ h_idx_c = find(valid_cp_svd(:));                          % contra pixels (== U_
 h_pixw  = U_svd_raw(:, 1:h_K) * h_wraw;                   % [nPix_contra x 1] signed
 h_km    = nan(nY_cp, nX_cp);  h_km(h_idx_c) = h_pixw;
 
-[h_figK, ~, h_axK] = brain_overlay_fig(mimg_cp, 8, 6);
 h_wlim   = prctile(abs(h_pixw), 99);  if h_wlim < eps; h_wlim = 1; end
-h_kmT    = h_km';                                         % transposed display (matches brain bg)
-h_alphaK = min(1, abs(h_kmT)./h_wlim);  h_alphaK(isnan(h_alphaK)) = 0;
-h_imK = imagesc(h_axK, h_kmT);  set(h_imK, 'AlphaData', h_alphaK);
 nC = 256; nHalf = ceil(nC/2);                            % blue->white->red diverging (no toolbox)
 h_cmapK = [ linspace(0.23,1,nHalf)', linspace(0.30,1,nHalf)', linspace(0.75,1,nHalf)'; ...
             linspace(1,0.80,nC-nHalf)', linspace(1,0.10,nC-nHalf)', linspace(1,0.10,nC-nHalf)' ];
-colormap(h_axK, h_cmapK);  clim(h_axK, [-h_wlim, h_wlim]);
-plot(h_axK, py_prim, px_prim, 'k+', 'MarkerSize',8, 'LineWidth',1.5, 'HandleVisibility','off');
+h_kmT   = h_km';                                          % transposed display (brain vertical)
+% single flattened RGB (gray brain + weights) -> exports faithfully (no AlphaData)
+h_rgbK  = cp_weight_composite(mimg_cp', h_kmT, h_cmapK, [-h_wlim h_wlim]);
+h_figK  = paperFig(8, 6);  h_axK = axes(h_figK, 'Position',[0.06 0.08 0.70 0.84]);
+image(h_axK, h_rgbK);  axis(h_axK, 'image', 'off');  hold(h_axK, 'on');
+colormap(h_axK, h_cmapK);  clim(h_axK, [-h_wlim, h_wlim]);   % so the colorbar reads correctly
+plot(h_axK, px_prim, py_prim, 'k+', 'MarkerSize',8, 'LineWidth',1.5, 'HandleVisibility','off');  % transposed display: array(row,col)->plot(row,col)=plot(px_prim,py_prim)
 title(h_axK, sprintf('Contra weights predictive of ipsi primary pixel (rank %d)', h_nmap), ...
     'FontSize',6,'FontWeight','bold');
 h_cbK = colorbar(h_axK, 'Position',[0.80 0.12 0.05 0.72]);
@@ -517,14 +579,15 @@ fprintf('[CP-KERNEL] exported cp_hemi_kernel_map.png (rank %d, |w| 99pct=%.3g)\n
 % --- secondary: squared "energy" map (sign-agnostic localization; sharpens focal vs diffuse) ---
 h_pixw2 = h_pixw.^2;
 h_km2   = nan(nY_cp, nX_cp);  h_km2(h_idx_c) = h_pixw2;
-[h_figK2, ~, h_axK2] = brain_overlay_fig(mimg_cp, 8, 6);
 h_wlim2  = prctile(h_pixw2, 99);  if h_wlim2 < eps; h_wlim2 = 1; end
+h_cmap2  = [linspace(1,0.85,256)', linspace(1,0.10,256)', linspace(1,0.10,256)'];   % white -> red
 h_km2T   = h_km2';
-h_alpha2 = min(1, h_km2T ./ h_wlim2);  h_alpha2(isnan(h_alpha2)) = 0;
-h_imK2 = imagesc(h_axK2, h_km2T);  set(h_imK2, 'AlphaData', h_alpha2);
-h_cmap2 = [linspace(1,0.85,256)', linspace(1,0.10,256)', linspace(1,0.10,256)'];   % white -> red
+h_a2     = min(1, h_km2T ./ h_wlim2);  h_a2(isnan(h_a2)) = 0;   % magnitude alpha
+h_rgb2   = cp_weight_composite(mimg_cp', h_km2T, h_cmap2, [0 h_wlim2], h_a2);
+h_figK2  = paperFig(8, 6);  h_axK2 = axes(h_figK2, 'Position',[0.06 0.08 0.70 0.84]);
+image(h_axK2, h_rgb2);  axis(h_axK2, 'image', 'off');  hold(h_axK2, 'on');
 colormap(h_axK2, h_cmap2);  clim(h_axK2, [0, h_wlim2]);
-plot(h_axK2, py_prim, px_prim, 'k+', 'MarkerSize',8, 'LineWidth',1.5, 'HandleVisibility','off');
+plot(h_axK2, px_prim, py_prim, 'k+', 'MarkerSize',8, 'LineWidth',1.5, 'HandleVisibility','off');  % transposed display: plot(row,col)=plot(px_prim,py_prim)
 title(h_axK2, sprintf('Contra predictive ENERGY (w^2, rank %d)', h_nmap), 'FontSize',6,'FontWeight','bold');
 h_cbK2 = colorbar(h_axK2, 'Position',[0.80 0.12 0.05 0.72]);
 ylabel(h_cbK2, 'weight^2 (a.u.)', 'FontSize',5,'FontWeight','bold');
@@ -552,6 +615,31 @@ h_expl_file = fullfile(dataDir, sprintf('cp_kernel_explorer_%s_%s%s_e%d.mat', mn
 save(h_expl_file, '-struct', 'expl', '-v7.3');
 fprintf('[CP-KERNEL] explorer products -> %s\n', h_expl_file);
 fprintf('           launch:  cp_kernel_explorer(''%s'')\n', h_expl_file);
+
+% --- launch the interactive explorer right here (click an ipsi pixel -> its contra
+%     weight map). Set h_launch_explorer=false to only dump the .mat (no GUI). ------
+h_launch_explorer = true;
+if h_launch_explorer
+    fprintf('[CP-KERNEL] launching cp_kernel_explorer (squared/energy view) ...\n');
+    clear cp_kernel_explorer;  rehash;          % pick up any edits to the GUI .m
+    cp_kernel_explorer(h_expl_file, true);      % true = open in squared (w^2) view
+end
+
+%% [CP-KRECON] Sparse kernel reconstruction: how few "kernels" predict the ipsi pixel
+% The HEMI readout is a sum over K canonical components (kernels). Rank them by
+% STANDALONE held-out primary-pixel R^2, accumulate in importance order, and report
+% how many (M) reconstruct 90/95/99% of the peak R^2. Reuses the [CP-HEMI] fit
+% products (no refit) -> run [CP-HEMI]+[CP-KERNEL] first. Exports cp_krecon_curve.png
+% (R^2-vs-M + per-kernel importance + example reconstructions) and cp_krecon_kernels.png
+% (the top-M individual contra kernel maps).
+if ~exist('h_scoresTe','var'), error('[CP-KRECON] run [CP-HEMI] + [CP-KERNEL] first.'); end
+clear cp_kernel_recon;  rehash;
+cp_kernel_recon(struct( ...
+    'scoresTe', h_scoresTe, 'aKern', h_aKern, 'mI_kern', h_mI_kern, ...
+    'yact_te', h_yact_te, 'segL', h_segL, 'nSeg', h_nSeg, ...
+    'kernR2', h_kernR2, 'kbest', h_kbest, 'b', h_b(:,1:h_K), 'sdtr', h_sdtr, ...
+    'U_svd_raw_K', U_svd_raw(:,1:h_K), 'idx_c', h_idx_c, 'nY', nY_cp, 'nX', nX_cp, ...
+    'mimg', mimg_cp, 'px_prim', px_prim, 'py_prim', py_prim, 'Fs', Fs, 'paper_root', paper_root));
 
 
 %% [CP-BLEED] Impulse-bleed map: which contra pixels are input-affected, and how far
@@ -648,17 +736,18 @@ fprintf('[CP-BLEED] sanity: primary-pixel beta=%.3g (p=%.4f) -- positive control
 
 % --- map: signed dose-response slope; FDR-significant pixels opaque ----------------
 b_km  = nan(nY_cp, nX_cp);  b_km(b_idx_c) = b_beta;
-[b_fig1, ~, b_ax1] = brain_overlay_fig(mimg_cp, 8, 6);
 b_lim = prctile(abs(b_beta), 99);  if b_lim < eps; b_lim = 1; end
-b_kmT = b_km';
-b_al  = zeros(nY_cp, nX_cp);  b_al(b_idx_c) = 0.30;  b_al(b_idx_c(b_sig)) = 1.0;
-b_alT = b_al';  b_alT(isnan(b_kmT)) = 0;
-b_im1 = imagesc(b_ax1, b_kmT);  set(b_im1, 'AlphaData', b_alT);
 nCb = 256; nHb = ceil(nCb/2);                        % blue->white->red diverging
 b_cmap = [ linspace(0.23,1,nHb)', linspace(0.30,1,nHb)', linspace(0.75,1,nHb)'; ...
            linspace(1,0.80,nCb-nHb)', linspace(1,0.10,nCb-nHb)', linspace(1,0.10,nCb-nHb)' ];
+b_kmT = b_km';
+b_al  = zeros(nY_cp, nX_cp);  b_al(b_idx_c) = 0.30;  b_al(b_idx_c(b_sig)) = 1.0;  % sig opaque
+b_alT = b_al';  b_alT(isnan(b_kmT)) = 0;
+b_rgb1 = cp_weight_composite(mimg_cp', b_kmT, b_cmap, [-b_lim b_lim], b_alT);
+b_fig1 = paperFig(8, 6);  b_ax1 = axes(b_fig1, 'Position',[0.06 0.08 0.70 0.84]);
+image(b_ax1, b_rgb1);  axis(b_ax1, 'image', 'off');  hold(b_ax1, 'on');
 colormap(b_ax1, b_cmap);  clim(b_ax1, [-b_lim, b_lim]);
-plot(b_ax1, py_prim, px_prim, 'g+', 'MarkerSize',8, 'LineWidth',1.5, 'HandleVisibility','off');
+plot(b_ax1, px_prim, py_prim, 'g+', 'MarkerSize',8, 'LineWidth',1.5, 'HandleVisibility','off');  % transposed display: plot(row,col)=plot(px_prim,py_prim)
 title(b_ax1, 'Impulse-bleed: dose-response slope \beta (opaque = FDR sig.)', ...
       'FontSize',6, 'FontWeight','bold');
 b_cb = colorbar(b_ax1, 'Position',[0.80 0.12 0.05 0.72]);
@@ -693,28 +782,29 @@ set(b_ax2, 'FontSize',6, 'FontWeight','bold');
 paperExport(b_fig2, fullfile(paper_root, 'cp_bleed_decay.png'));
 fprintf('[CP-BLEED] exported cp_bleed_slope_map.png + cp_bleed_decay.png\n');
 
-% --- params for the interactive WHOLE-BRAIN bleed explorer (uses the FLIPPED primary) ---
+% --- params for the interactive WHOLE-BRAIN bleed explorer (data-derived primary) ---
 % cp_bleed_explorer reloads the SVD and recomputes beta per pixel for any time window
 % live (cumsum-of-V window means -> one matvec/update); permutation+FDR on a button.
-% The flipped primary (row<->col swap) is the marker + distance reference, per the
-% user's decision to treat the transposed pixel as the recording site.
+% It displays transposed (imagesc(mimg.')) and marks plot(prim_row,prim_col), so on
+% that axis prim_row = array ROW, prim_col = array COL -> pass the data site directly
+% (px_prim=row, py_prim=col). Supersedes the old "flipped primary" hack.
 bx = struct('mn',mn, 'td',td, 'en',en, 'nSV_load',nSV_load, ...
             'onf',b_onf, 'amp',b_amp, 'brain_idx',find(brain_mask_cp(:)), ...
-            'prim_row',py_prim, 'prim_col',px_prim, ...   % FLIPPED: row=py_prim, col=px_prim
+            'prim_row',px_prim, 'prim_col',py_prim, ...   % row=px_prim, col=py_prim (data site)
             'k_prim',k_prim, 'Fs',Fs, 'nY',nY_cp, 'nX',nX_cp, 'dur_imp',dur_imp);
 bx_file = fullfile(dataDir, sprintf('cp_bleed_explorer_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
 save(bx_file, '-struct', 'bx');
 fprintf('[CP-BLEED] explorer params -> %s\n', bx_file);
 fprintf('           launch:  cp_bleed_explorer(''%s'')\n', bx_file);
 
-
-%%
-
-% kernel explorer (self-contained ~70 MB .mat, opens instantly)
-cp_kernel_explorer('C:\Users\aditya\Documents\projects\brain_paper\impulse-analysis\data\cp_kernel_explorer_AL_0033_0129_e1.mat')
-%%
-% bleed explorer (reloads the SVD via loadUVt -> ~30 s to open)
-cp_bleed_explorer('C:\Users\aditya\Documents\projects\brain_paper\impulse-analysis\data\cp_bleed_explorer_AL_0033_0129_e1.mat')
+% --- launch the interactive whole-brain bleed explorer right here. It reloads the
+%     SVD via loadUVt (~30 s to open). Set b_launch_explorer=false to only dump. ----
+b_launch_explorer = true;
+if b_launch_explorer
+    fprintf('[CP-BLEED] launching cp_bleed_explorer (reloads SVD, ~30 s) ...\n');
+    clear cp_bleed_explorer;  rehash;           % pick up any edits to the GUI .m
+    cp_bleed_explorer(bx_file);
+end
 
 
 % =====================================================================================
@@ -766,19 +856,24 @@ opts  = struct('decontam', decontam, 'use_motion', use_motion, ...
                'make_wide', true, 'plot', false, 'predictor', predictor);
 [R, S] = cp_residual_core(allExperiments, selExp, opts);
 
-% Per-trial fig-6 deviation (z-within-amp) for Actual/Global/Local + pooled dip traces.
-[dA, dG, dL, trA, trG, trL] = cp_agl(R);
-AGL = {'Actual (fig6)', dA; 'Global (contra)', dG; 'Local (residual)', dL};
+% Per-trial DV (z-within-amp) for Actual/Global/Local + pooled dip traces.
+% PRIMARY DV = L1-dev (dA1/dG1/dL1); SECONDARY = template-gain (dA/dG/dL).
+% (Primacy swapped 2026-07-01: at the laser center L1-dev is robust, gain collapses.)
+[dA, dG, dL, dA1, dG1, dL1, trA, trG, trL] = cp_agl(R);
+AGL  = {'Actual', dA1; 'Global (contra)', dG1; 'Local (residual)', dL1};   % PRIMARY: L1-dev
+AGLg = {'Actual', dA;  'Global (contra)', dG;  'Local (residual)', dL};     % SECONDARY: template-gain
 
 if R.use_motion
     warning(['[CP-SETUP] use_motion=true regresses motion out of the residual; the ' ...
              '[CP-MOTION] test will be biased. Set use_motion=false and re-run.']);
 end
-fprintf('\n[CP-SETUP] %s %s e%d | decontam=%d motion=%d | held-out R²=%.3f\n', ...
-    R.mn, R.td, R.en, R.decontam, R.use_motion, R.cv_mean);
-fprintf('  partial(dev_stim, state | dev_pre):  Motion %+.3f (p=%.3g) | PreVar %+.3f (p=%.3g) | PreDelta %+.3f (p=%.3g)\n', ...
-    S.r_partial(1), S.p_partial(1), S.r_partial(2), S.p_partial(2), S.r_partial(3), S.p_partial(3));
-fprintf('  -> now run any of: [CP-RESi] [CP-LOCAL] [CP-MOTION] [CP-VAR] [CP-DELTA]\n');
+fprintf('\n[CP-SETUP] %s %s e%d | site[row %d col %d] state=%s | decontam=%d motion=%d | held-out R²=%.3f\n', ...
+    R.mn, R.td, R.en, R.px_prim, R.py_prim, R.state_win, R.decontam, R.use_motion, R.cv_mean);
+fprintf('  PRIMARY   partial(L1-dev,      state|dev_pre):  Motion %+.3f (p=%.3g) | PreVar %+.3f (p=%.3g) | PreDelta %+.3f (p=%.3g)\n', ...
+    S.r_primary(1), S.p_primary(1), S.r_primary(2), S.p_primary(2), S.r_primary(3), S.p_primary(3));
+fprintf('  SECONDARY partial(template-gain, state|dev_pre):  Motion %+.3f (p=%.3g) | PreVar %+.3f (p=%.3g) | PreDelta %+.3f (p=%.3g)\n', ...
+    S.r_secondary(1), S.p_secondary(1), S.r_secondary(2), S.p_secondary(2), S.r_secondary(3), S.p_secondary(3));
+fprintf('  -> now run any of: [CP-RESi] [CP-LOCAL] [CP-MOTION] [CP-VAR] [CP-DELTA] [CP-BLEEDCTRL] [CP-KRECON]\n');
 
 %% [CP-RESi] Clickable inspector — click a trial: actual / contra-pred / residual / motion
 if ~exist('R','var'), error('Run [CP-SETUP] first.'); end
@@ -794,7 +889,7 @@ if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 states = {'Motion',  'Motion (z)',         R.mot, R.okM; ...
           'PreVar',  'Pre-stim var (z)',   R.pv,  R.okV; ...
           'PreDelta','Pre-stim \delta (z)',R.dp,  R.okD};
-fprintf('\n[CP-LOCAL] Spearman rho of |dip dev| with each state (z-within-amp):\n');
+fprintf('\n[CP-LOCAL] Spearman rho of L1-dev (primary) with each state (z-within-amp):\n');
 fprintf('  %-9s  Actual   Global   Local\n', 'state');
 for s = 1:3
     rr = nan(1,3);
@@ -818,7 +913,7 @@ for s = 1:3
         end
         set(axL,'Box','off','TickDir','out','FontSize',5,'FontWeight','bold');
         if s==3, xlabel(axL, states{s,2}, 'FontSize',5,'FontWeight','bold'); end
-        if c==1, ylabel(axL, sprintf('%s\n|dip dev| (z)', states{s,2}), 'FontSize',5,'FontWeight','bold'); end
+        if c==1, ylabel(axL, sprintf('%s\nL1-dev (z)', states{s,2}), 'FontSize',5,'FontWeight','bold'); end
     end
 end
 sgtitle(figL, sprintf('CP-LOCAL overview  %s %s e%d  (rows=state, cols=Actual/Global/Local)', ...
@@ -829,8 +924,8 @@ fprintf('[CP-LOCAL] Exported cp_local_state.png\n');
 %% [CP-MOTION] Motion-only: predictability (No-motion vs Motion) + mean dip trace
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 mot = R.mot;  noM = mot <= 0.5;  yesM = mot > 0.5;   % binary split (motion z is zero-inflated; lab motThr_hi=0.5)
-[rp,pp_] = partialcorr(R.devS(R.okM), mot(R.okM), R.devP(R.okM), 'type','Spearman','rows','complete');
-fprintf('\n[CP-MOTION] partial(dev_stim, motion | dev_pre) rho=%+.3f p=%.3g | n(No/Mot)=%d/%d\n', ...
+[rp,pp_] = partialcorr(R.devL1(R.okM), mot(R.okM), R.devP(R.okM), 'type','Spearman','rows','complete');
+fprintf('\n[CP-MOTION] partial(L1-dev, motion | dev_pre) rho=%+.3f p=%.3g | n(No/Mot)=%d/%d\n', ...
     rp, pp_, sum(noM), sum(yesM));
 clsCol = [0.3 0.55 0.85; 0.85 0.2 0.2];  clsLab = {'No motion','Motion'};  TR = {trA, trG, trL};
 figM = paperFig(18, 11);
@@ -846,7 +941,7 @@ for c = 1:3
     pr = ranksum(grp{1}, grp{2});
     set(axt,'XTick',1:2,'XTickLabel',clsLab,'XLim',[0.4 2.6],'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
     title(axt, sprintf('%s  ranksum p=%.2g', AGL{c,1}, pr), 'FontSize',6,'FontWeight','bold');
-    if c==1, ylabel(axt, '|dip dev| (z) [lower=predictable]','FontSize',6,'FontWeight','bold'); end
+    if c==1, ylabel(axt, 'L1-dev (z) [predictability]','FontSize',6,'FontWeight','bold'); end
     axb = subplot(2,3,3+c); hold(axb,'on');             % bottom: mean dip trace by motion class
     cls = {noM, yesM};
     for q = 1:2
@@ -879,8 +974,18 @@ cp_motion_amp(R, imp_amp, SIGc, sName, sprintf('cp_motion_amp_%s.png', lower(amp
 
 %% [CP-VAR] Pre-stim variance-only effect (A/G/L scatter + Local dose-response + partial)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
-cp_cont_state('PreVar', 'Pre-stim var (z)', R.pv, AGL, R.devS, R.devP, R.okV, R, 'cp_var_residual.png');
+cp_cont_state('PreVar', 'Pre-stim var (z)', R.pv, AGL, R.devL1, R.devP, R.okV, R, 'cp_var_residual.png');
 
 %% [CP-DELTA] Pre-stim 1-4 Hz delta-only effect (A/G/L scatter + Local dose-response + partial)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
-cp_cont_state('PreDelta', 'Pre-stim \delta (z)', R.dp, AGL, R.devS, R.devP, R.okD, R, 'cp_delta_residual.png');
+cp_cont_state('PreDelta', 'Pre-stim \delta (z)', R.dp, AGL, R.devL1, R.devP, R.okD, R, 'cp_delta_residual.png');
+
+%% [CP-BLEEDCTRL] Is the residual state-dep a bleed artifact? (bleed~state + catch null)
+% Controls the ipsi->contra leakage confound: a state-modulated bleed would let the
+% contra PREDICTOR absorb a state-varying share of the local response, faking the
+% headline (var/delta -> weaker local gain). Tests (per state): (A1) is bleed itself
+% state-dep, (A2->A3) does the gain-vs-state partial survive controlling for per-trial
+% bleed, (A4) is there a state x bleed interaction; plus (B) a catch-trial (amp-0) null.
+% Needs R.bleed / R.catch from cp_residual_core -> re-run [CP-SETUP] if missing.
+if ~exist('R','var'), error('Run [CP-SETUP] first.'); end
+cp_bleed_control(R);

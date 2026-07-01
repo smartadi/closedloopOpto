@@ -13,6 +13,20 @@
 - `prestim_variance.m` — pre-trial variance vs peak deviation, paper figure
 - `spatial_spread.m` — spatial spread vs amplitude
 
+## Stim site & display orientation — CANONICAL, do not re-flip (2026-06-29)
+- **`params.pixel` is flip-prone** (load/save schemes swap x/y). DO NOT trust it for the site.
+- **Laser/recording site = data-derived**, deepest focal inhibition in the trial-avg peri-stim
+  map (`utils/cp_find_stim_site.m`; baseline −500→0 ms vs peak 0→200 ms, strongest amp).
+  AL_0033 0129 e1 → **array [row 373, col 353]**; cached `data/cp_stim_site_AL_0033_0129_e1.mat`.
+- **Correct view is TRANSPOSED** (brain vertical, `imagesc(mimg')`). The site is an ARRAY
+  `(row,col)` (display-invariant). On a transposed axis, mark it `plot(row,col)` = `plot(px_prim,py_prim)`
+  where **`px_prim`=row, `py_prim`=col**. (getpixel_dFoF's `mimg(pixel(2),pixel(1))` read put the
+  pixel on the inhibition RIM = the old bug.)
+- `contra_prediction.m` `[CP-SITE]` (knob `USE_DATA_SITE`) sets px/py_prim from the cache and
+  re-extracts `y_full` at the site; footprint = `mimg(px_prim±k, py_prim±k)`. Markers in
+  `[CP-KERNEL]`/`[CP-BLEED]` + explorers all use the `plot(px_prim,py_prim)` rule.
+- TODO: replicate `cp_find_stim_site` on AL_0041 e1/e2; re-cache the explorer dumps (old A pixel).
+
 ## Residual / state-dependence workbench — PRIMARY ACTIVE STREAM (2026-06)
 `contra_residual.m` — SECTIONED MATLAB workbench. Isolates the LOCAL stim effect = actual ipsi dip
 − contra prediction (contra predicts the GLOBAL network activity flowing into the ipsi kernel), then
@@ -22,8 +36,19 @@ tests its brain-state dependence. Shared compute: `utils/cp_residual_core.m`. Ru
 3. then any section, in any order: `[CP-RESi]` (clickable per-trial inspector),
    `[CP-LOCAL]` (state×Actual/Global/Local overview), `[CP-MOTION]` (No-motion vs Motion),
    `[CP-MOTION-AMP]` (per-amplitude, fig-3 style, `amp_sig`='Actual'|'Global'|'Local'),
-   `[CP-VAR]`, `[CP-DELTA]`.
-- Helpers (utils/): `cp_agl.m`, `cp_cont_state.m`, `cp_motion_amp.m`, `cp_res_inspector.m`.
+   `[CP-VAR]`, `[CP-DELTA]`, `[CP-BLEEDCTRL]` (bleed-artifact control on the state result).
+- Helpers (utils/): `cp_agl.m`, `cp_cont_state.m`, `cp_motion_amp.m`, `cp_res_inspector.m`, `cp_bleed_control.m`.
+- DV = **template-gain** `<r,μ>/<μ,μ>` (signed/directional; `R.gain`) + **L1-dev** (unsigned deviation; `R.devL1`),
+  z-within-amp (2026-07-01, superseded `dev_stim`). Per-trial `R.bleed` (ipsi→contra leakage) + `R.catch`
+  (amp-0 null) for `[CP-BLEEDCTRL]`.
+- **A2 (2026-07-01): cp_residual_core now RETARGETS to the data-derived laser center** [row 373 col 353]
+  (`opts.use_data_site=true`, default) — reverses the old "do not retarget". This MATERIALLY shifted the
+  headline: at the true focus the signed template-gain effect collapses (PreVar −0.215→−0.080, PreDelta
+  −0.217→−0.115) but **L1-dev is robust** (PreVar +0.213 p=9e-9, PreDelta +0.166 p=8e-6). ⇒ defensible
+  finding is the PREDICTABILITY (L1-dev) effect, not directional size. **DV-primacy: revisit (L1 primary?).**
+- **A4:** `opts.state_win='pre'` (strictly pre-onset [−1,0]s) reproduces 'peri' → no onset-span circularity.
+- Bleed control at center: PreDelta confound rejected; PreVar bleed mildly state-dep (A1 +0.104) but gain
+  survives control; catch null clean. cp_bleed_control still built on `R.gain` — re-run on L1 if DV swaps.
 - Cross-session batch: `cp_state_batch.m`. Absolute dose-response (bleed comp ON): `cp_doseresponse.m`.
 - selExp=3 (AL_0033) ROI cached in `impulse-analysis/data/`; AL_0041 e1/e2 need interactive ROI draw on first run.
 

@@ -31,14 +31,14 @@ for si = 1:nS
     s = sessions(si);
     fprintf('\n=== cp_state_batch: session %d/%d (selExp=%d) ===\n', si, nS, s);
     [~, S] = cp_residual_core(allExperiments, s, opts);
-    rPart(si,:) = S.r_partial;  pPart(si,:) = S.p_partial;
+    rPart(si,:) = S.r_primary;  pPart(si,:) = S.p_primary;   % PRIMARY = L1-dev (swapped 2026-07-01)
     rStim(si,:) = S.r_stim;     rPre(si,:)  = S.r_pre;
     nUsed(si,:) = S.n;          r2(si)      = S.cv_mean;
     labels(si)  = sprintf('%s %s e%d', S.mn, S.td, S.en);
 end
 
 % ---- table ----
-fprintf('\n==== Residual state-dependence: partial(dev_stim, state | dev_pre) ====\n');
+fprintf('\n==== Residual state-dependence: partial(L1-dev, state | dev_pre) ====\n');
 for si = 1:nS
     fprintf('%-22s R²=%.3f | Motion %+.3f(p=%.2g) | PreVar %+.3f(p=%.2g) | PreDelta %+.3f(p=%.2g)\n', ...
         labels(si), r2(si), rPart(si,1),pPart(si,1), rPart(si,2),pPart(si,2), rPart(si,3),pPart(si,3));
