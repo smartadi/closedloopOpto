@@ -1,6 +1,6 @@
 function cp_motion_amp(R, imp, SIG, sigName, fname)
 % cp_motion_amp — per-amplitude motion vs |dip dev| (motion_analysis figure-3 style,
-% LARGE fonts) for the contra_residual workbench.
+% LARGE fonts) for the contra_prediction residual workbench.
 %
 % One subplot per stim amplitude: x = per-trial motion (session-z), y = |dip - amp-mean|
 % (deviation of the trial's inhibition energy from the amplitude-average = predictability;

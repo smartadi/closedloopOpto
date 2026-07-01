@@ -85,13 +85,13 @@ bleed_spont_ref      = 'shifted_window';
 bleed_spont_offset_s = 20;   % s to shift back for spontaneous reference window
 
 if ~exist('allExperiments','var') || isempty(allExperiments)
-    error('contra_residual: run load_experiments.m first.');
+    error('cp_residual_core: run load_experiments.m first.');
 end
 
 mn = allExperiments(selExp).mn;
 td = allExperiments(selExp).td;
 en = allExperiments(selExp).en;
-fprintf('contra_residual: %s  %s  en=%d\n', mn, td, en);
+fprintf('cp_residual_core: %s  %s  en=%d\n', mn, td, en);
 
 Fs      = 35;
 mlag    = max(pY, pX);

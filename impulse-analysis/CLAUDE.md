@@ -28,15 +28,17 @@
 - TODO: replicate `cp_find_stim_site` on AL_0041 e1/e2; re-cache the explorer dumps (old A pixel).
 
 ## Residual / state-dependence workbench — PRIMARY ACTIVE STREAM (2026-06)
-`contra_residual.m` — SECTIONED MATLAB workbench. Isolates the LOCAL stim effect = actual ipsi dip
-− contra prediction (contra predicts the GLOBAL network activity flowing into the ipsi kernel), then
-tests its brain-state dependence. Shared compute: `utils/cp_residual_core.m`. Run order:
+`contra_prediction.m` — SECTIONED MATLAB workbench (the residual/state sections were merged in
+from the now-retired `contra_residual.m`, deleted 2026-07-01). Isolates the LOCAL stim effect =
+actual ipsi dip − contra prediction (contra predicts the GLOBAL network activity flowing into the
+ipsi kernel), then tests its brain-state dependence. Shared compute: `utils/cp_residual_core.m`. Run order:
 1. `load_experiments.m` (builds `allExperiments`; reads SVD from server — slow).
 2. `[CP-SETUP]` — builds `R`,`S` + the Actual/Global/Local decomposition. RUN FIRST.
+   (`[CP-HEMI]`+`[CP-KERNEL]` must run first if you want `[CP-KRECON]`.)
 3. then any section, in any order: `[CP-RESi]` (clickable per-trial inspector),
    `[CP-LOCAL]` (state×Actual/Global/Local overview), `[CP-MOTION]` (No-motion vs Motion),
    `[CP-MOTION-AMP]` (per-amplitude, fig-3 style, `amp_sig`='Actual'|'Global'|'Local'),
-   `[CP-VAR]`, `[CP-DELTA]`, `[CP-BLEEDCTRL]` (bleed-artifact control on the state result).
+   `[CP-VAR]`, `[CP-DELTA]`, `[CP-BLEEDCTRL]` (bleed-artifact control), `[CP-KRECON]` (sparse kernel reconstruction).
 - Helpers (utils/): `cp_agl.m`, `cp_cont_state.m`, `cp_motion_amp.m`, `cp_res_inspector.m`, `cp_bleed_control.m`.
 - DV = **template-gain** `<r,μ>/<μ,μ>` (signed/directional; `R.gain`) + **L1-dev** (unsigned deviation; `R.devL1`),
   z-within-amp (2026-07-01, superseded `dev_stim`). Per-trial `R.bleed` (ipsi→contra leakage) + `R.catch`

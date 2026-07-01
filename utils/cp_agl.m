@@ -1,6 +1,6 @@
 function [dA,dG,dL, dA1,dG1,dL1, trA,trG,trL] = cp_agl(R)
 % cp_agl — per-trial DV split into Actual / Global / Local components.
-% For the contra_residual residual pipeline (R = cp_residual_core output).
+% For the contra_prediction residual pipeline (R = cp_residual_core output).
 %
 % PRIMARY DV = L1-dev: mean|r - mu| (robust trial-to-trial deviation from the
 % amplitude-mean dip template = predictability). SECONDARY DV = template-gain:

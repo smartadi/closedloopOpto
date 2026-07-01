@@ -112,7 +112,7 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 ---
 
 ## PARTIAL: Local photoinhibition response is state-robust to motion; state-dependence lives in GLOBAL activity
-**Status:** Single session (AL_0033 2025-01-29, n=748); **replication on AL_0041 e1/e2 PENDING** (needs interactive ROI draw). Stream = `impulse-analysis/contra_residual.m` (sectioned workbench) + `utils/cp_residual_core.m`. Full chronological detail: RESEARCH.md 2026-06-17 → 2026-06-22.
+**Status:** Single session (AL_0033 2025-01-29, n=748); **replication on AL_0041 e1/e2 PENDING** (needs interactive ROI draw). Stream = `impulse-analysis/contra_prediction.m` (sectioned workbench; `contra_residual.m` retired 2026-07-01) + `utils/cp_residual_core.m`. NB (2026-07-01): retargeted to the laser center [373,353] and DV switched to **L1-dev (predictability) primary** — the directional template-gain effect was a rim-pixel artifact; see RESEARCH.md 2026-07-01. Full chronological detail: RESEARCH.md 2026-06-17 → 2026-07-01.
 
 **Question:** Is the trial-to-trial variability of the LOCAL photoinhibition response brain-state dependent? Motivated by (a) the controller result — CL motion trials have lower MSE / are more "steerable"; and (b) the "Motion predicts impulse response deviation" finding above (fig 6), which is on the RAW ipsi signal (global + local mixed).
 
