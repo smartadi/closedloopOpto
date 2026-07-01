@@ -67,8 +67,11 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model RESOLVED 2026-06-27 (RESEARCH). **Wrapping up.**
 - [x] 2026-06-27 — Rig data model resolved + `ct_load_session` rewired: y=`states.csv` (% ΔF/F @35 Hz, glitch-clipped); layout auto-detected by #cols (8-col onset@2/Kp@5/Ki@6/ref=−col7; 7-col Timeline onsets w/ auto-calibrated states lag).
 - [x] 2026-06-28 — Final grid set = **4** (AL_0033 01-10/03-03/03-05 + AL_0034 10-17 cross-mouse); 03-17 → autotune (trajectory); 10-18 held (signal not regulatable). Headline panel `grid_cost_surfaces_4sessions.png`.
-- [ ] **Pick the primary cost-surface paper panel** (recommend 03-05 interior min; 03-03 fuller coverage; 10-17 cross-mouse) → add to PAPER.md, export PDF, write Results/Methods sentences.
-- [ ] **Decide cost window for 10-17** (dur=4 there) — keep [0 3] s for consistency, or [0 4].
+- [x] 2026-06-29 — **Methods written** (`methods_edit.tex` sec:gain_opt): grid + zeroth-order auto-tuning folded in; `fig:cost_landscape` now = real panels A(grid 03-05)/B(grid 10-17 cross-mouse)/C(autotune both mice); `eq:rms_cost` added; `alg:zo` corrected; panels copied to `Closedloop_edit/images/tuning/`. Cost window for 10-17 = **[0 4]** (decided).
+- Tuning is **Methods-only** (AL 2026-06-29) — no Results writeup, no main figure number; lives as `fig:cost_landscape`. PAPER.md updated.
+- [x] 2026-07-01 — Verified via local latexmk compile: all 3 `images/tuning/*.pdf` panels render, clean 29-page main.pdf. (Also fixed 2 surfaced blockers: `refs.bib` duplicate keys + `discussion.tex` `eq:controller`→`eq:pi`.)
+- [ ] confirm AL_0034 is introduced at first mention (13-session set names only AL_0033/AL_0039).
+- [ ] Add `\label{sec:disturbance}` in `methods_edit.tex` (disturbance/motion methods) so the low-freq `\todo` ref resolves; optionally delete orphan `methods.tex`/`introduction_temp.tex`.
 - [ ] **[deferred] getdfof recompute for AL_0034 10-18** — extract the raw widefield from the 165 GB `.rar`, recompute kernel-mean dF/F at pixel[390,390] via getdfof (independent of the online states.csv), re-test for a stim-locked dip / dose-response → settle biology-vs-online-pipeline. Only if 10-18 is specifically needed.
 
 ### Contra→ipsi prediction framework (impulse) — from JOURNAL 2026-06-16
@@ -82,6 +85,12 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 - [ ] Per-trial prediction error → brain-state mapping (JOURNAL 2026-06-16). Define prediction = contra_pred (pink) + TF impulse for that amplitude (red); error = deviation of actual trial from red over stim..stim+200ms (0-200ms dip window). Map error to motion AND motion-excluded pre-stim variance / delta power. NOTE: CP-4 in contra_prediction.m ALREADY computes red4=pink+TF, per-trial err4, and covariates (mot4, pvar4, dpow_pre4, dpow_stim4) — but err window is 0-1s (change to 0-200ms) and pink uses old full-kernel decontam (reconcile to α=1 baseline). This REPLACES the old per-trial error = deviation from trial-averaged-response-per-amp method.
 - [ ] Generalize the contra→ipsi setup into a reusable framework callable from controller-level analysis (not just impulse)
 - [ ] (decision pending) TF fit on the residual dip → add learned impulse response on top of the contra prediction at trial level
+
+### Contra predictability of trials (controller) — NEW, scaffold ready
+> Scaffold: `controller-analysis/contra_prediction_controller.m` (`[CTRL-CP-SETUP]`/`[CTRL-CP-TRIAL]`/`[CTRL-CP-STATE]`). Reuses the Zhiwen-faithful predictor (`utils/cp_hemi_predictor.m`) + `cp_roi_masks`/`redoSVD` UNCHANGED. Deferred until the impulse predictor is locked. RESEARCH 2026-06-29.
+- [ ] **[NEXT] Baseline-align per trial in `[CTRL-CP-TRIAL]`** — subtract the pre-stim `iPre` mean from BOTH actual `ya` and predicted `yp` before `r2`/`resE`. The Zhiwen map is mean-centered (CanonCor2 centers Y/X, `aKern` has no intercept) → it predicts deviations, carries no DC; CL's controller-imposed set-point (`dFk`→ref=−5) would otherwise inflate `resE` / deflate `r2` and fake "CL less contra-predictable". `rho` is already offset-invariant. Mirror `cp_residual_core` baseline handling (`A=ya−bl_a`, `Pr=yp−bl_p`).
+- [ ] Confirm DV + OL-vs-CL contrast with Nick before running (current scaffold: contra-predicted pre-stim state→MSE slope, OL vs CL = decoupling test for open Q2 / K2 slopes).
+- [ ] On first run verify units: `cp_hemi_predictor` field→kernel reconstruction vs `data.dFk` (both %ΔF/F) → sane held-out R²; `d.params.kernel` present (fallback k_prim=2).
 
 ### New analyses
 - [ ] Implement three-layer contralateral prediction model (pink/orange/red) — see FINDINGS.md — `plottingScript.m`
