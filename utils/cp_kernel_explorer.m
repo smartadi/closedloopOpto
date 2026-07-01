@@ -1,5 +1,9 @@
-function cp_kernel_explorer(matfile)
+function cp_kernel_explorer(matfile, start_sq)
 %CP_KERNEL_EXPLORER  Click an ipsi pixel -> see its contra predictive-weight map.
+%
+%   cp_kernel_explorer(MATFILE, START_SQ) opens in the squared "energy" (w^2) view
+%   when START_SQ is true (default false = signed weights). Toggle live with the
+%   "squared" checkbox.
 %
 %   cp_kernel_explorer(MATFILE) opens an interactive figure from the compact rank-K
 %   fit products dumped by contra_prediction's [CP-KERNEL] section
@@ -29,12 +33,13 @@ end
 if ~exist(matfile, 'file')
     error('cp_kernel_explorer: file not found: %s', matfile);
 end
+if nargin < 2 || isempty(start_sq), start_sq = false; end
 S = load(matfile);
 
 st      = struct();
 st.S    = S;
 st.n    = double(min(S.nmap, S.K));
-st.sq   = false;
+st.sq   = logical(start_sq);
 st.T    = local_buildT(S, st.n);
 st.xc   = S.px_prim;   % last click (screen coords: x=row, y=col)
 st.yc   = S.py_prim;
@@ -65,7 +70,7 @@ uicontrol(f,'Style','slider','Units','normalized','Position',[0.155 0.018 0.24 0
         'SliderStep',[1/(S.K-1) max(1,round(S.K/10))/(S.K-1)], ...
         'Callback',@(src,~) local_onRank(f, src));
 uicontrol(f,'Style','checkbox','Units','normalized','Position',[0.42 0.012 0.10 0.05], ...
-        'String','squared','Value',0,'BackgroundColor','w','FontWeight','bold', ...
+        'String','squared','Value',double(st.sq),'BackgroundColor','w','FontWeight','bold', ...
         'Callback',@(src,~) local_onSq(f, src));
 
 set(f, 'WindowButtonDownFcn', @(src,~) local_onClick(src));
