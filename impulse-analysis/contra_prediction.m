@@ -890,6 +890,28 @@ stimaff = cp_stimaffect(struct( ...
     'px_prim', px_prim, 'py_prim', py_prim, 'paper_root', paper_root, ...
     'mn', mn, 'td', td, 'en', en));
 
+%% (S15) [CP-PREDQ] Spontaneous contra->ipsi predictability vs brain state (CLICKABLE)
+% Before testing STIM-response state-dependence, characterize how contra->ipsi
+% PREDICTABILITY itself depends on brain state, on the SPONTANEOUS (non-stim, training-
+% domain) recording. Windows the spontaneous data (~1.5 s, frames >=1.5 s pre / 2.5 s
+% post any stim onset) and per window computes local R^2 vs four state measures,
+% FLAGGING power-independence: Motion energy (behavioral, power-INDEP), Variance var(y)
+% + abs delta power (power-CONFOUND: both ~ signal power, entangled with R^2), Relative
+% delta delta/total (spectral ratio, power-INDEP). Result (AL_0033 0129 e1): Motion
+% rho=-0.01 (NULL), Variance +0.79 / abs-delta +0.67 (CONFOUNDED), Relative-delta +0.29
+% (genuine) => predictability is motion-invariant, modestly higher in synchronized
+% states. CRITICAL: this is why the variance/delta "local stim state-dependence" was a
+% signal-power confound (RESEARCH 2026-07-01/02); the admissible states are motion +
+% relative-delta. CLICK any scatter point -> the window's actual / prediction /
+% mean-corrected prediction + residual (cp_spont_predq.m). Exports cp_spont_r2_vs_state.png.
+if ~exist('h_pixw','var'), error('[CP-PREDQ] run [CP-HEMI] + [CP-KERNEL] first (needs h_pixw, h_tr).'); end
+if ~exist('b_onf','var'),  error('[CP-PREDQ] run [CP-BLEED] first (needs b_onf).'); end
+clear cp_spont_predq;  rehash;
+predq = cp_spont_predq(struct( ...
+    'pixw', h_pixw, 'U_K', U_svd_raw(:,1:h_K), 'V_c', V_c_full(1:h_K,:), ...
+    'y', y_full, 'tr', h_tr, 'mI_kern', h_mI_kern, 'onf', b_onf, 'mot', mot_full, ...
+    'Fs', Fs, 'paper_root', paper_root, 'mn', mn, 'td', td, 'en', en));
+
 
 % =====================================================================================
 % RESIDUAL + STATE-DEPENDENCE WORKBENCH  (merged from contra_residual.m, 2026-06-26)
@@ -922,7 +944,7 @@ stimaff = cp_stimaffect(struct( ...
 %   use_motion (false) — keep motion OUT of the contra map so it can be tested as a
 %                        state in [CP-MOTION]; variance/delta unaffected (R² 0.899 vs 0.900)
 
-%% (S15) [CP-SETUP] Build residual + Actual/Global/Local decomposition — RUN THIS FIRST
+%% (S16) [CP-SETUP] Build residual + Actual/Global/Local decomposition — RUN THIS FIRST
 close all;
 wrap_path = mfilename('fullpath');
 if isempty(wrap_path), wrap_path = fullfile(pwd, 'contra_prediction.m'); end
@@ -959,7 +981,7 @@ fprintf('  SECONDARY partial(template-gain, state|dev_pre):  Motion %+.3f (p=%.3
     S.r_secondary(1), S.p_secondary(1), S.r_secondary(2), S.p_secondary(2), S.r_secondary(3), S.p_secondary(3));
 fprintf('  -> now run any of: [CP-RESi] [CP-LOCAL] [CP-MOTION] [CP-VAR] [CP-DELTA] [CP-BLEEDCTRL] [CP-KRECON]\n');
 
-%% (S16) [CP-RESi] Clickable inspector — click a trial: actual / contra-pred / residual / motion
+%% (S17) [CP-RESi] Clickable inspector — click a trial: actual / contra-pred / residual / motion
 if ~exist('R','var'), error('Run [CP-SETUP] first.'); end
 if isempty(R.Sin)
     warning('[CP-RESi] no inspector payload (make_wide was off). Re-run [CP-SETUP].');
@@ -968,7 +990,7 @@ else
     fprintf('[CP-RESi] Inspector open — click a scatter point (snaps to nearest trial).\n');
 end
 
-%% (S17) [CP-LOCAL] Overview: where each state effect lives (GLOBAL contra vs LOCAL residual)
+%% (S18) [CP-LOCAL] Overview: where each state effect lives (GLOBAL contra vs LOCAL residual)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 states = {'Motion',  'Motion (z)',         R.mot, R.okM; ...
           'PreVar',  'Pre-stim var (z)',   R.pv,  R.okV; ...
@@ -1005,7 +1027,7 @@ sgtitle(figL, sprintf('CP-LOCAL overview  %s %s e%d  (rows=state, cols=Actual/Gl
 paperExport(figL, fullfile(R.paper_root,'images','figure2','cp_local_state.png'));
 fprintf('[CP-LOCAL] Exported cp_local_state.png\n');
 
-%% (S18) [CP-MOTION] Motion-only: predictability (No-motion vs Motion) + mean dip trace
+%% (S19) [CP-MOTION] Motion-only: predictability (No-motion vs Motion) + mean dip trace
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 mot = R.mot;  noM = mot <= 0.5;  yesM = mot > 0.5;   % binary split (motion z is zero-inflated; lab motThr_hi=0.5)
 [rp,pp_] = partialcorr(R.devL1(R.okM), mot(R.okM), R.devP(R.okM), 'type','Spearman','rows','complete');
@@ -1043,7 +1065,7 @@ sgtitle(figM, sprintf('CP-MOTION  %s %s e%d  (top: predictability | bottom: mean
 paperExport(figM, fullfile(R.paper_root,'images','figure2','cp_motion_residual.png'));
 fprintf('[CP-MOTION] Exported cp_motion_residual.png\n');
 
-%% (S19) [CP-MOTION-AMP] Per-amplitude motion vs |dip dev| (figure-3 style, large fonts)
+%% (S20) [CP-MOTION-AMP] Per-amplitude motion vs |dip dev| (figure-3 style, large fonts)
 % One subplot per amplitude (within-amp r controls for amplitude). Pick the signal:
 %   amp_sig = 'Actual' (= motion_analysis fig 3) | 'Global' (contra) | 'Local' (residual)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
@@ -1056,15 +1078,15 @@ switch lower(amp_sig)
 end
 cp_motion_amp(R, imp_amp, SIGc, sName, sprintf('cp_motion_amp_%s.png', lower(amp_sig)));
 
-%% (S20) [CP-VAR] Pre-stim variance-only effect (A/G/L scatter + Local dose-response + partial)
+%% (S21) [CP-VAR] Pre-stim variance-only effect (A/G/L scatter + Local dose-response + partial)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 cp_cont_state('PreVar', 'Pre-stim var (z)', R.pv, AGL, R.devL1, R.devP, R.okV, R, 'cp_var_residual.png');
 
-%% (S21) [CP-DELTA] Pre-stim 1-4 Hz delta-only effect (A/G/L scatter + Local dose-response + partial)
+%% (S22) [CP-DELTA] Pre-stim 1-4 Hz delta-only effect (A/G/L scatter + Local dose-response + partial)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 cp_cont_state('PreDelta', 'Pre-stim \delta (z)', R.dp, AGL, R.devL1, R.devP, R.okD, R, 'cp_delta_residual.png');
 
-%% (S22) [CP-BLEEDCTRL] Is the residual state-dep a bleed artifact? (bleed~state + catch null)
+%% (S23) [CP-BLEEDCTRL] Is the residual state-dep a bleed artifact? (bleed~state + catch null)
 % Controls the ipsi->contra leakage confound: a state-modulated bleed would let the
 % contra PREDICTOR absorb a state-varying share of the local response, faking the
 % headline (var/delta -> weaker local gain). Tests (per state): (A1) is bleed itself
