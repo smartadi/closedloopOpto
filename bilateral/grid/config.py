@@ -24,8 +24,10 @@ EXPDIR = Path(SERVER) / SUBJECT / DATE / WF_EXP
 
 # ============================== STIM ==============================
 LASER = "638"              # active laser line (lightCommand638; 594 was idle)
-AMP_SEL = 0.5             # laser power to analyze. In this session only 0.5 fired;
-                          #   0.25 was sub-threshold (no pulse). None -> pool whatever fired.
+AMP_SEL = 0.5             # single-amp default (legacy 1-amp pipeline: build/tf_fit/viewer)
+AMPS = [0.25, 0.5]        # two-amp linearity build (build_amps). 2026-07-01 both fire
+                          #   (~50 reps/site each). Command->power is nonlinear (0.25~0.005 mW,
+                          #   0.5~0.058 mW per laser calib); for now treated as two levels, not mW.
 FS_DAQ = 2000.0           # Timeline DAQ rate (Hz), from TimelineHW.json
 N_COMPS = 50              # SVD components used
 LASER_THR = 0.3          # V threshold on lightCommand for onset detection

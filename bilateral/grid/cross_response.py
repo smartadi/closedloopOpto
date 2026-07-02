@@ -96,6 +96,104 @@ def load_cached():
     return {k: z[k] for k in z.files}
 
 
+CACHE2 = CACHE.parent / "grid_cross_response_2amp.npz"
+TRIALS2 = CACHE.parent / "grid_trials_2amp.npz"
+
+
+def build_amps(amps=None, win=None, cache=True):
+    """Build the (amp, stim, readout, time) response tensor for MULTIPLE laser amplitudes in
+    ONE SVD pass — the data for the linearity test. Same per-trial extraction as build(), but
+    onsets are split by Block-assigned power. Caches H (nAmp,nS,nS,nW) trial-mean + Hstd.
+
+    Returns (H, amps, sites, window).
+    """
+    amps = list(cfg.AMPS if amps is None else amps)
+    U, mimg, V, svdT, ny, nx = loader.load_svd(cfg.EXPDIR, cfg.N_COMPS)
+    gc = calibration.galvo_calib(cfg.SUBJECT, cfg.DATE, cfg.LASER, cfg.BLOCK_EXP,
+                                 cfg.SERVER, CACHE.parent)
+    onset_t, pos = loader.derive_onsets_positions(
+        cfg.EXPDIR, cfg.LASER, cfg.LASER_THR, cfg.DEBOUNCE_S, cfg.FS_DAQ,
+        gc["bregma_offset_x"], gc["bregma_offset_y"], gc["mm_per_v_x"], gc["mm_per_v_y"])
+    onset_amp = loader.block_power_per_onset(onset_t, pos, cfg.SUBJECT, cfg.DATE,
+                                             cfg.BLOCK_EXP, cfg.SERVER)
+    ramp = np.round(onset_amp, 3)
+    keep = np.isin(ramp, np.round(amps, 3))
+    sites = np.unique(pos[keep], axis=0)
+
+    t0, t1 = win if win is not None else cfg.CROSS_WIN
+    window = np.arange(t0, t1, 1.0 / cfg.FS_WIN)
+    base_ix = int(np.argmin(np.abs(window)))
+    t2svd = analysis.make_t2svd(svdT, V)
+    nA, nS, nW = len(amps), len(sites), len(window)
+    print(f"window {t0:+.2f}..{t1:+.2f}s @ {cfg.FS_WIN:.0f}Hz -> {nW} samples; amps {amps}; {nS} sites")
+
+    spat = np.zeros((nS, cfg.N_COMPS)); mI = np.zeros(nS)
+    for j, (mx, my) in enumerate(sites):
+        cx, cy = analysis.site_px(mx, my, cfg.BREGMA_PX, cfg.PX_PER_MM_X, cfg.PX_PER_MM_Y)
+        x0, x1 = int(np.clip(cx - cfg.ROI_RAD, 0, nx)), int(np.clip(cx + cfg.ROI_RAD, 0, nx))
+        y0, y1 = int(np.clip(cy - cfg.ROI_RAD, 0, ny)), int(np.clip(cy + cfg.ROI_RAD, 0, ny))
+        spat[j] = np.asarray(U[y0:y1, x0:x1, :cfg.N_COMPS]).mean((0, 1))
+        mI[j] = mimg[y0:y1, x0:x1].mean()
+
+    H = np.full((nA, nS, nS, nW), np.nan)
+    Hstd = np.full((nA, nS, nS, nW), np.nan)
+    ntri = np.zeros((nA, nS), int)
+    for ai, amp in enumerate(amps):
+        for i, (mx, my) in enumerate(sites):
+            these = onset_t[(pos[:, 0] == mx) & (pos[:, 1] == my) & (ramp == round(amp, 3))]
+            ntri[ai, i] = len(these)
+            if len(these) == 0:
+                continue
+            tr = t2svd(window[None, :] + these[:, None])
+            for j in range(nS):
+                fluo = tr @ spat[j] + mI[j]
+                base = np.nanmean(fluo[:, :base_ix])
+                dff = (fluo - base) / base
+                H[ai, i, j] = np.nanmean(dff, 0)
+                Hstd[ai, i, j] = np.nanstd(dff, 0)
+        print(f"  amp {amp}: {ntri[ai].min()}-{ntri[ai].max()} trials/site")
+    roi_ts = (V @ spat.T) + mI[None, :]
+
+    if cache:
+        CACHE.parent.mkdir(exist_ok=True)
+        np.savez(CACHE2, H=H, Hstd=Hstd, amps=np.array(amps, float), sites=sites, window=window,
+                 base_ix=base_ix, ntri=ntri, fs_win=cfg.FS_WIN)
+        np.savez(TRIALS2, roi_ts=roi_ts.astype(np.float32), svdT=svdT, onset_t=onset_t,
+                 pos=pos, onset_amp=onset_amp, sites=sites, window=window, base_ix=base_ix)
+        print(f"cached -> {CACHE2.name} (H {H.shape}) + {TRIALS2.name} (roi_ts {roi_ts.shape})")
+    return H, amps, sites, window
+
+
+def load_cached2():
+    if not CACHE2.exists():
+        raise FileNotFoundError(f"{CACHE2} missing — run cross_response.py 2amp first")
+    z = np.load(CACHE2, allow_pickle=True)
+    return {k: z[k] for k in z.files}
+
+
+def load_trials2():
+    if not TRIALS2.exists():
+        raise FileNotFoundError(f"{TRIALS2} missing — run cross_response.py 2amp first")
+    z = np.load(TRIALS2, allow_pickle=True)
+    return {k: z[k] for k in z.files}
+
+
+def extract_trials_amp(t, s_idx, r_idx, amp):
+    """Single-trial dF/F for (stim s_idx, readout r_idx) at laser amplitude `amp`, from the
+    2amp trials cache dict `t`. Returns (dff (nTrials,nWin), mean)."""
+    import scipy.interpolate
+    roi_ts, svdT, onset_t = t["roi_ts"].astype(np.float64), t["svdT"], t["onset_t"]
+    pos, sites, window, base_ix = t["pos"], t["sites"], t["window"], int(t["base_ix"])
+    sel = ((pos[:, 0] == sites[s_idx, 0]) & (pos[:, 1] == sites[s_idx, 1])
+           & (np.round(t["onset_amp"], 3) == round(amp, 3)))
+    these = onset_t[sel]
+    f = scipy.interpolate.interp1d(svdT, roi_ts[:, r_idx], bounds_error=False, fill_value=np.nan)
+    fluo = f(window[None, :] + these[:, None])
+    base = np.nanmean(fluo[:, :base_ix])
+    dff = (fluo - base) / base
+    return dff, np.nanmean(dff, 0)
+
+
 BRAIN_CACHE = CACHE.parent / "grid_brain.npz"
 TRIALS_CACHE = CACHE.parent / "grid_trials.npz"
 
@@ -137,10 +235,12 @@ def cache_brain():
 if __name__ == "__main__":
     import sys
     argv = sys.argv
+    win = None
+    if "--win" in argv:
+        i = argv.index("--win"); win = (float(argv[i + 1]), float(argv[i + 2]))
     if "brain" in argv:
         cache_brain()
+    elif "2amp" in argv:
+        build_amps(win=win)
     else:
-        win = None
-        if "--win" in argv:
-            i = argv.index("--win"); win = (float(argv[i + 1]), float(argv[i + 2]))
         build(win=win)
