@@ -8,10 +8,16 @@ see grid/README.md for the full handoff.
 from pathlib import Path
 
 # ============================== SESSION ==============================
+# *** To analyze a different session, edit ONLY these 4 fields. ***
+# Galvo volts->mm calibration is auto-read from the server per session (calibration.py, from
+# hardwareInfo.json in the BLOCK_EXP folder); only BREGMA_PX / PX_PER_MM below (image
+# registration) may need a Fig-0 re-check when the mouse/mounting changes.
 SUBJECT = "AL_0048"
-DATE = "2026-06-24"
-WF_EXP = "2"                # widefield SVD + raw Timeline traces (analysis reads this)
-BLOCK_EXP = "3"             # paired Signals run: per-trial power/position/order (Block.mat)
+DATE = "2026-07-01"
+WF_EXP = "4"                # widefield SVD + raw Timeline traces (analysis reads this)
+BLOCK_EXP = "5"             # paired Signals run: hardwareInfo.json + Block.mat (power/pos/order)
+# previous sessions: 2026-06-24 WF=2 Block=3
+
 SERVER = r"\\sahale.biostr.washington.edu\data\Subjects"
 
 EXPDIR = Path(SERVER) / SUBJECT / DATE / WF_EXP
@@ -25,17 +31,17 @@ N_COMPS = 50              # SVD components used
 LASER_THR = 0.3          # V threshold on lightCommand for onset detection
 DEBOUNCE_S = 0.06         # min gap between accepted onsets (s)
 
-# galvo volts -> mm-from-bregma  (hardwareInfo.daqController.galvoOpto)
-MM_PER_V_X = 1.1111111111111112
-MM_PER_V_Y = -1.075268817204301      # Y inverted
-BREGMA_OFFSET_X = 0.732639223045812  # galvo volts at bregma (mm=0)
-BREGMA_OFFSET_Y = 0.30088318722119456
+# galvo volts -> mm-from-bregma: NOT hardcoded — read per session from the server's
+# hardwareInfo.json (signalsOutputs.opto<LASER>, identical to .galvoOpto) by
+# calibration.galvo_calib() and cached to data/grid_calib_<subject>_<date>.json.
+# cross_response.build() fetches mmPerV_X/Y + bregmaOffset_X/Y automatically.
 
-# mm -> SVD-image pixel.  *** DIAL THESE IN WITH Fig 0 (grid_sites.png) ***
-#   server bregma_coords ([530, 217]) lives in the 512x640 calibration image, NOT this
-#   560x560 SVD frame, so it can't be used directly. Confirmed visually correct by user.
-BREGMA_PX = (280.0, 250.0)   # (x, y) px in the 560x560 meanImage
-PX_PER_MM_X = 57.8           # rig scale (from AL_0041 notebook)
+# mm -> SVD-image pixel.  *** IMAGE REGISTRATION — verify with Fig 0 (grid_sites.png) ***
+# These are NOT on the server for the widefield session: bregma is marked visually and px/mm
+# is a widefield-optics rig constant (from AL_0041 notebook). calibration.bregma_px_hint()
+# suggests a bregma pixel from a same-day bregma.csv when one exists; verify before trusting.
+BREGMA_PX = (280.0, 250.0)   # (x, y) px in the 560x560 meanImage (Fig-0 verified)
+PX_PER_MM_X = 57.8           # widefield rig scale
 PX_PER_MM_Y = -57.8          # y inverted for image coords
 ROI_RAD = 10                 # ROI half-width (px) around each site
 

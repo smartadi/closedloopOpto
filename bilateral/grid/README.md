@@ -64,16 +64,15 @@ SVD (present, standard): `blue/svdSpatialComponents.npy` U `(560,560,2000)` floa
   ```
 - Yields exactly **2600 onsets = 52 sites × 50 reps** (one power level — see below).
 
-### Calibration constants & provenance (from `hardwareInfo.json` → `daqController.galvoOpto`)
-```
-mmPerV_X        =  1.1111111111111112
-mmPerV_Y        = -1.075268817204301      # Y inverted
-bregmaOffset_X  =  0.732639223045812      # galvo volts at bregma (mm=0)
-bregmaOffset_Y  =  0.30088318722119456
-```
-Also at `AL_0048/2026-06-24/optoGalvoCalib/` (`bregma_coords.mat`, `bregmaOffset_X/Y.mat`,
-`bregma_image.mat`) — same offsets, plus `bregma_coords = [530.3, 216.7]` **in the 512×640
-calibration image** (NOT the 560×560 SVD frame — see geometry note).
+### Galvo calibration — auto-read per session (NOT hardcoded)
+`calibration.galvo_calib()` reads the four galvo constants from the session's
+`hardwareInfo.json` → `signalsOutputs.opto<LASER>` (identical copy under `.galvoOpto`) and
+caches them to `data/grid_calib_<subject>_<date>.json`. `cross_response.build()` /
+`run_grid.py` fetch them automatically — nothing to edit. **These are re-measured per
+session** (e.g. 2026-06-24 bregmaOffset = (0.733, 0.301); 2026-07-01 = (−0.199, 1.673)),
+which is exactly why they must not be hardcoded. `mmPerV_X/Y` (≈ 1.111 / −1.075) are rig
+constants and have been stable. The same offsets are also mirrored in
+`AL_0048/<date>/optoGalvoCalib/bregmaOffset_X/Y.mat`.
 
 ## Bregma / pixel geometry (dial-in, confirmed good)
 The mm→pixel mapping for ROI placement uses top-of-script knobs, **not** the server

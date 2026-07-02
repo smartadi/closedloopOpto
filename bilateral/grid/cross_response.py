@@ -19,6 +19,7 @@ import numpy as np
 import config as cfg
 import loader
 import analysis
+import calibration
 
 CACHE = Path(__file__).resolve().parents[2] / "data" / "grid_cross_response.npz"
 
@@ -27,9 +28,11 @@ def build(amp_sel=cfg.AMP_SEL, win=None, cache=True):
     """Return (H, sites, window, label). H is (nStim, nReadout, nWin) trial-mean dF/F.
     `win` = (t0, t1) seconds rel. onset (default cfg.CROSS_WIN)."""
     U, mimg, V, svdT, ny, nx = loader.load_svd(cfg.EXPDIR, cfg.N_COMPS)
+    gc = calibration.galvo_calib(cfg.SUBJECT, cfg.DATE, cfg.LASER, cfg.BLOCK_EXP,
+                                 cfg.SERVER, CACHE.parent)
     onset_t, pos = loader.derive_onsets_positions(
         cfg.EXPDIR, cfg.LASER, cfg.LASER_THR, cfg.DEBOUNCE_S, cfg.FS_DAQ,
-        cfg.BREGMA_OFFSET_X, cfg.BREGMA_OFFSET_Y, cfg.MM_PER_V_X, cfg.MM_PER_V_Y)
+        gc["bregma_offset_x"], gc["bregma_offset_y"], gc["mm_per_v_x"], gc["mm_per_v_y"])
     onset_t, pos, sites, label = loader.select_power(
         onset_t, pos, amp_sel, cfg.SUBJECT, cfg.DATE, cfg.BLOCK_EXP, cfg.SERVER)
     t0, t1 = win if win is not None else cfg.CROSS_WIN

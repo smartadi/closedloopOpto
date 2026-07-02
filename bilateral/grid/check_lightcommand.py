@@ -31,6 +31,9 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import config as cfg
 import loader
+import calibration
+
+DATA = Path(__file__).resolve().parents[2] / "data"
 
 
 def main():
@@ -42,9 +45,10 @@ def main():
     t = np.arange(lc.size) / fs
 
     # detected onsets (from the trace itself) + Block->Timeline offset
+    gc = calibration.galvo_calib(cfg.SUBJECT, cfg.DATE, cfg.LASER, cfg.BLOCK_EXP, cfg.SERVER, DATA)
     onset_t, pos = loader.derive_onsets_positions(
         exp, cfg.LASER, cfg.LASER_THR, cfg.DEBOUNCE_S, fs,
-        cfg.BREGMA_OFFSET_X, cfg.BREGMA_OFFSET_Y, cfg.MM_PER_V_X, cfg.MM_PER_V_Y)
+        gc["bregma_offset_x"], gc["bregma_offset_y"], gc["mm_per_v_x"], gc["mm_per_v_y"])
     blk = sorted((Path(cfg.SERVER) / cfg.SUBJECT / cfg.DATE / cfg.BLOCK_EXP).glob("*_Block.mat"))[0]
     b = scipy.io.loadmat(blk, squeeze_me=True, struct_as_record=False)["block"]
     ov = b.outputs.opto638Values

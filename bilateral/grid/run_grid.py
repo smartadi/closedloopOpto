@@ -12,7 +12,11 @@ Outputs -> bilateral/grid/grid_png/. See grid/README.md for the full handoff.
 import config as cfg
 import loader
 import analysis
+import calibration
 import plots
+
+from pathlib import Path
+DATA = Path(__file__).resolve().parents[2] / "data"
 
 
 def main():
@@ -20,9 +24,10 @@ def main():
 
     # ---- load + derive onsets/positions ----
     U, mimg, V, svdT, ny, nx = loader.load_svd(cfg.EXPDIR, cfg.N_COMPS)
+    gc = calibration.galvo_calib(cfg.SUBJECT, cfg.DATE, cfg.LASER, cfg.BLOCK_EXP, cfg.SERVER, DATA)
     onset_t, pos = loader.derive_onsets_positions(
         cfg.EXPDIR, cfg.LASER, cfg.LASER_THR, cfg.DEBOUNCE_S, cfg.FS_DAQ,
-        cfg.BREGMA_OFFSET_X, cfg.BREGMA_OFFSET_Y, cfg.MM_PER_V_X, cfg.MM_PER_V_Y)
+        gc["bregma_offset_x"], gc["bregma_offset_y"], gc["mm_per_v_x"], gc["mm_per_v_y"])
     print(f"{cfg.SUBJECT} {cfg.DATE}/{cfg.WF_EXP}: {len(onset_t)} detected {cfg.LASER} onsets")
 
     # ---- power select via Block alignment ----
