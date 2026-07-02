@@ -38,8 +38,8 @@ ipsi kernel), then tests its brain-state dependence. Shared compute: `utils/cp_r
 3. then any section, in any order: `[CP-RESi]` (clickable per-trial inspector),
    `[CP-LOCAL]` (state×Actual/Global/Local overview), `[CP-MOTION]` (No-motion vs Motion),
    `[CP-MOTION-AMP]` (per-amplitude, fig-3 style, `amp_sig`='Actual'|'Global'|'Local'),
-   `[CP-VAR]`, `[CP-DELTA]`, `[CP-BLEEDCTRL]` (bleed-artifact control), `[CP-KRECON]` (sparse kernel reconstruction).
-- Helpers (utils/): `cp_agl.m`, `cp_cont_state.m`, `cp_motion_amp.m`, `cp_res_inspector.m`, `cp_bleed_control.m`.
+   `[CP-VAR]`, `[CP-DELTA]`, `[CP-BLEEDCTRL]` (bleed-artifact control), `[CP-KRECON]` (pixel-isolated reconstruction: predict from only the top-weight contra pixels; coupling is DISTRIBUTED not focal — `cp_pixel_recon.m`), `[CP-CLEAN]` (S12, marries KRECON×BLEED: predict from BLEED-FREE contra pixels — bleed & predictive maps DISJOINT ρ=−0.06, drop all bleed px → R² unchanged 0.865; `cp_clean_predict.m`).
+- Helpers (utils/): `cp_agl.m`, `cp_cont_state.m`, `cp_motion_amp.m`, `cp_res_inspector.m`, `cp_bleed_control.m`, `cp_clean_predict.m`.
 - DV = **template-gain** `<r,μ>/<μ,μ>` (signed/directional; `R.gain`) + **L1-dev** (unsigned deviation; `R.devL1`),
   z-within-amp (2026-07-01, superseded `dev_stim`). Per-trial `R.bleed` (ipsi→contra leakage) + `R.catch`
   (amp-0 null) for `[CP-BLEEDCTRL]`.

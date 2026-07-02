@@ -105,9 +105,11 @@ if opts.plot
     figv = figure('Color','w','Name','cp_roi_masks: verification');
     figv.Units='centimeters'; figv.Position=[0 0 12 10];
     lab = nan(nX,nY);  lab(contraA) = 1;  lab(ipsiA) = 2;
-    him = imagesc(lab);  set(him, 'AlphaData', ~isnan(lab));
+    glo = prctile(A(:),1);  ghi = max(prctile(A(:),99), glo+eps);
+    g   = min(max((A - glo)/(ghi - glo), 0), 1);           % transposed brain -> [0,1] grayscale
+    image(repmat(g, 1, 1, 3));  axis image off;  hold on;  % brain image in the background
+    him = imagesc(lab);  set(him, 'AlphaData', 0.35*double(~isnan(lab)));  % translucent hemisphere tint
     colormap(gca, [0.10 0.45 0.95; 0.95 0.30 0.10]);  clim([1 2]);
-    axis image off;  set(gca,'Color',[0.92 0.92 0.92]);  hold on;
     plot(bx, by, 'k-', 'LineWidth', 0.8);
     tt = linspace(-3, 3, 2);
     plot(mx(1)+tt*dx, my(1)+tt*dy, 'k--', 'LineWidth', 1.2);

@@ -53,7 +53,7 @@ else
     warning('contra_prediction: cannot locate paper/ -- paths may be wrong.');
 end
 
-%% Setup -- session and model parameters
+%% (S01) Setup -- session and model parameters
 selExp    = 3;      % experiment index (default 3 = AL_0033 2025-01-29)
 pY        = 0;      % AR self-lags on y (0 = pure contra prediction)
 pX        = 0;      % predictor lags. 0 = instantaneous map y(t)=B*contra(t).
@@ -84,7 +84,7 @@ y_full  = allExperiments(selExp).dF(:);
 t_full  = allExperiments(selExp).timeBlue(:);
 nFrames = numel(y_full);
 
-%% Load SVD for this experiment
+%% (S02) Load SVD for this experiment
 serverRoot    = expPath(mn, td, en);
 [U_cp, V_cp, ~, mimg_cp] = loadUVt(serverRoot, nSV_load);
 [nY_cp, nX_cp] = size(mimg_cp);
@@ -101,7 +101,7 @@ k_prim   = double(d_tmp.params.kernel);   % recording-kernel half-width (for [CP
 mot_full = d_tmp.motion.motion_1(1:2:end);
 clear d_tmp
 
-%% [CP-SITE] Data-derived photostim site (overrides flip-prone params.pixel)
+%% (S03) [CP-SITE] Data-derived photostim site (overrides flip-prone params.pixel)
 % The laser/recording site is localised from the DATA (deepest focal inhibition in
 % the trial-averaged peri-stim map; utils/cp_find_stim_site), NOT params.pixel,
 % which the load/save schemes keep x<->y flipping. The site is an ARRAY [row col]
@@ -141,9 +141,22 @@ if USE_DATA_SITE
     nFrames = numel(y_full);
     clear Ur_cp KR KC kidx
     fprintf('[CP-SITE] retargeted y_full at site (n=%d frames, mI=%.3g)\n', nFrames, mI_st);
+
+    % --- verification: overlay the trial-avg inhibition CRATER + confirm the site is centered ---
+    SITE_VERIFY_PLOT = true;    % set false to skip (recomputes the strongest-amp peri-stim map)
+    if SITE_VERIFY_PLOT
+        imp_v = allExperiments(selExp).imp;  uA_v = allExperiments(selExp).uAmp;
+        [~, iMx_v] = max(uA_v);  sv = imp_v.startTimes{iMx_v}(:);   % strongest-amp onsets -> cleanest blob
+        onF_v = zeros(numel(sv),1);
+        for jv = 1:numel(sv), [~, onF_v(jv)] = min(abs(t_full - sv(jv))); end
+        st_v = cp_find_stim_site(U_cp, double(V_cp), mimg_cp, onF_v, 'fs', Fs);
+        cp_site_overlay(st_v, mimg_cp, px_prim, py_prim, k_prim);
+        fprintf('[CP-SITE] verify (amp=%.2f, n=%d): crater argmin [row %d col %d] depth=%.2f%% | adopted [row %d col %d]\n', ...
+            uA_v(iMx_v), numel(onF_v), st_v.rowcol, st_v.depth, px_prim, py_prim);
+    end
 end
 
-%% Brain mask + contra/ipsi split (full-brain mask bisected by the midline)
+%% (S04) Brain mask + contra/ipsi split (full-brain mask bisected by the midline)
 % Single source of truth: utils/cp_roi_masks draws the FULL-BRAIN outline + the
 % midline (first run / redefine_roi), bisects the brain by the midline, and tags
 % the side containing the primary (recording) pixel as IPSI (target); the other is
@@ -160,7 +173,7 @@ brain_mask_cp = M_cp.brain;     % full-brain mask (outline AND intensity floor)
 valid_cp_svd  = M_cp.contra;    % CONTRA = predictor hemisphere (name kept for downstream)
 ipsi_mask_cp  = M_cp.ipsi;      % IPSI   = target hemisphere (primary-pixel side)
 
-%% SVD extraction -- contra predictor signals (V_c_full)
+%% (S05) SVD extraction -- contra predictor signals (V_c_full)
 % redoSVD on the full contra-hemisphere mask -> V_c_full (the [CP-HEMI] regressor
 % modes) + U_svd_raw (contra spatial map, cached for the future bleed analysis).
 % Cached in *_svdraw.mat; computed once.
@@ -186,12 +199,12 @@ else
     fprintf('Saved contra SVD raw cache: %s  (%d modes)\n', path_svd_raw, size(V_c_full,1));
 end
 
-%% Frame count for the spontaneous windows
+%% (S06) Frame count for the spontaneous windows
 % [CP-HEMI] is the predictor and z-scores the contra modes (V_c_full) itself, so
 % the old OLS predictor matrix is gone; only the usable frame count remains.
 nF_m = min(nFrames, numel(mot_full));
 
-%% [CP-STIM] Stim-onset list for the spontaneous windows
+%% (S07) [CP-STIM] Stim-onset list for the spontaneous windows
 % Builds the sorted nonzero-amplitude stim onsets + pre_frames -- the only former
 % [CP-FIT] outputs still used: [CP-HEMI] carves its spontaneous windows from them
 % (inter-stim gaps or pre-stim). The instantaneous OLS map beta_cp and all its
@@ -210,7 +223,7 @@ all_starts_cp = sort(all_starts_cp);
 
 pre_frames = round(spont_pre * Fs);
 
-%% [CP-HEMI] Whole-hemisphere reduced-rank prediction (Ye/Zhiwen replication)
+%% (S08) [CP-HEMI] Whole-hemisphere reduced-rank prediction (Ye/Zhiwen replication)
 %
 % FAITHFUL PORT of Ye et al. 2023 spirals
 %   spirals_mirror/preprocessing/getReducedRankRegressionHEMI.m
@@ -542,7 +555,7 @@ end
 fprintf('[CP-HEMI] exported cp_hemi_rank/r2map/examples/bestworst .png\n');
 
 
-%% [CP-KERNEL] Contra weight map: pixels most predictive of the ipsi primary pixel
+%% (S09) [CP-KERNEL] Contra weight map: pixels most predictive of the ipsi primary pixel
 % Back-project the deployed HEMI readout's contra-mode weights into pixel space
 % (Ye et al. 2023 Fig 3D-G analog). The readout at rank n is
 %   yhat = (X_zscored * h_b(:,1:n)) * h_aKern(1:n),
@@ -625,24 +638,26 @@ if h_launch_explorer
     cp_kernel_explorer(h_expl_file, true);      % true = open in squared (w^2) view
 end
 
-%% [CP-KRECON] Sparse kernel reconstruction: how few "kernels" predict the ipsi pixel
-% The HEMI readout is a sum over K canonical components (kernels). Rank them by
-% STANDALONE held-out primary-pixel R^2, accumulate in importance order, and report
-% how many (M) reconstruct 90/95/99% of the peak R^2. Reuses the [CP-HEMI] fit
-% products (no refit) -> run [CP-HEMI]+[CP-KERNEL] first. Exports cp_krecon_curve.png
-% (R^2-vs-M + per-kernel importance + example reconstructions) and cp_krecon_kernels.png
-% (the top-M individual contra kernel maps).
-if ~exist('h_scoresTe','var'), error('[CP-KRECON] run [CP-HEMI] + [CP-KERNEL] first.'); end
-clear cp_kernel_recon;  rehash;
-cp_kernel_recon(struct( ...
-    'scoresTe', h_scoresTe, 'aKern', h_aKern, 'mI_kern', h_mI_kern, ...
-    'yact_te', h_yact_te, 'segL', h_segL, 'nSeg', h_nSeg, ...
-    'kernR2', h_kernR2, 'kbest', h_kbest, 'b', h_b(:,1:h_K), 'sdtr', h_sdtr, ...
-    'U_svd_raw_K', U_svd_raw(:,1:h_K), 'idx_c', h_idx_c, 'nY', nY_cp, 'nX', nX_cp, ...
-    'mimg', mimg_cp, 'px_prim', px_prim, 'py_prim', py_prim, 'Fs', Fs, 'paper_root', paper_root));
+%% (S10) [CP-KRECON] Pixel-isolated reconstruction: how large a contra REGION is needed
+% Predict the ipsi primary pixel using ONLY the top-weight contra PIXELS. Because the
+% contra SVD modes are orthonormal, the [CP-HEMI] readout is a pixelwise weighted sum,
+% so restricting to a pixel subset = summing over those pixels only (no refit). Rank
+% contra pixels by |weight| (h_pixw from [CP-KERNEL]), accumulate top f%, DC-align on
+% train, score held-out R^2 -> "how large a contra region do we need?". Finding: the
+% coupling is DISTRIBUTED, not focal -- the top ~1% focal hotspot alone predicts poorly
+% (R^2~0.3); ~50% of the hemisphere is needed for 90% of the full R^2. Exports
+% cp_pxrecon.png (R^2-vs-region-size + weight map + example trace + top 1/5/20% masks).
+if ~exist('h_pixw','var'), error('[CP-KRECON] run [CP-HEMI] + [CP-KERNEL] first (needs h_pixw).'); end
+clear cp_pixel_recon;  rehash;
+cp_pixel_recon(struct( ...
+    'pixw', h_pixw, 'U_K', U_svd_raw(:,1:h_K), ...
+    'Vte', V_c_full(1:h_K, h_te), 'Vtr', V_c_full(1:h_K, h_tr), ...
+    'yte', y_full(h_te), 'ytr', y_full(h_tr), 'mI_kern', h_mI_kern, ...
+    'idx_c', h_idx_c, 'nY', nY_cp, 'nX', nX_cp, 'mimg', mimg_cp, ...
+    'px_prim', px_prim, 'py_prim', py_prim, 'Fs', Fs, 'segL', h_segL, 'paper_root', paper_root));
 
 
-%% [CP-BLEED] Impulse-bleed map: which contra pixels are input-affected, and how far
+%% (S11) [CP-BLEED] Impulse-bleed map: which contra pixels are input-affected, and how far
 % For every contra pixel, test whether its trial-averaged peri-stim response is
 % amplitude-graded -- the dose-response slope beta over amps 0..5 is the input-effect
 % strength. Significance from an amplitude-LABEL permutation null (shuffles the amp
@@ -806,6 +821,28 @@ if b_launch_explorer
     cp_bleed_explorer(bx_file);
 end
 
+%% (S12) [CP-CLEAN] Marry KRECON + BLEED: predict ipsi from bleed-free contra pixels
+% Combines the two pixel maps built above: predictive weight |h_pixw| ([CP-KERNEL]/
+% [CP-KRECON], S09/S10) and bleed slope |b_beta| ([CP-BLEED], S11). If the contra->ipsi
+% prediction were an ipsi->contra leakage artifact, dropping the bleed pixels would gut
+% it. It does NOT: the two populations are spatially DISJOINT (Spearman rho(|beta|,
+% |pixw|) ~ -0.06), so excluding the top 5% most-bleed pixels barely dents R^2
+% (0.865->0.843) while excluding the top 5% most-predictive collapses it (->0.596), and
+% keeping ONLY bleed-free pixels (perm p>=0.05) leaves R^2 unchanged. Same no-refit
+% pixel-subset identity as [CP-KRECON] (orthonormal contra modes). Exports
+% cp_clean_predict.png (exclusion sweep + top-2% bleed-vs-predictive spatial overlap).
+if ~exist('h_pixw','var'), error('[CP-CLEAN] run [CP-HEMI] + [CP-KERNEL] first (needs h_pixw).'); end
+if ~exist('b_beta','var'), error('[CP-CLEAN] run [CP-BLEED] first (needs b_beta/b_p/b_idx_c).'); end
+clear cp_clean_predict;  rehash;
+cp_clean_predict(struct( ...
+    'pixw', h_pixw, 'U_K', U_svd_raw(:,1:h_K), ...
+    'Vte', V_c_full(1:h_K, h_te), 'Vtr', V_c_full(1:h_K, h_tr), ...
+    'yte', y_full(h_te), 'ytr', y_full(h_tr), 'mI_kern', h_mI_kern, ...
+    'idx_c', h_idx_c, 'b_beta', b_beta, 'b_p', b_p, 'b_idx_c', b_idx_c, ...
+    'nY', nY_cp, 'nX', nX_cp, 'mimg', mimg_cp, ...
+    'px_prim', px_prim, 'py_prim', py_prim, 'paper_root', paper_root, ...
+    'mn', mn, 'td', td, 'en', en));
+
 
 % =====================================================================================
 % RESIDUAL + STATE-DEPENDENCE WORKBENCH  (merged from contra_residual.m, 2026-06-26)
@@ -838,7 +875,7 @@ end
 %   use_motion (false) — keep motion OUT of the contra map so it can be tested as a
 %                        state in [CP-MOTION]; variance/delta unaffected (R² 0.899 vs 0.900)
 
-%% [CP-SETUP] Build residual + Actual/Global/Local decomposition — RUN THIS FIRST
+%% (S13) [CP-SETUP] Build residual + Actual/Global/Local decomposition — RUN THIS FIRST
 close all;
 wrap_path = mfilename('fullpath');
 if isempty(wrap_path), wrap_path = fullfile(pwd, 'contra_prediction.m'); end
@@ -875,7 +912,7 @@ fprintf('  SECONDARY partial(template-gain, state|dev_pre):  Motion %+.3f (p=%.3
     S.r_secondary(1), S.p_secondary(1), S.r_secondary(2), S.p_secondary(2), S.r_secondary(3), S.p_secondary(3));
 fprintf('  -> now run any of: [CP-RESi] [CP-LOCAL] [CP-MOTION] [CP-VAR] [CP-DELTA] [CP-BLEEDCTRL] [CP-KRECON]\n');
 
-%% [CP-RESi] Clickable inspector — click a trial: actual / contra-pred / residual / motion
+%% (S14) [CP-RESi] Clickable inspector — click a trial: actual / contra-pred / residual / motion
 if ~exist('R','var'), error('Run [CP-SETUP] first.'); end
 if isempty(R.Sin)
     warning('[CP-RESi] no inspector payload (make_wide was off). Re-run [CP-SETUP].');
@@ -884,7 +921,7 @@ else
     fprintf('[CP-RESi] Inspector open — click a scatter point (snaps to nearest trial).\n');
 end
 
-%% [CP-LOCAL] Overview: where each state effect lives (GLOBAL contra vs LOCAL residual)
+%% (S15) [CP-LOCAL] Overview: where each state effect lives (GLOBAL contra vs LOCAL residual)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 states = {'Motion',  'Motion (z)',         R.mot, R.okM; ...
           'PreVar',  'Pre-stim var (z)',   R.pv,  R.okV; ...
@@ -921,7 +958,7 @@ sgtitle(figL, sprintf('CP-LOCAL overview  %s %s e%d  (rows=state, cols=Actual/Gl
 paperExport(figL, fullfile(R.paper_root,'images','figure2','cp_local_state.png'));
 fprintf('[CP-LOCAL] Exported cp_local_state.png\n');
 
-%% [CP-MOTION] Motion-only: predictability (No-motion vs Motion) + mean dip trace
+%% (S16) [CP-MOTION] Motion-only: predictability (No-motion vs Motion) + mean dip trace
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 mot = R.mot;  noM = mot <= 0.5;  yesM = mot > 0.5;   % binary split (motion z is zero-inflated; lab motThr_hi=0.5)
 [rp,pp_] = partialcorr(R.devL1(R.okM), mot(R.okM), R.devP(R.okM), 'type','Spearman','rows','complete');
@@ -959,7 +996,7 @@ sgtitle(figM, sprintf('CP-MOTION  %s %s e%d  (top: predictability | bottom: mean
 paperExport(figM, fullfile(R.paper_root,'images','figure2','cp_motion_residual.png'));
 fprintf('[CP-MOTION] Exported cp_motion_residual.png\n');
 
-%% [CP-MOTION-AMP] Per-amplitude motion vs |dip dev| (figure-3 style, large fonts)
+%% (S17) [CP-MOTION-AMP] Per-amplitude motion vs |dip dev| (figure-3 style, large fonts)
 % One subplot per amplitude (within-amp r controls for amplitude). Pick the signal:
 %   amp_sig = 'Actual' (= motion_analysis fig 3) | 'Global' (contra) | 'Local' (residual)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
@@ -972,15 +1009,15 @@ switch lower(amp_sig)
 end
 cp_motion_amp(R, imp_amp, SIGc, sName, sprintf('cp_motion_amp_%s.png', lower(amp_sig)));
 
-%% [CP-VAR] Pre-stim variance-only effect (A/G/L scatter + Local dose-response + partial)
+%% (S18) [CP-VAR] Pre-stim variance-only effect (A/G/L scatter + Local dose-response + partial)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 cp_cont_state('PreVar', 'Pre-stim var (z)', R.pv, AGL, R.devL1, R.devP, R.okV, R, 'cp_var_residual.png');
 
-%% [CP-DELTA] Pre-stim 1-4 Hz delta-only effect (A/G/L scatter + Local dose-response + partial)
+%% (S19) [CP-DELTA] Pre-stim 1-4 Hz delta-only effect (A/G/L scatter + Local dose-response + partial)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 cp_cont_state('PreDelta', 'Pre-stim \delta (z)', R.dp, AGL, R.devL1, R.devP, R.okD, R, 'cp_delta_residual.png');
 
-%% [CP-BLEEDCTRL] Is the residual state-dep a bleed artifact? (bleed~state + catch null)
+%% (S20) [CP-BLEEDCTRL] Is the residual state-dep a bleed artifact? (bleed~state + catch null)
 % Controls the ipsi->contra leakage confound: a state-modulated bleed would let the
 % contra PREDICTOR absorb a state-varying share of the local response, faking the
 % headline (var/delta -> weaker local gain). Tests (per state): (A1) is bleed itself
