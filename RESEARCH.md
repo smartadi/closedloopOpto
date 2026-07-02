@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-07-01 — cp_cosuppression.png recolored to SIGN-based overlay (whole 95% reads blue)
+**Changed/Found:** `utils/cp_stimaffect.m` cp_cosuppression.png map switched from `cp_weight_composite` (diverging blue-white-red, magnitude-faded α) to a SIGN-based overlay: every co-suppressed pixel (R0<0) tinted BLUE, facilitated (R0≥0) RED, with a floored opacity (aFloor=0.40, depth by opacity, saturating at the 90th |R0| pct). The whole contra hemisphere now reads solid blue (95.2%) with the ~5% facilitated patch red, instead of pale/near-white.
+**Why:** on the diverging map most co-suppressed pixels (median R0=−0.16) fell near the white zero-point and faded to transparent, so the 95% did not visually read as "coloured". User wanted the 95% shown prominently.
+**Next:** none.
+
 ### 2026-07-01 — [CP-STIMAFF] prominent co-suppression figure (cp_cosuppression.png)
 **Changed/Found:** added a standalone prominent figure to `utils/cp_stimaffect.m` (exports `cp_cosuppression.png`, 300 dpi): left = R0 mean-onset-deflection map over the transposed brain (whole contra hemisphere flooded blue, ipsi stim site marked green + on the opposite side); right = histogram of R0 across all 80987 contra pixels with the negative mass shaded, annotating "95.2% co-suppressed (R0<0), median R0=−0.162%". Single-message panel: contra co-suppression is hemisphere-wide → there is no spatial "bleed-free region" to carve out.
 **Why:** user asked for a prominent plot of the 95% co-suppression effect so we can move on without worrying about locating bleed-free spatial regions — the co-suppression being global is the justification for using the whole-hemisphere predictor (with the amp-graded bleed strip already droppable at zero cost).

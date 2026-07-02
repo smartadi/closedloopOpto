@@ -113,23 +113,30 @@ exportgraphics(fig, fullfile(P.paper_root,'cp_stimaffect.png'), 'Resolution',200
 fprintf('[CP-STIMAFF] exported cp_stimaffect.png\n');
 
 % --- standalone PROMINENT co-suppression figure (the "no bleed-free region" headline) --
-fracNeg = 100*mean(R0<0);  limC = prctile(abs(R0),98);  if limC<eps, limC=1; end
-kmC = nan(P.nY,P.nX);  kmC(idx) = R0;
+% SIGN-BASED coloring: every co-suppressed pixel (R0<0) is BLUE, facilitated (R0>=0) RED,
+% with a floored opacity so even mild co-suppression reads as coloured (else 95% of the
+% hemisphere renders pale on a magnitude-faded diverging map). Depth shown by opacity.
+fracNeg = 100*mean(R0<0);  limC = prctile(abs(R0),90);  if limC<eps, limC=1; end
+kmC = nan(P.nY,P.nX);  kmC(idx) = R0;  kmT = kmC';
+contra = ~isnan(kmT);  neg = contra & (kmT<0);  pos = contra & (kmT>=0);
+magC = min(abs(kmT)/limC, 1);  aFloor = 0.40;
+alphaC = zeros(P.nY,P.nX);  alphaC(contra) = aFloor + (1-aFloor).*magC(contra);
+cBlue = reshape([0.10 0.35 0.95],1,1,3);  cRed = reshape([0.92 0.22 0.18],1,1,3);
+colC  = cBlue.*neg + cRed.*pos;
+g3 = repmat(gim,1,1,3);  a3 = repmat(alphaC,1,1,3);
+outIm = g3.*(1-a3) + colC.*a3;
 fig2 = figure('Color','w','Position',[60 60 1280 580]);
-axL = axes('Position',[0.02 0.05 0.50 0.80]);
-image(axL, cp_weight_composite(P.mimg', kmC', cmapK, [-limC limC])); axis(axL,'image','off'); hold(axL,'on');
+axL = axes('Position',[0.02 0.05 0.52 0.80]);
+image(axL, outIm); axis(axL,'image','off'); hold(axL,'on');
 plot(axL, P.px_prim, P.py_prim, 'g+','MarkerSize',16,'LineWidth',3);
-text(axL, P.px_prim+14, P.py_prim, 'ipsi stim site','Color',[0 0.55 0],'FontSize',12,'FontWeight','bold');
-title(axL,'Whole contra hemisphere co-suppresses on ipsi stim','FontSize',14,'FontWeight','bold');
-text(axL,0.5,-0.03,'mean peri-stim onset deflection (0-200 ms) per contra pixel','Units','normalized', ...
+text(axL, P.px_prim+14, P.py_prim, 'ipsi stim site','Color',[0 0.75 0],'FontSize',12,'FontWeight','bold');
+title(axL,sprintf('%.0f%% of contra hemisphere co-suppressed (blue)',fracNeg),'FontSize',14,'FontWeight','bold');
+text(axL,0.5,-0.03,'blue = co-suppressed (R_0<0)    red = facilitated (R_0\geq0)','Units','normalized', ...
      'HorizontalAlignment','center','FontSize',11,'Color',[0.3 0.3 0.3]);
-colormap(axL,cmapK); clim(axL,[-limC limC]);
-cbC = colorbar(axL,'Position',[0.505 0.14 0.015 0.66]); set(cbC,'FontSize',10);
-ylabel(cbC,'R_0  (\DeltaF/F %)','FontSize',11,'FontWeight','bold');
-axR = axes('Position',[0.66 0.16 0.31 0.64]); hold(axR,'on');
+axR = axes('Position',[0.64 0.16 0.32 0.64]); hold(axR,'on');
 edgesC = linspace(prctile(R0,0.2),prctile(R0,99.8),60);
-histogram(axR,R0(R0<0),edgesC,'FaceColor',[0.20 0.45 0.95],'EdgeColor','none');
-histogram(axR,R0(R0>=0),edgesC,'FaceColor',[0.90 0.30 0.25],'EdgeColor','none');
+histogram(axR,R0(R0<0),edgesC,'FaceColor',[0.10 0.35 0.95],'EdgeColor','none');
+histogram(axR,R0(R0>=0),edgesC,'FaceColor',[0.92 0.22 0.18],'EdgeColor','none');
 ylC = ylim(axR); plot(axR,[0 0],ylC,'k-','LineWidth',1.5);
 plot(axR,[median(R0) median(R0)],ylC,'--','Color',[0 0 0.6],'LineWidth',1.5);
 xlabel(axR,'R_0  (mean onset \DeltaF/F, %)','FontSize',13,'FontWeight','bold');
