@@ -112,6 +112,39 @@ sgtitle('CP-STIMAFF: "bleed-free" robustness — excluding more stim-affected px
 exportgraphics(fig, fullfile(P.paper_root,'cp_stimaffect.png'), 'Resolution',200);
 fprintf('[CP-STIMAFF] exported cp_stimaffect.png\n');
 
+% --- standalone PROMINENT co-suppression figure (the "no bleed-free region" headline) --
+fracNeg = 100*mean(R0<0);  limC = prctile(abs(R0),98);  if limC<eps, limC=1; end
+kmC = nan(P.nY,P.nX);  kmC(idx) = R0;
+fig2 = figure('Color','w','Position',[60 60 1280 580]);
+axL = axes('Position',[0.02 0.05 0.50 0.80]);
+image(axL, cp_weight_composite(P.mimg', kmC', cmapK, [-limC limC])); axis(axL,'image','off'); hold(axL,'on');
+plot(axL, P.px_prim, P.py_prim, 'g+','MarkerSize',16,'LineWidth',3);
+text(axL, P.px_prim+14, P.py_prim, 'ipsi stim site','Color',[0 0.55 0],'FontSize',12,'FontWeight','bold');
+title(axL,'Whole contra hemisphere co-suppresses on ipsi stim','FontSize',14,'FontWeight','bold');
+text(axL,0.5,-0.03,'mean peri-stim onset deflection (0-200 ms) per contra pixel','Units','normalized', ...
+     'HorizontalAlignment','center','FontSize',11,'Color',[0.3 0.3 0.3]);
+colormap(axL,cmapK); clim(axL,[-limC limC]);
+cbC = colorbar(axL,'Position',[0.505 0.14 0.015 0.66]); set(cbC,'FontSize',10);
+ylabel(cbC,'R_0  (\DeltaF/F %)','FontSize',11,'FontWeight','bold');
+axR = axes('Position',[0.66 0.16 0.31 0.64]); hold(axR,'on');
+edgesC = linspace(prctile(R0,0.2),prctile(R0,99.8),60);
+histogram(axR,R0(R0<0),edgesC,'FaceColor',[0.20 0.45 0.95],'EdgeColor','none');
+histogram(axR,R0(R0>=0),edgesC,'FaceColor',[0.90 0.30 0.25],'EdgeColor','none');
+ylC = ylim(axR); plot(axR,[0 0],ylC,'k-','LineWidth',1.5);
+plot(axR,[median(R0) median(R0)],ylC,'--','Color',[0 0 0.6],'LineWidth',1.5);
+xlabel(axR,'R_0  (mean onset \DeltaF/F, %)','FontSize',13,'FontWeight','bold');
+ylabel(axR,'contra pixels','FontSize',13,'FontWeight','bold'); set(axR,'FontSize',11,'Box','off','TickDir','out');
+text(axR,0.05,0.95,sprintf('%.1f%% co-suppressed (R_0<0)',fracNeg),'Units','normalized', ...
+     'FontSize',14,'FontWeight','bold','Color',[0.15 0.35 0.85],'VerticalAlignment','top');
+text(axR,0.05,0.72,sprintf('median R_0 = %+.3f%%',median(R0)),'Units','normalized','FontSize',12,'Color',[0 0 0.6]);
+title(axR,'No spatial bleed-free region','FontSize',13,'FontWeight','bold');
+annotation(fig2,'textbox',[0 0.92 1 0.07],'String', ...
+    sprintf('Contra co-suppression is hemisphere-wide  (%s %s e%d, %d contra px)', ...
+    getf(P,'mn','?'),getf(P,'td','?'),getf(P,'en',0),numel(R0)), ...
+    'HorizontalAlignment','center','EdgeColor','none','FontSize',14,'FontWeight','bold');
+exportgraphics(fig2, fullfile(P.paper_root,'cp_cosuppression.png'), 'Resolution',300);
+fprintf('[CP-STIMAFF] exported cp_cosuppression.png (%.1f%% of contra co-suppressed)\n', fracNeg);
+
 out = struct('R0',R0,'t0',t0,'p0',p0,'frac_cosupp',mean(R0<0), ...
              'fr',fr,'rdOn',rdOn,'rdRn',rdRn,'r2On',r2On,'r2Rn',r2Rn,'actDip',actDip);
 end

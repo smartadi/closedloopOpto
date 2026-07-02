@@ -877,7 +877,8 @@ cleanres = cp_cleanres(struct( ...
 % curves coincide (at matched R^2 the residual dips are equal). So excluding more
 % stim-affected pixels is predictor-loss, NOT removal of hidden bleed absorption — the
 % amplitude-graded SLOPE test is the correct bleed-specific criterion (bleed scales with
-% laser power). Exports cp_stimaffect.png (resDip-vs-R^2 curve + R0 map + bleed-vs-onset map).
+% laser power). Exports cp_stimaffect.png (resDip-vs-R^2 curve + R0 map + bleed-vs-onset map)
+% and the standalone prominent cp_cosuppression.png (R0 map + histogram, 95% co-suppressed).
 if ~exist('U_cp','var') || ~exist('V_cp','var'), error('[CP-STIMAFF] run [CP-SETUP-SVD] first (needs U_cp,V_cp).'); end
 if ~exist('h_pixw','var') || ~exist('b_p','var'), error('[CP-STIMAFF] run [CP-KERNEL] + [CP-BLEED] first.'); end
 clear cp_stimaffect;  rehash;
