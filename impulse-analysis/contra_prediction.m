@@ -904,6 +904,9 @@ stimaff = cp_stimaffect(struct( ...
 % signal-power confound (RESEARCH 2026-07-01/02); the admissible states are motion +
 % relative-delta. CLICK any scatter point -> the window's actual / prediction /
 % mean-corrected prediction + residual (cp_spont_predq.m). Exports cp_spont_r2_vs_state.png.
+% Guard: windows straddling a prediction-DISCONTINUITY (a >3 %dF/F single-frame step in the
+% readout absent from the slow-GCaMP target = a rare redoSVD/truncation glitch, NOT in the raw
+% contra data) are dropped (~6/534; aggregate rho shifts <=0.005). Tune via disc_thr/targ_smooth.
 if ~exist('h_pixw','var'), error('[CP-PREDQ] run [CP-HEMI] + [CP-KERNEL] first (needs h_pixw, h_tr).'); end
 if ~exist('b_onf','var'),  error('[CP-PREDQ] run [CP-BLEED] first (needs b_onf).'); end
 clear cp_spont_predq;  rehash;

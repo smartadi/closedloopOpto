@@ -25,6 +25,8 @@ function out = cp_spont_predq(P)
 K = size(P.U_K,2);  sc = 100/P.mI_kern;  Fs = P.Fs;
 winSec = 1.5;  if isfield(P,'winSec') && ~isempty(P.winSec), winSec = P.winSec; end
 interactive = true;  if isfield(P,'interactive') && ~isempty(P.interactive), interactive = P.interactive; end
+disc_thr = 3;  if isfield(P,'disc_thr') && ~isempty(P.disc_thr), disc_thr = P.disc_thr; end
+targ_smooth = 1;  if isfield(P,'targ_smooth') && ~isempty(P.targ_smooth), targ_smooth = P.targ_smooth; end
 nF = min([numel(P.y), size(P.V_c,2), numel(P.mot)]);
 
 % --- full-frame contra->ipsi prediction (DC aligned on train frames) --------------
@@ -33,6 +35,18 @@ yhat = (P.V_c(:,1:nF).' * w) * sc;
 yhat = yhat + mean(P.y(P.tr) - yhat(P.tr), 'omitnan');
 y    = P.y(1:nF);  res = y - yhat;
 mot  = P.mot(1:nF);  motz = (mot - mean(mot,'omitnan')) / max(std(mot,'omitnan'), eps);
+
+% --- prediction-discontinuity guard -----------------------------------------------
+% The redoSVD-reorthogonalized V_c mode 1 carries rare single-frame LEVEL SHIFTS that
+% leak into the K-truncated readout but are ABSENT from the raw contra data and the
+% (slow GCaMP) ipsi target (verified: raw contra-mean smooth at the flagged frames,
+% no timestamp gap, no motion). A > disc_thr %dF/F single-frame jump in the prediction
+% while the target is smooth (< targ_smooth) is non-physical for the slow indicator ->
+% flag the frame; any window straddling one is dropped (its R^2 is a step artifact,
+% not dynamics). ~46/193k frames on AL_0033 0129 e1 -> 4/534 windows; aggregate rho
+% shifts <=0.005, but the flagged windows are the spurious very-negative-R^2 tail.
+dYh = abs([0; diff(yhat)]);  dYt = abs([0; diff(y)]);
+discFrame = dYh > disc_thr & dYt < targ_smooth;
 
 % --- spontaneous mask: drop everything near a stim onset --------------------------
 spont = true(nF,1);  gpre = round(1.5*Fs);  gpost = round(2.5*Fs);
@@ -43,9 +57,12 @@ end
 % --- window into contiguous non-stim segments; per-window metrics + state ---------
 Lw = round(winSec*Fs);  win = hann(Lw);  Wn = sum(win.^2);  nfft = 2^nextpow2(Lw);
 fr = (0:nfft-1)'/nfft*Fs;  nB = floor(nfft/2)+1;  dband = fr(1:nB)>=1 & fr(1:nB)<=4;
-winIdx = {};  lr2=[]; rho=[]; motE=[]; pv=[]; dpow=[]; drel=[];  s = 1;
+winIdx = {};  lr2=[]; rho=[]; motE=[]; pv=[]; dpow=[]; drel=[];  s = 1;  nDisc = 0;
 while s+Lw-1 <= nF
     idx = s:s+Lw-1;
+    if all(spont(idx)) && any(discFrame(idx))   % otherwise-clean window with a prediction step
+        nDisc = nDisc + 1;  s = s + round(Lw/3);  continue;
+    end
     if all(spont(idx))
         yv = y(idx);  yh = yhat(idx);  rv = res(idx);
         winIdx{end+1,1} = idx;                                  %#ok<AGROW>
@@ -65,8 +82,8 @@ states  = [motE pv dpow drel];
 statesL = {'Motion energy (|z|)','Variance  var(y)','\delta power 1-4 Hz (abs)','Relative \delta  (\delta/total)'};
 flags   = {'power-INDEP','power-CONFOUND','power-CONFOUND','power-INDEP'};
 
-fprintf('\n[CP-PREDQ] spontaneous contra->ipsi predictability vs state (%s %s e%d): %d non-stim windows\n', ...
-    getf(P,'mn','?'), getf(P,'td','?'), getf(P,'en',0), numel(lr2));
+fprintf('\n[CP-PREDQ] spontaneous contra->ipsi predictability vs state (%s %s e%d): %d non-stim windows (%d dropped: prediction-discontinuity guard, %d flagged frames)\n', ...
+    getf(P,'mn','?'), getf(P,'td','?'), getf(P,'en',0), numel(lr2), nDisc, nnz(discFrame & spont));
 for k = 1:4
     [rr,pp] = corr(states(:,k), lr2, 'type','Spearman');
     fprintf('   R^2 vs %-26s rho=%+.2f (p=%.1g)  [%s]\n', statesL{k}, rr, pp, flags{k});
@@ -102,7 +119,8 @@ if interactive
     fprintf('[CP-PREDQ] click any scatter point -> window detail (actual / prediction / mean-corrected).\n');
 end
 
-out = struct('lr2',lr2,'rho',rho,'states',states,'statesL',{statesL},'winIdx',{winIdx},'n',numel(lr2));
+out = struct('lr2',lr2,'rho',rho,'states',states,'statesL',{statesL},'winIdx',{winIdx}, ...
+             'n',numel(lr2),'nDisc',nDisc,'discFrame',find(discFrame));
 end
 
 % ── Callback: which axes, nearest window ─────────────────────────────────────────
