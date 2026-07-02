@@ -63,7 +63,22 @@ r_bil      = 1;       % 1 = load cache | 0 = recompute and overwrite
 sessions_def = {
 %   mn          td             en  trials   pixel_L      pixel_R
   'AL_0048', '2026-06-05',    2,  100,   [NaN NaN],   [NaN NaN];
+  'AL_0048', '2026-07-01',    6,   99,   [NaN NaN],   [NaN NaN];  % sine FF-analysis, 4 modes, right side
 };
+
+% ---- FF-analysis build column map (2026-07 controller build) -------------
+% This build logs 17 columns and DIFFERS from the 2026-06-06 map above.
+% Detected per-session by column count (>=17). Layout:
+%   1 trial_idx | 2 kk(onset) | 3 mode(a) | 4 Kref | 5 Kp | 6 Ki |
+%   7 K_preview | 8 previewT_steps | 9 ref | 10 dur | 11 traj_on |
+%   12 traj_mode | 13 traj_amp | 14 traj_hz | 15 galvo_x_mm | 16 galvo_y_mm |
+%   17 ff_analysis_cond   (0=CL+preview, 1=OL+preview, 2=OL, 3=CL; -1=not FFA)
+FFA_GALVO_X_COL = 15;
+FFA_REF_COL     = 9;
+FFA_DUR_COL     = 10;
+FFA_TRAJAMP_COL = 13;
+FFA_TRAJHZ_COL  = 14;
+FFA_COND_COL    = 17;
 % -------------------------------------------------------------------------
 
 %% ---- Load / cache loop -------------------------------------------------
@@ -109,12 +124,33 @@ for k = 1:nSess
             nStims = length(d.stimStarts);
 
             %% Build trial_meta from input_params
+            % FF-analysis build (2026-07) logs 17 columns with a different
+            % layout than the 2026-06 map — detect and parse accordingly.
+            isFFAbuild = size(d.input_params, 2) >= FFA_COND_COL;
+
+            clear trial_meta   % avoid stale entries carried from a prior session
             trial_meta(nStims) = struct('trial_idx', 0, 'side', '', ...
-                                        'stim_type', '', 'amplitude', NaN);
+                                        'stim_type', '', 'amplitude', NaN, ...
+                                        'ff_cond', -1);
 
             for j = 1:nStims
                 trial_meta(j).trial_idx = j;
+                trial_meta(j).ff_cond   = -1;
 
+                if isFFAbuild
+                    % --- Side from galvo_x_mm sign (locked convention) ---
+                    gx = d.input_params(j, FFA_GALVO_X_COL);
+                    if     gx > 0; trial_meta(j).side = 'right';   % inhibitory
+                    elseif gx < 0; trial_meta(j).side = 'left';    % excitatory
+                    else;          trial_meta(j).side = 'unknown';
+                    end
+                    trial_meta(j).stim_type = 'sinewave';
+                    trial_meta(j).ff_cond   = d.input_params(j, FFA_COND_COL);
+                    trial_meta(j).amplitude = d.input_params(j, FFA_TRAJAMP_COL);
+                    continue;
+                end
+
+                % --- Legacy (2026-06) build --------------------------------
                 % --- Side from hemisphere column (col 4); galvo_x_mm (col 8) as cross-check ---
                 hemi = d.input_params(j, HEMISPHERE_COL);
                 if hemi * SIGN_L > 0
@@ -148,6 +184,17 @@ for k = 1:nSess
                 trial_meta(j).amplitude = d.input_params(j, AMP_COL);
             end
 
+            % --- Fixed sine-reference params (constant across FFA trials) ---
+            if isFFAbuild
+                sess_sine = struct( ...
+                    'ref0', d.input_params(1, FFA_REF_COL), ...
+                    'amp',  d.input_params(1, FFA_TRAJAMP_COL), ...
+                    'hz',   d.input_params(1, FFA_TRAJHZ_COL), ...
+                    'dur',  d.input_params(1, FFA_DUR_COL));
+            else
+                sess_sine = [];
+            end
+
             %% Per-side pixel dF/F (loaded once per side if pixel known)
             left_trials  = find(strcmp({trial_meta.side}, 'left'));
             right_trials = find(strcmp({trial_meta.side}, 'right'));
@@ -159,6 +206,19 @@ for k = 1:nSess
             sess.d          = d;
             sess.stim_mode  = STIM_MODE;
             sess.trial_meta = trial_meta;
+            sess.sine       = sess_sine;
+
+            % Resolve analysis pixels: fall back to the online-derived pixel
+            % (d.params.pixels, from galvo offset + bregma) when the registry
+            % leaves pix_L/pix_R as [NaN NaN].
+            if any(isnan(pix_R)) && isfield(d, 'params') && isfield(d.params, 'pixels') ...
+                    && ~isempty(right_trials)
+                pix_R = double(d.params.pixels);
+            end
+            if any(isnan(pix_L)) && isfield(d, 'params') && isfield(d.params, 'pixels') ...
+                    && ~isempty(left_trials) && isempty(right_trials)
+                pix_L = double(d.params.pixels);
+            end
 
             if ~isempty(left_trials) && ~any(isnan(pix_L))
                 dFoF_L    = getpixel_dFoF(d, 0, pix_L, 1);
