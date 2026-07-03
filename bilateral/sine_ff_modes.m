@@ -181,11 +181,46 @@ ylabel('Across-trial variance (\DeltaF/F)^2', 'FontSize', sty.fs, 'FontWeight', 
 title('Variance by mode', 'FontSize', sty.fs, 'FontWeight', 'bold');
 hold off;
 
+%% ---- Panel C: per-mode trial traces + red mean (4 up, paper style) ----
+% One panel per controller case: all trials in light grey, trial-averaged
+% mean bold red, commanded sine reference dashed. Shared y-limits.
+figC = paperFig(18, 4.5);
+tl = tiledlayout(figC, 1, nMode, 'TileSpacing', 'compact', 'Padding', 'compact');
+col_trial = [0.80 0.80 0.80];          % light grey individual traces
+
+% Shared y-limits across all panels (from the actual traces)
+allv = cell2mat(traces(:));
+yl = [min(allv(:)) max(allv(:))];
+yl = yl + [-0.05 0.05] * range(yl);
+
+for m = 1:nMode
+    axm = nexttile(tl); hold(axm, 'on');
+    if nTr(m) >= 1
+        plot(axm, t_ax, traces{m}.', 'Color', col_trial, 'LineWidth', sty.lw_trial);
+        plot(axm, t_ax, mean(traces{m}, 1), 'Color', sty.col_ol, 'LineWidth', sty.lw_mean);
+    end
+    plot(axm, t_ref, Rref, 'k--', 'LineWidth', sty.lw_ref);
+    xline(axm, 0, 'k:', 'LineWidth', 0.8);
+    xline(axm, sn.dur, 'k:', 'LineWidth', 0.8);
+    hold(axm, 'off');
+    xlim(axm, [t_ax(1) t_ax(end)]); ylim(axm, yl);
+    set(axm, 'Box', 'off', 'TickDir', 'out', 'FontSize', sty.fs, 'FontWeight', 'bold');
+    title(axm, sprintf('%s (n=%d)', MODE_LABELS{m}, nTr(m)), 'FontSize', sty.fs, 'FontWeight', 'bold');
+    xlabel(axm, 'Time (s)', 'FontSize', sty.fs, 'FontWeight', 'bold');
+    if m == 1
+        ylabel(axm, '\DeltaF/F (%)', 'FontSize', sty.fs, 'FontWeight', 'bold');
+    else
+        set(axm, 'YTickLabel', []);
+    end
+end
+title(tl, 'Sine tracking by controller mode', 'FontSize', sty.fs, 'FontWeight', 'bold');
+
 %% ---- Export -----------------------------------------------------------
 if EXPORT_FIG
     if ~exist(outDir, 'dir'); mkdir(outDir); end
     exportgraphics(fig0, fullfile(outDir, 'sine_ff_verify.png'),   'Resolution', 300);
     exportgraphics(figA, fullfile(outDir, 'sine_ff_mse.png'),      'Resolution', 300);
     exportgraphics(figB, fullfile(outDir, 'sine_ff_variance.png'), 'Resolution', 300);
-    fprintf('Exported 3 PNGs to %s\n', outDir);
+    exportgraphics(figC, fullfile(outDir, 'sine_ff_trials_4up.png'), 'Resolution', 300);
+    fprintf('Exported 4 PNGs to %s\n', outDir);
 end
