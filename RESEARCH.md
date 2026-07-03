@@ -16,6 +16,41 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-07-02 — Grid TF fit: removed the transport-delay (lag) term theta
+**Changed/Found:** `tf_fit.py` — the per-pair onset-lag term theta was absorbing real early dynamics (model stayed flat until theta then started, so the poles missed the fast rise). Pinned theta=0: `_fit_order` no longer optimizes it (params = A,tau only), BIC parameter count 1+2n -> 2n, DELAY_MAX=0, docstrings updated. Refit on the 2026-06-24 single-amp tensor: order hist [139,293,979,752,541], median R2 0.65 (was 0.73 with lag — expected drop; the delay was an extra DOF cosmetically improving fit by sliding the onset). Prototype confirms fits now start at t=0 and capture the transient. delay array is now all-zeros in the cache.
+**Why:** User: the lag scan caused some dynamics to be missed; remove the lag term for now.
+**Next:** none (viewer reads the refit grid_tf_fits.npz). Two-amp TF fitting (new session) not yet wired to tf_fit.
+
+### 2026-07-02 — Add cp_ols_predictor.m + [CP-OLS] (S25): direct-pixel no-lag OLS predictor
+**Changed/Found:** New `utils/cp_ols_predictor.m` + `contra_prediction.m` section S25 [CP-OLS]. Predicts the ipsi primary pixel from the RAW, CONTEMPORANEOUS (no-lag) activity of a tight 200-pixel regular grid over the contra mask, by OLS (optional ridge). No SVD modes / no reduced rank. Grid built by adaptive spacing `d=round(sqrt(nContra/200))` snapped into `valid_cp_svd`; pixel activity reconstructed on the fly as `U(grid,:)*V` (no movie load). Same interstim post-settle train/test split as [CP-HEMI] → held-out R² (`Hols.cv`) directly comparable to the RRR predictor. Deployable affine map (bpix,b0) folds train z-score. Figure: grid on brain + per-pixel weight map + held-out actual-vs-pred. Confirmed no prior OLS/direct-pixel predictor existed (cp_pixel_recon still routes through the SVD-mode readout; cp_anchor_pred is just DC re-anchoring).
+**Why:** user wanted the direct-pixel no-lag predictor back as an interpretability foil / sanity check for C1 (contra→ipsi coupling). User chose tight 200-pixel contra grid over all-contra/top-weight variants.
+**Next:** run S25, compare `Hols.cv` to [CP-HEMI] `H.cv`; if collinearity hurts held-out R², raise the `ridge` knob. Best run on the redoSVD-fixed caches.
+
+### 2026-07-02 — Standardize: CONTRA_PREDICTION_WORKFLOW.md (paper-flow spec)
+**Changed/Found:** New `impulse-analysis/CONTRA_PREDICTION_WORKFLOW.md` — standing spec for the contra_prediction pipeline written as a paper argument: 6 claims C1–C6 (each mapped to sections + status SOLID/CAVEAT/RETRACTED), stage-by-stage table of all sections S01–S24 (question/output/result/status), run order, locked decisions, caveats (redoSVD fix, var/δ retraction, n=1, reviewer risks), helper map.
+**Why:** user wants a written, standardizable workflow to argue/bookkeep against, treated as the source of truth ("edit here first, then the script").
+**Next:** keep in sync as the pipeline changes; fold AL_0041 replication + K-raise results into the status flags when done.
+
+### 2026-07-02 — Add [CP-TUNE] (S24): per-pixel amplitude tuning-curve viewer
+**Changed/Found:** `contra_prediction.m` — new end section [CP-TUNE] (S24) launches the vendored `utils/widefield/miniGUIs/pixelTuningCurveViewerSVD` on the impulse session. Builds onset list from `imp_data.startTimes{ia}` with NUMERIC amplitude labels (tuning-curve x-axis = stim amplitude V; amp-0 kept as baseline), window [-0.5 1.5]s. Click a pixel → panel C = its response-vs-amplitude tuning curve. GUI on path via existing `addpath(genpath(utilsDir))` (line 42); vendored, not modified.
+**Why:** user wanted the existing pixel tuning-curve viewer wired into the contra-prediction workbench (found via `controller-analysis/pixelviewer.m`, which launches the same GUI).
+**Next:** GUI defaults caxis to raw-count scale — press '-' to rescale if the image looks flat. Consider adding to impulse-analysis/CLAUDE.md run-order list.
+
+### 2026-07-02 — CP-MOTION: drop bottom-row mean-dip traces
+**Changed/Found:** `contra_prediction.m` [CP-MOTION] (S19) — removed the bottom row (mean dip trace by motion class) and its legend; section is now a single row of the three predictability bars (Actual/Global/Local, No-motion vs Motion). Figure 1180×420; `trA/trG/trL` no longer referenced here.
+**Why:** user found the example/mean-dip traces not useful; the predictability bars carry the result.
+**Next:** none.
+
+### 2026-07-02 — L1-dev DV: z-within-amp → RATIO-to-amp-mean (positive, interpretable)
+**Changed/Found:** `cp_residual_core.m` (`R.devL1`) + `cp_agl.m` (`dA1/dG1/dL1`) now normalize L1-dev as `x./mean(x)` within amplitude (new `rf`) instead of z-score (`zf`). Template-gain keeps z (signed/directional). Labels in [CP-LOCAL]/[CP-MOTION]/`cp_cont_state` → "L1-dev (×amp-avg)" + dotted ref line at 1. Now: 1=amp-average trial, <1=MORE predictable, >1=less; always positive.
+**Why:** z-within-amp made below-average (more-predictable) trials NEGATIVE — user found the sign confusing on the CP-MOTION plot ("negative = more predictable?"). Ratio keeps amplitude control (each amp ÷ its own mean deviation) while staying positive/interpretable. User chose ratio over raw-%dF/F (AskUserQuestion 2026-07-02).
+**Next:** RE-RUN [CP-SETUP] before S18–S23 (in-memory R/AGL still z-scored). Spearman ρ shifts slightly vs z (ratio normalizes mean only, not per-amp variance); effect directions preserved. L1-dev still scales with signal power → var/δ power-confound caveat unchanged.
+
+### 2026-07-02 — Readability pass: CP-MOTION + downstream section figures
+**Changed/Found:** `contra_prediction.m` [CP-MOTION] (S19) + helpers `cp_cont_state.m` ([CP-VAR]/[CP-DELTA] S21/22) + `cp_bleed_control.m` ([CP-BLEEDCTRL] S23) — replaced `paperFig`+FontSize 6 (paper-panel sizing, unreadable on screen) with pixel-sized screen figures, 12–14 pt fonts, Actual/Global/Local color coding (black/blue/red), grid on, thicker traces/markers, 200-dpi PNG export, and a console `HOW TO READ` explainer per section. `cp_motion_amp.m` (S20) already had large fonts → left unchanged.
+**Why:** user reported the section figures were unreadable (tiny labels) and wanted result explainers, extended from the [CP-LOCAL] fix to all subsequent sections.
+**Next:** if any of these become actual paper panels, revert that one to `paperFig`/6 pt bold per the figure-style spec (these are diagnostics, so screen sizing is correct for now).
+
 ### 2026-07-02 — [CP-PREDQ] on Zhiwen data: relative-δ predictability effect FLIPS SIGN (does not replicate)
 **Changed/Found:** New `impulse-analysis/cp_zhiwen_predq.m` ports our [CP-PREDQ] (spontaneous contra→ipsi single-pixel predictability vs brain state) to Zhiwen's `AB_0004_20210330_1`. Model: predictor = LEFT sensory redoSVD modes (K=50), target = a representative RIGHT sensory pixel (median train-R²; selected on train, evaluated held-out). 400 random 3-s windows from the held-out test block. Target pixel test R²=0.918 (median window 0.905) — real dynamic range. Spearman ρ(local R², state): **Variance +0.74** (power-CONFOUND), **abs δ-power +0.34** (power-CONFOUND), **Relative-δ −0.25** (power-INDEP). Robustness over 150 sensory pixels: Variance median +0.77 (100% positive), abs-δ +0.28 (79% positive), **Relative-δ median −0.33 (99% NEGATIVE)**. Fig+mat → `impulse-analysis/data/cp_zhiwen_predq.{png,mat}`.
 **Why:** Test whether our AL_0033 [CP-PREDQ] result (Variance +0.79 / abs-δ +0.67 = power-confounds; Relative-δ +0.29 = the one power-INDEPENDENT "genuine" effect) replicates on independent, cleaner, hemo-corrected data. Two methodological traps hit and fixed first: (1) predicting the hemisphere spatial-MEAN gives R²≈0.999 (global mode, no dynamic range) — must predict a single pixel; (2) predicting a K-dim target from K modes is near-degenerate (R²≈1) — target must live in the FULL 200-dim signal while predictor stays at K=50 (the rank asymmetry that makes prediction lossy, as in CP-HEMI).

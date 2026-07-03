@@ -3,9 +3,10 @@
 Each H[s, r, :] (from cross_response.py) is the empirical impulse response from stim site
 s to readout r. We fit a delayed all-pole TF, whose impulse response is a sum of
 exponentials:  h(t) = sum_i A_i * exp(-(t-theta)/tau_i)  for t >= theta.
-That is the impulse response of K * prod_i 1/(s + 1/tau_i) with a transport delay theta
-(poles at -1/tau_i; residue pattern A_i absorbs the zeros). Real poles, opposite-sign
-residues give a rise-then-decay; theta captures propagation latency for off-diagonal pairs.
+That is the impulse response of K * prod_i 1/(s + 1/tau_i) (poles at -1/tau_i; residue
+pattern A_i absorbs the zeros). Real poles, opposite-sign residues give a rise-then-decay.
+NOTE: the transport-delay (lag) term theta is currently DISABLED (pinned to 0) — scanning a
+per-pair onset lag was absorbing real early dynamics, so fits now start at t=0.
 
 Orders 1-3 are fit and AIC selects. This is the per-(s,r) building block; the prototype
 runs it on a few representative pairs to validate the model class before scaling to 52x52.
@@ -15,8 +16,10 @@ import scipy.optimize
 
 import cross_response
 
-DELAY_MAX = 0.12   # s — upper bound on the transport delay theta (was 0.30; cortical
-                   # propagation + indicator onset is fast, so cap it tighter)
+# NOTE: the transport-delay (lag) term theta is DISABLED for now. Scanning a per-pair onset
+# lag was absorbing real early dynamics — the model stayed flat until theta then started, so
+# the poles missed the fast rise. All fits now start at t=0 (theta fixed to 0).
+DELAY_MAX = 0.0    # s — lag term disabled (theta pinned to 0)
 ORDERS = (1, 2, 3, 4, 5)   # pole counts to try (BIC selects among them)
 FIT_TMAX = 1.0     # s — fit only t in [0, FIT_TMAX]; beyond ~1 s the trial average is
                    # contaminated by neighbor stims (ITI ~0.71 s), so don't fit the tail.
@@ -32,22 +35,22 @@ def _impulse(t, theta, A, tau):
 
 
 def _fit_order(t, h, n, peak):
-    """Fit an n-pole delayed sum-of-exponentials; return (params, yhat, sse)."""
+    """Fit an n-pole sum-of-exponentials (no lag; theta pinned to 0); return (params,yhat,sse)."""
     sign = np.sign(peak) or 1.0
     A0 = [sign * abs(peak)] + [-sign * abs(peak) * 0.5] * (n - 1)   # rise/decay seed
     tau0 = list(np.geomspace(0.05, 0.4, n))
-    p0 = [min(0.02, DELAY_MAX)] + A0 + tau0
-    lo = [0.0] + [-1.0] * n + [1e-3] * n
-    hi = [DELAY_MAX] + [1.0] * n + [3.0] * n
+    p0 = A0 + tau0
+    lo = [-1.0] * n + [1e-3] * n
+    hi = [1.0] * n + [3.0] * n
 
     def resid(p):
-        theta, A, tau = p[0], p[1:1 + n], p[1 + n:]
-        return _impulse(t, theta, A, tau) - h
+        A, tau = p[:n], p[n:]
+        return _impulse(t, 0.0, A, tau) - h
 
     r = scipy.optimize.least_squares(resid, p0, bounds=(lo, hi), max_nfev=4000)
-    theta, A, tau = r.x[0], r.x[1:1 + n], r.x[1 + n:]
-    yhat = _impulse(t, theta, A, tau)
-    return dict(theta=theta, A=A, tau=tau), yhat, float(np.sum((yhat - h) ** 2))
+    A, tau = r.x[:n], r.x[n:]
+    yhat = _impulse(t, 0.0, A, tau)
+    return dict(theta=0.0, A=A, tau=tau), yhat, float(np.sum((yhat - h) ** 2))
 
 
 def fit_lti(t, h, orders=ORDERS, criterion="bic"):
@@ -70,7 +73,7 @@ def fit_lti(t, h, orders=ORDERS, criterion="bic"):
             params, yhat, sse = _fit_order(tp, hp, n, peak)
         except Exception:
             continue
-        k = 1 + 2 * n                                   # theta + (A,tau) per pole
+        k = 2 * n                                        # (A,tau) per pole; no lag term
         pen = k * np.log(n_obs) if criterion == "bic" else 2 * k
         ic = n_obs * np.log(sse / n_obs + 1e-30) + pen
         r2 = 1.0 - sse / ss_tot
