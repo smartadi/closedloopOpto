@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-07-03 — BUGFIX: sine reference amp was 2 (warm-up trial), true is 3 → MSE result revised
+**Changed/Found:** `bilateral/load_bilateral.m` — `sess_sine` read the trajectory params from `input_params(1,:)`, but trial 1 is a `ff_cond=-1` warm-up (traj_amp=2). The 80 actual sine trials use **traj_amp=3**. Fixed to read from the first `ff_cond>=0` trial. Confirmed controller params (identical across all 4 modes): Kp=0.08, Ki=0.01, Kref=0.075, K_preview=1, previewT_steps=5 (~143 ms @35 Hz), traj_hz=1, dur=4 s, ref0≈−0.048. Re-ran with amp=3: MSE OL=27.1, OL+prev=34.3, CL=32.3, CL+prev=25.3 (variance unchanged: it's of the traces, not vs ref). Ordering unchanged (CL+prev best, OL+prev worst) but **no pairwise Wilcoxon is now significant** (OL vs OL+prev p=0.14, CL vs CL+prev p=0.47, OL vs CL p=0.89, OL+prev vs CL+prev p=0.118) — the earlier "p=0.035" was against the wrong (2/3-amplitude) reference.
+**Why:** User asked for the controller parameters; pulling them per-mode exposed traj_amp=3 on the sine trials vs the amp=2 my reference used.
+**Next:** Supersedes the amp=2 numbers in the 2026-07-03 "First 4-mode result" entry below. Honest read now: at n≈20/mode, modes are statistically indistinguishable; CL+prev only trends best. Amplitude-normalised/phase metric still worth adding since commanded pk-pk (~6%) ≫ neural response (~2%).
+
 ### 2026-07-03 — sine_ff_modes.m: add 4-up per-mode trial+mean panel (Panel C)
 **Changed/Found:** `bilateral/sine_ff_modes.m` — new `figC`: a 1×4 `tiledlayout` (one tile per controller case OL / OL+prev / CL / CL+prev), each showing all individual trials in light grey (`lw_trial`), the trial-averaged mean bold red (`col_ol`, `lw_mean`), and the commanded sine dashed; shared y-limits, per-panel title with n, y-label only on the first tile. Wired into `EXPORT_FIG` as `sine_ff_trials_4up.png`. Static-checked (only the benign EXPORT_FIG dead-branch flag) and verified by a full run.
 **Why:** User wanted a paper-style side-by-side view of each controller mode's raw trials vs its mean, to see tracking + trial spread per condition at a glance.
