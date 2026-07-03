@@ -50,6 +50,7 @@ SIGN_R     = -1;      % polarity: right hemisphere (inhibitory) — flip to +1 i
 REF_L      = +5;      % default reference level, left side (% dF/F)
 REF_R      = -5;      % default reference level, right side (% dF/F)
 r_bil      = 1;       % 1 = load cache | 0 = recompute and overwrite
+GETPIX_MODE = 1;      % getpixel_dFoF source: 0 = local raw frames | 1 = server SVD
 % -------------------------------------------------------------------------
 
 %% ---- Session registry --------------------------------------------------
@@ -208,20 +209,23 @@ for k = 1:nSess
             sess.trial_meta = trial_meta;
             sess.sine       = sess_sine;
 
-            % Resolve analysis pixels: fall back to the online-derived pixel
-            % (d.params.pixels, from galvo offset + bregma) when the registry
-            % leaves pix_L/pix_R as [NaN NaN].
-            if any(isnan(pix_R)) && isfield(d, 'params') && isfield(d.params, 'pixels') ...
-                    && ~isempty(right_trials)
-                pix_R = double(d.params.pixels);
+            % Resolve the single online analysis pixel [col row] for the used
+            % galvo spot, when the registry leaves pix_L/pix_R as [NaN NaN].
+            % Prefer d.params.pixel (singular, 1x2 = the active spot); fall back
+            % to the first row of d.params.pixels (Nx2 default grid).
+            pix_auto = [NaN NaN];
+            if isfield(d, 'params')
+                if isfield(d.params, 'pixel') && numel(d.params.pixel) == 2
+                    pix_auto = double(d.params.pixel(:).');
+                elseif isfield(d.params, 'pixels') && size(d.params.pixels, 2) == 2
+                    pix_auto = double(d.params.pixels(1, :));
+                end
             end
-            if any(isnan(pix_L)) && isfield(d, 'params') && isfield(d.params, 'pixels') ...
-                    && ~isempty(left_trials) && isempty(right_trials)
-                pix_L = double(d.params.pixels);
-            end
+            if any(isnan(pix_R)); pix_R = pix_auto; end
+            if any(isnan(pix_L)); pix_L = pix_auto; end
 
             if ~isempty(left_trials) && ~any(isnan(pix_L))
-                dFoF_L    = getpixel_dFoF(d, 0, pix_L, 1);
+                [~, dFoF_L] = getpixel_dFoF(d, GETPIX_MODE, pix_L, 1);   % 2nd output = dF/F trace
                 sess.left = struct('dFoF', dFoF_L, 'ref', REF_L * SIGN_L, ...
                                    'pixel', pix_L, 'opsin', 'excitatory');
             else
@@ -230,7 +234,7 @@ for k = 1:nSess
             end
 
             if ~isempty(right_trials) && ~any(isnan(pix_R))
-                dFoF_R     = getpixel_dFoF(d, 0, pix_R, 1);
+                [~, dFoF_R] = getpixel_dFoF(d, GETPIX_MODE, pix_R, 1);   % 2nd output = dF/F trace
                 sess.right = struct('dFoF', dFoF_R, 'ref', REF_R * SIGN_R, ...
                                     'pixel', pix_R, 'opsin', 'inhibitory');
             else

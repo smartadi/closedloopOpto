@@ -20,8 +20,8 @@
 SIDE        = 'right';        % inhibitory hemisphere (only side used this session)
 fs_img      = 35;
 n_pre_s     = 1.0;            % pre-onset context for plots (s)
-REF_SIGN    = -1;            % sign of commanded sine in dF/F space (VERIFY via panel 0)
-REF_BASE    = [];            % DC offset of reference; [] => use sess.(SIDE).ref
+REF_SIGN    = -1;            % sign of commanded sine in dF/F space (verified: response is negative)
+REF_BASE    = [];            % DC offset of reference; [] => use logged sine.ref0 (~0)
 EXPORT_FIG  = false;
 
 % Mode display order, labels, colours
@@ -94,7 +94,7 @@ t_ref = (0 : n_win) / fs_img;              % reference time axis (post-onset)
 t_post = t_ax >= 0;                        % post-onset samples
 
 wave  = 1 + sin(-pi/2 + 2*pi * sn.hz * t_ref);   % in [0, 2], starts at 0
-if isempty(REF_BASE); ref_base = sess.(SIDE).ref; else; ref_base = REF_BASE; end
+if isempty(REF_BASE); ref_base = sn.ref0; else; ref_base = REF_BASE; end
 Rref  = ref_base + REF_SIGN * sn.amp * wave;      % commanded reference (dF/F units)
 
 %% ---- Collect per-mode trial windows -----------------------------------
@@ -131,7 +131,7 @@ for m = 1:nMode
 end
 plot(t_ref, Rref, 'k--', 'LineWidth', sty.lw_ref);
 xline(0, 'k:', 'LineWidth', 0.8);
-legend([MODE_LABELS, {'ref'}], 'FontSize', sty.fs, 'ItemTokenSize', [6 6], 'Box', 'off');
+lg0 = legend([MODE_LABELS, {'ref'}], 'FontSize', sty.fs, 'Box', 'off'); lg0.ItemTokenSize = [6 6];
 xlabel('Time (s)', 'FontSize', sty.fs, 'FontWeight', 'bold');
 ylabel('\DeltaF/F (%)', 'FontSize', sty.fs, 'FontWeight', 'bold');
 title('Tracking + reference (verify sign)', 'FontSize', sty.fs, 'FontWeight', 'bold');
@@ -175,7 +175,7 @@ for m = 1:nMode
 end
 xline(0, 'k:', 'LineWidth', 0.8);
 xline(sn.dur, 'k:', 'LineWidth', 0.8);
-legend(MODE_LABELS(nTr >= 2), 'FontSize', sty.fs, 'ItemTokenSize', [6 6], 'Box', 'off');
+lgB = legend(MODE_LABELS(nTr >= 2), 'FontSize', sty.fs, 'Box', 'off'); lgB.ItemTokenSize = [6 6];
 xlabel('Time (s)', 'FontSize', sty.fs, 'FontWeight', 'bold');
 ylabel('Across-trial variance (\DeltaF/F)^2', 'FontSize', sty.fs, 'FontWeight', 'bold');
 title('Variance by mode', 'FontSize', sty.fs, 'FontWeight', 'bold');
