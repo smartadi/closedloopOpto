@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-07-02 — Honest skip diagnostics for the sine FF-analysis load path
+**Changed/Found:** `bilateral/load_bilateral.m` — the catch now stores `sess.skip_reason` + `mn/td/en` on skipped sessions (not just `skip=true`). `bilateral/sine_ff_modes.m` — the "no session found" error now distinguishes *registered-but-skipped* (prints the actual load failure, e.g. missing input_params.csv) from *stale pre-`sine` cache* (tells you to re-run with `r_bil=0`), and guards `isfield(trial_meta,'ff_cond')`.
+**Why:** Running `sine_ff_modes.m` while exp 6 was skipped (data not on server) produced a misleading "run load_bilateral with the row" message even though the row was present — the session had silently failed to load.
+**Next:** Real blocker unchanged — 2026-07-01/6 controller CSVs live on the rig PC (`C:/Users/IBL_ephys/.../im_cature/data/AL_0048`) and the SVD isn't built; upload+preprocess to sahale, then re-run. Static-checked; not data-verified.
+
 ### 2026-07-02 — Grid TF fit: removed the transport-delay (lag) term theta
 **Changed/Found:** `tf_fit.py` — the per-pair onset-lag term theta was absorbing real early dynamics (model stayed flat until theta then started, so the poles missed the fast rise). Pinned theta=0: `_fit_order` no longer optimizes it (params = A,tau only), BIC parameter count 1+2n -> 2n, DELAY_MAX=0, docstrings updated. Refit on the 2026-06-24 single-amp tensor: order hist [139,293,979,752,541], median R2 0.65 (was 0.73 with lag — expected drop; the delay was an extra DOF cosmetically improving fit by sliding the onset). Prototype confirms fits now start at t=0 and capture the transient. delay array is now all-zeros in the cache.
 **Why:** User: the lag scan caused some dynamics to be missed; remove the lag term for now.

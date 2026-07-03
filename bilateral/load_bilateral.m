@@ -62,7 +62,7 @@ r_bil      = 1;       % 1 = load cache | 0 = recompute and overwrite
 
 sessions_def = {
 %   mn          td             en  trials   pixel_L      pixel_R
-  'AL_0048', '2026-06-05',    2,  100,   [NaN NaN],   [NaN NaN];
+  % 'AL_0048', '2026-06-05',    2,  100,   [NaN NaN],   [NaN NaN];
   'AL_0048', '2026-07-01',    6,   99,   [NaN NaN],   [NaN NaN];  % sine FF-analysis, 4 modes, right side
 };
 
@@ -253,8 +253,10 @@ for k = 1:nSess
         end
 
     catch ME
-        fprintf('Skipping %s: %s\n', tag, ME.message);
-        sessions.(tag).skip = true;
+        fprintf('Skipping %s (%s %s exp %d): %s\n', tag, mn, td, en, ME.message);
+        sessions.(tag).skip        = true;
+        sessions.(tag).skip_reason = ME.message;
+        sessions.(tag).mn = mn; sessions.(tag).td = td; sessions.(tag).en = en;
     end
 end
 

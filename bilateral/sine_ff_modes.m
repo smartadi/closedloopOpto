@@ -48,16 +48,33 @@ outDir = fullfile(paper_root, 'images', 'bilateral');
 %% ---- Locate the FF-analysis session -----------------------------------
 fields = fieldnames(sessions);
 sess = [];
+skipped = {};   % collect skip reasons for a helpful error
 for k = 1:numel(fields)
     s = sessions.(fields{k});
-    if isfield(s, 'skip') && s.skip; continue; end
+    if isfield(s, 'skip') && s.skip
+        why = 'unknown';
+        if isfield(s, 'skip_reason'); why = s.skip_reason; end
+        tagstr = fields{k};
+        if isfield(s,'mn'); tagstr = sprintf('%s (%s %s exp %d)', fields{k}, s.mn, s.td, s.en); end
+        skipped{end+1} = sprintf('%s: %s', tagstr, why); %#ok<SAGROW>
+        continue;
+    end
     if isfield(s, 'sine') && ~isempty(s.sine) && ...
-       any([s.trial_meta.ff_cond] >= 0)
+       isfield(s.trial_meta, 'ff_cond') && any([s.trial_meta.ff_cond] >= 0)
         sess = s; break;
     end
 end
 if isempty(sess)
-    error('sine_ff_modes: no FF-analysis session found in `sessions`. Run load_bilateral.m with the 2026-07-01 exp 6 row.');
+    if ~isempty(skipped)
+        error(['sine_ff_modes: the FF-analysis session is registered but was SKIPPED during load ' ...
+               '(data not available). Reason(s):\n  %s\n' ...
+               'The 2026-07-01/6 controller CSVs + SVD must be uploaded to the server first.'], ...
+               strjoin(skipped, '\n  '));
+    else
+        error(['sine_ff_modes: no FF-analysis session found in `sessions`. ' ...
+               'A loaded session has no non-empty `sine` field / ff_cond — re-run load_bilateral.m ' ...
+               'with r_bil=0 to force recompute (a stale pre-`sine` cache will not have it).']);
+    end
 end
 
 d   = sess.d;
