@@ -1196,6 +1196,13 @@ if RUN_ALLSESS
                 S.label, S.r2_ols, S.r2_con, S.cost),'FontWeight','bold');
     end
 
+    % --- (a2) per-session bleed characterization (§13/§14 headless) for every session ----
+    fprintf('\n[ALLSESS-BLEEDCHAR] per-session bleed-affected classification (coupling-window abs energy):\n');
+    for si = 1:numel(ALLSESS)
+        S = ALLSESS{si};
+        local_bleedchar_session(S.BC, S.label, 1.28, 300);   % bc_z_thr=1.28, 300 bootstrap (match §14)
+    end
+
     % --- (b) combined Local-effect dose curve (one line per session) ---------------------
     figure('Color','w','Name','[ALLSESS] Local-effect dose curves','Position',[80 80 640 460]);
     hold on; box on;  cols = lines(numel(ALLSESS));
@@ -1446,7 +1453,7 @@ for g = find(keep(:).')
     blk = mask(grR(g)-em:grR(g)+em, grC(g)-em:grC(g)+em);
     if ~all(blk(:)), keep(g) = false; end
 end
-gridIdx = gridIdx(keep);  nG = numel(gridIdx);
+gridIdx = gridIdx(keep);  grR = grR(keep);  grC = grC(keep);  nG = numel(gridIdx);
 
 % --- (6) spontaneous interstim frames + train/test split ------------------------------
 ons = zeros(numel(all_starts),1);
@@ -1527,7 +1534,24 @@ for ai = 1:nA
     A_dip(ai) = mean(ya(dipCols));  G_dip(ai) = mean(yg(dipCols));  L_dip(ai) = A_dip(ai)-G_dip(ai);
 end
 
-S = struct('label',label,'sel',sel,'amps',amps,'Actual',A_dip,'Global',G_dip,'Local',L_dip, ...
+% --- raw %dF/F peri-onset arrays for the headless bleed characterization (§13/§14) ----
+% Same statistic as the main-session §14: ABSOLUTE evoked energy over the coupling (null) window.
+mI_grid = double(mimg_cp(gridIdx));
+Xpct = (double(Uflat(gridIdx,:)) * single(V_cp)) ./ single(mI_grid) * 100;   % %dF/F [nG x nFall]
+[m0, blk0] = local_periavg(Xpct, onF0, rel, preN, nG, Wb);                    % 0 V baseline
+mResp = nan(nG,Wb,nA);  nT_amp = zeros(nA,1);
+for ai = 1:nA
+    onF = onFcell{ai};  nT_amp(ai) = numel(onF);  if isempty(onF), continue; end
+    mR = local_periavg(Xpct, onF, rel, preN, nG, Wb);
+    mResp(:,:,ai) = mR - m0;                                                  % evoked excess re 0 V
+end
+gA = mimg_cp.';  gimg = (gA-min(gA(:)))/max(max(gA(:))-min(gA(:)),eps);
+BC = struct('mResp',mResp,'blk0',blk0,'m0',m0,'nT_amp',nT_amp,'nT0',nT0, ...
+            'grR',grR,'grC',grC,'gridIdx',gridIdx,'site',[px_prim py_prim], ...
+            'gimg',gimg,'amps',amps,'nA',nA,'nG',nG,'rel',rel,'Fs',Fs,'preN',preN,'Wb',Wb, ...
+            'couple_win_s',couple_win_s,'null_win_s',null_win_s,'dip_win_s',cfg.dip_win_s);
+
+S = struct('label',label,'sel',sel,'amps',amps,'Actual',A_dip,'Global',G_dip,'Local',L_dip,'BC',BC, ...
            'trA',{trA},'trG',{trG},'trL',{trL},'rel',rel,'Fs',Fs,'preN',preN, ...
            'r2_ols',r2_ols,'r2_con',r2_con,'cost',r2_ols-r2_con,'nG',nG, ...
            'couple_win_s',couple_win_s,'null_win_s',null_win_s,'nConstraints',size(Ae,2));
@@ -1646,6 +1670,74 @@ end
 
 function s = ternchar(cond, a, b)
 if cond, s = a; else, s = b; end
+end
+
+function local_bleedchar_session(BC, label, bc_z_thr, bc_nRand)
+% HEADLESS §14 BLEEDCHAR for a non-main session (AL_0041 e1/e2): classify each grid pixel at each
+% amplitude by ABSOLUTE evoked coupling energy over the session null window, exactly as the main
+% §13/§14 (biphasic-safe, one-sided z). Produces (1) per-amp "definitely stim-affected" maps and
+% (2) a z-matrix + #amps-bled clickable map (same bleedchar_click/bleedchar_detail report as §14).
+mResp=BC.mResp; nG=BC.nG; nA=BC.nA; amps=BC.amps(:); preN=BC.preN; Wb=BC.Wb; Fs=BC.Fs;
+cplCols=(preN+1):min(Wb, preN+round(BC.null_win_s*Fs));          % coupling/null window (>= dip_win_s)
+eDipA=squeeze(mean(abs(mResp(:,cplCols,:)),2));                   % [nG x nA] ABS coupling energy
+mu0A=zeros(nG,nA); sd0A=ones(nG,nA);
+for ai=1:nA
+    nT=BC.nT_amp(ai); if nT==0, continue; end
+    nd=nan(nG,bc_nRand);
+    for r=1:bc_nRand
+        bb=BC.blk0(:,:, randi(BC.nT0, nT, 1));
+        mb=mean(bb - mean(bb(:,1:preN,:),2), 3) - BC.m0;
+        nd(:,r)=mean(abs(mb(:,cplCols)),2);
+    end
+    mu0A(:,ai)=mean(nd,2); sd0A(:,ai)=std(nd,0,2);
+end
+zA=(eDipA-mu0A)./max(sd0A,eps);  bledA=zA>bc_z_thr;              % one-sided (energy excess)
+distBC=hypot(BC.grR-BC.site(1), BC.grC-BC.site(2));  nBledAmp=sum(bledA,2);
+ampv=amps; Afit=[ones(nA,1) ampv]; slopeA=zeros(nG,1);
+for p=1:nG, cc=Afit\abs(zA(p,:)).'; slopeA(p)=cc(2); end
+fprintf('   [BLEEDCHAR %s] %.0f ms null window, per-amp bled (z>%.2f): ', label, 1000*BC.null_win_s, bc_z_thr);
+for ai=1:nA, fprintf('%.1fV:%d ', amps(ai), nnz(bledA(:,ai))); end;  fprintf('\n');
+
+% (1) per-amp black maps ---------------------------------------------------------------
+nc=min(nA,3); nr=ceil(nA/nc);
+figM=figure('Color','w','Name',sprintf('[ALLSESS BLEEDCHAR] per-amp affected — %s',label), ...
+            'Position',[90 70 380*nc 300*nr]);
+for ai=1:nA
+    ax=subplot(nr,nc,ai,'Parent',figM); hold(ax,'on');
+    image(ax, repmat(BC.gimg,[1 1 3])); axis(ax,'image','off'); set(ax,'YDir','reverse');
+    aff=bledA(:,ai);
+    scatter(ax, BC.grR(~aff), BC.grC(~aff), 12, [0.75 0.75 0.75],'filled','MarkerEdgeColor',[0.4 0.4 0.4],'LineWidth',0.2);
+    scatter(ax, BC.grR(aff),  BC.grC(aff),  20, 'k','filled','MarkerEdgeColor','k');
+    plot(ax, BC.site(1), BC.site(2), 'r+','MarkerSize',12,'LineWidth',1.6);
+    title(ax, sprintf('%.2f V   %d/%d bled', amps(ai), nnz(aff), nG),'FontSize',11,'FontWeight','bold');
+end
+sgtitle(figM, sprintf('Bleed-affected contra px (black) — %s  (|coupling| energy over %.0f ms)', ...
+        label, 1000*BC.null_win_s),'FontSize',12,'FontWeight','bold');
+
+% (2) z-matrix + clickable #amps map ---------------------------------------------------
+[~,sdi]=sort(distBC,'ascend');
+figBC=figure('Color','w','Name',sprintf('[ALLSESS BLEEDCHAR] z-matrix — %s',label),'Position',[120 90 1180 620]);
+axMat=subplot(1,2,1,'Parent',figBC);
+imagesc(axMat,1:nA,1:nG,zA(sdi,:)); set(axMat,'YDir','normal');
+zmx=max(abs(zA(:)))+eps; clim(axMat,[-zmx zmx]);
+sM=linspace(0,1,128)'; colormap(axMat,[[sM sM ones(128,1)];[ones(128,1) 1-sM 1-sM]]);
+cb1=colorbar(axMat,'eastoutside'); cb1.Label.String='z (coupling energy vs 0V)';
+set(axMat,'XTick',1:nA,'XTickLabel',compose('%.1f',amps),'FontSize',9);
+xlabel(axMat,'amplitude (V)','FontWeight','bold'); ylabel(axMat,'grid pixel (near\rightarrowfar)','FontWeight','bold');
+title(axMat,'z-score matrix','FontSize',10,'FontWeight','bold');
+axMap=subplot(1,2,2,'Parent',figBC); hold(axMap,'on');
+image(axMap, repmat(BC.gimg,[1 1 3])); axis(axMap,'image','off'); set(axMap,'YDir','reverse');
+scMap=scatter(axMap, BC.grR, BC.grC, 28, nBledAmp,'filled','MarkerEdgeColor',[0.25 0.25 0.25],'LineWidth',0.3);
+colormap(axMap, parula(max(nA+1,2))); clim(axMap,[0 nA]);
+cb2=colorbar(axMap,'eastoutside'); cb2.Label.String='# amplitudes bled';
+plot(axMap, BC.site(1), BC.site(2),'g+','MarkerSize',14,'LineWidth',2);
+title(axMap,'# amps each pixel is bled at  (click \rightarrow report)','FontSize',10,'FontWeight','bold');
+sgtitle(figBC, sprintf('BLEEDCHAR — %s',label),'FontSize',11,'FontWeight','bold');
+BCg=struct('axMap',axMap,'scMap',scMap,'grR',BC.grR,'grC',BC.grC,'nG',nG,'amps',amps,'nA',nA, ...
+           'mResp',mResp,'rel',BC.rel,'Fs',Fs,'preN',preN,'dipCols',cplCols, ...
+           'eDipA',eDipA,'mu0A',mu0A,'sd0A',sd0A,'zA',zA,'bledA',bledA,'slopeA',slopeA, ...
+           'z_thr',bc_z_thr,'dist',distBC,'site',BC.site);
+guidata(figBC, BCg); set(figBC,'WindowButtonDownFcn',@bleedchar_click);
 end
 
 % ---------------- §20 SESSION-VIEWER: loader + orientation-normalized interactive map --------
