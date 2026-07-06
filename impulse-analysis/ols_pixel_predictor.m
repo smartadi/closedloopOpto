@@ -233,19 +233,26 @@ fig = figure('Color','w','Name','OLS kernel viewer — click an ipsi pixel to re
     'Units','pixels','Position',[120 80 720 760]);
 ax_map = axes('Parent',fig,'Units','normalized','Position',[0.05 0.05 0.90 0.90]); hold(ax_map,'on');
 
-% brain as an RGB grayscale underlay (ignores the axes colormap)
-A2 = mimg_cp.';  g = (A2 - min(A2(:))) / max(max(A2(:))-min(A2(:)), eps);
+% brain as an RGB grayscale underlay, in the ANATOMY-NORMALIZED orientation (ipsi hemisphere
+% right, midline vertical) chosen by pick_orient — the SAME transform the §20 viewer uses.
+% This replaces the old hardcoded mimg.' transpose, which happened to be correct for AL_0033
+% but is WRONG for sessions whose raw camera frame is rotated (AL_0041). Grid, site marker and
+% click-selection are ALL mapped through the same T, so the overlay is never transposed.
+T = pick_orient(contra_mask, ipsi_mask, px_prim, py_prim, nY_cp, nX_cp);  D.T = T;
+Idisp = T.imgOp(mimg_cp);  g = (Idisp - min(Idisp(:))) / max(max(Idisp(:))-min(Idisp(:)), eps);
 image(ax_map, repmat(g,[1 1 3]));  axis(ax_map,'image','off');  set(ax_map,'YDir','reverse');
 s = linspace(0,1,128)';  cmapBWR = [ [s s ones(128,1)] ; [ones(128,1) 1-s 1-s] ];  % blue->white->red
 colormap(ax_map, cmapBWR);
 
-% initial fit = the stim-site pixel
+% initial fit = the stim-site pixel (refit is in ORIGINAL coords; only the display is oriented)
 [bpix, cv, yte, yhat_te, nAct] = ols_refit(D, px_prim, py_prim);
 wsc = max(abs(bpix))+eps;
-hSc  = scatter(ax_map, grR, grC, 26, bpix, 'filled', 'MarkerEdgeColor',[0.1 0.1 0.1], 'LineWidth',0.4);
+[gdR,gdC] = orient_fwd(T, grR, grC);                        % grid pixels -> display coords
+hSc  = scatter(ax_map, gdC, gdR, 26, bpix, 'filled', 'MarkerEdgeColor',[0.1 0.1 0.1], 'LineWidth',0.4);
 clim(ax_map,[-wsc wsc]);
 cb = colorbar(ax_map,'eastoutside');  cb.Label.String = 'weight (contra px \rightarrow ipsi target)';
-hMk  = plot(ax_map, px_prim, py_prim, 'g+', 'MarkerSize',14, 'LineWidth',2);   % clicked ipsi target
+[sdR,sdC] = orient_fwd(T, px_prim, py_prim);
+hMk  = plot(ax_map, sdC, sdR, 'g+', 'MarkerSize',14, 'LineWidth',2);   % clicked ipsi target
 hTtl = title(ax_map, sprintf('[%s] target [row %d col %d]   R^2=%.3f   %d/%d px active   (click ipsi)', ...
     D.fit_mode, px_prim, py_prim, cv, nAct, nG), 'FontSize',13, 'FontWeight','bold');
 
@@ -1297,8 +1304,10 @@ end
 
 function ols_click(fig, ~)
 D = guidata(fig);
-cp = D.ax_map.CurrentPoint;  row = round(cp(1,1));  col = round(cp(1,2));   % x=row, y=col (transposed view)
-if row<1 || row>D.nY || col<1 || col>D.nX, return; end
+T = D.T;
+cp = D.ax_map.CurrentPoint;  xd = round(cp(1,1));  yd = round(cp(1,2));   % display col=x, display row=y
+if yd<1 || yd>T.Hd || xd<1 || xd>T.Wd, return; end
+[row, col] = orient_inv(T, yd, xd);                                       % display -> original (row,col)
 if ~D.ipsi(row,col)
     set(D.hTtl,'String', sprintf('[row %d col %d] is NOT on the ipsi (target) side — click the ipsi hemisphere', row, col));
     return;
@@ -1306,7 +1315,7 @@ end
 [bpix, cv, ~, ~, nAct] = ols_refit(D, row, col);   % only the kernel map updates on click
 wsc = max(abs(bpix))+eps;
 set(D.hSc,'CData',bpix);  clim(D.ax_map,[-wsc wsc]);
-set(D.hMk,'XData',row,'YData',col);
+[sdR,sdC] = orient_fwd(T, row, col);  set(D.hMk,'XData',sdC,'YData',sdR);
 set(D.hTtl,'String', sprintf('[%s] target [row %d col %d]   R^2=%.3f   %d/%d px active', ...
     D.fit_mode, row, col, cv, nAct, numel(bpix)));
 % NB: best/worst companion is intentionally NOT updated — it stays fixed on the site pixel.
