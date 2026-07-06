@@ -9,7 +9,14 @@
 %
 % Prereq: load_experiments.m has been run (allExperiments in workspace).
 close all; clc;
-bp = fullfile(fileparts(mfilename('fullpath')), '..');
+% mfilename points to a temp Editor_* copy when a section is run with unsaved
+% changes; reject tempdir so utils/paper resolve to the repo, not tempdir.
+bpath = mfilename('fullpath');
+if isempty(bpath) || startsWith(bpath, tempdir)
+    w = which('cp_state_batch');
+    if ~isempty(w) && ~startsWith(w, tempdir), bpath = w; end
+end
+bp = fullfile(fileparts(bpath), '..');
 addpath(genpath(fullfile(bp, 'utils')));
 
 if ~exist('allExperiments','var') || isempty(allExperiments)

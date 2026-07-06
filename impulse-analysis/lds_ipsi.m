@@ -24,8 +24,14 @@
 close all;
 selExp = 3; n_states = 5;
 %% [LDS-SETUP] -----------------------------------------------------------------
+% mfilename points to a temp Editor_* copy when a section is run with unsaved
+% changes; reject tempdir and fall back to which()/pwd so caches land in data\.
 lds_path = mfilename('fullpath');
-if isempty(lds_path), lds_path = fullfile(pwd,'lds_ipsi.m'); end
+if isempty(lds_path) || startsWith(lds_path, tempdir)
+    w = which('lds_ipsi');
+    if ~isempty(w) && ~startsWith(w, tempdir), lds_path = w;
+    else,                                      lds_path = fullfile(pwd,'lds_ipsi.m'); end
+end
 impulseDir = fileparts(lds_path);
 utilsDir   = fullfile(impulseDir,'..','utils');
 dataDir    = fullfile(impulseDir,'data');
