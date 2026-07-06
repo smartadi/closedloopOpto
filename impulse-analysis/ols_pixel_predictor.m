@@ -1861,7 +1861,10 @@ uicontrol(fig,'Style','text','Units','normalized','Position',[0.05 0.955 0.10 0.
           'FontSize',10,'HorizontalAlignment','left','BackgroundColor','w');
 pop=uicontrol(fig,'Style','popupmenu','String',labels,'Units','normalized','Position',[0.16 0.95 0.5 0.04],'FontSize',10);
 ax=axes(fig,'Units','normalized','Position',[0.05 0.03 0.9 0.89]);
-VS=struct('cfg',cfg,'allExp',{allExperiments},'selList',selList,'ax',ax,'pop',pop);
+% cache: a session's SVD load is ~17 s of disk I/O (loadUVt+loadData); memoize the loaded
+% state per sel so switching BACK to an already-visited session is instant (no re-read).
+cache=containers.Map('KeyType','double','ValueType','any');
+VS=struct('cfg',cfg,'allExp',{allExperiments},'selList',selList,'ax',ax,'pop',pop,'cache',cache);
 guidata(fig,VS);
 set(pop,'Callback',@(s,~) viewer_load(fig));
 viewer_load(fig);
@@ -1871,9 +1874,14 @@ function viewer_load(fig)
 VS=guidata(fig); ax=VS.ax; cla(ax,'reset');
 sel=VS.selList(get(VS.pop,'Value'));
 ae=VS.allExp(sel); lbl=sprintf('%s %s e%d',ae.mn,ae.td,ae.en);
-title(ax,sprintf('loading %s ...',lbl)); axis(ax,'off'); drawnow;
-[D,px,py,contra,ipsi]=local_load_session(sel,VS.cfg,VS.allExp);
-T=pick_orient(contra,ipsi,px,py,D.nY,D.nX);
+if isKey(VS.cache,sel)                                   % already loaded once -> instant
+    C=VS.cache(sel); D=C.D; px=C.px; py=C.py; T=C.T;
+else                                                     % first visit: ~17 s SVD disk read
+    title(ax,sprintf('loading %s  (first visit, ~15 s SVD read) ...',lbl)); axis(ax,'off'); drawnow;
+    [D,px,py,contra,ipsi]=local_load_session(sel,VS.cfg,VS.allExp);
+    T=pick_orient(contra,ipsi,px,py,D.nY,D.nX);
+    VS.cache(sel)=struct('D',D,'px',px,'py',py,'T',T);   % containers.Map is a handle -> persists
+end
 Idisp=T.imgOp(D.mimg); g=(Idisp-min(Idisp(:)))/max(max(Idisp(:))-min(Idisp(:)),eps);
 him=image(ax,repmat(g,[1 1 3])); axis(ax,'image','off'); set(ax,'YDir','reverse'); hold(ax,'on');
 s=linspace(0,1,128)'; colormap(ax,[[s s ones(128,1)];[ones(128,1) 1-s 1-s]]);
