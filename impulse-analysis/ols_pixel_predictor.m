@@ -1010,7 +1010,11 @@ R2c = @(y,yh) 1 - sum((y-yh).^2)/max(sum((y-mean(y)).^2),eps);
 % full column space forces the stim-blind prediction's evoked to ~0 across the WHOLE window (dip AND
 % rebound), so the residual (Local) captures the COMPLETE stim effect (point 5: maximize residual
 % stim-capture). Higher spont-R^2 cost than the old dip-mean null is expected and accepted by design.
-cwN = round(couple_win_s*Fs);  cwCols = (preN+1):min(Wb, preN+max(cwN,1));
+% FLOOR the null span to at least dip_win_s: the dip is REPORTED over dip_win_s, so the null must cover
+% it or the (couple..dip) tail leaks into Global sign-flipped (amplitude-limited sessions e.g. AL_0041
+% e1, whose measured coupling ~171 ms < 300 ms dip window). max() makes this consistent with §13/§14.
+null_win_s = max(couple_win_s, dip_win_s);                   % coupling span, floored to the reporting dip window
+cwN = round(null_win_s*Fs);  cwCols = (preN+1):min(Wb, preN+max(cwN,1));
 dipColsA = (preN+1):min(Wb, preN+round(dip_win_s*Fs));       % unipolar dip window (for reporting only)
 EVcell=cell(numel(amps),1);  Apatt=[];
 for ai=1:numel(amps)
@@ -1024,8 +1028,8 @@ Ae = orth(Apatt);                                            % orthonormal basis
 GiA = Gc\Ae;
 b_con = b_ols - GiA*(pinv(Ae.'*GiA)*(Ae.'*b_ols));           % STIM-BLIND: null coupling across whole window
 r2_ols=R2c(yteC, muYc+Zte*b_ols);  r2_con=R2c(yteC, muYc+Zte*b_con);
-fprintf('\n[AGL-STIMBLIND] coupling-subspace null over %.0f ms window: %d directions projected out.\n', ...
-    1000*couple_win_s, size(Ae,2));
+fprintf('\n[AGL-STIMBLIND] coupling-subspace null over %.0f ms (measured coupling %.0f ms, floored to dip %.0f ms): %d directions projected out.\n', ...
+    1000*null_win_s, 1000*couple_win_s, 1000*dip_win_s, size(Ae,2));
 fprintf('[AGL-STIMBLIND] spont held-out R^2:  full-OLS=%.4f -> stim-blind=%.4f  (cost %.4f)\n', ...
     r2_ols, r2_con, r2_ols-r2_con);
 
@@ -1046,8 +1050,8 @@ end
 gCWmax=0;                                                    % verify coupling nulled across WHOLE window (dip+rebound)
 for ai=1:numel(amps), if isempty(EVcell{ai}), continue; end
     yg=b_con.'*EVcell{ai}; yg=yg-mean(yg(1:preN)); gCWmax=max(gCWmax,max(abs(yg(cwCols)))); end
-fprintf('   [check] max |Global evoked| over the %.0f ms coupling window = %.4f  (\\approx 0 => residual carries full stim)\n', ...
-    1000*couple_win_s, gCWmax);
+fprintf('   [check] max |Global evoked| over the %.0f ms null window = %.4f  (\\approx 0 => residual carries full stim)\n', ...
+    1000*null_win_s, gCWmax);
 
 figAGL = figure('Color','w','Name','[AGL-STIMBLIND] residual = full stim effect','Position',[60 60 1250 420]);
 axA=subplot(1,3,1); hold(axA,'on'); box(axA,'on');
@@ -1073,7 +1077,7 @@ sgtitle('STIM-BLIND decomposition: contra (Global) predicts ZERO dip -> residual
 
 AGL = struct('b_ols',b_ols,'b_con',b_con,'r2_ols',r2_ols,'r2_con',r2_con,'cost',r2_ols-r2_con, ...
              'amps',amps,'Actual',A_dip,'Global',G_dip,'Local',L_dip,'trA',{trA},'trG',{trG},'trL',{trL}, ...
-             'couple_win_s',couple_win_s,'gCWmax',gCWmax,'nConstraints',size(Ae,2),'muY',muYc);
+             'couple_win_s',couple_win_s,'null_win_s',null_win_s,'gCWmax',gCWmax,'nConstraints',size(Ae,2),'muY',muYc);
 
 %% (18) [BESTPRED] --- SECONDARY --- per-amp BEST contra->ipsi stim prediction (ceiling/robustness)
 % SECONDARY to §17. Different question: not "isolate the local effect" but "what is the MOST of the
@@ -1158,8 +1162,8 @@ if RUN_ALLSESS
     for si = 1:numel(allSelExp)
         S = local_stimblind_session(allSelExp(si), cfg, allExperiments);
         ALLSESS{si} = S;
-        fprintf('   %-24s: spont R^2 %.4f->%.4f (cost %.4f) | %d amps, grid %d, couple %.0f ms, %d null-dirs\n', ...
-                S.label, S.r2_ols, S.r2_con, S.cost, numel(S.amps), S.nG, 1000*S.couple_win_s, S.nConstraints);
+        fprintf('   %-24s: spont R^2 %.4f->%.4f (cost %.4f) | %d amps, grid %d, couple %.0f ms (null %.0f ms), %d null-dirs\n', ...
+                S.label, S.r2_ols, S.r2_con, S.cost, numel(S.amps), S.nG, 1000*S.couple_win_s, 1000*S.null_win_s, S.nConstraints);
         for ai = 1:numel(S.amps)
             fprintf('      %5.2f V | A %+.3f  G %+.3f  L %+.3f  (%3.0f%% Local)\n', ...
                     S.amps(ai), S.Actual(ai), S.Global(ai), S.Local(ai), 100*S.Local(ai)/S.Actual(ai));
@@ -1505,7 +1509,8 @@ for ai = 1:nA
     if ~isempty(lk), cwEnd(ai)=rel(preN+lk)/Fs; end
 end
 couple_win_s=max([cwEnd;0]); if couple_win_s<=0, couple_win_s=cfg.dip_win_s; end
-cwN=round(couple_win_s*Fs); cwCols=(preN+1):min(Wb,preN+max(cwN,1));
+null_win_s=max(couple_win_s,cfg.dip_win_s);                 % floor null span to reporting dip window (see §17)
+cwN=round(null_win_s*Fs); cwCols=(preN+1):min(Wb,preN+max(cwN,1));
 Apatt=[]; for ai=1:nA, if isempty(EVcell{ai}), continue; end; Apatt=[Apatt, EVcell{ai}(:,cwCols)]; end %#ok<AGROW>
 Ae=orth(Apatt); GiA=Gc\Ae; b_con=b_ols-GiA*(pinv(Ae.'*GiA)*(Ae.'*b_ols));
 r2_ols = R2c(yteC, muYc+Zte*b_ols);  r2_con = R2c(yteC, muYc+Zte*b_con);
@@ -1525,7 +1530,7 @@ end
 S = struct('label',label,'sel',sel,'amps',amps,'Actual',A_dip,'Global',G_dip,'Local',L_dip, ...
            'trA',{trA},'trG',{trG},'trL',{trL},'rel',rel,'Fs',Fs,'preN',preN, ...
            'r2_ols',r2_ols,'r2_con',r2_con,'cost',r2_ols-r2_con,'nG',nG, ...
-           'couple_win_s',couple_win_s,'nConstraints',size(Ae,2));
+           'couple_win_s',couple_win_s,'null_win_s',null_win_s,'nConstraints',size(Ae,2));
 end
 
 function bleed_detail(DB, p, ai)
