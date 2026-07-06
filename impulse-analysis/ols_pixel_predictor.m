@@ -228,31 +228,35 @@ D.mu_p=mu_p; D.sd_p=sd_p; D.Ate=Ate;
 D.grR=grR; D.grC=grC; D.gridIdx=gridIdx; D.nY=nY_cp; D.nX=nX_cp;
 D.mimg=mimg_cp; D.k=k_prim; D.Fs=Fs; D.ipsi=logical(ipsi_mask);
 
+% ---- ONE display-orientation transform shared by ALL brain-map overlays (§8,§10,§13,§14,§16) ----
+% pick_orient normalizes any session to a common anatomical view (ipsi hemisphere right, midline
+% vertical). AL_0033 is unchanged; rotated camera frames (AL_0041) are corrected. Every overlay
+% draws Torient.imgOp(mimg) and places grid/site via orient_fwd, so the WHOLE script is
+% session-safe — you can point selExp at any session and the maps render upright.
+Torient = pick_orient(contra_mask, ipsi_mask, px_prim, py_prim, nY_cp, nX_cp);
+[dspGr, dspGc] = orient_fwd(Torient, grR, grC);            % grid pixels -> display (row,col)
+[dspSr, dspSc] = orient_fwd(Torient, px_prim, py_prim);    % laser site  -> display (row,col)
+oI_ = Torient.imgOp(mimg_cp);  dspImg = (oI_-min(oI_(:)))/max(max(oI_(:))-min(oI_(:)),eps);  % oriented brain [Hd x Wd]
+
 %% (8) Interactive map: weights ON the brain; click an IPSI pixel -> refit kernel
 fig = figure('Color','w','Name','OLS kernel viewer — click an ipsi pixel to refit', ...
     'Units','pixels','Position',[120 80 720 760]);
 ax_map = axes('Parent',fig,'Units','normalized','Position',[0.05 0.05 0.90 0.90]); hold(ax_map,'on');
 
-% brain as an RGB grayscale underlay, in the ANATOMY-NORMALIZED orientation (ipsi hemisphere
-% right, midline vertical) chosen by pick_orient — the SAME transform the §20 viewer uses.
-% This replaces the old hardcoded mimg.' transpose, which happened to be correct for AL_0033
-% but is WRONG for sessions whose raw camera frame is rotated (AL_0041). Grid, site marker and
-% click-selection are ALL mapped through the same T, so the overlay is never transposed.
-T = pick_orient(contra_mask, ipsi_mask, px_prim, py_prim, nY_cp, nX_cp);  D.T = T;
-Idisp = T.imgOp(mimg_cp);  g = (Idisp - min(Idisp(:))) / max(max(Idisp(:))-min(Idisp(:)), eps);
-image(ax_map, repmat(g,[1 1 3]));  axis(ax_map,'image','off');  set(ax_map,'YDir','reverse');
+% brain underlay in the shared ANATOMY-NORMALIZED orientation (Torient); grid, site and clicks
+% all map through the same transform, so the overlay is never transposed on any session.
+D.T = Torient;
+image(ax_map, repmat(dspImg,[1 1 3]));  axis(ax_map,'image','off');  set(ax_map,'YDir','reverse');
 s = linspace(0,1,128)';  cmapBWR = [ [s s ones(128,1)] ; [ones(128,1) 1-s 1-s] ];  % blue->white->red
 colormap(ax_map, cmapBWR);
 
 % initial fit = the stim-site pixel (refit is in ORIGINAL coords; only the display is oriented)
 [bpix, cv, yte, yhat_te, nAct] = ols_refit(D, px_prim, py_prim);
 wsc = max(abs(bpix))+eps;
-[gdR,gdC] = orient_fwd(T, grR, grC);                        % grid pixels -> display coords
-hSc  = scatter(ax_map, gdC, gdR, 26, bpix, 'filled', 'MarkerEdgeColor',[0.1 0.1 0.1], 'LineWidth',0.4);
+hSc  = scatter(ax_map, dspGc, dspGr, 26, bpix, 'filled', 'MarkerEdgeColor',[0.1 0.1 0.1], 'LineWidth',0.4);
 clim(ax_map,[-wsc wsc]);
 cb = colorbar(ax_map,'eastoutside');  cb.Label.String = 'weight (contra px \rightarrow ipsi target)';
-[sdR,sdC] = orient_fwd(T, px_prim, py_prim);
-hMk  = plot(ax_map, sdC, sdR, 'g+', 'MarkerSize',14, 'LineWidth',2);   % clicked ipsi target
+hMk  = plot(ax_map, dspSc, dspSr, 'g+', 'MarkerSize',14, 'LineWidth',2);   % clicked ipsi target
 hTtl = title(ax_map, sprintf('[%s] target [row %d col %d]   R^2=%.3f   %d/%d px active   (click ipsi)', ...
     D.fit_mode, px_prim, py_prim, cv, nAct, nG), 'FontSize',13, 'FontWeight','bold');
 
@@ -367,26 +371,27 @@ affected = stimDev > threshFactor .* nullThr;                              % [nG
 % --- per-amplitude map: affected pixels BLACK ------------------------------------
 figB = figure('Color','w','Name','BLEED — definitely stim-affected contra pixels (per amp)', ...
     'Units','pixels','Position',[100 60 1200 780]);
-A2b = mimg_cp.';  gB = (A2b-min(A2b(:)))/max(max(A2b(:))-min(A2b(:)),eps);
+gB = dspImg;                                                               % oriented brain (Torient)
 nCols = min(nA,3);  nRows = ceil(nA/nCols);  axB = gobjects(nA,1);
 for ai=1:nA
     ax = subplot(nRows,nCols,ai,'Parent',figB);  hold(ax,'on');
     image(ax, repmat(gB,[1 1 3]));  axis(ax,'image','off');  set(ax,'YDir','reverse');
     aff = affected(:,ai);
-    scatter(ax, grR(~aff), grC(~aff), 12, [0.75 0.75 0.75], 'filled', 'MarkerEdgeColor',[0.4 0.4 0.4], 'LineWidth',0.2);
-    scatter(ax, grR(aff),  grC(aff),  20, 'k', 'filled', 'MarkerEdgeColor','k');
-    plot(ax, px_prim, py_prim, 'r+', 'MarkerSize',12, 'LineWidth',1.6);
+    scatter(ax, dspGc(~aff), dspGr(~aff), 12, [0.75 0.75 0.75], 'filled', 'MarkerEdgeColor',[0.4 0.4 0.4], 'LineWidth',0.2);
+    scatter(ax, dspGc(aff),  dspGr(aff),  20, 'k', 'filled', 'MarkerEdgeColor','k');
+    plot(ax, dspSc, dspSr, 'r+', 'MarkerSize',12, 'LineWidth',1.6);
     title(ax, sprintf('%.2f V   %d/%d affected', amps(ai), nnz(aff), nG), 'FontSize',12,'FontWeight','bold');
     axB(ai) = ax;
 end
 sgtitle(figB, sprintf('Definitely stim-affected contra grid px (black)  %s %s e%d  — click a pixel to inspect', ...
     mn, td, en), 'FontSize',13,'FontWeight','bold');
 
-DB = struct('axB',axB,'amps',amps,'grR',grR,'grC',grC,'mResp',mResp,'stimDev',stimDev, ...
+DB = struct('axB',axB,'amps',amps,'grR',grR,'grC',grC,'gdR',dspGr,'gdC',dspGc, ...
+            'mResp',mResp,'stimDev',stimDev, ...
             'nullThr',nullThr,'affected',affected,'rel',rel,'Fs',Fs,'postCols',postCols, ...
             'nT_amp',nT_amp,'nT0',nT0,'preN',preN, ...
             'Xpct',Xpct,'onFcell',{onFcell},'onF0',onF0, ...          % per-trial pull for the verifier
-            'gimg',gB,'site',[px_prim py_prim]);                      % brain + site for spatial context
+            'gimg',gB,'site',[px_prim py_prim],'sdR',dspSr,'sdC',dspSc); % brain + site (orig + display)
 guidata(figB, DB);  set(figB,'WindowButtonDownFcn',@bleed_click);
 fprintf('[BLEED] click any pixel -> VERIFIER: per-trial traces + 0V baseline + spatial location/distance.\n');
 
@@ -600,14 +605,13 @@ lgS = legend(axP,'Location','best','Box','off','FontSize',8);  lgS.ItemTokenSize
 figS3 = figure('Color','w','Name',sprintf('STIMBLIND pixel combo @ %.2f V',ampB), ...
     'Units','pixels','Position',[140 620 720 520]);
 axM = axes(figS3); hold(axM,'on');
-Ab = mimg_cp.';  gBs = (Ab-min(Ab(:)))/max(max(Ab(:))-min(Ab(:)),eps);
-image(axM, repmat(gBs,[1 1 3]));  axis(axM,'image','off');  set(axM,'YDir','reverse');
+image(axM, repmat(dspImg,[1 1 3]));  axis(axM,'image','off');  set(axM,'YDir','reverse');
 s = linspace(0,1,128)';  colormap(axM, [ [s s ones(128,1)] ; [ones(128,1) 1-s 1-s] ]);
 wB = zeros(nG,1);  wB(Sb) = bBlind;  wsc = max(abs(wB))+eps;
-scatter(axM, grR(~blindMask), grC(~blindMask), 22, 'k', 'filled', 'MarkerEdgeColor','k', 'DisplayName','removed');
-scatter(axM, grR(blindMask),  grC(blindMask),  26, wB(blindMask), 'filled', 'MarkerEdgeColor',[0.2 0.2 0.2], 'LineWidth',0.3);
+scatter(axM, dspGc(~blindMask), dspGr(~blindMask), 22, 'k', 'filled', 'MarkerEdgeColor','k', 'DisplayName','removed');
+scatter(axM, dspGc(blindMask),  dspGr(blindMask),  26, wB(blindMask), 'filled', 'MarkerEdgeColor',[0.2 0.2 0.2], 'LineWidth',0.3);
 clim(axM,[-wsc wsc]);  colorbar(axM,'eastoutside');
-plot(axM, px_prim, py_prim, 'g+', 'MarkerSize',14, 'LineWidth',2);
+plot(axM, dspSc, dspSr, 'g+', 'MarkerSize',14, 'LineWidth',2);
 title(axM, sprintf('stim-blind COMBO @ %.2f V: %d kept (colored) / %d removed (black)', ampB, numel(Sb), kSel), ...
     'FontSize',11,'FontWeight','bold');
 
@@ -740,15 +744,14 @@ lgQ = legend(axQ,'Location','best','Box','off','FontSize',8);  lgQ.ItemTokenSize
 figC3 = figure('Color','w','Name',sprintf('CLEANMAX combo @ %.2f V',ampC), ...
     'Units','pixels','Position',[140 620 620 520]);
 axC = axes(figC3); hold(axC,'on');
-Ac = mimg_cp.';  gBc = (Ac-min(Ac(:)))/max(max(Ac(:))-min(Ac(:)),eps);
-image(axC, repmat(gBc,[1 1 3]));  axis(axC,'image','off');  set(axC,'YDir','reverse');
+image(axC, repmat(dspImg,[1 1 3]));  axis(axC,'image','off');  set(axC,'YDir','reverse');
 s = linspace(0,1,128)';  colormap(axC, [ [s s ones(128,1)] ; [ones(128,1) 1-s 1-s] ]);
 keptMask = false(nG,1);  keptMask(Sk)=true;  wC = zeros(nG,1);  wC(Sk)=bK;  wsc = max(abs(wC))+eps;
-scatter(axC, grR(~keptMask), grC(~keptMask), 22, 'k', 'filled', 'MarkerEdgeColor','k', 'DisplayName','discarded (bled)');
-scatter(axC, grR(keptMask),  grC(keptMask),  26, wC(keptMask), 'filled', 'MarkerEdgeColor',[0.2 0.2 0.2], 'LineWidth',0.3);
+scatter(axC, dspGc(~keptMask), dspGr(~keptMask), 22, 'k', 'filled', 'MarkerEdgeColor','k', 'DisplayName','discarded (bled)');
+scatter(axC, dspGc(keptMask),  dspGr(keptMask),  26, wC(keptMask), 'filled', 'MarkerEdgeColor',[0.2 0.2 0.2], 'LineWidth',0.3);
 clim(axC,[-wsc wsc]);  colorbar(axC,'eastoutside');
-if radSel>0, th = linspace(0,2*pi,120); plot(axC, px_prim+radSel*cos(th), py_prim+radSel*sin(th), 'g--', 'LineWidth',1.2); end
-plot(axC, px_prim, py_prim, 'g+', 'MarkerSize',14, 'LineWidth',2);
+if radSel>0, th = linspace(0,2*pi,120); plot(axC, dspSc+radSel*cos(th), dspSr+radSel*sin(th), 'g--', 'LineWidth',1.2); end
+plot(axC, dspSc, dspSr, 'g+', 'MarkerSize',14, 'LineWidth',2);
 title(axC, sprintf('bleed-free COMBO @ %.2f V: keep %d / discard %d (radius %.0f px)', ampC, numel(Sk), nG-numel(Sk), radSel), ...
     'FontSize',11,'FontWeight','bold');
 
@@ -811,15 +814,14 @@ xlabel(axMat,'amplitude (V)','FontWeight','bold');  ylabel(axMat,'grid pixel (so
 title(axMat,'z-score matrix: how every pixel scores at every amp','FontSize',10,'FontWeight','bold');
 
 axMap = subplot(1,2,2,'Parent',figBC);  hold(axMap,'on');
-Abc = mimg_cp.';  gBC = (Abc-min(Abc(:)))/max(max(Abc(:))-min(Abc(:)),eps);
-image(axMap, repmat(gBC,[1 1 3]));  axis(axMap,'image','off');  set(axMap,'YDir','reverse');
-scMap = scatter(axMap, grR, grC, 28, nBledAmp, 'filled', 'MarkerEdgeColor',[0.25 0.25 0.25], 'LineWidth',0.3);
+image(axMap, repmat(dspImg,[1 1 3]));  axis(axMap,'image','off');  set(axMap,'YDir','reverse');
+scMap = scatter(axMap, dspGc, dspGr, 28, nBledAmp, 'filled', 'MarkerEdgeColor',[0.25 0.25 0.25], 'LineWidth',0.3);
 colormap(axMap, parula(max(nA+1,2)));  clim(axMap,[0 nA]);
 cb2 = colorbar(axMap,'eastoutside');  cb2.Label.String = '# amplitudes bled';
-plot(axMap, px_prim, py_prim, 'g+', 'MarkerSize',14, 'LineWidth',2);
+plot(axMap, dspSc, dspSr, 'g+', 'MarkerSize',14, 'LineWidth',2);
 title(axMap,'map: # amps each pixel is bled at  (click a pixel \rightarrow full report)','FontSize',10,'FontWeight','bold');
 
-BC = struct('axMap',axMap,'scMap',scMap,'grR',grR,'grC',grC,'nG',nG,'amps',amps,'nA',nA, ...
+BC = struct('axMap',axMap,'scMap',scMap,'grR',grR,'grC',grC,'gdR',dspGr,'gdC',dspGc,'nG',nG,'amps',amps,'nA',nA, ...
             'mResp',mResp,'rel',rel,'Fs',Fs,'preN',preN,'dipCols',cplColsBC, ...
             'eDipA',eDipA,'mu0A',mu0A,'sd0A',sd0A,'zA',zA,'bledA',bledA,'slopeA',slopeA, ...
             'z_thr',bc_z_thr,'dist',distBC,'site',[px_prim py_prim]);
@@ -965,11 +967,10 @@ fprintf('   dist(pos) vs dist(neg): ranksum p=%.3g  => NEG sits nearer (neural),
 figFP = figure('Color','w','Name','[FARPIX] two populations: near neural dip vs far bleed','Position',[60 60 1250 420]);
 % (1) spatial map: red=positive(bleed), blue=negative(dip), on the brain
 ax1=subplot(1,3,1); hold(ax1,'on');
-Afp=mimg_cp.'; gFP=(Afp-min(Afp(:)))/max(max(Afp(:))-min(Afp(:)),eps);
-image(ax1, repmat(gFP,[1 1 3])); axis(ax1,'image','off'); set(ax1,'YDir','reverse');
-scatter(ax1, grR(negP), grC(negP), 34, [0.1 0.3 0.9], 'filled','MarkerEdgeColor','w','LineWidth',.3);
-scatter(ax1, grR(posP), grC(posP), 34, [0.9 0.15 0.15],'filled','MarkerEdgeColor','w','LineWidth',.3);
-plot(ax1, px_prim, py_prim, 'g+', 'MarkerSize',15,'LineWidth',2);
+image(ax1, repmat(dspImg,[1 1 3])); axis(ax1,'image','off'); set(ax1,'YDir','reverse');
+scatter(ax1, dspGc(negP), dspGr(negP), 34, [0.1 0.3 0.9], 'filled','MarkerEdgeColor','w','LineWidth',.3);
+scatter(ax1, dspGc(posP), dspGr(posP), 34, [0.9 0.15 0.15],'filled','MarkerEdgeColor','w','LineWidth',.3);
+plot(ax1, dspSc, dspSr, 'g+', 'MarkerSize',15,'LineWidth',2);
 title(ax1,sprintf('blue=dip (n=%d, near)  red=bleed (n=%d, far)',nnz(negP),nnz(posP)),'FontSize',9,'FontWeight','bold');
 % (2) population-mean evoked traces (each at its best amp)
 ax2=subplot(1,3,2); hold(ax2,'on'); box(ax2,'on');
@@ -1373,7 +1374,7 @@ for ai = 1:numel(DB.axB)
     ax = DB.axB(ai);  cp = ax.CurrentPoint;  x = cp(1,1);  y = cp(1,2);
     xl = ax.XLim;  yl = ax.YLim;
     if x>=xl(1) && x<=xl(2) && y>=yl(1) && y<=yl(2)
-        [~,p] = min((DB.grR - x).^2 + (DB.grC - y).^2);   % x=row, y=col (transposed view)
+        [~,p] = min((DB.gdC - x).^2 + (DB.gdR - y).^2);   % x=display col, y=display row
         bleed_detail(DB, p, ai);  return;
     end
 end
@@ -1554,9 +1555,13 @@ for ai = 1:nA
     mR = local_periavg(Xpct, onF, rel, preN, nG, Wb);
     mResp(:,:,ai) = mR - m0;                                                  % evoked excess re 0 V
 end
-gA = mimg_cp.';  gimg = (gA-min(gA(:)))/max(max(gA(:))-min(gA(:)),eps);
+% orient the brain map + grid/site the same way the main script does (session-safe display)
+Tor = pick_orient(logical(M.contra), logical(M.ipsi), px_prim, py_prim, nY, nX);
+[gdR,gdC] = orient_fwd(Tor, grR, grC);  [sdR,sdC] = orient_fwd(Tor, px_prim, py_prim);
+oiB = Tor.imgOp(mimg_cp);  gimg = (oiB-min(oiB(:)))/max(max(oiB(:))-min(oiB(:)),eps);
 BC = struct('mResp',mResp,'blk0',blk0,'m0',m0,'nT_amp',nT_amp,'nT0',nT0, ...
-            'grR',grR,'grC',grC,'gridIdx',gridIdx,'site',[px_prim py_prim], ...
+            'grR',grR,'grC',grC,'gdR',gdR,'gdC',gdC,'gridIdx',gridIdx, ...
+            'site',[px_prim py_prim],'sdR',sdR,'sdC',sdC, ...
             'gimg',gimg,'amps',amps,'nA',nA,'nG',nG,'rel',rel,'Fs',Fs,'preN',preN,'Wb',Wb, ...
             'couple_win_s',couple_win_s,'null_win_s',null_win_s,'dip_win_s',cfg.dip_win_s);
 
@@ -1606,11 +1611,11 @@ legend(ax2,'Location','best','Box','off','FontSize',8);
 ax3 = subplot(2,2,[2 4]); hold(ax3,'on');                         % spatial context
 image(ax3, repmat(DB.gimg,[1 1 3]));  axis(ax3,'image','off');  set(ax3,'YDir','reverse');
 affA = DB.affected(:,ai);
-scatter(ax3, DB.grR(~affA), DB.grC(~affA), 10, [0.7 0.7 0.7], 'filled', 'MarkerEdgeColor',[0.4 0.4 0.4], 'LineWidth',0.2);
-scatter(ax3, DB.grR(affA),  DB.grC(affA),  16, 'k', 'filled');
-plot(ax3, DB.site(1), DB.site(2), 'g+', 'MarkerSize',14, 'LineWidth',2);
-plot(ax3, [DB.site(1) DB.grR(p)], [DB.site(2) DB.grC(p)], 'r-', 'LineWidth',0.8);
-scatter(ax3, DB.grR(p), DB.grC(p), 70, 'r', 'filled', 'MarkerEdgeColor','k', 'LineWidth',1);
+scatter(ax3, DB.gdC(~affA), DB.gdR(~affA), 10, [0.7 0.7 0.7], 'filled', 'MarkerEdgeColor',[0.4 0.4 0.4], 'LineWidth',0.2);
+scatter(ax3, DB.gdC(affA),  DB.gdR(affA),  16, 'k', 'filled');
+plot(ax3, DB.sdC, DB.sdR, 'g+', 'MarkerSize',14, 'LineWidth',2);
+plot(ax3, [DB.sdC DB.gdC(p)], [DB.sdR DB.gdR(p)], 'r-', 'LineWidth',0.8);
+scatter(ax3, DB.gdC(p), DB.gdR(p), 70, 'r', 'filled', 'MarkerEdgeColor','k', 'LineWidth',1);
 title(ax3, sprintf('px #%d  |  %.0f px from site  |  %.2f V (n=%d) vs 0V (n=%d)', ...
     p, dist, DB.amps(ai), DB.nT_amp(ai), DB.nT0), 'FontSize',10,'FontWeight','bold');
 end
@@ -1626,10 +1631,10 @@ end
 function bleedchar_click(figBC, ~)
 % Click a pixel on the BLEEDCHAR map -> open its full per-amplitude bleed report.
 BC = guidata(figBC);
-cp = BC.axMap.CurrentPoint;  x = cp(1,1);  y = cp(1,2);          % x=row, y=col (transposed view)
+cp = BC.axMap.CurrentPoint;  x = cp(1,1);  y = cp(1,2);          % x=display col, y=display row
 xl = BC.axMap.XLim;  yl = BC.axMap.YLim;
 if x<xl(1)||x>xl(2)||y<yl(1)||y>yl(2), return; end
-[~,p] = min((BC.grR - x).^2 + (BC.grC - y).^2);
+[~,p] = min((BC.gdC - x).^2 + (BC.gdR - y).^2);
 bleedchar_detail(BC, p);
 end
 
@@ -1715,9 +1720,9 @@ for ai=1:nA
     ax=subplot(nr,nc,ai,'Parent',figM); hold(ax,'on');
     image(ax, repmat(BC.gimg,[1 1 3])); axis(ax,'image','off'); set(ax,'YDir','reverse');
     aff=bledA(:,ai);
-    scatter(ax, BC.grR(~aff), BC.grC(~aff), 12, [0.75 0.75 0.75],'filled','MarkerEdgeColor',[0.4 0.4 0.4],'LineWidth',0.2);
-    scatter(ax, BC.grR(aff),  BC.grC(aff),  20, 'k','filled','MarkerEdgeColor','k');
-    plot(ax, BC.site(1), BC.site(2), 'r+','MarkerSize',12,'LineWidth',1.6);
+    scatter(ax, BC.gdC(~aff), BC.gdR(~aff), 12, [0.75 0.75 0.75],'filled','MarkerEdgeColor',[0.4 0.4 0.4],'LineWidth',0.2);
+    scatter(ax, BC.gdC(aff),  BC.gdR(aff),  20, 'k','filled','MarkerEdgeColor','k');
+    plot(ax, BC.sdC, BC.sdR, 'r+','MarkerSize',12,'LineWidth',1.6);
     title(ax, sprintf('%.2f V   %d/%d bled', amps(ai), nnz(aff), nG),'FontSize',11,'FontWeight','bold');
 end
 sgtitle(figM, sprintf('Bleed-affected contra px (black) — %s  (|coupling| energy over %.0f ms)', ...
@@ -1736,13 +1741,13 @@ xlabel(axMat,'amplitude (V)','FontWeight','bold'); ylabel(axMat,'grid pixel (nea
 title(axMat,'z-score matrix','FontSize',10,'FontWeight','bold');
 axMap=subplot(1,2,2,'Parent',figBC); hold(axMap,'on');
 image(axMap, repmat(BC.gimg,[1 1 3])); axis(axMap,'image','off'); set(axMap,'YDir','reverse');
-scMap=scatter(axMap, BC.grR, BC.grC, 28, nBledAmp,'filled','MarkerEdgeColor',[0.25 0.25 0.25],'LineWidth',0.3);
+scMap=scatter(axMap, BC.gdC, BC.gdR, 28, nBledAmp,'filled','MarkerEdgeColor',[0.25 0.25 0.25],'LineWidth',0.3);
 colormap(axMap, parula(max(nA+1,2))); clim(axMap,[0 nA]);
 cb2=colorbar(axMap,'eastoutside'); cb2.Label.String='# amplitudes bled';
-plot(axMap, BC.site(1), BC.site(2),'g+','MarkerSize',14,'LineWidth',2);
+plot(axMap, BC.sdC, BC.sdR,'g+','MarkerSize',14,'LineWidth',2);
 title(axMap,'# amps each pixel is bled at  (click \rightarrow report)','FontSize',10,'FontWeight','bold');
 sgtitle(figBC, sprintf('BLEEDCHAR — %s',label),'FontSize',11,'FontWeight','bold');
-BCg=struct('axMap',axMap,'scMap',scMap,'grR',BC.grR,'grC',BC.grC,'nG',nG,'amps',amps,'nA',nA, ...
+BCg=struct('axMap',axMap,'scMap',scMap,'grR',BC.grR,'grC',BC.grC,'gdR',BC.gdR,'gdC',BC.gdC,'nG',nG,'amps',amps,'nA',nA, ...
            'mResp',mResp,'rel',BC.rel,'Fs',Fs,'preN',preN,'dipCols',cplCols, ...
            'eDipA',eDipA,'mu0A',mu0A,'sd0A',sd0A,'zA',zA,'bledA',bledA,'slopeA',slopeA, ...
            'z_thr',bc_z_thr,'dist',distBC,'site',BC.site);
