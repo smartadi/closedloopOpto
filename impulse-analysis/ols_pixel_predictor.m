@@ -22,15 +22,26 @@
 %% (1) Paths + config
 close all;
 here = fileparts(mfilename('fullpath'));
+% When a *section* is run (Ctrl+Enter) or a selection is evaluated, MATLAB executes
+% a temp copy under %TEMP%\Editor_*, so mfilename points there. Discard any such
+% temp path so we never resolve dataDir to ...\Editor_xxxx\data.
+if ~isempty(here) && (contains(here, tempdir, 'IgnoreCase', true) || ...
+                      contains(here, 'Editor_', 'IgnoreCase', true))
+    here = '';
+end
 % robustly locate impulse-analysis/ (the dir that actually contains data/), so the
 % ROI + site caches are found regardless of pwd or how the script is launched.
-cand = {here, fullfile(pwd,'impulse-analysis'), pwd, fullfile(pwd,'..','impulse-analysis')};
+% Last-resort absolute anchor for this single-machine repo.
+knownDir = 'C:\Users\aditya\Documents\projects\brain_paper\impulse-analysis';
+cand = {here, fullfile(pwd,'impulse-analysis'), pwd, fullfile(pwd,'..','impulse-analysis'), knownDir};
 impulseDir = '';
 for c = cand
     if ~isempty(c{1}) && exist(fullfile(c{1},'data'),'dir'), impulseDir = c{1}; break; end
 end
 if isempty(impulseDir)
-    if ~isempty(here), impulseDir = here; else, impulseDir = fullfile(pwd,'impulse-analysis'); end
+    if exist(fullfile(knownDir,'data'),'dir'),  impulseDir = knownDir;
+    elseif ~isempty(here),                      impulseDir = here;
+    else,                                       impulseDir = fullfile(pwd,'impulse-analysis'); end
 end
 utilsDir   = fullfile(impulseDir,'..','utils');
 dataDir    = fullfile(impulseDir,'data');

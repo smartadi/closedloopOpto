@@ -18,8 +18,20 @@ clear le_path
 
 
 
-% Recompute paths wiped by clear all — mfilename() still works after clear.
-impulseDir = fileparts(mfilename('fullpath'));
+% Recompute paths wiped by clear all. Prefer which() (finds the on-path file, not
+% the temp Editor_* copy MATLAB makes when a section is run); fall back to
+% mfilename only if it is not a temp path.
+le2 = which('load_experiments');
+if ~isempty(le2)
+    impulseDir = fileparts(le2);
+else
+    mf = fileparts(mfilename('fullpath'));
+    if ~isempty(mf) && ~(contains(mf, tempdir, 'IgnoreCase', true) || ...
+                         contains(mf, 'Editor_', 'IgnoreCase', true))
+        impulseDir = mf;
+    end   % else keep the impulseDir computed above
+end
+clear le2 mf
 paperRoot  = fullfile(impulseDir, '..', 'paper');
 
 %% experiment name - define all experiments
@@ -177,7 +189,7 @@ stimStarts = stimStarts_filled;
 uAmp       = uAmp_filled;
 idxByAmp   = idxByAmp_filled;
 
-save(fullfile('data', sprintf('stim_vars_%s_%s_en%d.mat', mn, td, en)), 'uAmp', 'idxByAmp', 'stimStarts');
+save(fullfile(impulseDir, 'data', sprintf('stim_vars_%s_%s_en%d.mat', mn, td, en)), 'uAmp', 'idxByAmp', 'stimStarts');
 
 
 % get dF/F
