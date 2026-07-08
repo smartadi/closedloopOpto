@@ -155,6 +155,7 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 - [ ] Optional: insert fixed 2 ms pause in processing code to verify ~14 ms minimum latency shifts
 - [ ] Follow up with Zilu on ARIMA/forecasting models
 - [ ] Prepare widefield dataset for Tim Kim latent-space model; arrange joint meeting
+- [ ] **Make a video of the real-time controller setup** (Rainier rig) — a demo/supplementary clip showing the closed-loop controller running live. Likely easier to reconstruct on THIS PC from data we already have (replay the controller code against a recorded session) than to film the rig; check whether the online loop can be re-driven offline to render a real-time-looking animation.
 
 
 ---
