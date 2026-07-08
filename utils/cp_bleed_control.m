@@ -64,36 +64,46 @@ fprintf('  CATCH (amp0, n=%d, no stim):  res~var rho=%+.3f p=%.2g | res~delta rh
 fprintf('     bleed-axis~state (catch):  var rho=%+.3f | delta rho=%+.3f (contra state activity absent stim)\n', rbv, rbd);
 
 % ---- Figure -----------------------------------------------------------------
-fig = paperFig(22, 12);
+fig = figure('Color','w','Name','CP-BLEEDCTRL', ...
+    'Units','pixels','Position',[50 60 1500 860]);
 for s = 1:2
     ax1 = subplot(2,3,(s-1)*3+1); hold(ax1,'on');            % A1 bleed vs state
-    scatter(ax1, res(s).x, res(s).b, 7, [0.5 0.5 0.5], 'filled','MarkerFaceAlpha',0.3);
+    scatter(ax1, res(s).x, res(s).b, 16, [0.6 0.6 0.6], 'filled','MarkerFaceAlpha',0.30);
     pc = polyfit(res(s).x,res(s).b,1); xl=[min(res(s).x) max(res(s).x)];
-    plot(ax1, xl, polyval(pc,xl), 'r-','LineWidth',1.2);
-    title(ax1, sprintf('bleed vs %s  \\rho=%+.2f p=%.2g', res(s).nm, res(s).rA1, res(s).pA1), 'FontSize',6,'FontWeight','bold');
-    xlabel(ax1, res(s).xlab,'FontSize',6,'FontWeight','bold'); ylabel(ax1,'contra bleed (z)','FontSize',6,'FontWeight','bold');
-    set(ax1,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+    plot(ax1, xl, polyval(pc,xl), 'r-','LineWidth',2.2);
+    title(ax1, sprintf('bleed vs %s   \\rho=%+.2f p=%.2g', res(s).nm, res(s).rA1, res(s).pA1), 'FontSize',13,'FontWeight','bold');
+    xlabel(ax1, res(s).xlab,'FontSize',13,'FontWeight','bold'); ylabel(ax1,'contra bleed (z)','FontSize',13,'FontWeight','bold');
+    set(ax1,'Box','off','TickDir','out','FontSize',12);  grid(ax1,'on');
 
     ax2 = subplot(2,3,(s-1)*3+2); hold(ax2,'on');            % A2 vs A3 partial bars
     bar(ax2, [1 2], [res(s).rA2 res(s).rA3], 0.6, 'FaceColor',[0.3 0.55 0.85],'EdgeColor','none');
-    set(ax2,'XTick',[1 2],'XTickLabel',{'| pre','| pre,bleed'},'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
-    title(ax2, sprintf('%s partial(L1dev)  A4 int p=%.2g', res(s).nm, res(s).pi), 'FontSize',6,'FontWeight','bold');
-    ylabel(ax2,'\rho','FontSize',6,'FontWeight','bold'); yline(ax2,0,'k-','LineWidth',0.4);
+    set(ax2,'XTick',[1 2],'XTickLabel',{'| pre','| pre, bleed'},'Box','off','TickDir','out','FontSize',12);
+    title(ax2, sprintf('%s  partial(L1-dev)   (A4 interaction p=%.2g)', res(s).nm, res(s).pi), 'FontSize',13,'FontWeight','bold');
+    ylabel(ax2,'\rho','FontSize',13,'FontWeight','bold'); yline(ax2,0,'k-','LineWidth',0.6);
 
     ax3 = subplot(2,3,(s-1)*3+3); hold(ax3,'on');            % Control B catch null
     if s==1, cx = R.catch.pv; xlab='catch Pre-stim var (z)'; else, cx = R.catch.dp; xlab='catch Pre-stim \delta (z)'; end
     okc = isfinite(R.catch.res)&isfinite(cx);
-    scatter(ax3, cx(okc), R.catch.res(okc), 7, [0.6 0.3 0.3],'filled','MarkerFaceAlpha',0.4);
-    if sum(okc)>2, pc=polyfit(cx(okc),R.catch.res(okc),1); xl=[min(cx(okc)) max(cx(okc))]; plot(ax3,xl,polyval(pc,xl),'r-','LineWidth',1.2); end
+    scatter(ax3, cx(okc), R.catch.res(okc), 16, [0.6 0.3 0.3],'filled','MarkerFaceAlpha',0.40);
+    if sum(okc)>2, pc=polyfit(cx(okc),R.catch.res(okc),1); xl=[min(cx(okc)) max(cx(okc))]; plot(ax3,xl,polyval(pc,xl),'r-','LineWidth',2.2); end
     [rc,pcc]=corr(cx(okc),R.catch.res(okc),'type','Spearman','rows','complete');
-    title(ax3, sprintf('CATCH null  \\rho=%+.2f p=%.2g', rc, pcc), 'FontSize',6,'FontWeight','bold');
-    xlabel(ax3, xlab,'FontSize',6,'FontWeight','bold'); ylabel(ax3,'residual dip (\DeltaF/F %)','FontSize',6,'FontWeight','bold');
-    set(ax3,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+    title(ax3, sprintf('CATCH null   \\rho=%+.2f p=%.2g', rc, pcc), 'FontSize',13,'FontWeight','bold');
+    xlabel(ax3, xlab,'FontSize',13,'FontWeight','bold'); ylabel(ax3,'residual dip (\DeltaF/F %)','FontSize',13,'FontWeight','bold');
+    set(ax3,'Box','off','TickDir','out','FontSize',12);  grid(ax3,'on');
 end
-sgtitle(fig, sprintf('CP-BLEEDCTRL  %s %s e%d  (col1 bleed~state | col2 L1dev partial ±bleed | col3 catch null)', ...
-    R.mn, R.td, R.en), 'FontSize',6,'FontWeight','bold','Interpreter','tex');
-paperExport(fig, fullfile(R.paper_root,'images','figure2','cp_bleed_control.png'));
+sgtitle(fig, sprintf('CP-BLEEDCTRL  %s %s e%d   —   col1: bleed ~ state   |   col2: L1-dev partial ±bleed   |   col3: catch (amp-0) null', ...
+    R.mn, R.td, R.en), 'FontSize',14,'FontWeight','bold','Interpreter','tex');
+exportgraphics(fig, fullfile(R.paper_root,'images','figure2','cp_bleed_control.png'), 'Resolution',200);
 fprintf('[CP-BLEEDCTRL] Exported cp_bleed_control.png\n');
+
+% ---- explainer ------------------------------------------------------------------
+fprintf('\n[CP-BLEEDCTRL] HOW TO READ:\n');
+fprintf('  Confound tested: stim leaks ipsi->contra, so the contra predictor can absorb a\n');
+fprintf('  STATE-VARYING share of the local response, faking a state effect. Per state row:\n');
+fprintf('    col1 (bleed~state): should be FLAT (bleed not state-dep).\n');
+fprintf('    col2 (partial bars): "| pre" (headline) vs "| pre,bleed" — bars ~EQUAL => effect not bleed-driven.\n');
+fprintf('    col3 (catch null): amp-0 no-stim residual vs state should be FLAT (no local response to modulate).\n');
+fprintf('  Confound REJECTED when col1 flat, col2 bars equal, col3 null.\n');
 end
 
 % -- verdict helpers -----------------------------------------------------------

@@ -540,6 +540,11 @@ nfft_r = 2^nextpow2(nWvd);
 fr     = (0:nfft_r-1)'/nfft_r * Fs; nB_r = floor(nfft_r/2)+1;
 delta_r = fr(1:nB_r) >= 1 & fr(1:nB_r) <= 4;
 zf = @(x) (x - mean(x,'omitnan')) ./ max(std(x,'omitnan'), eps);
+% L1-dev normalizer: RATIO to the amplitude-mean (not z-score). Keeps it POSITIVE and
+% amplitude-controlled (each amp divided by its own mean deviation): 1 = average trial,
+% <1 = MORE predictable, >1 = less. (Replaces z-within-amp, which made below-average /
+% more-predictable trials confusingly negative. 2026-07-02.)
+rf = @(x) x ./ max(mean(x,'omitnan'), eps);
 
 if ~exist('make_inspector','var'), make_inspector = true; end   % clickable CP-RESi
 pre_w  = 2*Fs; post_w = 2*Fs; t_w = (-pre_w:post_w)/Fs; Lw = numel(t_w);
@@ -609,7 +614,7 @@ for ia = ia_res
         end
     end
     resE_all=[resE_all; zf(resE)]; devS_all=[devS_all; zf(devS)]; devP_all=[devP_all; zf(devP)];
-    gain_all=[gain_all; zf(gain)]; devL1_all=[devL1_all; zf(devL1)];   %#ok<AGROW>
+    gain_all=[gain_all; zf(gain)]; devL1_all=[devL1_all; rf(devL1)];   %#ok<AGROW> L1-dev = ratio to amp-mean (positive)
     mot_all=[mot_all; mt]; pv_all=[pv_all; pv]; dp_all=[dp_all; dp];
     amp_all=[amp_all; repmat(uAmp_cp(ia), nT, 1)];   %#ok<AGROW>
     actW_all=[actW_all; actW]; prdW_all=[prdW_all; prdW];   %#ok<AGROW>

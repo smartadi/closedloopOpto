@@ -66,22 +66,32 @@ Ua              = single(Ua);
 Sv              = single(diag(Sv));
 %% get new V (Fs) from new U and data, batch by batch
 ix = 0;
-Fs = zeros(nSVD, ntotframes, 'single');   
+Fs = zeros(nSVD, ntotframes, 'single');
 
-for ibatch = 1:nbatch+1    
-    fprintf(1, '   frame %d out of %d\n', ix, ntotframes);  
+% GLOBAL temporal mean of the pixel data (computed once over ALL frames), to be
+% subtracted consistently in every batch. Previously each batch subtracted its OWN
+% mean(data,2), which injected a piecewise-constant per-batch offset into Vnew that
+% jumped discontinuously at every batchStart (frame 1+k*imgbatchSize). That offset
+% survives per-mode z-scoring/truncation and shows up as spurious step artifacts in
+% any linear readout of Vnew. The Ua basis was built from a globally demeaned mov
+% (line 37), so Vnew must use the same global mean. data mean over all frames =
+% U*mean(V,2), a single cheap matvec.
+globMean = U * mean(V, 2);   % [uSize x 1] global temporal mean in pixel space
+
+for ibatch = 1:nbatch+1
+    fprintf(1, '   frame %d out of %d\n', ix, ntotframes);
     batchStart = 1+(ibatch-1)*imgbatchSize;
     if ibatch == nbatch+1 & mod(ntotframes,imgbatchSize)
         batchEnd = ntotframes;
     else
         batchEnd = ibatch*imgbatchSize;
     end
-    data = U*V(:,batchStart:batchEnd);    
+    data = U*V(:,batchStart:batchEnd);
 
-    % subtract mean as we did before
-    data = data-mean(data,2);
+    % subtract the GLOBAL mean (consistent across all batches; see note above)
+    data = data - globMean;
     FsRange = ix + (1:size(data,2));
-    Fs(:, FsRange) = Ua' * data;       
+    Fs(:, FsRange) = Ua' * data;
     ix = ix + size(data,2);
 end
 %%

@@ -6,15 +6,17 @@ function [dA,dG,dL, dA1,dG1,dL1, trA,trG,trL] = cp_agl(R)
 % amplitude-mean dip template = predictability). SECONDARY DV = template-gain:
 % project each trial's dip onto the template (gain = <r,mu>/<mu,mu>; =1 for an
 % average response, signed/directional = response SIZE). (Primacy swapped 2026-07-01:
-% at the retargeted laser center L1-dev is the robust effect, gain collapses.) Both
-% z-scored WITHIN amplitude, for three signals, plus their pooled per-trial dip
-% traces (aligned to R.mot order):
+% at the retargeted laser center L1-dev is the robust effect, gain collapses.)
+% Normalized WITHIN amplitude: L1-dev as a RATIO to the amp-mean (positive; 1=average
+% trial, <1=more predictable), template-gain as a z-score (signed/directional). For
+% three signals, plus their pooled per-trial dip traces (aligned to R.mot order):
 %   dA/dA1 , trA — actual ipsi dip        (= GLOBAL + LOCAL mixed)
 %   dG/dG1 , trG — contra prediction      (GLOBAL incoming activity)
 %   dL/dL1 , trL — residual = actual-contra (LOCAL stim effect)
 % d*1 = L1-dev (PRIMARY);  d* = template-gain (SECONDARY).
 iD = R.iDip;  nz = find(R.nzMask(:))';
-zf = @(x)(x-mean(x,'omitnan'))/max(std(x,'omitnan'),eps);
+zf = @(x)(x-mean(x,'omitnan'))/max(std(x,'omitnan'),eps);            % template-gain: z-within-amp (signed/directional)
+rf = @(x) x ./ max(mean(x,'omitnan'),eps);                          % L1-dev: RATIO to amp-mean (positive; 1=avg, <1=more predictable)
 dA=[]; dG=[]; dL=[]; dA1=[]; dG1=[]; dL1=[]; trA=[]; trG=[]; trL=[];
 for ia = nz
     A = R.act_imp{ia};  P = R.prr_imp{ia};  L = R.res_imp{ia};
@@ -22,7 +24,7 @@ for ia = nz
     [gG,l1G] = local_gain(P(:,iD));
     [gL,l1L] = local_gain(L(:,iD));
     dA  = [dA;  zf(gA)];   dG  = [dG;  zf(gG)];   dL  = [dL;  zf(gL)];   %#ok<AGROW>
-    dA1 = [dA1; zf(l1A)];  dG1 = [dG1; zf(l1G)];  dL1 = [dL1; zf(l1L)]; %#ok<AGROW>
+    dA1 = [dA1; rf(l1A)];  dG1 = [dG1; rf(l1G)];  dL1 = [dL1; rf(l1L)]; %#ok<AGROW> L1-dev = ratio to amp-mean
     trA = [trA; A];  trG = [trG; P];  trL = [trL; L];                   %#ok<AGROW>
 end
 end

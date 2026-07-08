@@ -29,7 +29,7 @@ here = fileparts(mfilename('fullpath'));
 % (contra_prediction needs best_sys from tf_fit; motion and prestim use
 %  contra_prediction residuals as the deviation signal)
 run(fullfile(here, 'tf_fit.m'));
-run(fullfile(here, 'contra_prediction.m'));
+ %run(fullfile(here, 'contra_prediction.m'));
 % run(fullfile(here, 'trace_overlay.m'));
 % run(fullfile(here, 'dose_response.m'));
 

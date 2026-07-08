@@ -20,19 +20,22 @@ rr = nan(1,3);
 for c = 1:3, m = okMask & isfinite(AGL{c,2}); rr(c) = corr(AGL{c,2}(m), x(m),'type','Spearman','rows','complete'); end
 fprintf('  L1-dev vs %s:  Actual %+.3f | Global %+.3f | Local %+.3f\n', tag, rr(1), rr(2), rr(3));
 
-fig = paperFig(22, 6);
+compClr = [0.20 0.20 0.20; 0.15 0.40 0.80; 0.85 0.20 0.20];   % Actual / Global / Local
+fig = figure('Color','w','Name',sprintf('CP-%s',tag), ...
+    'Units','pixels','Position',[50 90 1560 430]);
 for c = 1:3
     ax = subplot(1,4,c); hold(ax,'on');
     m = okMask & isfinite(AGL{c,2});  xv = x(m);  yv = AGL{c,2}(m);
-    scatter(ax, xv, yv, 7, [0.5 0.5 0.5], 'filled', 'MarkerFaceAlpha',0.3);
+    scatter(ax, xv, yv, 16, [0.6 0.6 0.6], 'filled', 'MarkerFaceAlpha',0.30);
     if numel(xv) > 2
         pc = polyfit(xv,yv,1);  xl = [min(xv) max(xv)];
-        plot(ax, xl, polyval(pc,xl), 'r-', 'LineWidth',1.2);
+        plot(ax, xl, polyval(pc,xl), '-', 'Color',compClr(c,:), 'LineWidth',2.2);
     end
-    title(ax, sprintf('%s  \\rho=%+.2f', AGL{c,1}, rr(c)), 'FontSize',6,'FontWeight','bold');
-    set(ax,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
-    xlabel(ax, xlab, 'FontSize',6,'FontWeight','bold');
-    if c==1, ylabel(ax, 'L1-dev (z)', 'FontSize',6,'FontWeight','bold'); end
+    yline(ax, 1, ':', 'Color',[0.5 0.5 0.5]);   % 1 = amplitude-average trial
+    title(ax, sprintf('%s   \\rho=%+.2f', AGL{c,1}, rr(c)), 'FontSize',13,'FontWeight','bold','Color',compClr(c,:));
+    set(ax,'Box','off','TickDir','out','FontSize',12);  grid(ax,'on');
+    xlabel(ax, xlab, 'FontSize',13,'FontWeight','bold');
+    if c==1, ylabel(ax, 'L1-dev (\times amp-avg)', 'FontSize',13,'FontWeight','bold'); end
 end
 ax4 = subplot(1,4,4); hold(ax4,'on');                 % Local dose-response (state quintiles)
 m = okMask & isfinite(AGL{3,2});  xv = x(m);  yv = AGL{3,2}(m);
@@ -42,12 +45,19 @@ for b = 1:5
     sel = bin == b;
     bc(b) = mean(xv(sel),'omitnan'); bm(b) = mean(yv(sel),'omitnan'); bse(b) = std(yv(sel),'omitnan')/sqrt(max(sum(sel),1));
 end
-errorbar(ax4, bc, bm, bse, '-o', 'Color',[0.85 0.2 0.1], 'MarkerFaceColor',[0.85 0.2 0.1], 'LineWidth',1, 'MarkerSize',4, 'CapSize',4);
-set(ax4,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
-xlabel(ax4, xlab, 'FontSize',6,'FontWeight','bold'); ylabel(ax4, 'Local L1-dev (z)', 'FontSize',6,'FontWeight','bold');
-title(ax4, 'Local dose-response (quintiles)', 'FontSize',6,'FontWeight','bold');
-sgtitle(fig, sprintf('CP-%s effect on residual  %s %s e%d  (cols 1-3 Actual/Global/Local; col 4 Local dose-resp)', ...
-    tag, R.mn, R.td, R.en), 'FontSize',6,'FontWeight','bold','Interpreter','tex');
-paperExport(fig, fullfile(R.paper_root,'images','figure2',fname));
+errorbar(ax4, bc, bm, bse, '-o', 'Color',[0.85 0.2 0.1], 'MarkerFaceColor',[0.85 0.2 0.1], 'LineWidth',2.0, 'MarkerSize',7, 'CapSize',8);
+yline(ax4, 1, ':', 'Color',[0.5 0.5 0.5]);   % 1 = amplitude-average trial
+set(ax4,'Box','off','TickDir','out','FontSize',12);  grid(ax4,'on');
+xlabel(ax4, xlab, 'FontSize',13,'FontWeight','bold'); ylabel(ax4, 'Local L1-dev (\times amp-avg)', 'FontSize',13,'FontWeight','bold');
+title(ax4, 'Local dose-response (quintiles)', 'FontSize',13,'FontWeight','bold','Color',compClr(3,:));
+sgtitle(fig, sprintf('CP-%s on residual  %s %s e%d   —   cols 1-3 = Actual / Global / Local (L1-dev vs state);   col 4 = Local dose-response', ...
+    tag, R.mn, R.td, R.en), 'FontSize',14,'FontWeight','bold','Interpreter','tex');
+exportgraphics(fig, fullfile(R.paper_root,'images','figure2',fname), 'Resolution',200);
 fprintf('[CP-%s] Exported %s\n', tag, fname);
+
+% ---- explainer ------------------------------------------------------------------
+fprintf('  HOW TO READ [CP-%s]: cols 1-3 = L1-dev (predictability; lower=more predictable) vs %s\n', tag, tag);
+fprintf('  for Actual / Global / Local. Effect in Actual+Global that COLLAPSES in Local => GLOBAL/network;\n');
+fprintf('  survives in Local => genuinely local. Decisive test = PARTIAL(L1|pre) rho=%+.3f p=%.2g (col-3 slope after\n', rA, pA);
+fprintf('  removing prediction-quality). NOTE: L1-dev carries var(y), so raw %s-vs-L1 is partly a power confound.\n', tag);
 end

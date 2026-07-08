@@ -54,7 +54,7 @@ else
 end
 
 %% (S01) Setup -- session and model parameters
-selExp    = 3;      % experiment index (default 3 = AL_0033 2025-01-29)
+selExp    = 2;      % experiment index (default 3 = AL_0033 2025-01-29)
 pY        = 0;      % AR self-lags on y (0 = pure contra prediction)
 pX        = 0;      % predictor lags. 0 = instantaneous map y(t)=B*contra(t).
                     % Interhemispheric coupling is near-instantaneous (callosal
@@ -256,7 +256,7 @@ pre_frames = round(spont_pre * Fs);
 % Prereqs (run earlier sections first): U_cp, V_cp, V_c_full, valid_cp_svd (contra),
 % ipsi_mask_cp, y_full, Fs, all_starts_cp/pre_frames.
 
-h_K        = 50;      % SVD modes per hemisphere (Zhiwen uses 50)
+h_K        = 200;      % SVD modes per hemisphere (Zhiwen uses 50)
 h_maxPix   = 2000;    % cap ipsi pixels (CPU memory); pooled R^2 is ~invariant to it
 h_maxFrm   = 60000;   % cap total spontaneous frames used
 h_trainFrac= 2/3;     % contiguous early-train / late-test split (~Zhiwen 40k/20k)
@@ -913,7 +913,8 @@ clear cp_spont_predq;  rehash;
 predq = cp_spont_predq(struct( ...
     'pixw', h_pixw, 'U_K', U_svd_raw(:,1:h_K), 'V_c', V_c_full(1:h_K,:), ...
     'y', y_full, 'tr', h_tr, 'mI_kern', h_mI_kern, 'onf', b_onf, 'mot', mot_full, ...
-    'Fs', Fs, 'paper_root', paper_root, 'mn', mn, 'td', td, 'en', en));
+    'Fs', Fs, 'paper_root', paper_root, 'mn', mn, 'td', td, 'en', en, ...
+    'winSec', 3.0));   % evaluation window length (s); default 1.5 — raise to see longer spontaneous windows
 
 
 % =====================================================================================
@@ -1000,73 +1001,104 @@ states = {'Motion',  'Motion (z)',         R.mot, R.okM; ...
           'PreDelta','Pre-stim \delta (z)',R.dp,  R.okD};
 fprintf('\n[CP-LOCAL] Spearman rho of L1-dev (primary) with each state (z-within-amp):\n');
 fprintf('  %-9s  Actual   Global   Local\n', 'state');
+rrAll = nan(3,3);  ppAll = nan(3,3);
 for s = 1:3
-    rr = nan(1,3);
     for c = 1:3
         m = states{s,4} & isfinite(AGL{c,2});
-        rr(c) = corr(AGL{c,2}(m), states{s,3}(m), 'type','Spearman','rows','complete');
+        [rrAll(s,c), ppAll(s,c)] = corr(AGL{c,2}(m), states{s,3}(m), 'type','Spearman','rows','complete');
     end
-    fprintf('  %-9s  %+.3f   %+.3f   %+.3f\n', states{s,1}, rr(1), rr(2), rr(3));
+    fprintf('  %-9s  %+.3f   %+.3f   %+.3f\n', states{s,1}, rrAll(s,1), rrAll(s,2), rrAll(s,3));
 end
-figL = paperFig(18, 14);
+
+% ---- readable on-screen overview (diagnostic, NOT a paper panel) -----------------
+compClr = [0.20 0.20 0.20; 0.15 0.40 0.80; 0.85 0.20 0.20];   % Actual / Global / Local
+figL = figure('Color','w','Name','CP-LOCAL overview', ...
+    'Units','pixels','Position',[70 70 1180 900]);
 for s = 1:3
     for c = 1:3
         axL = subplot(3,3,(s-1)*3+c); hold(axL,'on');
         m = states{s,4} & isfinite(AGL{c,2}); xv = states{s,3}(m); yv = AGL{c,2}(m);
-        scatter(axL, xv, yv, 6, [0.5 0.5 0.5], 'filled', 'MarkerFaceAlpha',0.3);
+        scatter(axL, xv, yv, 16, [0.6 0.6 0.6], 'filled', 'MarkerFaceAlpha',0.30);
         if numel(xv) > 2
             pc = polyfit(xv,yv,1); xl = [min(xv) max(xv)];
-            plot(axL, xl, polyval(pc,xl), 'r-', 'LineWidth',1.0);
-            [rv,pp] = corr(xv,yv,'type','Spearman');
-            title(axL, sprintf('%s  \\rho=%+.2f p=%.2g', AGL{c,1}, rv, pp), 'FontSize',5,'FontWeight','bold');
+            plot(axL, xl, polyval(pc,xl), '-', 'Color',compClr(c,:), 'LineWidth',2.2);
         end
-        set(axL,'Box','off','TickDir','out','FontSize',5,'FontWeight','bold');
-        if s==3, xlabel(axL, states{s,2}, 'FontSize',5,'FontWeight','bold'); end
-        if c==1, ylabel(axL, sprintf('%s\nL1-dev (z)', states{s,2}), 'FontSize',5,'FontWeight','bold'); end
+        yline(axL, 1, ':', 'Color',[0.5 0.5 0.5], 'HandleVisibility','off');   % 1 = amplitude-average trial
+        set(axL,'Box','off','TickDir','out','FontSize',11);  grid(axL,'on');
+        if s==1   % column header (component) above the top row
+            text(axL, 0.5, 1.10, AGL{c,1}, 'Units','normalized', ...
+                'HorizontalAlignment','center', 'FontSize',16, 'FontWeight','bold', ...
+                'Color',compClr(c,:));
+        end
+        if s==3, xlabel(axL, states{s,2}, 'FontSize',13, 'FontWeight','bold'); end
+        if c==1, ylabel(axL, sprintf('%s\nL1-dev (\\times amp-avg)', states{s,1}), ...
+                'FontSize',13, 'FontWeight','bold'); end
     end
 end
-sgtitle(figL, sprintf('CP-LOCAL overview  %s %s e%d  (rows=state, cols=Actual/Global/Local)', ...
-    R.mn, R.td, R.en), 'FontSize',6,'FontWeight','bold','Interpreter','tex');
-paperExport(figL, fullfile(R.paper_root,'images','figure2','cp_local_state.png'));
+sgtitle(figL, sprintf('CP-LOCAL  %s %s e%d   —  rows = brain state,  cols = signal (Actual / Global / Local)', ...
+    R.mn, R.td, R.en), 'FontSize',14, 'FontWeight','bold', 'Interpreter','tex');
+exportgraphics(figL, fullfile(R.paper_root,'images','figure2','cp_local_state.png'), 'Resolution',200);
 fprintf('[CP-LOCAL] Exported cp_local_state.png\n');
 
-%% (S19) [CP-MOTION] Motion-only: predictability (No-motion vs Motion) + mean dip trace
+% ---- data-driven explainer: where does each state effect LIVE? -------------------
+fprintf('\n[CP-LOCAL] HOW TO READ:\n');
+fprintf('  Each row is a brain-state axis; each column is the signal we measure the state effect on.\n');
+fprintf('    Actual = raw ipsi-kernel dip deviation (|L1|).\n');
+fprintf('    Global = the part contra PREDICTS (shared network flowing into the kernel).\n');
+fprintf('    Local  = residual = Actual - Global = the stim-specific local response.\n');
+fprintf('  A state effect present in Actual+Global but that VANISHES in Local is a GLOBAL/network\n');
+fprintf('  effect (contra explains it); one that SURVIVES into Local is genuinely local.\n');
+fprintf('  --- verdict per state (this session) ---\n');
+for s = 1:3
+    a = rrAll(s,1); g = rrAll(s,2); l = rrAll(s,3);
+    if abs(a) < 0.05
+        v = sprintf('no Actual effect to place (Actual rho %+.2f)', a);
+    elseif abs(l) < 0.5*abs(a)
+        v = sprintf('GLOBAL  — collapses in Local (Actual %+.2f, Global %+.2f, Local %+.2f)', a, g, l);
+    elseif abs(l) >= 0.8*abs(a)
+        v = sprintf('LOCAL   — survives contra removal (Actual %+.2f, Local %+.2f)', a, l);
+    else
+        v = sprintf('MIXED   — partly local (Actual %+.2f, Global %+.2f, Local %+.2f)', a, g, l);
+    end
+    fprintf('   %-9s -> %s\n', states{s,1}, v);
+end
+
+%% (S19) [CP-MOTION] Motion-only: predictability (No-motion vs Motion)
 if ~exist('dL','var'), error('Run [CP-SETUP] first.'); end
 mot = R.mot;  noM = mot <= 0.5;  yesM = mot > 0.5;   % binary split (motion z is zero-inflated; lab motThr_hi=0.5)
 [rp,pp_] = partialcorr(R.devL1(R.okM), mot(R.okM), R.devP(R.okM), 'type','Spearman','rows','complete');
 fprintf('\n[CP-MOTION] partial(L1-dev, motion | dev_pre) rho=%+.3f p=%.3g | n(No/Mot)=%d/%d\n', ...
     rp, pp_, sum(noM), sum(yesM));
-clsCol = [0.3 0.55 0.85; 0.85 0.2 0.2];  clsLab = {'No motion','Motion'};  TR = {trA, trG, trL};
-figM = paperFig(18, 11);
+clsCol = [0.3 0.55 0.85; 0.85 0.2 0.2];  clsLab = {'No motion','Motion'};
+compClr = [0.20 0.20 0.20; 0.15 0.40 0.80; 0.85 0.20 0.20];   % Actual / Global / Local
+figM = figure('Color','w','Name','CP-MOTION', ...
+    'Units','pixels','Position',[60 200 1180 420]);
 for c = 1:3
-    d = AGL{c,2};  T = TR{c};
-    axt = subplot(2,3,c); hold(axt,'on');               % top: |dip dev| No-motion vs Motion
+    d = AGL{c,2};
+    axt = subplot(1,3,c); hold(axt,'on');               % |dip dev| No-motion vs Motion
     grp = {d(noM & isfinite(d)), d(yesM & isfinite(d))};
     for q = 1:2
         v = grp{q};  mu = mean(v);  se = std(v)/sqrt(max(numel(v),1));
         bar(axt, q, mu, 0.6, 'FaceColor',clsCol(q,:), 'FaceAlpha',0.55, 'EdgeColor','none');
-        errorbar(axt, q, mu, se, 'k', 'LineWidth',1, 'CapSize',5);
+        errorbar(axt, q, mu, se, 'k', 'LineWidth',1.2, 'CapSize',8);
     end
     pr = ranksum(grp{1}, grp{2});
-    set(axt,'XTick',1:2,'XTickLabel',clsLab,'XLim',[0.4 2.6],'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
-    title(axt, sprintf('%s  ranksum p=%.2g', AGL{c,1}, pr), 'FontSize',6,'FontWeight','bold');
-    if c==1, ylabel(axt, 'L1-dev (z) [predictability]','FontSize',6,'FontWeight','bold'); end
-    axb = subplot(2,3,3+c); hold(axb,'on');             % bottom: mean dip trace by motion class
-    cls = {noM, yesM};
-    for q = 1:2
-        idx = cls{q} & any(isfinite(T),2);
-        m  = mean(T(idx,:),1,'omitnan');  se = std(T(idx,:),0,1,'omitnan')/sqrt(max(sum(idx),1));
-        patch(axb,[R.t_imp,fliplr(R.t_imp)],[m+se,fliplr(m-se)],clsCol(q,:),'FaceAlpha',0.15,'EdgeColor','none','HandleVisibility','off');
-        plot(axb, R.t_imp, m, 'Color',clsCol(q,:), 'LineWidth',1.2, 'DisplayName',sprintf('%s (n=%d)',clsLab{q},sum(idx)));
-    end
-    xline(axb,0,'k:','LineWidth',0.5,'HandleVisibility','off'); yline(axb,0,'k--','LineWidth',0.4,'HandleVisibility','off');
-    set(axb,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold'); xlabel(axb,'Time re onset (s)','FontSize',6,'FontWeight','bold');
-    if c==1, ylabel(axb,'\DeltaF/F (%)','FontSize',6,'FontWeight','bold'); lg=legend(axb,'Location','south','Box','off','FontSize',5); lg.ItemTokenSize=[6 6]; end
+    yline(axt, 1, ':', 'Color',[0.5 0.5 0.5], 'HandleVisibility','off');   % 1 = amplitude-average trial
+    set(axt,'XTick',1:2,'XTickLabel',clsLab,'XLim',[0.4 2.6],'Box','off','TickDir','out','FontSize',12);
+    title(axt, sprintf('%s   (ranksum p=%.2g)', AGL{c,1}, pr), 'FontSize',13,'FontWeight','bold','Color',compClr(c,:));
+    if c==1, ylabel(axt, 'L1-dev (\times amp-avg)  [lower = more predictable]','FontSize',13,'FontWeight','bold'); end
 end
-sgtitle(figM, sprintf('CP-MOTION  %s %s e%d  (top: predictability | bottom: mean dip)  by motion class', ...
-    R.mn, R.td, R.en), 'FontSize',6,'FontWeight','bold','Interpreter','tex');
-paperExport(figM, fullfile(R.paper_root,'images','figure2','cp_motion_residual.png'));
+sgtitle(figM, sprintf('CP-MOTION  %s %s e%d   —   dip predictability, No-motion vs Motion  (Actual / Global / Local)', ...
+    R.mn, R.td, R.en), 'FontSize',14,'FontWeight','bold','Interpreter','tex');
+exportgraphics(figM, fullfile(R.paper_root,'images','figure2','cp_motion_residual.png'), 'Resolution',200);
 fprintf('[CP-MOTION] Exported cp_motion_residual.png\n');
+
+% ---- explainer ------------------------------------------------------------------
+fprintf('\n[CP-MOTION] HOW TO READ:\n');
+fprintf('  Columns = Actual / Global / Local signal. Bars = trial-to-trial dip predictability\n');
+fprintf('  (L1-dev x amp-avg; lower = more predictable) split No-motion vs Motion.\n');
+fprintf('  Motion changing Actual+Global but NOT Local => the motion effect is GLOBAL/network,\n');
+fprintf('  the local stim response is motion-invariant (headline). partial(L1,motion|pre) rho=%+.3f p=%.2g.\n', rp, pp_);
 
 %% (S20) [CP-MOTION-AMP] Per-amplitude motion vs |dip dev| (figure-3 style, large fonts)
 % One subplot per amplitude (within-amp r controls for amplitude). Pick the signal:
@@ -1098,3 +1130,33 @@ cp_cont_state('PreDelta', 'Pre-stim \delta (z)', R.dp, AGL, R.devL1, R.devP, R.o
 % Needs R.bleed / R.catch from cp_residual_core -> re-run [CP-SETUP] if missing.
 if ~exist('R','var'), error('Run [CP-SETUP] first.'); end
 cp_bleed_control(R);
+
+%% (S24) [CP-TUNE] Per-pixel amplitude tuning-curve viewer (click a pixel -> response vs amplitude)
+% Launches the widefield miniGUI pixelTuningCurveViewerSVD on this impulse session:
+%   A) brain image at a chosen time/amplitude; B) peri-stim traces at the clicked pixel
+%      for every amplitude;  C) that pixel's TUNING CURVE = response vs stim amplitude.
+% Numeric amplitude labels => the tuning-curve x-axis is the actual amplitude (V); amp 0
+% (catch/gap-fill) is kept as the baseline anchor. Needs only the load block + [CP-SETUP]
+% variables (U_cp, V_cp, t_full, uAmp_cp, imp_data). Vendored GUI — called, not modified.
+% Controls: click any panel to set pixel/time/condition; arrow keys navigate; i/j/k/l move
+% the pixel; '-'/'=' rescale the color axis (press '-' a few times if the image looks flat —
+% the GUI defaults to raw-count caxis); 'r' draws an ROI and returns peri-event traces.
+if ~exist('U_cp','var') || ~exist('V_cp','var') || ~exist('uAmp_cp','var') || ~exist('imp_data','var')
+    error('[CP-TUNE] run the load block + [CP-SETUP] first (needs U_cp, V_cp, t_full, uAmp_cp, imp_data).');
+end
+tune_win = [-0.5 1.5];                       % peri-stim window (s): baseline + dip (0-200 ms) + recovery
+tune_times = [];  tune_amp = [];
+for ia = 1:numel(uAmp_cp)
+    st = imp_data.startTimes{ia}(:);
+    tune_times = [tune_times; st];                                          %#ok<AGROW>
+    tune_amp   = [tune_amp;   repmat(double(uAmp_cp(ia)), numel(st), 1)];   %#ok<AGROW>
+end
+fprintf('\n[CP-TUNE] %s %s e%d — launching pixel tuning-curve viewer: %d onsets, %d amplitudes (%.2f-%.2f V), win [%.1f %.1f]s\n', ...
+    mn, td, en, numel(tune_times), numel(uAmp_cp), min(uAmp_cp), max(uAmp_cp), tune_win(1), tune_win(2));
+pixelTuningCurveViewerSVD(U_cp, double(V_cp), t_full, tune_times.', tune_amp.', tune_win);
+
+% NOTE: the direct-pixel, no-lag OLS predictor (200-pixel contra grid) lives in its own
+% standalone script: impulse-analysis/ols_pixel_predictor.m (independent of this RRR
+% pipeline; run it directly after load_experiments.m).
+%%
+

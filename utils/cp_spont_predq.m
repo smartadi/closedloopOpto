@@ -114,7 +114,8 @@ fprintf('[CP-PREDQ] exported cp_spont_r2_vs_state.png\n');
 % --- attach the clickable inspector ----------------------------------------------
 if interactive
     D = struct('states',states,'lr2',lr2,'rho',rho,'winIdx',{winIdx},'y',y,'yhat',yhat, ...
-               'Fs',Fs,'ax',ax,'statesL',{statesL},'motE',motE,'pv',pv,'dpow',dpow,'drel',drel);
+               'Fs',Fs,'ax',ax,'statesL',{statesL},'motE',motE,'pv',pv,'dpow',dpow,'drel',drel, ...
+               'motz',motz);
     guidata(fig, D);  set(fig,'WindowButtonDownFcn',@predq_click);
     fprintf('[CP-PREDQ] click any scatter point -> window detail (actual / prediction / mean-corrected).\n');
 end
@@ -143,9 +144,10 @@ idx = D.winIdx{j};  tt = (0:numel(idx)-1)/D.Fs;
 yv = D.y(idx);  yh = D.yhat(idx);
 yh_mc = yh - mean(yh,'omitnan') + mean(yv,'omitnan');    % mean-corrected prediction (DC re-aligned to window)
 r_mc  = yv - yh_mc;
+mv    = D.motz(idx);                                     % z-scored motion over the window
 figD = figure('Name',sprintf('CP-PREDQ  window %d  |  R^2=%.2f  corr=%.2f',j,D.lr2(j),D.rho(j)), ...
-    'Color','w','Position',[220 120 620 520]);
-ax1 = subplot(2,1,1,'Parent',figD); hold(ax1,'on');
+    'Color','w','Position',[220 90 620 640]);
+ax1 = subplot(3,1,1,'Parent',figD); hold(ax1,'on');
 plot(ax1, tt, yv,    'k-',  'LineWidth',1.6, 'DisplayName','trial (actual)');
 plot(ax1, tt, yh,    'r-',  'LineWidth',1.2, 'DisplayName','prediction');
 plot(ax1, tt, yh_mc, 'b--', 'LineWidth',1.2, 'DisplayName','mean-corrected prediction');
@@ -154,11 +156,17 @@ ylabel(ax1,'\DeltaF/F (%)','FontWeight','bold');
 legend(ax1,'Location','best','Box','off','FontSize',8);
 title(ax1, sprintf('window %d  |  R^2=%.2f  corr=%.2f  |  motion=%.2f  var=%.2f  \\delta=%.2f  rel\\delta=%.2f', ...
     j, D.lr2(j), D.rho(j), D.motE(j), D.pv(j), D.dpow(j), D.drel(j)), 'FontWeight','bold','FontSize',9);
-ax2 = subplot(2,1,2,'Parent',figD); hold(ax2,'on');
+ax2 = subplot(3,1,2,'Parent',figD); hold(ax2,'on');
 plot(ax2, tt, r_mc, 'Color',[0.85 0.15 0.15], 'LineWidth',1.4, 'DisplayName','residual (actual - mean-corr pred)');
 yline(ax2,0,'k:','HandleVisibility','off'); set(ax2,'Box','off','TickDir','out');
-xlabel(ax2,'time in window (s)','FontWeight','bold');  ylabel(ax2,'residual \DeltaF/F (%)','FontWeight','bold');
+ylabel(ax2,'residual \DeltaF/F (%)','FontWeight','bold');
 legend(ax2,'Location','best','Box','off','FontSize',8);
+ax3 = subplot(3,1,3,'Parent',figD); hold(ax3,'on');
+plot(ax3, tt, mv, 'Color',[0.20 0.55 0.25], 'LineWidth',1.4, 'DisplayName','motion (z)');
+yline(ax3,0,'k:','HandleVisibility','off'); set(ax3,'Box','off','TickDir','out');
+xlabel(ax3,'time in window (s)','FontWeight','bold');  ylabel(ax3,'motion (z)','FontWeight','bold');
+legend(ax3,'Location','best','Box','off','FontSize',8);
+linkaxes([ax1 ax2 ax3],'x');  xlim(ax3,[tt(1) tt(end)]);
 end
 
 % ── small helper ─────────────────────────────────────────────────────────────────
