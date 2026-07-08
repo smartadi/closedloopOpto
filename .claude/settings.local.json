@@ -79,7 +79,8 @@
       "Bash(git -C /c/Users/aditya/Documents/projects/brain_paper status -sb)",
       "mcp__matlab__detect_matlab_toolboxes",
       "Bash(rm -f _tmp_cphemi_run.m zz_cphemi_run.m)",
-      "Bash(ls -1 *cphemi_run.m)"
+      "Bash(ls -1 *cphemi_run.m)",
+      "Bash(git rm *)"
     ]
   },
   "hooks": {
