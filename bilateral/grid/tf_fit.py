@@ -20,9 +20,15 @@ import cross_response
 # lag was absorbing real early dynamics — the model stayed flat until theta then started, so
 # the poles missed the fast rise. All fits now start at t=0 (theta fixed to 0).
 DELAY_MAX = 0.0    # s — lag term disabled (theta pinned to 0)
-ORDERS = (1, 2, 3, 4, 5)   # pole counts to try (BIC selects among them)
-FIT_TMAX = 1.0     # s — fit only t in [0, FIT_TMAX]; beyond ~1 s the trial average is
-                   # contaminated by neighbor stims (ITI ~0.71 s), so don't fit the tail.
+ORDERS = (1, 2, 3)   # pole counts to try (CV selects among them). Capped at 3: a perturbation
+                     # impulse response is a rise-then-decay (~2nd order). Orders 4-5 were being
+                     # CV-selected only to approximate the rise with a sum of DECAYING exps — a
+                     # model-class artifact (tightening the window made it worse, not better),
+                     # not real dynamics. Low order also keeps poles/zeros interpretable.
+FIT_TMAX = 0.6     # s — fit only t in [0, FIT_TMAX], which ends BEFORE the first neighbour
+                   # stim (~0.71 s at ITI 0.71 s). The response transient completes by ~0.5 s;
+                   # ending at 0.6 s keeps the fit clean of the reproducible neighbour bump —
+                   # which CV alone can't reject (it is present in both trial-halves).
 
 
 def _impulse(t, theta, A, tau):
@@ -86,14 +92,73 @@ def fit_lti(t, h, orders=ORDERS, criterion="bic"):
     return best
 
 
+def _r2(yhat, target):
+    ss = np.sum((yhat - target) ** 2)
+    st = np.sum((target - target.mean()) ** 2) + 1e-12
+    return 1.0 - ss / st
+
+
+def split_half_means():
+    """Even/odd-trial split-half mean responses HA, HB (nS,nS,nW) from the trials cache —
+    two INDEPENDENT estimates of each pair's impulse response, for cross-validated order
+    selection. Same per-half baseline convention as build()."""
+    import scipy.interpolate
+    zt = cross_response.load_trials()
+    roi_ts = zt["roi_ts"].astype(np.float64)
+    svdT, onset_t, pos = zt["svdT"], zt["onset_t"], zt["pos"]
+    sites, window, base_ix = zt["sites"], zt["window"], int(zt["base_ix"])
+    nS, nW = len(sites), len(window)
+    fr = [scipy.interpolate.interp1d(svdT, roi_ts[:, r], bounds_error=False, fill_value=np.nan)
+          for r in range(nS)]
+    HA = np.full((nS, nS, nW), np.nan); HB = np.full((nS, nS, nW), np.nan)
+    for s, (mx, my) in enumerate(sites):
+        onsets = onset_t[(pos[:, 0] == mx) & (pos[:, 1] == my)]
+        a = np.arange(len(onsets)) % 2 == 0
+        for r in range(nS):
+            fluo = fr[r](window[None, :] + onsets[:, None])          # (nTrials,nW)
+            for Hh, ix in ((HA, a), (HB, ~a)):
+                fh = fluo[ix]
+                base = np.nanmean(fh[:, :base_ix])
+                Hh[s, r] = np.nanmean((fh - base) / base, 0)
+    return HA, HB, window
+
+
+def fit_lti_cv(t, h, hA, hB, orders=ORDERS):
+    """Select TF order by 2-fold split-half cross-validation, then refit on the full mean h.
+
+    For each order: fit on half A, score R^2 on half B, and vice-versa; the CV score is the
+    mean. Overfitting noise in one half does not predict the independent other half, so CV
+    rejects orders that only fit noise. Final params come from a refit on the full mean.
+    """
+    post = (t >= 0) & (t <= FIT_TMAX)
+    tp, hp, hAp, hBp = t[post], h[post], hA[post], hB[post]
+    cv = []
+    for n in orders:
+        try:
+            _, yA, _ = _fit_order(tp, hAp, n, hAp[np.argmax(np.abs(hAp))])
+            _, yB, _ = _fit_order(tp, hBp, n, hBp[np.argmax(np.abs(hBp))])
+            cv.append(0.5 * (_r2(yA, hBp) + _r2(yB, hAp)))
+        except Exception:
+            cv.append(-np.inf)
+    cv = np.asarray(cv)
+    nbest = orders[int(np.nanargmax(cv))] if np.any(np.isfinite(cv)) else orders[0]
+    params, yhat, sse = _fit_order(tp, hp, nbest, hp[np.argmax(np.abs(hp))])
+    sst = np.sum((hp - hp.mean()) ** 2) + 1e-12
+    return dict(order=nbest, cvr2=float(np.nanmax(cv)) if np.any(np.isfinite(cv)) else np.nan,
+                r2=1.0 - sse / sst, sse=sse, theta=0.0, tau=np.asarray(params["tau"]),
+                A=np.asarray(params["A"]), poles=-1.0 / np.asarray(params["tau"]),
+                gain=yhat[np.argmax(np.abs(yhat))], yhat=yhat, t=tp)
+
+
 CACHE_TF = cross_response.CACHE.parent / "grid_tf_fits.npz"
 
 
-def fit_all(orders=ORDERS, criterion="bic", cache=True):
+def fit_all(orders=ORDERS, selection="cv", criterion="bic", cache=True):
     """Fit a TF to every (stim, readout) pair; cache predictions + params for the viewer.
 
-    Caches H, yhat (full-window predicted curves), and per-pair order/r2/gain/delay/tau to
-    data/grid_tf_fits.npz so the interactive viewer loads instantly.
+    selection="cv" (default): pick the order by split-half trial cross-validation — the
+    overfitting-proof choice (falls back to BIC if the trials cache is missing). "bic" uses
+    in-sample BIC. Caches H, yhat, and per-pair order/r2/cvr2/gain/tau to grid_tf_fits.npz.
     """
     z = cross_response.load_cached()
     H, sites, window = z["H"], z["sites"], z["window"]
@@ -101,16 +166,30 @@ def fit_all(orders=ORDERS, criterion="bic", cache=True):
     Hstd = z["Hstd"] if "Hstd" in z else np.zeros_like(H)
     label = str(z["label"])
     nS, nW = len(sites), len(window)
+
+    HA = HB = None
+    if selection == "cv":
+        try:
+            HA, HB, _ = split_half_means()
+        except Exception as e:
+            print(f"  [cv] trials cache unavailable ({e}); falling back to BIC")
+            selection = "bic"
+
     yhat = np.zeros((nS, nS, nW))
     order = np.zeros((nS, nS), int)
     r2 = np.full((nS, nS), np.nan)
+    cvr2 = np.full((nS, nS), np.nan)
     gain = np.zeros((nS, nS))
     delay = np.zeros((nS, nS))
     tau = np.full((nS, nS, max(ORDERS)), np.nan)     # poles (s), sorted ascending
     Amp = np.full((nS, nS, max(ORDERS)), np.nan)     # residues, aligned to tau
     for s in range(nS):
         for r in range(nS):
-            f = fit_lti(window, H[s, r], orders=orders, criterion=criterion)
+            if selection == "cv":
+                f = fit_lti_cv(window, H[s, r], HA[s, r], HB[s, r], orders=orders)
+                cvr2[s, r] = f["cvr2"]
+            else:
+                f = fit_lti(window, H[s, r], orders=orders, criterion=criterion)
             yhat[s, r] = _impulse(window, f["theta"], f["A"], f["tau"])
             order[s, r] = f["order"]; r2[s, r] = f["r2"]; gain[s, r] = f["gain"]
             delay[s, r] = f["theta"]
@@ -119,14 +198,15 @@ def fit_all(orders=ORDERS, criterion="bic", cache=True):
             Amp[s, r, :n] = np.asarray(f["A"])[o]
         print(f"  fit stim {s+1:2d}/{nS}  median R2(row)={np.nanmedian(r2[s]):.2f}", end="\r")
     print()
-    print(f"fit all {nS}x{nS}; order hist {np.bincount(order.ravel(), minlength=6)[1:]}, "
-          f"median R2={np.nanmedian(r2):.2f}")
+    print(f"fit all {nS}x{nS} ({selection}); order hist "
+          f"{np.bincount(order.ravel(), minlength=6)[1:]}, median R2={np.nanmedian(r2):.2f}"
+          + (f", median CV-R2={np.nanmedian(cvr2):.2f}" if selection == "cv" else ""))
     if cache:
         np.savez(CACHE_TF, H=H, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window,
-                 label=label, order=order, r2=r2, gain=gain, delay=delay, tau=tau, A=Amp)
+                 label=label, order=order, r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp)
         print("cached ->", CACHE_TF)
     return dict(H=H, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window, order=order,
-                r2=r2, gain=gain, delay=delay, tau=tau, A=Amp, label=label)
+                r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp, label=label)
 
 
 # --------------------------------------------------------------------------- #
