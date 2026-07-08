@@ -107,6 +107,14 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 - [ ] Confirm DV + OL-vs-CL contrast with Nick before running (current scaffold: contra-predicted pre-stim state→MSE slope, OL vs CL = decoupling test for open Q2 / K2 slopes).
 - [ ] On first run verify units: `cp_hemi_predictor` field→kernel reconstruction vs `data.dFk` (both %ΔF/F) → sane held-out R²; `d.params.kernel` present (fallback k_prim=2).
 
+### OLS pixel-predictor stim-blind decomposition (`impulse-analysis/ols_pixel_predictor_wip.m`) — NEW workbench, 2026-07-08
+> Single-session (AL_0033 2025-01-29 e1) so far. Three stim-blind models: **GREEDY** (§17, sparse — LEFT AS-IS per AL), **NATIVE** (§17b, all-unaffected px + KKT dip+rebound blinding, `native_nblind` auto-tuned=2), and **NAIVE** (§17b2, FIXED 3.7 V pixel config reused across amps — **current best model**). State-dependence reframed as VARIABILITY (§17c2): Rel-δ held-out ρ=+0.113, perm p=0.025. RESEARCH 2026-07-07/08.
+- [ ] **[PRIMARY] Keep iterating on STIMBLIND-NAIVE (our best model)** — fixed 3.7 V config gives the cleanest/most-uniform biphasic capture (dip 91% / reb 89%) and cuts the mid/high-amp stim leak. Explore: PCA-of-evoked blinding subspace (keep more px, less leak), per-amp adaptive `nblind` if 4.9 V non-stim R² stays negative, and choosing the reference amp principled-ly (not hard-coded 3.7 V).
+- [ ] **Zhiwen-style weight plot on the FIRST (sparse OLS) model** — pick a few ipsi-side regions (laser-site pixel + 2–3 others) and render their most prominent CONTRA weights as a spatial map, à la Zhiwen Ye 2023; shows what contra structure predicts each ipsi region.
+- [ ] **State the EXACT unaffected-pixel characterization** used by all stim-blind models — currently the §10 matched-filter AFFECT gate: per-amp, affected = (signed z > 2.0) AND (cosine-to-dip-template > 0.40) AND (evoked peak ≤ 700 ms); unaffected = complement. Write this precisely into Methods + the script header so the predictor set is reproducible/defensible.
+- [ ] **Validate STATEDEP-VAR (Rel-δ variability, p=0.025) for the paper** — this IS the power-independent state result the reviewer-proofing block below asked for (drop abs-var/δ magnitude confound → use relative δ). Replicate across AL_0041 e1/e2 + other sessions, animal-as-random-effect, FDR across states×sessions, then write into results §"Pre-stimulus brain state shapes predictability" (results.tex L64–68, currently a `\todo` stub). Promote to FINDINGS.md once replicated.
+- [ ] (session-left, 2026-07-08) All of the above is SINGLE-SESSION — run headless across allSelExp for cross-session. Greedy untouched by design. NATIVE M3 held-out rebound capture is weak (6–38%; dip generalizes far better) — flag in any rebound claim. `ols_pixel_predictor_wip.m` committed to `alpha` this session; not yet merged into the tracked `ols_pixel_predictor.m`.
+
 ### New analyses
 - [ ] Implement three-layer contralateral prediction model (pink/orange/red) — see FINDINGS.md — `plottingScript.m`
 - [ ] Implement Curto & Issa-style trial-sorting figure (synced vs desynced by pre-stim variance) — `plottingScript.m`
@@ -119,6 +127,12 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 - [ ] Generate spatial spread supplementary panel (ΔF/F inhibition area vs laser power) — cite Nuoli/Svoboda
 - [ ] Verify Fig 3H shows MSE (not MAE) — update caption accordingly
 - [ ] Verify Fig 2C shading is ±1 SD — update caption if not
+
+### Paper figure consistency pass (whole-manuscript, 2026-07-08)
+- [ ] **Colorblind-safe version of ALL figures** — add a colorblind palette/template to `utils/paperStyle.m` (Wong/Okabe-Ito 8-color or ColorBrewer), and re-export every panel through it; keep a switch so both the standard and colorblind versions can be produced.
+- [ ] **Unify the error-metric label across figures** — the manuscript mixes **MSE** (Fig 3E/G/H, results.tex L86/88) and **RMS** (Fig 3J "tracking-error RMS", L91). Pick ONE (MSE per the locked MSE-window decision) and relabel consistently across every y-axis, or explicitly justify why J is an RMS ratio. Same quantity → same label everywhere.
+- [ ] **Add units to every short-corner-axis figure** — `paperStyle` corner axes use `XLabel`/`YLabel` scale bars (e.g. '1 s','3%'); several panels don't set them yet. Audit all figures and add the missing unit labels.
+- [ ] **Fig 2 impulse-response plots need variance shading** — add ±1 SD shading around the trial-average traces (the caption L48 already claims "shading shows ±1 SD"; the generated panel must match). Ties to the "Verify Fig 2C shading is ±1 SD" item above.
 
 ### Prose
 - [ ] Convert passive voice to active throughout results ("We delivered…", "We quantified…")
