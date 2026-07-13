@@ -38,6 +38,30 @@ New grid coding goes here (Python). The analysis is split into single-responsibi
   for the spatial map). One run takes a couple of minutes over the network.
 - Outputs → `bilateral/grid/grid_png/` (**gitignored** — regenerable).
 
+### Batch: ALL grid sessions, per amplitude
+```bash
+.venv/Scripts/python.exe bilateral/grid/run_grid_all.py
+```
+Runs the standard characterization **separately for each fired amplitude** across every grid
+session in the `SESSIONS` registry (top of `run_grid_all.py`), into a per-session/per-amp tree:
+```
+grid_sessions/<date>/grid_sites.png        registration (amp-independent)
+grid_sessions/<date>/amp_linearity.png     per-site focal dF/F @ low vs high amp (>=2 amps)
+grid_sessions/<date>/amp_<amp>/grid_*.png  the 5 standard figures
+```
+Reuses config/loader/analysis/plots unchanged; a per-run config namespace overrides DATE/OUTDIR
+(and BREGMA_PX if a session needs it). Fired amps are auto-detected from the Block power
+breakdown (an amp with `< MIN_ONSETS=300` detected onsets is treated as sub-threshold and
+skipped — e.g. 2026-06-24's "0.25" = 59 spurious non-lasing onsets). Multi-block Timelines are
+handled with the registry `seg='last'` (segment_onsets before Block alignment) — required for
+2026-07-10, whose exp-3 Timeline also holds the impulse blocks. `SPATIAL_CLIM`/`RASTER_CLIM` are
+fixed (±2%/±8%) across sessions for comparability, so low-power maps read fainter.
+
+Sessions (as of 2026-07-13) and fired amps: **2026-06-24** [0.5] (0.25 sub-threshold),
+**2026-07-01** [0.25, 0.5], **2026-07-10** [1.0, 2.0]. Cross-amp scaling: 2026-07-10 is a clean
+sign-preserving dose-response (per-site focal fit slope 1.0→2.0 ≈ **1.39**); 2026-07-01's low
+powers (0.25≈0.005 mW, 0.5≈0.058 mW) sit near the response floor (slope ≈ **0.19**, scattered).
+
 ## Session & data layout (important: this session is RAW)
 Server root: `\\sahale.biostr.washington.edu\data\Subjects\AL_0048\2026-06-24\`
 - **exp `2`** = widefield SVD + raw Timeline traces (the analysis reads this; `WF_EXP="2"`).

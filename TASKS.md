@@ -60,6 +60,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Run `compare_sides.m` → cross-side summary figure
 
 ### AL_0048 galvo photostim site-grid (`opto_brainGrid638`) — see `bilateral/grid/README.md`
+- [x] 2026-07-13 — **Batch grid across ALL sessions × amps** (`bilateral/grid/run_grid_all.py`) → `grid_sessions/<date>/amp_<amp>/` + per-session `grid_sites.png` + cross-amp `amp_linearity.png`. Sessions/amps: 06-24 [0.5], 07-01 [0.25,0.5], 07-10 [1.0,2.0]. 07-10 clean dose-response (slope 1.39); 07-01 low-power SNR-limited (slope 0.19). RESEARCH 2026-07-13.
 - [x] 2026-07-13 — Grid re-run on **2026-07-10 block 6** (WF=3): 5200 onsets, 52 sites, amps [1.0, 2.0] both fired (2600 each, 50/site). Added multi-block onset segmentation (`loader.segment_onsets` + config `ONSET_SEGMENT`) so the shared-Timeline impulse blocks are excluded. Registration + dual-opsin polarity clean. RESEARCH 2026-07-13.
 - [x] 2026-06-25 — Python analysis runs end-to-end on 2026-06-24/2 (all notebook plots: sites/timecourses/τ/spatial/raster). Onsets+positions derived from raw Timeline + rig calibration; bregma dial-in confirmed; power split done (only 0.5 fired)
 - [x] 2026-06-29 — Consolidated into `bilateral/grid/` and refactored the monolith into a clean Python module (`config`/`loader`/`analysis`/`plots`/`run_grid`); old script kept in `grid/legacy/`
