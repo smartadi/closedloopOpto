@@ -30,6 +30,7 @@ from pathlib import Path
 import numpy as np
 import scipy.linalg as sla
 from scipy.optimize import nnls
+from scipy.signal import savgol_filter
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -161,6 +162,62 @@ def sweep_delay(H, klo, khi, khi_pred, dt, nS, depths=(3, 4, 6, 8), ranks=(40, 6
     return best, table
 
 
+def fit_structured_simerror(H, klo, khi, khi_pred, dt, nS, r=18, maxiter=150):
+    """PROPER structured marriage: a 2nd-order graph model  x_ddot = -L x - Gamma x_dot  with
+    L symmetric PSD (generalized graph-Laplacian, Lambda=B B^T) and Gamma>=0 damping — STABLE
+    by construction — fit by SIMULATION (output) error: directly minimize the free-run
+    trajectory MSE (not the acceleration equation, which we showed fails). Optimized on an
+    r-mode POD subspace to stay cheap; the node-space operator is L_node = P Lambda P^T.
+    Returns (P, Lambda, gamma, freerun_fn, var_captured)."""
+    from scipy.optimize import minimize
+    P = np.linalg.svd(np.concatenate([H[s, :, klo:khi + 1] for s in range(nS)], axis=1),
+                      full_matrices=False)[0][:, :r]                 # (nS, r) orthonormal modes
+    # Savitzky-Golay velocity (a noisy finite-difference seed wrecks a 2nd-order free-run)
+    vel = np.stack([savgol_filter(H[s], 9, 3, deriv=1, delta=dt, axis=1) for s in range(nS)])  # (nStim,nS,nWin)
+    nfit, npred = khi - klo, khi_pred - klo
+    a0 = np.stack([P.T @ H[s, :, klo] for s in range(nS)]).T          # (r, nStim)
+    v0 = np.stack([P.T @ vel[s, :, klo] for s in range(nS)]).T
+    Aact = np.stack([P.T @ H[s, :, klo:khi_pred + 1] for s in range(nS)], axis=1)  # (r,nStim,npred+1)
+
+    def unpack(th):
+        B = th[:r * r].reshape(r, r)
+        return B @ B.T, np.log1p(np.exp(th[r * r:]))                  # Lambda PSD, gamma>=0 softplus
+
+    def simulate(Lam, gam, nstep):
+        A2r = np.block([[np.zeros((r, r)), np.eye(r)], [-Lam, -np.diag(gam)]])
+        Md = sla.expm(A2r * dt)
+        z = np.vstack([a0, v0]); out = [z[:r].copy()]
+        for _ in range(nstep):
+            z = Md @ z; out.append(z[:r].copy())
+        return np.stack(out, axis=2)                                  # (r, nStim, nstep+1)
+
+    def obj(th):
+        Lam, gam = unpack(th)
+        return float(np.sum((simulate(Lam, gam, nfit) - Aact[:, :, :nfit + 1]) ** 2))
+
+    # warm start from the reduced EQUATION-error fit (symmetrized + PSD-projected)
+    ar = np.concatenate([P.T @ H[s, :, klo - 1:khi + 2] for s in range(nS)], axis=1)  # (r, N+..)
+    a = ar[:, 1:-1]; ad = (ar[:, 2:] - ar[:, :-2]) / (2 * dt); add = (ar[:, 2:] - 2 * ar[:, 1:-1] + ar[:, :-2]) / dt ** 2
+    Meq = add @ np.linalg.pinv(np.vstack([a, ad]))                    # [-Lambda | -Gamma]
+    Lam0 = -0.5 * (Meq[:, :r] + Meq[:, :r].T)
+    ew, ev = np.linalg.eigh(Lam0); Lam0 = ev @ np.diag(np.maximum(ew, 1e-3)) @ ev.T
+    B0 = np.linalg.cholesky(Lam0 + 1e-3 * np.eye(r))
+    g0 = np.maximum(-np.diag(Meq[:, r:]), 1e-2)
+    th0 = np.concatenate([B0.ravel(), np.log(np.expm1(g0))])
+    res = minimize(obj, th0, method="L-BFGS-B", options=dict(maxiter=maxiter))
+    Lam, gam = unpack(res.x)
+
+    def freerun_fn(s, nstep):
+        A2r = np.block([[np.zeros((r, r)), np.eye(r)], [-Lam, -np.diag(gam)]])
+        Md = sla.expm(A2r * dt)
+        z = np.concatenate([P.T @ H[s, :, klo], P.T @ vel[s, :, klo]])
+        xs = [P @ z[:r]]
+        for _ in range(nstep):
+            z = Md @ z; xs.append(P @ z[:r])
+        return np.array(xs)
+    return P, Lam, gam, freerun_fn
+
+
 def free_run(Mdisc, x0, nstep):
     """Iterate x_{k+1}=Mdisc x_k for nstep steps from x0; return (nstep+1, nNode)."""
     xs = [x0]
@@ -280,24 +337,35 @@ def main():
         z0 = np.concatenate([H[s, :, klo - t] for t in range(d)])
         return free_run_delay(Ur, Atil, z0, n, nS)
 
+    # STRUCTURED MARRIAGE: 2nd-order symmetric-PSD graph-Laplacian, fit by SIMULATION error.
+    # r=18 is the best config; more modes make the nonconvex fit harder + ring (interpretable
+    # but RIGID -- one freq/damping per mode -- so it can't match the flexible delay-DMD).
+    R_POD = 18
+    Pmode, Lam, gam_s, fr_struct = fit_structured_simerror(H, klo, khi, khi_pred, dt, nS, r=R_POD, maxiter=200)
+    L_node = Pmode @ Lam @ Pmode.T                                   # node-space PSD Laplacian
+    freqs = np.sqrt(np.clip(np.linalg.eigvalsh(Lam), 0, None)) / (2 * np.pi)   # modal freq (Hz)
+
     print(f"\n latent-state model                 free-run R2   extrapol R2   stable?   #states  (delay d={d},r={drank})")
-    for name, frfn, ev, nst in [
-            (f"2nd-order graph (x_ddot=-Lx-Gv)", fr_2nd, np.linalg.eigvals(A2), 2 * nS),
-            (f"delay-embed DMD (d={d}, r={Atil.shape[0]})", fr_delay, np.linalg.eigvals(Atil), Ur.shape[1])]:
+    latent = [
+        ("2nd-order graph (equation-error)", fr_2nd, np.max(np.linalg.eigvals(A2).real) <= 1e-6, 2 * nS),
+        (f"delay-embed DMD (d={d}, r={drank})", fr_delay, np.max(np.abs(np.linalg.eigvals(Atil))) <= 1 + 1e-6, drank),
+        (f"structured graph-Laplacian (sim-error, r={R_POD})", fr_struct, True, 2 * R_POD)]
+    for name, frfn, stable, nst in latent:
         fr, ex = [], []
         for s in range(nS):
             traj = frfn(s, khi_pred - klo)
             actual = H[s, :, klo:khi_pred + 1].T
             fr.append(r2(actual[:khi - klo + 1], traj[:khi - klo + 1]))
             ex.append(r2(actual, traj))
-        # A2 eig are continuous (Re<=0 stable); Atil eig are discrete (|.|<=1 stable)
-        stable = (np.max(ev.real) <= 1e-6) if nst == 2 * nS else (np.max(np.abs(ev)) <= 1 + 1e-6)
-        print(f" {name:34s}  {np.nanmedian(fr):9.3f}   {np.nanmedian(ex):9.3f}   "
+        print(f" {name:44s}  {np.nanmedian(fr):8.3f}   {np.nanmedian(ex):9.3f}   "
               f"{'yes' if stable else 'NO':6s}   {nst}")
+    print(f" structured model: {len(freqs)} modes, oscillation freqs {np.sort(freqs)[::-1][:5].round(2)} Hz; "
+          f"damping gamma tau=1/gamma {(1/np.maximum(gam_s,1e-9)).round(2)[:4]} s")
 
     _figures(H, sites, window, klo, khi, khi_pred, dt, A_un, A_sym, Mdmd, models, metrics)
     _lap_figures(sites, A_lap, W_lap, gamma)
     _latent_figures(H, sites, window, klo, khi, khi_pred, A2, W2, gamma2, fr_2nd, fr_delay, Atil, dt, nS)
+    _struct_figures(H, sites, window, klo, khi, khi_pred, L_node, fr_struct, fr_delay, freqs, nS)
     print("\nwrote:", OUTDIR)
 
 
@@ -453,6 +521,48 @@ def _latent_figures(H, sites, window, klo, khi, khi_pred, A2, W2, gamma2, fr_2nd
     ax[1].set_xlabel("Re"); ax[1].set_ylabel("Im")
     fig.suptitle("Latent-state model spectra (complex modes = oscillatory rebounds)")
     fig.tight_layout(); fig.savefig(OUTDIR / "net_latent_spectra.png", dpi=150); plt.close(fig)
+
+
+def _struct_figures(H, sites, window, klo, khi, khi_pred, L_node, fr_struct, fr_delay, freqs, nS):
+    order = np.lexsort((sites[:, 1], sites[:, 0]))
+    tt = window[klo:khi_pred + 1]
+
+    # 1) recovered node-space graph-Laplacian L_node + its off-diagonal coupling on the grid
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4.6))
+    Lo = L_node[np.ix_(order, order)]
+    v = np.percentile(np.abs(Lo), 98)
+    im = ax[0].imshow(Lo, cmap="RdBu_r", vmin=-v, vmax=v)
+    ax[0].set_title("recovered node Laplacian L = PΛP^T (sym PSD)"); ax[0].set_xlabel("node"); ax[0].set_ylabel("node")
+    fig.colorbar(im, ax=ax[0], fraction=0.046)
+    # strongest off-diagonal (negative L_ij = coupling) edges on the grid
+    Woff = -L_node.copy(); np.fill_diagonal(Woff, 0)
+    ax[1].scatter(sites[:, 0], sites[:, 1], c="0.7", s=60, zorder=1)
+    thr = np.percentile(np.abs(Woff), 98)
+    for i in range(nS):
+        for j in range(i + 1, nS):
+            if abs(Woff[i, j]) >= thr:
+                ax[1].plot([sites[i, 0], sites[j, 0]], [sites[i, 1], sites[j, 1]],
+                           color=("tab:blue" if Woff[i, j] > 0 else "tab:red"),
+                           lw=1.1, alpha=0.6, zorder=2)
+    ax[1].set_aspect("equal"); ax[1].set_title("top 2% coupling edges (blue=+, red=-)")
+    ax[1].set_xticks([]); ax[1].set_yticks([])
+    fig.suptitle("Structured graph-Laplacian recovered by simulation-error fit")
+    fig.tight_layout(); fig.savefig(OUTDIR / "net_struct_laplacian.png", dpi=150); plt.close(fig)
+
+    # 2) free-run: structured (blue) vs delay-DMD (green) vs actual (black)
+    ex_stims = [int(np.argmax([np.abs(H[s, s, klo:khi]).max() for s in range(nS)])), int(nS * 0.4), int(nS * 0.75)]
+    fig, axs = plt.subplots(1, 3, figsize=(13, 3.6), sharex=True)
+    for a, s in zip(axs, ex_stims):
+        ts = fr_struct(s, khi_pred - klo); td = fr_delay(s, khi_pred - klo)
+        for r in [s] + list(np.argsort(-np.abs(H[s, :, khi]))[:1]):
+            a.plot(tt, H[s, r, klo:khi_pred + 1] * 100, "k-", lw=1.8, label=f"node {r} actual")
+            a.plot(tt, ts[:, r] * 100, "--", lw=1.3, color="tab:blue", label="structured L")
+            a.plot(tt, td[:, r] * 100, ":", lw=1.3, color="tab:green", label="delay-DMD")
+        a.axvline(window[khi], color="0.5", lw=0.6, ls=":")
+        a.set_title(f"stim ({sites[s,0]:+.1f},{sites[s,1]:+.0f})"); a.set_xlabel("t (s)"); a.set_ylabel("dF/F %")
+        a.legend(fontsize=6, frameon=False)
+    fig.suptitle("Structured graph-Laplacian (blue) vs delay-DMD (green) vs actual (black)")
+    fig.tight_layout(); fig.savefig(OUTDIR / "net_struct_freerun.png", dpi=150); plt.close(fig)
 
 
 if __name__ == "__main__":
