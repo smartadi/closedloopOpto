@@ -39,6 +39,8 @@ import cross_response as cr
 OUTDIR = Path(__file__).resolve().parent / "network_png"
 FIT_WIN = (0.08, 0.60)      # s rel. onset: post-pulse autonomous decay, ends before the 0.716 s ITI
 PRED_EXTRA = 0.30           # s beyond FIT_WIN to test extrapolation (free-run)
+D_EMBED = 8                 # time-delay embedding dimension (Hankel-DMD / ERA)
+DELAY_RANK = 40             # rank truncation for the delay-embedded propagator
 
 
 def r2(actual, pred):
@@ -73,11 +75,80 @@ def fit_directed_laplacian(Xmid, Xdot, nS, ridge=0.0):
     return A, W, gamma
 
 
+def deriv_stacks(H, klo, khi, dt):
+    """Per-stim x, x_dot, x_ddot (central differences) pooled over [klo,khi] across stims.
+    Returns (X, V, Acc) each (nNode, nStim*(khi-klo+1)) + a per-stim velocity at klo for seeding."""
+    nS = H.shape[0]
+    xs, vs, accs, v0 = [], [], [], np.zeros((nS, nS))
+    for s in range(nS):
+        Y = H[s]
+        xs.append(Y[:, klo:khi + 1])
+        vs.append((Y[:, klo + 1:khi + 2] - Y[:, klo - 1:khi]) / (2 * dt))
+        accs.append((Y[:, klo + 1:khi + 2] - 2 * Y[:, klo:khi + 1] + Y[:, klo - 1:khi]) / dt ** 2)
+        v0[s] = (Y[:, klo + 1] - Y[:, klo - 1]) / (2 * dt)
+    return np.concatenate(xs, 1), np.concatenate(vs, 1), np.concatenate(accs, 1), v0
+
+
+def fit_second_order(X, V, Acc, nS):
+    """Fit a 2nd-order graph model  x_ddot_i = sum_{j!=i} W_ij (x_j - x_i) - gamma_i x_dot_i
+    (damped wave / networked oscillator on the graph-Laplacian L = D - W, damping Gamma).
+    W>=0, gamma>=0 via row-wise NNLS. Latent state = velocity (interpretable). Complex modes
+    => it can produce the oscillatory rebounds a 1st-order model cannot. Returns companion
+    A2 (2nS x 2nS), W, gamma, L."""
+    W = np.zeros((nS, nS)); gamma = np.zeros(nS)
+    for i in range(nS):
+        idx = [j for j in range(nS) if j != i]
+        R = np.column_stack([(X[idx] - X[i][None, :]).T, -V[i]])      # W cols + damping on x_dot
+        coef, _ = nnls(R, Acc[i])
+        W[i, idx] = coef[:-1]; gamma[i] = coef[-1]
+    L = np.diag(W.sum(1)) - W
+    A2 = np.block([[np.zeros((nS, nS)), np.eye(nS)], [-L, -np.diag(gamma)]])
+    return A2, W, gamma, L
+
+
+def fit_delay_dmd(H, klo, khi, dt, d, rank):
+    """Time-delay-embedded DMD (Hankel-DMD ~ ERA): augment the state with d time-lagged copies,
+    z_k = [x_k; x_{k-1}; ...; x_{k-d+1}], and fit a rank-truncated linear propagator on z. The
+    delay coordinates supply the LATENT states the first-order observed-state fit lacked.
+    Returns (Ur, Atil, d): reduced POD basis + reduced propagator."""
+    nS = H.shape[0]
+    Z0, Z1 = [], []
+    for s in range(nS):
+        Y = H[s]
+        for k in range(klo, khi):
+            if k - d + 1 < 0:
+                continue
+            Z0.append(np.concatenate([Y[:, k - t] for t in range(d)]))
+            Z1.append(np.concatenate([Y[:, k + 1 - t] for t in range(d)]))
+    Z0 = np.array(Z0).T; Z1 = np.array(Z1).T                          # (nS*d, N)
+    U, S, Vt = np.linalg.svd(Z0, full_matrices=False)
+    r = min(rank, np.sum(S > 1e-10 * S[0]))
+    Ur, Sr, Vr = U[:, :r], S[:r], Vt[:r].T
+    Atil = Ur.T @ Z1 @ (Vr / Sr)                                      # reduced propagator (r x r)
+    return Ur, Atil, d
+
+
 def free_run(Mdisc, x0, nstep):
     """Iterate x_{k+1}=Mdisc x_k for nstep steps from x0; return (nstep+1, nNode)."""
     xs = [x0]
     for _ in range(nstep):
         xs.append(Mdisc @ xs[-1])
+    return np.array(xs)
+
+
+def free_run_2nd(M2, x0, v0, nstep, nS):
+    """Free-run the 2nd-order system from [x0; v0]; return the position part (nstep+1, nS)."""
+    z = np.concatenate([x0, v0]); xs = [z[:nS]]
+    for _ in range(nstep):
+        z = M2 @ z; xs.append(z[:nS])
+    return np.array(xs)
+
+
+def free_run_delay(Ur, Atil, z0, nstep, nS):
+    """Free-run in reduced delay coords from full delay-stack z0; return x part (nstep+1, nS)."""
+    a = Ur.T @ z0; xs = [(Ur @ a)[:nS]]
+    for _ in range(nstep):
+        a = Atil @ a; xs.append((Ur @ a)[:nS])
     return np.array(xs)
 
 
@@ -158,8 +229,37 @@ def main():
           f"{1/np.maximum(gamma.min(),1e-9):.3f}]s; edge density {dens:.2f}; "
           f"W asymmetry ||W-W^T||/||W|| = {np.linalg.norm(W_lap-W_lap.T)/np.linalg.norm(W_lap):.2f}")
 
+    # ---- LATENT-STATE models (add the capacity the first-order fits lacked) ----
+    X, V, Acc, v0 = deriv_stacks(H, klo, khi, dt)
+    A2, W2, gamma2, L2 = fit_second_order(X, V, Acc, nS)
+    M2 = sla.expm(A2 * dt)
+    Ur, Atil, d = fit_delay_dmd(H, klo, khi, dt, D_EMBED, DELAY_RANK)
+
+    def fr_2nd(s, n):
+        return free_run_2nd(M2, H[s, :, klo], v0[s], n, nS)
+
+    def fr_delay(s, n):
+        z0 = np.concatenate([H[s, :, klo - t] for t in range(d)])
+        return free_run_delay(Ur, Atil, z0, n, nS)
+
+    print("\n latent-state model                 free-run R2   extrapol R2   stable?   #states")
+    for name, frfn, ev, nst in [
+            (f"2nd-order graph (x_ddot=-Lx-Gv)", fr_2nd, np.linalg.eigvals(A2), 2 * nS),
+            (f"delay-embed DMD (d={d}, r={Atil.shape[0]})", fr_delay, np.linalg.eigvals(Atil), Ur.shape[1])]:
+        fr, ex = [], []
+        for s in range(nS):
+            traj = frfn(s, khi_pred - klo)
+            actual = H[s, :, klo:khi_pred + 1].T
+            fr.append(r2(actual[:khi - klo + 1], traj[:khi - klo + 1]))
+            ex.append(r2(actual, traj))
+        # A2 eig are continuous (Re<=0 stable); Atil eig are discrete (|.|<=1 stable)
+        stable = (np.max(ev.real) <= 1e-6) if nst == 2 * nS else (np.max(np.abs(ev)) <= 1 + 1e-6)
+        print(f" {name:34s}  {np.nanmedian(fr):9.3f}   {np.nanmedian(ex):9.3f}   "
+              f"{'yes' if stable else 'NO':6s}   {nst}")
+
     _figures(H, sites, window, klo, khi, khi_pred, dt, A_un, A_sym, Mdmd, models, metrics)
     _lap_figures(sites, A_lap, W_lap, gamma)
+    _latent_figures(H, sites, window, klo, khi, khi_pred, A2, W2, gamma2, fr_2nd, fr_delay, Atil, dt, nS)
     print("\nwrote:", OUTDIR)
 
 
@@ -279,6 +379,42 @@ def _lap_figures(sites, A_lap, W, gamma):
     a.set_aspect("equal"); a.set_title("top 4% directed edges (j->i)"); a.set_xticks([]); a.set_yticks([])
     fig.suptitle("Directed graph-Laplacian network structure on the grid")
     fig.tight_layout(); fig.savefig(OUTDIR / "net_laplacian_grid.png", dpi=150); plt.close(fig)
+
+
+def _latent_figures(H, sites, window, klo, khi, khi_pred, A2, W2, gamma2, fr_2nd, fr_delay, Atil, dt, nS):
+    tt = window[klo:khi_pred + 1]
+    # example free-run (2nd-order vs delay vs actual) for 3 stims, strongest self + 2 targets
+    ex_stims = [int(np.argmax([np.abs(H[s, s, klo:khi]).max() for s in range(nS)]))]
+    ex_stims += [int(nS * 0.4), int(nS * 0.75)]
+    fig, axs = plt.subplots(1, 3, figsize=(13, 3.6), sharex=True)
+    for a, s in zip(axs, ex_stims):
+        t2 = fr_2nd(s, khi_pred - klo); td = fr_delay(s, khi_pred - klo)
+        tgt = [s] + list(np.argsort(-np.abs(H[s, :, khi]))[:1])
+        for r in tgt:
+            a.plot(tt, H[s, r, klo:khi_pred + 1] * 100, "k-", lw=1.8, label=f"node {r} actual")
+            a.plot(tt, t2[:, r] * 100, "--", lw=1.2, color="tab:orange", label="2nd-order")
+            a.plot(tt, td[:, r] * 100, ":", lw=1.4, color="tab:green", label="delay-DMD")
+        a.axvline(window[khi], color="0.5", lw=0.6, ls=":")
+        a.set_title(f"stim ({sites[s,0]:+.1f},{sites[s,1]:+.0f})"); a.set_xlabel("t (s)"); a.set_ylabel("dF/F %")
+        a.legend(fontsize=6, frameon=False)
+    fig.suptitle("Latent-state free-run: 2nd-order (orange) & delay-DMD (green) vs actual (black)")
+    fig.tight_layout(); fig.savefig(OUTDIR / "net_latent_freerun.png", dpi=150); plt.close(fig)
+
+    # spectra: 2nd-order continuous poles + delay-DMD discrete->continuous poles
+    fig, ax = plt.subplots(1, 2, figsize=(9, 4))
+    e2 = np.linalg.eigvals(A2)
+    ax[0].scatter(e2.real, e2.imag, s=16, c="tab:orange", alpha=0.7)
+    ax[0].axvline(0, color="r", lw=0.6, ls="--")
+    ax[0].set_title(f"2nd-order poles (1/s)\n{int(np.sum(e2.real<=1e-6))}/{2*nS} stable, "
+                    f"{int(np.sum(np.abs(e2.imag)>1e-3))} oscillatory")
+    ax[0].set_xlabel("Re"); ax[0].set_ylabel("Im")
+    ed = np.log(np.linalg.eigvals(Atil).astype(complex)) / dt
+    ax[1].scatter(ed.real, ed.imag, s=16, c="tab:green", alpha=0.7)
+    ax[1].axvline(0, color="r", lw=0.6, ls="--")
+    ax[1].set_title(f"delay-DMD poles (1/s)\n{int(np.sum(np.abs(ed.imag)>1e-3))} oscillatory")
+    ax[1].set_xlabel("Re"); ax[1].set_ylabel("Im")
+    fig.suptitle("Latent-state model spectra (complex modes = oscillatory rebounds)")
+    fig.tight_layout(); fig.savefig(OUTDIR / "net_latent_spectra.png", dpi=150); plt.close(fig)
 
 
 if __name__ == "__main__":
