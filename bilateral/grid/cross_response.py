@@ -33,6 +33,8 @@ def build(amp_sel=cfg.AMP_SEL, win=None, cache=True):
     onset_t, pos = loader.derive_onsets_positions(
         cfg.EXPDIR, cfg.LASER, cfg.LASER_THR, cfg.DEBOUNCE_S, cfg.FS_DAQ,
         gc["bregma_offset_x"], gc["bregma_offset_y"], gc["mm_per_v_x"], gc["mm_per_v_y"])
+    if getattr(cfg, "ONSET_SEGMENT", None) is not None:      # multi-block Timeline -> grid segment
+        onset_t, pos, _ = loader.segment_onsets(onset_t, pos, cfg.SEGMENT_GAP_S, cfg.ONSET_SEGMENT)
     onset_t, pos, sites, label = loader.select_power(
         onset_t, pos, amp_sel, cfg.SUBJECT, cfg.DATE, cfg.BLOCK_EXP, cfg.SERVER)
     t0, t1 = win if win is not None else cfg.CROSS_WIN
@@ -114,6 +116,8 @@ def build_amps(amps=None, win=None, cache=True):
     onset_t, pos = loader.derive_onsets_positions(
         cfg.EXPDIR, cfg.LASER, cfg.LASER_THR, cfg.DEBOUNCE_S, cfg.FS_DAQ,
         gc["bregma_offset_x"], gc["bregma_offset_y"], gc["mm_per_v_x"], gc["mm_per_v_y"])
+    if getattr(cfg, "ONSET_SEGMENT", None) is not None:      # multi-block Timeline -> grid segment
+        onset_t, pos, _ = loader.segment_onsets(onset_t, pos, cfg.SEGMENT_GAP_S, cfg.ONSET_SEGMENT)
     onset_amp = loader.block_power_per_onset(onset_t, pos, cfg.SUBJECT, cfg.DATE,
                                              cfg.BLOCK_EXP, cfg.SERVER)
     ramp = np.round(onset_amp, 3)
