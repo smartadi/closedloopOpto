@@ -106,11 +106,12 @@ def fit_second_order(X, V, Acc, nS):
     return A2, W, gamma, L
 
 
-def fit_delay_dmd(H, klo, khi, dt, d, rank):
+def fit_delay_dmd(H, klo, khi, dt, d, rank, stabilize=True):
     """Time-delay-embedded DMD (Hankel-DMD ~ ERA): augment the state with d time-lagged copies,
     z_k = [x_k; x_{k-1}; ...; x_{k-d+1}], and fit a rank-truncated linear propagator on z. The
     delay coordinates supply the LATENT states the first-order observed-state fit lacked.
-    Returns (Ur, Atil, d): reduced POD basis + reduced propagator."""
+    stabilize=True projects the reduced propagator's eigenvalues onto the closed unit disk
+    (|lambda|<=1) so free-run/extrapolation cannot diverge. Returns (Ur, Atil, d)."""
     nS = H.shape[0]
     Z0, Z1 = [], []
     for s in range(nS):
@@ -122,10 +123,42 @@ def fit_delay_dmd(H, klo, khi, dt, d, rank):
             Z1.append(np.concatenate([Y[:, k + 1 - t] for t in range(d)]))
     Z0 = np.array(Z0).T; Z1 = np.array(Z1).T                          # (nS*d, N)
     U, S, Vt = np.linalg.svd(Z0, full_matrices=False)
-    r = min(rank, np.sum(S > 1e-10 * S[0]))
+    r = min(rank, int(np.sum(S > 1e-10 * S[0])))
     Ur, Sr, Vr = U[:, :r], S[:r], Vt[:r].T
     Atil = Ur.T @ Z1 @ (Vr / Sr)                                      # reduced propagator (r x r)
+    if stabilize:
+        lam, Phi = np.linalg.eig(Atil)
+        lam_c = lam / np.maximum(np.abs(lam), 1.0)                    # project onto unit disk
+        Atil = (Phi @ np.diag(lam_c) @ np.linalg.inv(Phi)).real
     return Ur, Atil, d
+
+
+def _delay_freerun_scores(H, Ur, Atil, d, klo, khi, khi_pred, nS):
+    """Median in-window free-run R2 and extrapolation R2 for a delay model across all stims."""
+    fr, ex = [], []
+    for s in range(nS):
+        z0 = np.concatenate([H[s, :, klo - t] for t in range(d)])
+        traj = free_run_delay(Ur, Atil, z0, khi_pred - klo, nS)
+        actual = H[s, :, klo:khi_pred + 1].T
+        fr.append(r2(actual[:khi - klo + 1], traj[:khi - klo + 1]))
+        ex.append(r2(actual, traj))
+    return float(np.nanmedian(fr)), float(np.nanmedian(ex))
+
+
+def sweep_delay(H, klo, khi, khi_pred, dt, nS, depths=(3, 4, 6, 8), ranks=(40, 60, 80, 100, 130)):
+    """Grid-search delay depth x rank for the STABILIZED delay-DMD; pick the best by
+    extrapolation R2 (honest generalization). Returns (best_d, best_rank, Ur, Atil, table)."""
+    table, best = [], None
+    for d in depths:
+        for rank in ranks:
+            if rank > nS * d:
+                continue
+            Ur, Atil, _ = fit_delay_dmd(H, klo, khi, dt, d, rank, stabilize=True)
+            frm, exm = _delay_freerun_scores(H, Ur, Atil, d, klo, khi, khi_pred, nS)
+            table.append((d, rank, frm, exm))
+            if best is None or exm > best[0]:
+                best = (exm, frm, d, rank, Ur, Atil)
+    return best, table
 
 
 def free_run(Mdisc, x0, nstep):
@@ -233,7 +266,12 @@ def main():
     X, V, Acc, v0 = deriv_stacks(H, klo, khi, dt)
     A2, W2, gamma2, L2 = fit_second_order(X, V, Acc, nS)
     M2 = sla.expm(A2 * dt)
-    Ur, Atil, d = fit_delay_dmd(H, klo, khi, dt, D_EMBED, DELAY_RANK)
+
+    # STABILIZED delay-DMD, tuned by (depth x rank) sweep on extrapolation R2
+    (exm, frm, d, drank, Ur, Atil), sweep_tbl = sweep_delay(H, klo, khi, khi_pred, dt, nS)
+    print("\n delay-DMD sweep (stabilized |lambda|<=1):   d  rank   free-run  extrapol")
+    for dd, rr, f, e in sweep_tbl:
+        print(f"   {dd:3d} {rr:4d}   {f:8.3f}  {e:8.3f}" + ("  <-- best" if (dd == d and rr == drank) else ""))
 
     def fr_2nd(s, n):
         return free_run_2nd(M2, H[s, :, klo], v0[s], n, nS)
@@ -242,7 +280,7 @@ def main():
         z0 = np.concatenate([H[s, :, klo - t] for t in range(d)])
         return free_run_delay(Ur, Atil, z0, n, nS)
 
-    print("\n latent-state model                 free-run R2   extrapol R2   stable?   #states")
+    print(f"\n latent-state model                 free-run R2   extrapol R2   stable?   #states  (delay d={d},r={drank})")
     for name, frfn, ev, nst in [
             (f"2nd-order graph (x_ddot=-Lx-Gv)", fr_2nd, np.linalg.eigvals(A2), 2 * nS),
             (f"delay-embed DMD (d={d}, r={Atil.shape[0]})", fr_delay, np.linalg.eigvals(Atil), Ur.shape[1])]:
