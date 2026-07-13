@@ -59,8 +59,13 @@ fixed (±2%/±8%) across sessions for comparability, so low-power maps read fain
 
 Sessions (as of 2026-07-13) and fired amps: **2026-06-24** [0.5] (0.25 sub-threshold),
 **2026-07-01** [0.25, 0.5], **2026-07-10** [1.0, 2.0]. Cross-amp scaling: 2026-07-10 is a clean
-sign-preserving dose-response (per-site focal fit slope 1.0→2.0 ≈ **1.39**); 2026-07-01's low
-powers (0.25≈0.005 mW, 0.5≈0.058 mW) sit near the response floor (slope ≈ **0.19**, scattered).
+sign-preserving dose-response (per-site focal fit slope 1.0→2.0 ≈ **1.39**); 2026-07-01 is
+scattered/near-floor (slope ≈ **0.19**).
+
+> **PRIMARY grid session = 2026-07-10.** The 2026-07-01 deflections are small because the
+> **hardware laser power was set much lower** on that session (not just the command amplitude);
+> the power was bumped up for 2026-07-10, which is why it gives the clean graded response. Use
+> 2026-07-10 [1.0, 2.0] as the reference grid; 06-24/07-01 are low-power / early sessions.
 
 ## Session & data layout (important: this session is RAW)
 Server root: `\\sahale.biostr.washington.edu\data\Subjects\AL_0048\2026-06-24\`
