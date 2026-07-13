@@ -29,6 +29,7 @@ from pathlib import Path
 
 import numpy as np
 import scipy.linalg as sla
+from scipy.optimize import nnls
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -47,6 +48,29 @@ def r2(actual, pred):
     a, p = a[m], p[m]
     ss = np.sum((a - a.mean()) ** 2)
     return float(1 - np.sum((a - p) ** 2) / ss) if ss > 0 else np.nan
+
+
+def fit_directed_laplacian(Xmid, Xdot, nS, ridge=0.0):
+    """Fit A as a LEAKY DIRECTED graph-Laplacian with NON-NEGATIVE edge weights:
+        x_dot_i = sum_{j!=i} W_ij (x_j - x_i) - gamma_i x_i ,   W_ij >= 0, gamma_i >= 0
+    so A = W - diag(rowsum W) - diag(gamma) is Metzler with non-positive row sums =>
+    Hurwitz-STABLE by construction (Gershgorin: Re(lambda) <= -min gamma). The fit
+    SEPARATES BY ROW into nS non-negative least-squares problems (scipy.nnls): the
+    coupling into node i plus its own leak. W_ij is the directed edge j->i.
+    """
+    W = np.zeros((nS, nS)); gamma = np.zeros(nS)
+    for i in range(nS):
+        idx = [j for j in range(nS) if j != i]
+        R = np.column_stack([(Xmid[idx] - Xmid[i][None, :]).T, -Xmid[i]])   # (N, nS): W cols + leak
+        b = Xdot[i]
+        if ridge > 0:                                          # Tikhonov toward small weights
+            R = np.vstack([R, np.sqrt(ridge) * np.eye(R.shape[1])])
+            b = np.concatenate([b, np.zeros(R.shape[1])])
+        coef, _ = nnls(R, b)
+        W[i, idx] = coef[:-1]; gamma[i] = coef[-1]
+    A = W.copy()
+    A[np.diag_indices(nS)] = -(W.sum(1)) - gamma
+    return A, W, gamma
 
 
 def free_run(Mdisc, x0, nstep):
@@ -91,10 +115,14 @@ def main():
     A_sym = sla.solve_sylvester(P, P, Q)
     A_sym = 0.5 * (A_sym + A_sym.T)                           # enforce numerically
 
+    # ---- 4. LEAKY DIRECTED graph-Laplacian, non-negative weights (stable by construction) ----
+    A_lap, W_lap, gamma = fit_directed_laplacian(Xmid, Xdot, nS, ridge=0.0)
+
     models = {
         "DMD (discrete, unconstrained)": Mdmd,
         "A_un (continuous, directed)": sla.expm(A_un * dt),
         "A_sym (continuous, symmetric)": sla.expm(A_sym * dt),
+        "A_lap (directed Laplacian, W>=0)": sla.expm(A_lap * dt),
     }
 
     # ---- evaluation: one-step + free-run (in-window) + extrapolation ----
@@ -117,16 +145,21 @@ def main():
         flag = "yes" if stable else f"NO (max|l|={maxabs:.3f})"
         print(f" {name:34s}  {one:8.3f}   {np.nanmedian(fr):9.3f}   {np.nanmedian(ex):9.3f}   {flag}")
 
-    # continuous poles / timescales from A_un and A_sym
-    for nm, A in [("A_un", A_un), ("A_sym", A_sym)]:
+    # continuous poles / timescales
+    for nm, A in [("A_un", A_un), ("A_sym", A_sym), ("A_lap", A_lap)]:
         w = np.linalg.eigvals(A)
         tau = -1.0 / w.real
         tau = np.sort(tau[(w.real < 0) & (tau < 100)])[::-1]
         print(f" {nm}: {np.sum(w.real < 0)}/{nS} decaying modes; "
               f"slowest tau {tau[:4].round(3) if len(tau) else '[]'} s; "
               f"symmetry ||A-A^T||/||A|| = {np.linalg.norm(A-A.T)/np.linalg.norm(A):.2f}")
+    dens = float((W_lap > 1e-6).mean())
+    print(f" A_lap: leak gamma tau=1/gamma range [{1/np.maximum(gamma,1e-9).max():.3f}, "
+          f"{1/np.maximum(gamma.min(),1e-9):.3f}]s; edge density {dens:.2f}; "
+          f"W asymmetry ||W-W^T||/||W|| = {np.linalg.norm(W_lap-W_lap.T)/np.linalg.norm(W_lap):.2f}")
 
     _figures(H, sites, window, klo, khi, khi_pred, dt, A_un, A_sym, Mdmd, models, metrics)
+    _lap_figures(sites, A_lap, W_lap, gamma)
     print("\nwrote:", OUTDIR)
 
 
@@ -202,6 +235,50 @@ def _figures(H, sites, window, klo, khi, khi_pred, dt, A_un, A_sym, Mdmd, models
         fig.colorbar(sc, ax=a, fraction=0.046)
     fig.suptitle("Slowest symmetric network modes (spatial eigenvectors on the grid)")
     fig.tight_layout(); fig.savefig(OUTDIR / "net_modes.png", dpi=150); plt.close(fig)
+
+
+def _lap_figures(sites, A_lap, W, gamma):
+    nS = len(sites)
+    order = np.lexsort((sites[:, 1], sites[:, 0]))
+
+    # 1) directed W matrix + A_lap eigen-spectrum (should be all-stable)
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4.6))
+    Wo = W[np.ix_(order, order)]
+    im = ax[0].imshow(Wo, cmap="magma", vmax=np.percentile(W[W > 0], 98) if (W > 0).any() else 1)
+    ax[0].set_title("directed edge weights W (j->i, >=0)"); ax[0].set_xlabel("from j"); ax[0].set_ylabel("to i")
+    fig.colorbar(im, ax=ax[0], fraction=0.046)
+    ev = np.linalg.eigvals(A_lap)
+    ax[1].scatter(ev.real, ev.imag, s=18, c="tab:green", alpha=0.7)
+    ax[1].axvline(0, color="r", lw=0.6, ls="--")
+    ax[1].set_title(f"A_lap spectrum — {int(np.sum(ev.real<1e-9))}/{nS} stable (Re<=0)")
+    ax[1].set_xlabel("Re (1/s)"); ax[1].set_ylabel("Im (1/s)")
+    fig.suptitle("Directed leaky graph-Laplacian: connectivity + stability")
+    fig.tight_layout(); fig.savefig(OUTDIR / "net_laplacian_W.png", dpi=150); plt.close(fig)
+
+    # 2) grid maps: leak timescale, in/out strength, top directed edges
+    instr = W.sum(1)      # incoming coupling to node i
+    outstr = W.sum(0)     # outgoing coupling from node j
+    tau_leak = 1.0 / np.maximum(gamma, 1e-9)
+    fig, ax = plt.subplots(1, 4, figsize=(16, 3.8))
+    for a, val, ttl in [(ax[0], np.clip(tau_leak, 0, np.percentile(tau_leak, 95)), "leak timescale 1/gamma (s)"),
+                        (ax[1], instr, "in-strength (sum_j W_ij)"),
+                        (ax[2], outstr, "out-strength (sum_i W_ij)")]:
+        sc = a.scatter(sites[:, 0], sites[:, 1], c=val, cmap="viridis", s=130, ec="k", lw=0.3)
+        a.set_aspect("equal"); a.set_title(ttl); a.set_xticks([]); a.set_yticks([])
+        fig.colorbar(sc, ax=a, fraction=0.046)
+    # top directed edges as arrows (color by hemisphere of source)
+    a = ax[3]
+    a.scatter(sites[:, 0], sites[:, 1], c="0.7", s=60, zorder=1)
+    thr = np.percentile(W[W > 0], 96) if (W > 0).any() else np.inf
+    for i in range(nS):
+        for j in range(nS):
+            if W[i, j] >= thr:
+                a.annotate("", xy=sites[i], xytext=sites[j], zorder=2,
+                           arrowprops=dict(arrowstyle="->", lw=0.8, alpha=0.6,
+                                           color="tab:red" if sites[j, 0] < 0 else "tab:blue"))
+    a.set_aspect("equal"); a.set_title("top 4% directed edges (j->i)"); a.set_xticks([]); a.set_yticks([])
+    fig.suptitle("Directed graph-Laplacian network structure on the grid")
+    fig.tight_layout(); fig.savefig(OUTDIR / "net_laplacian_grid.png", dpi=150); plt.close(fig)
 
 
 if __name__ == "__main__":
