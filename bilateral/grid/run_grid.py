@@ -30,6 +30,10 @@ def main():
         gc["bregma_offset_x"], gc["bregma_offset_y"], gc["mm_per_v_x"], gc["mm_per_v_y"])
     print(f"{cfg.SUBJECT} {cfg.DATE}/{cfg.WF_EXP}: {len(onset_t)} detected {cfg.LASER} onsets")
 
+    # ---- multi-block Timeline: keep only this block's onset segment ----
+    if getattr(cfg, "ONSET_SEGMENT", None) is not None:
+        onset_t, pos, _ = loader.segment_onsets(onset_t, pos, cfg.SEGMENT_GAP_S, cfg.ONSET_SEGMENT)
+
     # ---- power select via Block alignment ----
     onset_t, pos, sites, label = loader.select_power(
         onset_t, pos, cfg.AMP_SEL, cfg.SUBJECT, cfg.DATE, cfg.BLOCK_EXP, cfg.SERVER)

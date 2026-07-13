@@ -46,6 +46,9 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## 🟡 Next sprint
 
 ### Bilateral analysis — AL_0048 (new sub-area)
+- [x] 2026-07-13 — **Dual-opsin impulse dose-response** (2026-07-10 block 5) analyzed via new Python sub-area `bilateral/impulse/` (reuses grid loader/calibration/SVD; run `bilateral/impulse/run_impulse.py`). Both opsins respond, opposite sign, dose-graded (excit peak +0.3→+2.1%; inhib dip ~−1.2% at high amp). See `bilateral/impulse/README.md` + RESEARCH 2026-07-13. Single session — needs replication + TF fit + sham-baseline recovery.
+- [ ] Recover sham (amp 0) catch trials for the impulse dose-response via Block↔Timeline clock offset (no laser onset → not in detected onsets)
+- [ ] TF-fit each side's AL_0048 impulse response (excit transient vs inhib dip time constants); compare to AL_0033/AL_0041 impulse TFs
 - [ ] Fill in session registry in `bilateral/load_bilateral.m` as experiments are collected
 - [ ] Confirm `BREGMA_COL` (input_params column for galvo bregma X) and set in `load_bilateral.m`
 - [ ] Decide stim detection mode (`STIM_MODE`: A / B / C) once first session is inspected
@@ -57,6 +60,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Run `compare_sides.m` → cross-side summary figure
 
 ### AL_0048 galvo photostim site-grid (`opto_brainGrid638`) — see `bilateral/grid/README.md`
+- [x] 2026-07-13 — Grid re-run on **2026-07-10 block 6** (WF=3): 5200 onsets, 52 sites, amps [1.0, 2.0] both fired (2600 each, 50/site). Added multi-block onset segmentation (`loader.segment_onsets` + config `ONSET_SEGMENT`) so the shared-Timeline impulse blocks are excluded. Registration + dual-opsin polarity clean. RESEARCH 2026-07-13.
 - [x] 2026-06-25 — Python analysis runs end-to-end on 2026-06-24/2 (all notebook plots: sites/timecourses/τ/spatial/raster). Onsets+positions derived from raw Timeline + rig calibration; bregma dial-in confirmed; power split done (only 0.5 fired)
 - [x] 2026-06-29 — Consolidated into `bilateral/grid/` and refactored the monolith into a clean Python module (`config`/`loader`/`analysis`/`plots`/`run_grid`); old script kept in `grid/legacy/`
 - [ ] (optional) aggregate stim→response **causal/connectivity map** across the 52 sites (N×N or per-region readout) — beyond per-site `grid_spatial.png`; per-trial dF/F available via `analysis.compute_site_responses`

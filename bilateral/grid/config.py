@@ -13,21 +13,27 @@ from pathlib import Path
 # hardwareInfo.json in the BLOCK_EXP folder); only BREGMA_PX / PX_PER_MM below (image
 # registration) may need a Fig-0 re-check when the mouse/mounting changes.
 SUBJECT = "AL_0048"
-DATE = "2026-07-01"
-WF_EXP = "4"                # widefield SVD + raw Timeline traces (analysis reads this)
-BLOCK_EXP = "5"             # paired Signals run: hardwareInfo.json + Block.mat (power/pos/order)
-# previous sessions: 2026-06-24 WF=2 Block=3
+DATE = "2026-07-10"
+WF_EXP = "3"                # widefield SVD + raw Timeline traces (analysis reads this)
+BLOCK_EXP = "6"            # paired Signals run: hardwareInfo.json + Block.mat (power/pos/order)
+# previous sessions: 2026-07-01 WF=4 Block=5 ; 2026-06-24 WF=2 Block=3
 
-SERVER = r"\\sahale.biostr.washington.edu\data\Subjects"
+# 2026-07-10 note: exp 3's Timeline/SVD spans the WHOLE ~97-min session, so its 638 onsets
+# contain the two impulse blocks (4=false-start, 5=impulse dose-response) THEN this grid
+# block (6), separated by a >90 s gap. Take the LAST onset segment for the grid; the impulse
+# stream is handled in bilateral/impulse/.
+ONSET_SEGMENT = "last"     # None = use all onsets (single-block sessions); 'last'/'first'/int
+SEGMENT_GAP_S = 50         # inter-block gap (s) that marks a block boundary
+
+SERVER = "//sahale.biostr.washington.edu/data/Subjects"
 
 EXPDIR = Path(SERVER) / SUBJECT / DATE / WF_EXP
 
 # ============================== STIM ==============================
 LASER = "638"              # active laser line (lightCommand638; 594 was idle)
-AMP_SEL = 0.5             # single-amp default (legacy 1-amp pipeline: build/tf_fit/viewer)
-AMPS = [0.25, 0.5]        # two-amp linearity build (build_amps). 2026-07-01 both fire
-                          #   (~50 reps/site each). Command->power is nonlinear (0.25~0.005 mW,
-                          #   0.5~0.058 mW per laser calib); for now treated as two levels, not mW.
+AMP_SEL = 2.0             # single-amp default (legacy 1-amp pipeline: build/tf_fit/viewer)
+AMPS = [1.0, 2.0]         # 2026-07-10 grid (block 6): two power levels, BOTH fired, 2600
+                          #   onsets each (50 reps x 52 sites). (2026-07-01 was [0.25, 0.5].)
 FS_DAQ = 2000.0           # Timeline DAQ rate (Hz), from TimelineHW.json
 N_COMPS = 50              # SVD components used
 LASER_THR = 0.3          # V threshold on lightCommand for onset detection

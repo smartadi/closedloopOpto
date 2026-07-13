@@ -56,6 +56,35 @@ def derive_onsets_positions(expdir, laser, laser_thr, debounce_s, fs_daq,
     return onset_t, pos
 
 
+def segment_onsets(onset_t, pos, gap_s, which="last"):
+    """Split a Timeline that contains several sequential stim blocks into contiguous
+    segments separated by inter-block gaps, and return the requested one.
+
+    When a single widefield/Timeline recording spans multiple Signals runs (e.g.
+    AL_0048 2026-07-10 exp 3 holds the two impulse blocks then the grid block), the
+    detected onsets form time-contiguous runs separated by minutes of setup. A gap
+    larger than `gap_s` seconds marks a block boundary.
+
+    which: 'last' (final segment), 'first', or an int segment index (0-based).
+    Returns (onset_t_seg, pos_seg, seg_slice).
+    """
+    import numpy as _np
+    bnd = _np.where(_np.diff(onset_t) > gap_s)[0]        # last idx of each segment but the last
+    starts = _np.r_[0, bnd + 1]
+    stops = _np.r_[bnd + 1, len(onset_t)]
+    segs = list(zip(starts, stops))
+    if which == "last":
+        i = len(segs) - 1
+    elif which == "first":
+        i = 0
+    else:
+        i = int(which)
+    s, e = segs[i]
+    print(f"  segment_onsets: {len(segs)} segments {[int(b-a) for a, b in segs]}; "
+          f"took '{which}' -> [{s}:{e}] = {e - s} onsets")
+    return onset_t[s:e], pos[s:e], slice(s, e)
+
+
 def block_power_per_onset(onset_t, snapped_pos, subject, date, block_exp, server):
     """Assign each Timeline onset its laser power by greedy in-order alignment to the
     session's Block.mat (the authoritative randomized trial log). The galvo position
