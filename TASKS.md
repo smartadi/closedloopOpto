@@ -130,7 +130,9 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 
 ### OLS pixel-predictor stim-blind decomposition (`impulse-analysis/ols_pixel_predictor_wip.m`) — NEW workbench, 2026-07-08
 > Single-session (AL_0033 2025-01-29 e1) so far. Three stim-blind models: **GREEDY** (§17, sparse — LEFT AS-IS per AL), **NATIVE** (§17b, all-unaffected px + KKT dip+rebound blinding, `native_nblind` auto-tuned=2), and **NAIVE** (§17b2, FIXED 3.7 V pixel config reused across amps — **current best model**). State-dependence reframed as VARIABILITY (§17c2): Rel-δ held-out ρ=+0.113, perm p=0.025. RESEARCH 2026-07-07/08.
-- [ ] **[PRIMARY] Keep iterating on STIMBLIND-NAIVE (our best model)** — fixed 3.7 V config gives the cleanest/most-uniform biphasic capture (dip 91% / reb 89%) and cuts the mid/high-amp stim leak. Explore: PCA-of-evoked blinding subspace (keep more px, less leak), per-amp adaptive `nblind` if 4.9 V non-stim R² stays negative, and choosing the reference amp principled-ly (not hard-coded 3.7 V).
+> **UPDATE 2026-07-13:** detection reworked to **TF-based** (§10T learns a canonical TF order from sampled pixels → §10T2 fits every pixel at that FIXED order → `affected_tf`; §10T3 = TF click-debug map). NATIVE stays primary stim-blind model; NAIVE retired. Clean linear rewrite lives in **`impulse-analysis/ols_tf_pipeline.m`** (setup→TF-detect→stim-blind→state-dep→batch; explorers in appendix; TF-map disk cache). WIP `ols_pixel_predictor_wip.m` kept as reference. UNVERIFIED — needs a clean run.
+- [ ] **[PRIMARY-NEXT] TF affected-detection SENSITIVITY** (`ols_tf_pipeline.m` §10T/§10T2) — misses real affected pixels because the fixed-order TF is SLUGGISH vs the sharp real dip. Plan (P1+P3 first): **(P1)** fit + score VAF on the **DIP window** (onset→recovery ~0–350 ms / §15 landmark), not the full 0–1000 ms — the noisy rebound tail blunts the fit + depresses VAF; **(P3)** **OR-gate**: affected if the TF matches OR a sensitive dip-shape criterion fires (matched-filter cosine of the pixel dip vs reference dip > 0 V null) — rescues pixels the TF underfits; **(P2)** give bandwidth (allow a zero/underdamped pole, re-learn canonical order on the dip window, optionally per-pixel delay∈{0,1,2}); **(P4)** learn the reference from the STRONGEST amp (sharpest); **(P5)** noise-weighted VAF; then re-tune vafFloor+matchTol on the §10T3 debug set. Symptom seen on the affected plot: genuinely-responsive regions dropped.
+- [ ] **[superseded] Keep iterating on STIMBLIND-NAIVE** — NAIVE retired 2026-07-13 (dominated by NATIVE+nblind=4; ref-amp sweep proved it). Kept for history; do not resume unless reopened.
 - [ ] **Zhiwen-style weight plot on the FIRST (sparse OLS) model** — pick a few ipsi-side regions (laser-site pixel + 2–3 others) and render their most prominent CONTRA weights as a spatial map, à la Zhiwen Ye 2023; shows what contra structure predicts each ipsi region.
 - [ ] **State the EXACT unaffected-pixel characterization** used by all stim-blind models — currently the §10 matched-filter AFFECT gate: per-amp, affected = (signed z > 2.0) AND (cosine-to-dip-template > 0.40) AND (evoked peak ≤ 700 ms); unaffected = complement. Write this precisely into Methods + the script header so the predictor set is reproducible/defensible.
 - [ ] **Validate STATEDEP-VAR (Rel-δ variability, p=0.025) for the paper** — this IS the power-independent state result the reviewer-proofing block below asked for (drop abs-var/δ magnitude confound → use relative δ). Replicate across AL_0041 e1/e2 + other sessions, animal-as-random-effect, FDR across states×sessions, then write into results §"Pre-stimulus brain state shapes predictability" (results.tex L64–68, currently a `\todo` stub). Promote to FINDINGS.md once replicated.
@@ -146,20 +148,20 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 ### Figure fixes
 - [ ] Make mean dot smaller in all-sessions MSE violin (panel 3H) — `plottingScript.m`
 - [ ] Generate spatial spread supplementary panel (ΔF/F inhibition area vs laser power) — cite Nuoli/Svoboda
-- [ ] Verify Fig 3H shows MSE (not MAE) — update caption accordingly
+- [x] 2026-07-14 — Verify Fig 3H shows MSE (not MAE): it shows **MAE** — `step_response.m` computes `abs(mean error)` over time; caption "Mean absolute tracking error per unit time" is already CORRECT. No change.
 - [ ] Verify Fig 2C shading is ±1 SD — update caption if not
 
 ### Paper figure consistency pass (whole-manuscript, 2026-07-08)
 - [ ] **Colorblind-safe version of ALL figures** — add a colorblind palette/template to `utils/paperStyle.m` (Wong/Okabe-Ito 8-color or ColorBrewer), and re-export every panel through it; keep a switch so both the standard and colorblind versions can be produced.
-- [ ] **Unify the error-metric label across figures** — the manuscript mixes **MSE** (Fig 3E/G/H, results.tex L86/88) and **RMS** (Fig 3J "tracking-error RMS", L91). Pick ONE (MSE per the locked MSE-window decision) and relabel consistently across every y-axis, or explicitly justify why J is an RMS ratio. Same quantity → same label everywhere.
+- [ ] **Unify the error-metric label — ⚠ DECISION NEEDED (2026-07-14): the "MSE" panels actually compute RMS.** `variance_mse.m` panels E/G/J all compute `sqrt(mean((y−ref).^2))` = RMS (code even prints "MSE window comparison (RMS)" L286; ylabels `'RMS MSE'`/`'OL/CL RMS ratio'`). So captions E/G + body L86/88 saying "MSE" are mislabelled; J's "RMS" is correct; H is MAE (correct). Two truthful options — **(a)** rename manuscript E/G/body → **RMS/RMSE** everywhere (no re-run, but overrides the locked "MSE" naming), or **(b)** drop the sqrt in `variance_mse.m` → true MSE, re-export Fig 3 panels, keep "MSE" labels. Did NOT auto-pick (either lies or reopens a locked decision). Once chosen, sweep every y-axis + Results body.
 - [ ] **Add units to every short-corner-axis figure** — `paperStyle` corner axes use `XLabel`/`YLabel` scale bars (e.g. '1 s','3%'); several panels don't set them yet. Audit all figures and add the missing unit labels.
 - [ ] **Fig 2 impulse-response plots need variance shading** — add ±1 SD shading around the trial-average traces (the caption L48 already claims "shading shows ±1 SD"; the generated panel must match). Ties to the "Verify Fig 2C shading is ±1 SD" item above.
 
 ### Prose
-- [ ] Convert passive voice to active throughout results ("We delivered…", "We quantified…")
-- [ ] Standardise figure citation style to `Fig. 1A` (not `Figure 1(A)`) throughout
-- [ ] Remove remaining equation references from Results prose
-- [ ] Add n and ± CI to all slope estimates in linearity paragraph
+- [x] 2026-07-14 — Convert passive voice to active throughout results (setup paragraph rewritten; OL-variance-slope sentence → "We quantified…"; rest of Results was already active). `results.tex`.
+- [x] 2026-07-14 — Standardise figure citation style to `Fig. 1A` (fixed lone inline "Figure~\ref" on L41; all live-file refs now "Fig.~". Remaining "Figure~" are only in ORPHAN `methods.tex`, not `\input` by `main.tex`).
+- [x] 2026-07-14 — Remove equation references from Results prose (grep-verified: none present — already clean).
+- [ ] Add n and ± CI to all slope estimates in linearity paragraph — BLOCKED: needs fit CIs from the impulse dose-response fit (`dose_response.m`); n=3 already stated. Can't fabricate CIs — run the fit to emit slope ± CI, then add.
 
 ---
 
