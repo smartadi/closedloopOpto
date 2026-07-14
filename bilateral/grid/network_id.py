@@ -226,6 +226,79 @@ def fit_driven_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, maxiter=120):
     return W, leak, g, b, L, P, freerun_fn
 
 
+def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0, maxiter=150, stabilize=True):
+    """DRIVEN 2nd-order DIRECTED weighted-graph model, fit by SIMULATION error:
+        x_ddot = -(L_dir + diag(leak)) x - Gamma x_dot + B u ,   L_dir = diag(rowsum W) - W
+    W is a DIRECTED, non-negative weight matrix (W[i,j] = strength of edge j->i, W[i,j] != W[j,i]
+    allowed) on a LOCAL k-NN candidate set (each node connects to its k nearest, both directions as
+    independent weights => locality/sparsity prior). An optional L1 penalty `l1*sum(W)` drives extra
+    sparsity. leak>=0 grounds the zero mode, Gamma=diag(g)>=0 damping, B=diag(b) sign-free. 2nd-order
+    => complex modes => reproduces the rebound; DIRECTED => asymmetric coupling (source vs sink roles,
+    inter-hemisphere flow). Params live in NODE space; trajectory simulated in an r-mode POD subspace.
+    Warm-started from the equation-error 2nd-order fit (already directed). Directed 2nd-order is NOT
+    stable by construction, so `stabilize` projects the reduced companion's continuous poles to Re<=0
+    for the free-run/prediction only (the RETURNED W is the raw learned graph). Returns
+    (W, leak, g, b, L_dir, P, freerun_fn)."""
+    from scipy.optimize import minimize
+    P = np.linalg.svd(np.concatenate([H[s, :, klo:khi + 1] for s in range(nS)], axis=1),
+                      full_matrices=False)[0][:, :r]
+    vel = np.stack([savgol_filter(H[s], 9, 3, deriv=1, delta=dt, axis=1) for s in range(nS)])
+    nfit = khi - klo
+    a0 = np.stack([P.T @ H[s, :, klo] for s in range(nS)]).T
+    v0 = np.stack([P.T @ vel[s, :, klo] for s in range(nS)]).T
+    Aact = np.stack([P.T @ H[s, :, klo:khi + 1] for s in range(nS)], axis=1)
+
+    D = np.linalg.norm(sites[:, None, :] - sites[None, :, :], axis=2)         # directed k-NN candidates
+    pairs = sorted({(i, int(j)) for i in range(nS) for j in np.argsort(D[i])[1:knn + 1]})  # (into i, from j)
+    nP = len(pairs)
+    pi = np.array([p[0] for p in pairs]); pj = np.array([p[1] for p in pairs])
+    sp = lambda t: np.logaddexp(0.0, t)
+
+    def node_ops(th):
+        w = sp(th[:nP]); leak = sp(th[nP:nP + nS]); g = sp(th[nP + nS:])
+        W = np.zeros((nS, nS)); W[pi, pj] = w                                 # directed: W[i,j] = j->i
+        L = np.diag(W.sum(1)) - W                                            # directed (in-degree) Laplacian
+        return W, leak, g, L + np.diag(leak), np.diag(g)
+
+    def reduced(L, Gam, stab=False):
+        Lr = P.T @ L @ P; Gr = P.T @ Gam @ P
+        A2r = np.block([[np.zeros((r, r)), np.eye(r)], [-Lr, -Gr]])
+        if stab:                                                             # project poles to Re<=0
+            lam, Vv = np.linalg.eig(A2r)
+            lam = np.minimum(lam.real, 0.0) + 1j * lam.imag
+            A2r = (Vv @ np.diag(lam) @ np.linalg.inv(Vv)).real
+        return sla.expm(A2r * dt)
+
+    def simulate(Md, nstep):
+        z = np.vstack([a0, v0]); out = [z[:r].copy()]
+        for _ in range(nstep):
+            z = Md @ z; out.append(z[:r].copy())
+        return np.stack(out, axis=2)
+
+    def obj(th):
+        W, leak, g, L, Gam = node_ops(th)
+        err = np.sum((simulate(reduced(L, Gam), nfit) - Aact) ** 2)
+        return float(err + l1 * np.sum(sp(th[:nP])))
+
+    X, V, Acc, _ = deriv_stacks(H, klo, khi, dt)                              # warm start: directed eq-error 2nd-order
+    _, W2, gam2, _ = fit_second_order(X, V, Acc, nS)
+    inv = lambda y: np.log(np.expm1(np.clip(y, 1e-6, None)))
+    th0 = np.concatenate([inv(np.maximum(W2[pi, pj], 1e-4)),
+                          inv(np.full(nS, 1e-2)), inv(np.maximum(gam2, 1e-2))])
+    res = minimize(obj, th0, method="L-BFGS-B", options=dict(maxiter=maxiter))
+    W, leak, g, L, Gam = node_ops(res.x)
+    b = np.array([H[s, s, klo + int(np.argmax(np.abs(H[s, s, klo:khi])))] for s in range(nS)])
+    Md = reduced(L, Gam, stab=stabilize)
+
+    def freerun_fn(s, nstep):
+        z = np.concatenate([P.T @ H[s, :, klo], P.T @ vel[s, :, klo]])
+        xs = [P @ z[:r]]
+        for _ in range(nstep):
+            z = Md @ z; xs.append(P @ z[:r])
+        return np.array(xs)
+    return W, leak, g, b, L, P, freerun_fn
+
+
 def fit_delay_dmd(H, klo, khi, dt, d, rank, stabilize=True):
     """Time-delay-embedded DMD (Hankel-DMD ~ ERA): augment the state with d time-lagged copies,
     z_k = [x_k; x_{k-1}; ...; x_{k-d+1}], and fit a rank-truncated linear propagator on z. The
