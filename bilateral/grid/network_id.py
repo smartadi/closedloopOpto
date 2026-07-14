@@ -157,6 +157,75 @@ def fit_second_order(X, V, Acc, nS):
     return A2, W, gamma, L
 
 
+def fit_driven_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, maxiter=120):
+    """DRIVEN 2nd-order graph-WAVE with a NODE-SPACE proper Laplacian, fit by SIMULATION error:
+        x_ddot = -(L + diag(leak)) x - Gamma x_dot + B u ,   L = D - W
+    W = undirected NON-NEGATIVE weights on a LOCAL k-NN candidate edge set (=> L symmetric PSD and
+    interpretable/sparse), leak>=0 grounds the Laplacian zero mode, Gamma=diag(g)>=0 damping, and
+    B = diag(b) is DIAGONAL + SIGN-FREE (signed self-kick; opsin polarity read off the data). Being
+    2nd-order, complex modes let it OSCILLATE (the rebound the first-order Laplacian cannot make)
+    while L stays a proper graph-Laplacian. Non-negativity via softplus. The parameters live in NODE
+    space (interpretable) but the trajectory is simulated in an r-mode POD subspace (Lr=P^T L P,
+    Gr=P^T Gamma P) so each objective eval is cheap. L-BFGS from the equation-error 2nd-order fit
+    (correct operator scale). Stable by construction (L, Gamma PSD). Returns (W, leak, g, b, L, P,
+    freerun_fn)."""
+    from scipy.optimize import minimize
+    P = np.linalg.svd(np.concatenate([H[s, :, klo:khi + 1] for s in range(nS)], axis=1),
+                      full_matrices=False)[0][:, :r]
+    vel = np.stack([savgol_filter(H[s], 9, 3, deriv=1, delta=dt, axis=1) for s in range(nS)])
+    nfit = khi - klo
+    a0 = np.stack([P.T @ H[s, :, klo] for s in range(nS)]).T                # (r, nStim)
+    v0 = np.stack([P.T @ vel[s, :, klo] for s in range(nS)]).T
+    Aact = np.stack([P.T @ H[s, :, klo:khi + 1] for s in range(nS)], axis=1)  # (r, nStim, nfit+1)
+
+    D = np.linalg.norm(sites[:, None, :] - sites[None, :, :], axis=2)       # k-NN candidate edges
+    E = set()
+    for i in range(nS):
+        for j in np.argsort(D[i])[1:knn + 1]:
+            E.add((min(i, int(j)), max(i, int(j))))
+    edges = sorted(E); nE = len(edges)
+    ei = np.array([e[0] for e in edges]); ej = np.array([e[1] for e in edges])
+    sp = lambda t: np.logaddexp(0.0, t)                                     # softplus (>=0)
+
+    def node_ops(th):
+        w = sp(th[:nE]); leak = sp(th[nE:nE + nS]); g = sp(th[nE + nS:])
+        W = np.zeros((nS, nS)); W[ei, ej] = w; W[ej, ei] = w
+        L = np.diag(W.sum(1)) - W + np.diag(leak)
+        return W, leak, g, L, np.diag(g)
+
+    def reduced(L, Gam):
+        Lr = P.T @ L @ P; Gr = P.T @ Gam @ P
+        return sla.expm(np.block([[np.zeros((r, r)), np.eye(r)], [-Lr, -Gr]]) * dt)
+
+    def simulate(Md, nstep):
+        z = np.vstack([a0, v0]); out = [z[:r].copy()]
+        for _ in range(nstep):
+            z = Md @ z; out.append(z[:r].copy())
+        return np.stack(out, axis=2)
+
+    def obj(th):
+        _, _, _, L, Gam = node_ops(th)
+        return float(np.sum((simulate(reduced(L, Gam), nfit) - Aact) ** 2))
+
+    X, V, Acc, _ = deriv_stacks(H, klo, khi, dt)                            # warm start from eq-error 2nd-order
+    _, W2, gam2, _ = fit_second_order(X, V, Acc, nS)
+    inv = lambda y: np.log(np.expm1(np.clip(y, 1e-6, None)))
+    w0 = inv(np.maximum(0.5 * (W2[ei, ej] + W2[ej, ei]), 1e-4))
+    th0 = np.concatenate([w0, inv(np.full(nS, 1e-2)), inv(np.maximum(gam2, 1e-2))])
+    res = minimize(obj, th0, method="L-BFGS-B", options=dict(maxiter=maxiter))
+    W, leak, g, L, Gam = node_ops(res.x)
+    b = np.array([H[s, s, klo + int(np.argmax(np.abs(H[s, s, klo:khi])))] for s in range(nS)])
+    Md = reduced(L, Gam)
+
+    def freerun_fn(s, nstep):
+        z = np.concatenate([P.T @ H[s, :, klo], P.T @ vel[s, :, klo]])
+        xs = [P @ z[:r]]
+        for _ in range(nstep):
+            z = Md @ z; xs.append(P @ z[:r])
+        return np.array(xs)
+    return W, leak, g, b, L, P, freerun_fn
+
+
 def fit_delay_dmd(H, klo, khi, dt, d, rank, stabilize=True):
     """Time-delay-embedded DMD (Hankel-DMD ~ ERA): augment the state with d time-lagged copies,
     z_k = [x_k; x_{k-1}; ...; x_{k-d+1}], and fit a rank-truncated linear propagator on z. The
@@ -392,9 +461,10 @@ def main():
     half = max(1, int(0.6 * len(mact)))
     ktr = int(np.argmin(mact[:half]))                       # FIRST (early) trough, not the decaying tail
     rebound = float((mact[ktr:].max() - mact[ktr]) / (np.abs(mact[0]) + 1e-9))
+    fr1_med, self1_med = np.nanmedian(fr), np.nanmedian(self_r2)     # keep: `fr` is reused by later loops
     print(f"\n DRIVEN symmetric-PSD Laplacian (x_dot=-(L+diag g)x + B u):")
-    print(f"   free-run R2 {np.nanmedian(fr):.3f} | extrapol R2 {np.nanmedian(ex):.3f} | "
-          f"SELF-site R2 {np.nanmedian(self_r2):.3f} | stable {ev_drv.max() <= 1e-6} (all real, max l={ev_drv.max():.3g})")
+    print(f"   free-run R2 {fr1_med:.3f} | extrapol R2 {np.nanmedian(ex):.3f} | "
+          f"SELF-site R2 {self1_med:.3f} | stable {ev_drv.max() <= 1e-6} (all real, max l={ev_drv.max():.3g})")
     print(f"   diag B opsin-sign recovery vs hemisphere: {sign_match*100:.0f}% match "
           f"({int(np.sum(b_drv > 0))} +, {int(np.sum(b_drv < 0))} -)")
     print(f"   rebound index (pooled self-response post-trough recovery, model CANNOT produce): {rebound:+.2f} "
@@ -445,10 +515,38 @@ def main():
     print(f" structured model: {len(freqs)} modes, oscillation freqs {np.sort(freqs)[::-1][:5].round(2)} Hz; "
           f"damping gamma tau=1/gamma {(1/np.maximum(gam_s,1e-9)).round(2)[:4]} s")
 
+    # ---- DRIVEN 2nd-order graph-WAVE: node-space proper Laplacian, sim-error (step 3) ----
+    W_w, leak_w, g_w, b_w, L_w, P_w, fr_wave = fit_driven_wave(H, sites, klo, khi, dt, nS, r=18, knn=8)
+    frw, exw, selfw = [], [], []
+    for s in range(nS):
+        traj = fr_wave(s, khi_pred - klo)
+        actual = H[s, :, klo:khi_pred + 1].T
+        frw.append(r2(actual[:khi - klo + 1], traj[:khi - klo + 1]))
+        exw.append(r2(actual, traj))
+        selfw.append(r2(actual[:, s], traj[:, s]))
+    Aw2 = np.block([[np.zeros((nS, nS)), np.eye(nS)], [-L_w, -np.diag(g_w)]])
+    ew = np.linalg.eigvals(Aw2)
+    fw = np.abs(ew.imag[np.abs(ew.imag) > 1e-3]) / (2 * np.pi)
+    dens_w = float((W_w > 1e-6).mean())
+    print(f"\n DRIVEN 2nd-order graph-WAVE (node Laplacian-cone, sim-error): "
+          f"free-run R2 {np.nanmedian(frw):.3f} | extrapol {np.nanmedian(exw):.3f} | "
+          f"SELF-site R2 {np.nanmedian(selfw):.3f} | {int(np.sum(ew.real<=1e-6))}/{2*nS} stable")
+    print(f"   {W_w[W_w>1e-6].size} learned edges (kNN cand.), density {dens_w:.2f}; "
+          f"{len(fw)} oscillatory modes, freqs {np.sort(fw)[::-1][:5].round(2)} Hz")
+
+    # ---- unified comparison: interpretability vs prediction, across the model ladder ----
+    print("\n ===== MODEL LADDER (free-run R2 / self-site R2 / node-space Laplacian?) =====")
+    print(f"  1st-order driven Laplacian   free {fr1_med:+.2f}  self {self1_med:+.2f}  "
+          f"node-L YES  (monotone: cannot rebound)")
+    print(f"  2nd-order driven graph-wave  free {np.nanmedian(frw):+.2f}  self {np.nanmedian(selfw):+.2f}  "
+          f"node-L YES  (oscillates: {len(fw)} complex modes)")
+    print(f"  delay-DMD (predictive ceil.) free {frm:+.2f}  self  n/a   node-L NO   (latent Hankel)")
+
     _figures(H, sites, window, klo, khi, khi_pred, dt, A_un, A_sym, Mdmd, models, metrics)
     _lap_figures(sites, A_lap, W_lap, gamma)
     _latent_figures(H, sites, window, klo, khi, khi_pred, A2, W2, gamma2, fr_2nd, fr_delay, Atil, dt, nS)
     _struct_figures(H, sites, window, klo, khi, khi_pred, L_node, fr_struct, fr_delay, freqs, nS)
+    _wave_figures(H, sites, window, klo, khi, khi_pred, W_w, L_w, b_w, fr_wave, fr_delay, Aw2, selfw, nS)
     print("\nwrote:", OUTDIR)
 
 
@@ -630,6 +728,71 @@ def _driven_figures(H, sites, window, klo, khi, khi_pred, A, W, gamma, b, Md,
 
     fig.suptitle("Driven first-order symmetric-PSD graph-Laplacian  x_dot = -(L+diag g) x + B u", fontsize=12)
     fig.tight_layout(); fig.savefig(OUTDIR / "net_driven_laplacian.png", dpi=150); plt.close(fig)
+
+
+def _wave_figures(H, sites, window, klo, khi, khi_pred, W, L, b, fr_wave, fr_delay, Aw2, selfw, nS):
+    """Driven 2nd-order graph-wave: learned node-space Laplacian coupling on the grid, its complex
+    (oscillatory) spectrum, same-site free-run vs actual (does it now capture the rebound?), and the
+    wave-vs-delay-DMD free-run comparison."""
+    tt = window[klo:khi_pred + 1]
+    fig, ax = plt.subplots(2, 2, figsize=(11.5, 9))
+
+    # (a) learned undirected coupling W on the grid (top edges), node color = input sign
+    a = ax[0, 0]
+    vmax = np.percentile(np.abs(b), 98)
+    a.scatter(sites[:, 0], sites[:, 1], c=b, cmap="RdBu_r", s=90, ec="k", lw=0.3,
+              vmin=-vmax, vmax=vmax, zorder=3)
+    thr = np.percentile(W[W > 0], 90) if (W > 0).any() else np.inf
+    for i in range(nS):
+        for j in range(i + 1, nS):
+            if W[i, j] >= thr:
+                a.plot([sites[i, 0], sites[j, 0]], [sites[i, 1], sites[j, 1]],
+                       "0.35", lw=0.5 + 2.0 * W[i, j] / W.max(), alpha=0.5, zorder=1)
+    a.axvline(0, color="0.5", lw=0.8, ls="--")
+    a.set_aspect("equal"); a.set_xticks([]); a.set_yticks([])
+    a.set_title(f"learned graph-wave coupling W=W^T (top 10% k-NN edges)\nnode fill = diagonal B sign")
+
+    # (b) complex spectrum: oscillatory modes = the rebound capacity
+    a = ax[0, 1]
+    ew = np.linalg.eigvals(Aw2)
+    a.scatter(ew.real, ew.imag / (2 * np.pi), s=18, c="tab:blue", alpha=0.7)
+    a.axvline(0, color="r", lw=0.6, ls="--")
+    a.set_xlabel("Re (1/s) — decay"); a.set_ylabel("Im/2pi (Hz) — oscillation")
+    a.set_title(f"graph-wave poles: {int(np.sum(np.abs(ew.imag) > 1e-3))}/{2*nS} oscillatory, "
+                f"{int(np.sum(ew.real <= 1e-6))}/{2*nS} stable")
+
+    # (c) same-site free-run vs actual, pooled sign-normalized (does it capture the rebound now?)
+    a = ax[1, 0]
+    sa, sm = [], []
+    for s in range(nS):
+        tr = fr_wave(s, khi_pred - klo); ac = H[s, :, klo:khi_pred + 1].T
+        sgn = np.sign(b[s]) or 1.0
+        sa.append(sgn * ac[:, s]); sm.append(sgn * tr[:, s])
+    sa, sm = np.array(sa), np.array(sm)
+    a.fill_between(tt, (sa.mean(0) - sa.std(0)) * 100, (sa.mean(0) + sa.std(0)) * 100, color="k", alpha=0.12, lw=0)
+    a.plot(tt, sa.mean(0) * 100, "k-", lw=2.0, label="actual self-response (mean)")
+    a.plot(tt, sm.mean(0) * 100, "--", lw=1.7, color="tab:blue", label="2nd-order graph-wave")
+    a.axhline(0, color="0.6", lw=0.6); a.axvline(window[khi], color="0.5", lw=0.6, ls=":")
+    a.set_xlabel("t (s)"); a.set_ylabel("sign-norm. dF/F %")
+    a.set_title(f"same-site: graph-wave vs actual (median self R2 {np.nanmedian(selfw):.2f})\nnow oscillatory — compare to first-order's monotone miss")
+    a.legend(fontsize=8, frameon=False)
+
+    # (d) example free-run: graph-wave vs delay-DMD vs actual (strongest self + 2 stims)
+    a = ax[1, 1]
+    ex_stims = [int(np.argmax([np.abs(H[s, s, klo:khi]).max() for s in range(nS)])), int(nS * 0.4), int(nS * 0.75)]
+    cols = ["tab:blue", "tab:green", "tab:orange"]
+    for s, c in zip(ex_stims, cols):
+        tw = fr_wave(s, khi_pred - klo); td = fr_delay(s, khi_pred - klo)
+        a.plot(tt, H[s, s, klo:khi_pred + 1] * 100, "-", lw=1.8, color=c, label=f"stim {s} actual")
+        a.plot(tt, tw[:, s] * 100, "--", lw=1.2, color=c)
+        a.plot(tt, td[:, s] * 100, ":", lw=1.2, color=c)
+    a.axvline(window[khi], color="0.5", lw=0.6, ls=":")
+    a.set_xlabel("t (s)"); a.set_ylabel("dF/F %")
+    a.set_title("self free-run: actual (solid) / graph-wave (dash) / delay-DMD (dot)")
+    a.legend(fontsize=7, frameon=False)
+
+    fig.suptitle("Driven 2nd-order graph-WAVE  x_ddot = -(L+diag leak) x - Gamma x_dot + B u  (node Laplacian, sim-error)", fontsize=11.5)
+    fig.tight_layout(); fig.savefig(OUTDIR / "net_driven_wave.png", dpi=150); plt.close(fig)
 
 
 def _latent_figures(H, sites, window, klo, khi, khi_pred, A2, W2, gamma2, fr_2nd, fr_delay, Atil, dt, nS):
