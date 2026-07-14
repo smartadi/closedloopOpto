@@ -226,7 +226,7 @@ def fit_driven_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, maxiter=120):
     return W, leak, g, b, L, P, freerun_fn
 
 
-def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0,
+def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0, dist_pen=0.0, dist_pow=2.0,
                       connect=True, floor=1.0, maxiter=150, stabilize=True):
     """DRIVEN 2nd-order DIRECTED weighted-graph model, fit by SIMULATION error:
         x_ddot = -(L_dir + diag(leak)) x - Gamma x_dot + B u ,   L_dir = diag(rowsum W) - W
@@ -234,15 +234,19 @@ def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0,
     allowed). Candidate edges:
       * knn=<int> : each node's k nearest neighbours (LOCAL / sparse prior),
       * knn=None  : ALL ordered pairs (FULLY-CONNECTED / dense candidate set).
+    DISTANCE CONSTRAINT: each edge carries an L1 penalty  pen_ij = l1 + dist_pen*(d_ij/d_scale)^dist_pow
+    (d_ij = cortical distance, d_scale = median candidate-edge length). With dist_pen>0 LONG edges pay
+    more and are pruned first => SOFT locality (long-range connections discouraged, not forbidden) even
+    on the fully-connected candidate set. dist_pen=0 recovers a plain L1.
     CONNECTIVITY GUARANTEE (connect=True): a minimum-spanning-tree backbone over cortical distance is
     added (both directions) and floored to `floor>0` via w = softplus(theta)+floor on those edges, so
-    the learned graph stays WEAKLY CONNECTED no matter how hard the L1 penalty prunes; the L1 term
-    `l1*sum(W)` is applied to NON-backbone edges only. leak>=0 grounds the zero mode, Gamma=diag(g)>=0
-    damping, B=diag(b) sign-free. 2nd-order => complex modes => reproduces the rebound; DIRECTED =>
-    asymmetric coupling. Params live in NODE space; trajectory simulated in an r-mode POD subspace,
-    warm-started from the equation-error 2nd-order fit. Directed 2nd-order is NOT stable by
-    construction, so `stabilize` projects the reduced companion poles to Re<=0 for the free-run only
-    (RETURNED W is the raw learned graph). Returns (W, leak, g, b, L_dir, P, freerun_fn)."""
+    the learned graph stays WEAKLY CONNECTED no matter how hard the penalty prunes; the penalty is
+    applied to NON-backbone edges only. leak>=0 grounds the zero mode, Gamma=diag(g)>=0 damping,
+    B=diag(b) sign-free. 2nd-order => complex modes => reproduces the rebound; DIRECTED => asymmetric
+    coupling. Params live in NODE space; trajectory simulated in an r-mode POD subspace, warm-started
+    from the equation-error 2nd-order fit. Directed 2nd-order is NOT stable by construction, so
+    `stabilize` projects the reduced companion poles to Re<=0 for the free-run only (RETURNED W is the
+    raw learned graph). Returns (W, leak, g, b, L_dir, P, freerun_fn)."""
     from scipy.optimize import minimize
     from scipy.sparse import csr_matrix
     from scipy.sparse.csgraph import minimum_spanning_tree
@@ -270,6 +274,9 @@ def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0,
     pairs = sorted(cand); nP = len(pairs)
     pi = np.array([p[0] for p in pairs]); pj = np.array([p[1] for p in pairs])
     bb_mask = np.array([p in bb for p in pairs])
+    elen = D[pi, pj]                                                         # candidate-edge cortical lengths
+    dscale = np.median(elen) if elen.size else 1.0
+    edge_pen = l1 + dist_pen * (elen / dscale) ** dist_pow                   # per-edge L1 coeff (long edges cost more)
     sp = lambda t: np.logaddexp(0.0, t)
 
     def node_ops(th):
@@ -297,7 +304,8 @@ def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0,
     def obj(th):
         W, leak, g, L, Gam = node_ops(th)
         err = np.sum((simulate(reduced(L, Gam), nfit) - Aact) ** 2)
-        return float(err + l1 * np.sum(sp(th[:nP])[~bb_mask]))               # L1 on non-backbone only
+        w = sp(th[:nP])
+        return float(err + np.sum((edge_pen * w)[~bb_mask]))                 # distance-weighted L1, non-backbone only
 
     X, V, Acc, _ = deriv_stacks(H, klo, khi, dt)                             # warm start: directed eq-error 2nd-order
     _, W2, gam2, _ = fit_second_order(X, V, Acc, nS)
