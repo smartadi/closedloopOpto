@@ -226,20 +226,26 @@ def fit_driven_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, maxiter=120):
     return W, leak, g, b, L, P, freerun_fn
 
 
-def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0, maxiter=150, stabilize=True):
+def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0,
+                      connect=True, floor=1.0, maxiter=150, stabilize=True):
     """DRIVEN 2nd-order DIRECTED weighted-graph model, fit by SIMULATION error:
         x_ddot = -(L_dir + diag(leak)) x - Gamma x_dot + B u ,   L_dir = diag(rowsum W) - W
     W is a DIRECTED, non-negative weight matrix (W[i,j] = strength of edge j->i, W[i,j] != W[j,i]
-    allowed) on a LOCAL k-NN candidate set (each node connects to its k nearest, both directions as
-    independent weights => locality/sparsity prior). An optional L1 penalty `l1*sum(W)` drives extra
-    sparsity. leak>=0 grounds the zero mode, Gamma=diag(g)>=0 damping, B=diag(b) sign-free. 2nd-order
-    => complex modes => reproduces the rebound; DIRECTED => asymmetric coupling (source vs sink roles,
-    inter-hemisphere flow). Params live in NODE space; trajectory simulated in an r-mode POD subspace.
-    Warm-started from the equation-error 2nd-order fit (already directed). Directed 2nd-order is NOT
-    stable by construction, so `stabilize` projects the reduced companion's continuous poles to Re<=0
-    for the free-run/prediction only (the RETURNED W is the raw learned graph). Returns
-    (W, leak, g, b, L_dir, P, freerun_fn)."""
+    allowed). Candidate edges:
+      * knn=<int> : each node's k nearest neighbours (LOCAL / sparse prior),
+      * knn=None  : ALL ordered pairs (FULLY-CONNECTED / dense candidate set).
+    CONNECTIVITY GUARANTEE (connect=True): a minimum-spanning-tree backbone over cortical distance is
+    added (both directions) and floored to `floor>0` via w = softplus(theta)+floor on those edges, so
+    the learned graph stays WEAKLY CONNECTED no matter how hard the L1 penalty prunes; the L1 term
+    `l1*sum(W)` is applied to NON-backbone edges only. leak>=0 grounds the zero mode, Gamma=diag(g)>=0
+    damping, B=diag(b) sign-free. 2nd-order => complex modes => reproduces the rebound; DIRECTED =>
+    asymmetric coupling. Params live in NODE space; trajectory simulated in an r-mode POD subspace,
+    warm-started from the equation-error 2nd-order fit. Directed 2nd-order is NOT stable by
+    construction, so `stabilize` projects the reduced companion poles to Re<=0 for the free-run only
+    (RETURNED W is the raw learned graph). Returns (W, leak, g, b, L_dir, P, freerun_fn)."""
     from scipy.optimize import minimize
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import minimum_spanning_tree
     P = np.linalg.svd(np.concatenate([H[s, :, klo:khi + 1] for s in range(nS)], axis=1),
                       full_matrices=False)[0][:, :r]
     vel = np.stack([savgol_filter(H[s], 9, 3, deriv=1, delta=dt, axis=1) for s in range(nS)])
@@ -248,22 +254,35 @@ def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0, maxiter=1
     v0 = np.stack([P.T @ vel[s, :, klo] for s in range(nS)]).T
     Aact = np.stack([P.T @ H[s, :, klo:khi + 1] for s in range(nS)], axis=1)
 
-    D = np.linalg.norm(sites[:, None, :] - sites[None, :, :], axis=2)         # directed k-NN candidates
-    pairs = sorted({(i, int(j)) for i in range(nS) for j in np.argsort(D[i])[1:knn + 1]})  # (into i, from j)
-    nP = len(pairs)
+    D = np.linalg.norm(sites[:, None, :] - sites[None, :, :], axis=2)
+    if knn is None:                                                          # fully-connected candidates
+        cand = {(i, j) for i in range(nS) for j in range(nS) if i != j}
+    else:                                                                    # local k-NN candidates
+        cand = {(i, int(j)) for i in range(nS) for j in np.argsort(D[i])[1:knn + 1]}
+    bb = set()
+    if connect:                                                             # MST backbone => weak connectivity guarantee
+        mst = minimum_spanning_tree(csr_matrix(D)).toarray()
+        for i in range(nS):
+            for j in range(nS):
+                if mst[i, j] > 0:
+                    bb.add((i, j)); bb.add((j, i))
+        cand |= bb
+    pairs = sorted(cand); nP = len(pairs)
     pi = np.array([p[0] for p in pairs]); pj = np.array([p[1] for p in pairs])
+    bb_mask = np.array([p in bb for p in pairs])
     sp = lambda t: np.logaddexp(0.0, t)
 
     def node_ops(th):
-        w = sp(th[:nP]); leak = sp(th[nP:nP + nS]); g = sp(th[nP + nS:])
-        W = np.zeros((nS, nS)); W[pi, pj] = w                                 # directed: W[i,j] = j->i
-        L = np.diag(W.sum(1)) - W                                            # directed (in-degree) Laplacian
+        w = sp(th[:nP]) + floor * bb_mask                                    # backbone floored > 0
+        leak = sp(th[nP:nP + nS]); g = sp(th[nP + nS:])
+        W = np.zeros((nS, nS)); W[pi, pj] = w                                # directed: W[i,j] = j->i
+        L = np.diag(W.sum(1)) - W                                           # directed (in-degree) Laplacian
         return W, leak, g, L + np.diag(leak), np.diag(g)
 
     def reduced(L, Gam, stab=False):
         Lr = P.T @ L @ P; Gr = P.T @ Gam @ P
         A2r = np.block([[np.zeros((r, r)), np.eye(r)], [-Lr, -Gr]])
-        if stab:                                                             # project poles to Re<=0
+        if stab:                                                            # project poles to Re<=0
             lam, Vv = np.linalg.eig(A2r)
             lam = np.minimum(lam.real, 0.0) + 1j * lam.imag
             A2r = (Vv @ np.diag(lam) @ np.linalg.inv(Vv)).real
@@ -278,12 +297,12 @@ def fit_directed_wave(H, sites, klo, khi, dt, nS, r=18, knn=8, l1=0.0, maxiter=1
     def obj(th):
         W, leak, g, L, Gam = node_ops(th)
         err = np.sum((simulate(reduced(L, Gam), nfit) - Aact) ** 2)
-        return float(err + l1 * np.sum(sp(th[:nP])))
+        return float(err + l1 * np.sum(sp(th[:nP])[~bb_mask]))               # L1 on non-backbone only
 
-    X, V, Acc, _ = deriv_stacks(H, klo, khi, dt)                              # warm start: directed eq-error 2nd-order
+    X, V, Acc, _ = deriv_stacks(H, klo, khi, dt)                             # warm start: directed eq-error 2nd-order
     _, W2, gam2, _ = fit_second_order(X, V, Acc, nS)
     inv = lambda y: np.log(np.expm1(np.clip(y, 1e-6, None)))
-    th0 = np.concatenate([inv(np.maximum(W2[pi, pj], 1e-4)),
+    th0 = np.concatenate([inv(np.maximum(W2[pi, pj] - floor * bb_mask, 1e-4)),
                           inv(np.full(nS, 1e-2)), inv(np.maximum(gam2, 1e-2))])
     res = minimize(obj, th0, method="L-BFGS-B", options=dict(maxiter=maxiter))
     W, leak, g, L, Gam = node_ops(res.x)
