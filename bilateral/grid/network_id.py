@@ -76,6 +76,56 @@ def fit_directed_laplacian(Xmid, Xdot, nS, ridge=0.0):
     return A, W, gamma
 
 
+def fit_driven_laplacian(H, sites, klo, khi, dt, nS, ridge=1e-2, dmax=None):
+    """DRIVEN first-order SYMMETRIC-PSD graph-Laplacian (the parsimony baseline + rebound test):
+        x_dot = -(L + diag(gamma)) x + B u ,   L = D - W,  W = W^T >= 0,  gamma >= 0,  B = diag(b)
+    L is a proper combinatorial graph-Laplacian (undirected non-negative weights => symmetric PSD);
+    gamma>=0 is a per-node leak that grounds the Laplacian's zero mode so responses decay to 0.
+    B is DIAGONAL and SIGN-FREE: each stim injects only at its own node, and the SIGN of b_s is left
+    free so the excitatory(+)/inhibitory(-) opsin polarity is a RESULT read off the data, not an
+    imposed prior. L,gamma are fit by a CONVEX bounded-variable equation-error LS over the pooled
+    post-pulse snapshots (undirected weight w_ij is shared between rows i and j); b_s is the signed
+    self-kick at the driven site. A = -(L+diag(gamma)) is symmetric negative-definite => real
+    eigenvalues => guaranteed stable AND non-oscillatory: it structurally cannot rebound, which is
+    exactly why its same-site residual isolates the dynamics a first-order Laplacian must miss.
+    Returns (A, L, W, gamma, b)."""
+    from scipy.optimize import lsq_linear
+    from scipy.sparse import csr_matrix, vstack, eye as speye
+    Phi = np.transpose(H, (2, 1, 0))                             # (nWin, nReadout, nStim)
+    Xc, Xdc = [], []
+    for k in range(klo, khi):
+        Xc.append(Phi[k]); Xdc.append((Phi[k + 1] - Phi[k - 1]) / (2 * dt))   # central diff
+    X = np.concatenate(Xc, 1); Xd = np.concatenate(Xdc, 1)       # (nS, N)
+    N = X.shape[1]
+    if dmax is None:
+        edges = [(i, j) for i in range(nS) for j in range(i + 1, nS)]
+    else:                                                        # locality prior: candidate edges within dmax
+        D = np.linalg.norm(sites[:, None, :] - sites[None, :, :], axis=2)
+        edges = [(i, j) for i in range(nS) for j in range(i + 1, nS) if D[i, j] <= dmax]
+    nE = len(edges)
+    ri, ci, va, ar = [], [], [], np.arange(N)
+    for ei, (i, j) in enumerate(edges):                          # w_ij: +(x_j-x_i) into row i, -(...) into row j
+        di = X[j] - X[i]
+        ri.extend(i * N + ar); ci.extend([ei] * N); va.extend(di)
+        ri.extend(j * N + ar); ci.extend([ei] * N); va.extend(-di)
+    for i in range(nS):                                          # leak: -x_i into row i
+        ri.extend(i * N + ar); ci.extend([nE + i] * N); va.extend(-X[i])
+    G = csr_matrix((va, (ri, ci)), shape=(nS * N, nE + nS))
+    y = Xd.reshape(nS * N)                                       # node-major flatten matches row index i*N+n
+    if ridge > 0:
+        G = vstack([G, np.sqrt(ridge) * speye(nE + nS, format="csr")], format="csr")
+        y = np.concatenate([y, np.zeros(nE + nS)])
+    theta = lsq_linear(G, y, bounds=(0, np.inf), max_iter=60, lsmr_tol="auto", verbose=0).x
+    W = np.zeros((nS, nS))
+    for ei, (i, j) in enumerate(edges):
+        W[i, j] = W[j, i] = theta[ei]
+    gamma = theta[nE:]
+    L = np.diag(W.sum(1)) - W
+    A = -(L + np.diag(gamma))
+    b = np.array([H[s, s, klo + int(np.argmax(np.abs(H[s, s, klo:khi])))] for s in range(nS)])
+    return A, L, W, gamma, b
+
+
 def deriv_stacks(H, klo, khi, dt):
     """Per-stim x, x_dot, x_ddot (central differences) pooled over [klo,khi] across stims.
     Returns (X, V, Acc) each (nNode, nStim*(khi-klo+1)) + a per-stim velocity at klo for seeding."""
@@ -319,6 +369,39 @@ def main():
           f"{1/np.maximum(gamma.min(),1e-9):.3f}]s; edge density {dens:.2f}; "
           f"W asymmetry ||W-W^T||/||W|| = {np.linalg.norm(W_lap-W_lap.T)/np.linalg.norm(W_lap):.2f}")
 
+    # ---- DRIVEN 1st-order SYMMETRIC-PSD Laplacian: parsimony baseline + REBOUND DIAGNOSTIC ----
+    A_drv, L_drv, W_drv, gam_drv, b_drv = fit_driven_laplacian(H, sites, klo, khi, dt, nS, ridge=1e-2)
+    Md_drv = sla.expm(A_drv * dt)
+    fr, ex, self_r2, self_act, self_mod = [], [], [], [], []
+    for s in range(nS):
+        traj = free_run(Md_drv, H[s, :, klo], khi_pred - klo)
+        actual = H[s, :, klo:khi_pred + 1].T
+        fr.append(r2(actual[:khi - klo + 1], traj[:khi - klo + 1]))
+        ex.append(r2(actual, traj))
+        self_r2.append(r2(actual[:, s], traj[:, s]))
+        sgn = np.sign(b_drv[s]) or 1.0                        # sign-normalize so all self-responses start +
+        self_act.append(sgn * actual[:, s]); self_mod.append(sgn * traj[:, s])
+    self_act = np.array(self_act); self_mod = np.array(self_mod)
+    ev_drv = np.linalg.eigvalsh(A_drv)                       # symmetric => real
+    # opsin-sign recovery: does the free-fit b_s sign match hemisphere (left/excit x<0 => +)?
+    hemi_expect = np.where(sites[:, 0] < 0, 1.0, -1.0)
+    sign_match = float(np.mean(np.sign(b_drv) == hemi_expect))
+    # rebound index: EARLY-trough -> subsequent-peak recovery of the pooled mean self-response
+    # (the biphasic dip->rebound a symmetric-PSD first-order model structurally cannot produce)
+    mact = self_act.mean(0)
+    half = max(1, int(0.6 * len(mact)))
+    ktr = int(np.argmin(mact[:half]))                       # FIRST (early) trough, not the decaying tail
+    rebound = float((mact[ktr:].max() - mact[ktr]) / (np.abs(mact[0]) + 1e-9))
+    print(f"\n DRIVEN symmetric-PSD Laplacian (x_dot=-(L+diag g)x + B u):")
+    print(f"   free-run R2 {np.nanmedian(fr):.3f} | extrapol R2 {np.nanmedian(ex):.3f} | "
+          f"SELF-site R2 {np.nanmedian(self_r2):.3f} | stable {ev_drv.max() <= 1e-6} (all real, max l={ev_drv.max():.3g})")
+    print(f"   diag B opsin-sign recovery vs hemisphere: {sign_match*100:.0f}% match "
+          f"({int(np.sum(b_drv > 0))} +, {int(np.sum(b_drv < 0))} -)")
+    print(f"   rebound index (pooled self-response post-trough recovery, model CANNOT produce): {rebound:+.2f} "
+          f"=> {'REBOUND present, first-order structurally misses it' if rebound > 0.15 else 'no strong rebound'}")
+    _driven_figures(H, sites, window, klo, khi, khi_pred, A_drv, W_drv, gam_drv, b_drv,
+                    Md_drv, self_act, self_mod, self_r2, hemi_expect, nS)
+
     # ---- LATENT-STATE models (add the capacity the first-order fits lacked) ----
     X, V, Acc, v0 = deriv_stacks(H, klo, khi, dt)
     A2, W2, gamma2, L2 = fit_second_order(X, V, Acc, nS)
@@ -485,6 +568,68 @@ def _lap_figures(sites, A_lap, W, gamma):
     a.set_aspect("equal"); a.set_title("top 4% directed edges (j->i)"); a.set_xticks([]); a.set_yticks([])
     fig.suptitle("Directed graph-Laplacian network structure on the grid")
     fig.tight_layout(); fig.savefig(OUTDIR / "net_laplacian_grid.png", dpi=150); plt.close(fig)
+
+
+def _driven_figures(H, sites, window, klo, khi, khi_pred, A, W, gamma, b, Md,
+                    self_act, self_mod, self_r2, hemi_expect, nS):
+    """Driven symmetric-PSD Laplacian: opsin-sign B map, recovered undirected coupling, and the
+    REBOUND DIAGNOSTIC (pooled same-site actual vs the monotone first-order free-run)."""
+    order = np.lexsort((sites[:, 1], sites[:, 0]))
+    tt = window[klo:khi_pred + 1]
+    fig, ax = plt.subplots(2, 2, figsize=(11, 9))
+
+    # (a) recovered diagonal input B on the grid: sign = opsin polarity, data-resolved
+    a = ax[0, 0]
+    vmax = np.percentile(np.abs(b), 98)
+    sc = a.scatter(sites[:, 0], sites[:, 1], c=b, cmap="RdBu_r", s=150, ec="k", lw=0.4,
+                   vmin=-vmax, vmax=vmax)
+    match = np.sign(b) == hemi_expect
+    a.scatter(sites[~match, 0], sites[~match, 1], s=250, facecolors="none",
+              edgecolors="lime", lw=1.6, label="sign != hemisphere")
+    a.axvline(0, color="0.5", lw=0.8, ls="--")
+    a.set_aspect("equal"); a.set_xticks([]); a.set_yticks([])
+    a.set_title(f"diagonal input B (signed self-kick)\nleft/excit x<0 => +  |  {int(match.mean()*100)}% match hemisphere")
+    fig.colorbar(sc, ax=a, fraction=0.046, label="b_s (dF/F)")
+    if (~match).any():
+        a.legend(fontsize=7, frameon=False, loc="lower right")
+
+    # (b) recovered undirected coupling W (symmetric) as top edges on the grid
+    a = ax[0, 1]
+    a.scatter(sites[:, 0], sites[:, 1], c="0.7", s=60, zorder=1)
+    thr = np.percentile(W[W > 0], 96) if (W > 0).any() else np.inf
+    for i in range(nS):
+        for j in range(i + 1, nS):
+            if W[i, j] >= thr:
+                a.plot([sites[i, 0], sites[j, 0]], [sites[i, 1], sites[j, 1]],
+                       "tab:purple", lw=1.1, alpha=0.55, zorder=2)
+    a.axvline(0, color="0.5", lw=0.8, ls="--")
+    a.set_aspect("equal"); a.set_xticks([]); a.set_yticks([])
+    a.set_title(f"undirected Laplacian coupling W=W^T (top 4% edges)\ndensity {float((W>1e-6).mean()):.2f}")
+
+    # (c) THE REBOUND DIAGNOSTIC: pooled sign-normalized self-response, actual vs monotone model
+    a = ax[1, 0]
+    mact, sact = self_act.mean(0), self_act.std(0)
+    mmod = self_mod.mean(0)
+    a.fill_between(tt, (mact - sact) * 100, (mact + sact) * 100, color="k", alpha=0.12, lw=0)
+    a.plot(tt, mact * 100, "k-", lw=2.0, label="actual self-response (mean)")
+    a.plot(tt, mmod * 100, "--", lw=1.6, color="tab:red", label="first-order Laplacian (monotone)")
+    a.axhline(0, color="0.6", lw=0.6)
+    a.axvline(window[khi], color="0.5", lw=0.6, ls=":")
+    a.set_xlabel("t (s)"); a.set_ylabel("sign-norm. dF/F %")
+    a.set_title("REBOUND DIAGNOSTIC: same-site actual vs first-order\n(gap after trough = structurally unrepresentable)")
+    a.legend(fontsize=8, frameon=False)
+
+    # (d) per-stim self-site free-run R2 distribution
+    a = ax[1, 1]
+    sr = np.array(self_r2); sr = sr[np.isfinite(sr)]
+    a.hist(sr, bins=np.linspace(min(-1, sr.min()), 1, 25), color="tab:red", alpha=0.75)
+    a.axvline(np.median(sr), color="k", lw=1.5, ls="--", label=f"median {np.median(sr):.2f}")
+    a.set_xlabel("same-site free-run R2"); a.set_ylabel("# stims")
+    a.set_title("Same-site fit quality (per driven node)")
+    a.legend(fontsize=8, frameon=False)
+
+    fig.suptitle("Driven first-order symmetric-PSD graph-Laplacian  x_dot = -(L+diag g) x + B u", fontsize=12)
+    fig.tight_layout(); fig.savefig(OUTDIR / "net_driven_laplacian.png", dpi=150); plt.close(fig)
 
 
 def _latent_figures(H, sites, window, klo, khi, khi_pred, A2, W2, gamma2, fr_2nd, fr_delay, Atil, dt, nS):
