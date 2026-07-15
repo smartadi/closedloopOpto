@@ -65,6 +65,7 @@ sessions_def = {
 %   mn          td             en  trials   pixel_L      pixel_R
   % 'AL_0048', '2026-06-05',    2,  100,   [NaN NaN],   [NaN NaN];
   'AL_0048', '2026-07-01',    6,   99,   [NaN NaN],   [NaN NaN];  % sine FF-analysis, 4 modes, right side
+  'AL_0048', '2026-07-14',    1,  NaN,   [NaN NaN],   [NaN NaN];  % new session; imaging preprocessed, controller CSVs pending
 };
 
 % ---- FF-analysis build column map (2026-07 controller build) -------------
