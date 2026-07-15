@@ -93,9 +93,19 @@ t_ax  = (-n_pre : n_win) / fs_img;         % time axis for extracted windows
 t_ref = (0 : n_win) / fs_img;              % reference time axis (post-onset)
 t_post = t_ax >= 0;                        % post-onset samples
 
-wave  = 1 + sin(-pi/2 + 2*pi * sn.hz * t_ref);   % in [0, 2], starts at 0
+% Prefer the LOGGED raw trajectory (reference_raw.csv, kk-indexed) sliced at
+% each trial's true onset — no phase reconstruction. Fall back to an analytic
+% sine only if the log is unavailable.
+USE_LOGGED_REF = isfield(sess,'ref_raw') && ~isempty(sess.ref_raw) && ...
+                 isfield(sess,'onset_idx') && ~isempty(sess.onset_idx);
 if isempty(REF_BASE); ref_base = sn.ref0; else; ref_base = REF_BASE; end
+wave  = 1 + sin(-pi/2 + 2*pi * sn.hz * t_ref);   % analytic fallback, [0,2]
 Rref  = ref_base + REF_SIGN * sn.amp * wave;      % commanded reference (dF/F units)
+if USE_LOGGED_REF
+    fprintf('Reference: LOGGED reference_raw.csv, sliced at traj_on onsets.\n');
+else
+    warning('sine_ff_modes: no logged reference — using analytic sine (phase assumed onset-locked).');
+end
 
 %% ---- Collect per-mode trial windows -----------------------------------
 nMode = numel(MODE_CODES);
@@ -104,22 +114,42 @@ mse    = cell(1, nMode);   % each: [nTrial x 1] MSE vs Rref over [0, dur]
 nTr    = zeros(1, nMode);
 
 sideMask = strcmp({sess.trial_meta.side}, SIDE);
+refs = cell(1, nMode);   % per-trial reference actually used (for plotting)
 for m = 1:nMode
     modeMask = ([sess.trial_meta.ff_cond] == MODE_CODES(m)) & sideMask;
     trials   = [sess.trial_meta(modeMask).trial_idx];
     for j = 1:numel(trials)
-        [~, i0] = min(abs(t - d.stimStarts(trials(j))));
+        if USE_LOGGED_REF
+            i0 = sess.onset_idx(trials(j));        % true onset (traj_on epoch start)
+        else
+            [~, i0] = min(abs(t - d.stimStarts(trials(j))));
+        end
         if i0 - n_pre < 1 || i0 + n_win > length(dFoF); continue; end
         seg = dFoF(i0 - n_pre : i0 + n_win);
+
+        % Per-trial reference, phase-correct by construction
+        if USE_LOGGED_REF
+            if i0 + n_win > numel(sess.ref_raw); continue; end
+            Rj = ref_base + REF_SIGN * sess.ref_raw(i0 : i0 + n_win).';
+        else
+            Rj = Rref;
+        end
+
         traces{m} = [traces{m}; seg(:)'];
+        refs{m}   = [refs{m};   Rj(:)'];
         seg_post  = seg(n_pre + 1 : end);          % t >= 0, length numel(t_ref)
-        mse{m}    = [mse{m}; mean((seg_post - Rref).^2)];
+        mse{m}    = [mse{m}; mean((seg_post(:) - Rj(:)).^2)];
     end
     nTr(m) = size(traces{m}, 1);
     fprintf('[%s] mode %-8s (cond %d): %2d trials | mean MSE = %.4f | mean var = %.4f\n', ...
         SIDE, MODE_LABELS{m}, MODE_CODES(m), nTr(m), ...
         mean(mse{m}), mean(var(traces{m}(:, t_post), 0, 1)));
 end
+
+% Reference to draw: mean of the per-trial logged references (they are
+% phase-locked, so the mean is a faithful sine), else the analytic one.
+allrefs = cell2mat(refs(:));
+if USE_LOGGED_REF && ~isempty(allrefs); refPlot = mean(allrefs, 1); else; refPlot = Rref; end
 
 %% ---- Panel 0 (verification): grand-mean dFoF vs reconstructed ref ------
 % Overlay every mode's mean trace with Rref to confirm REF_SIGN / REF_BASE
@@ -129,7 +159,7 @@ for m = 1:nMode
     if nTr(m) == 0; continue; end
     plot(t_ax, mean(traces{m}, 1), 'Color', MODE_COLS(m,:), 'LineWidth', sty.lw_mean);
 end
-plot(t_ref, Rref, 'k--', 'LineWidth', sty.lw_ref);
+plot(t_ref, refPlot, 'k--', 'LineWidth', sty.lw_ref);
 xline(0, 'k:', 'LineWidth', 0.8);
 lg0 = legend([MODE_LABELS, {'ref'}], 'FontSize', sty.fs, 'Box', 'off'); lg0.ItemTokenSize = [6 6];
 xlabel('Time (s)', 'FontSize', sty.fs, 'FontWeight', 'bold');

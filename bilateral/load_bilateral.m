@@ -81,6 +81,7 @@ FFA_DUR_COL     = 10;
 FFA_TRAJAMP_COL = 13;
 FFA_TRAJHZ_COL  = 14;
 FFA_COND_COL    = 17;
+FFA_FS          = 35;   % controller/imaging frame rate (kk clock)
 % -------------------------------------------------------------------------
 
 %% ---- Load / cache loop -------------------------------------------------
@@ -123,13 +124,43 @@ for k = 1:nSess
                     error('STIM_MODE C not yet implemented.');
             end
 
+            %% FF-analysis build (2026-07): 17-col layout + true onsets
+            isFFAbuild = size(d.input_params, 2) >= FFA_COND_COL;
+
+            % CRITICAL: for this build input_params col 2 (kk) marks the trial
+            % END, and params has no 'horizon' field, so findStims mode 1's
+            % fallback (kk - 40*35) puts onsets ~36 s early — which randomises
+            % the apparent sine phase. Derive true onsets from the logged
+            % traj_on flag instead, and keep the logged raw trajectory.
+            ffa_onset = []; ffa_refraw = [];
+            if isFFAbuild
+                sRoot = expPath(mn, td, en);
+                tonP  = fullfile(sRoot, 'traj_on.csv');
+                rrwP  = fullfile(sRoot, 'reference_raw.csv');
+                if isfile(tonP)
+                    ton   = dlmread(tonP, ' ');
+                    onf   = ton(:) > 0.5;
+                    dvf   = diff([0; onf; 0]);
+                    st_i  = find(dvf == 1);
+                    en_i  = find(dvf == -1) - 1;
+                    keep  = (en_i - st_i + 1) > 0.5 * FFA_FS;   % drop stubs < 0.5 s
+                    st_i  = st_i(keep); en_i = en_i(keep);
+                    nT    = min(numel(st_i), size(d.input_params, 1));
+                    st_i  = st_i(1:nT); en_i = en_i(1:nT);
+                    d.stimStarts = d.timeBlue(st_i);
+                    d.stimEnds   = d.timeBlue(en_i);
+                    ffa_onset    = st_i;                        % index into timeBlue/dFoF
+                    if isfile(rrwP); ffa_refraw = dlmread(rrwP, ' '); end
+                    fprintf(['[%s] FFA onsets from traj_on: %d epochs ' ...
+                             '(median %d samples)\n'], tag, nT, median(en_i - st_i + 1));
+                else
+                    warning('[%s] traj_on.csv missing — onsets fall back to findStims (LIKELY MISALIGNED).', tag);
+                end
+            end
+
             nStims = length(d.stimStarts);
 
             %% Build trial_meta from input_params
-            % FF-analysis build (2026-07) logs 17 columns with a different
-            % layout than the 2026-06 map — detect and parse accordingly.
-            isFFAbuild = size(d.input_params, 2) >= FFA_COND_COL;
-
             clear trial_meta   % avoid stale entries carried from a prior session
             trial_meta(nStims) = struct('trial_idx', 0, 'side', '', ...
                                         'stim_type', '', 'amplitude', NaN, ...
@@ -213,6 +244,8 @@ for k = 1:nSess
             sess.stim_mode  = STIM_MODE;
             sess.trial_meta = trial_meta;
             sess.sine       = sess_sine;
+            sess.onset_idx  = ffa_onset;    % per-trial onset index into dFoF/timeBlue
+            sess.ref_raw    = ffa_refraw;   % logged raw trajectory (0..2*amp), kk-indexed
 
             % Resolve the single online analysis pixel [col row] for the used
             % galvo spot, when the registry leaves pix_L/pix_R as [NaN NaN].
