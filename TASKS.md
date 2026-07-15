@@ -37,7 +37,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Run TF fit across all 3 impulse sessions; compare poles/time constants between sessions — `Impulse_mouseDataAnalysis_all.m`
 - [ ] Relax TF delay τ; report R² on held-out 20% test set (Nick, 2026-05-08)
 - [ ] Verify widebrain ARX R²_spont > 0.3; interpret OL vs CL residuals — `plottingScript.m`
-- [ ] Confirm Methods states both MSE windows: general trial MSE = t=0→+3 s; disturbance-rejection panel = t=+1→+3 s
+- [x] 2026-07-15 — Methods states both RMSE windows (`methods_edit.tex` "Performance metric": full t=0→+3 s for per-trial/cross-session distributions; settled t=+1→+3 s only for disturbance rejection). Metric renamed MSE→RMSE same day.
 - [ ] Run low-frequency spectral attribution (Fig 4 section): on motion-clean trials (z-motion ≤1.5), fraction of top-quartile high-error CL trials with elevated pre-stim 1–4 Hz absolute power (`ncFreqPow`/`wcFreqPow`); write results into Fig-4 `\todo`. Methods done (`methods.tex` sec:disturbance)
 - [ ] Supplementary Fig S (`fig:lowfreq_examples`): AL to pick representative low-/high-error motion-clean CL trial spectra; placeholder in `methods.tex`
 
@@ -148,19 +148,20 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 ### Figure fixes
 - [ ] Make mean dot smaller in all-sessions MSE violin (panel 3H) — `plottingScript.m`
 - [ ] Generate spatial spread supplementary panel (ΔF/F inhibition area vs laser power) — cite Nuoli/Svoboda
-- [x] 2026-07-14 — Verify Fig 3H shows MSE (not MAE): it shows **MAE** — `step_response.m` computes `abs(mean error)` over time; caption "Mean absolute tracking error per unit time" is already CORRECT. No change.
+- [x] 2026-07-15 — Verify Fig 3H shows MSE (not MAE): it shows **MAE** — `step_response.m` computes `abs(mean error)` over time; caption "Mean absolute tracking error per unit time" is already CORRECT. No change.
 - [ ] Verify Fig 2C shading is ±1 SD — update caption if not
 
 ### Paper figure consistency pass (whole-manuscript, 2026-07-08)
 - [ ] **Colorblind-safe version of ALL figures** — add a colorblind palette/template to `utils/paperStyle.m` (Wong/Okabe-Ito 8-color or ColorBrewer), and re-export every panel through it; keep a switch so both the standard and colorblind versions can be produced.
-- [ ] **Unify the error-metric label — ⚠ DECISION NEEDED (2026-07-14): the "MSE" panels actually compute RMS.** `variance_mse.m` panels E/G/J all compute `sqrt(mean((y−ref).^2))` = RMS (code even prints "MSE window comparison (RMS)" L286; ylabels `'RMS MSE'`/`'OL/CL RMS ratio'`). So captions E/G + body L86/88 saying "MSE" are mislabelled; J's "RMS" is correct; H is MAE (correct). Two truthful options — **(a)** rename manuscript E/G/body → **RMS/RMSE** everywhere (no re-run, but overrides the locked "MSE" naming), or **(b)** drop the sqrt in `variance_mse.m` → true MSE, re-export Fig 3 panels, keep "MSE" labels. Did NOT auto-pick (either lies or reopens a locked decision). Once chosen, sweep every y-axis + Results body.
+- [x] 2026-07-15 — **Unify the error-metric label → RMSE everywhere** (user decision). Text: `methods_edit.tex` (metric definition now "RMSE = √(cost/N)", theory cost stays squared) + `results.tex` (captions 3E/3G/3J, motion caption, body) — grep-clean, zero bare MSE/RMS in live tex. Code labels: `variance_mse.m`, `analysisPlots_combined.m`, `motion_mse_significance.m`. Fig 3H = deliberate exception (genuinely MAE; axis fixed 'MSE dF/F'→'MAE dF/F'). **Bigger find:** `er_ncDfk` was `norm()` = un-normalised ‖e‖₂ (=RMSE·√N), not MSE *or* RMS → normalised in `controllerData.m`. No conclusion changes (constant rescale). RESEARCH 2026-07-15.
+  - [ ] **[REQUIRED] Rebuild caches + re-export** — run `load_sessions.m` with `r_ctrl = 0` ONCE (caches hold old ‖e‖₂), then re-export 3E/3G/3J. Check E/G `ylim`/ksdensity after the ~10.3× rescale.
 - [ ] **Add units to every short-corner-axis figure** — `paperStyle` corner axes use `XLabel`/`YLabel` scale bars (e.g. '1 s','3%'); several panels don't set them yet. Audit all figures and add the missing unit labels.
-- [ ] **Fig 2 impulse-response plots need variance shading** — add ±1 SD shading around the trial-average traces (the caption L48 already claims "shading shows ±1 SD"; the generated panel must match). Ties to the "Verify Fig 2C shading is ±1 SD" item above.
+- [x] 2026-07-15 — **Fig 2A impulse-response variance shading added** — `trace_overlay.m` now draws a per-amplitude ±1 SD ribbon (`std(dfImp,0,1)`, `FaceAlpha = PS.fa`, two-pass so means sit on top), matching the caption L48 claim. PAPER.md 2A shading "—"→"±1 SD". Code-analyzer clean. **NEEDS RE-EXPORT** (`load_experiments.m` → `trace_overlay.m`); check the 5 overlapping bands aren't muddy. RESEARCH 2026-07-15.
 
 ### Prose
-- [x] 2026-07-14 — Convert passive voice to active throughout results (setup paragraph rewritten; OL-variance-slope sentence → "We quantified…"; rest of Results was already active). `results.tex`.
-- [x] 2026-07-14 — Standardise figure citation style to `Fig. 1A` (fixed lone inline "Figure~\ref" on L41; all live-file refs now "Fig.~". Remaining "Figure~" are only in ORPHAN `methods.tex`, not `\input` by `main.tex`).
-- [x] 2026-07-14 — Remove equation references from Results prose (grep-verified: none present — already clean).
+- [x] 2026-07-15 — Convert passive voice to active throughout results (setup paragraph rewritten; OL-variance-slope sentence → "We quantified…"; rest of Results was already active). `results.tex`.
+- [x] 2026-07-15 — Standardise figure citation style to `Fig. 1A` (fixed lone inline "Figure~\ref" on L41; all live-file refs now "Fig.~". Remaining "Figure~" are only in ORPHAN `methods.tex`, not `\input` by `main.tex`).
+- [x] 2026-07-15 — Remove equation references from Results prose (grep-verified: none present — already clean).
 - [ ] Add n and ± CI to all slope estimates in linearity paragraph — BLOCKED: needs fit CIs from the impulse dose-response fit (`dose_response.m`); n=3 already stated. Can't fabricate CIs — run the fit to emit slope ± CI, then add.
 
 ---

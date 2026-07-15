@@ -55,7 +55,7 @@ hold(ax_H, 'off');
 
 lgd_H = legend(ax_H, {'Open-Loop', 'Closed-Loop'}, 'Location','northeast');
 paperLegend(lgd_H);
-paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','MSE dF/F');
+paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','MAE dF/F');
 paperExport(fig_H, fullfile(paper_root, 'images', 'figure3', 'all_average_sessions.pdf'));
 
 

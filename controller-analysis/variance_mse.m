@@ -251,7 +251,7 @@ hold(ax_mse, 'off');
 numExp = length(fields);
 xlim(ax_mse, [0.5 numExp+0.5]);
 cleanAxes(ax_mse);
-text(ax_mse, -0.06, 0.5, 'Trial MSE', ...
+text(ax_mse, -0.06, 0.5, 'Trial RMSE', ...
     'Units','normalized', 'Rotation', 90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'FontSize', 6, 'FontWeight','bold', 'Color','k', 'Clipping','off');
@@ -283,7 +283,7 @@ al_g2   = 0.5;   % fill alpha
 t_g2_av  = (0 : c2w_g2 - c0_g2) / 35;   % 0 to 3 s, 106 pts
 nc_tr_g2 = [];   wc_tr_g2 = [];
 
-fprintf('\nMSE window comparison (RMS, ref = -5)\n');
+fprintf('\nRMSE window comparison (ref = -5)\n');
 fprintf('%-4s  %6s %6s %5s | %6s %6s %5s\n','ses','OL_03','CL_03','R_03','OL_13','CL_13','R_13');
 
 nSess_g2 = length(fields);
@@ -344,7 +344,7 @@ hold(ax_G2a,'off');
 legend(ax_G2a,'Box','off','FontSize',6,'Location','best');
 xlabel(ax_G2a,'Time (s)','FontWeight','bold','FontSize',6);
 ylabel(ax_G2a,'dF/F (%)', 'FontWeight','bold','FontSize',6);
-title(ax_G2a,sprintf('Trial averages  (n=%d sess,  grey=[+1,+3]s MSE window)', nS_g2),...
+title(ax_G2a,sprintf('Trial averages  (n=%d sess,  grey=[+1,+3]s RMSE window)', nS_g2),...
     'FontSize',6,'FontWeight','bold');
 set(ax_G2a,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
 % exportgraphics(fig_G2a,'paper/MSE_window_comparison.pdf','ContentType','vector');
@@ -368,7 +368,7 @@ for k = 1:length(fields)
     title(ax_s, sprintf('S%d', k),'FontSize',6,'FontWeight','bold');
     xlabel(ax_s,'Trial #','FontSize',6,'FontWeight','bold');
     if mod(ki_g2-1, nC_g2) == 0
-        ylabel(ax_s,'RMS MSE (\DeltaF/F)','FontSize',6,'FontWeight','bold');
+        ylabel(ax_s,'RMSE (\DeltaF/F)','FontSize',6,'FontWeight','bold');
     end
 end
 paperExport(fig_G2b, fullfile(paper_root, 'MSE_vs_trial_number.png'));
@@ -453,7 +453,7 @@ hold(ax_g2r,'off');
 xlim(ax_g2r, [0.5 4.5]);
 ax_g2r.XTick = [1 2 3 4];
 ax_g2r.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
-ylabel(ax_g2r, 'OL/CL RMS ratio', 'FontWeight','bold');
+ylabel(ax_g2r, 'OL/CL RMSE ratio', 'FontWeight','bold');
 lgd_g2r = legend(ax_g2r, 'Location','best'); paperLegend(lgd_g2r);
 paperExport(fig_G2r, fullfile(paper_root, 'images', 'figure3', 'MSE_ratio_by_window.pdf'));
 
@@ -506,7 +506,7 @@ hold(ax_gv,'off');
 % Session x-ticks
 xlim(ax_gv, [0.3, 3*nV_gv-0.3]);
 ax_gv.XTick = xt_gv; ax_gv.XTickLabel = arrayfun(@(n) sprintf('S%d',n), 1:nV_gv, 'UniformOutput',false);
-ylabel(ax_gv, 'RMS MSE (\DeltaF/F)', 'FontWeight','bold');
+ylabel(ax_gv, 'RMSE (\DeltaF/F)', 'FontWeight','bold');
 
 % Legend: OL/CL colour + early/late alpha
 patch(ax_gv,NaN,NaN,colA_gv,'FaceAlpha',al_e,'EdgeColor','none','DisplayName','OL 0-1 s');

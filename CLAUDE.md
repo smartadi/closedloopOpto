@@ -31,6 +31,31 @@ One entry per change. Do not skip — the log is the primary record between git 
 
 ---
 
+## Vault worklog (cross-project hub)
+
+Separate from `RESEARCH.md`. The **Research Hub** is a single Obsidian file spanning all of Aditya's projects (both postdoc labs, the sleep-mask startup, personal):
+
+**Path:** `C:\Users\aditya\OneDrive\Notes\Research Hub.md`
+
+**At the END of any session that did real work** (edited a script, ran an analysis, produced a figure, or found something), append **one** distilled entry to the `## 📓 Worklog` section:
+
+```
+### YYYY-MM-DD · Brain Paper — <one-line title>
+**Done:** <what got done this session, plain language>
+**Found:** <key result / bug / decision, or "—">
+**Next:** <what's next, or "—">
+```
+
+Rules:
+1. **Newest on top**, directly under the `## 📓 Worklog` header (below its format comment).
+2. **One entry per session, not per change.** This is the human daily distillation — `RESEARCH.md` remains the granular per-change machine log. Don't paste RESEARCH entries here; summarize the session.
+3. **Human, low-jargon.** Write it so a non-specialist collaborator (or future-you skimming a week later) gets it. Spell out what mattered, skip the script internals.
+4. **Prefix the title with `Brain Paper`** so the hub stays sortable by project.
+5. **Append only to `## 📓 Worklog`.** Never edit the `## 🎯 Command board` (that's the user's brief to you) — but *do* read the `### Brain Paper` command section at session start for pending asks. You may update the project's row in `## 📊 Dashboard` (Current focus / Next action / Updated date) when it has clearly changed.
+6. Use today's real date (`currentDate`). Never guess or reuse a prior date.
+
+---
+
 ## Git commit & push discipline
 
 The Change Log is the record *between* commits; commits + push are the durable record. Keep them tight.
@@ -144,7 +169,8 @@ These are final — do not question or re-derive unless the user explicitly reop
 - TF fit currently on `selExp = 3` (AL_0033, 2025-01-29); sweep 1–3 poles, 0–2 zeros, 0–5 sample delay; AIC selection
 
 ### Controller / CL vs OL
-- MSE window: **t = 0 s to +3 s** for trial MSE analysis, **t = +1 s to +3 s** only for disturbance rejection in one panel,post-laser onset (skips inhibitory transient)
+- Error metric = **RMSE** (root-mean-squared error, sample-normalised, in %ΔF/F) — decided 2026-07-15, supersedes the old "MSE" naming. `controllerData.m` now stores `er_ncDfk`/`er_wcDfk` as `norm(seg-ref)/sqrt(numel(seg))` (was un-normalised `norm()` = ‖e‖₂ = RMSE·√N). Label every axis/caption "RMSE"; the theory cost in Methods stays a squared cost (√ is monotone → same minimiser). Fig 3H is the one exception: it is genuinely **MAE** (`abs(mean error)`) and is labelled MAE.
+- RMSE window: **t = 0 s to +3 s** for trial RMSE analysis, **t = +1 s to +3 s** only for disturbance rejection in one panel, post-laser onset (skips inhibitory transient)
 - Power spectra: **absolute (ΔF/F)² Hz⁻¹** only — no normalization, no z-scoring at any stage
 - Motion exclusion threshold: `motThresh = 1.5` (z-scored motion)
 - Step response sessions: `custom_idx = [4 9 11]` (m4=AL_0033 2025-02-26, m9/m11=AL_0039)

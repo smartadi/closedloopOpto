@@ -23,7 +23,8 @@
 
 ## Locked-in decisions (see root CLAUDE.md for full list)
 - Error bars on impulse plots: 95th-percentile bounds (2.5th–97.5th)
-- MSE window: **t = 0 to +3 s** (general trial MSE); **t = +1 to +3 s** only for the disturbance-rejection panel — state both windows explicitly in Methods
+- Error metric = **RMSE** everywhere (2026-07-15 decision, supersedes "MSE"); Fig 3H is the exception — genuinely MAE, labelled MAE
+- RMSE window: **t = 0 to +3 s** (general trial RMSE); **t = +1 to +3 s** only for the disturbance-rejection panel — state both windows explicitly in Methods
 - Inhibition energy = integral over 0–200 ms post-onset (define exact bounds in Methods)
 - Absolute power spectra only — no relative normalization
 
@@ -36,5 +37,5 @@
 ## Open questions (see TASKS.md for full list)
 1. What are actual Kp and Ki values? (needed for `results_edit.tex` L89)
 2. Is n=3 sessions for linearity defensible, or add more?
-3. Does Fig 3H show MSE or MAE? Affects caption.
+3. ~~Does Fig 3H show MSE or MAE?~~ RESOLVED 2026-07-15: **MAE** (`step_response.m` plots `abs(mean error)`); caption already correct, axis label fixed MSE→MAE.
 4. Should feedforward/preview be a full section or supplementary?

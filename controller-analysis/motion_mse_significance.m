@@ -110,7 +110,7 @@ errorbar(ax, xq-w/2, qmean_ol, qsem_ol, 'k', 'LineStyle','none','LineWidth',0.6,
 errorbar(ax, xq+w/2, qmean_cl, qsem_cl, 'k', 'LineStyle','none','LineWidth',0.6,'HandleVisibility','off','CapSize',2);
 set(ax,'XTick',1:4,'XTickLabel',{'Q1','Q2','Q3','Q4'});
 xlabel(ax,'Motion quartile (low \rightarrow high)','FontSize',6,'FontWeight','bold');
-ylabel(ax,'Trial MSE (z, within session)','FontSize',6,'FontWeight','bold');
+ylabel(ax,'Trial RMSE (z, within session)','FontSize',6,'FontWeight','bold');
 set(ax,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
 % significance star on top quartile
 yTop = max(qmean_ol(4)+qsem_ol(4), qmean_cl(4)+qsem_cl(4)) + 0.05;

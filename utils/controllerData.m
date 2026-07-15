@@ -113,7 +113,11 @@ for j = 1:length(nc)
     ncInp(j,:)    = d.inpVals(i2 : i2+dur*2000)';
     ncmotion(j,:) = mv(i-70 : i+35*dur);
     seg = dFk(i : i+35*dur);
-    er_ncDfk(j)   = norm(seg - d.ref);
+    % RMSE (sample-normalised) so values are in %dF/F and comparable across
+    % sessions/windows of different length. Was norm() = ||e||_2 (un-normalised,
+    % = RMSE*sqrt(N)); the sqrt(N) rescale is constant for fixed dur, so all
+    % ratios/z-scores/slopes are unchanged -- only the axis scale + units.
+    er_ncDfk(j)   = norm(seg - d.ref) / sqrt(numel(seg));
     vr_ncDfk(j)   = var(seg);
     t_on = (i-1)/Fs;
     [~, sc] = min(abs(t_spec - t_on));
@@ -136,7 +140,8 @@ for j = 1:length(wc)
     wcInp(j,:)    = d.inpVals(i2 : i2+dur*2000)';
     wcmotion(j,:) = mv(i-70 : i+35*dur);
     seg = dFk(i : i+35*dur);
-    er_wcDfk(j)   = norm(seg - d.ref);
+    % RMSE (sample-normalised) -- see er_ncDfk note above.
+    er_wcDfk(j)   = norm(seg - d.ref) / sqrt(numel(seg));
     vr_wcDfk(j)   = var(seg);
     t_on = (i-1)/Fs;
     [~, sc] = min(abs(t_spec - t_on));

@@ -1,5 +1,15 @@
 # Controller Analysis — Session Context
 
+## ⭐ Incoming port (added 2026-07-13) — READ TASKS.md before starting
+A **TF-based stim-blind contra→ipsi predictor** now exists in `impulse-analysis/ols_tf_pipeline.m`
+(TF affected-detection → predict the ipsi site from contra pixels). **Plan: port it into controller trials**
+to decompose the controlled ipsi into **Global** (contra-predicted = counterfactual "no controller input")
++ **Local** (the controller's own effect). See the **"⭐ PORT the TF stim-blind contra→ipsi model into
+CONTROLLER trials"** block in `TASKS.md` for the full step list. Groundwork: scaffold
+`controller-analysis/contra_prediction_controller.m` (`[CTRL-CP-SETUP/TRIAL/STATE]`).
+**FIRST check (blocker):** full-frame widefield SVD availability for the 13 controller sessions
+(the predictor needs contra PIXELS via `redoSVD`, not just the ipsi-kernel `states.csv`).
+
 ## Primary script
 `plottingScript.m` (root, ~3557 lines) — monolithic script, still in active use; run section-by-section in MATLAB.
 
@@ -36,7 +46,8 @@ Cache check: `isfield(tmp, 'd')` — if missing, reinitialise and re-save.
 - `utils/findStims.m` — mode 1 (AL_0033/AL_0039), mode 2 (AL_0041)
 
 ## Locked-in decisions (see root CLAUDE.md for full list)
-- MSE window: **t = 0 s to +3 s** default (`er_ncDfk` / `er_wcDfk`); **t = +1 s to +3 s** only for the disturbance-rejection panel (`er_ncDfk_w` / `er_wcDfk_w`)
+- Error metric = **RMSE** (sample-normalised, %ΔF/F) — 2026-07-15, supersedes "MSE" naming. `er_ncDfk`/`er_wcDfk` = `norm(seg-ref)/sqrt(numel(seg))`; previously un-normalised `norm()` (=RMSE·√N), so **caches built before 2026-07-15 hold the OLD ‖e‖₂ values — rerun `load_sessions.m` with `r_ctrl = 0` once to rebuild**. Constant rescale ⇒ all ratios/z-scores/slopes/p-values unchanged; only axis scale + units.
+- RMSE window: **t = 0 s to +3 s** default (`er_ncDfk` / `er_wcDfk`); **t = +1 s to +3 s** only for the disturbance-rejection panel (`er_ncDfk_w` / `er_wcDfk_w`)
 - Power spectra: absolute (ΔF/F)² Hz⁻¹ only
 - `d.ref = −5` as project-wide default reference level
 

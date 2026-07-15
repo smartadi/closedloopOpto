@@ -21,10 +21,25 @@ tShade = [-0.2, 0.5];
 patch([tShade(1) tShade(2) tShade(2) tShade(1)], [-5 -5 3 3], ...
     [0.8 0.8 0.8], 'FaceAlpha', 0.5, 'EdgeColor', 'none', 'HandleVisibility', 'off');
 
+% Pass 1: +/-1 SD ribbons across trials (drawn first so the mean traces sit on
+% top). Fig-2A caption states "shading shows +/-1 SD across trials"; PS.fa is
+% the project-standard +/-std ribbon alpha.
+tw = t_win(:).';
+for i = 1:length(uAmp3)
+    if mod(i,2)==1 && ~isempty(imp3.dfImp{i})
+        mu_i = mean(imp3.dfImp{i}, 1);          % trials x time -> 1 x time
+        sd_i = std(imp3.dfImp{i}, 0, 1);        % +/-1 SD across trials
+        col_i = [1-(0.1*i),(1-0.1*i),(1-0.1*i)];
+        fill([tw fliplr(tw)], [mu_i+sd_i fliplr(mu_i-sd_i)], col_i, ...
+            'FaceAlpha', PS.fa, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+    end
+end
+
+% Pass 2: trial-mean traces
 for i = 1:length(uAmp3)
     if mod(i,2)==1 && ~isempty(imp3.dfImp{i})
         plot(0, 0.75, 'ro','MarkerSize',5,'MarkerFaceColor','red','HandleVisibility','off');
-        plot(t_win, mean(imp3.dfImp{i}), ...
+        plot(t_win, mean(imp3.dfImp{i}, 1), ...
             'Color',[1-(0.1*i),(1-0.1*i),(1-0.1*i)],'LineWidth',2, ...
             'DisplayName', sprintf('%.2f mW', uAmp3(i)/3));
     end
