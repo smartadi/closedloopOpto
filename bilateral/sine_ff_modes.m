@@ -17,7 +17,7 @@
 % Compares per-trial MSE (vs the fixed sine) and across-trial variance.
 
 %% ---- Knobs -------------------------------------------------------------
-SESSION_TAG = 's2';           % '' = first FFA session in `sessions`; else e.g. 's2'
+SESSION_TAG = 's1';           % '' = first FFA session in `sessions`; else e.g. 's2'
 SIDE        = 'right';        % inhibitory hemisphere (only side used this session)
 fs_img      = 35;
 n_pre_s     = 1.0;            % pre-onset context for plots (s)
@@ -249,6 +249,58 @@ for m = 1:nMode
 end
 title(tl, 'Sine tracking by controller mode', 'FontSize', sty.fs, 'FontWeight', 'bold');
 
+%% ---- Summary table: MSE / variance / 1 Hz gain / phase lag -------------
+% Gain and lag from the fundamental fit of the mean response vs the mean
+% reference (both phase-locked, so the means are faithful).
+Xf   = [ones(numel(t_ref),1), sin(2*pi*sn.hz*t_ref).', cos(2*pi*sn.hz*t_ref).'];
+fAmp = @(y) hypot([0 1 0]*(Xf\y(:)), [0 0 1]*(Xf\y(:)));
+fPh  = @(y) atan2([0 0 1]*(Xf\y(:)), [0 1 0]*(Xf\y(:)));
+fprintf('\n=== %s | %s %s exp %d | %s ===\n', sessTag, sess.mn, sess.td, sess.en, SIDE);
+fprintf('%-9s %4s %8s %9s %7s %9s\n', 'mode', 'n', 'MSE', 'variance', 'gain', 'phaseLag');
+for m = 1:nMode
+    if nTr(m) < 1; continue; end
+    mu = mean(traces{m}(:, n_pre+1:end), 1);
+    mr = mean(refs{m}, 1);
+    lag = mod(fPh(mr) - fPh(mu) + pi, 2*pi) - pi;
+    fprintf('%-9s %4d %8.2f %9.2f %7.2f %7.0fms\n', MODE_LABELS{m}, nTr(m), ...
+        mean(mse{m}), mean(var(traces{m}(:, t_post), 0, 1)), ...
+        fAmp(mu)/fAmp(mr), lag/(2*pi*sn.hz)*1000);
+end
+
+%% ---- Panel D: MSE over time by mode ------------------------------------
+% Instantaneous squared error (response - its own logged reference), averaged
+% across trials at each timepoint. Shows WHERE in the trial the error lives:
+% onset transient vs steady-state tracking. Mean +/- SEM.
+figD = paperFig(7, 4.5); axD = gca; hold(axD, 'on');
+for m = 1:nMode
+    if nTr(m) < 2; continue; end
+    Epost = (traces{m}(:, n_pre+1:end) - refs{m}).^2;   % [nTrial x numel(t_ref)]
+    mu    = mean(Epost, 1);
+    sem   = std(Epost, 0, 1) / sqrt(size(Epost, 1));
+    fill(axD, [t_ref, fliplr(t_ref)], [mu+sem, fliplr(mu-sem)], MODE_COLS(m,:), ...
+        'FaceAlpha', sty.fa, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+    plot(axD, t_ref, mu, 'Color', MODE_COLS(m,:), 'LineWidth', sty.lw_mean, ...
+        'DisplayName', sprintf('%s (n=%d)', MODE_LABELS{m}, nTr(m)));
+end
+xline(axD, 0, 'k:', 'LineWidth', 0.8, 'HandleVisibility', 'off');
+hold(axD, 'off');
+xlim(axD, [0 sn.dur]);
+xlabel(axD, 'Time (s)', 'FontSize', sty.fs, 'FontWeight', 'bold');
+ylabel(axD, 'MSE (\DeltaF/F)^2', 'FontSize', sty.fs, 'FontWeight', 'bold');
+title(axD, 'MSE over time by mode (mean \pm SEM)', 'FontSize', sty.fs, 'FontWeight', 'bold');
+set(axD, 'Box', 'off', 'TickDir', 'out', 'FontSize', sty.fs, 'FontWeight', 'bold');
+lgD = legend(axD, 'Location', 'northeast', 'Box', 'off', 'FontSize', sty.fs);
+lgD.ItemTokenSize = [6 6];
+
+% Console: error split into onset transient vs steady state
+fprintf('\nMSE by epoch within trial (mean):\n%-9s %10s %10s\n', 'mode', '0-1s', '1-dur');
+for m = 1:nMode
+    if nTr(m) < 1; continue; end
+    Epost = (traces{m}(:, n_pre+1:end) - refs{m}).^2;
+    e1 = t_ref <= 1; e2 = t_ref > 1;
+    fprintf('%-9s %10.2f %10.2f\n', MODE_LABELS{m}, mean(mean(Epost(:,e1))), mean(mean(Epost(:,e2))));
+end
+
 %% ---- Export -----------------------------------------------------------
 if EXPORT_FIG
     if ~exist(outDir, 'dir'); mkdir(outDir); end
@@ -258,5 +310,6 @@ if EXPORT_FIG
     exportgraphics(figA, fullfile(outDir, ['sine_ff_mse_'        sfx '.png']), 'Resolution', EXPORT_DPI);
     exportgraphics(figB, fullfile(outDir, ['sine_ff_variance_'   sfx '.png']), 'Resolution', EXPORT_DPI);
     exportgraphics(figC, fullfile(outDir, ['sine_ff_trials_4up_' sfx '.png']), 'Resolution', EXPORT_DPI);
-    fprintf('Exported 4 PNGs (%d dpi) to %s  [%s]\n', EXPORT_DPI, outDir, sfx);
+    exportgraphics(figD, fullfile(outDir, ['sine_ff_mse_time_'   sfx '.png']), 'Resolution', EXPORT_DPI);
+    fprintf('Exported 5 PNGs (%d dpi) to %s  [%s]\n', EXPORT_DPI, outDir, sfx);
 end
