@@ -82,6 +82,8 @@ FFA_TRAJAMP_COL = 13;
 FFA_TRAJHZ_COL  = 14;
 FFA_COND_COL    = 17;
 FFA_FS          = 35;   % controller/imaging frame rate (kk clock)
+FFA_KK_COL      = 2;    % kk = frame index at trial END (row logged after the trial)
+FFA_MATCH_TOL   = 5;    % max |kk - epoch_end| (samples) to accept a trial<->epoch match
 % -------------------------------------------------------------------------
 
 %% ---- Load / cache loop -------------------------------------------------
@@ -145,14 +147,33 @@ for k = 1:nSess
                     en_i  = find(dvf == -1) - 1;
                     keep  = (en_i - st_i + 1) > 0.5 * FFA_FS;   % drop stubs < 0.5 s
                     st_i  = st_i(keep); en_i = en_i(keep);
-                    nT    = min(numel(st_i), size(d.input_params, 1));
-                    st_i  = st_i(1:nT); en_i = en_i(1:nT);
-                    d.stimStarts = d.timeBlue(st_i);
-                    d.stimEnds   = d.timeBlue(en_i);
-                    ffa_onset    = st_i;                        % index into timeBlue/dFoF
+
+                    % Robust pairing: match each input_params row to the epoch
+                    % whose END is nearest its kk (kk marks the trial END).
+                    % NEVER pair in order — some warm-up trials produce no
+                    % traj_on epoch, which would shift every later label.
+                    nRows     = size(d.input_params, 1);
+                    ffa_onset = nan(nRows, 1);
+                    onset_end = nan(nRows, 1);
+                    for ii = 1:nRows
+                        [dd, jj] = min(abs(en_i - d.input_params(ii, FFA_KK_COL)));
+                        if dd <= FFA_MATCH_TOL
+                            ffa_onset(ii) = st_i(jj);
+                            onset_end(ii) = en_i(jj);
+                        end
+                    end
+                    okm = ~isnan(ffa_onset);
+                    d.stimStarts = nan(nRows, 1); d.stimEnds = nan(nRows, 1);
+                    d.stimStarts(okm) = d.timeBlue(ffa_onset(okm));
+                    d.stimEnds(okm)   = d.timeBlue(onset_end(okm));
                     if isfile(rrwP); ffa_refraw = dlmread(rrwP, ' '); end
-                    fprintf(['[%s] FFA onsets from traj_on: %d epochs ' ...
-                             '(median %d samples)\n'], tag, nT, median(en_i - st_i + 1));
+                    fprintf(['[%s] FFA onsets from traj_on: %d epochs, ' ...
+                             '%d/%d trials matched (median len %d samples)\n'], ...
+                             tag, numel(st_i), sum(okm), nRows, median(en_i - st_i + 1));
+                    if any(~okm)
+                        fprintf('[%s]   %d unmatched trials (ff_cond: %s)\n', tag, ...
+                            sum(~okm), mat2str(unique(d.input_params(~okm, FFA_COND_COL))'));
+                    end
                 else
                     warning('[%s] traj_on.csv missing — onsets fall back to findStims (LIKELY MISALIGNED).', tag);
                 end

@@ -17,12 +17,14 @@
 % Compares per-trial MSE (vs the fixed sine) and across-trial variance.
 
 %% ---- Knobs -------------------------------------------------------------
+SESSION_TAG = 's2';           % '' = first FFA session in `sessions`; else e.g. 's2'
 SIDE        = 'right';        % inhibitory hemisphere (only side used this session)
 fs_img      = 35;
 n_pre_s     = 1.0;            % pre-onset context for plots (s)
 REF_SIGN    = -1;            % sign of commanded sine in dF/F space (verified: response is negative)
 REF_BASE    = [];            % DC offset of reference; [] => use logged sine.ref0 (~0)
-EXPORT_FIG  = false;
+EXPORT_FIG  = true;           % PNG only (paper panels -> PDF; see CLAUDE.md export rule)
+EXPORT_DPI  = 600;            % high-res raster
 
 % Mode display order, labels, colours
 MODE_CODES  = [2 1 3 0];
@@ -47,6 +49,7 @@ outDir = fullfile(paper_root, 'images', 'bilateral');
 
 %% ---- Locate the FF-analysis session -----------------------------------
 fields = fieldnames(sessions);
+if ~isempty(SESSION_TAG); fields = {SESSION_TAG}; end
 sess = [];
 skipped = {};   % collect skip reasons for a helpful error
 for k = 1:numel(fields)
@@ -61,7 +64,7 @@ for k = 1:numel(fields)
     end
     if isfield(s, 'sine') && ~isempty(s.sine) && ...
        isfield(s.trial_meta, 'ff_cond') && any([s.trial_meta.ff_cond] >= 0)
-        sess = s; break;
+        sess = s; sessTag = fields{k}; break;
     end
 end
 if isempty(sess)
@@ -124,6 +127,7 @@ for m = 1:nMode
         else
             [~, i0] = min(abs(t - d.stimStarts(trials(j))));
         end
+        if isnan(i0); continue; end                % trial had no traj_on epoch
         if i0 - n_pre < 1 || i0 + n_win > length(dFoF); continue; end
         seg = dFoF(i0 - n_pre : i0 + n_win);
 
@@ -248,9 +252,11 @@ title(tl, 'Sine tracking by controller mode', 'FontSize', sty.fs, 'FontWeight', 
 %% ---- Export -----------------------------------------------------------
 if EXPORT_FIG
     if ~exist(outDir, 'dir'); mkdir(outDir); end
-    exportgraphics(fig0, fullfile(outDir, 'sine_ff_verify.png'),   'Resolution', 300);
-    exportgraphics(figA, fullfile(outDir, 'sine_ff_mse.png'),      'Resolution', 300);
-    exportgraphics(figB, fullfile(outDir, 'sine_ff_variance.png'), 'Resolution', 300);
-    exportgraphics(figC, fullfile(outDir, 'sine_ff_trials_4up.png'), 'Resolution', 300);
-    fprintf('Exported 4 PNGs to %s\n', outDir);
+    % Session-tagged filenames so multiple sessions never overwrite each other
+    sfx = sprintf('%s_%s_%d', sess.mn, sess.td, sess.en);
+    exportgraphics(fig0, fullfile(outDir, ['sine_ff_verify_'     sfx '.png']), 'Resolution', EXPORT_DPI);
+    exportgraphics(figA, fullfile(outDir, ['sine_ff_mse_'        sfx '.png']), 'Resolution', EXPORT_DPI);
+    exportgraphics(figB, fullfile(outDir, ['sine_ff_variance_'   sfx '.png']), 'Resolution', EXPORT_DPI);
+    exportgraphics(figC, fullfile(outDir, ['sine_ff_trials_4up_' sfx '.png']), 'Resolution', EXPORT_DPI);
+    fprintf('Exported 4 PNGs (%d dpi) to %s  [%s]\n', EXPORT_DPI, outDir, sfx);
 end
