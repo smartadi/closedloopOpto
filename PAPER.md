@@ -79,7 +79,7 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 1D | Fig1 | *(interface diagram — illustrator)* | — | — | — | external |
 | 1E | Fig1 | *(control system — illustrator)* | — | — | — | external |
 | 1F | Fig1 | *(latency image)* | — | — | — | pending |
-| 2A | Fig2 | paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf | 5 × 4 | vector | ±1 SD | trace_overlay.m — ±1 SD ribbon added + re-exported 2026-07-16 (PS.fa alpha) |
+| 2A | Fig2 | paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf | 5 × 4 | vector | ±1 SD | trace_overlay.m — ±1 SD ribbon added 2026-07-16 (subset lowest+highest amp; faint fill α=0.08 + envelope outlines) |
 | 2B | Fig2 | paper/images/figure2/imp_response.pdf | 5 × 4 | vector | — | dose_response.m |
 | 2C | Fig2 | paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf | 6 × 4 | vector | ±std | done |
 | 2D | Fig2 | paper/images/figure2/step_response.pdf | 6 × 4 | image 300dpi | — | step_response.m |

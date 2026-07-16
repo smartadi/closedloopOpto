@@ -21,18 +21,23 @@ tShade = [-0.2, 0.5];
 patch([tShade(1) tShade(2) tShade(2) tShade(1)], [-5 -5 3 3], ...
     [0.8 0.8 0.8], 'FaceAlpha', 0.5, 'EdgeColor', 'none', 'HandleVisibility', 'off');
 
-% Pass 1: +/-1 SD ribbons across trials (drawn first so the mean traces sit on
-% top). Fig-2A caption states "shading shows +/-1 SD across trials"; PS.fa is
-% the project-standard +/-std ribbon alpha.
+% Pass 1: +/-1 SD across trials, shown ONLY for the lowest and highest drawn
+% amplitude (subset -> keeps all 5 mean traces legible). Each band = faint fill
+% (low alpha) + thin envelope outlines in a darkened shade so even the light
+% low-amp band stays visible. Drawn first so the mean traces sit on top.
 tw = t_win(:).';
-for i = 1:length(uAmp3)
-    if mod(i,2)==1 && ~isempty(imp3.dfImp{i})
-        mu_i = mean(imp3.dfImp{i}, 1);          % trials x time -> 1 x time
-        sd_i = std(imp3.dfImp{i}, 0, 1);        % +/-1 SD across trials
-        col_i = [1-(0.1*i),(1-0.1*i),(1-0.1*i)];
-        fill([tw fliplr(tw)], [mu_i+sd_i fliplr(mu_i-sd_i)], col_i, ...
-            'FaceAlpha', PS.fa, 'EdgeColor', 'none', 'HandleVisibility', 'off');
-    end
+drawIdx  = find(arrayfun(@(i) mod(i,2)==1 && ~isempty(imp3.dfImp{i}), 1:length(uAmp3)));
+shadeIdx = unique([drawIdx(1) drawIdx(end)]);   % lowest + highest amplitude
+sd_alpha = 0.08;                                 % faint fill (option 1)
+for i = shadeIdx
+    mu_i = mean(imp3.dfImp{i}, 1);              % trials x time -> 1 x time
+    sd_i = std(imp3.dfImp{i}, 0, 1);           % +/-1 SD across trials
+    col_i  = [1-(0.1*i),(1-0.1*i),(1-0.1*i)];
+    edge_i = max(col_i - 0.35, 0);             % darkened outline -> always visible
+    fill([tw fliplr(tw)], [mu_i+sd_i fliplr(mu_i-sd_i)], col_i, ...
+        'FaceAlpha', sd_alpha, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+    plot(tw, mu_i+sd_i, 'Color', edge_i, 'LineWidth', 0.4, 'HandleVisibility', 'off');
+    plot(tw, mu_i-sd_i, 'Color', edge_i, 'LineWidth', 0.4, 'HandleVisibility', 'off');
 end
 
 % Pass 2: trial-mean traces
