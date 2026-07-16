@@ -46,7 +46,7 @@ Cache check: `isfield(tmp, 'd')` — if missing, reinitialise and re-save.
 - `utils/findStims.m` — mode 1 (AL_0033/AL_0039), mode 2 (AL_0041)
 
 ## Locked-in decisions (see root CLAUDE.md for full list)
-- Error metric = **RMSE** (sample-normalised, %ΔF/F) — 2026-07-15, supersedes "MSE" naming. `er_ncDfk`/`er_wcDfk` = `norm(seg-ref)/sqrt(numel(seg))`; previously un-normalised `norm()` (=RMSE·√N), so **caches built before 2026-07-15 hold the OLD ‖e‖₂ values — rerun `load_sessions.m` with `r_ctrl = 0` once to rebuild**. Constant rescale ⇒ all ratios/z-scores/slopes/p-values unchanged; only axis scale + units.
+- Error metric = **RMSE** (sample-normalised, %ΔF/F) — 2026-07-16, supersedes "MSE" naming. `er_ncDfk`/`er_wcDfk` = `norm(seg-ref)/sqrt(numel(seg))`; previously un-normalised `norm()` (=RMSE·√N), so **caches built before 2026-07-16 hold the OLD ‖e‖₂ values — rerun `load_sessions.m` with `r_ctrl = 0` once to rebuild**. Constant rescale ⇒ all ratios/z-scores/slopes/p-values unchanged; only axis scale + units.
 - RMSE window: **t = 0 s to +3 s** default (`er_ncDfk` / `er_wcDfk`); **t = +1 s to +3 s** only for the disturbance-rejection panel (`er_ncDfk_w` / `er_wcDfk_w`)
 - Power spectra: absolute (ΔF/F)² Hz⁻¹ only
 - `d.ref = −5` as project-wide default reference level

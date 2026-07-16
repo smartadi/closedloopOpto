@@ -79,7 +79,7 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 1D | Fig1 | *(interface diagram — illustrator)* | — | — | — | external |
 | 1E | Fig1 | *(control system — illustrator)* | — | — | — | external |
 | 1F | Fig1 | *(latency image)* | — | — | — | pending |
-| 2A | Fig2 | paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf | 5 × 4 | vector | ±1 SD | trace_overlay.m — ±1 SD ribbon added 2026-07-15 (PS.fa alpha); NEEDS RE-EXPORT |
+| 2A | Fig2 | paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf | 5 × 4 | vector | ±1 SD | trace_overlay.m — ±1 SD ribbon added + re-exported 2026-07-16 (PS.fa alpha) |
 | 2B | Fig2 | paper/images/figure2/imp_response.pdf | 5 × 4 | vector | — | dose_response.m |
 | 2C | Fig2 | paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf | 6 × 4 | vector | ±std | done |
 | 2D | Fig2 | paper/images/figure2/step_response.pdf | 6 × 4 | image 300dpi | — | step_response.m |
@@ -92,7 +92,7 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3B | Fig3 | paper/images/figure3/panel_B.pdf | 8.9 × 4 | vector | ±std | utils/analysisPlots_combined.m — all trials + avg OL\|CL |
 | 3C | Fig3 | paper/images/figure3/panel_C.pdf | 8.9 × 3 | vector | — | utils/analysisPlots_combined.m — avg inputs OL\|CL |
 | 3D | Fig3 | paper/images/figure3/panel_D.pdf | 3 × 3.5 | vector | — | utils/analysisPlots_combined.m — variance over time (single panel) |
-| 3E | Fig3 | paper/images/figure3/panel_E.pdf | 3 × 3 | vector | — | utils/analysisPlots_combined.m — RMSE half-violin (single panel); relabelled 2026-07-15, NEEDS RE-EXPORT after cache rebuild |
+| 3E | Fig3 | paper/images/figure3/panel_E.pdf | 3 × 3 | vector | — | utils/analysisPlots_combined.m — RMSE half-violin (single panel); relabelled + re-exported 2026-07-16 (cache rebuilt to RMSE) |
 | 3F | Fig3 | paper/images/figure3/all_variance_sessions.pdf | 3 × 3.5 | vector | ±SEM | variance_mse.m fig_F — cross-session variance trace |
 | 3G | Fig3 | paper/images/figure3/all_average_sessions.pdf | 3 × 4 | vector | ±SEM | step_response.m fig_H — per-session faint + bold mean |
 | 3H | Fig3 | paper/images/figure3/all_MSE_sessions.pdf | 7.8 × 4 | image 300dpi | — | variance_mse.m fig_G — cross-session MSE violin; mean dot too large (open task) |

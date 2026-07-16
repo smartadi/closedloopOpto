@@ -169,7 +169,7 @@ These are final — do not question or re-derive unless the user explicitly reop
 - TF fit currently on `selExp = 3` (AL_0033, 2025-01-29); sweep 1–3 poles, 0–2 zeros, 0–5 sample delay; AIC selection
 
 ### Controller / CL vs OL
-- Error metric = **RMSE** (root-mean-squared error, sample-normalised, in %ΔF/F) — decided 2026-07-15, supersedes the old "MSE" naming. `controllerData.m` now stores `er_ncDfk`/`er_wcDfk` as `norm(seg-ref)/sqrt(numel(seg))` (was un-normalised `norm()` = ‖e‖₂ = RMSE·√N). Label every axis/caption "RMSE"; the theory cost in Methods stays a squared cost (√ is monotone → same minimiser). Fig 3H is the one exception: it is genuinely **MAE** (`abs(mean error)`) and is labelled MAE.
+- Error metric = **RMSE** (root-mean-squared error, sample-normalised, in %ΔF/F) — decided 2026-07-16, supersedes the old "MSE" naming. `controllerData.m` now stores `er_ncDfk`/`er_wcDfk` as `norm(seg-ref)/sqrt(numel(seg))` (was un-normalised `norm()` = ‖e‖₂ = RMSE·√N). Label every axis/caption "RMSE"; the theory cost in Methods stays a squared cost (√ is monotone → same minimiser). Fig 3H is the one exception: it is genuinely **MAE** (`abs(mean error)`) and is labelled MAE.
 - RMSE window: **t = 0 s to +3 s** for trial RMSE analysis, **t = +1 s to +3 s** only for disturbance rejection in one panel, post-laser onset (skips inhibitory transient)
 - Power spectra: **absolute (ΔF/F)² Hz⁻¹** only — no normalization, no z-scoring at any stage
 - Motion exclusion threshold: `motThresh = 1.5` (z-scored motion)
