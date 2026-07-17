@@ -206,6 +206,85 @@ def exemplars(z, save="grid_tf_exemplars.png"):
     print("wrote", out)
 
 
+def _field_ax(ax, sites, gvec, s, clim):
+    """Draw one efferent field: every readout site at its true cortical (ML, AP) coordinate,
+    coloured by signed peak gain; the stimulated site is ringed, bregma (+) and midline drawn."""
+    x, y = sites[:, 0], sites[:, 1]
+    sc = ax.scatter(x, y, c=gvec, cmap="bwr", vmin=-clim, vmax=clim, s=170, ec="0.35", lw=0.4)
+    ax.scatter(x[s], y[s], s=360, facecolors="none", ec="k", lw=2.2, zorder=5)   # stim site
+    ax.axvline(0, c="0.55", lw=0.7, ls="--")                                      # midline
+    ax.plot(0, 0, "+", c="lime", ms=10, mew=1.6, zorder=6)                        # bregma
+    ax.set_aspect("equal")
+    return sc
+
+
+def gain_fields(z, amp=None, save="grid_tf_response_fields.png"):
+    """Efferent 'response field' maps for four representative stim sites (strong self-responder
+    in each hemisphere x anterior/posterior half): stimulate HERE -> cortex responds like THIS,
+    laid out in true brain coordinates. Reads directly as spatial projection fields."""
+    sites, amps, gain = z["sites"], z["amps"], z["gain"]
+    ai = len(amps) - 1 if amp is None else int(np.argmin(np.abs(amps - amp)))
+    gi = gain[ai]
+    x, y = sites[:, 0], sites[:, 1]
+    ymid = np.median(y)
+
+    def strong_self(xm, ym):
+        idx = np.where(xm & ym & (np.abs(x) >= 1.0))[0]
+        return int(idx[np.argmax(np.abs([gi[i, i] for i in idx]))])
+
+    picks = [(strong_self(x < 0, y >= ymid), "excit L, anterior"),
+             (strong_self(x < 0, y < ymid),  "excit L, posterior"),
+             (strong_self(x > 0, y >= ymid), "inhib R, anterior"),
+             (strong_self(x > 0, y < ymid),  "inhib R, posterior")]
+    clim = float(np.nanpercentile(np.abs(gi), 97))
+
+    fig, axes = plt.subplots(2, 2, figsize=(9.5, 9), constrained_layout=True)
+    sc = None
+    for ax, (s, lab) in zip(axes.ravel(), picks):
+        sc = _field_ax(ax, sites, gi[s], s, clim)
+        ax.set_title(f"stim ({x[s]:+.1f}, {y[s]:+.0f}) mm  [{lab}]", fontsize=9)
+        ax.set_xlabel("ML from bregma (mm)"); ax.set_ylabel("AP from bregma (mm)")
+    cb = fig.colorbar(sc, ax=axes, shrink=0.6); cb.set_label("signed peak gain (dF/F)")
+    fig.suptitle(f"Efferent response fields — stim site (ring) -> cortical response  "
+                 f"(amp {amps[ai]:.1f}; left=excitatory, right=inhibitory)", fontsize=12)
+    out = OUT / Path(save).name; OUT.mkdir(exist_ok=True)
+    fig.savefig(out, dpi=150); plt.close(fig)
+    print("wrote", out, "| stim sites:", [p[0] for p in picks])
+
+
+def gain_field_grid(z, amp=None, save="grid_tf_response_field_grid.png"):
+    """The full 52x52 in brain space: at each stim site's own cortical location, a mini efferent
+    field (all readouts coloured by that site's peak gain). One glance = the whole connectivity."""
+    sites, amps, gain = z["sites"], z["amps"], z["gain"]
+    ai = len(amps) - 1 if amp is None else int(np.argmin(np.abs(amps - amp)))
+    gi = gain[ai]
+    x, y = sites[:, 0], sites[:, 1]
+    xr = (x - x.min()) / (x.max() - x.min())
+    yr = (y - y.min()) / (y.max() - y.min())
+    clim = float(np.nanpercentile(np.abs(gi), 97))
+    w, m = 0.082, 0.06                                          # mini-map size, page margin
+
+    fig = plt.figure(figsize=(13, 13))
+    sc = None
+    for s in range(len(sites)):
+        ax = fig.add_axes([m + (1 - 2 * m - w) * xr[s], m + (1 - 2 * m - w) * yr[s], w, w])
+        sc = ax.scatter(x, y, c=gi[s], cmap="bwr", vmin=-clim, vmax=clim, s=9, lw=0)
+        ax.scatter(x[s], y[s], s=26, facecolors="none", ec="k", lw=0.9)
+        ax.axvline(0, c="0.7", lw=0.4, ls="--")
+        ax.set_xticks([]); ax.set_yticks([]); ax.set_aspect("equal")
+        for sp in ax.spines.values():
+            sp.set_edgecolor("0.8"); sp.set_linewidth(0.5)
+    cax = fig.add_axes([1 - m + 0.005, 0.35, 0.012, 0.3])
+    cb = fig.colorbar(sc, cax=cax); cb.set_label("signed peak gain (dF/F)")
+    fig.text(0.5, 1 - m + 0.01, f"Efferent field at every stim location (amp {amps[ai]:.1f})  "
+             f"— each mini-map sits at its stim site; left=excitatory, right=inhibitory",
+             ha="center", fontsize=12)
+    fig.text(0.5, m - 0.03, "ML from bregma (mm) ->", ha="center", fontsize=10)
+    out = OUT / Path(save).name; OUT.mkdir(exist_ok=True)
+    fig.savefig(out, dpi=150, bbox_inches="tight"); plt.close(fig)
+    print("wrote", out)
+
+
 if __name__ == "__main__":
     z = _load()
     print(f"loaded 2-amp TF fits: amps={list(z['amps'])}, sites={len(z['sites'])}, "
@@ -213,3 +292,5 @@ if __name__ == "__main__":
     gain_matrix(z)
     amp_compare(z)
     exemplars(z)
+    gain_fields(z)
+    gain_field_grid(z)
