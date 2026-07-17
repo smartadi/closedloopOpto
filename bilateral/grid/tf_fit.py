@@ -31,6 +31,23 @@ FIT_TMAX = 0.6     # s — fit only t in [0, FIT_TMAX], which ends BEFORE the fi
                    # which CV alone can't reject (it is present in both trial-halves).
 
 
+ONSET_PRE_S = 0.10   # s — width of the immediate pre-onset window whose mean defines the
+                     # "activity at stim onset". Subtracting it zeros the TF's initial condition
+                     # (system at rest at onset), so the fit models the response, not a DC offset
+                     # left over from baselining against the long 2 s pre-stim window.
+
+
+def _zero_onset(t, h):
+    """Return (h - onset_level, onset_level). onset_level = mean of h over [-ONSET_PRE_S, 0),
+    so the shifted response is ZERO at stim onset — the correct zero initial condition for the
+    sum-of-exponentials impulse-response fit. Falls back to the sample nearest t=0 if the
+    pre-onset window is empty. NaN-safe."""
+    pre = (t >= -ONSET_PRE_S) & (t < 0)
+    off = np.nanmean(h[pre]) if np.any(pre) and np.any(np.isfinite(h[pre])) \
+        else float(h[int(np.argmin(np.abs(t)))])
+    return h - off, off
+
+
 def _impulse(t, theta, A, tau):
     """Sum-of-exponentials impulse response, zero before the delay theta."""
     out = np.zeros_like(t)
@@ -197,13 +214,16 @@ def fit_all(orders=ORDERS, selection="cv", criterion="bic", cache=True):
     delay = np.zeros((nS, nS))
     tau = np.full((nS, nS, max(ORDERS)), np.nan)     # poles (s), sorted ascending
     Amp = np.full((nS, nS, max(ORDERS)), np.nan)     # residues, aligned to tau
+    Hs = np.array(H, float)                          # onset-zeroed copy (fit + store this)
     for s in range(nS):
         for r in range(nS):
+            h, off = _zero_onset(window, H[s, r])    # zero the initial condition at onset
+            Hs[s, r] = h
             if selection == "cv":
-                f = fit_lti_cv(window, H[s, r], HA[s, r], HB[s, r], orders=orders)
+                f = fit_lti_cv(window, h, HA[s, r] - off, HB[s, r] - off, orders=orders)
                 cvr2[s, r] = f["cvr2"]
             else:
-                f = fit_lti(window, H[s, r], orders=orders, criterion=criterion)
+                f = fit_lti(window, h, orders=orders, criterion=criterion)
             yhat[s, r] = _impulse(window, f["theta"], f["A"], f["tau"])
             order[s, r] = f["order"]; r2[s, r] = f["r2"]; gain[s, r] = f["gain"]
             delay[s, r] = f["theta"]
@@ -216,10 +236,10 @@ def fit_all(orders=ORDERS, selection="cv", criterion="bic", cache=True):
           f"{np.bincount(order.ravel(), minlength=6)[1:]}, median R2={np.nanmedian(r2):.2f}"
           + (f", median CV-R2={np.nanmedian(cvr2):.2f}" if selection == "cv" else ""))
     if cache:
-        np.savez(CACHE_TF, H=H, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window,
+        np.savez(CACHE_TF, H=Hs, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window,
                  label=label, order=order, r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp)
         print("cached ->", CACHE_TF)
-    return dict(H=H, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window, order=order,
+    return dict(H=Hs, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window, order=order,
                 r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp, label=label)
 
 
@@ -293,15 +313,18 @@ def fit_all_amps(orders=ORDERS, selection="cv", cache=True):
     delay = np.zeros((nA, nS, nS))
     tau = np.full((nA, nS, nS, max(ORDERS)), np.nan)         # poles (s), ascending
     Amp = np.full((nA, nS, nS, max(ORDERS)), np.nan)         # residues, aligned to tau
+    Hs = np.array(H, float)                                  # onset-zeroed copy (fit + store)
     for ai in range(nA):
         for s in range(nS):
             for r in range(nS):
                 h = H[ai, s, r]
                 if not np.all(np.isfinite(h)):               # site had no trials at this amp
                     continue
+                h, off = _zero_onset(window, h)              # zero initial condition at onset
+                Hs[ai, s, r] = h
                 if selection == "cv" and np.all(np.isfinite(HA[ai, s, r])) \
                         and np.all(np.isfinite(HB[ai, s, r])):
-                    f = fit_lti_cv(window, h, HA[ai, s, r], HB[ai, s, r], orders=orders)
+                    f = fit_lti_cv(window, h, HA[ai, s, r] - off, HB[ai, s, r] - off, orders=orders)
                     cvr2[ai, s, r] = f["cvr2"]
                 else:
                     f = fit_lti(window, h, orders=orders)
@@ -318,11 +341,11 @@ def fit_all_amps(orders=ORDERS, selection="cv", cache=True):
               f"median R2={np.nanmedian(r2[ai]):.2f}"
               + (f", median CV-R2={np.nanmedian(cvr2[ai]):.2f}" if selection == "cv" else ""))
     if cache:
-        np.savez(CACHE_TF2, H=H, Hstd=Hstd, yhat=yhat, sites=sites, window=window,
+        np.savez(CACHE_TF2, H=Hs, Hstd=Hstd, yhat=yhat, sites=sites, window=window,
                  amps=np.array(amps, float), order=order, r2=r2, cvr2=cvr2, gain=gain,
                  delay=delay, tau=tau, A=Amp)
         print("cached ->", CACHE_TF2)
-    return dict(H=H, Hstd=Hstd, yhat=yhat, sites=sites, window=window, amps=amps, order=order,
+    return dict(H=Hs, Hstd=Hstd, yhat=yhat, sites=sites, window=window, amps=amps, order=order,
                 r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp)
 
 
@@ -372,7 +395,7 @@ def prototype(save="grid_png/tf_prototype.png"):
           f"stim_inh=({sites[s_inh,0]:+.1f},{sites[s_inh,1]:+.0f})")
     print(f"{'pair':<16}{'order':>6}{'R2':>8}{'delay_ms':>10}{'tau_ms (poles)':>22}{'gain':>10}")
     for ax, (s, r, lab) in zip(axes.ravel(), cases):
-        h = H[s, r]
+        h, _ = _zero_onset(window, H[s, r])          # zero initial condition at onset
         fit = fit_lti(window, h, orders=ORDERS)
         ax.axhline(0, c="k", lw=0.4, ls="--")
         ax.axvline(0, c="grey", lw=0.4)
