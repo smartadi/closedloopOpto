@@ -210,6 +210,109 @@ def fit_all(orders=ORDERS, selection="cv", criterion="bic", cache=True):
 
 
 # --------------------------------------------------------------------------- #
+# TWO-AMPLITUDE variant: fit the 52x52 site->site TF matrix SEPARATELY for each laser
+# amplitude of a multi-power session (2026-07-10 grid = [1.0, 2.0]). Same per-pair model
+# and CV order selection as the single-amp path; adds an amp axis to every output so the
+# fits are directly comparable (LTI check: poles amplitude-invariant, gain scales with power).
+CACHE_TF2 = cross_response.CACHE.parent / "grid_tf_fits_2amp.npz"
+
+
+def split_half_means_amp():
+    """Even/odd-trial split-half means per amplitude from the 2-amp trials cache.
+
+    Returns HA, HB (nA,nS,nS,nW) — two independent estimates of each pair's impulse response
+    at each amp — plus amps and window. Onsets are filtered by Block-assigned power exactly as
+    cross_response.extract_trials_amp, and the same per-half baseline convention as build_amps."""
+    import scipy.interpolate
+    zt = cross_response.load_trials2()
+    roi_ts = zt["roi_ts"].astype(np.float64)
+    svdT, onset_t, pos = zt["svdT"], zt["onset_t"], zt["pos"]
+    onset_amp = np.round(zt["onset_amp"], 3)
+    sites, window, base_ix = zt["sites"], zt["window"], int(zt["base_ix"])
+    amps = [round(float(a), 3) for a in cross_response.load_cached2()["amps"]]
+    nA, nS, nW = len(amps), len(sites), len(window)
+    fr = [scipy.interpolate.interp1d(svdT, roi_ts[:, r], bounds_error=False, fill_value=np.nan)
+          for r in range(nS)]
+    HA = np.full((nA, nS, nS, nW), np.nan); HB = np.full((nA, nS, nS, nW), np.nan)
+    for ai, amp in enumerate(amps):
+        for s, (mx, my) in enumerate(sites):
+            onsets = onset_t[(pos[:, 0] == mx) & (pos[:, 1] == my) & (onset_amp == amp)]
+            a = np.arange(len(onsets)) % 2 == 0
+            for r in range(nS):
+                fluo = fr[r](window[None, :] + onsets[:, None])          # (nTrials,nW)
+                for Hh, ix in ((HA, a), (HB, ~a)):
+                    fh = fluo[ix]
+                    if fh.shape[0] == 0:
+                        continue
+                    base = np.nanmean(fh[:, :base_ix])
+                    Hh[ai, s, r] = np.nanmean((fh - base) / base, 0)
+    return HA, HB, amps, window
+
+
+def fit_all_amps(orders=ORDERS, selection="cv", cache=True):
+    """Fit a TF to every (stim, readout) pair at EACH laser amplitude of the 2-amp session.
+
+    Reads the 2-amp cross-response tensor (cross_response.load_cached2 -> H (nA,nS,nS,nW)) and,
+    for CV order selection, the 2-amp split-half means. Caches per-amp H/yhat/order/r2/cvr2/
+    gain/delay/tau/A (all with a leading amp axis) to grid_tf_fits_2amp.npz. Falls back to BIC
+    if the 2-amp trials cache is missing."""
+    z = cross_response.load_cached2()
+    H, sites, window = z["H"], z["sites"], z["window"]        # H (nA,nS,nS,nW)
+    amps = [round(float(a), 3) for a in z["amps"]]
+    Hstd = z["Hstd"] if "Hstd" in z else np.zeros_like(H)
+    nA, nS, nW = H.shape[0], len(sites), len(window)
+
+    HA = HB = None
+    if selection == "cv":
+        try:
+            HA, HB, amps_cv, _ = split_half_means_amp()
+            assert amps_cv == amps, f"amp mismatch {amps_cv} vs {amps}"
+        except Exception as e:
+            print(f"  [cv] 2-amp trials cache unavailable ({e}); falling back to BIC")
+            selection = "bic"
+
+    yhat = np.zeros((nA, nS, nS, nW))
+    order = np.zeros((nA, nS, nS), int)
+    r2 = np.full((nA, nS, nS), np.nan)
+    cvr2 = np.full((nA, nS, nS), np.nan)
+    gain = np.zeros((nA, nS, nS))
+    delay = np.zeros((nA, nS, nS))
+    tau = np.full((nA, nS, nS, max(ORDERS)), np.nan)         # poles (s), ascending
+    Amp = np.full((nA, nS, nS, max(ORDERS)), np.nan)         # residues, aligned to tau
+    for ai in range(nA):
+        for s in range(nS):
+            for r in range(nS):
+                h = H[ai, s, r]
+                if not np.all(np.isfinite(h)):               # site had no trials at this amp
+                    continue
+                if selection == "cv" and np.all(np.isfinite(HA[ai, s, r])) \
+                        and np.all(np.isfinite(HB[ai, s, r])):
+                    f = fit_lti_cv(window, h, HA[ai, s, r], HB[ai, s, r], orders=orders)
+                    cvr2[ai, s, r] = f["cvr2"]
+                else:
+                    f = fit_lti(window, h, orders=orders)
+                yhat[ai, s, r] = _impulse(window, f["theta"], f["A"], f["tau"])
+                order[ai, s, r] = f["order"]; r2[ai, s, r] = f["r2"]
+                gain[ai, s, r] = f["gain"]; delay[ai, s, r] = f["theta"]
+                n = len(f["tau"]); o = np.argsort(f["tau"])
+                tau[ai, s, r, :n] = np.asarray(f["tau"])[o]
+                Amp[ai, s, r, :n] = np.asarray(f["A"])[o]
+            print(f"  amp {amps[ai]}  stim {s+1:2d}/{nS}  median R2(row)={np.nanmedian(r2[ai, s]):.2f}",
+                  end="\r")
+        print()
+        print(f"amp {amps[ai]}: order hist {np.bincount(order[ai].ravel(), minlength=6)[1:]}, "
+              f"median R2={np.nanmedian(r2[ai]):.2f}"
+              + (f", median CV-R2={np.nanmedian(cvr2[ai]):.2f}" if selection == "cv" else ""))
+    if cache:
+        np.savez(CACHE_TF2, H=H, Hstd=Hstd, yhat=yhat, sites=sites, window=window,
+                 amps=np.array(amps, float), order=order, r2=r2, cvr2=cvr2, gain=gain,
+                 delay=delay, tau=tau, A=Amp)
+        print("cached ->", CACHE_TF2)
+    return dict(H=H, Hstd=Hstd, yhat=yhat, sites=sites, window=window, amps=amps, order=order,
+                r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp)
+
+
+# --------------------------------------------------------------------------- #
 def _nearest(sites, ref, exclude=()):
     """Index of the site closest to coordinate `ref`, excluding given indices."""
     d = np.hypot(sites[:, 0] - ref[0], sites[:, 1] - ref[1])
@@ -277,7 +380,9 @@ def prototype(save="grid_png/tf_prototype.png"):
 
 if __name__ == "__main__":
     import sys
-    if "all" in sys.argv:
+    if "2amp" in sys.argv:
+        fit_all_amps()
+    elif "all" in sys.argv:
         fit_all()
     else:
         prototype()
