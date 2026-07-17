@@ -156,32 +156,43 @@ def main():
                            for v in zr)
             print(f"  {coord(r)} n{int(order[X,r])} g{gain[X,r]:+.4f}  p[{ps}] z[{zs}]")
 
-    eff = build_brain()
-    views = {"aff": None, "trials": None}
+    def build_selector():
+        """Map 1: a plain clickable brain (mean image + site dots). Click picks the stim site."""
+        fig = plt.figure(figsize=(6.2, 6.2))
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.imshow(mimg, cmap="gray", extent=[0, nx, ny, 0], aspect="auto")
+        ax.set_xlim(0, nx); ax.set_ylim(ny, 0); ax.axis("off")
+        ax.scatter(px[:, 0], px[:, 1], s=70, c="red", edgecolors="white", linewidths=0.6, zorder=3)
+        return dict(fig=fig, ax=ax, ring=None)
+
+    def mark_selector(sel, X):
+        if sel["ring"] is not None:
+            sel["ring"].remove()
+        sel["ring"] = sel["ax"].scatter([px[X, 0]], [px[X, 1]], s=240, facecolors="none",
+                                        edgecolors="yellow", linewidths=2.6, zorder=4)
+        t = sel["fig"].suptitle(f"SELECT stim site — clicked {coord(X)}  (efferent map updates)",
+                                fontsize=12, color="white", y=0.99)
+        t.set_path_effects(ST)
+        sel["fig"].canvas.draw_idle()
+
+    def nearest_site(event, ax):
+        if event.inaxes is not ax or event.xdata is None:
+            return None
+        d = (px[:, 0] - event.xdata) ** 2 + (px[:, 1] - event.ydata) ** 2
+        return int(np.argmin(d))
+
+    effv = build_brain()
+    sel = build_selector()
+    views = {"trials": None}
     X0 = int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)])))
-    state = {"X": X0, "Y": None, "live": False, "on_sec": None}
+    state = {"X": X0, "Y": None, "live": False}
 
     def draw_efferent(X):
-        render(eff, lambda j: H[X, j], lambda j: Hstd[X, j], lambda j: yhat[X, j],
+        render(effv, lambda j: H[X, j], lambda j: Hstd[X, j], lambda j: yhat[X, j],
                lambda j: order[X, j], {X: "red"}, X,
                f"EFFERENT — stim {coord(X)} → response at every site   "
                f"blue=trial mean  band=±2SD  orange=TF")
         report(X)
-
-    def draw_afferent(X, Ysel=None):
-        if views["aff"] is None or not plt.fignum_exists(views["aff"]["fig"].number):
-            views["aff"] = build_brain()
-            if state.get("on_sec"):
-                views["aff"]["fig"].canvas.mpl_connect("button_press_event", state["on_sec"])
-            if state.get("live"):
-                views["aff"]["fig"].show()
-        frames = {X: "red"}
-        if Ysel is not None:
-            frames[Ysel] = "lime"
-        render(views["aff"], lambda j: H[j, X], lambda j: Hstd[j, X], lambda j: yhat[j, X],
-               lambda j: order[j, X], frames, X,
-               f"AFFERENT — node {coord(X)}: each site = {coord(X)}'s response when THAT site "
-               f"is stimmed   red={coord(X)}  green=trials shown   [click a node for its trials]")
 
     def show_trials(s, r):
         dff, m = cr.extract_trials(roi_ts, svdT, onset_t, pos, sites, twin, base_ix, s, r)
@@ -212,43 +223,33 @@ def main():
         f.canvas.draw_idle()
 
     draw_efferent(X0)
-    # default trials pair: the OTHER stim site whose response at X0 is strongest (afferent
-    # col of X0, excluding X0 itself so the preview/default is a genuine cross pair)
-    col = np.abs(H[:, X0, post]).max(1).copy(); col[X0] = -np.inf
-    Y0 = int(np.argmax(col))
-    state["Y"] = Y0
+    mark_selector(sel, X0)
 
     if SAVE:
-        draw_afferent(X0, Y0)
-        show_trials(Y0, X0)
         outdir = Path(__file__).resolve().parent / "grid_png"; outdir.mkdir(exist_ok=True)
-        eff["fig"].savefig(outdir / "view_efferent.png", dpi=130)
-        views["aff"]["fig"].savefig(outdir / "view_afferent.png", dpi=130)
-        views["trials"]["fig"].savefig(outdir / "view_trials.png", dpi=130)
-        print("wrote view_efferent.png, view_afferent.png, view_trials.png")
+        sel["fig"].savefig(outdir / "view_selector.png", dpi=130)
+        effv["fig"].savefig(outdir / "view_efferent.png", dpi=130)
+        print("wrote view_selector.png, view_efferent.png")
         return
 
-    # secondary (afferent) map: click a node Y on it -> trials of (stim Y -> readout X)
-    def on_secondary(event):
-        if views["aff"] is None or event.inaxes not in views["aff"]["axs"]:
+    # Map 1 (selector): click nearest site -> set stim X -> Map 2 (efferent field) redraws
+    def on_select(event):
+        X = nearest_site(event, sel["ax"])
+        if X is None:
             return
-        state["Y"] = views["aff"]["axs"][event.inaxes]
-        draw_afferent(state["X"], state["Y"])
-        show_trials(state["Y"], state["X"])
-    state["on_sec"] = on_secondary
+        state["X"] = X
+        mark_selector(sel, X)
+        draw_efferent(X)
+    sel["fig"].canvas.mpl_connect("button_press_event", on_select)
 
-    # primary (efferent) map: click a node X -> efferent H[X,:] AND afferent H[:,X] both update
-    def on_primary(event):
-        if event.inaxes not in eff["axs"]:
+    # Map 2 (efferent): click a node -> single-trial view of (stim X -> that readout)
+    def on_efferent(event):
+        if event.inaxes not in effv["axs"]:
             return
-        state["X"] = eff["axs"][event.inaxes]
-        draw_efferent(state["X"])
-        draw_afferent(state["X"], state["Y"])
-        show_trials(state["Y"], state["X"])
-    eff["fig"].canvas.mpl_connect("button_press_event", on_primary)
+        state["Y"] = effv["axs"][event.inaxes]
+        show_trials(state["X"], state["Y"])
+    effv["fig"].canvas.mpl_connect("button_press_event", on_efferent)
 
-    draw_afferent(X0, Y0)          # creates the afferent window (+ connects on_secondary)
-    show_trials(Y0, X0)
     state["live"] = True
     plt.show()
 
