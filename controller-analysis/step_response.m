@@ -77,10 +77,8 @@ custom_idx = [4 9 11];   % change as needed
 
 % custom_idx = [3 6 8];   % change as needed
 
-% ---- Your experimental colors ----
-expColors = [0.2 0.4 0.8;
-             0.8 0.2 0.2;
-             0.2 0.8 0.4];
+% ---- Session colors (colorblind-safe when global PAPER_CB=true) ----
+expColors = PS.sess;
 
 ax = gca;
 
@@ -170,7 +168,7 @@ text(-0.1-3, 10, {'Variance', 'across trials'}, ...
 
 
 % shortCornerAxes_plot(gca,'Frac',0.15,'XLabel','Time','YLabel','dF/F','LineWidth',5,'LabelGap',0.05)
-paperExport(fig, fullfile(paper_root, 'images', 'figure2', 'step_response.pdf'));
+paperExport(fig, fullfile(paper_root, 'images', 'figure2', sprintf('step_response%s.pdf', PS.cbtag)));
 
 
 

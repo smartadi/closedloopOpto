@@ -6,10 +6,9 @@
 %% Combined plot for all experiments
 close all;
 
-expColors = [0.2 0.4 0.8; 0.8 0.2 0.2; 0.2 0.8 0.4];
-
 PW_c = 5; PH_c = 4;
 PS = paperStyle();
+expColors = PS.sess;   % session palette (colorblind-safe when global PAPER_CB=true)
 setPaperDefaults();
 fig = paperFig(PW_c, PH_c); hold on
 h1 = yline(0,'--k');
@@ -93,7 +92,7 @@ text(ax, -0.12, 0.5, 'Inhibition Energy', ...
     'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'FontSize',PS.fs, 'FontWeight',PS.fw, 'Color','k', 'Clipping','off');
-paperExport(fig, fullfile(paperRoot, 'images', 'figure2', 'imp_response.pdf'));
+paperExport(fig, fullfile(paperRoot, 'images', 'figure2', sprintf('imp_response%s.pdf', PS.cbtag)));
 
 %% Combined plot - median +/- IQR (supplementary)
 figM = paperFig(PW_c, PH_c); hold on
