@@ -8,7 +8,12 @@ close all;
 
 PW_c = 5; PH_c = 4;
 PS = paperStyle();
-expColors = PS.sess;   % session palette (colorblind-safe when global PAPER_CB=true)
+expColors = PS.sess;   % session palette (kept for reference; 2B is now monochrome)
+% Monochrome session encoding (matches Fig 2F): session = marker SHAPE + fit
+% LINESTYLE in one neutral colour -> colour-free, print/CB-safe.
+sessColor   = [0.15 0.15 0.15];
+sessMarkers = {'o', 's', '^'};
+sessLines   = {'-', '--', ':'};
 setPaperDefaults();
 fig = paperFig(PW_c, PH_c); hold on
 h1 = yline(0,'--k');
@@ -34,25 +39,31 @@ for expIdx = 1:nExp
     xpos     = xpos_raw(nzMask) + (expIdx - 2) * 0.005;
     capWidth = 0.003;
 
+    mk = sessMarkers{min(expIdx,numel(sessMarkers))};
     for j = 1:numel(xpos)
         plot([xpos(j) xpos(j)], [meanVals(j)-semVals(j), meanVals(j)+semVals(j)], ...
-            '-', 'LineWidth', 1, 'Color', expColors(expIdx,:));
+            '-', 'LineWidth', 1, 'Color', sessColor);
         plot([xpos(j)-capWidth xpos(j)+capWidth], [meanVals(j)-semVals(j), meanVals(j)-semVals(j)], ...
-            '-', 'LineWidth', 1, 'Color', expColors(expIdx,:));
+            '-', 'LineWidth', 1, 'Color', sessColor);
         plot([xpos(j)-capWidth xpos(j)+capWidth], [meanVals(j)+semVals(j), meanVals(j)+semVals(j)], ...
-            '-', 'LineWidth', 1, 'Color', expColors(expIdx,:));
-        plot(xpos(j), meanVals(j), 'o', 'MarkerSize', 1.5, ...
-            'MarkerFaceColor', expColors(expIdx,:), ...
-            'MarkerEdgeColor', expColors(expIdx,:), ...
-            'LineWidth', 2);
+            '-', 'LineWidth', 1, 'Color', sessColor);
+        plot(xpos(j), meanVals(j), mk, 'MarkerSize', 3, ...
+            'MarkerFaceColor', sessColor, ...
+            'MarkerEdgeColor', sessColor, ...
+            'LineWidth', 0.5);
     end
 
-    % Fit line through means for this experiment
+    % Fit line through means for this experiment (session = linestyle)
     p  = polyfit(xpos, meanVals, 1);
     xf = linspace(min(xpos)-0.02, max(xpos)+0.02, 100);
 
-    hLegend(expIdx) = plot(xf, polyval(p,xf), '-', 'LineWidth', 2.0, ...
-        'Color', expColors(expIdx,:));
+    ls = sessLines{min(expIdx,numel(sessLines))};
+    plot(xf, polyval(p,xf), 'LineStyle', ls, 'LineWidth', 1.5, ...
+        'Color', sessColor, 'HandleVisibility','off');
+    % legend token carries BOTH shape and linestyle
+    hLegend(expIdx) = plot(nan, nan, 'LineStyle', ls, 'Color', sessColor, ...
+        'Marker', mk, 'MarkerFaceColor', sessColor, 'MarkerEdgeColor', sessColor, ...
+        'MarkerSize', 3, 'LineWidth', 1.5);
 
     legTxt{expIdx} = sprintf('Session %d',expIdx);
 
@@ -64,7 +75,7 @@ for expIdx = 1:nExp
     fprintf('  Session %d: slope=%.4f dF%%/V,  R2=%.3f\n', expIdx, p(1), R2_e);
     text(ax_c, 0.5, 0.05 + 0.12*(expIdx-1), ...
         sprintf('S%d: m=%.3f, R2=%.2f', expIdx, p(1), R2_e), ...
-        'Units','normalized', 'FontSize',PS.fs, 'Color',expColors(expIdx,:), ...
+        'Units','normalized', 'FontSize',PS.fs, 'Color',sessColor, ...
         'FontWeight','bold', 'HorizontalAlignment','right', 'VerticalAlignment','bottom');
 end
 
@@ -121,22 +132,27 @@ for expIdx = 1:nExp
     ug_m       = ug_m(nzMask_m);
     capWidth_m = 0.003;
 
+    mk_m = sessMarkers{min(expIdx,numel(sessMarkers))};
     for j = 1:numel(ug_m)
         plot([xpos_m(j) xpos_m(j)], [p25(j), p75(j)], ...
-            '-', 'LineWidth', 1, 'Color', expColors(expIdx,:));
+            '-', 'LineWidth', 1, 'Color', sessColor);
         plot([xpos_m(j)-capWidth_m xpos_m(j)+capWidth_m], [p25(j) p25(j)], ...
-            '-', 'LineWidth', 1, 'Color', expColors(expIdx,:));
+            '-', 'LineWidth', 1, 'Color', sessColor);
         plot([xpos_m(j)-capWidth_m xpos_m(j)+capWidth_m], [p75(j) p75(j)], ...
-            '-', 'LineWidth', 1, 'Color', expColors(expIdx,:));
-        plot(xpos_m(j), medVals(j), 'o', 'MarkerSize', 1, ...
-            'MarkerFaceColor', expColors(expIdx,:), ...
-            'MarkerEdgeColor', expColors(expIdx,:), 'LineWidth', 2);
+            '-', 'LineWidth', 1, 'Color', sessColor);
+        plot(xpos_m(j), medVals(j), mk_m, 'MarkerSize', 3, ...
+            'MarkerFaceColor', sessColor, ...
+            'MarkerEdgeColor', sessColor, 'LineWidth', 0.5);
     end
 
+    ls_m = sessLines{min(expIdx,numel(sessLines))};
     p_m  = polyfit(xpos_m, medVals, 1);
     xf_m = linspace(min(xpos_m)-0.02, max(xpos_m)+0.02, 100);
-    hLegendM(expIdx) = plot(xf_m, polyval(p_m,xf_m), '-', 'LineWidth', 1.5, ...
-        'Color', expColors(expIdx,:));
+    plot(xf_m, polyval(p_m,xf_m), 'LineStyle', ls_m, 'LineWidth', 1.5, ...
+        'Color', sessColor, 'HandleVisibility','off');
+    hLegendM(expIdx) = plot(nan, nan, 'LineStyle', ls_m, 'Color', sessColor, ...
+        'Marker', mk_m, 'MarkerFaceColor', sessColor, 'MarkerEdgeColor', sessColor, ...
+        'MarkerSize', 3, 'LineWidth', 1.5);
     legTxtM{expIdx} = sprintf('Session %d', expIdx);
 
     % R2 for this linear fit
@@ -147,7 +163,7 @@ for expIdx = 1:nExp
     fprintf('  Session %d: slope=%.4f dF%%/V,  R2=%.3f\n', expIdx, p_m(1), R2_m);
     text(ax_mc, 0.5, 0.05 + 0.12*(expIdx-1), ...
         sprintf('S%d: m=%.3f, R2=%.2f', expIdx, p_m(1), R2_m), ...
-        'Units','normalized', 'FontSize',PS.fs, 'Color',expColors(expIdx,:), ...
+        'Units','normalized', 'FontSize',PS.fs, 'Color',sessColor, ...
         'FontWeight','bold', 'HorizontalAlignment','right', 'VerticalAlignment','bottom');
 end
 
