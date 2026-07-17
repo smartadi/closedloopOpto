@@ -7,7 +7,7 @@
 %   paper/images/figure4/sine_panel_C_<sfx>.pdf  – average 638 input, mW   (17 x 3)  +/-std
 %   paper/images/figure4/sine_panel_D_<sfx>.pdf  – variance over time     (3 x 3.5)
 %   paper/images/figure4/sine_panel_E_<sfx>.pdf  – trial MSE half-violin  (3 x 3)
-%   paper/images/figure4/sine_panel_F_<sfx>.pdf  – PHASE LAG by mode      (3 x 3.5)
+%   paper/images/figure4/sine_panel_F_<sfx>.pdf  – PHASE LAG (deg) by mode (3 x 3.5)
 %
 % Style delegated to paperStyle / setPaperDefaults / paperAxes / paperLegend.
 % Requires: load_bilateral.m has been run (`sessions` in workspace).
@@ -246,11 +246,12 @@ lags = nan(1,nMode); gains = nan(1,nMode);
 iRef = (nPre+1) : (nPre+1+round(dur*fs));
 for m = 1:nMode
     mu = mean(traces{m}(:, iRef),1); mr = mean(refs{m},1);
-    lg_ = mod(fPh(mr)-fPh(mu)+pi, 2*pi)-pi;
-    lags(m)  = lg_/(2*pi*sn.hz)*1000;
+    lg_ = mod(fPh(mr)-fPh(mu)+pi, 2*pi)-pi;      % wrapped phase diff, radians
+    lags(m)  = lg_*180/pi;                        % report as phase in degrees
     gains(m) = fAmp(mu)/fAmp(mr);
 end
-prevLook = 1000 * sess.d.input_params(find([sess.trial_meta.ff_cond]>=0,1), 8) / fs;   % ms
+% preview lookahead as an equivalent phase at the drive frequency (deg)
+prevLook = 360 * sn.hz * sess.d.input_params(find([sess.trial_meta.ff_cond]>=0,1), 8) / fs;
 
 fig_F = paperFig(3, 3.5);
 lm2f = 0.20; rm2f = 0.05; bm2f = 0.20; tm2f = 0.08;
@@ -261,19 +262,19 @@ for m = 1:nMode
 end
 yline(ax_ph, 0, 'k-', 'LineWidth', PS.lw_zero);
 yline(ax_ph, prevLook, '--', 'Color', [0.5 0.5 0.5], 'LineWidth', PS.lw_ref);
-text(ax_ph, nMode+0.55, prevLook, sprintf('preview %.0f ms', prevLook), ...
+text(ax_ph, nMode+0.55, prevLook, sprintf('preview %.0f\\circ', prevLook), ...
     'Color', [0.5 0.5 0.5], 'HorizontalAlignment','right', 'VerticalAlignment','bottom', ...
     'FontSize', PS.fs, 'Clipping','off');
 hold(ax_ph,'off');
 xlim(ax_ph, [0.4 nMode+0.6]);
 ax_ph.XTick = 1:nMode; ax_ph.XTickLabel = {'OL','OL+p','CL','CL+p'};
 ax_ph.XTickLabelRotation = 30;
-ylabel(ax_ph, 'Phase lag (ms)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+ylabel(ax_ph, 'Phase lag (\circ)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
 set(ax_ph, 'Box','off', 'TickDir','out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
 if EXPORT; paperExport(fig_F, fullfile(outDir, sprintf('sine_panel_F_phaselag_%s.pdf', sfx)));
     if EXPORT_PNG; paperExport(fig_F, fullfile(pngDir, sprintf('sine_panel_F_phaselag_%s.png', sfx))); end; end
 prev(fig_F, 'F');
 
 fprintf('\n[%s] %s exp %d — n per mode: %s\n', SESSION_TAG, sess.td, sess.en, mat2str(nTr));
-fprintf('gain: %s\nlag (ms): %s | preview lookahead = %.0f ms\n', ...
+fprintf('gain: %s\nlag (deg): %s | preview lookahead = %.0f deg\n', ...
     mat2str(gains,3), mat2str(round(lags)), prevLook);
