@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-07-17 — Error-by-mode time series, sessions overlaid (per-mode comparison)
+**Changed/Found:** Scratch (not committed) — re-cut of the trial-averaged error `e(t)=activity−ref` as 4 panels (one per mode), s1 vs s2 overlaid (`scratchpad/error_by_mode_bothsesh.png`, ±SEM). Same 1 Hz residual shape/phase across sessions for OL/CL/CL+prev; OL+prev diverges most (s1 larger + positively biased). CAVEAT: s1 driven at amp 3, s2 at amp 2 → s1's larger absolute error is partly just bigger drive; a drive-normalized version would decouple this.
+**Why:** User wanted the error per mode with both sessions compared side-by-side (transpose of the earlier session-per-row layout).
+**Next:** Offered drive-normalized (error/amp) version pending user OK. Not a paper panel yet.
+
 ### 2026-07-17 — TF fit bug: zero the initial condition at stim onset before fitting
 **Changed/Found:** `bilateral/grid/tf_fit.py` — the sum-of-exponentials impulse-response model `h(t)=ΣA_i e^{-t/τ_i}` is a ZERO-initial-condition response (system at rest at onset), but the data `H[s,r]` was baselined over the whole 2 s pre-stim window, so slow drift between that baseline and onset left a nonzero value at t=0 the TF structurally can't represent → biased fits. Added `_zero_onset(t,h)` (subtract the mean over the immediate pre-onset window `ONSET_PRE_S=0.10 s`, making `h(0)=0`) and applied it per pair in `fit_all` + `fit_all_amps` (same offset subtracted from the CV split-halves `HA/HB`) and in `prototype`. The onset-zeroed `H` is what gets stored in both caches, so the viewer/matrix display the same shifted data the fit saw (blue trace and orange TF now both start at 0 at onset). Single-amp refit: order hist [1436,513,755]→**[1335,643,726]** (shifts toward order-2), median in-sample R² 0.36→**0.29** — expected + correct: the model can no longer earn "free" R² from a DC offset it can't represent, so R² now reflects fitting the actual dynamics. Verified in the viewer: every trace sits at 0 on the onset line.
 **Why:** user identified the fit was starting from a nonzero initial condition and asked to shift the data so activity at stim onset is zero.
