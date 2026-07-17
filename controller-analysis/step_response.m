@@ -61,113 +61,68 @@ paperExport(fig_H, fullfile(paper_root, 'images', 'figure3', 'all_average_sessio
 
 
 
-%% plot the open loop step response
-
+%% Step response: two-row stack (mean response above across-trial variance), monochrome
 close all;
 fig = paperFig(6, 4);
-hold on;
+set(gcf, 'Renderer', 'opengl');
 
-set(gcf, 'Renderer', 'opengl')
+t  = -3:1/35:(dur+3);
 
-t = -3:1/35:(dur+3);
+custom_idx = [4 9 11];   % sessions for the step-response panel
 
-% ---- Your three indices ----
-custom_idx = [4 9 11];   % change as needed
+% Monochrome session encoding (matches Fig 2B/2F): session = LINESTYLE in one
+% colour. Mean response (top) and across-trial variance (bottom) are now SEPARATE
+% rows sharing the time axis, instead of overlaid via a +2 offset.
+sessColor = [0.15 0.15 0.15];
+sessLines = {'-', '--', ':'};
 
+lm = 0.15; rm = 0.04;
+ax_mean = axes(fig, 'Position', [lm 0.46 1-lm-rm 0.48]); hold(ax_mean, 'on');
+ax_var  = axes(fig, 'Position', [lm 0.12 1-lm-rm 0.26]); hold(ax_var,  'on');
 
-% custom_idx = [3 6 8];   % change as needed
+hLegend = gobjects(numel(custom_idx), 1);
+legTxt  = strings(numel(custom_idx), 1);
 
-% ---- Session colors (colorblind-safe when global PAPER_CB=true) ----
-expColors = PS.sess;
+for i = 1:numel(custom_idx)
+    k    = custom_idx(i);
+    e_nc = mouse.(fields{k}).data.pncDfk_l;   % trials x time
+    mu   = mean(e_nc, 1);
+    ls   = sessLines{min(i, numel(sessLines))};
 
-ax = gca;
+    % top row: mean step response
+    hLegend(i) = plot(ax_mean, t, mu, 'LineStyle', ls, 'Color', sessColor, 'LineWidth', 1.2);
 
-hLegend = gobjects(length(custom_idx),1);
-legTxt  = strings(length(custom_idx),1);
-t0 = 0:1/35:3;
-for i = 1:length(custom_idx)
-% for i = 1:1
+    % bottom row: across-trial variance (no offset needed now)
+    plot(ax_var, t, var(e_nc, 0, 1), 'LineStyle', ls, 'Color', sessColor, 'LineWidth', 1.2);
 
-    k = custom_idx(i);
-    e_nc = mouse.(fields{k}).data.pncDfk_l;   % n x t
-
-    mu  = mean(e_nc, 1);
-    sig = std(e_nc, 0, 1);
-
-    % mu0  = mu - mean(mu);
-    mu0  = mu;
-    up0  = (mu + sig) - mean(mu);
-    low0 = (mu - sig) - mean(mu);
-
-    c = expColors(i,:);
-
-    % ---- Shaded mean +/- std (hidden from legend)
-    hfill = fill([t fliplr(t)], ...
-                 [up0 fliplr(low0)], ...
-                 c, ...
-                 'EdgeColor','none', ...
-                 'FaceAlpha',0.15);
-    hfill.HandleVisibility = 'off';
-    uistack(hfill,'bottom');
-
-
-alphaVal = 0.6;
-cLight = alphaVal * c + (1-alphaVal) * [1 1 1];   % blend toward white
-
-
-plot(t,2+var(e_nc),'Color', c, ...
-                      'LineWidth', 1)
-
-plot(t0, ...
-     ones(1,numel(t0)) * mean(mu(3*35:6*35)), ...
-     'LineWidth', 1, ...
-     'Color', c, ...
-     'HandleVisibility','off');
-    % ---- Mean line (store handle for legend)
-    hLegend(i) = plot(t, mu0, ...
-                      'Color', c, ...
-                      'LineWidth', 1);
-
-    % legTxt(i) = fields{k};   % or custom label
-    legTxt{i} = sprintf('Session %d',i);
+    legTxt{i} = sprintf('Session %d', i);
 end
 
+% stim window shading on both rows, sent behind the traces
+for ax = [ax_mean, ax_var]
+    xlim(ax, [-3 dur+3]);
+    yl = ylim(ax);
+    hStim = patch(ax, [0 dur dur 0], [yl(1) yl(1) yl(2) yl(2)], [0.9 0.9 0.9], ...
+        'FaceAlpha', 0.3, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+    uistack(hStim, 'bottom');
+    ylim(ax, yl);
+    xticks(ax, []);
+end
 
-t0 = 0:1/35:3;
-% Zero line (hidden from legend)
-% h0 = plot(t0, -5*ones(1, numel(t0)), '--k', 'LineWidth', 2);
-% h0.HandleVisibility = 'off';
+% corner scale bars: dF/F on top (y only), variance + time on bottom
+paperAxes(ax_mean, 'YLength', 3, 'YLabel', '3% dF/F');
+paperAxes(ax_var,  'XLength', 1, 'YLength', 5, 'XLabel', '1 s', 'YLabel', '5 %^2');
 
-yl = ylim;
-patch([0 3 3 0], ...
-      [yl(1) yl(1) yl(2) yl(2)], ...
-      [0.9 0.9 0.9], ...
-      'FaceAlpha', 0.3, ...
-      'EdgeColor', 'none', ...
-      'HandleVisibility','off');
+% rotated label for the variance row
+text(ax_var, -0.13, 0.5, {'Variance', 'across trials'}, 'Units', 'normalized', ...
+    'Color', 'k', 'FontSize', PS.fs, 'FontWeight', PS.fw, ...
+    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', ...
+    'Rotation', 90, 'Clipping', 'off');
 
-xlim([-3 dur+3])
-xticks([])
-paperAxes(gca, 'XLength', 1, 'YLength', 3, 'XLabel', '1 s', 'YLabel', '3% dF/F')
-% ---- Your legend style ----
-lgd = legend(ax, hLegend, legTxt, 'Color','none', 'Location','southeast');
+lgd = legend(ax_mean, hLegend, legTxt, 'Color', 'none', 'Location', 'southeast');
 paperLegend(lgd);
 lgd.AutoUpdate = 'off';
 
-% legend(ax2, [hA hD hC hB], {'Open-Loop', 'Closed-Loop','Stim', 'Ref'}, ...
-%     'Location','northeast', ...
-%     'Box','off', FontSize=12, FontWeight='bold')
-% shortCornerAxes_plot(ax,'Frac',0.1,'XLabel','time(secs)','YLabel','dF/F  /  Variance','LineWidth',5,'LabelGap',0.05)
-
-text(-0.1-3, 10, {'Variance', 'across trials'}, ...
-    'Color','k', 'FontSize', 6, 'FontWeight','bold', ...
-    'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
-    'Rotation', 90, 'Clipping','off');
-
-
-
-
-% shortCornerAxes_plot(gca,'Frac',0.15,'XLabel','Time','YLabel','dF/F','LineWidth',5,'LabelGap',0.05)
 paperExport(fig, fullfile(paper_root, 'images', 'figure2', sprintf('step_response%s.pdf', PS.cbtag)));
 
 
