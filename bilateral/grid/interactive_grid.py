@@ -77,6 +77,7 @@ def main():
     H, yhat, sites, window = z["H"], z["yhat"], z["sites"], z["window"]
     Hstd = z["Hstd"] if "Hstd" in z.files else np.zeros_like(H)
     gain, order, tau, A = z["gain"], z["order"], z["tau"], z["A"]
+    cvr2 = z["cvr2"] if "cvr2" in z.files else np.zeros_like(gain)
     bz = np.load(BRAIN_CACHE, allow_pickle=True)
     mimg, px, sp, ny, nx = bz["mimg"], bz["px"], float(bz["sp"]), int(bz["ny"]), int(bz["nx"])
     tz = cr.load_trials()
@@ -118,7 +119,7 @@ def main():
             axd[j], axs[ax] = ax, j
         return dict(fig=fig, bg=bg, axd=axd, axs=axs, dot=None)
 
-    def render(view, trace_fn, std_fn, pred_fn, order_fn, frames, ring, title):
+    def render(view, trace_fn, std_fn, pred_fn, order_fn, frames, ring, title, rel_fn=None):
         for j, ax in view["axd"].items():
             ax.clear(); ax.patch.set_alpha(0)
             ax.axhline(0, c="0.6", lw=0.4, ls=":", alpha=0.7, zorder=1)
@@ -126,7 +127,13 @@ def main():
             tr, sd = trace_fn(j), std_fn(j)
             ax.fill_between(window, tr - 2 * sd, tr + 2 * sd, color="deepskyblue", alpha=0.10, lw=0)
             ax.plot(window, tr, c="blue", lw=1.7)             # trial MEAN — prominent
-            ax.plot(window, pred_fn(j), c="orange", lw=1.0, ls="--")
+            # TF overlay: opacity encodes generalization (CV-R2). A fit that doesn't predict the
+            # held-out trial half (low/negative CV-R2 = noise-fit) is drawn faint so it doesn't
+            # read as a confident fit; a fit that generalizes is solid.
+            a_tf = 1.0
+            if rel_fn is not None:
+                a_tf = float(np.clip(0.15 + 0.85 * (rel_fn(j) + 0.3) / 0.6, 0.15, 1.0))
+            ax.plot(window, pred_fn(j), c="orange", lw=1.0, ls="--", alpha=a_tf)
             ax.set_ylim(-YMAX, YMAX); ax.set_xticks([]); ax.set_yticks([])
             if XLIM is not None:
                 ax.set_xlim(*XLIM)
@@ -191,7 +198,8 @@ def main():
         render(effv, lambda j: H[X, j], lambda j: Hstd[X, j], lambda j: yhat[X, j],
                lambda j: order[X, j], {X: "red"}, X,
                f"EFFERENT — stim {coord(X)} → response at every site   "
-               f"blue=trial mean  band=±2SD  orange=TF")
+               f"blue=trial mean  band=±2SD  orange=TF (faint = low CV-R²)",
+               rel_fn=lambda j: cvr2[X, j])
         report(X)
 
     def show_trials(s, r):

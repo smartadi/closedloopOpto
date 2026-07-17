@@ -16,6 +16,12 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-07-17 — TF overfitting: parsimony margin in CV order selection + viewer reliability dimming
+**Changed/Found:** (1) `tf_fit.py` `fit_lti_cv` — added `CV_MARGIN=0.03`: instead of plain `argmax(cv)`, pick the SIMPLEST order whose CV-R² is within the margin of the best (a higher order must EARN its complexity). `cvr2` now reports the CHOSEN order's CV, not the max. Single-amp refit: order hist [1379,479,846] → **[1436,513,755]** (91 order-3 fits deflated to lower order); median R²/CV-R² essentially unchanged (0.36 / −1.13). (2) `interactive_grid.py` `render` — TF orange line α now graded by CV-R² (`rel_fn=cvr2[X,·]`): fits that don't predict the held-out trial half are drawn faint so noise-fits on weak pairs stop reading as confident. Loaded `cvr2` into the viewer. **Verified independence:** every (s,r) pair is still fit on its OWN impulse response (`for s: for r:` in `fit_all` → `fit_lti_cv(H[s,r], HA[s,r], HB[s,r])`) — no shared/canonical order, no coupling; independence was never the issue.
+**Found:** overfitting is concentrated on the WEAK off-diagonal pairs (82.8% of pairs CV-R²<0 = there's no real response to fit, so any model overfits noise); STRONG pairs generalize (order-3 pairs median CV-R² −0.28 & |gain| 0.0096, vs order-1 −2.03 & 0.0044 — CV already prefers order 1 for noise). Sub-sample-τ spike-fitting is NOT a factor (only 2.4% of pairs have a pole faster than 2 samples).
+**Why:** user flagged that displayed TF fits looked overfit and asked to confirm per-site independence.
+**Next:** refit the 2-amp cache `grid_tf_fits_2amp.npz` with the same margin for consistency + re-render the matrix/exemplar/field figures; consider reliability-masking (CV-R² floor) the gain matrix so noise pairs don't read as coupling.
+
 ### 2026-07-17 — Interactive grid viewer: default trace window −0.5…+1 s
 **Changed/Found:** `bilateral/grid/interactive_grid.py` — `XLIM` default `None` (full −2…+2 s) → `(-0.5, 1.0)` s rel. onset, so every efferent mini-panel opens zoomed on the transient (still overridable with `--xlim`). The full-window baseline stretch was mostly empty; the dip/rebound + TF fit are far more legible at ±(0.5–1) s.
 **Why:** User asked to tighten the trace window to −0.5…+1 s.

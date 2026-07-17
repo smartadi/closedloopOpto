@@ -123,12 +123,21 @@ def split_half_means():
     return HA, HB, window
 
 
-def fit_lti_cv(t, h, hA, hB, orders=ORDERS):
+CV_MARGIN = 0.03   # min CV-R2 improvement to justify a higher order. A higher order is only
+                   # accepted when it beats the simplest order-within-reach by more than this;
+                   # otherwise the SIMPLEST order whose CV is within CV_MARGIN of the best wins.
+                   # Prevents order inflation on marginal pairs where the extra pole only chases
+                   # a noise-level sliver of held-out variance (parsimony / ~1-SE rule).
+
+
+def fit_lti_cv(t, h, hA, hB, orders=ORDERS, margin=CV_MARGIN):
     """Select TF order by 2-fold split-half cross-validation, then refit on the full mean h.
 
     For each order: fit on half A, score R^2 on half B, and vice-versa; the CV score is the
     mean. Overfitting noise in one half does not predict the independent other half, so CV
-    rejects orders that only fit noise. Final params come from a refit on the full mean.
+    rejects orders that only fit noise. Among orders whose CV is within `margin` of the best,
+    the SIMPLEST is chosen (parsimony: a higher order must EARN its complexity by > margin).
+    Final params come from a refit on the full mean.
     """
     post = (t >= 0) & (t <= FIT_TMAX)
     tp, hp, hAp, hBp = t[post], h[post], hA[post], hB[post]
@@ -141,10 +150,15 @@ def fit_lti_cv(t, h, hA, hB, orders=ORDERS):
         except Exception:
             cv.append(-np.inf)
     cv = np.asarray(cv)
-    nbest = orders[int(np.nanargmax(cv))] if np.any(np.isfinite(cv)) else orders[0]
+    if np.any(np.isfinite(cv)):
+        within = np.where(cv >= np.nanmax(cv) - margin)[0]   # orders as good as best (± margin)
+        i_best = int(within.min())                           # -> pick the SIMPLEST of them
+        nbest, cv_best = orders[i_best], float(cv[i_best])   # report the CHOSEN order's CV
+    else:
+        nbest, cv_best = orders[0], np.nan
     params, yhat, sse = _fit_order(tp, hp, nbest, hp[np.argmax(np.abs(hp))])
     sst = np.sum((hp - hp.mean()) ** 2) + 1e-12
-    return dict(order=nbest, cvr2=float(np.nanmax(cv)) if np.any(np.isfinite(cv)) else np.nan,
+    return dict(order=nbest, cvr2=cv_best,
                 r2=1.0 - sse / sst, sse=sse, theta=0.0, tau=np.asarray(params["tau"]),
                 A=np.asarray(params["A"]), poles=-1.0 / np.asarray(params["tau"]),
                 gain=yhat[np.argmax(np.abs(yhat))], yhat=yhat, t=tp)
