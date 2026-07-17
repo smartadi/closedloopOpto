@@ -91,7 +91,7 @@ def main():
     YMAX = 0.05
     if "--ymax" in sys.argv:
         YMAX = float(sys.argv[sys.argv.index("--ymax") + 1])
-    XLIM = None
+    XLIM = (-0.5, 1.0)          # default trace window (s rel. onset); override with --xlim
     if "--xlim" in sys.argv:
         i = sys.argv.index("--xlim")
         XLIM = (max(float(sys.argv[i + 1]), float(window[0])),

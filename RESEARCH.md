@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-07-17 — Interactive grid viewer: default trace window −0.5…+1 s
+**Changed/Found:** `bilateral/grid/interactive_grid.py` — `XLIM` default `None` (full −2…+2 s) → `(-0.5, 1.0)` s rel. onset, so every efferent mini-panel opens zoomed on the transient (still overridable with `--xlim`). The full-window baseline stretch was mostly empty; the dip/rebound + TF fit are far more legible at ±(0.5–1) s.
+**Why:** User asked to tighten the trace window to −0.5…+1 s.
+**Next:** none.
+
 ### 2026-07-17 — Interactive grid viewer relayout: brain SELECTOR + efferent-field-with-TF
 **Changed/Found:** `bilateral/grid/interactive_grid.py` — replaced the efferent(clickable)+afferent two-map layout with **Map 1 = plain clickable brain selector** (mean image + red site dots; `build_selector`/`mark_selector`/`nearest_site`: click → nearest site becomes the stim site, yellow ring marks it) and **Map 2 = efferent field** (all 52 sites' trial mean + ±2SD band + learned-TF orange-dashed overlay, each mini-panel at its true cortical pixel, stim site red-framed) which redraws live on every selector click. Clicking a Map-2 panel opens the single-trial view for (stim→that readout). Dropped the afferent view + its handlers. `save` arg now writes `view_selector.png` + `view_efferent.png` (was view_efferent/afferent/trials). Uses the single-amp TF cache `grid_tf_fits.npz` (AMP_SEL=2.0).
 **Why:** User wanted "click a spot → the second brain map shows responses of all spots with learned TFs overlaid" — the efferent+TF rendering already existed on the primary map, but as a selector→display two-panel workflow it's cleaner to interpret.
