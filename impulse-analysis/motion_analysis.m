@@ -272,10 +272,9 @@ allAbsDev_s    = allAbsDev_pool(shufIdx);
 allExp_s       = allExp_pool(shufIdx);
 motBin_s       = motBin_pool(shufIdx);
 
-% Session is encoded by MARKER SHAPE (colour-free -> print- and CB-safe); a
-% single pooled trend line carries the motion->error relationship.
-sessMarkers = {'o', 's', '^'};        % S1 circle, S2 square, S3 triangle
-sessColor   = [0.35 0.35 0.35];       % one neutral grey for all points
+% Session is encoded by COLOUR (sequential gradient PS.sessGrad -> ordered and
+% colourblind-safe); a single pooled trend line carries the motion->error trend.
+gradC = PS.sessGrad(nExp);
 
 % Per-session min-max normalise motion to [0,1] (replaces the z-score: motion
 % energy is a positive quantity, so a 0-1 scale is more intuitive; doing it
@@ -292,16 +291,15 @@ fig_mvp = paperFig(4, 4);
 ax_mvp  = axes(fig_mvp);
 hold(ax_mvp, 'on');
 
-% one scatter call per session -> marker shape distinguishes sessions
+% one scatter call per session -> gradient colour distinguishes sessions
 hLeg_p = gobjects(nExp, 1);
 for expIdx = 1:nExp
     mk = allExp_s == expIdx;
     if ~any(mk), continue; end
-    mkr = sessMarkers{min(expIdx, numel(sessMarkers))};
-    scatter(ax_mvp, motN_s(mk), allAbsDev_s(mk), 8, sessColor, ...
-        mkr, 'filled', 'MarkerFaceAlpha', 0.4, ...
+    scatter(ax_mvp, motN_s(mk), allAbsDev_s(mk), 8, gradC(expIdx,:), ...
+        'o', 'filled', 'MarkerFaceAlpha', 0.5, ...
         'MarkerEdgeColor', 'none', 'HandleVisibility', 'off');
-    hLeg_p(expIdx) = plot(ax_mvp, nan, nan, mkr, 'MarkerFaceColor', sessColor, ...
+    hLeg_p(expIdx) = plot(ax_mvp, nan, nan, 'o', 'MarkerFaceColor', gradC(expIdx,:), ...
         'MarkerEdgeColor', 'none', 'MarkerSize', 4, ...
         'DisplayName', sprintf('Session %d', expIdx));
 end

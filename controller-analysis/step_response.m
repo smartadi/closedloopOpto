@@ -70,11 +70,10 @@ t  = -3:1/35:(dur+3);
 
 custom_idx = [4 9 11];   % sessions for the step-response panel
 
-% Monochrome session encoding (matches Fig 2B/2F): session = LINESTYLE in one
-% colour. Mean response (top) and across-trial variance (bottom) are now SEPARATE
-% rows sharing the time axis, instead of overlaid via a +2 offset.
-sessColor = [0.15 0.15 0.15];
-sessLines = {'-', '--', ':'};
+% Session = sequential colour gradient (PS.sessGrad -> ordered, CB-safe). Mean
+% response (top) and across-trial variance (bottom) are SEPARATE rows sharing
+% the time axis, instead of overlaid via a +2 offset.
+expColors = PS.sessGrad(numel(custom_idx));
 
 lm = 0.15; rm = 0.04;
 ax_mean = axes(fig, 'Position', [lm 0.46 1-lm-rm 0.48]); hold(ax_mean, 'on');
@@ -87,13 +86,13 @@ for i = 1:numel(custom_idx)
     k    = custom_idx(i);
     e_nc = mouse.(fields{k}).data.pncDfk_l;   % trials x time
     mu   = mean(e_nc, 1);
-    ls   = sessLines{min(i, numel(sessLines))};
+    c    = expColors(i,:);
 
     % top row: mean step response
-    hLegend(i) = plot(ax_mean, t, mu, 'LineStyle', ls, 'Color', sessColor, 'LineWidth', 1.2);
+    hLegend(i) = plot(ax_mean, t, mu, '-', 'Color', c, 'LineWidth', 1.2);
 
     % bottom row: across-trial variance (no offset needed now)
-    plot(ax_var, t, var(e_nc, 0, 1), 'LineStyle', ls, 'Color', sessColor, 'LineWidth', 1.2);
+    plot(ax_var, t, var(e_nc, 0, 1), '-', 'Color', c, 'LineWidth', 1.2);
 
     legTxt{i} = sprintf('Session %d', i);
 end
