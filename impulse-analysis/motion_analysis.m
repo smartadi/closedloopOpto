@@ -272,7 +272,10 @@ allAbsDev_s    = allAbsDev_pool(shufIdx);
 allExp_s       = allExp_pool(shufIdx);
 motBin_s       = motBin_pool(shufIdx);
 
-poolMarkers = {'o', '^'};   % No motion = circle, Motion = triangle
+% Session is encoded by MARKER SHAPE (colour-free -> print- and CB-safe); a
+% single pooled trend line carries the motion->error relationship.
+sessMarkers = {'o', 's', '^'};        % S1 circle, S2 square, S3 triangle
+sessColor   = [0.35 0.35 0.35];       % one neutral grey for all points
 
 % Per-session min-max normalise motion to [0,1] (replaces the z-score: motion
 % energy is a positive quantity, so a 0-1 scale is more intuitive; doing it
@@ -285,43 +288,39 @@ for e = unique(allExp_s).'
     else,        motN_s(m) = 0;  end
 end
 
-% per-trial colour matrix (Nx3) from session index
-cMat = expColors(allExp_s, :);
-
 fig_mvp = paperFig(4, 4);
 ax_mvp  = axes(fig_mvp);
 hold(ax_mvp, 'on');
 
-% one scatter call per marker class; per-point colour via Nx3 matrix
-for k = 1:2
-    mk = motBin_s == k;
+% one scatter call per session -> marker shape distinguishes sessions
+hLeg_p = gobjects(nExp, 1);
+for expIdx = 1:nExp
+    mk = allExp_s == expIdx;
     if ~any(mk), continue; end
-    scatter(ax_mvp, motN_s(mk), allAbsDev_s(mk), 8, cMat(mk, :), ...
-        poolMarkers{k}, 'filled', 'MarkerFaceAlpha', 0.5, ...
+    mkr = sessMarkers{min(expIdx, numel(sessMarkers))};
+    scatter(ax_mvp, motN_s(mk), allAbsDev_s(mk), 8, sessColor, ...
+        mkr, 'filled', 'MarkerFaceAlpha', 0.4, ...
         'MarkerEdgeColor', 'none', 'HandleVisibility', 'off');
+    hLeg_p(expIdx) = plot(ax_mvp, nan, nan, mkr, 'MarkerFaceColor', sessColor, ...
+        'MarkerEdgeColor', 'none', 'MarkerSize', 4, ...
+        'DisplayName', sprintf('Session %d', expIdx));
 end
 
-% ghost plots for session colours (not shown in legend)
-for expIdx = 1:nExp
-    plot(ax_mvp, nan, nan, 'o', 'MarkerFaceColor', expColors(expIdx,:), ...
-        'MarkerEdgeColor', 'none', 'MarkerSize', 4, 'HandleVisibility', 'off');
-end
-% legend entries: marker shape only
-hLeg_p = gobjects(2, 1);
-hLeg_p(1) = plot(ax_mvp, nan, nan, 'o', 'MarkerFaceColor', [0.5 0.5 0.5], ...
-    'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','No motion');
-hLeg_p(2) = plot(ax_mvp, nan, nan, '^', 'MarkerFaceColor', [0.5 0.5 0.5], ...
-    'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','Motion');
-% No single "Motion Threshold" line here: with per-session min-max the fixed
-% motThr_hi (z units) maps to a different x per session, so it is not one line.
-% Marker shape (o vs ^) still encodes the No-motion/Motion split.
-% title(ax_mvp, sprintf('All sessions  r = %.2f  p = %.3f', rP, pP), ...
-%     'FontSize', 6, 'FontWeight', 'bold');
+% pooled linear trend line (fit on the plotted 0-1 axis so it matches the data)
+okFit = ~isnan(motN_s) & ~isnan(allAbsDev_s);
+pFit  = polyfit(motN_s(okFit), allAbsDev_s(okFit), 1);
+[rN, pN] = corr(motN_s(okFit), allAbsDev_s(okFit), 'rows', 'complete');
+xf    = linspace(0, 1, 100);
+hFit  = plot(ax_mvp, xf, polyval(pFit, xf), '-', 'Color', 'k', ...
+    'LineWidth', PS.lw_fit, 'DisplayName', sprintf('Fit (r=%.2f)', rN));
+
 xlim(ax_mvp, [-0.03 1.03]);
+yl_mvp = ylim(ax_mvp);
+ylim(ax_mvp, [max(yl_mvp(1), -2), yl_mvp(2)]);   % trim dead space below the floor
 xlabel(ax_mvp, sprintf('Normalized motion, 0-1 (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
     'FontSize', 6, 'FontWeight', 'bold');
 ylabel(ax_mvp, dev_ylabel, 'FontSize', 6, 'FontWeight', 'bold');
-lg_mvp = legend(ax_mvp, hLeg_p, 'Location', 'best');
+lg_mvp = legend(ax_mvp, [hLeg_p; hFit], 'Location', 'northeast');
 paperLegend(lg_mvp);
 hold(ax_mvp, 'off');
 paperExport(fig_mvp, ...
