@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-07-17 — Trial-averaged tracking-error TIME SERIES per mode (both sessions)
+**Changed/Found:** Scratch analysis (not committed) — `e(t)=mean_trials(response−reference)` over the 4 s window, 4 modes overlaid, both sessions (`scratchpad/tracking_error_timeseries.png`, ±SEM). The mean error is a clean 1 Hz residual oscillation (systematic error; trial-to-trial variability averages out). All 4 modes oscillate ~IN PHASE with each other → the systematic residual is dominated by GAIN DEFICIT (amplitude undershoot, gain<1), not phase lag; lag is only a smaller quadrature term. Residual amplitude ~3–4% (s1) vs ~2% (s2), consistent with s2's higher gain / ~2× laser power.
+**Why:** User asked for the trial-averaged tracking-error time series. Signed mean (not |e| or e²) so phase/bias structure is visible.
+**Next:** Implication — mode-to-mode RMS differences come substantially from VARIABILITY, not systematic tracking (deterministic residuals are similar across modes). Optional follow-up: across-trial RMS envelope √⟨e(t)²⟩ (includes variability → modes separate). Not a paper panel yet.
+
 ### 2026-07-17 — Cross-session tracking-error (RMS) per mode — bar comparison
 **Changed/Found:** Scratch analysis (not committed to repo) — computed per-trial RMS tracking error (√mean((resp−ref)²) over the 4 s sine window, same def as panel E's MSE) for all 4 modes in BOTH sessions and plotted grouped bars (`scratchpad/train_error_per_mode.png`). RMS %dF/F (mean±SEM): s1 OL 5.15±.27 / OL+p 4.29±.35 / CL 4.10±.15 / CL+p 3.44±.21; s2 OL 4.10±.26 / OL+p 4.04±.41 / CL 3.27±.32 / CL+p 3.42±.21.
 **Why:** User asked to plot tracking error per mode for both sessions. Used RMS not MSE (tail-robust, interpretable dF/F units).
