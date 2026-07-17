@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-07-17 — Fix panel-F PNG clipping (widen left margin)
+**Changed/Found:** `bilateral/sine_ff_plots_combined.m` panel F — `lm2f` 0.20 → 0.30. F is the only small (3 cm) panel with a real numeric y-axis; its tick labels (−20…60) + `ylabel` overflowed the figure box, and raster PNG export clips to `fig.Position` while the vector PDF keeps the overflow — so the y-label came out clipped to a sliver in the PNG only. Panels A–E were unaffected (they use manually-placed rotated `text()` labels inside the box, no numeric y-ticks). Verified clean on both sessions.
+**Why:** User: PNGs poorly clipped. Isolated it to panel F's y-label by viewing the exported PNGs.
+**Next:** none.
+
 ### 2026-07-17 — Panel F phase lag: report in degrees, not ms
 **Changed/Found:** `bilateral/sine_ff_plots_combined.m` panel F — switched the phase-lag metric from ms to degrees (`lags = lg_*180/pi`, the wrapped phase diff is already radians). Y-label → `Phase lag (\circ)`, preview reference line converted to equivalent phase `prevLook = 360*hz*previewT_steps/fs` (= 51° at 1 Hz), text label and console print updated. Regenerated both sessions. Degrees: s1 OL 56 / OL+p −2 / CL 45 / CL+p 5; s2 OL 60 / OL+p 5 / CL 36 / CL+p −9 (preview 51°).
 **Why:** User asked to report in degrees. Frequency-invariant unit (matters if a second drive frequency is ever added); at 1 Hz it is just ms×0.36.

@@ -254,7 +254,9 @@ end
 prevLook = 360 * sn.hz * sess.d.input_params(find([sess.trial_meta.ff_cond]>=0,1), 8) / fs;
 
 fig_F = paperFig(3, 3.5);
-lm2f = 0.20; rm2f = 0.05; bm2f = 0.20; tm2f = 0.08;
+% wide left margin: this is the only small panel with a numeric y-axis, so the
+% tick labels + ylabel must fit inside the figure box or raster export clips them
+lm2f = 0.30; rm2f = 0.05; bm2f = 0.20; tm2f = 0.08;
 ax_ph = axes(fig_F, 'Position', [lm2f, bm2f, 1-lm2f-rm2f, 1-bm2f-tm2f]); hold(ax_ph,'on');
 for m = 1:nMode
     bar(ax_ph, m, lags(m), 0.6, 'FaceColor', MODE_COLS(m,:), ...
