@@ -1,0 +1,17 @@
+# Generated/large binaries — regenerable from the scripts + MATLAB caches.
+# Tracked: the *.py pipeline, README.md, and the hand-drawn assets/mask_*.npy.
+
+# rendered videos (make_video.py / make_session_previews.py / make_trial_clips.py)
+*.mp4
+session_previews/
+clips/
+
+# single-frame probe scratch
+_probe_*.png
+
+# data bundles (MATLAB SVD export + build_demo_data.py; npz regen in seconds)
+assets/*.mat
+assets/*.npz
+assets/preview/
+assets/server_cache/
+assets/*.png
