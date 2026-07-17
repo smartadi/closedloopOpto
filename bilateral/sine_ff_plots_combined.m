@@ -14,7 +14,7 @@
 % Row fit (total 17, gap 0.3): D+E+F = 3+3+3+0.6 = 9.6 OK
 
 %% ---- Knobs -------------------------------------------------------------
-SESSION_TAG = 's2';        % experiment 2 = AL_0048 2026-07-14/1 (200 trials)
+SESSION_TAG = 's2';        % s1 = AL_0048 2026-07-01/6 (87 tr); s2 = 2026-07-14/1 (200 tr)
 SIDE        = 'right';
 PRE         = 2;           % s before onset
 POST        = 2;           % s after trajectory end
@@ -22,11 +22,14 @@ EX_TRIAL    = 6;           % which trial (within mode) for the single-trial pane
 INP_SCALE   = 2;           % scale on the 638 command (mW) so it reads on the dF/F axis
 MSE_CLIP_P  = 95;          % panel E y-limit percentile (s2 has heavy motion outliers)
 EXPORT      = true;        % paper panels -> vector PDF
+EXPORT_PNG  = true;        % also mirror each panel as a 300-dpi PNG (figure4/png/)
 PREVIEW_DIR = '';          % non-empty -> also drop 200-dpi PNG previews there
                            % (quick visual check; PDFs remain the deliverable)
 % -------------------------------------------------------------------------
 prev = @(f, nm) preview_png(f, PREVIEW_DIR, nm);
 
+close all   % clear leftover panels: a stale figure stack makes the OS clamp the
+            % short 4-cm-tall panels, distorting their rasterised PNG export
 PS = paperStyle();
 setPaperDefaults();
 
@@ -44,6 +47,8 @@ else
 end
 outDir = fullfile(paper_root, 'images', 'figure4');
 if EXPORT && ~exist(outDir,'dir'); mkdir(outDir); end
+pngDir = fullfile(outDir, 'png');
+if EXPORT && EXPORT_PNG && ~exist(pngDir,'dir'); mkdir(pngDir); end
 
 MODE_CODES  = [2 1 3 0];
 MODE_LABELS = {'Open-Loop', 'OL + Preview', 'Closed-Loop', 'CL + Preview'};
@@ -119,7 +124,8 @@ for m = 1:nMode
         'HorizontalAlignment','center', 'Clipping','off');
 end
 linkaxes(axA,'x');
-if EXPORT; paperExport(fig_A, fullfile(outDir, sprintf('sine_panel_A_%s.pdf', sfx))); end
+if EXPORT; paperExport(fig_A, fullfile(outDir, sprintf('sine_panel_A_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_A, fullfile(pngDir, sprintf('sine_panel_A_%s.png', sfx))); end; end
 prev(fig_A, 'A');
 
 %% B: all trials + average -----------------------------------------------
@@ -151,7 +157,8 @@ lgd = legend(axB(1), [hLeg(1) hLeg(2)], {'mean \pm std','Ref'}, 'Orientation','h
 paperLegend(lgd); lgd.Units = 'normalized';
 lgd.Position(2) = 0.01; lgd.Position(1) = 0.5 - lgd.Position(3)/2;
 linkaxes(axB,'x');
-if EXPORT; paperExport(fig_B, fullfile(outDir, sprintf('sine_panel_B_%s.pdf', sfx))); end
+if EXPORT; paperExport(fig_B, fullfile(outDir, sprintf('sine_panel_B_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_B, fullfile(pngDir, sprintf('sine_panel_B_%s.png', sfx))); end; end
 prev(fig_B, 'B');
 
 %% C: average inputs -----------------------------------------------------
@@ -176,7 +183,8 @@ for m = 1:nMode
     end
 end
 linkaxes(axC,'x');
-if EXPORT; paperExport(fig_C, fullfile(outDir, sprintf('sine_panel_C_%s.pdf', sfx))); end
+if EXPORT; paperExport(fig_C, fullfile(outDir, sprintf('sine_panel_C_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_C, fullfile(pngDir, sprintf('sine_panel_C_%s.png', sfx))); end; end
 prev(fig_C, 'C');
 
 %% D: variance over time -------------------------------------------------
@@ -194,7 +202,8 @@ uistack(findobj(ax_var,'Type','line'), 'top'); hold(ax_var,'off');
 paperAxes(ax_var, 'XLength',1, 'YLength',10, 'XLabel','1 s', 'YLabel','10');
 text(ax_var, -0.12, 0.5, 'Variance across trials', 'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', 'Color','k', 'Clipping','off');
-if EXPORT; paperExport(fig_D, fullfile(outDir, sprintf('sine_panel_D_%s.pdf', sfx))); end
+if EXPORT; paperExport(fig_D, fullfile(outDir, sprintf('sine_panel_D_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_D, fullfile(pngDir, sprintf('sine_panel_D_%s.png', sfx))); end; end
 prev(fig_D, 'D');
 
 %% E: MSE half-violin ----------------------------------------------------
@@ -223,7 +232,8 @@ fprintf('[E] MSE axis clipped at p%d = %.1f (%d/%d trials above, off-axis)\n', .
 text(ax_mse, -0.12, 0.5, 'Trial MSE', 'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', 'Color','k', 'Clipping','off');
 paperAxes(ax_mse);
-if EXPORT; paperExport(fig_E, fullfile(outDir, sprintf('sine_panel_E_%s.pdf', sfx))); end
+if EXPORT; paperExport(fig_E, fullfile(outDir, sprintf('sine_panel_E_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_E, fullfile(pngDir, sprintf('sine_panel_E_%s.png', sfx))); end; end
 prev(fig_E, 'E');
 
 %% F: PHASE LAG by mode --------------------------------------------------
@@ -260,7 +270,8 @@ ax_ph.XTick = 1:nMode; ax_ph.XTickLabel = {'OL','OL+p','CL','CL+p'};
 ax_ph.XTickLabelRotation = 30;
 ylabel(ax_ph, 'Phase lag (ms)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
 set(ax_ph, 'Box','off', 'TickDir','out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
-if EXPORT; paperExport(fig_F, fullfile(outDir, sprintf('sine_panel_F_phaselag_%s.pdf', sfx))); end
+if EXPORT; paperExport(fig_F, fullfile(outDir, sprintf('sine_panel_F_phaselag_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_F, fullfile(pngDir, sprintf('sine_panel_F_phaselag_%s.png', sfx))); end; end
 prev(fig_F, 'F');
 
 fprintf('\n[%s] %s exp %d — n per mode: %s\n', SESSION_TAG, sess.td, sess.en, mat2str(nTr));
