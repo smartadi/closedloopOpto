@@ -34,8 +34,13 @@ PS = paperStyle();
 setPaperDefaults();
 colOL = PS.col_ol;
 colCL = PS.col_cl;
-fig_tf_paper = paperFig(12, 4);
-tlo_tf_paper = tiledlayout(fig_tf_paper, 1, nSess_ol, 'TileSpacing','compact','Padding','compact');
+fig_tf_paper = paperFig(6, 4);
+ax_p = axes(fig_tf_paper); hold(ax_p, 'on');
+gradC_tf = PS.sessGrad(nSess_ol);      % session gradient (matches Fig 2B/2F)
+hLegTF   = gobjects(nSess_ol, 1);      % one legend handle per session
+% Stim-window shading drawn ONCE (all sessions share the locked dur=3 s window)
+patch(ax_p, [0 dur dur 0], [-8 -8 5 5], [0.85 0.85 0.85], ...
+    'FaceAlpha',0.4, 'EdgeColor','none', 'HandleVisibility','off');
 
 for si = 1:nSess_ol
     fld       = fields{ol_sess_idx(si)};
@@ -82,8 +87,30 @@ for si = 1:nSess_ol
     y_fit_ol   = [zeros(nPre_ol,1); y_mean_ol];
     data_id_ol = iddata(y_fit_ol, u_fit_ol, Ts_ol);
     data_id_ol.Tstart = -nPre_ol * Ts_ol;
-    best_ol = tfest(data_id_ol, 2, 1, tfOpt_ol);
+    % AIC sweep over LOW orders (np capped at 2: candidates 1p0z / 2p0z / 2p1z),
+    % nz 0..min(np-1,3), nd=0, strictly proper. Same search idea as impulse
+    % tf_fit.m but pole-capped -- high-order AIC picks free-simulate poorly on the
+    % long step response (e.g. 4p0z gave R2=-8 on S1); 2 poles stay robust.
+    bestAIC_ol = inf; best_ol = []; bestNP_ol = NaN; bestNZ_ol = NaN;
+    for np_ol = 1:2
+        for nz_ol = 0:min(np_ol-1, 3)
+            try
+                sys_ol = tfest(data_id_ol, np_ol, nz_ol, tfOpt_ol, 'InputDelay', 0);
+                aic_ol = aic(sys_ol);
+                if aic_ol < bestAIC_ol
+                    bestAIC_ol = aic_ol;  best_ol = sys_ol;
+                    bestNP_ol = np_ol;    bestNZ_ol = nz_ol;
+                end
+            catch ME_ol
+                fprintf('    tfest(%dp%dz) failed: %s\n', np_ol, nz_ol, ME_ol.message);
+            end
+        end
+    end
+    if isempty(best_ol)   % fallback to the old fixed order if the sweep found nothing
+        best_ol = tfest(data_id_ol, 2, 1, tfOpt_ol); bestNP_ol = 2; bestNZ_ol = 1;
+    end
     tf_ol{si} = best_ol;   % stash for Bode / margin analysis below
+    fprintf('  AIC-best TF: %dp%dz  (AIC=%.1f)\n', bestNP_ol, bestNZ_ol, bestAIC_ol);
 
     % OL mean prediction -- x0 from findstates on mean pre-onset window
     y_pre_ol_mean = mean(ncDfk_bc(:, 1:iOn_ol-1), 1)';
@@ -97,7 +124,7 @@ for si = 1:nSess_ol
 
     p_ol   = pole(best_ol);
     tau_ol = sort(abs(1 ./ real(p_ol(real(p_ol) < 0))));
-    fprintf('  2p1z  R2=%.3f  tau =', R2_ol);
+    fprintf('  %dp%dz  R2=%.3f  tau =', bestNP_ol, bestNZ_ol, R2_ol);
     if ~isempty(tau_ol), fprintf('  %.3f s', tau_ol); end
     fprintf('\n');
 
@@ -262,40 +289,32 @@ for si = 1:nSess_ol
     yp_ext     = yp_ext + (y_mean_ol(1) - yp_ext(1));      % anchor at onset
     t_pred_ext = [t_stim_w, t_post_extra];
 
-    ax_p = nexttile(tlo_tf_paper);
-    hold(ax_p, 'on');
+    % Merged paper panel: overlay this session's OL mean (solid) + TF fit (dashed)
+    % on the single shared axis, coloured by the session gradient.
+    colP = gradC_tf(si, :);
+    hLegTF(si) = plot(ax_p, t_w_full, y_w_full, 'Color', colP, 'LineWidth', 1.2, ...
+        'DisplayName', sprintf('Session %d', si));
+    plot(ax_p, t_pred_ext, yp_ext, '--', 'Color', colP, 'LineWidth', 1.0, ...
+        'HandleVisibility', 'off');
 
-    % Stim window shading (t=0 to dur_ol s)
-    patch(ax_p, [0 dur_ol dur_ol 0], [-8 -8 5 5], [0.85 0.85 0.85], ...
-        'FaceAlpha',0.5,'EdgeColor','none','HandleVisibility','off');
-
-    % OL mean +/- SEM
-    fill(ax_p, [t_w_full, fliplr(t_w_full)], ...
-        [y_w_full+sem_w_full, fliplr(y_w_full-sem_w_full)], ...
-        col_s, 'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
-    plot(ax_p, t_w_full, y_w_full, 'Color',col_s, 'LineWidth',1.5);
-
-    % TF prediction over stim + 1 s post-stim (zero input after stim end)
-    plot(ax_p, t_pred_ext, yp_ext, 'k--', 'LineWidth',1.2);
-
-    xline(ax_p, 0,      'Color',[0.5 0.5 0.5], 'LineWidth',0.5, 'HandleVisibility','off');
-    xline(ax_p, dur_ol, 'Color',[0.5 0.5 0.5], 'LineWidth',0.5, 'HandleVisibility','off');
-    yline(ax_p, 0,      'Color',[0.7 0.7 0.7], 'LineWidth',0.5, 'HandleVisibility','off');
-
-    % R² annotation on paper panel (top-right, inside stim window)
-    text(ax_p, dur_ol - 0.05, 4.5, sprintf('R^2=%.2f', R2_ol), ...
-        'FontSize',5, 'FontWeight','bold', 'Color','k', ...
-        'HorizontalAlignment','right', 'VerticalAlignment','top');
-
-    hold(ax_p, 'off');
-    set(ax_p, 'Box','off','XTick',[],'YTick',[],'XColor','none','YColor','none', ...
-        'XLim',[-1 dur_ol+1],'YLim',[-8 5],'Clipping','off');
-
-    % Corner scalebar on first panel only
-    if si == 1
-        paperAxes(ax_p, 'XLength',1, 'YLength',3, 'XLabel','1 s', 'YLabel','3% dF/F');
-    end
+    % R² + selected order, stacked top-left in the session colour
+    text(ax_p, -0.9, 4.6 - 1.05*(si-1), ...
+        sprintf('S%d: R^2=%.2f (%dp%dz)', si, R2_ol, bestNP_ol, bestNZ_ol), ...
+        'FontSize',5, 'FontWeight','bold', 'Color',colP, ...
+        'HorizontalAlignment','left', 'VerticalAlignment','top');
 end
+
+% ---- Decorate the merged TF paper panel once (after all sessions overlaid) ----
+xline(ax_p, 0,   'Color',[0.5 0.5 0.5], 'LineWidth',0.5, 'HandleVisibility','off');
+xline(ax_p, dur, 'Color',[0.5 0.5 0.5], 'LineWidth',0.5, 'HandleVisibility','off');
+yline(ax_p, 0,   'Color',[0.7 0.7 0.7], 'LineWidth',0.5, 'HandleVisibility','off');
+set(ax_p, 'XLim',[-1 dur+1], 'YLim',[-8 5], 'Clipping','off');
+uistack(findobj(ax_p,'Type','patch'), 'bottom');
+hFitDummy = plot(ax_p, nan, nan, '--', 'Color',[0.3 0.3 0.3], 'LineWidth',1.0, ...
+    'DisplayName','TF fit');
+lgd_tf = legend(ax_p, [hLegTF; hFitDummy], 'Location','southeast');
+paperLegend(lgd_tf);
+paperAxes(ax_p, 'XLength',1, 'YLength',3, 'XLabel','1 s', 'YLabel','3% dF/F');
 
 % Resolve output dir whether run from brain_paper/ root or controller-analysis/
 if exist(fullfile('paper','images','figure2'), 'dir')
