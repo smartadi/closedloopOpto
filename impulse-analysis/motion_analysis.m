@@ -274,7 +274,18 @@ motBin_s       = motBin_pool(shufIdx);
 
 poolMarkers = {'o', '^'};   % No motion = circle, Motion = triangle
 
-% per-trial colour matrix (NÃ—3) from session index
+% Per-session min-max normalise motion to [0,1] (replaces the z-score: motion
+% energy is a positive quantity, so a 0-1 scale is more intuitive; doing it
+% per-session preserves cross-session comparability the way the z-score did).
+motN_s = nan(size(allMot_s));
+for e = unique(allExp_s).'
+    m  = allExp_s == e;
+    lo = min(allMot_s(m));  hi = max(allMot_s(m));
+    if hi > lo,  motN_s(m) = (allMot_s(m) - lo) ./ (hi - lo);
+    else,        motN_s(m) = 0;  end
+end
+
+% per-trial colour matrix (Nx3) from session index
 cMat = expColors(allExp_s, :);
 
 fig_mvp = paperFig(4, 4);
@@ -285,7 +296,7 @@ hold(ax_mvp, 'on');
 for k = 1:2
     mk = motBin_s == k;
     if ~any(mk), continue; end
-    scatter(ax_mvp, allMot_s(mk), allAbsDev_s(mk), 8, cMat(mk, :), ...
+    scatter(ax_mvp, motN_s(mk), allAbsDev_s(mk), 8, cMat(mk, :), ...
         poolMarkers{k}, 'filled', 'MarkerFaceAlpha', 0.5, ...
         'MarkerEdgeColor', 'none', 'HandleVisibility', 'off');
 end
@@ -301,12 +312,13 @@ hLeg_p(1) = plot(ax_mvp, nan, nan, 'o', 'MarkerFaceColor', [0.5 0.5 0.5], ...
     'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','No motion');
 hLeg_p(2) = plot(ax_mvp, nan, nan, '^', 'MarkerFaceColor', [0.5 0.5 0.5], ...
     'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','Motion');
-hl_p = xline(ax_mvp, motThr_hi, 'k--', 'Motion Threshold', 'LineWidth', 0.8, ...
-    'FontSize', 6, 'LabelVerticalAlignment', 'top', 'LabelHorizontalAlignment', 'right');
-hl_p.HandleVisibility = 'off';
+% No single "Motion Threshold" line here: with per-session min-max the fixed
+% motThr_hi (z units) maps to a different x per session, so it is not one line.
+% Marker shape (o vs ^) still encodes the No-motion/Motion split.
 % title(ax_mvp, sprintf('All sessions  r = %.2f  p = %.3f', rP, pP), ...
 %     'FontSize', 6, 'FontWeight', 'bold');
-xlabel(ax_mvp, sprintf('Motion energy z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
+xlim(ax_mvp, [-0.03 1.03]);
+xlabel(ax_mvp, sprintf('Normalized motion, 0-1 (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
     'FontSize', 6, 'FontWeight', 'bold');
 ylabel(ax_mvp, dev_ylabel, 'FontSize', 6, 'FontWeight', 'bold');
 lg_mvp = legend(ax_mvp, hLeg_p, 'Location', 'best');
@@ -315,43 +327,6 @@ hold(ax_mvp, 'off');
 paperExport(fig_mvp, ...
     fullfile(paperRoot, 'images', 'figure2', sprintf('imp_motion_devscatter_all_sessions_%s%s.pdf', dev_tag, PS.cbtag)));
 
-%% ---- 2F LOG variant: same scatter on a symlog motion axis ----------------
-% Motion z-score is signed (mean 0), so a plain log axis can't render x<=0.
-% Use a symmetric-log (symlog) transform: linear within +/-lt, log10 beyond,
-% so the heavy positive tail is spread while low/negative motion is preserved.
-lt_L = 0.5;                                   % linear-region half-width (z units)
-sT   = @(x) sign(x) .* log10(1 + abs(x)./lt_L);
-tickV_L = [-0.5 0 0.5 1 2 5 10];              % z-score tick values to label
-cMat_L  = expColors(allExp_s, :);
-
-fig_mvpL = paperFig(4, 4);
-ax_L = axes(fig_mvpL);
-hold(ax_L, 'on');
-for k = 1:2
-    mk = motBin_s == k;
-    if ~any(mk), continue; end
-    scatter(ax_L, sT(allMot_s(mk)), allAbsDev_s(mk), 8, cMat_L(mk, :), ...
-        poolMarkers{k}, 'filled', 'MarkerFaceAlpha', 0.5, ...
-        'MarkerEdgeColor', 'none', 'HandleVisibility', 'off');
-end
-hLeg_L = gobjects(2, 1);
-hLeg_L(1) = plot(ax_L, nan, nan, 'o', 'MarkerFaceColor', [0.5 0.5 0.5], ...
-    'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','No motion');
-hLeg_L(2) = plot(ax_L, nan, nan, '^', 'MarkerFaceColor', [0.5 0.5 0.5], ...
-    'MarkerEdgeColor','none','MarkerSize',4,'DisplayName','Motion');
-hl_L = xline(ax_L, sT(motThr_hi), 'k--', 'Motion Threshold', 'LineWidth', 0.8, ...
-    'FontSize', 6, 'LabelVerticalAlignment', 'top', 'LabelHorizontalAlignment', 'right');
-hl_L.HandleVisibility = 'off';
-set(ax_L, 'XTick', sT(tickV_L), 'XTickLabel', compose('%g', tickV_L));
-xlim(ax_L, sT([min(tickV_L) max(allMot_s)]));
-xlabel(ax_L, sprintf('Motion energy z-score (symlog, %.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
-    'FontSize', 6, 'FontWeight', 'bold');
-ylabel(ax_L, dev_ylabel, 'FontSize', 6, 'FontWeight', 'bold');
-lg_L = legend(ax_L, hLeg_L, 'Location', 'best');
-paperLegend(lg_L);
-hold(ax_L, 'off');
-paperExport(fig_mvpL, ...
-    fullfile(paperRoot, 'images', 'figure2', sprintf('imp_motion_devscatter_all_sessions_LOG_%s%s.pdf', dev_tag, PS.cbtag)));
 
 %% Prediction error vs motion z-score — all sessions, all amps, threshold = 1.5
 motThr_15    = 1.5;
