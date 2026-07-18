@@ -16,8 +16,14 @@ ideas, frustrations, half-decisions, "today I noticed…", questions for Nick, e
 Newest entry on top.
 
 ---
+
+
+
 ### 2026-06-20
-The entries are not concrete, 
+- A note i need to make is that the motion energy trace has a uptick every 60 frames(might be 70) which is an artifact i need to to have a filter for it, if most of the motion is already saved like this for all experiments i want you to plan on how to filter it out completely, its not a hinderance for analysis as the actual motion has much higher amplitude, but the analysis needs to be straightened out.
+- Since we are doing the state dependence and all, I want you to 
+//- In impulse analysis. We need to consolidate and simplify all contra related analysis to use contra activity to as a tool to subtract baseline activity from ipsi kernel, we can not find the perfect bleed removal so we will only focus on residual ipsi only activation. make the con
+↳ gleaned: TASKS#Motion trace quality — periodic ~60-frame uptick artifact → verify period, check all sessions, filter at load time (flagged 🟡: motion is now the primary power-independent state covariate). The second bullet ("consolidate contra analysis → residual ipsi-only activation") was already carried out — it is the residual/Actual−Global framework now in `impulse-analysis/contra_prediction.m` + `ols_tf_pipeline.m` (RESEARCH 2026-06-17 onward).
 
 
 ### 2026-06-19 — LDS plan: universal input-driven state-space model for contra→ipsi impulse analysis
@@ -44,6 +50,7 @@ Plan for `contra_lds.m` crystallised across two sessions. Key architectural deci
 **n_states sweep needed:** Try [5, 10, 15, 20]; select by held-out dip R². Default 15.
 
 ---
+
 ### 2026-06-17 
 
 #### Realization
