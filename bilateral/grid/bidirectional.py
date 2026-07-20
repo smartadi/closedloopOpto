@@ -44,7 +44,13 @@ import cross_response
 
 OUT = Path(__file__).resolve().parent / "grid_png"
 
-EFFECT_WIN = (0.0, 0.20)   # s post-onset — project convention (mean dF/F, not peak)
+# The response is BIPHASIC (excitatory peak ~70 ms, suppression trough ~140-240 ms), so a
+# single 0-200 ms mean BLENDS the two lobes and its sign reports whichever dominates rather
+# than the drive itself (verified: stim(-1.5,-2)->self reads +1.27% over 0-200 ms although its
+# actual peak is +3.52%). Test two physiologically-motivated windows separately instead; a site
+# counts as drivable in a direction if EITHER window shows a qualifying effect in that sign.
+EFFECT_WINS = {"early": (0.0, 0.10),    # excitatory peak lobe (~70 ms)
+               "late":  (0.10, 0.25)}   # suppression trough lobe (~140-240 ms)
 ONSET_PRE = 0.10           # s — per-trial pre-onset baseline (zero initial condition)
 FDR_Q = 0.05               # BH false-discovery rate across all pairs
 MIN_EFFECT = 0.005         # |dF/F| floor for "adequately" affected (0.5%)
@@ -71,22 +77,27 @@ def bh_fdr(p, q):
 
 
 def pair_effects():
-    """Per-pair trial-level effect: returns eff (nS,nS) mean dF/F over EFFECT_WIN,
-    tstat, pval, and n trials. eff[s, r] = effect at readout r when stimming s."""
+    """Per-pair trial-level effects in each EFFECT_WINS window.
+
+    Returns eff/tst/pv with shape (nWin, nS, nS) — eff[w, s, r] = mean dF/F at readout r when
+    stimming s, measured in window w — plus ntrials, sites, and the window names."""
     zt = cross_response.load_trials()
     roi_ts = zt["roi_ts"].astype(np.float64)
     svdT, onset_t, pos = zt["svdT"], zt["onset_t"], zt["pos"]
     sites, window, base_ix = zt["sites"], zt["window"], int(zt["base_ix"])
     nS = len(sites)
 
-    w_eff = (window >= EFFECT_WIN[0]) & (window <= EFFECT_WIN[1])
+    wnames = list(EFFECT_WINS)
+    wmask = [(window >= EFFECT_WINS[k][0]) & (window <= EFFECT_WINS[k][1]) for k in wnames]
     w_pre = (window >= -ONSET_PRE) & (window < 0)
-    print(f"effect window {EFFECT_WIN[0]:.2f}-{EFFECT_WIN[1]:.2f}s ({w_eff.sum()} samples), "
-          f"onset baseline {ONSET_PRE:.2f}s ({w_pre.sum()} samples)")
+    for k, m in zip(wnames, wmask):
+        print(f"window '{k}' {EFFECT_WINS[k][0]:.2f}-{EFFECT_WINS[k][1]:.2f}s ({m.sum()} samples)")
+    print(f"onset baseline {ONSET_PRE:.2f}s ({w_pre.sum()} samples)")
 
-    eff = np.full((nS, nS), np.nan)
-    tst = np.full((nS, nS), np.nan)
-    pv = np.full((nS, nS), np.nan)
+    nWin = len(wnames)
+    eff = np.full((nWin, nS, nS), np.nan)
+    tst = np.full((nWin, nS, nS), np.nan)
+    pv = np.full((nWin, nS, nS), np.nan)
     ntr = np.zeros((nS, nS), int)
 
     # one interpolator per readout; reuse across all stim sites
@@ -103,49 +114,64 @@ def pair_effects():
                 continue
             dff = (fluo - base) / base
             dff = dff - np.nanmean(dff[:, w_pre], 1, keepdims=True)   # per-trial onset zero
-            e = np.nanmean(dff[:, w_eff], 1)                     # per-trial effect
-            e = e[np.isfinite(e)]
-            if e.size < 3:
-                continue
-            eff[s, r] = e.mean(); ntr[s, r] = e.size
-            t, p = scipy.stats.ttest_1samp(e, 0.0)
-            tst[s, r] = t; pv[s, r] = p
+            for wi, m in enumerate(wmask):
+                e = np.nanmean(dff[:, m], 1)                     # per-trial effect
+                e = e[np.isfinite(e)]
+                if e.size < 3:
+                    continue
+                eff[wi, s, r] = e.mean()
+                t, p = scipy.stats.ttest_1samp(e, 0.0)
+                tst[wi, s, r] = t; pv[wi, s, r] = p
+                ntr[s, r] = e.size
         print(f"  readout {r+1:2d}/{nS}", end="\r")
     print()
-    return eff, tst, pv, ntr, sites
+    return eff, tst, pv, ntr, sites, wnames
 
 
-def classify(eff, pv, sites, q=FDR_Q, min_eff=MIN_EFFECT):
-    """Per readout: best qualifying positive / negative driver; bidirectional flag."""
+def classify(eff, pv, sites, q=FDR_Q, min_eff=MIN_EFFECT, min_driver_ml=0.0):
+    """Per readout: best qualifying positive / negative driver; bidirectional flag.
+
+    min_driver_ml > 0 EXCLUDES near-midline stim sites (|ML| <= min_driver_ml) from acting as
+    drivers. Near-midline galvo positions are "dominated by the opposite field" (beam spread /
+    registration at ML=+-0.5), so a left/excitatory site appearing as a strong INHIBITORY
+    driver is more likely cross-midline leakage than biology. Set 0.5 to test that."""
     sig = bh_fdr(pv, q)
     qual = sig & (np.abs(eff) >= min_eff) & np.isfinite(eff)
-    nS = eff.shape[0]
+    nS = len(sites)                      # eff is (nWin, nS, nS) — NOT eff.shape[0]
     print(f"pairs: {np.isfinite(pv).sum()} tested, {sig.sum()} FDR-sig (q={q}), "
           f"{qual.sum()} also |eff|>={min_eff*100:.1f}%")
+    if min_driver_ml > 0:
+        ok_driver = np.abs(sites[:, 0]) > min_driver_ml
+        qual = qual & ok_driver[None, :, None]
+        print(f"  excluding |ML|<={min_driver_ml} stim sites as drivers "
+              f"({(~ok_driver).sum()} of {nS} dropped) -> {qual.sum()} qualifying pairs")
 
-    best_pos = np.full(nS, np.nan); arg_pos = np.full(nS, -1, int)
-    best_neg = np.full(nS, np.nan); arg_neg = np.full(nS, -1, int)
+    # best driver per readout = extremum over BOTH the stim axis and the window axis
+    best_pos = np.full(nS, np.nan); arg_pos = np.full(nS, -1, int); win_pos = np.full(nS, -1, int)
+    best_neg = np.full(nS, np.nan); arg_neg = np.full(nS, -1, int); win_neg = np.full(nS, -1, int)
     for r in range(nS):
-        col = eff[:, r]
-        mp = qual[:, r] & (col > 0)
-        mn = qual[:, r] & (col < 0)
+        col = eff[:, :, r]                       # (nWin, nS)
+        mp = qual[:, :, r] & (col > 0)
+        mn = qual[:, :, r] & (col < 0)
         if mp.any():
-            i = int(np.nanargmax(np.where(mp, col, -np.inf)))
-            best_pos[r], arg_pos[r] = col[i], i
+            wi, si = np.unravel_index(np.nanargmax(np.where(mp, col, -np.inf)), col.shape)
+            best_pos[r], arg_pos[r], win_pos[r] = col[wi, si], si, wi
         if mn.any():
-            i = int(np.nanargmin(np.where(mn, col, np.inf)))
-            best_neg[r], arg_neg[r] = col[i], i
+            wi, si = np.unravel_index(np.nanargmin(np.where(mn, col, np.inf)), col.shape)
+            best_neg[r], arg_neg[r], win_neg[r] = col[wi, si], si, wi
     bidir = np.isfinite(best_pos) & np.isfinite(best_neg)
     rng = np.where(bidir, best_pos - best_neg, np.nan)
     return dict(sig=sig, qual=qual, best_pos=best_pos, best_neg=best_neg,
-                arg_pos=arg_pos, arg_neg=arg_neg, bidir=bidir, rng=rng)
+                arg_pos=arg_pos, arg_neg=arg_neg, win_pos=win_pos, win_neg=win_neg,
+                bidir=bidir, rng=rng)
 
 
-def report(res, sites, eff):
+def report(res, sites, eff, wnames):
     b, rng = res["bidir"], res["rng"]
     nS = len(sites)
     print(f"\nBIDIRECTIONAL readouts: {b.sum()}/{nS}")
-    print(f"{'readout':>14}{'best+':>9}{'from':>12}{'best-':>9}{'from':>12}{'range':>9}")
+    print(f"{'readout':>14}{'best+':>9}{'from':>12}{'win':>7}"
+          f"{'best-':>9}{'from':>12}{'win':>7}{'range':>9}")
     for r in np.argsort(-np.where(np.isfinite(rng), rng, -np.inf)):
         if not b[r]:
             continue
@@ -153,8 +179,10 @@ def report(res, sites, eff):
         print(f"({sites[r,0]:+.1f},{sites[r,1]:+.0f})".rjust(14)
               + f"{res['best_pos'][r]*100:>8.2f}%"
               + f"({sites[ip,0]:+.1f},{sites[ip,1]:+.0f})".rjust(12)
+              + f"{wnames[res['win_pos'][r]]:>7}"
               + f"{res['best_neg'][r]*100:>8.2f}%"
               + f"({sites[ineg,0]:+.1f},{sites[ineg,1]:+.0f})".rjust(12)
+              + f"{wnames[res['win_neg'][r]]:>7}"
               + f"{rng[r]*100:>8.2f}%")
     only_p = np.isfinite(res["best_pos"]) & ~np.isfinite(res["best_neg"])
     only_n = ~np.isfinite(res["best_pos"]) & np.isfinite(res["best_neg"])
@@ -193,9 +221,9 @@ def plot(res, sites, save="grid_bidirectional.png"):
         a.axvline(0, c="0.6", lw=0.7, ls="--"); a.plot(0, 0, "+", c="lime", ms=9, mew=1.5)
         a.set_aspect("equal"); a.set_xlabel("ML from bregma (mm)")
     ax[0].set_ylabel("AP from bregma (mm)")
+    wtxt = ", ".join(f"{k} {v[0]*1000:.0f}-{v[1]*1000:.0f} ms" for k, v in EFFECT_WINS.items())
     fig.suptitle(f"Bidirectionally drivable grid sites — FDR q={FDR_Q}, "
-                 f"|effect|>={MIN_EFFECT*100:.1f}% dF/F, window "
-                 f"{EFFECT_WIN[0]*1000:.0f}-{EFFECT_WIN[1]*1000:.0f} ms", fontsize=12)
+                 f"|effect|>={MIN_EFFECT*100:.1f}% dF/F, windows: {wtxt}", fontsize=12)
     OUT.mkdir(exist_ok=True)
     fig.savefig(OUT / Path(save).name, dpi=150); plt.close(fig)
     print("wrote", OUT / Path(save).name)
@@ -206,12 +234,17 @@ if __name__ == "__main__":
         MIN_EFFECT = float(sys.argv[sys.argv.index("--min-effect") + 1])
     if "--q" in sys.argv:
         FDR_Q = float(sys.argv[sys.argv.index("--q") + 1])
-    eff, tst, pv, ntr, sites = pair_effects()
-    res = classify(eff, pv, sites, q=FDR_Q, min_eff=MIN_EFFECT)
-    report(res, sites, eff)
-    plot(res, sites)
+    min_ml = 0.0
+    if "--min-driver-ml" in sys.argv:
+        min_ml = float(sys.argv[sys.argv.index("--min-driver-ml") + 1])
+    eff, tst, pv, ntr, sites, wnames = pair_effects()
+    res = classify(eff, pv, sites, q=FDR_Q, min_eff=MIN_EFFECT, min_driver_ml=min_ml)
+    report(res, sites, eff, wnames)
+    plot(res, sites, save=("grid_bidirectional.png" if min_ml == 0
+                           else f"grid_bidirectional_ml{min_ml:g}.png"))
     np.savez(cross_response.CACHE.parent / "grid_bidirectional.npz",
-             eff=eff, tstat=tst, pval=pv, ntrials=ntr, sites=sites,
+             eff=eff, tstat=tst, pval=pv, ntrials=ntr, sites=sites, windows=np.array(wnames),
              bidir=res["bidir"], best_pos=res["best_pos"], best_neg=res["best_neg"],
-             arg_pos=res["arg_pos"], arg_neg=res["arg_neg"], rng=res["rng"])
+             arg_pos=res["arg_pos"], arg_neg=res["arg_neg"],
+             win_pos=res["win_pos"], win_neg=res["win_neg"], rng=res["rng"])
     print("cached -> grid_bidirectional.npz")
