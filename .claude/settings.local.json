@@ -80,7 +80,8 @@
       "mcp__matlab__detect_matlab_toolboxes",
       "Bash(rm -f _tmp_cphemi_run.m zz_cphemi_run.m)",
       "Bash(ls -1 *cphemi_run.m)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(.venv/Scripts/python.exe presentation/make_trial_clips.py --only CL --frames 40)"
     ]
   },
   "hooks": {
