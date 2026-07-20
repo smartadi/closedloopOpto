@@ -11,9 +11,10 @@
 %% =========================================================
 
 selExp   = 3;        % <-- target session
-maxPoles = 3;        % <-- sweep 1..maxPoles
-maxZeros = 3;        % <-- sweep 0..min(np-1, maxZeros)
-maxDelay = 0;        % <-- sweep 0..maxDelay samples (~0..143 ms at 35 Hz)
+maxPoles = 3;        % <-- sweep 1..maxPoles. 4p let AIC over-fit the clean ipsi trace, and §10T2 LOCKS every
+                     %     (noisier) contra pixel to this order -> contra over-fit. 3 still allows >2p0z (3p2z).
+maxZeros = 3;        % <-- sweep 0..min(np-1, maxZeros); nz<np keeps the TF STRICTLY PROPER so h(0)=0 (onset-referencing depends on it)
+maxDelay = 0;        % <-- delay CONSTRAINED to 0 (no dead-time; onset frame IS t=0). flows to best_sys -> §10T contra fits inherit nd=0
 tFit_s   = 0.5;     % <-- post-stim fit window end (s); increase for strong-amp tails
 fig_A_amps_mW = [0, 0.7, 1.63];  % <-- mW values to plot in Fig A; [] = auto (smallest/mid/largest)
 
@@ -58,6 +59,10 @@ for nd = 0:maxDelay
         for nz = 0:min(np-1, maxZeros)
             try
                 sys_i = tfest(data_fit, np, nz, tfOpt, 'InputDelay', nd*Ts);
+                if ~tf_ok(sys_i, Ts)     % unstable/stiff fits ACCESS-VIOLATE in sssim (compare/sim) — uncatchable; drop them
+                    fprintf('  tfest(%dp%dz%dd) rejected: unstable/stiff (unsafe to simulate)\n', np, nz, nd);
+                    continue;
+                end
                 ri = ri + 1;
                 res(ri).np  = np;
                 res(ri).nz  = nz;
@@ -221,6 +226,7 @@ for iLeave = 1:nValid
     catch
         continue;
     end
+    if ~tf_ok(sys_lo, Ts), continue; end   % skip unsafe low-amp refit (would crash sssim in sim below)
 
     % Predict held-out amplitude
     y_ho   = DF_s(iAmp_lo, iPost)';
@@ -400,4 +406,25 @@ else
     % exportgraphics(fig_B, sprintf('paper/images/figure2/tf_loao_%s_%s_en%d.pdf', ...
     %     allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en), ...
     %     'ContentType','vector');
+end
+
+% ---------------------------------------------------------------------------------------------------
+function ok = tf_ok(sys, Ts)
+% TRUE iff a fitted continuous TF is SAFE to hand to sim()/compare() (-> the controllib sssim MEX). A
+% pathological fit (which the higher 4p3z order can produce) makes sssim ACCESS-VIOLATE deep in BLAS -- a
+% HARD crash that try/catch CANNOT trap. Screen it out FIRST using only algebraic pole extraction (roots of
+% the denominator; NO state-space sim, cannot crash). Reject unstable (any pole real part > 0) or stiff/too-
+% fast (|pole|*Ts > 10, a mode faster than ~3x Nyquist -> solver step explosion). Legitimate dip/rebound
+% dynamics have |pole|*Ts = O(1) and Re(pole) < 0, so this only culls overfit junk.
+ok = false;
+if isempty(sys), return; end
+try
+    p = pole(sys);
+catch
+    return;
+end
+if isempty(p) || any(~isfinite(p)),   return; end
+if max(real(p)) > 1e-6,               return; end   % unstable -> reject
+if max(abs(p))*Ts > 2*pi,             return; end   % stiff / past ~2x Nyquist (unrepresentable) -> reject
+ok = true;
 end

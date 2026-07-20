@@ -49,7 +49,7 @@ dip_win_s = 0.300;    % INHIBITION-ENERGY / dip window (s) post-onset. Data-driv
                       %   trough ~114-143 ms, median RECOVERY ~314 ms, rebound peak ~550 ms.
                       %   0.300 captures the full recovery WITHOUT touching the rebound (was 0.200,
                       %   which cut inhibition off mid-recovery). Used by BLEED/BLEEDCHAR/SETTLETIME/
-                      %   STIMBLIND-NATIVE (§17b) so the dip window has ONE source of truth.
+                      %   STIMBLIND-SELECT (§17d) so the dip window has ONE source of truth.
 settle_s  = 2.0;      % post-onset settle before an interstim window starts (s)
 trainFrac = 2/3;      % temporal train fraction (first block = train)
 maxFrm    = 60000;    % cap on spontaneous frames used
@@ -66,7 +66,7 @@ debias    = true;     % refit plain OLS on the Lasso-SELECTED pixels (removes L1
                       %     recovers most of the R^2 lost to the penalty while KEEPING sparsity)
 USE_DATA_SITE = true; % localise the site from data (recommended), not params.pixel
 RUN_ALLSESS   = false; % §18: OFF by default in this WIP. §18's engine local_stimblind_session now uses
-                      %   the NATIVE KKT stim-blind (repointed 2026-07-14); it keys off the energy-based
+                      %   the SELECT sparse far-from-ipsi stim-blind (repointed 2026-07-18); it keys off the energy-based
                       %   bledA affected map, not TF detection. Turn on for the cross-session batch.
 allSelExp     = [3 1 2];  % sessions for §18 combined run: AL_0033 e3, AL_0041 e1, AL_0041 e2
 RUN_SESSION_VIEWER = true;  % §20: open the orientation-normalized interactive map with a session
@@ -739,72 +739,8 @@ fprintf('[AFFECT-TF] -> AFFECT_TF (affected_tf[nG x nA] + VAF / dip / rebound ma
 
 
 %% ==================================================================
-% STAGE 1b -- COUPLING WINDOW + RESPONSE LANDMARKS (feed the stim-blind)
+% STAGE 1b -- RESPONSE LANDMARKS (feed the stim-blind)
 % ==================================================================
-
-% (10b) [COUPLING-WINDOW] data-driven window capturing ALL ipsi<->contra coupling (BEFORE bleed labeling)
-% Runs BEFORE the bleed-affected labeling (§13/§14) so the coupling extent is known first — cutting
-% coupling short with a guessed 200-300 ms window is what corrupted the earlier bleed/neural split.
-% COUPLING is measured as the stim-locked structure in the FULL contra->ipsi OLS PREDICTION of the
-% ipsi site — i.e. the exact signal the stim-blind (§17b) must null. This is far more sensitive than
-% a raw contra-population average, because the predictor concentrates on the coupled subspace.
-%   per amp a, bin t:  P_obs(a,t) = b_ols' * (contra evoked z-pattern at t)   [predicted ipsi evoked]
-%   null: apply b_ols to size-matched 0 V windows -> 95th pctile of |predicted evoked| per bin.
-% Coupling window end = last post-onset bin with |P_obs|>null; session window = MAX over amps.
-% NOTE the coupling trace is BIPHASIC (dip then rebound): this window is the coupling SPAN and must
-% NOT replace the unipolar dip_win_s used by the signed-dip metrics (§11-§14,§17b). It is reported
-% here and used to drive an ABSOLUTE-energy bleed window + (next) a per-bin stim-blind null.
-y_sp_cw = double(y_full(frames));  muY_cw = mean(y_sp_cw(itr));
-Gc_cw   = Ztr.'*Ztr;  b_ols_cw = Gc_cw \ (Ztr.'*(y_sp_cw(itr)-muY_cw));   % spont-trained full OLS (z-space)
-idx0 = onF0(:).' + rel(:);                                                % z-scored 0 V evoked block (for null)
-Z0 = (double(Uflat(gridIdx,:))*double(V_cp(:,idx0(:))) - mu_p)./sd_p;
-Z0 = reshape(Z0,nG,Wb,nT0);  Z0 = Z0 - mean(Z0(:,1:preN,:),2);
-% [0V CLAMP] reference the predicted-evoked trace to the 0 V (no-stim) condition, not just its own
-% pre-onset baseline: a trial-AVERAGE need not be zero-mean (a few high-variability trials leave a
-% common baseline drift). Subtract the grand 0 V predicted trace so every amp AND the null are clamped
-% to 0 V -> the coupling test measures departure from 0 V, not from a possibly-biased self-baseline.
-ev0_all = mean(Z0,3);  P_0V = b_ols_cw.' * ev0_all;
-cw_nBoot = 300;  tt_c = rel/Fs;
-P_obs = nan(nA,Wb);  P_nul = nan(nA,Wb);  cwEnd = zeros(nA,1);
-for ai = 1:nA
-    onF = onFcell{ai};  nT = numel(onF);  if nT==0, continue; end
-    idx = onF(:).' + rel(:);
-    Zp = (double(Uflat(gridIdx,:))*double(V_cp(:,idx(:))) - mu_p)./sd_p;
-    ev = mean(reshape(Zp,nG,Wb,nT),3);  ev = ev - mean(ev(:,1:preN),2);
-    P_obs(ai,:) = b_ols_cw.' * ev - P_0V;                                 % predicted ipsi evoked trace (clamped to 0V)
-    bd = nan(cw_nBoot,Wb);
-    for b = 1:cw_nBoot
-        ev0 = mean(Z0(:,:, randi(nT0, nT, 1)),3);                         % size-nT 0 V predicted evoked
-        bd(b,:) = abs(b_ols_cw.' * ev0 - P_0V);                           % null clamped to 0V identically
-    end
-    P_nul(ai,:) = quantile(bd,0.95,1);
-    sig = abs(P_obs(ai,postCols)) > P_nul(ai,postCols);
-    lastk = find(sig,1,'last');  if ~isempty(lastk), cwEnd(ai) = tt_c(preN+lastk); end
-end
-couple_win_s = max([cwEnd; 0]);                                           % full coupling extent (all amps)
-if couple_win_s<=0, couple_win_s = dip_win_s; end
-fprintf('\n[COUPLING-WINDOW] per-amp contra->ipsi coupling extent (last bin |pred evoked| > 0V null):\n');
-for ai = 1:nA, fprintf('   %5.2f V | coupled to %4.0f ms\n', amps(ai), 1000*cwEnd(ai)); end
-fprintf('   --> session coupling window = %.0f ms (max across amps)  |  config dip_win_s = %.0f ms\n', ...
-        1000*couple_win_s, 1000*dip_win_s);
-
-figCW = figure('Color','w','Name','[COUPLING-WINDOW] contra->ipsi predicted-evoked coupling vs time','Position',[60 60 1150 720]);
-ncw = min(nA,3);  nrw = ceil(nA/ncw);
-for ai = 1:nA
-    ax = subplot(nrw,ncw,ai); hold(ax,'on'); box(ax,'on');
-    if nT_amp(ai)==0, title(ax,sprintf('%.2f V n/a',amps(ai))); continue; end
-    plot(ax, 1000*tt_c(postCols),  P_obs(ai,postCols), 'k-','LineWidth',1.5,'DisplayName','pred evoked');
-    plot(ax, 1000*tt_c(postCols),  P_nul(ai,postCols), 'r--','LineWidth',1.0,'DisplayName','0V null 95%');
-    plot(ax, 1000*tt_c(postCols), -P_nul(ai,postCols), 'r--','LineWidth',1.0,'HandleVisibility','off');
-    if cwEnd(ai)>0, xline(ax,1000*cwEnd(ai),'b-','LineWidth',1.3,'DisplayName','coupling end'); end
-    xline(ax,1000*dip_win_s,'m:','LineWidth',1.2,'DisplayName','dip\_win\_s'); yline(ax,0,'k:','HandleVisibility','off');
-    title(ax,sprintf('%.2f V  couple\\rightarrow%.0f ms',amps(ai),1000*cwEnd(ai)),'FontSize',9,'FontWeight','bold');
-    if ai==1, legend(ax,'Location','best','FontSize',6); ylabel(ax,'pred ipsi evoked (%\DeltaF/F)'); xlabel(ax,'ms re onset'); end
-end
-sgtitle(sprintf('COUPLING-WINDOW  %s %s e%d  — session coupling %.0f ms (blue) vs dip\\_win\\_s %.0f ms (magenta)', ...
-        mn,td,en,1000*couple_win_s,1000*dip_win_s),'FontWeight','bold');
-COUPLING = struct('amps',amps,'P_obs',P_obs,'P_nul',P_nul,'cwEnd',cwEnd,'couple_win_s',couple_win_s, ...
-                  'rel',rel,'Fs',Fs,'postCols',postCols);
 
 %% (15) [SETTLETIME] Dip-window AUDIT + REBOUND landmarks (consumes §10's landmarks)
 % The trough and the recovery/settle WINDOWS are computed ONCE in §10 (data-driven per-amp landmarks
@@ -904,7 +840,7 @@ SETTLE = struct('amps',amps,'tms',tms,'mAmp',mAmp,'tTrough',Ltr,'dTrough',Dtr, .
 % [FARPIX section REMOVED 2026-07-06] It only characterized a far, positive-going population and split
 % flagged px by SIGN -- but that far positive population is NOT a stim effect we want to consider, and
 % the §10 affect detector now flags INHIBITION ONLY (signed dip-direction match), so nothing far/positive
-% is ever classified as stim-affected. FARPIX fed nothing downstream (NATIVE §17b uses the §10T `affected`),
+% is ever classified as stim-affected. FARPIX fed nothing downstream (SELECT §17d uses the §10T `affected`),
 % so removing it changes no result -- it just removes a confusing, unused diagnostic.
 
 
@@ -912,43 +848,28 @@ SETTLE = struct('amps',amps,'tms',tms,'mAmp',mAmp,'tTrough',Ltr,'dTrough',Dtr, .
 %% STAGE 2 -- STIM-BLIND CONTRA MODEL (unaffected px predict ipsi; residual = dip)
 %% ==================================================================
 
-%% (17) [SPONT-OLS] shared spontaneous contra->ipsi training (feeds §17b NATIVE)
+%% (17) [SPONT-OLS] shared spontaneous contra->ipsi training (feeds §17d SELECT)
 % Trains the unconstrained spont contra->ipsi OLS ONCE (z-space, §6 train/test split) and defines the
-% shared reporting windows. NATIVE (§17b) deploys these operators per amp with its KKT dip+rebound
-% blinding; §17c (state-dep) and §18 (all-session) reuse the same weights. The former greedy stim-blind
-% predictor (per-amp pixel removal until the predicted dip vanished) was RETIRED 2026-07-14 in favour of
-% NATIVE's exact linear-constraint blinding, which keeps every unaffected pixel and zeroes the dip exactly.
+% shared reporting windows. SELECT (§17d) deploys these operators per amp with its sparse, distance-
+% weighted (far-from-ipsi) fit; §17c (state-dep) and §18 (all-session) reuse the SELECT weights. Two
+% predictors were retired ahead of it: the greedy per-amp pixel-removal model (2026-07-14) and the
+% KKT dip-blinded NATIVE model (2026-07-18) -- see §17a. SELECT is now the sole stim-blind model.
 dipCols = (preN+1):min(Wb, preN+round(dip_win_s*Fs));       % reporting dip window (data-driven default)
 ttc = rel/Fs;                                               % peri-onset time axis (s) for trace figures
 y_sp = double(y_full(frames));  ytr = y_sp(itr);  yte = y_sp(ite);  muY = mean(ytr);  ytrc = ytr - muY;
 Gz = Ztr.'*Ztr;  cz = Ztr.'*ytrc;  lamR = 1e-6*mean(diag(Gz));  sstot = max(sum((yte-mean(yte)).^2),eps);
 
-% (greedy per-amp pixel-removal predictor removed 2026-07-14 — NATIVE §17b is the sole stim-blind model)
+% (greedy predictor removed 2026-07-14; NATIVE KKT predictor removed 2026-07-18 — SELECT §17d is the sole model)
 
-%% (17b) [STIMBLIND-NATIVE] *** PRIMARY *** KEEP ALL unaffected px, enforce dip-blindness by CONSTRAINT
-% THE stim-blind model: a spont-trained contra->ipsi prediction BLIND to the stim, so the residual carries
-% the dip. We KEEP EVERY available (stim-UNAFFECTED) px for maximum accuracy and impose dip-blindness as a
-% linear EQUALITY CONSTRAINT on the spont fit -- no px are thrown away:
-%     minimize || y_spont - Z b ||^2   subject to   b . evDip == 0     (predicted dip is EXACTLY 0)
-% Closed form = project the unconstrained spont OLS off the dip direction (KKT / Lagrange):
-%     b0 = G\c;   b = b0 - (G\d) * (d.'*b0) / (d.'*(G\d)),    G=Gz(S,S)+ridge, c=cz(S), d=evDip(S)
-% Sparsity is NOT enforced (all unaffected px retained), so the spont / non-dip accuracy is high (many
-% predictors) while the dip is zeroed EXACTLY by construction -> ~100% of the dip in the residual. Trained
-% SPONT only; deployed per amp. (Superseded the greedy per-amp pixel-removal predictor, retired 2026-07-14.)
-% [BIPHASIC UPGRADE 2026-07-07] The stim response is BIPHASIC: a fast inhibitory DIP (~0-300 ms) then a
-% slow positive REBOUND (~300-700 ms, grows with amp per §15). Blinding to the dip ALONE lets the rebound
-% leak into the prediction (Global), so the residual misses it. FIX: blind
-% the prediction to the FULL stim-effect window by projecting the spont OLS off a K-column subspace D --
-% K equal sub-windows spanning onset->settle, each column = that sub-window's mean evoked direction:
-%     minimize ||y_spont - Z b||^2  s.t.  D' b = 0   ->   b = b0 - G^{-1}D (D'G^{-1}D)^+ D' b0   (KKT)
-% The residual (Local) then carries BOTH lobes. We ALSO fit a SHARED parametric biphasic model (fast + slow
-% gamma, SAME shape across amps) to the residual -> per-amp dip-gain & rebound-gain = a uniform dose model.
-% [NBLIND TUNING 2026-07-07, pick reworked 2026-07-13] native_nblind (# blinded sub-windows) trades
-% biphasic capture vs how many prediction DoF are removed: MORE windows -> fuller dip+rebound capture in
-% the residual, but fewer DoF left for the ongoing (pre/post-stim) prediction. We SWEEP candidates, cache
-% each amp's evoked ONCE (the expensive SVD reconstruction), and pick the smallest nblind that captures the
-% dip at EVERY amp (see the auto-pick below) -- NOT the old "max nonStimR2" which was chasing a lying metric.
-nblind_grid = [2 3 4 5 6 8];                                          % # blind sub-windows swept (native_nblind pick)
+%% (17a) [SHARED-OPS] per-amp evoked + fit operators shared by SELECT (§17d), STATEDEP (§17c) and §18
+% Everything below is model-AGNOSTIC prep: the per-amp trial-averaged evoked in z-space, the kept
+% (stim-UNAFFECTED) pixel set per amp, the ridge-factorised spont operators, the shared parametric biphasic
+% basis, and the HONEST pre/post-stim prediction-R^2 designs. §17d [STIMBLIND-SELECT] consumes these.
+% [RETIRED 2026-07-18] The former §17b [STIMBLIND-NATIVE] predictor (keep ALL unaffected px, zero the dip by
+% a KKT equality constraint on a K-window blind subspace) and its §17bV validation were REMOVED. NATIVE
+% cancelled the dip by construction, which guarantees ~100% dip capture but makes the capture uninformative;
+% SELECT instead earns its residual by choosing FEW, FAR-from-ipsi predictors, so its leak is an honest
+% readout. SELECT is now the SOLE stim-blind model and feeds the paper's state-dependence analysis.
 ncN = min(nA,3);  nrN = ceil(nA/ncN);
 % shared parametric biphasic basis (fixed shapes from §15 landmarks: dip peak ~143 ms, rebound peak ~571 ms)
 tms_on = (rel(:)-rel(preN+1))/Fs*1000;  posT = tms_on>=0;
@@ -986,230 +907,19 @@ for ai = 1:nA
     Zpre{ai} =((double(Uflat(gridIdx,:))*double(V_cp(:,frPre)))-mu_p)./sd_p;   ypre{ai} =y_full(frPre);
     Zpost{ai}=((double(Uflat(gridIdx,:))*double(V_cp(:,frPost)))-mu_p)./sd_p;  ypost{ai}=y_full(frPost);
 end
-% ---- sweep native_nblind: report dip/rebound capture + the HONEST per-frame pre/post prediction R^2 ----
-% [2026-07-13] Pick the SMALLEST nblind whose WORST-amp dip capture >= cap_dip_min_amp, so EVERY amp
-% (incl. the low ones) reaches ~full capture while removing as few prediction DoF as possible (smaller
-% nblind -> higher pred R^2). The OLD objective ("max median nonStimR2 s.t. median dip>=90%") picked
-% nblind=2 by chasing the lying trial-avg metric, which under-captured the dip at low/mid amps (52% at
-% 3.2 V). native_nblind='auto' runs this pick (-> 4 on AL_0033); set an integer to force it.
-native_nblind   = 'auto';   % 'auto' = data-driven pick below; or a fixed integer to force the # blind windows
-cap_dip_min_amp = 92;       % 'auto': smallest nblind whose MIN per-amp dip capture >= this (%). ("100% at ALL amps")
-fprintf('\n[STIMBLIND-NATIVE] tuning native_nblind — dip/rebound capture + HONEST per-frame pre/post pred R^2:\n');
-fprintf('   %-6s | %9s %9s | %9s | %14s | %8s\n','nblind','medDipCap','minDipCap','medRebCap','predR2 pre/post','spontR2b');
-sw_dip=nan(numel(nblind_grid),1); sw_dipmin=sw_dip; sw_reb=sw_dip; sw_pre=sw_dip; sw_post=sw_dip; sw_sb=sw_dip; sw_ns=sw_dip;
-for gi = 1:numel(nblind_grid)
-    nb=nblind_grid(gi); dcv=nan(nA,1); rcv=nan(nA,1); nsv=nan(nA,1); sbv=nan(nA,1); prv=nan(nA,1); pov=nan(nA,1);
-    for ai = 1:nA
-        if isempty(evZc{ai}), continue; end
-        [bN,~,~,r2ns,dCap,rCap,r2sb] = native_project(nb, evZc{ai},aAc{ai},dcc{ai},rcc{ai},scc{ai},Sc{ai},dGc{ai},b0c{ai}, preN,Wb,yte,muY,Zte,sstot);
-        S=Sc{ai}; nsv(ai)=r2ns; dcv(ai)=dCap; rcv(ai)=rCap; sbv(ai)=r2sb;
-        prv(ai)=r2f(ypre{ai},  muY+(Zpre{ai}(S,:).'*bN));
-        pov(ai)=r2f(ypost{ai}, muY+(Zpost{ai}(S,:).'*bN));
-    end
-    sw_dip(gi)=median(dcv,'omitnan'); sw_dipmin(gi)=min(dcv,[],'omitnan'); sw_reb(gi)=median(rcv,'omitnan');
-    sw_pre(gi)=median(prv,'omitnan'); sw_post(gi)=median(pov,'omitnan'); sw_sb(gi)=median(sbv,'omitnan'); sw_ns(gi)=median(nsv,'omitnan');
-    fprintf('   %-6d | %8.0f%% %8.0f%% | %8.0f%% | %6.3f / %6.3f | %8.3f\n', nb, sw_dip(gi), sw_dipmin(gi), sw_reb(gi), sw_pre(gi), sw_post(gi), sw_sb(gi));
-end
-if ischar(native_nblind) && strcmpi(native_nblind,'auto')
-    good = find(sw_dipmin>=cap_dip_min_amp);
-    if ~isempty(good), native_nblind=nblind_grid(good(1));            % smallest nblind reaching full per-amp capture
-    else, [~,bi]=max(sw_dipmin); native_nblind=nblind_grid(bi); end
-    fprintf('   --> AUTO picked native_nblind = %d (smallest nblind with MIN per-amp dip capture >= %d%%)\n', native_nblind, cap_dip_min_amp);
-else
-    fprintf('   --> using forced native_nblind = %d\n', native_nblind);
-end
 
-An_dip=nan(nA,1); Gn_dip=nan(nA,1); Ln_dip=nan(nA,1);              % DIP lobe (Actual/Global/Local)
-An_reb=nan(nA,1); Gn_reb=nan(nA,1); Ln_reb=nan(nA,1);             % REBOUND lobe
-r2n_full=nan(nA,1); r2n_sb=nan(nA,1); r2n_ns=nan(nA,1);          % spont ceiling / blinded / NON-stim R2 (trial-avg; deprecated)
-r2n_pre=nan(nA,1); r2n_post=nan(nA,1);                            % HONEST per-frame pre/post-stim prediction R2
-nUse_n=zeros(nA,1); pdn=nan(nA,1); prn=nan(nA,1); nCon=zeros(nA,1);
-kDipA=nan(nA,1); kRebA=nan(nA,1);                                 % shared parametric biphasic gains per amp
-trAn=cell(nA,1); trGn=cell(nA,1); trLn=cell(nA,1); trMn=cell(nA,1); useMaskN=false(nG,nA); bUseN=cell(nA,1);
-fprintf('\n[STIMBLIND-NATIVE] KEEP all unaffected px; blind prediction to DIP+REBOUND (%d-window subspace); SPONT-trained:\n', native_nblind);
-fprintf('   %-6s %4s | %5s %4s | %13s | %14s | %8s %8s | %8s %8s\n','amp','nTr','nUse','nCon','spontR2 c->b','predR2 pre/post','dipAct','dipLoc','rebAct','rebLoc');
-for ai = 1:nA
-    if isempty(evZc{ai}), continue; end
-    S=Sc{ai};  nUse_n(ai)=numel(S);  useMaskN(S,ai)=true;
-    aA=aAc{ai};  dc=dcc{ai};  rc=rcc{ai};  stimCols=scc{ai};
-    [bN,yg,rL,r2ns,~,~,r2sb,nc] = native_project(native_nblind, evZc{ai},aA,dc,rc,stimCols,S,dGc{ai},b0c{ai}, preN,Wb,yte,muY,Zte,sstot);
-    nCon(ai)=nc;  bf=zeros(nG,1);  bf(S)=bN;  bUseN{ai}=bf;
-    r2n_full(ai) = 1 - sum((yte-(muY+Zte(:,S)*b0c{ai})).^2)/sstot;         % spont ceiling (unconstrained)
-    r2n_sb(ai) = r2sb;  r2n_ns(ai) = r2ns;                                 % spont blinded / NON-stim R2 (deprecated)
-    r2n_pre(ai)  = r2f(ypre{ai},  muY+(Zpre{ai}(S,:).'*bN));               % HONEST per-frame pre-stim prediction R2
-    r2n_post(ai) = r2f(ypost{ai}, muY+(Zpost{ai}(S,:).'*bN));             % HONEST per-frame post-stim prediction R2
-    An_dip(ai)=mean(aA(dc)); Gn_dip(ai)=mean(yg(dc)); Ln_dip(ai)=mean(rL(dc));  pdn(ai)=Gn_dip(ai);
-    if ~isempty(rc), An_reb(ai)=mean(aA(rc)); Gn_reb(ai)=mean(yg(rc)); Ln_reb(ai)=mean(rL(rc));  prn(ai)=Gn_reb(ai); end
-    B = [gDip(stimCols) gReb(stimCols)];  kk = B \ rL(stimCols);          % shared biphasic fit to the residual
-    kDipA(ai)=kk(1); kRebA(ai)=kk(2);  trMn{ai} = (gDip*kk(1) + gReb*kk(2));
-    trAn{ai}=aA(:); trGn{ai}=yg(:); trLn{ai}=rL(:);
-    fprintf('   %-6.2f %4d | %5d %4d | %.3f->%.3f | %6.3f / %6.3f | %8.3f %8.3f | %8.3f %8.3f\n', ...
-        amps(ai), nT_amp(ai), nUse_n(ai), nCon(ai), r2n_full(ai), r2n_sb(ai), r2n_pre(ai), r2n_post(ai), An_dip(ai), Ln_dip(ai), An_reb(ai), Ln_reb(ai));
-end
-capDip = median(100*Ln_dip./An_dip,'omitnan');  capReb = median(100*Ln_reb./An_reb,'omitnan');
-fprintf('   --> median DIP in residual = %.0f%% | median REBOUND in residual = %.0f%% | spont R^2 %.3f->%.3f | HONEST pred R^2 pre %.3f / post %.3f\n', ...
-    capDip, capReb, median(r2n_full,'omitnan'), median(r2n_sb,'omitnan'), median(r2n_pre,'omitnan'), median(r2n_post,'omitnan'));
-
-% --- Fig 1: DIP + REBOUND dose curves (Actual / Global(pred~0) / Local(residual)) ------------
-figNB1 = figure('Color','w','Name','[STIMBLIND-NATIVE] dip+rebound dose curves','Position',[80 80 1000 430]);
-axD=subplot(1,2,1,'Parent',figNB1); hold(axD,'on'); box(axD,'on');
-plot(axD,amps,An_dip,'-o','Color','k','LineWidth',1.8,'MarkerFaceColor','k','DisplayName','Actual');
-plot(axD,amps,Gn_dip,'-s','Color',[.85 .2 .2],'LineWidth',1.4,'MarkerFaceColor',[.85 .2 .2],'DisplayName','Global (\approx0)');
-plot(axD,amps,Ln_dip,'-^','Color',[.1 .4 .85],'LineWidth',1.4,'MarkerFaceColor',[.1 .4 .85],'DisplayName','Local (residual)');
-yline(axD,0,'k:'); xlabel(axD,'amplitude (V)'); ylabel(axD,'dip \DeltaF/F %'); legend(axD,'Location','southwest','FontSize',7);
-title(axD,sprintf('DIP lobe  (median %.0f%% in residual)',capDip),'FontSize',9,'FontWeight','bold');
-axR=subplot(1,2,2,'Parent',figNB1); hold(axR,'on'); box(axR,'on');
-plot(axR,amps,An_reb,'-o','Color','k','LineWidth',1.8,'MarkerFaceColor','k','DisplayName','Actual');
-plot(axR,amps,Gn_reb,'-s','Color',[.85 .2 .2],'LineWidth',1.4,'MarkerFaceColor',[.85 .2 .2],'DisplayName','Global (\approx0)');
-plot(axR,amps,Ln_reb,'-^','Color',[.1 .4 .85],'LineWidth',1.4,'MarkerFaceColor',[.1 .4 .85],'DisplayName','Local (residual)');
-yline(axR,0,'k:'); xlabel(axR,'amplitude (V)'); ylabel(axR,'rebound \DeltaF/F %'); legend(axR,'Location','northwest','FontSize',7);
-title(axR,sprintf('REBOUND lobe  (median %.0f%% in residual)',capReb),'FontSize',9,'FontWeight','bold');
-sgtitle(figNB1,'NATIVE stim-blind: BIPHASIC effect (dip + rebound) captured in the residual','FontWeight','bold');
-
-% --- Fig 2: per-amp Actual / Global / Local + shared biphasic model overlay -----------------
-figNB2 = figure('Color','w','Name','[STIMBLIND-NATIVE] per-amp Actual/Global/Local + biphasic model','Position',[60 40 1300 780]);
-for ai=1:nA
-    ax=subplot(nrN,ncN,ai); hold(ax,'on'); box(ax,'on');
-    if isempty(trAn{ai}), title(ax,sprintf('%.2f V: n/a',amps(ai))); continue; end
-    plot(ax, ttc, trAn{ai}, 'k-','LineWidth',1.6,'DisplayName','Actual');
-    plot(ax, ttc, trGn{ai}, '-','Color',[.85 .2 .2],'LineWidth',1.3,'DisplayName','Global (stim-blind pred)');
-    plot(ax, ttc, trLn{ai}, '-','Color',[.1 .4 .85],'LineWidth',1.3,'DisplayName','Local (residual)');
-    plot(ax, ttc, trMn{ai}, '--','Color',[0 .6 .2],'LineWidth',1.2,'DisplayName','biphasic model');
-    xline(ax,0,'k:'); yline(ax,0,'k:'); xlim(ax,[-.5 1]);
-    title(ax,sprintf('%.2f V (%d px | dip %.0f%%, reb %.0f%%)',amps(ai),nUse_n(ai), ...
-        100*Ln_dip(ai)/An_dip(ai), 100*Ln_reb(ai)/max(abs(An_reb(ai)),eps)*sign(An_reb(ai))),'FontSize',8,'FontWeight','bold');
-    if ai==1, legend(ax,'Location','southeast','FontSize',5); ylabel(ax,'\DeltaF/F %'); end
-    if ai>nA-ncN, xlabel(ax,'t re onset (s)'); end
-end
-sgtitle('NATIVE STIM-BLIND: prediction blind to DIP+REBOUND -> residual (blue) carries full biphasic effect; green dash = shared parametric model','FontWeight','bold');
-
-% --- Fig 3: per-amp used (weight-colored) vs excluded/affected (black) contra pixels ---------
-figNB3 = figure('Color','w','Name','[STIMBLIND-NATIVE] per-amp used pixel maps','Position',[100 60 1300 780]);
-for ai=1:nA
-    ax=subplot(nrN,ncN,ai); hold(ax,'on');
-    image(ax, repmat(dspImg,[1 1 3])); axis(ax,'image','off'); set(ax,'YDir','reverse');
-    sM=linspace(0,1,128)'; colormap(ax,[[sM sM ones(128,1)];[ones(128,1) 1-sM 1-sM]]);
-    if isempty(bUseN{ai}), title(ax,sprintf('%.2f V: n/a',amps(ai))); continue; end
-    w=bUseN{ai}; um=useMaskN(:,ai); wsc=max(abs(w))+eps;
-    scatter(ax, dspGc(~um), dspGr(~um), 20, 'k','filled','MarkerEdgeColor','k');
-    scatter(ax, dspGc(um),  dspGr(um),  24, w(um),'filled','MarkerEdgeColor',[.2 .2 .2],'LineWidth',0.3);
-    clim(ax,[-wsc wsc]); plot(ax, dspSc, dspSr, 'g+','MarkerSize',12,'LineWidth',1.8);
-    title(ax,sprintf('%.2f V: use %d (all unaffected) / excl %d (affected)',amps(ai),nnz(um),nG-nnz(um)),'FontSize',9,'FontWeight','bold');
-end
-sgtitle('per-amp NATIVE stim-blind sets: used=ALL unaffected px (constrained weights), excluded=affected (black)','FontWeight','bold');
-
-STIMBLIND_NATIVE = struct('amps',amps,'ActualDip',An_dip,'GlobalDip',Gn_dip,'LocalDip',Ln_dip, ...
-                   'ActualReb',An_reb,'GlobalReb',Gn_reb,'LocalReb',Ln_reb, ...
-                   'trA',{trAn},'trG',{trGn},'trL',{trLn},'trModel',{trMn},'bUseN',{bUseN},'useMaskN',useMaskN, ...
-                   'r2full',r2n_full,'r2sb',r2n_sb,'r2nonStim',r2n_ns,'r2pre',r2n_pre,'r2post',r2n_post,'nUse',nUse_n,'nCon',nCon,'predDip',pdn,'predReb',prn, ...
-                   'kDip',kDipA,'kReb',kRebA,'native_nblind',native_nblind, ...
-                   'dipCols',dipCols,'rel',rel,'Fs',Fs,'preN',preN, ...
-                   'medDipCapPct',capDip,'medRebCapPct',capReb,'mn',mn,'td',td,'en',en);
-
-%% (17bV) [NATIVE-VALIDATION] overfitting + performance metrics for the NATIVE stim-blind model
-% Statistical validation for the NATIVE stim-blind model. Four independent checks:
-%   (M1) BLOCKED k-fold CV of the spont fit -- CONTIGUOUS folds (random-frame CV leaks because widefield
-%        frames are temporally autocorrelated) -> held-out R^2 mean+-SD and the train-test gap (optimism =
-%        the direct overfitting readout).
-%   (M2) PERMUTATION null: circularly shift the ipsi target vs the contra design to break the instantaneous
-%        coupling, refit -> null R^2 distribution -> p = P(null >= real). Confirms the fit isn't chance.
-%   (M3) NATIVE held-out DIP+REBOUND capture: estimate the blinding subspace on TRAIN trials (odd), deploy
-%        on HELD-OUT trials (even) -> does dip/rebound-blindness GENERALIZE (held-out predicted dip ~0)?
-%   (M4) WEIGHT stability: bootstrap the spont fit -> mean pairwise weight-map correlation (stable weights
-%        across resamples = signal, not overfit noise).
-RUN_NATIVE_VAL = true;
-if RUN_NATIVE_VAL
-    fprintf('\n[NATIVE-VAL] statistical validation of the NATIVE stim-blind model:\n');
-    Zall = [Ztr; Zte];  yall = y_sp(:);  nAll = size(Zall,1);
-    % (M1) blocked k-fold CV of the spont predictor
-    kF = 5;  ed = round(linspace(1,nAll+1,kF+1));  r2te=nan(kF,1); r2tr=nan(kF,1);
-    for f = 1:kF
-        te = ed(f):ed(f+1)-1;  tr = setdiff(1:nAll, te);
-        muf = mean(yall(tr));  Gf = Zall(tr,:).'*Zall(tr,:) + lamR*eye(nG);  cf = Zall(tr,:).'*(yall(tr)-muf);
-        bf = Gf\cf;
-        r2te(f) = 1 - sum((yall(te)-(muf+Zall(te,:)*bf)).^2)/max(sum((yall(te)-mean(yall(te))).^2),eps);
-        r2tr(f) = 1 - sum((yall(tr)-(muf+Zall(tr,:)*bf)).^2)/max(sum((yall(tr)-muf).^2),eps);
-    end
-    fprintf('   M1 blocked %d-fold CV: held-out R^2 %.3f +- %.3f  | train R^2 %.3f  | optimism(train-test) %.3f\n', ...
-        kF, mean(r2te), std(r2te), mean(r2tr), mean(r2tr)-mean(r2te));
-    % (M2) circular-shift permutation null
-    nPerm = 200;  shifts = round(linspace(0.1,0.9,nPerm)*nAll);  r2null=nan(nPerm,1);
-    GA = Zall.'*Zall + lamR*eye(nG);  muA = mean(yall);
-    breal = GA\(Zall.'*(yall-muA));  r2real = 1 - sum((yall-(muA+Zall*breal)).^2)/max(sum((yall-muA).^2),eps);
-    for p = 1:nPerm
-        ysh = circshift(yall, shifts(p));  msh = mean(ysh);
-        bp = GA\(Zall.'*(ysh-msh));
-        r2null(p) = 1 - sum((ysh-(msh+Zall*bp)).^2)/max(sum((ysh-msh).^2),eps);
-    end
-    pPerm = (1+sum(r2null>=r2real))/(nPerm+1);
-    fprintf('   M2 permutation null: real R^2 %.3f vs null %.3f +- %.3f  -> p=%.4f (n=%d shifts)\n', ...
-        r2real, mean(r2null), std(r2null), pPerm, nPerm);
-    % (M3) NATIVE held-out dip/rebound capture (odd trials -> subspace, even trials -> test)
-    hoDip=nan(nA,1); hoReb=nan(nA,1); hoPredDip=nan(nA,1);
-    for ai = 1:nA
-        onF=onFcell{ai}; nT=numel(onF); if nT<6, continue; end
-        dc=inhCols{ai}; if isempty(dc), dc=dipCols; end;  rc=rebCols{ai};
-        idx=onF(:).'+rel(:);
-        Zp=(double(Uflat(gridIdx,:))*double(V_cp(:,idx(:)))-mu_p)./sd_p; Zp=reshape(Zp,nG,Wb,nT);
-        trn=1:2:nT; tst=2:2:nT;
-        evTr=mean(Zp(:,:,trn),3); evTr=evTr-mean(evTr(:,1:preN),2);
-        evTe=mean(Zp(:,:,tst),3); evTe=evTe-mean(evTe(:,1:preN),2);
-        Amat=reshape(double(y_full(idx(:))),Wb,nT);  aTe=mean(Amat(:,tst),2); aTe=aTe-mean(aTe(1:preN));
-        if ~isempty(rc), se=rc(end); else, se=dc(end); end
-        scph=(preN+1):max(se,dc(end)); eg=round(linspace(1,numel(scph)+1,native_nblind+1));
-        Dtr=zeros(nG,native_nblind);
-        for q=1:native_nblind, cc=scph(eg(q):eg(q+1)-1); if ~isempty(cc), Dtr(:,q)=mean(evTr(:,cc),2); end; end
-        act=~affected(:,ai); if nnz(act)<5, act=true(nG,1); end;  S=find(act);
-        G=Gz(S,S)+lamR*eye(numel(S)); b0=G\cz(S);
-        Dc=Dtr(S,:); Dc=Dc(:,any(abs(Dc)>0,1));
-        if ~isempty(Dc), GD=G\Dc; bN=b0-GD*(pinv(Dc.'*GD)*(Dc.'*b0)); else, bN=b0; end
-        ygte=(bN.'*evTe(S,:)).'; ygte=ygte-mean(ygte(1:preN));  rLte=aTe-ygte;
-        hoPredDip(ai)=mean(ygte(dc));
-        if abs(mean(aTe(dc)))>eps, hoDip(ai)=100*mean(rLte(dc))/mean(aTe(dc)); end
-        if ~isempty(rc) && abs(mean(aTe(rc)))>eps, hoReb(ai)=100*mean(rLte(rc))/mean(aTe(rc)); end
-    end
-    fprintf('   M3 held-out (even trials): median dip captured %.0f%% | rebound %.0f%% | median |pred dip| %.4f (want ~0)\n', ...
-        median(hoDip,'omitnan'), median(hoReb,'omitnan'), median(abs(hoPredDip),'omitnan'));
-    % (M4) weight-map bootstrap stability
-    Bn=30; Wm=nan(nG,Bn);
-    for b=1:Bn
-        ii=randi(nTr,nTr,1); Zb=Ztr(ii,:); yb=ytrc(ii);
-        Wm(:,b)=(Zb.'*Zb+lamR*eye(nG))\(Zb.'*yb);
-    end
-    Rw=corr(Wm); ut=triu(true(Bn),1); meanWr=mean(Rw(ut));
-    fprintf('   M4 weight stability: mean pairwise weight-map r = %.3f across %d bootstraps (1=perfectly stable)\n', meanWr, Bn);
-
-    figVAL = figure('Color','w','Name','[NATIVE-VALIDATION]','Position',[70 70 1280 360]);
-    axv1=subplot(1,3,1,'Parent',figVAL); bar(axv1,1:kF,r2te,'FaceColor',[.3 .5 .85]); hold(axv1,'on');
-    yline(axv1,mean(r2tr),'r--','LineWidth',1.2); box(axv1,'on');
-    xlabel(axv1,'fold'); ylabel(axv1,'held-out R^2'); title(axv1,sprintf('M1 blocked %d-fold CV (red=train)',kF),'FontSize',9,'FontWeight','bold');
-    axv2=subplot(1,3,2,'Parent',figVAL); histogram(axv2,r2null,20,'FaceColor',[.6 .6 .6]); hold(axv2,'on');
-    xline(axv2,r2real,'r-','LineWidth',1.8); box(axv2,'on');
-    xlabel(axv2,'spont R^2'); ylabel(axv2,'count'); title(axv2,sprintf('M2 perm null (real=red, p=%.3f)',pPerm),'FontSize',9,'FontWeight','bold');
-    axv3=subplot(1,3,3,'Parent',figVAL); hold(axv3,'on'); box(axv3,'on');
-    plot(axv3,amps,hoDip,'-o','Color',[.1 .4 .85],'LineWidth',1.4,'MarkerFaceColor',[.1 .4 .85],'DisplayName','dip');
-    plot(axv3,amps,hoReb,'-^','Color',[0 .6 .2],'LineWidth',1.4,'MarkerFaceColor',[0 .6 .2],'DisplayName','rebound');
-    yline(axv3,100,'k:'); xlabel(axv3,'amplitude (V)'); ylabel(axv3,'held-out % captured'); legend(axv3,'Location','best','FontSize',7);
-    title(axv3,'M3 held-out biphasic capture','FontSize',9,'FontWeight','bold');
-    sgtitle(figVAL, sprintf('NATIVE-VALIDATION  %s %s e%d',mn,td,en),'FontWeight','bold','FontSize',10);
-
-    NATIVE_VAL = struct('kFold',kF,'r2test',r2te,'r2train',r2tr,'r2real',r2real,'r2null',r2null,'pPerm',pPerm, ...
-                        'hoDipCap',hoDip,'hoRebCap',hoReb,'hoPredDip',hoPredDip,'weightStability',meanWr,'mn',mn,'td',td,'en',en);
-end
-
-
-%% (17d) [STIMBLIND-SELECT] SPARSE, DISTANCE-WEIGHTED spont OLS on unaffected px (weights FAR from ipsi)
-% Companion to NATIVE (§17b). Same spont-trained contra->ipsi prediction and same kept pixel set (every
-% stim-UNAFFECTED px from the §10T detector), but instead of NATIVE's KKT dip-blinding this model imposes
-% TWO soft constraints on the fit: (a) SPARSITY (L1) and (b) a spatial prior that PENALISES weights near the
-% ipsi stim site, so surviving predictors are FEW and FAR from ipsi (least stim-contaminated). No explicit
-% dip-blinding: the residual carries the dip only insofar as those distal predictors are stim-blind, so the
+%% (17d) [STIMBLIND-SELECT] *** PRIMARY *** SPARSE, DISTANCE-WEIGHTED spont OLS on unaffected px (FAR from ipsi)
+% THE stim-blind model (sole predictor since NATIVE was retired 2026-07-18). Spont-trained contra->ipsi
+% prediction on the stim-UNAFFECTED pixel set (§10T detector), with TWO soft constraints on the fit:
+% (a) SPARSITY (L1) and (b) a spatial prior that PENALISES weights near the ipsi stim site, so surviving
+% predictors are FEW and FAR from ipsi (least stim-contaminated). No explicit dip-blinding: the residual
+% carries the dip only insofar as those distal predictors are stim-blind, so the
 % LEAK (Global dip as % of Actual) is an HONEST readout of selection+distance quality:
 %     leak ~ 0  => distal unaffected px already produce ~zero stim dip (validates selection + far-weighting)
 %     leak > 0  => some stim signal still leaks through the chosen predictors
 % Since Local = Actual - Global exactly, dip-capture = 100 - leak. Fit = select_wlasso(Gz,cz,S,selGamma,...)
 % -- the SAME solver the interactive "Refit SELECT model" button uses, at the CONFIRMED sensitivity.
-% selGamma/select_l1frac come from the §10T3 SELECT-model prep. §17c/§18 still use NATIVE.
+% selGamma/select_l1frac come from the §10T3 SELECT-model prep. §17c (state-dep) and §18 consume these weights.
 As_dip=nan(nA,1); Gs_dip=nan(nA,1); Ls_dip=nan(nA,1);              % DIP lobe (Actual/Global/Local)
 As_reb=nan(nA,1); Gs_reb=nan(nA,1); Ls_reb=nan(nA,1);             % REBOUND lobe
 r2s_pre=nan(nA,1); r2s_post=nan(nA,1); nUse_s=zeros(nA,1);        % HONEST per-frame pre/post pred R2 + #ACTIVE px
@@ -1237,11 +947,9 @@ end
 capDipS = median(100*Ls_dip./As_dip,'omitnan');  leakDipS = median(100*Gs_dip./As_dip,'omitnan');  capRebS = median(100*Ls_reb./As_reb,'omitnan');
 fprintf('   --> median DIP in residual %.0f%% (LEAK into prediction %.0f%%) | median REBOUND in residual %.0f%% | HONEST pred R^2 pre %.3f / post %.3f\n', ...
     capDipS, leakDipS, capRebS, median(r2s_pre,'omitnan'), median(r2s_post,'omitnan'));
-fprintf('   --> SELECT vs NATIVE median dip capture: %.0f%% (selection only) vs %.0f%% (KKT-blinded) -> constraint adds %.0f pts\n', ...
-    capDipS, capDip, capDip-capDipS);
 
-% --- Fig 1: dip + rebound dose curves + SELECT-vs-NATIVE capture (Global here is the LEAK, not ~0) --------
-figSB1 = figure('Color','w','Name','[STIMBLIND-SELECT] dip+rebound dose + capture vs NATIVE','Position',[90 90 1320 420]);
+% --- Fig 1: dip + rebound dose curves + per-amp capture (Global here is the LEAK, not ~0 by construction) --
+figSB1 = figure('Color','w','Name','[STIMBLIND-SELECT] dip+rebound dose + per-amp capture','Position',[90 90 1320 420]);
 axD=subplot(1,3,1,'Parent',figSB1); hold(axD,'on'); box(axD,'on');
 plot(axD,amps,As_dip,'-o','Color','k','LineWidth',1.8,'MarkerFaceColor','k','DisplayName','Actual');
 plot(axD,amps,Gs_dip,'-s','Color',[.85 .2 .2],'LineWidth',1.4,'MarkerFaceColor',[.85 .2 .2],'DisplayName','Global (LEAK)');
@@ -1255,10 +963,10 @@ plot(axR,amps,Ls_reb,'-^','Color',[.1 .4 .85],'LineWidth',1.4,'MarkerFaceColor',
 yline(axR,0,'k:'); xlabel(axR,'amplitude (V)'); ylabel(axR,'rebound \DeltaF/F %'); legend(axR,'Location','northwest','FontSize',7);
 title(axR,sprintf('REBOUND lobe  (median %.0f%% in residual)',capRebS),'FontSize',9,'FontWeight','bold');
 axC=subplot(1,3,3,'Parent',figSB1); hold(axC,'on'); box(axC,'on');
-plot(axC,amps,100*Ls_dip./As_dip,'-^','Color',[.1 .4 .85],'LineWidth',1.6,'MarkerFaceColor',[.1 .4 .85],'DisplayName','SELECT (sparse, far)');
-plot(axC,amps,100*Ln_dip./An_dip,'-s','Color',[.2 .55 .2],'LineWidth',1.6,'MarkerFaceColor',[.2 .55 .2],'DisplayName','NATIVE (KKT-blinded)');
-yline(axC,100,'k:'); xlabel(axC,'amplitude (V)'); ylabel(axC,'dip captured in residual (%)'); ylim(axC,[0 130]); legend(axC,'Location','southeast','FontSize',7);
-title(axC,'sparse-distal fit vs the KKT constraint','FontSize',9,'FontWeight','bold');
+plot(axC,amps,100*Ls_dip./As_dip,'-^','Color',[.1 .4 .85],'LineWidth',1.6,'MarkerFaceColor',[.1 .4 .85],'DisplayName','dip captured');
+plot(axC,amps,100*Gs_dip./As_dip,'-s','Color',[.85 .2 .2],'LineWidth',1.6,'MarkerFaceColor',[.85 .2 .2],'DisplayName','leak into prediction');
+yline(axC,100,'k:'); yline(axC,0,'k:'); xlabel(axC,'amplitude (V)'); ylabel(axC,'% of actual dip'); ylim(axC,[-30 130]); legend(axC,'Location','east','FontSize',7);
+title(axC,'per-amp capture vs leak (sparse-distal selection)','FontSize',9,'FontWeight','bold');
 sgtitle(figSB1,'STIMBLIND-SELECT: sparse, weighted FAR from ipsi -> Global carries the LEAK; residual captures the dip as far as the distal predictors are stim-blind','FontWeight','bold');
 
 % --- Fig 2: per-amp Actual / Global / Local + shared biphasic model overlay ------------------------------
@@ -1292,16 +1000,20 @@ STIMBLIND_SELECT = struct('amps',amps,'ActualDip',As_dip,'GlobalDip',Gs_dip,'Loc
 %% ==================================================================
 
 %% (17c) [STATEDEP] Trial-by-trial state-dependence of the LOCAL (stim-blind residual) dip
-% The per-amp TRIAL-AVERAGED Local dip (§17b NATIVE) is the MEAN stim effect. Question (journal 2026-06-16):
+% The per-amp TRIAL-AVERAGED Local dip (§17d SELECT) is the MEAN stim effect. Question (journal 2026-06-16):
 % does the SINGLE-TRIAL Local dip vary with brain state at stim onset -- i.e. is the local stim
 % response itself state-dependent, beyond baseline prediction noise? For each trial we build the
-% NATIVE stim-blind (§17b) prediction from THAT trial's own contra pixels (bUseN*Z_trial), subtract
+% SELECT stim-blind (§17d) prediction from THAT trial's own contra pixels (bUseS*Z_trial), subtract
 % from the trial's actual ipsi -> single-trial Local residual; its 0-200 ms dip is the per-trial
 % stim effect (DV). We z-score the DV WITHIN amplitude (removes the dose-response mean = the
 % trial-averaged Local dip) so only the trial-to-trial spread AROUND that mean is tested.
-%     DECISIVE TEST:  partialcorr( localDip_zWithinAmp , state | dev_pre )     [Spearman]
-% dev_pre = pre-onset (-0.2..0 s) residual energy = per-trial prediction quality, partialled out so
-% a state effect means the STIM response is state-dependent, not just a noisier baseline fit.
+%     DECISIVE TEST:  partialcorr( localDip_zWithinAmp , state | dev_pre[, dev_post] )     [Spearman]
+% dev_pre = pre-onset (-0.2..0 s) residual energy = per-trial prediction quality with NO stim, partialled
+% out so a state effect means the STIM response is state-dependent, not just a noisier baseline fit. We ALSO
+% report the partial controlling for BOTH dev_pre AND dev_post (settled tail +0.8..+1.0 s, another stim-free
+% prediction-quality probe) to guard against within-trial non-stationarity of the fit across the onset, and a
+% state<->dev_pre/post COLLINEARITY table so a null partial reads as "no effect" vs "no power left after
+% partialling". A real effect survives raw + partial(pre) + partial(pre+post) + the trustworthy-half re-run.
 % State defs are IDENTICAL to CP-RES / cp_residual_core (2026-06-26 windows): MOTION = total |z| of
 % the session motion trace over [-2,+0.5]s; PRE-VAR = var(y) over [-1,+0.5]s; PRE-DELTA = 1-4 Hz
 % power over the same window. CRITICAL (RESEARCH 2026-07-01/02, CP-PREDQ): raw var and ABSOLUTE
@@ -1309,6 +1021,8 @@ STIMBLIND_SELECT = struct('amps',amps,'ActualDip',As_dip,'GlobalDip',Gs_dip,'Loc
 % admissible POWER-INDEPENDENT states are MOTION and RELATIVE delta (delta/total). All four are
 % reported; the two confounded ones are flagged, not interpreted as genuine state-dependence.
 tsec    = rel(:)/Fs;  preCols = find(tsec>=-0.2 & tsec<0);     % matched pre-onset control window (cols into peri-onset)
+postCtrlCols = ((Wb-round(0.2*Fs)+1):Wb).';                    % matched POST-settle control window (last 0.2 s of the trace,
+                                                              % well past the rebound-settle ~770 ms) -> 2nd prediction-quality probe
 vd_preN = round(1*Fs);  vd_postN = round(0.5*Fs);             % var/delta window [-1,+0.5]s (peri-stim, CP-RES)
 motPreN = round(2*Fs);  motPostN = round(0.5*Fs);            % motion window  [-2,+0.5]s
 nWvd = vd_preN+vd_postN+1;  win_r = hann(nWvd);  W_r = sum(win_r.^2);
@@ -1329,23 +1043,24 @@ catch ME
     fprintf('[STATEDEP] motion trace unavailable (%s) -> Motion column will be NaN.\n', ME.message);
 end
 
-DVz=[]; LD=[]; PRE=[]; MOT=[]; PVv=[]; DPa=[]; DPr=[]; AMPv=[]; AMPi=[]; TRi=[]; ldMean=nan(nA,1); ldStd=nan(nA,1);
+DVz=[]; GNz=[]; L1z=[]; LD=[]; PRE=[]; POST=[]; MOT=[]; PVv=[]; DPa=[]; DPr=[]; AMPv=[]; AMPi=[]; TRi=[]; ldMean=nan(nA,1); ldStd=nan(nA,1);
 trAll=cell(nA,1); ygAll=cell(nA,1); rlAll=cell(nA,1);      % per-trial traces for TRIALPRED fig + clickable scatter
 for ai = 1:nA
     onF = onFcell{ai};  nT = numel(onF);
-    if nT==0 || isempty(bUseN{ai}), continue; end
-    b  = bUseN{ai};  dc = inhCols{ai};  if isempty(dc), dc = dipCols; end   % NATIVE §17b per-amp KKT-blinded weights
+    if nT==0 || isempty(bUseS{ai}), continue; end
+    b  = bUseS{ai};  dc = inhCols{ai};  if isempty(dc), dc = dipCols; end   % SELECT §17d per-amp sparse far-from-ipsi weights
     idx = onF(:).'+rel(:);
     Zp  = (double(Uflat(gridIdx,:))*double(V_cp(:,idx(:))) - mu_p)./sd_p;  Zp = reshape(Zp,nG,Wb,nT);
     A   = reshape(double(y_full(idx(:))),Wb,nT);  A = A - mean(A(1:preN,:),1);   % single-trial actual (baselined)
-    ld=nan(nT,1); dpre=nan(nT,1); mt=nan(nT,1); pvv=nan(nT,1); dpa=nan(nT,1); dpr=nan(nT,1);
+    ld=nan(nT,1); dpre=nan(nT,1); dpost=nan(nT,1); mt=nan(nT,1); pvv=nan(nT,1); dpa=nan(nT,1); dpr=nan(nT,1);
     YG=nan(Wb,nT); RL=nan(Wb,nT);                          % per-trial predicted + residual traces
     for j = 1:nT
         yg = (b.'*Zp(:,:,j)).';  yg = yg - mean(yg(1:preN));   % single-trial stim-blind (Global) prediction
         rL = A(:,j) - yg;                                      % single-trial Local residual (stim effect)
         YG(:,j)=yg;  RL(:,j)=rL;                               % keep traces for plotting + click inspector
         ld(j)   = mean(rL(dc));                                % 0-200 ms Local dip = per-trial stim effect (DV)
-        dpre(j) = mean(rL(preCols).^2);                        % pre-onset residual energy = prediction quality (control)
+        dpre(j)  = mean(rL(preCols).^2);                       % pre-onset residual energy = prediction quality (control)
+        dpost(j) = mean(rL(postCtrlCols).^2);                  % post-SETTLE residual energy = 2nd prediction-quality probe
         ion = onF(j);
         mw = ion-motPreN:ion+motPostN;
         if ~isempty(motz_full) && mw(1)>=1 && mw(end)<=numel(motz_full), mt(j)=sum(abs(motz_full(mw))); end
@@ -1359,12 +1074,24 @@ for ai = 1:nA
     end
     trAll{ai}=A;  ygAll{ai}=YG;  rlAll{ai}=RL;
     ldMean(ai) = mean(ld,'omitnan');  ldStd(ai) = std(ld,'omitnan');
-    % DV = SIGNED deviation from the amp-mean dip (dip - <dip>_amp), z-scored WITHIN amp. Signed (not
-    % |dev|) so the metric carries DIRECTION: DV<0 = deeper dip than the amp template, DV>0 = shallower.
+    % ---- THREE candidate DVs, all on the SAME dip window dc, all z-scored WITHIN amp ------------------
     % Within-amp centering removes the dose-response mean (the trial-averaged Local dip) so only the
-    % trial-to-trial spread AROUND that mean is tested against state.
+    % trial-to-trial spread AROUND that mean is tested against state. DV-primacy is decided from the data
+    % (2026-07-18): the 2026-07-01 A2 result was that at the true laser focus the SIGNED effect collapses
+    % while the UNSIGNED (L1) deviation survives -> the defensible claim may be PREDICTABILITY, not size.
+    %   (1) DIPmean  SIGNED mean residual over dc, minus the amp mean. Carries DIRECTION: <0 = deeper dip
+    %                than the amp template, >0 = shallower. (the original DV)
+    %   (2) GAIN     TEMPLATE-GAIN <r,mu>/<mu,mu> against the amp-mean residual template mu. Shape-aware
+    %                (uses the whole window profile, not just its mean) -> better SNR than a window mean;
+    %                1.0 = this trial matches the template, >1 = scaled-up response. SIGNED/directional.
+    %   (3) L1DEV    mean |r - mu| over dc: UNSIGNED deviation from the template = per-trial UNPREDICTABILITY.
+    %                Cannot cancel a deep-then-shallow mixture the way a signed mean can.
+    muT = mean(RL(dc,:),2,'omitnan');                      % amp-mean residual template over the dip window
+    gn  = (RL(dc,:).'*muT)/max(muT.'*muT, eps);            % (2) template gain per trial
+    l1d = mean(abs(RL(dc,:) - muT),1).';                   % (3) unsigned deviation from the template
     sdf = @(x) (x-mean(x,'omitnan'))./max(std(x,'omitnan'),eps);
-    DVz  = [DVz;  sdf(ld)];   LD = [LD; ld];   PRE = [PRE; dpre];     %#ok<AGROW>  signed dev + raw dip (for split re-centering)
+    DVz  = [DVz;  sdf(ld)];   GNz = [GNz; sdf(gn)];  L1z = [L1z; sdf(l1d)];       %#ok<AGROW>  the 3 DVs
+    LD = [LD; ld];   PRE = [PRE; dpre];   POST = [POST; dpost];                  %#ok<AGROW>  raw dip + pre/post pred-error
     MOT  = [MOT;  mt];  PVv = [PVv; pvv];  DPa = [DPa; dpa];  DPr = [DPr; dpr];  %#ok<AGROW>
     AMPv = [AMPv; amps(ai)*ones(nT,1)];  AMPi = [AMPi; ai*ones(nT,1)];  TRi = [TRi; (1:nT).'];  %#ok<AGROW>
 end
@@ -1373,7 +1100,7 @@ end
 % Requested "before state-dep": shows the per-trial decomposition the state test operates on. Top row
 % = actual ipsi (thin grey) & stim-blind prediction (thin red) for 5 trials, with the amp-average
 % actual (thick black) and predicted (thick red) overlaid. Bottom row = each trial's residual (thin
-% blue) and the amp-average residual (thick blue). Prediction is the NATIVE §17b stim-blind model.
+% blue) and the amp-average residual (thick blue). Prediction is the SELECT §17d stim-blind model.
 nEx = 5;  ttTP = rel(:)/Fs;
 figTP = figure('Color','w','Name','[TRIALPRED] per-trial ipsi prediction + residual (5 trials/amp)','Position',[25 60 1560 520]);
 for ai = 1:nA
@@ -1412,31 +1139,62 @@ STc = {'Motion',            zf(MOT), true , 'power-indep';
        'Pre-var',           zf(PVv), false, 'POWER-CONFOUND';
        'Pre-\delta (abs)',  zf(DPa), false, 'POWER-CONFOUND';
        'Rel-\delta',        zf(DPr), true , 'power-indep'};
-fprintf('\n[STATEDEP] single-trial SIGNED Local dip deviation vs brain state  (DV=(dip-ampMean) z-within-amp; PARTIAL controls dev_pre; Spearman):\n');
-fprintf('   [trust] Spearman(|DV|, pre-stim error) = %+.3f  (>0 => noisier baseline fits inflate the deviation)\n', trust_r);
-fprintf('   %-16s %8s %8s | %11s   %-14s\n','state','partial','raw','trust-only','class');
-rhoP=nan(4,1); pvP=nan(4,1); rhoR=nan(4,1); rhoT=nan(4,1); pvT=nan(4,1);
+% ---- CONTROL COLLINEARITY: how much prediction-quality overlaps each state (= how much the partial removes) ----
+% dev_pre / dev_post are the residual ENERGY in a stim-free window BEFORE onset and in the SETTLED tail. They
+% measure the predictor's per-trial quality with NO stim -> partialling them isolates state-dependence of the
+% STIM response from state-dependence of the baseline fit. But if a state (e.g. variance) is strongly collinear
+% with prediction quality, partialling removes shared variance and the test LOSES POWER -- report it so a null
+% partial can be read as "no effect" vs "no power left".
+colPre=nan(4,1); colPost=nan(4,1);
+fprintf('\n[STATEDEP CONTROL] state <-> prediction-quality collinearity (Spearman; large |rho| => partial loses power):\n');
+fprintf('   %-16s %10s %10s   %-14s\n','state','rho(pre)','rho(post)','class');
 for s=1:4
-    st = STc{s,2};  m = isfinite(DVz)&isfinite(st)&isfinite(PRE);
-    if nnz(m) > 10
-        [rhoP(s),pvP(s)] = partialcorr(DVz(m), st(m), PRE(m), 'type','Spearman');
-        rhoR(s)          = corr(DVz(m), st(m), 'type','Spearman','rows','complete');
-    end
-    mt = m & trust_ok;                                    % trustworthy half only (well-predicted baseline)
-    if nnz(mt) > 10, [rhoT(s),pvT(s)] = partialcorr(DVz(mt), st(mt), PRE(mt), 'type','Spearman'); end
-    mark  = '';  if pvP(s) < 0.05, mark = ' *'; end
-    markT = ' ';  if pvT(s) < 0.05, markT = '*'; end
-    fprintf('   %-16s %+8.3f %+8.3f | %+10.3f%s  %-14s%s\n', regexprep(STc{s,1},'\\',''), rhoP(s), rhoR(s), rhoT(s), markT, STc{s,4}, mark);
+    st=STc{s,2};  m=isfinite(st)&isfinite(PRE)&isfinite(POST);
+    if nnz(m)>10, colPre(s)=corr(st(m),PRE(m),'type','Spearman'); colPost(s)=corr(st(m),POST(m),'type','Spearman'); end
+    fprintf('   %-16s %+10.3f %+10.3f   %-14s\n', regexprep(STc{s,1},'\\',''), colPre(s), colPost(s), STc{s,4});
 end
-fprintf('   NOTE: DV = SIGNED (per-trial 0-%.0f ms Local dip - amp mean), z-within amp. rho<0 => the trial dip is\n', 1000*dip_win_s);
-fprintf('         DEEPER (more negative) than the amp template in that state; rho>0 => shallower. "trust-only" repeats\n');
-fprintf('         the partial on the well-predicted half (pre-error below median). Interpret Motion + Rel-\\delta only.\n');
+% ---- DV COMPARISON: run the SAME partial on all three candidate DVs so primacy is decided from data ----
+DVset = {'DIPmean (signed)', DVz, 'signed mean residual over dc, minus amp mean';
+         'GAIN (template)',  GNz, 'shape-aware <r,mu>/<mu,mu> vs the amp template';
+         'L1DEV (unsigned)', L1z, 'mean |r-mu| = per-trial UNPREDICTABILITY'};
+fprintf('\n[STATEDEP] single-trial Local-dip DV vs brain state  (z-within-amp; partials control prediction quality; Spearman):\n');
+fprintf('   [trust] Spearman(|DV_dipmean|, pre-stim error) = %+.3f  (>0 => noisier baseline fits inflate the deviation)\n', trust_r);
+% partial columns: p|pre = control dev_pre only; p|pre+post = control BOTH stim-free windows jointly (2-covariate
+% partial) -> guards against within-trial non-stationarity of prediction quality across the onset.
+rhoP=nan(4,3); pvP=nan(4,3); rhoPP=nan(4,3); pvPP=nan(4,3); rhoR=nan(4,3); rhoT=nan(4,3); pvT=nan(4,3);
+for d = 1:size(DVset,1)
+    DVd = DVset{d,2};
+    fprintf('   -- DV %-18s (%s)\n', DVset{d,1}, DVset{d,3});
+    fprintf('   %-16s %9s %11s %8s | %10s   %-14s\n','state','p|pre','p|pre+post','raw','trust','class');
+    for s=1:4
+        st = STc{s,2};  m = isfinite(DVd)&isfinite(st)&isfinite(PRE)&isfinite(POST);
+        if nnz(m) > 10
+            [rhoP(s,d),pvP(s,d)]   = partialcorr(DVd(m), st(m), PRE(m), 'type','Spearman');
+            [rhoPP(s,d),pvPP(s,d)] = partialcorr(DVd(m), st(m), [PRE(m) POST(m)], 'type','Spearman');  % control BOTH windows
+            rhoR(s,d)              = corr(DVd(m), st(m), 'type','Spearman','rows','complete');
+        end
+        mt = m & trust_ok;                                % trustworthy half only (well-predicted baseline)
+        if nnz(mt) > 10, [rhoT(s,d),pvT(s,d)] = partialcorr(DVd(mt), st(mt), PRE(mt), 'type','Spearman'); end
+        mk  = '';  if pvP(s,d) <0.05, mk =' *'; end
+        mkP = '';  if pvPP(s,d)<0.05, mkP='*'; end
+        mkT = ' '; if pvT(s,d) <0.05, mkT='*'; end
+        fprintf('   %-16s %+9.3f %+10.3f%s %+8.3f | %+9.3f%s  %-14s%s\n', regexprep(STc{s,1},'\\',''), ...
+                rhoP(s,d), rhoPP(s,d), mkP, rhoR(s,d), rhoT(s,d), mkT, STc{s,4}, mk);
+    end
+end
+fprintf('   NOTE: window = 0-%.0f ms Local residual, z-within amp. For the SIGNED DVs (DIPmean, GAIN) rho<0 => the\n', 1000*dip_win_s);
+fprintf('         trial response is DEEPER/larger than the amp template in that state; rho>0 => shallower. For L1DEV\n');
+fprintf('         (unsigned) rho>0 => the response is LESS PREDICTABLE in that state (magnitude, no direction).\n');
+fprintf('         p|pre = partial on pre-onset pred-error; p|pre+post = partial on BOTH stim-free windows; "trust" =\n');
+fprintf('         p|pre on the well-predicted half. A REAL effect survives all three. Interpret Motion + Rel-\\delta only.\n');
+fprintf('   [DV-PRIMACY] compare the admissible rows (Motion, Rel-delta) across the three DVs: if the SIGNED DVs\n');
+fprintf('         collapse while L1DEV survives, the defensible claim is PREDICTABILITY, not response size (cf. A2 2026-07-01).\n');
 
 % --- Fig A: trial-averaged Local dip (the §17b NATIVE mean) with single-trial spread -----------
 figST1 = figure('Color','w','Name','[STATEDEP] trial-avg Local dip + single-trial spread','Position',[70 90 560 460]);
 axS=axes(figST1); hold(axS,'on'); box(axS,'on');
 errorbar(axS, amps, ldMean, ldStd, '-o','Color','k','LineWidth',1.6,'MarkerFaceColor','k','CapSize',4,'DisplayName','trial-avg Local dip \pm SD');
-plot(axS, amps, STIMBLIND_NATIVE.LocalDip, 's','Color',[.1 .4 .85],'MarkerFaceColor',[.1 .4 .85],'DisplayName','§17b NATIVE Local (check)');
+plot(axS, amps, STIMBLIND_SELECT.LocalDip, 's','Color',[.1 .4 .85],'MarkerFaceColor',[.1 .4 .85],'DisplayName','§17d SELECT Local (check)');
 yline(axS,0,'k:'); xlabel(axS,'amplitude (V)'); ylabel(axS,sprintf('0-%.0f ms Local dip (\\DeltaF/F %%)',1000*dip_win_s));
 title(axS,'per-amp trial-averaged Local dip (bars = single-trial SD = what STATEDEP explains)','FontSize',9,'FontWeight','bold');
 legend(axS,'Location','southwest','FontSize',7);
@@ -1456,7 +1214,7 @@ for s=1:4
     end
     admis = STc{s,3};
     tcol = [0 0 0];  if ~admis, tcol = [.6 .3 0]; end
-    ttl = sprintf('%s  \\rho_{part}=%+.2f (trust %+.2f)', STc{s,1}, rhoP(s), rhoT(s));
+    ttl = sprintf('%s  \\rho_{part}=%+.2f (trust %+.2f)', STc{s,1}, rhoP(s,1), rhoT(s,1));   % col 1 = DIPmean (the plotted DV)
     title(ax, ttl, 'FontSize',9,'FontWeight','bold','Color', tcol);
     if ~admis, xlabel(ax, {STc{s,4}; '(not interpreted)'},'FontSize',7,'Color',[.6 .3 0]);
     else,      xlabel(ax, sprintf('%s (z)',regexprep(STc{s,1},'\\',''))); end
@@ -1474,10 +1232,15 @@ SDc = struct('axPanels',axP, ...
 guidata(figST2, SDc);  set(figST2,'WindowButtonDownFcn',@statedep_click);
 fprintf('[STATEDEP] scatter is clickable -> click a point to see that trial''s actual/pred/residual traces.\n');
 
-STATEDEP = struct('DVz',DVz,'dev_pre',PRE,'amp',AMPv, ...
+% rho_* are [4 states x 3 DVs]; DV column order = dvLabel (DIPmean, GAIN, L1DEV). Column 1 is the DV plotted
+% in Fig B. DV-primacy for the paper is chosen by comparing the admissible rows (Motion, Rel-delta) across columns.
+STATEDEP = struct('DVz',DVz,'GAINz',GNz,'L1DEVz',L1z,'dvLabel',{{'DIPmean','GAIN','L1DEV'}}, ...
+                  'dev_pre',PRE,'dev_post',POST,'amp',AMPv, ...
+                  'ctrl_collin_pre',colPre,'ctrl_collin_post',colPost, ...
                   'Motion',MOT,'PreVar',PVv,'PreDeltaAbs',DPa,'RelDelta',DPr, ...
                   'stateLabel',{{'Motion','PreVar','PreDeltaAbs','RelDelta'}}, ...
-                  'rho_partial',rhoP,'p_partial',pvP,'rho_raw',rhoR,'admissible',[true false false true], ...
+                  'rho_partial',rhoP,'p_partial',pvP,'rho_partial_prepost',rhoPP,'p_partial_prepost',pvPP, ...
+                  'rho_raw',rhoR,'admissible',[true false false true], ...
                   'rho_partial_trust',rhoT,'p_partial_trust',pvT,'trust_r',trust_r,'pre_error',PRE,'trust_ok',trust_ok, ...
                   'ldMean',ldMean,'ldStd',ldStd,'dipCols',dipCols,'dip_win_s',dip_win_s, ...
                   'motAvailable',~isempty(motz_full),'mn',mn,'td',td,'en',en);
@@ -1599,11 +1362,11 @@ STATEDEP_VAR = struct('stateLabel',{{'Motion','PreVar','PreDeltaAbs','RelDelta'}
 %% ==================================================================
 
 %% (18) [ALLSESS-STIMBLIND] combined PRIMARY stim-blind decomposition across ALL sessions
-% Runs the §17b NATIVE stim-blind model HEADLESS for every session in allSelExp (default the three
+% Runs the §17d SELECT stim-blind model HEADLESS for every session in allSelExp (default the three
 % impulse datasets), so the local-only effect can be compared across mice/sessions in one place.
-% Each session is decomposed exactly as §17b: per amp, KEEP the stim-UNAFFECTED contra pixels (per-amp
-% ~bledA), fit the contra->ipsi OLS on SPONT and KKT-project it off the coupling-window evoked subspace
-% -> Global (dip-blind pred ~0); Local (residual) = Actual - Global = the full stim effect. Reuses the same
+% Each session is decomposed exactly as §17d: per amp, KEEP the stim-UNAFFECTED contra pixels (per-amp
+% ~bledA), fit the contra->ipsi spont OLS with the distance-weighted L1 penalty (few predictors, all FAR
+% from ipsi) -> Global (carries the honest LEAK); Local (residual) = Actual - Global. Reuses the same
 % cached site + ROI (cp_stim_site_*.mat,
 % cp_roi2_*.mat) as the single-session path; NEVER opens the draw GUI. Outputs:
 %   (a) one per-amp Actual/Global/Local trial-average figure per session,
@@ -1615,7 +1378,8 @@ if RUN_ALLSESS
                  'settle_s',settle_s,'trainFrac',trainFrac,'maxFrm',maxFrm, ...
                  'USE_DATA_SITE',USE_DATA_SITE,'dataDir',dataDir, ...
                  'bleed_preSec',bleed_preSec,'bleed_postSec',bleed_postSec, ...
-                 'maxBaseTrl',maxBaseTrl,'dip_win_s',dip_win_s);
+                 'maxBaseTrl',maxBaseTrl,'dip_win_s',dip_win_s, ...
+                 'select_l1frac',select_l1frac,'select_penNear',select_penNear,'select_penFar',select_penFar);
     ALLSESS = cell(numel(allSelExp),1);
     fprintf('\n[ALLSESS-STIMBLIND] combined PRIMARY stim-blind across %d sessions %s:\n', ...
             numel(allSelExp), mat2str(allSelExp));
@@ -1751,116 +1515,64 @@ sgtitle(figK, sprintf('KERNELMAP  %s %s e%d  —  sparse CONTRA weight map predi
     mn,td,en,D.fit_mode,l1_frac), 'FontWeight','bold','FontSize',9);
 fprintf('\n[KERNELMAP] %d ipsi regions -> per-region sparse contra weight maps (site + %d spread targets).\n', nTk, nTk-1);
 
-%% (14) [BLEEDCHAR] Fully auditable per-pixel, per-amplitude bleed characterization
-% "Show me EXACTLY how each pixel is called bled, at every amplitude." For every grid pixel p
-% and amplitude a we compute one statistic — ABSOLUTE evoked energy integrated over the SESSION
-% COUPLING WINDOW (mean_t |amp - 0V| over 0..couple_win_s) — and its 0 V bootstrap null (matched
-% to that amp's trial count), giving a one-sided z-score zA(p,a). A pixel is bled at amp a iff
-% zA(p,a) > bc_z_thr. We use ABSOLUTE energy over the FULL coupling window (not the signed 0-200 ms
-% dip mean) precisely because the ipsi->contra coupling is BIPHASIC (dip then rebound): a signed
-% mean cancels the two lobes and under-counts bleed at high amps — exactly what hurt the previous
-% analysis. Identifying all coupling BEFORE labeling bleed is the point (user pipeline step 4).
-% Nothing is hidden: click any pixel to see, across ALL amps, (1) its evoked excess traces,
-% (2) z vs amplitude with the threshold, (3) the raw coupling energy vs the 0V null band. Real
-% bleed is AMPLITUDE-GRADED (grows with power) and RADIAL (near the site).
-bc_z_thr  = 1.28;                                              % z to call a pixel bled at an amp (LOWER=more sensitive)
-bc_nRand  = 600;                                              % 0V bootstrap draws (raised for a stabler map)
-cplColsBC = (preN+1):min(Wb, preN+round(max(couple_win_s,dip_win_s)*Fs)); % coupling window (>= dip_win_s floor)
+%% (8c) [KERNELPAPER] paper-level SMOOTH ipsi-region -> contra sparse-kernel panels (5 evenly-spaced targets)
+% Publication version of §8b: pick 5 ipsi targets spaced EVENLY along the ipsi hemisphere's principal axis,
+% and for EACH fit the spont-trained sparse contra kernel (the SAME ols_refit Lasso, fit on non-stim data).
+% Instead of §8b's discrete dots, each kernel is rendered as a SMOOTH continuous weight field: the sparse
+% grid weights are scatter-interpolated onto the full display grid and Gaussian-smoothed WITHIN the contra
+% hemisphere (normalized/edge-safe convolution -> no bleed across the midline or the hull), then overlaid on
+% the anatomical background with a diverging blue-white-red map. A COMMON symmetric colour scale across all
+% five panels keeps the weights quantitatively comparable. Green pentagram = that panel's ipsi target; black
+% + = laser site. Set KP_export=true to write the vector PDF paper panel.
+KP_sigma  = 6;        % Gaussian smoothing sigma (display px) for the kernel field
+KP_alpha  = 0.85;     % overlay opacity of the kernel field over the anatomical background
+KP_export = false;    % true -> exportgraphics vector PDF (this is a paper panel)
 
-eDipA = squeeze(mean(abs(mResp(:,cplColsBC,:)),2));         % [nG x nA] ABS evoked coupling energy (|excess re 0V|)
-mu0A = zeros(nG,nA);  sd0A = ones(nG,nA);
-fprintf('\n[BLEEDCHAR] building per-pixel x per-amp z-scores over %.0f ms coupling window (%d amps, %d bootstrap)...\n', ...
-        numel(cplColsBC)/Fs*1000, nA, bc_nRand);
-for ai = 1:nA
-    nT = nT_amp(ai);  if nT==0, continue; end
-    nd = nan(nG,bc_nRand);
-    for r = 1:bc_nRand
-        bb = blk0(:,:, randi(nT0, nT, 1));                   % random nT-subset of the 0V trials
-        mb = mean(bb - mean(bb(:,1:preN,:),2), 3) - m0;      % subset avg re full 0V mean
-        nd(:,r) = mean(abs(mb(:,cplColsBC)),2);              % same ABS-energy statistic under 0V
-    end
-    mu0A(:,ai) = mean(nd,2);  sd0A(:,ai) = std(nd,0,2);
+ipM = logical(D.ipsi);  [ir,ic] = find(ipM);                         % ipsi-mask pixel coords
+P = [ir ic];  Pc = P - mean(P,1);                                    % centre, then principal axis via SVD
+[~,~,Vsvd] = svd(Pc,0);  proj = Pc*Vsvd(:,1);                        % 1-D coordinate along the ipsi main axis
+qs = linspace(prctile(proj,8), prctile(proj,92), 5);                 % 5 EVENLY-spaced positions along it
+targK = zeros(numel(qs),2);
+for i = 1:numel(qs), [~,mi] = min(abs(proj-qs(i)));  targK(i,:) = P(mi,:); end
+targK = unique(targK,'rows','stable');  nTp = size(targK,1);         % (dedupe in case the mask is small)
+
+[Hd,Wd] = size(dspImg);  [Xq,Yq] = meshgrid(1:Wd, 1:Hd);            % display-space query grid
+oCon = logical(Torient.imgOp(double(contra_mask)) > 0.5);            % contra hemisphere in display space
+sMk = linspace(0,1,128)';  cmapBWR = [[sMk sMk ones(128,1)];[ones(128,1) 1-sMk 1-sMk]];   % blue->white->red
+
+Kfld = cell(nTp,1);  Kr2 = nan(nTp,1);  Kna = nan(nTp,1);  wscG = 0;
+for t = 1:nTp                                                        % pass 1: fit + smooth all kernels, common scale
+    [bpx, cvk, ~, ~, nAk] = ols_refit(D, targK(t,1), targK(t,2));    % spont sparse contra weights for this ipsi px
+    Kfld{t} = kfield(dspGc, dspGr, bpx, Xq, Yq, oCon, KP_sigma);
+    Kr2(t) = cvk;  Kna(t) = nAk;  wscG = max(wscG, max(abs(bpx))+eps);
 end
-zA = (eDipA - mu0A) ./ max(sd0A, eps);                       % [nG x nA] one-sided z (coupling energy above 0V floor)
-bledA = zA > bc_z_thr;                                       % [nG x nA] per-amp bled flag (one-sided: energy excess)
-ampv = amps(:);  Afit = [ones(nA,1) ampv];                   % amp-graded slope of |z| (bleed grows w/ power)
-slopeA = zeros(nG,1);
-for p = 1:nG, cc = Afit \ abs(zA(p,:)).';  slopeA(p) = cc(2); end
-distBC = hypot(grR - px_prim, grC - py_prim);
-nBledAmp = sum(bledA,2);                                     % [nG x 1] # amps each pixel is bled at
-% SEVERITY (map metric): reward pixels bled at MORE *and* HIGHER amps, not just the raw count.
-% For each pixel sum the voltage of every amp it is bled at -> a pixel bled only at 4.9 V scores
-% higher than one bled at 0.5+1.1+1.6 V; a pixel bled at many high amps scores highest of all.
-% Units = summed volts over the amps where it exceeds the null. (bledA is the same bleed call as
-% before, so the map still reflects exactly the pixels the z-matrix flags — only the color weight
-% changes from count -> amplitude-weighted.)
-sevBleed = bledA * amps(:);                                  % [nG x 1] Sigma of bled-amp voltages (V)
-fprintf('[BLEEDCHAR] per-amp bled counts (|z|>%.2f):\n', bc_z_thr);
-for ai=1:nA, fprintf('   %.2f V (n=%d): %d/%d px bled\n', amps(ai), nT_amp(ai), nnz(bledA(:,ai)), nG); end
 
-% --- overview: z-score matrix (pixels sorted by distance) + clickable map ------------
-[~,sdi] = sort(distBC,'ascend');
-figBC = figure('Color','w','Name','BLEEDCHAR — per-pixel x per-amp bleed classification', ...
-    'Units','pixels','Position',[110 90 1180 720]);
-axMat = subplot(1,2,1,'Parent',figBC);
-imagesc(axMat, 1:nA, 1:nG, zA(sdi,:));  set(axMat,'YDir','normal');
-zmx = max(abs(zA(:)))+eps;  clim(axMat,[-zmx zmx]);
-sM = linspace(0,1,128)';  colormap(axMat,[ [sM sM ones(128,1)] ; [ones(128,1) 1-sM 1-sM] ]);
-cb1 = colorbar(axMat,'eastoutside');  cb1.Label.String = 'z (coupling energy vs 0V)';
-set(axMat,'XTick',1:nA,'XTickLabel',compose('%.1f',amps(:)),'FontSize',9);
-xlabel(axMat,'amplitude (V)','FontWeight','bold');  ylabel(axMat,'grid pixel (sorted near\rightarrowfar from site)','FontWeight','bold');
-title(axMat,'z-score matrix: how every pixel scores at every amp','FontSize',10,'FontWeight','bold');
-
-axMap = subplot(1,2,2,'Parent',figBC);  hold(axMap,'on');
-image(axMap, repmat(dspImg,[1 1 3]));  axis(axMap,'image','off');  set(axMap,'YDir','reverse');
-% size AND color encode severity: bigger+hotter = bled at more and higher amps. Unbled px (sev=0)
-% drawn small/dark so the amplitude-graded, radial structure of real bleed stands out.
-sevMx = max(sevBleed);  if sevMx<=0, sevMx = 1; end
-mkSz  = 14 + 44*(sevBleed./sevMx);                          % 14..58 px marker area by severity
-scMap = scatter(axMap, dspGc, dspGr, mkSz, sevBleed, 'filled', 'MarkerEdgeColor',[0.25 0.25 0.25], 'LineWidth',0.3);
-colormap(axMap, hot(256));  clim(axMap,[0 sevMx]);
-cb2 = colorbar(axMap,'eastoutside');  cb2.Label.String = 'amplitude-weighted bleed (\Sigma bled-amp V)';
-plot(axMap, dspSc, dspSr, 'g+', 'MarkerSize',14, 'LineWidth',2);
-title(axMap,{'map: amplitude-weighted bleed severity  (\Sigma of bled-amp voltages)', ...
-             'bigger+hotter = bled at more AND higher amps   (click \rightarrow full report)'}, ...
-      'FontSize',10,'FontWeight','bold');
-
-BC = struct('axMap',axMap,'scMap',scMap,'grR',grR,'grC',grC,'gdR',dspGr,'gdC',dspGc,'nG',nG,'amps',amps,'nA',nA, ...
-            'mResp',mResp,'rel',rel,'Fs',Fs,'preN',preN,'dipCols',cplColsBC, ...
-            'eDipA',eDipA,'mu0A',mu0A,'sd0A',sd0A,'zA',zA,'bledA',bledA,'slopeA',slopeA, ...
-            'z_thr',bc_z_thr,'dist',distBC,'site',[px_prim py_prim]);
-guidata(figBC, BC);  set(figBC,'WindowButtonDownFcn',@bleedchar_click);
-fprintf('[BLEEDCHAR] click any pixel on the map -> its z(amp) curve, evoked traces, and 0V null band.\n');
-
-BLEEDCHAR = struct('zA',zA,'bledA',bledA,'eDipA',eDipA,'mu0A',mu0A,'sd0A',sd0A,'slopeA',slopeA, ...
-                   'nBledAmp',nBledAmp,'sevBleed',sevBleed,'dist',distBC,'amps',amps,'z_thr',bc_z_thr,'mn',mn,'td',td,'en',en);
-
-%% (16) [PIXVIEW] FEASIBILITY — click a contra pixel -> its per-amp response vs 0V null + windows
-% BEFORE fitting the stim-blind (§17b): is the effect even there, and where are the critical windows?
-% Click any contra grid pixel on the brain (left). The right panel updates IN PLACE with that pixel's
-% per-amp TRIAL-AVERAGED evoked response (mResp, re 0 V), overlaid on the 0 V NULL ENVELOPE (95% band
-% from a size-matched 0 V bootstrap) with the data-driven RECOVERY (end-of-inhibition) and SETTLE
-% (end-of-rebound) marks. A pixel whose amp traces leave the grey null band inside those windows is a
-% real stim-coupled pixel; one that stays inside the band is stim-blind -> a good predictor candidate.
-figPV = figure('Color','w','Name','[PIXVIEW] click a contra pixel -> per-amp response vs 0V null', ...
-    'Units','pixels','Position',[80 80 1280 620]);
-axMapPV = subplot(1,2,1,'Parent',figPV);  hold(axMapPV,'on');
-image(axMapPV, repmat(dspImg,[1 1 3]));  axis(axMapPV,'image','off');  set(axMapPV,'YDir','reverse');
-scatter(axMapPV, dspGc, dspGr, 16, [0.6 0.6 0.6], 'filled', 'MarkerEdgeColor',[0.3 0.3 0.3], 'LineWidth',0.2);
-plot(axMapPV, dspSc, dspSr, 'g+', 'MarkerSize',14, 'LineWidth',2);
-hMkPV = plot(axMapPV, nan, nan, 'o', 'MarkerSize',11, 'MarkerEdgeColor',[0.9 0.1 0.1], 'LineWidth',2);
-title(axMapPV,'click a contra grid pixel','FontWeight','bold');
-axTrPV = subplot(1,2,2,'Parent',figPV);  hold(axTrPV,'on');  box(axTrPV,'on');
-pvYL = [min(mResp(:)) max(mResp(:))];  pvYL = pvYL + [-1 1]*0.08*max(diff(pvYL),eps);  % CONSTANT y-limits (full range)
-PV = struct('mResp',mResp,'blk0',blk0,'m0',m0,'nT0',nT0,'nRep',max(round(median(nT_amp(nT_amp>0))),2), ...
-            'nBoot',500,'preN',preN,'rel',rel,'Fs',Fs,'amps',amps,'nA',nA,'tms',rel/Fs*1000, ...
-            'gdR',dspGr,'gdC',dspGc,'grR',grR,'grC',grC,'site',[px_prim py_prim],'ylimPV',pvYL, ...
-            'recMs',recMs,'setMs',setMs,'axMap',axMapPV,'axTr',axTrPV,'hMk',hMkPV);
-guidata(figPV, PV);  set(figPV,'WindowButtonDownFcn',@pixview_click);
-[~,p0] = min(hypot(grR-px_prim, grC-py_prim));   % start on the pixel nearest the site
-pixview_show(PV, p0);  set(hMkPV,'XData',dspGc(p0),'YData',dspGr(p0));
-fprintf('\n[PIXVIEW] feasibility viewer: click a contra pixel -> per-amp trial-avg vs 0V null envelope (windows marked).\n');
-
+figKP = figure('Color','w','Name','[KERNELPAPER] ipsi region -> smooth contra sparse kernel', ...
+    'Units','centimeters','Position',[2 2 min(28, nTp*3.4+1.4) 4.6]);
+tl = tiledlayout(figKP, 1, nTp, 'TileSpacing','compact','Padding','compact');
+[sr,sc] = orient_fwd(Torient, px_prim, py_prim);                     % laser site in display space
+axK = gobjects(nTp,1);
+for t = 1:nTp
+    ax = nexttile(tl);  axK(t) = ax;  hold(ax,'on');
+    image(ax, repmat(dspImg,[1 1 3]));                              % anatomical background (truecolor)
+    hF = imagesc(ax, Kfld{t});  set(hF,'AlphaData', KP_alpha*double(isfinite(Kfld{t})));   % smooth kernel field
+    colormap(ax, cmapBWR);  set(ax,'CLim',[-wscG wscG]);
+    [tr,tc] = orient_fwd(Torient, targK(t,1), targK(t,2));
+    plot(ax, tc, tr, 'p','MarkerSize',9,'MarkerFaceColor',[0 1 0],'MarkerEdgeColor','k','LineWidth',0.5);
+    plot(ax, sc, sr, '+','Color','k','MarkerSize',7,'LineWidth',1.0);   % laser site (all panels)
+    axis(ax,'image','off');  set(ax,'YDir','reverse');
+    title(ax, sprintf('R^2 %.2f | %d px', Kr2(t), Kna(t)), 'FontSize',6,'FontWeight','bold');
+end
+cb = colorbar(axK(end));  cb.Layout.Tile = 'east';  cb.FontSize = 6;
+cb.Label.String = 'contra weight (a.u.)';  cb.Label.FontSize = 6;
+title(tl, sprintf('%s %s e%d  —  spont contra sparse kernel per ipsi region (%s, l1=%.2f)', mn,td,en,D.fit_mode,l1_frac), ...
+    'FontSize',7,'FontWeight','bold');
+fprintf('\n[KERNELPAPER] %d evenly-spaced ipsi targets -> smoothed spont contra sparse kernels (common scale |w|<=%.3g).\n', nTp, wscG);
+if KP_export
+    kpFile = fullfile(dataDir, sprintf('kernelpaper_%s_%s_e%d.pdf', mn, td, en));
+    exportgraphics(figKP, kpFile, 'ContentType','vector');
+    fprintf('  [KERNELPAPER] exported paper panel -> %s\n', kpFile);
+end
 
 %% ==================================================================
 %% LOCAL FUNCTIONS (shared)
@@ -1899,6 +1611,22 @@ end
 bpix = betaz ./ D.sd_p;
 cv = sseExplainedCal(yte(:).', yhat_te(:).');
 nActive = nnz(betaz);
+end
+
+function F = kfield(gc, gr, w, Xq, Yq, mask, sig)
+% §8c [KERNELPAPER] smooth a SPARSE per-grid-pixel kernel into a continuous display-space field.
+% Scatter-interpolate the weights at the grid pixels (gc,gr) onto the full (Xq,Yq) display grid, then
+% Gaussian-smooth with a NORMALIZED (edge-safe) convolution restricted to `mask` -- num/den over the same
+% kernel, so the field does not decay at the hemisphere border and never bleeds across the midline.
+% Base-MATLAB only (scatteredInterpolant + conv2): no Image Processing Toolbox dependency.
+Fi = scatteredInterpolant(gc(:), gr(:), double(w(:)), 'natural', 'none');   % 'none' -> NaN outside the hull
+V  = Fi(Xq, Yq);
+m  = mask & isfinite(V);                                   % valid support = contra hemisphere ∩ grid hull
+V(~m) = 0;
+hs = max(1, ceil(3*sig));  [gx,gy] = meshgrid(-hs:hs, -hs:hs);
+K = exp(-(gx.^2 + gy.^2)/(2*sig^2));  K = K/sum(K(:));
+F = conv2(V, K, 'same') ./ max(conv2(double(m), K, 'same'), eps);   % normalized convolution
+F(~mask) = NaN;                                            % keep the field inside the contra hemisphere only
 end
 
 function b = cd_lasso(G, c, dg, lam1, lam2)
@@ -2029,34 +1757,9 @@ blk = reshape(Xpct(:,(onF(:).'+rel(:))), nG, Wb, numel(onF));
 m = mean(blk - mean(blk(:,1:preN,:),2), 3);
 end
 
-function [mass, c0, c1] = local_maxcluster(T, z, kmin)
-% §10T detector: per-row (pixel) LARGEST supra-threshold temporal cluster of |T|.
-% T [nG x nD] (rows = pixels, cols = time bins). A cluster = >= kmin CONSECUTIVE bins
-% with |T|>z; its mass = sum|T| over the run. Returns per-row max cluster mass and the
-% winning run's [start end] column indices (all 0 if no qualifying cluster). Vectorised
-% over pixels; single pass over the nD bins (nD is small, so this is cheap per call).
-[nGr, nD] = size(T);
-aT = abs(T);  sup = aT > z;
-runLen = zeros(nGr,1); runMass = zeros(nGr,1); runStart = zeros(nGr,1);
-mass = zeros(nGr,1); c0 = zeros(nGr,1); c1 = zeros(nGr,1);
-for t = 1:nD
-    on = sup(:,t);
-    runLen  = (runLen + 1).*on;                          % length of the current run (0 where not supra)
-    newRun  = on & runLen==1;  runStart(newRun) = t;     % remember where each fresh run began
-    runMass = (runMass + aT(:,t)).*on;                   % accumulate |T| within the run (0 resets it)
-    win = on & (runLen>=kmin) & (runMass>mass);          % qualifying run that beats the best-so-far
-    mass(win) = runMass(win);  c0(win) = runStart(win);  c1(win) = t;
-end
-end
-
 function s = ternstr(cond, a, b)
 % tiny string-ternary helper (MATLAB has no ?: operator): returns a if cond else b.
 if cond, s = a; else, s = b; end
-end
-
-function c = tern_col(isAff)
-% colour for §10T fit overlay: red-ish for affected, grey-blue for clean.
-if isAff, c = [0.85 0.15 0.15]; else, c = [0.25 0.45 0.75]; end
 end
 
 function tfmap_button(fig, ~)
@@ -2222,17 +1925,6 @@ end
 ok = all(isfinite(b));
 end
 
-function ord = tf_orderof(sys, Ts)
-% [np nz nd] of a fitted continuous TF: denominator order, numerator order (leading-zero-trimmed),
-% and InputDelay in samples. Used to adopt the canonical ipsi-TF (best_sys) order for the §10T2 fits.
-[num, den] = tfdata(sys, 'v');
-np = numel(den) - 1;
-nzc = find(abs(num) > eps*max(max(abs(num)),1), 1, 'first');       % first (highest-power) nonzero num coef
-if isempty(nzc), nz = 0; else, nz = numel(num) - nzc; end
-nd = 0;  try, nd = round(sys.InputDelay / Ts); catch, end
-ord = [max(np,1), max(nz,0), max(nd,0)];
-end
-
 function h = sys_impulse(sys, nT, Ts)
 % MEX-FREE unit-impulse response over nT samples. Replaces sim()/impulse() (which route through the
 % crashing controllib sssim MEX). Handles the two model kinds in play:
@@ -2300,35 +1992,8 @@ lastEx = find(abs(yi) > tol, 1, 'last');
 if ~isempty(lastEx), ch.settleMs = tiMs(lastEx); end
 end
 
-function [bN,yg,rL,r2ns,dipCap,rebCap,r2sb,nCon] = native_project(nb, evZ,aA,dc,rc,stimCols,S,dG,b0, preN,Wb,yte,muY,Zte,sstot)
-% NATIVE stim-blind KKT projection for a given #blind-windows nb, on cached per-amp evoked. Splits the
-% onset->settle window into nb equal sub-windows, blinds the prediction to each sub-window's mean evoked
-% direction (D), and returns the constrained weights + Global/residual traces + capture/R^2 metrics.
-edg = round(linspace(1, numel(stimCols)+1, nb+1));
-D = zeros(numel(S), nb);
-for q = 1:nb
-    cc = stimCols(edg(q):edg(q+1)-1);
-    if ~isempty(cc), D(:,q) = mean(evZ(S,cc),2); end
-end
-D = D(:, any(abs(D)>0,1));  nCon = size(D,2);
-if ~isempty(D), GD = dG\D;  bN = b0 - GD*(pinv(D.'*GD)*(D.'*b0));  else, bN = b0; end   % project off stim subspace
-yg = (bN.'*evZ(S,:)).';  yg = yg - mean(yg(1:preN));
-rL = aA - yg;
-nsc = [1:preN, (stimCols(end)+1):Wb];                                                   % NON-stim window
-r2ns = 1 - sum((aA(nsc)-yg(nsc)).^2)/max(sum((aA(nsc)-mean(aA(nsc))).^2),eps);
-dipCap = 100*mean(rL(dc))/mean(aA(dc));
-if ~isempty(rc) && abs(mean(aA(rc)))>eps, rebCap = 100*mean(rL(rc))/mean(aA(rc)); else, rebCap = NaN; end
-r2sb = 1 - sum((yte-(muY+Zte(:,S)*bN)).^2)/sstot;
-end
-
-function pixview_click(fig, ~)
-% [PIXVIEW] click on the brain map -> nearest contra grid pixel -> update the per-amp trace panel.
-PV = guidata(fig);  ax = PV.axMap;  cp = ax.CurrentPoint;  x = cp(1,1);  y = cp(1,2);
-xl = ax.XLim;  yl = ax.YLim;  if x<xl(1)||x>xl(2)||y<yl(1)||y>yl(2), return; end
-[~, p] = min((PV.gdC - x).^2 + (PV.gdR - y).^2);          % nearest grid pixel (display coords)
-pixview_show(PV, p);
-set(PV.hMk, 'XData', PV.gdC(p), 'YData', PV.gdR(p));      % mark the clicked pixel on the map
-end
+% [RETIRED 2026-07-18] native_project (the NATIVE KKT stim-blind projection helper) was removed together with
+% §17b/§17bV -- SELECT (select_wlasso) is now the sole stim-blind fit, in both the main script and §18.
 
 function statedep_click(fig, ~)
 % [STATEDEP] click a scatter point in any of the 4 state panels -> that trial's actual/predicted ipsi
@@ -2360,43 +2025,11 @@ xline(axb,0,'k:'); yline(axb,0,'k:'); xlim(axb,[-.5 1]);  legend(axb,'Location',
 xlabel(axb,'t re onset (s)');  ylabel(axb,'residual \DeltaF/F %');
 end
 
-function pixview_show(PV, p)
-% Redraw (IN PLACE) the per-amp trial-averaged evoked response of contra pixel p vs the 0V null
-% envelope, with the data-driven recovery + settle windows marked.
-ax = PV.axTr;  cla(ax);  hold(ax,'on');  box(ax,'on');
-Wb = numel(PV.rel);
-% 0V null envelope for THIS pixel: 95% band of a size-nRep 0V bootstrap trial-average (re 0V mean)
-nd = nan(PV.nBoot, Wb);
-for r = 1:PV.nBoot
-    bb = PV.blk0(p, :, randi(PV.nT0, PV.nRep, 1));
-    nd(r,:) = mean(bb - mean(bb(:,1:PV.preN,:),2), 3) - PV.m0(p,:);
-end
-lo = prctile(nd,2.5,1);  hi = prctile(nd,97.5,1);
-fill(ax, [PV.tms fliplr(PV.tms)], [hi fliplr(lo)], [0.82 0.82 0.82], 'EdgeColor','none', ...
-     'FaceAlpha',0.6, 'DisplayName','0V null 95%');
-cmap = parula(PV.nA);
-for ai = 1:PV.nA
-    plot(ax, PV.tms, squeeze(PV.mResp(p,:,ai)), '-', 'Color',cmap(ai,:), 'LineWidth',1.3, ...
-         'DisplayName',sprintf('%.2f V',PV.amps(ai)));
-end
-yline(ax,0,'k:','HandleVisibility','off');  xline(ax,0,'k:','HandleVisibility','off');
-mr = median(PV.recMs,'omitnan');  ms = median(PV.setMs,'omitnan');
-if isfinite(mr), xline(ax, mr, '--', 'Color',[0.1 0.5 0.1], 'LineWidth',1.2, 'DisplayName','recovery (end inhib)'); end
-if isfinite(ms), xline(ax, ms, '--', 'Color',[0.2 0.3 0.9], 'LineWidth',1.2, 'DisplayName','settle (end rebound)'); end
-xlim(ax, [PV.tms(1) PV.tms(end)]);
-if isfield(PV,'ylimPV') && all(isfinite(PV.ylimPV)), ylim(ax, PV.ylimPV); end   % CONSTANT across clicks
-xlabel(ax,'time from onset (ms)','FontWeight','bold');  ylabel(ax,'evoked \DeltaF/F (amp - 0V, %)','FontWeight','bold');
-d = hypot(PV.grR(p)-PV.site(1), PV.grC(p)-PV.site(2));
-title(ax, sprintf('pixel [r%d c%d]  %.0f px from site  —  per-amp trial avg re 0V', PV.grR(p), PV.grC(p), d), ...
-      'FontSize',9,'FontWeight','bold');
-lg = legend(ax,'Location','southeast','FontSize',6);  lg.ItemTokenSize=[10 10];
-end
-
 function S = local_stimblind_session(sel, cfg, allExperiments)
-% HEADLESS reproduction of the minimal §2-§7,§10,§17b pipeline for ONE session, returning the
-% PRIMARY NATIVE stim-blind (Actual/Global/Local) decomposition. Mirrors the main-script math
-% (site retarget, cached ROI, uniform eroded grid, spont train/test split, KKT dip+rebound
-% equality constraint) but skips every interactive/diagnostic figure. Used by §18 to compare the
+% HEADLESS reproduction of the minimal §2-§7,§10,§17d pipeline for ONE session, returning the
+% PRIMARY SELECT stim-blind (Actual/Global/Local) decomposition. Mirrors the main-script math
+% (site retarget, cached ROI, uniform eroded grid, spont train/test split, sparse distance-weighted
+% far-from-ipsi lasso) but skips every interactive/diagnostic figure. Used by §18 to compare the
 % local effect across sessions. Requires cached cp_stim_site_*.mat + cp_roi2_*.mat (no draw GUI).
 mn = allExperiments(sel).mn;  td = allExperiments(sel).td;  en = allExperiments(sel).en;
 label = sprintf('%s %s e%d', mn, td, en);
@@ -2547,27 +2180,33 @@ for ai=1:nA
     z=(eDipA(:,ai)-mean(nd,2))./max(std(nd,0,2),eps); bledA(:,ai)=z>bc_z_thr;
 end
 
-% --- (17b NATIVE) per-amp KKT stim-blind: KEEP unaffected px, blind pred to the dip+rebound subspace -----
-% Headless twin of §17b: for each amp keep the stim-UNAFFECTED pixels (~bledA), train the spont OLS, and
-% project its weights off the coupling-window (onset->settle) evoked subspace so the predicted dip is zeroed
-% by construction -> residual (Local) carries the full stim effect. Calls the shared native_project helper.
-% nbN = # blind sub-windows (main-script auto-pick is 4 on AL_0033; fixed here for the headless batch).
-% Replaces the retired greedy / drop-bled predictor (2026-07-14).
+% --- (17d SELECT) per-amp SPARSE, DISTANCE-WEIGHTED stim-blind: FEW predictors, all FAR from ipsi --------
+% Headless twin of §17d: for each amp keep the stim-UNAFFECTED pixels (~bledA) and fit the spont OLS with an
+% L1 penalty that GROWS toward the ipsi site, so the surviving predictors are FEW and FAR from ipsi (least
+% stim-contaminated). NO dip-blinding constraint -- the residual (Local) carries the dip only insofar as
+% those distal predictors are genuinely stim-blind, so G_dip here is an HONEST LEAK, not ~0 by construction.
+% (Replaces the retired NATIVE KKT twin, 2026-07-18 -- see §17a.)
+% Distance is taken in ARRAY coords: the display orientation is an isometry, so the metric is unchanged.
 dipCols=(preN+1):min(Wb, preN+round(cfg.dip_win_s*Fs));
 ytr=y_sp(itr); yte=y_sp(ite); sstot=max(sum((yte-mean(yte)).^2),eps);
 Gz=Gc; lamR=1e-6*mean(diag(Gz)); ytrc=ytr-muYc; cz=Ztr.'*ytrc;          % shared spont OLS operators (z-space)
-nbN=4;                                                                  % # blind sub-windows (matches §17b auto-pick)
-A_dip=nan(nA,1); G_dip=nan(nA,1); L_dip=nan(nA,1); r2clean=nan(nA,1); nDrop=zeros(nA,1);
+selD  = hypot(grC(:)-py_prim, grR(:)-px_prim);                          % each contra px -> ipsi stim site
+selDn = (selD-min(selD))/max(max(selD)-min(selD),eps);                  % normalize distance to [0,1]
+gammaS = 1./(cfg.select_penNear*(1-selDn) + cfg.select_penFar*selDn);   % lasso column gains (LARGE far, small near)
+A_dip=nan(nA,1); G_dip=nan(nA,1); L_dip=nan(nA,1); r2clean=nan(nA,1); nDrop=zeros(nA,1); nActA=zeros(nA,1);
 trA=cell(nA,1); trG=cell(nA,1); trL=cell(nA,1); cleanMaskA=false(nG,nA); bCleanA=cell(nA,1);
 for ai=1:nA
     onF=onFcell{ai}; nT=numel(onF); if nT==0 || isempty(EVcell{ai}), continue; end
     active=~bledA(:,ai); if nnz(active)<5, active=true(nG,1); end        % keep stim-UNAFFECTED px
     cleanMaskA(:,ai)=active; nDrop(ai)=nnz(~active);
-    Sset=find(active); dG=decomposition(Gz(Sset,Sset)+lamR*eye(numel(Sset))); b0=dG\cz(Sset);
+    Sset=find(active);
     idx=onF(:).'+rel(:);
     ya=mean(reshape(double(y_full(idx(:))),Wb,nT),2); ya=ya-mean(ya(1:preN));
-    [bN,yg,rL,~,~,~,r2sb]=native_project(nbN, EVcell{ai},ya,dipCols,[],cplCols,Sset,dG,b0, preN,Wb,yte,muYc,Zte,sstot);
-    r2clean(ai)=r2sb; bfull=zeros(nG,1); bfull(Sset)=bN; bCleanA{ai}=bfull;
+    bfull = select_wlasso(Gz, cz, Sset, gammaS, cfg.select_l1frac, lamR);   % SPARSE + far-from-ipsi weighted lasso
+    nActA(ai)=nnz(bfull);  bCleanA{ai}=bfull;
+    yg=(bfull.'*EVcell{ai}).'; yg=yg-mean(yg(1:preN));                   % Global = sparse distal prediction
+    rL=ya-yg;                                                            % Local  = residual (carries the dip)
+    r2clean(ai)=1 - sum((yte-(muYc+Zte*bfull)).^2)/sstot;                % held-out spont R^2 of these weights
     trA{ai}=ya(:); trG{ai}=yg(:); trL{ai}=rL(:);
     A_dip(ai)=mean(ya(dipCols)); G_dip(ai)=mean(yg(dipCols)); L_dip(ai)=mean(rL(dipCols));
 end
@@ -2584,7 +2223,7 @@ BC = struct('mResp',mResp,'blk0',blk0,'m0',m0,'nT_amp',nT_amp,'nT0',nT0, ...
 
 S = struct('label',label,'sel',sel,'amps',amps,'Actual',A_dip,'Global',G_dip,'Local',L_dip,'BC',BC, ...
            'trA',{trA},'trG',{trG},'trL',{trL},'rel',rel,'Fs',Fs,'preN',preN, ...
-           'r2_ols',r2_ols,'r2clean',r2clean,'nDrop',nDrop,'medLocalPct',medLocalPct,'nG',nG, ...
+           'r2_ols',r2_ols,'r2clean',r2clean,'nDrop',nDrop,'nActive',nActA,'medLocalPct',medLocalPct,'nG',nG, ...
            'bledA',bledA,'cleanMaskA',cleanMaskA,'bCleanA',{bCleanA}, ...
            'couple_win_s',couple_win_s,'null_win_s',null_win_s);
 end

@@ -306,6 +306,46 @@ else
     fprintf('\n[OLS] viewer off; site-pixel weights recorded: R^2=%.3f, %d/%d px active (%s).\n', cv, nAct, nG, fit_mode);
 end
 
+%% (8b) [KERNELMAP] Zhiwen-style static panel: a few ipsi regions -> their prominent CONTRA weights
+% Ye/Zhiwen 2023 figure style: pick a handful of ipsi-side target regions and, for EACH, show the
+% sparse contra-grid weights that predict it (spont-trained %s OLS = the SAME first model as the §8
+% viewer, just static + multi-region instead of interactive single-pixel). Reveals what distributed
+% contra structure predicts each ipsi region: active (non-zero, debiased Lasso) px are drawn big &
+% color-coded by signed weight; the ~zero px are faint grey so the sparse kernel pops. The green
+% pentagram marks the ipsi target of each panel; the first panel is always the laser site.
+ipM = logical(D.ipsi);  [ir, ic] = find(ipM);                     % ipsi-mask pixel coords
+% spatially-spread ipsi targets: laser site first, then a 3x3 lattice over the ipsi mask snapped in
+rq = round(prctile(ir,[22 50 78]));  cq = round(prctile(ic,[25 50 75]));
+cand = zeros(numel(rq)*numel(cq),2);  q = 0;
+for a = 1:numel(rq)
+    for bcol = 1:numel(cq)
+        [~,mi] = min((ir-rq(a)).^2 + (ic-cq(bcol)).^2);
+        q = q+1;  cand(q,:) = [ir(mi) ic(mi)];
+    end
+end
+targ = unique([px_prim py_prim; cand], 'rows', 'stable');         % site first, then spread (deduped)
+nTk = min(6, size(targ,1));  targ = targ(1:nTk,:);
+ncK = 3;  nrK = ceil(nTk/ncK);  sMk = linspace(0,1,128)';
+figK = figure('Color','w','Name','[KERNELMAP] ipsi regions -> prominent contra weights','Position',[55 55 1320 780]);
+for t = 1:nTk
+    [bpx, cvk, ~, ~, nAk] = ols_refit(D, targ(t,1), targ(t,2));   % sparse contra weights for this ipsi px
+    ax = subplot(nrK,ncK,t); hold(ax,'on');
+    image(ax, repmat(dspImg,[1 1 3]));  axis(ax,'image','off');  set(ax,'YDir','reverse');
+    colormap(ax, [[sMk sMk ones(128,1)];[ones(128,1) 1-sMk 1-sMk]]);   % blue -> white -> red
+    act = bpx~=0;  wsc = max(abs(bpx)) + eps;
+    scatter(ax, dspGc(~act), dspGr(~act), 5, [.62 .62 .62],'filled','MarkerFaceAlpha',0.30);  % ~zero px
+    sz = 24 + 130*(abs(bpx)/wsc);
+    scatter(ax, dspGc(act), dspGr(act), sz(act), bpx(act),'filled','MarkerEdgeColor',[.15 .15 .15],'LineWidth',0.3);
+    clim(ax, [-wsc wsc]);
+    [tr,tc] = orient_fwd(Torient, targ(t,1), targ(t,2));          % this panel's ipsi target -> display
+    plot(ax, tc, tr, 'p','MarkerSize',15,'MarkerFaceColor',[0 1 0],'MarkerEdgeColor','k','LineWidth',0.8);
+    ttl = 'ipsi region';  if t==1, ttl = 'laser SITE'; end
+    title(ax, sprintf('%s [r%d c%d]  R^2=%.2f, %d px', ttl, targ(t,1), targ(t,2), cvk, nAk), 'FontSize',8,'FontWeight','bold');
+end
+sgtitle(figK, sprintf('KERNELMAP  %s %s e%d  —  sparse CONTRA weight map predicting each ipsi region (%s, l1=%.2f)   [green pentagram = ipsi target; marker size = |weight|]', ...
+    mn,td,en,D.fit_mode,l1_frac), 'FontWeight','bold','FontSize',9);
+fprintf('\n[KERNELMAP] %d ipsi regions -> per-region sparse contra weight maps (site + %d spread targets).\n', nTk, nTk-1);
+
 %% (10) [AFFECT] TASK 2 — per-amp IMPULSE-RESPONSE detection (matched filter to the stim impulse)
 % Question (task 2): per amplitude, which contra pixels show a genuine STIM-LOCKED IMPULSE response
 % (not slow non-stim wander)?  A window-mean-vs-0V-null test is a BAD metric: it flags any deviation
@@ -472,6 +512,240 @@ DB = struct('axB',axB,'amps',amps,'grR',grR,'grC',grC,'gdR',dspGr,'gdC',dspGc, .
             'gimg',gB,'site',[px_prim py_prim],'sdR',dspSr,'sdC',dspSc); % brain + site (orig + display)
 guidata(figB, DB);  set(figB,'WindowButtonDownFcn',@bleed_click);
 fprintf('[BLEED] click any pixel -> VERIFIER: per-trial traces + 0V baseline + spatial location/distance.\n');
+
+%% =====================================================================
+% §10T [AFFECT-TF-PROTO] -- TF fit to each contra pixel's own impulse response (Framing A)
+%   Alternative to §10's matched filter. Fit a low-order continuous-time TF
+%   H(s) to a pixel's evoked response (mResp = measured impulse response of a
+%   brief stim pulse). A pixel is "dynamically affected by ipsi" iff:
+%     (a) fit VAF exceeds the 0V-null (there ARE dynamics to fit), AND
+%     (b) the fitted dynamics MATCH the ipsi-site reference TF
+%         (onset delay / trough / settle / rebound within tolerance).
+%   Bleed  -> good VAF but delay~0, monophasic, no rebound (mismatch => reject).
+%   Couple -> delay>0, biphasic dip+rebound tracking the ipsi reference (accept).
+%   PROTOTYPE ONLY: runs on a few known-affected + clean pixels at the strong
+%   amp to lock the parameterisation + thresholds before any per-pixel rollout.
+% =====================================================================
+tf_maxPoles = 3;   tf_maxZeros = 2;   tf_maxDelay = 4;   % sweep bounds (delay in samples)
+tf_refAmpIdx = nA;                                       % strongest amp = reference dynamics
+tf_win  = (preN+1):Wb;                                   % post-onset fit window (dip+rebound)
+tf_nBoot = 15;                                           % 0V-null VAF draws (serial, coarse floor sweep)
+tf_vafFloor = 40;   tf_matchTol = 0.7;                   % detection: VAF>floor AND delay+trough match<tol
+Ts  = 1/Fs;   nPreZ = tf_maxPoles + tf_maxZeros + 2;
+tfOptP = tfestOptions('EnforceStability', false, 'Display', 'off');
+tfWarnPrev = warning('off','all');                       % suppress tfest goodness warnings ONCE (restored at end of §10T2)
+tms = rel/Fs*1000;                                       % peri-onset time axis (ms) — §10T runs before §10b defines it
+tms_w  = tms(tf_win);                                    % window time axis (ms), t=0 at onset+1
+
+fprintf('\n[AFFECT-TF] framing-A prototype  (amp %.1f V, win %d..%d ms, sweep %dp/%dz/%dd)\n', ...
+        amps(tf_refAmpIdx), round(tms_w(1)), round(tms_w(end)), tf_maxPoles, tf_maxZeros, tf_maxDelay);
+
+% --- reference dynamics: fit TF to the ipsi-site evoked at the strong amp ---
+rRef = mAmpP(tf_win, tf_refAmpIdx);   rRef = rRef - rRef(1);
+[sysRef, vafRef, chRef, ordRef] = proto_fitTF(rRef, Ts, tf_maxPoles, tf_maxZeros, tf_maxDelay, nPreZ, tfOptP);
+fprintf('  REF (ipsi site): VAF=%.1f%%  order=%dp/%dz/%dd  delay=%.0fms trough=%.0fms settle=%.0fms rebRatio=%.2f\n', ...
+        vafRef, ordRef(1),ordRef(2),ordRef(3), chRef.delayMs, chRef.troughMs, chRef.settleMs, chRef.reboundRatio);
+
+% --- 0V null VAF floor: fit TF to no-signal 0V segments (parfor; narrowed sweep, sets a floor only) ---
+rng(0);  gN = randi(nG, tf_nBoot, 1);  kN = randi(nT0, tf_nBoot, 1);
+vafNull = nan(tf_nBoot,1);
+for b = 1:tf_nBoot          % serial (parfor routes worker output through the crashing structuredoutput layer)
+    rn = squeeze(blk0(gN(b),tf_win,kN(b))).' - m0(gN(b),tf_win).';   rn = rn - rn(1);
+    [~, vafNull(b)] = proto_fitTF(rn, Ts, 2,0,2, nPreZ, tfOptP);   % coarse floor sweep
+end
+vaf95 = prctile(vafNull(~isnan(vafNull)), 95);
+fprintf('  0V-null VAF: median=%.1f%%  95th=%.1f%%  (fit must beat this)\n', ...
+        median(vafNull,'omitnan'), vaf95);
+
+% --- pick prototype pixels: deepest known-affected + spread of clean ---
+aiR   = tf_refAmpIdx;
+affPx = find(affected(:,aiR));
+[~,ord] = sort(min(mResp(affPx,tf_win,aiR),[],2),'ascend');    % deepest dip first
+affPick = affPx(ord(1:min(4,numel(affPx))));
+cleanPx = find(~any(affected,2));                              % never affected at any amp
+if numel(cleanPx) >= 4, cleanPick = cleanPx(round(linspace(1,numel(cleanPx),4)));
+else,                   cleanPick = cleanPx; end
+protoPx  = [affPick(:); cleanPick(:)];
+protoLbl = [repmat({'aff'},numel(affPick),1); repmat({'clean'},numel(cleanPick),1)];
+
+% dynamic-match distance = delay + trough only (the discriminative pair; VAF & the
+% noisy settle/rebound do NOT separate aff from clean -- they are reported, not gated).
+mScale  = [40, 80];    % ms tolerances for [delay, trough]
+matchOf = @(c) sqrt(mean( ([c.delayMs c.troughMs] - ...
+                          [chRef.delayMs chRef.troughMs]).^2 ./ mScale.^2 ));
+
+% --- fit each prototype pixel + tabulate ---
+nPx = numel(protoPx);
+Tvaf=nan(nPx,1); Tdel=nan(nPx,1); Ttr=nan(nPx,1); Tset=nan(nPx,1); Treb=nan(nPx,1); Tmd=nan(nPx,1);
+protoFit = cell(nPx,1);  Tord = nan(nPx,3);
+fprintf('  %-4s %-5s %6s %7s %6s %7s %7s %7s %7s\n','g','cls','VAF','order','delay','trough','settle','rebR','matchD');
+for i = 1:nPx          % serial
+    ri = squeeze(mResp(protoPx(i),tf_win,aiR));  ri = ri(:) - ri(1);
+    [sysi, vafi, chi, ordi] = proto_fitTF(ri, Ts, tf_maxPoles, tf_maxZeros, tf_maxDelay, nPreZ, tfOptP);
+    protoFit{i} = struct('sys',sysi,'r',ri);  Tord(i,:) = ordi;
+    Tvaf(i)=vafi; Tdel(i)=chi.delayMs; Ttr(i)=chi.troughMs; Tset(i)=chi.settleMs; Treb(i)=chi.reboundRatio;
+    Tmd(i)=matchOf(chi);
+    fprintf('  %-4d %-5s %5.1f%% %2dp%dz%dd %5.0f %6.0f %6.0f %6.2f %6.2f\n', ...
+            protoPx(i), protoLbl{i}, Tvaf(i), ordi(1),ordi(2),ordi(3), Tdel(i), Ttr(i), Tset(i), Treb(i), Tmd(i));
+end
+% --- LOCK canonical order from the affected prototypes (+ ref): fix #poles/#zeros, minimal delay ---
+affRows = 1:numel(affPick);
+ordPool = [ordRef; Tord(affRows,:)];  ordPool = ordPool(all(~isnan(ordPool),2),:);
+if isempty(ordPool), tf_np=2; tf_nz=1; tf_nd=1;                     % fallback
+else, tf_np = mode(ordPool(:,1));  tf_nz = mode(ordPool(:,2));  tf_nd = min(ordPool(:,3)); end
+fprintf('  >> CANONICAL order locked: %dp/%dz/%dd  (fixed for per-pixel fits in §10T2; delay=min of affected)\n', tf_np,tf_nz,tf_nd);
+vafGate = max(tf_vafFloor, vaf95);
+tfPass  = (Tvaf > vafGate) & (Tmd < tf_matchTol);          % VAF certifies a real fit; match = ipsi dynamics
+fprintf('  detect rule: VAF>%.1f%% AND (delay+trough)match<%.2f  ->  aff pass %d/%d,  clean pass %d/%d\n', ...
+        vafGate, tf_matchTol, nnz(tfPass(1:numel(affPick))), numel(affPick), ...
+        nnz(tfPass(numel(affPick)+1:end)), numel(cleanPick));
+
+% --- figure: evoked + TF fit overlays (ref, affected, clean) ---
+figure('Name','§10T AFFECT-TF prototype','Color','w','Position',[80 80 1180 620]);
+tl = tiledlayout(3, max(4,ceil(nPx/2)+1), 'TileSpacing','compact','Padding','compact');
+nexttile([1 max(4,ceil(nPx/2)+1)]);
+plot(tms_w, rRef,'k','LineWidth',1.6); hold on;
+[ypR] = proto_sim(sysRef, numel(tf_win), Ts, nPreZ);
+plot(tms_w, ypR,'r--','LineWidth',1.2); yline(0,':','Color',[.6 .6 .6]);
+title(sprintf('REF ipsi site  VAF=%.0f%%  delay=%.0f trough=%.0f settle=%.0f rebR=%.2f', ...
+      vafRef, chRef.delayMs, chRef.troughMs, chRef.settleMs, chRef.reboundRatio),'FontSize',9);
+xlabel('ms'); ylabel('\DeltaF/F'); legend({'evoked','TF fit'},'Location','best','FontSize',7);
+for i = 1:nPx
+    nexttile;
+    plot(tms_w, protoFit{i}.r,'Color',[.2 .2 .2],'LineWidth',1.2); hold on;
+    plot(tms_w, proto_sim(protoFit{i}.sys, numel(tf_win), Ts, nPreZ),'--','LineWidth',1.1, ...
+         'Color', tern_col(strcmp(protoLbl{i},'aff')));
+    yline(0,':','Color',[.7 .7 .7]);
+    ttl = sprintf('g%d %s  VAF=%.0f%%\ndel=%.0f md=%.2f %s', protoPx(i), protoLbl{i}, ...
+                  Tvaf(i), Tdel(i), Tmd(i), ternstr(tfPass(i),'PASS','--'));
+    title(ttl,'FontSize',8); xlabel('ms');
+end
+sgtitle(sprintf('§10T framing-A: TF per-pixel impulse fit  (amp %.1f V)', amps(aiR)),'FontWeight','bold');
+
+AFFECT_TF_PROTO = struct('amp',amps(aiR),'sysRef',sysRef,'chRef',chRef,'vafRef',vafRef, ...
+    'vaf95null',vaf95,'protoPx',protoPx,'protoLbl',{protoLbl},'VAF',Tvaf,'delayMs',Tdel, ...
+    'troughMs',Ttr,'settleMs',Tset,'reboundRatio',Treb,'matchD',Tmd,'pass',tfPass, ...
+    'win',tf_win,'sweep',[tf_maxPoles tf_maxZeros tf_maxDelay]);
+fprintf('[AFFECT-TF] -> AFFECT_TF_PROTO  (review overlays + table before per-pixel rollout)\n');
+
+%% =====================================================================
+% §10T2 [AFFECT-TF-FULL] per-pixel x amp TF detection -> affected_tf[nG x nA]  (sibling to §10)
+%   Rolls the framing-A TF fit (validated in §10T) across every screened pixel x amp.
+%   A pixel is TF-affected iff  VAF>floor  AND  its (delay,trough) match the ipsi
+%   reference TF (i.e. it obeys the same LTI dynamics => "dynamically affected by ipsi").
+%   Cheap dip pre-screen keeps the tfest count tractable; parfor over candidates.
+%   affect_mode toggles which map (§10 matched | §10T2 TF) feeds §17/§17b downstream.
+% =====================================================================
+affect_mode = 'tf';           % 'matched' (=§10)  |  'tf' (=this cell)
+tf_run      = 'full';            % 'full' (real nG x nA map) | 'subset' (~60-cell validation) | 'off'
+tf_screenK  = 2.0;                 % candidate if dip < -K * pre-onset sd (cheap gate)
+tf_useParfor = false;              % SERIAL by default (parfor worker-output crashes the MCP structuredoutput layer); set true only outside MCP
+dipWinT = (preN+1):min(Wb, preN+round(0.35*Fs));
+
+% FIXED canonical order from §10T (tf_np/tf_nz/tf_nd) — every pixel gets the SAME model class,
+% one tfest each (no per-pixel sweep): uniform dynamics across contra + ~1 fit/cell.
+if ~exist('tf_np','var'), error('run §10T first (it locks the canonical order tf_np/tf_nz/tf_nd).'); end
+[sysRef2,vafRef2,chRef2] = proto_fitTF_fix(rRef, Ts, tf_np,tf_nz,tf_nd, nPreZ, tfOptP);
+dR = chRef2.delayMs;  tR = chRef2.troughMs;  mScaleR = [40 80];
+fprintf('\n[AFFECT-TF-FULL] fixed order %dp/%dz/%dd | ref: VAF=%.1f%% delay=%.0fms trough=%.0fms\n', ...
+        tf_np,tf_nz,tf_nd, vafRef2, dR, tR);
+
+sd0g = squeeze(std(mResp(:,1:preN,:),0,2));                 % [nG x nA] pre-onset noise
+dipD = squeeze(min(mResp(:,dipWinT,:),[],2));               % [nG x nA] dip depth
+cand = dipD < -tf_screenK*max(sd0g,eps);
+[cg,ca] = find(cand);  nCall = numel(cg);
+switch lower(tf_run)
+    case 'off',    sel = [];
+    case 'subset', sel = unique(round(linspace(1, nCall, min(60,nCall))));    % evenly-spaced validation subset
+    otherwise,     sel = (1:nCall).';   tf_run = 'full';
+end
+cg = cg(sel);  ca = ca(sel);  nC = numel(cg);
+fprintf('  mode=%s: fitting %d/%d screened candidates (K=%.1f, fixed %dp/%dz/%dd)\n', ...
+        tf_run, nC, nCall, tf_screenK, tf_np,tf_nz,tf_nd);
+
+tV=nan(nC,1); tMD=nan(nC,1); tDE=nan(nC,1); tTR=nan(nC,1); tSE=nan(nC,1); tRB=nan(nC,1);
+mR=mResp; win=tf_win; fnp=tf_np; fnz=tf_nz; fnd=tf_nd; nPz=nPreZ; TsL=Ts; optL=tfOptP;  % parfor locals
+tstart=tic;
+if tf_useParfor
+    parfor c=1:nC
+        ri=squeeze(mR(cg(c),win,ca(c))); ri=ri(:)-ri(1);
+        [~,v,ch]=proto_fitTF_fix(ri, TsL, fnp,fnz,fnd, nPz, optL);
+        tV(c)=v; tDE(c)=ch.delayMs; tTR(c)=ch.troughMs; tSE(c)=ch.settleMs; tRB(c)=ch.reboundRatio;
+        tMD(c)=sqrt(mean(([ch.delayMs ch.troughMs]-[dR tR]).^2./mScaleR.^2));
+    end
+else
+    for c=1:nC
+        ri=squeeze(mR(cg(c),win,ca(c))); ri=ri(:)-ri(1);
+        [~,v,ch]=proto_fitTF_fix(ri, TsL, fnp,fnz,fnd, nPz, optL);
+        tV(c)=v; tDE(c)=ch.delayMs; tTR(c)=ch.troughMs; tSE(c)=ch.settleMs; tRB(c)=ch.reboundRatio;
+        tMD(c)=sqrt(mean(([ch.delayMs ch.troughMs]-[dR tR]).^2./mScaleR.^2));
+    end
+end
+fprintf('  fit %d candidates in %.0f s (1 tfest/cell, fixed order)\n', nC, toc(tstart));
+
+affected_tf=false(nG,nA);
+VAFtf=nan(nG,nA); MDtf=nan(nG,nA); DELtf=nan(nG,nA); TRtf=nan(nG,nA); SETtf=nan(nG,nA); REBtf=nan(nG,nA);
+vg=max(tf_vafFloor,vaf95);
+for c=1:nC
+    g=cg(c); a=ca(c);
+    VAFtf(g,a)=tV(c); MDtf(g,a)=tMD(c); DELtf(g,a)=tDE(c); TRtf(g,a)=tTR(c); SETtf(g,a)=tSE(c); REBtf(g,a)=tRB(c);
+    affected_tf(g,a)= tV(c)>vg && tMD(c)<tf_matchTol;
+end
+fitIdx = sub2ind([nG nA], cg, ca);              % linear idx of the cells actually fitted
+aM = affected(fitIdx);  aT = affected_tf(fitIdx);
+if strcmpi(tf_run,'full')
+    fprintf('  per-amp TF-affected: '); fprintf('%d ', sum(affected_tf,1));
+    fprintf('(vs §10: '); fprintf('%d ',sum(affected,1)); fprintf(')\n');
+end
+fprintf('  over %d fitted cells vs §10: both=%d  §10-only=%d  TF-only=%d  neither=%d  (gate VAF>%.0f match<%.2f)\n', ...
+        nC, nnz(aM&aT), nnz(aM&~aT), nnz(~aM&aT), nnz(~aM&~aT), vg, tf_matchTol);
+
+if strcmpi(affect_mode,'tf') && strcmpi(tf_run,'full')
+    affected = affected_tf;
+    fprintf('  affect_mode=tf  ->  affected := affected_tf  (feeds §17/§17b)\n');
+elseif strcmpi(affect_mode,'tf')
+    fprintf('  affect_mode=tf but tf_run=%s (partial map) -> NOT switching; set tf_run=''full'' first\n', tf_run);
+else
+    fprintf('  affect_mode=matched  ->  §10 map unchanged  (set affect_mode=''tf'' + tf_run=''full'' to switch)\n');
+end
+
+AFFECT_TF = struct('mode',affect_mode,'affected_tf',affected_tf,'VAF',VAFtf,'matchD',MDtf, ...
+    'delayMs',DELtf,'troughMs',TRtf,'settleMs',SETtf,'reboundRatio',REBtf, ...
+    'chRef',chRef2,'vafRef',vafRef2,'vafGate',vg,'matchTol',tf_matchTol,'screenK',tf_screenK, ...
+    'order',[tf_np tf_nz tf_nd],'nCand',nC);
+fprintf('[AFFECT-TF-FULL] -> AFFECT_TF (affected_tf[nG x nA] + per-cell VAF/delay/trough/settle/rebound maps)\n');
+warning(tfWarnPrev);               % restore warning state suppressed at top of §10T (single top-level call)
+
+%% =====================================================================
+%% §10T3 [AFFECT-TF-MAP] interactive TF-affected pixel map (DEBUG the TF detection)
+%%   Per-amp grid with TF-affected pixels (affected_tf) in BLACK. Click any pixel ->
+%%   refit its fixed-order TF and show evoked + fit overlay + ipsi reference, with
+%%   VAF/trough/matchD/pass, so you can see WHY the TF flagged / missed it.
+%%   Placed AFTER §10T2 and driven by affected_tf (works in subset or full mode).
+%% =====================================================================
+figT = figure('Color','w','Position',[60 60 1500 820], ...
+    'Name','TF-AFFECT — TF-detected stim-affected contra pixels (per amp) — click to debug');
+nColT = ceil(sqrt(nA));  nRowT = ceil(nA/nColT);
+axT = gobjects(nA,1);
+for ai = 1:nA
+    axT(ai) = subplot(nRowT, nColT, ai);
+    imagesc(axT(ai), gB);  colormap(axT(ai), gray);  axis(axT(ai),'image','off');  hold(axT(ai),'on');
+    aff = affected_tf(:,ai);
+    scatter(axT(ai), dspGc(~aff), dspGr(~aff), 12, [0.75 0.75 0.75],'filled','MarkerEdgeColor',[0.4 0.4 0.4],'LineWidth',0.2);
+    scatter(axT(ai), dspGc(aff),  dspGr(aff),  20, 'k','filled','MarkerEdgeColor','k');
+    plot(axT(ai), dspSc, dspSr, 'r+','MarkerSize',12,'LineWidth',1.6);
+    title(axT(ai), sprintf('%.1f V   %d aff', amps(ai), nnz(aff)), 'FontSize',10,'FontWeight','bold');
+end
+sgtitle(sprintf('§10T3 TF-affected map (%s, fixed %dp/%dz/%dd) — click a pixel to see its TF fit', ...
+        tf_run, tf_np,tf_nz,tf_nd), 'FontWeight','bold');
+
+DBT = struct('axT',axT,'amps',amps,'grR',grR,'grC',grC,'gdR',dspGr,'gdC',dspGc, ...
+    'mResp',mResp,'tf_win',tf_win,'tms_w',tms_w,'rRef',rRef, ...
+    'np',tf_np,'nz',tf_nz,'nd',tf_nd,'nPreZ',nPreZ,'Ts',Ts,'opt',tfOptP, ...
+    'affected_tf',affected_tf,'VAF',VAFtf,'MD',MDtf,'TR',TRtf,'vg',vg,'tol',tf_matchTol, ...
+    'dR',chRef2.delayMs,'tR',chRef2.troughMs);
+guidata(figT, DBT);  set(figT,'WindowButtonDownFcn',@tfmap_click);
+fprintf('[AFFECT-TF-MAP] click any pixel -> refit its fixed-order TF + show evoked/fit/VAF/trough/matchD/pass.\n');
 
 %% (10b) [COUPLING-WINDOW] data-driven window capturing ALL ipsi<->contra coupling (BEFORE bleed labeling)
 % Runs BEFORE the bleed-affected labeling (§13/§14) so the coupling extent is known first — cutting
@@ -646,8 +920,9 @@ Ltr    = nan(nA_s,1);  Dtr = nan(nA_s,1);               % trough time (ms) / dep
 Lrec   = nan(nA_s,1);                                   % recovery (end-of-inhibition) time (ms)
 Lreb   = nan(nA_s,1);  Dreb = nan(nA_s,1);              % rebound peak time (ms) / height (%dF/F)
 Lset   = nan(nA_s,1);                                   % full settle time (ms)
+Lrbs   = nan(nA_s,1);                                   % REBOUND-settle time (ms): rebound has died down (target #3)
 fprintf('\n[SETTLETIME] primary-pixel impulse landmarks (0V-subtracted, per amp):\n');
-fprintf('   amp(V)  nTrl | trough(ms)  depth | recover(ms) | reboundPk(ms)  height | settle(ms)\n');
+fprintf('   amp(V)  nTrl | trough(ms)  depth | recover(ms) | reboundPk(ms)  height | rebSettle(ms) | settle(ms)\n');
 for ai = 1:nA_s
     onF = onFcell{ai};  nT = numel(onF);
     if nT==0, continue; end
@@ -665,23 +940,39 @@ for ai = 1:nA_s
     rc = iT - 1 + find(m(iT:Wb) >= -tolR, 1, 'first');  % first return to baseline after trough
     if ~isempty(rc), Lrec(ai) = tms(rc); else, rc = Wb; end
 
+    iRb = NaN;                                          % rebound-peak column (set below if a rebound exists)
     if rc < Wb                                          % rebound = max positive lobe after recovery
         [dRb, iRl] = max(m(rc:Wb));  iR = rc + iRl - 1;
-        if dRb > tolR, Dreb(ai) = dRb;  Lreb(ai) = tms(iR); end
+        if dRb > tolR, Dreb(ai) = dRb;  Lreb(ai) = tms(iR);  iRb = iR; end
     end
 
     tolS = max(2*bslSD, st_setFac*abs(dTr));            % full-settle band (both lobes inside)
     lb = find(abs(seg) > tolS, 1, 'last');              % last excursion outside the band
     if isempty(lb), Lset(ai) = 0; else, Lset(ai) = tms(preN+lb); end
 
-    fprintf('   %-6.2f %5d | %8.0f %7.3f | %9.0f | %11s %7s | %8.0f\n', ...
+    % REBOUND-settle (target #3): the honest "rebound has died down" landmark = AFTER the rebound
+    % peak, the first sustained (>=2 consecutive frames) return into the settle band. Unlike the
+    % full-settle (last excursion ANYWHERE), it is not corrupted by late trial-avg noise, so it is
+    % stable across amps (~770 ms) and is the principled end of the biphasic stim response.
+    if ~isnan(iRb) && iRb < Wb
+        ms  = smoothdata(m,'movmean',3);                % light smoothing kills trial-avg jitter
+        inb = abs(ms(iRb:Wb)) <= tolS;                  % within settle band after the rebound peak
+        kk  = find(inb(1:end-1) & inb(2:end), 1, 'first');
+        if ~isempty(kk), Lrbs(ai) = tms(iRb + kk - 1); end
+    end
+
+    fprintf('   %-6.2f %5d | %8.0f %7.3f | %9.0f | %11s %7s | %13s | %8.0f\n', ...
         amps(ai), nT, Ltr(ai), Dtr(ai), Lrec(ai), ...
         ternchar(isnan(Lreb(ai)),'   --',sprintf('%6.0f',Lreb(ai))), ...
-        ternchar(isnan(Dreb(ai)),'  --',sprintf('%5.3f',Dreb(ai))), Lset(ai));
+        ternchar(isnan(Dreb(ai)),'  --',sprintf('%5.3f',Dreb(ai))), ...
+        ternchar(isnan(Lrbs(ai)),'   --',sprintf('%6.0f',Lrbs(ai))), Lset(ai));
 end
 
 medRec = median(Lrec,'omitnan');
+medRbs = median(Lrbs,'omitnan');
 fprintf('   --> median recovery (end-of-inhibition) = %.0f ms   (current window = %.0f ms)\n', medRec, st_win*1000);
+fprintf('   --> median REBOUND-settle (rebound died down = end of biphasic response) = %.0f ms  [n=%d amps]\n', ...
+        medRbs, nnz(~isnan(Lrbs)));
 if isfinite(medRec)
     if medRec < st_win*1000-15
         fprintf('       %.0f ms OVER-includes: it reaches into the post-inhibition REBOUND by ~%.0f ms.\n', st_win*1000, st_win*1000-medRec);
@@ -707,6 +998,7 @@ yl = ylim(axL);
 plot(axL, [0 0], yl, 'k:', 'HandleVisibility','off');
 plot(axL, st_win*1000*[1 1], yl, 'r--', 'LineWidth',1.2, 'DisplayName',sprintf('%.0f ms (current)',st_win*1000));
 if isfinite(medRec), plot(axL, medRec*[1 1], yl, 'g--', 'LineWidth',1.2, 'DisplayName','median recovery'); end
+if isfinite(medRbs), plot(axL, medRbs*[1 1], yl, '--', 'Color',[0 .5 .8], 'LineWidth',1.2, 'DisplayName','median rebound-settle'); end
 yline(axL, 0, 'Color',[.6 .6 .6], 'HandleVisibility','off');
 xlabel(axL,'time from onset (ms)'); ylabel(axL,'evoked \DeltaF/F (amp - 0V, %)');
 title(axL,'trial-avg impulse @ primary pixel  (\itv\rm=trough, \it\wedge\rm=rebound)','FontSize',10,'FontWeight','bold');
@@ -716,6 +1008,7 @@ axR = subplot(1,2,2); hold(axR,'on');  box(axR,'on');
 plot(axR, amps, Ltr,  '-o', 'Color',[0.85 0.2 0.2], 'MarkerFaceColor',[0.85 0.2 0.2], 'DisplayName','trough');
 plot(axR, amps, Lrec, '-s', 'Color',[0.1 0.5 0.1], 'MarkerFaceColor',[0.1 0.5 0.1], 'DisplayName','recovery (end of inhib)');
 plot(axR, amps, Lreb, '-^', 'Color',[0.2 0.3 0.9], 'MarkerFaceColor',[0.2 0.3 0.9], 'DisplayName','rebound peak');
+plot(axR, amps, Lrbs, '-v', 'Color',[0 0.5 0.8], 'MarkerFaceColor',[0 0.5 0.8], 'DisplayName','rebound-settle');
 plot(axR, amps, Lset, '-d', 'Color',[0.4 0.4 0.4], 'MarkerFaceColor',[0.4 0.4 0.4], 'DisplayName','full settle');
 yline(axR, st_win*1000, 'r--', sprintf('%.0f ms',st_win*1000), 'LineWidth',1.2, 'LabelHorizontalAlignment','left', 'HandleVisibility','off');
 xlabel(axR,'amplitude (V)'); ylabel(axR,'time from onset (ms)');
@@ -723,8 +1016,8 @@ title(axR,'landmark timing vs amplitude','FontSize',10,'FontWeight','bold');
 legend(axR,'Location','northwest','FontSize',7); grid(axR,'on');
 
 SETTLE = struct('amps',amps,'tms',tms,'mAmp',mAmp,'tTrough',Ltr,'dTrough',Dtr, ...
-                'tRecover',Lrec,'tRebound',Lreb,'dRebound',Dreb,'tSettle',Lset, ...
-                'medRecover',medRec,'win_ms',st_win*1000);
+                'tRecover',Lrec,'tRebound',Lreb,'dRebound',Dreb,'tReboundSettle',Lrbs,'tSettle',Lset, ...
+                'medRecover',medRec,'medReboundSettle',medRbs,'win_ms',st_win*1000);
 
 % [FARPIX section REMOVED 2026-07-06] It only characterized a far, positive-going population and split
 % flagged px by SIGN -- but that far positive population is NOT a stim effect we want to consider, and
@@ -900,11 +1193,12 @@ STIMBLIND = struct('amps',amps,'Actual',A_dip,'Global',G_dip,'Local',L_dip, ...
 %     minimize ||y_spont - Z b||^2  s.t.  D' b = 0   ->   b = b0 - G^{-1}D (D'G^{-1}D)^+ D' b0   (KKT)
 % The residual (Local) then carries BOTH lobes. We ALSO fit a SHARED parametric biphasic model (fast + slow
 % gamma, SAME shape across amps) to the residual -> per-amp dip-gain & rebound-gain = a uniform dose model.
-% [NBLIND TUNING 2026-07-07] native_nblind (# blinded sub-windows) trades biphasic capture vs non-stim R^2:
-% MORE windows -> fuller dip+rebound capture but more DoF removed from the prediction -> lower non-stim R^2.
-% We SWEEP candidates, cache each amp's evoked ONCE (the expensive SVD reconstruction), and auto-pick the
-% nblind that MAXIMIZES non-stim R^2 while still capturing both lobes (median dip & rebound capture >= targets).
-nblind_grid = [2 3 4 5 6 8];  cap_dip_min = 90;  cap_reb_min = 80;    % capture targets (%) governing the pick
+% [NBLIND TUNING 2026-07-07, pick reworked 2026-07-13] native_nblind (# blinded sub-windows) trades
+% biphasic capture vs how many prediction DoF are removed: MORE windows -> fuller dip+rebound capture in
+% the residual, but fewer DoF left for the ongoing (pre/post-stim) prediction. We SWEEP candidates, cache
+% each amp's evoked ONCE (the expensive SVD reconstruction), and pick the smallest nblind that captures the
+% dip at EVERY amp (see the auto-pick below) -- NOT the old "max nonStimR2" which was chasing a lying metric.
+nblind_grid = [2 3 4 5 6 8];                                          % # blind sub-windows swept (native_nblind pick)
 ncN = min(nA,3);  nrN = ceil(nA/ncN);
 % shared parametric biphasic basis (fixed shapes from §15 landmarks: dip peak ~143 ms, rebound peak ~571 ms)
 tms_on = (rel(:)-rel(preN+1))/Fs*1000;  posT = tms_on>=0;
@@ -925,38 +1219,65 @@ for ai = 1:nA
     evZc{ai}=evZ; aAc{ai}=aA; dcc{ai}=dc; rcc{ai}=rc; scc{ai}=(preN+1):max(se,dc(end));
     Sc{ai}=S; dGc{ai}=decomposition(Gz(S,S)+lamR*eye(numel(S))); b0c{ai}=dGc{ai}\cz(S);
 end
-% ---- sweep native_nblind, pick the one recovering the most non-stim R^2 that still captures both lobes ----
-fprintf('\n[STIMBLIND-NATIVE] tuning native_nblind (blind sub-windows) — dip/rebound capture vs non-stim R^2:\n');
-fprintf('   %-8s | %10s %10s | %13s | %12s\n','nblind','medDipCap','medRebCap','med nonStimR2','med spontR2b');
-sw_dip=nan(numel(nblind_grid),1); sw_reb=sw_dip; sw_ns=sw_dip; sw_sb=sw_dip;
+% ---- per-amp pre/post-stim FRAME designs for the HONEST prediction-R^2 metric (2026-07-13) -------
+% The old "non-stim R^2" is computed on the trial-AVERAGED evoked, which OUTSIDE the stim window is ~0
+% signal + averaging noise -> its R^2 measures noise-vs-noise and is MEANINGLESS (it read 0.16-0.56 even
+% when the predictor was excellent). The RIGHT metric applies the blinded weights to the RAW per-trial
+% pre-onset and post-settle frames (real ongoing activity) and asks how well the prediction tracks the
+% ipsi site there. On AL_0033 this reads ~0.95 (vs the lying 0.32). Precomputed ONCE (indep. of nblind).
+r2f = @(y,yh) 1 - sum((y(:)-yh(:)).^2)/max(sum((y(:)-mean(y(:))).^2),eps);
+Zpre=cell(nA,1); ypre=cell(nA,1); Zpost=cell(nA,1); ypost=cell(nA,1);
+for ai = 1:nA
+    onF=onFcell{ai}; if isempty(onF)||isempty(evZc{ai}), continue; end
+    frPre =onF(:).'+rel(1:preN).';              frPre =frPre(:).';
+    frPost=onF(:).'+rel(scc{ai}(end)+1:Wb).';   frPost=frPost(:).';
+    frPre =frPre( frPre>=1  & frPre<=size(V_cp,2));
+    frPost=frPost(frPost>=1 & frPost<=size(V_cp,2));
+    Zpre{ai} =((double(Uflat(gridIdx,:))*double(V_cp(:,frPre)))-mu_p)./sd_p;   ypre{ai} =y_full(frPre);
+    Zpost{ai}=((double(Uflat(gridIdx,:))*double(V_cp(:,frPost)))-mu_p)./sd_p;  ypost{ai}=y_full(frPost);
+end
+% ---- sweep native_nblind: report dip/rebound capture + the HONEST per-frame pre/post prediction R^2 ----
+% [2026-07-13] Pick the SMALLEST nblind whose WORST-amp dip capture >= cap_dip_min_amp, so EVERY amp
+% (incl. the low ones) reaches ~full capture while removing as few prediction DoF as possible (smaller
+% nblind -> higher pred R^2). The OLD objective ("max median nonStimR2 s.t. median dip>=90%") picked
+% nblind=2 by chasing the lying trial-avg metric, which under-captured the dip at low/mid amps (52% at
+% 3.2 V). native_nblind='auto' runs this pick (-> 4 on AL_0033); set an integer to force it.
+native_nblind   = 'auto';   % 'auto' = data-driven pick below; or a fixed integer to force the # blind windows
+cap_dip_min_amp = 92;       % 'auto': smallest nblind whose MIN per-amp dip capture >= this (%). ("100% at ALL amps")
+fprintf('\n[STIMBLIND-NATIVE] tuning native_nblind — dip/rebound capture + HONEST per-frame pre/post pred R^2:\n');
+fprintf('   %-6s | %9s %9s | %9s | %14s | %8s\n','nblind','medDipCap','minDipCap','medRebCap','predR2 pre/post','spontR2b');
+sw_dip=nan(numel(nblind_grid),1); sw_dipmin=sw_dip; sw_reb=sw_dip; sw_pre=sw_dip; sw_post=sw_dip; sw_sb=sw_dip; sw_ns=sw_dip;
 for gi = 1:numel(nblind_grid)
-    nb=nblind_grid(gi); dcv=nan(nA,1); rcv=nan(nA,1); nsv=nan(nA,1); sbv=nan(nA,1);
+    nb=nblind_grid(gi); dcv=nan(nA,1); rcv=nan(nA,1); nsv=nan(nA,1); sbv=nan(nA,1); prv=nan(nA,1); pov=nan(nA,1);
     for ai = 1:nA
         if isempty(evZc{ai}), continue; end
-        [~,~,~,r2ns,dCap,rCap,r2sb] = native_project(nb, evZc{ai},aAc{ai},dcc{ai},rcc{ai},scc{ai},Sc{ai},dGc{ai},b0c{ai}, preN,Wb,yte,muY,Zte,sstot);
-        nsv(ai)=r2ns; dcv(ai)=dCap; rcv(ai)=rCap; sbv(ai)=r2sb;
+        [bN,~,~,r2ns,dCap,rCap,r2sb] = native_project(nb, evZc{ai},aAc{ai},dcc{ai},rcc{ai},scc{ai},Sc{ai},dGc{ai},b0c{ai}, preN,Wb,yte,muY,Zte,sstot);
+        S=Sc{ai}; nsv(ai)=r2ns; dcv(ai)=dCap; rcv(ai)=rCap; sbv(ai)=r2sb;
+        prv(ai)=r2f(ypre{ai},  muY+(Zpre{ai}(S,:).'*bN));
+        pov(ai)=r2f(ypost{ai}, muY+(Zpost{ai}(S,:).'*bN));
     end
-    sw_dip(gi)=median(dcv,'omitnan'); sw_reb(gi)=median(rcv,'omitnan'); sw_ns(gi)=median(nsv,'omitnan'); sw_sb(gi)=median(sbv,'omitnan');
-    fprintf('   %-8d | %9.0f%% %9.0f%% | %13.3f | %12.3f\n', nb, sw_dip(gi), sw_reb(gi), sw_ns(gi), sw_sb(gi));
+    sw_dip(gi)=median(dcv,'omitnan'); sw_dipmin(gi)=min(dcv,[],'omitnan'); sw_reb(gi)=median(rcv,'omitnan');
+    sw_pre(gi)=median(prv,'omitnan'); sw_post(gi)=median(pov,'omitnan'); sw_sb(gi)=median(sbv,'omitnan'); sw_ns(gi)=median(nsv,'omitnan');
+    fprintf('   %-6d | %8.0f%% %8.0f%% | %8.0f%% | %6.3f / %6.3f | %8.3f\n', nb, sw_dip(gi), sw_dipmin(gi), sw_reb(gi), sw_pre(gi), sw_post(gi), sw_sb(gi));
 end
-ok = sw_dip>=cap_dip_min & sw_reb>=cap_reb_min;
-if any(ok)
-    cand=find(ok); [~,bi]=max(sw_ns(cand)); native_nblind=nblind_grid(cand(bi));
-elseif any(sw_dip>=cap_dip_min)
-    cand=find(sw_dip>=cap_dip_min); [~,bi]=max(sw_ns(cand)); native_nblind=nblind_grid(cand(bi));
+if ischar(native_nblind) && strcmpi(native_nblind,'auto')
+    good = find(sw_dipmin>=cap_dip_min_amp);
+    if ~isempty(good), native_nblind=nblind_grid(good(1));            % smallest nblind reaching full per-amp capture
+    else, [~,bi]=max(sw_dipmin); native_nblind=nblind_grid(bi); end
+    fprintf('   --> AUTO picked native_nblind = %d (smallest nblind with MIN per-amp dip capture >= %d%%)\n', native_nblind, cap_dip_min_amp);
 else
-    [~,bi]=max(sw_ns); native_nblind=nblind_grid(bi);
+    fprintf('   --> using forced native_nblind = %d\n', native_nblind);
 end
-fprintf('   --> picked native_nblind = %d (max non-stim R^2 with dip>=%d%% & rebound>=%d%% capture)\n', native_nblind, cap_dip_min, cap_reb_min);
 
 An_dip=nan(nA,1); Gn_dip=nan(nA,1); Ln_dip=nan(nA,1);              % DIP lobe (Actual/Global/Local)
 An_reb=nan(nA,1); Gn_reb=nan(nA,1); Ln_reb=nan(nA,1);             % REBOUND lobe
-r2n_full=nan(nA,1); r2n_sb=nan(nA,1); r2n_ns=nan(nA,1);          % spont ceiling / blinded / NON-stim R2
+r2n_full=nan(nA,1); r2n_sb=nan(nA,1); r2n_ns=nan(nA,1);          % spont ceiling / blinded / NON-stim R2 (trial-avg; deprecated)
+r2n_pre=nan(nA,1); r2n_post=nan(nA,1);                            % HONEST per-frame pre/post-stim prediction R2
 nUse_n=zeros(nA,1); pdn=nan(nA,1); prn=nan(nA,1); nCon=zeros(nA,1);
 kDipA=nan(nA,1); kRebA=nan(nA,1);                                 % shared parametric biphasic gains per amp
 trAn=cell(nA,1); trGn=cell(nA,1); trLn=cell(nA,1); trMn=cell(nA,1); useMaskN=false(nG,nA); bUseN=cell(nA,1);
 fprintf('\n[STIMBLIND-NATIVE] KEEP all unaffected px; blind prediction to DIP+REBOUND (%d-window subspace); SPONT-trained:\n', native_nblind);
-fprintf('   %-6s %4s | %5s %4s | %13s | %9s | %8s %8s | %8s %8s\n','amp','nTr','nUse','nCon','spontR2 c->b','nonStimR2','dipAct','dipLoc','rebAct','rebLoc');
+fprintf('   %-6s %4s | %5s %4s | %13s | %14s | %8s %8s | %8s %8s\n','amp','nTr','nUse','nCon','spontR2 c->b','predR2 pre/post','dipAct','dipLoc','rebAct','rebLoc');
 for ai = 1:nA
     if isempty(evZc{ai}), continue; end
     S=Sc{ai};  nUse_n(ai)=numel(S);  useMaskN(S,ai)=true;
@@ -964,18 +1285,20 @@ for ai = 1:nA
     [bN,yg,rL,r2ns,~,~,r2sb,nc] = native_project(native_nblind, evZc{ai},aA,dc,rc,stimCols,S,dGc{ai},b0c{ai}, preN,Wb,yte,muY,Zte,sstot);
     nCon(ai)=nc;  bf=zeros(nG,1);  bf(S)=bN;  bUseN{ai}=bf;
     r2n_full(ai) = 1 - sum((yte-(muY+Zte(:,S)*b0c{ai})).^2)/sstot;         % spont ceiling (unconstrained)
-    r2n_sb(ai) = r2sb;  r2n_ns(ai) = r2ns;                                 % spont blinded / NON-stim R2
+    r2n_sb(ai) = r2sb;  r2n_ns(ai) = r2ns;                                 % spont blinded / NON-stim R2 (deprecated)
+    r2n_pre(ai)  = r2f(ypre{ai},  muY+(Zpre{ai}(S,:).'*bN));               % HONEST per-frame pre-stim prediction R2
+    r2n_post(ai) = r2f(ypost{ai}, muY+(Zpost{ai}(S,:).'*bN));             % HONEST per-frame post-stim prediction R2
     An_dip(ai)=mean(aA(dc)); Gn_dip(ai)=mean(yg(dc)); Ln_dip(ai)=mean(rL(dc));  pdn(ai)=Gn_dip(ai);
     if ~isempty(rc), An_reb(ai)=mean(aA(rc)); Gn_reb(ai)=mean(yg(rc)); Ln_reb(ai)=mean(rL(rc));  prn(ai)=Gn_reb(ai); end
     B = [gDip(stimCols) gReb(stimCols)];  kk = B \ rL(stimCols);          % shared biphasic fit to the residual
     kDipA(ai)=kk(1); kRebA(ai)=kk(2);  trMn{ai} = (gDip*kk(1) + gReb*kk(2));
     trAn{ai}=aA(:); trGn{ai}=yg(:); trLn{ai}=rL(:);
-    fprintf('   %-6.2f %4d | %5d %4d | %.3f->%.3f | %9.3f | %8.3f %8.3f | %8.3f %8.3f\n', ...
-        amps(ai), nT_amp(ai), nUse_n(ai), nCon(ai), r2n_full(ai), r2n_sb(ai), r2n_ns(ai), An_dip(ai), Ln_dip(ai), An_reb(ai), Ln_reb(ai));
+    fprintf('   %-6.2f %4d | %5d %4d | %.3f->%.3f | %6.3f / %6.3f | %8.3f %8.3f | %8.3f %8.3f\n', ...
+        amps(ai), nT_amp(ai), nUse_n(ai), nCon(ai), r2n_full(ai), r2n_sb(ai), r2n_pre(ai), r2n_post(ai), An_dip(ai), Ln_dip(ai), An_reb(ai), Ln_reb(ai));
 end
 capDip = median(100*Ln_dip./An_dip,'omitnan');  capReb = median(100*Ln_reb./An_reb,'omitnan');
-fprintf('   --> median DIP in residual = %.0f%% | median REBOUND in residual = %.0f%% | spont R^2 %.3f->%.3f | non-stim R^2 %.3f\n', ...
-    capDip, capReb, median(r2n_full,'omitnan'), median(r2n_sb,'omitnan'), median(r2n_ns,'omitnan'));
+fprintf('   --> median DIP in residual = %.0f%% | median REBOUND in residual = %.0f%% | spont R^2 %.3f->%.3f | HONEST pred R^2 pre %.3f / post %.3f\n', ...
+    capDip, capReb, median(r2n_full,'omitnan'), median(r2n_sb,'omitnan'), median(r2n_pre,'omitnan'), median(r2n_post,'omitnan'));
 
 % --- Fig 1: DIP + REBOUND dose curves (Actual / Global(pred~0) / Local(residual)) ------------
 figNB1 = figure('Color','w','Name','[STIMBLIND-NATIVE] dip+rebound dose curves','Position',[80 80 1000 430]);
@@ -1028,7 +1351,7 @@ sgtitle('per-amp NATIVE stim-blind sets: used=ALL unaffected px (constrained wei
 STIMBLIND_NATIVE = struct('amps',amps,'ActualDip',An_dip,'GlobalDip',Gn_dip,'LocalDip',Ln_dip, ...
                    'ActualReb',An_reb,'GlobalReb',Gn_reb,'LocalReb',Ln_reb, ...
                    'trA',{trAn},'trG',{trGn},'trL',{trLn},'trModel',{trMn},'bUseN',{bUseN},'useMaskN',useMaskN, ...
-                   'r2full',r2n_full,'r2sb',r2n_sb,'r2nonStim',r2n_ns,'nUse',nUse_n,'nCon',nCon,'predDip',pdn,'predReb',prn, ...
+                   'r2full',r2n_full,'r2sb',r2n_sb,'r2nonStim',r2n_ns,'r2pre',r2n_pre,'r2post',r2n_post,'nUse',nUse_n,'nCon',nCon,'predDip',pdn,'predReb',prn, ...
                    'kDip',kDipA,'kReb',kRebA,'native_nblind',native_nblind, ...
                    'dipCols',dipCols,'rel',rel,'Fs',Fs,'preN',preN, ...
                    'medDipCapPct',capDip,'medRebCapPct',capReb,'mn',mn,'td',td,'en',en);
@@ -1134,9 +1457,49 @@ end
 % reference some of those px become stim-affected, so we intersect with each amp's own unaffected set
 % (never reintroduce a bled pixel). Blinding + metrics identical to NATIVE (same native_nblind, same KKT);
 % only the predictor SET changes. Same validation (blocked CV + held-out capture) is run below.
-[~,aiRef] = min(abs(amps-3.7));                              % reference amp = 3.7 V (or nearest available)
-if isempty(Sc{aiRef})                                       % ref empty (no trials) -> most-constrained set with >=20 px
-    cnt = arrayfun(@(a) numel(Sc{a}), 1:nA);  cnt(cnt<20)=inf;  [~,aiRef]=min(cnt);
+% [REF-SWEEP 2026-07-10] The reference amp used to be hardcoded 3.7 V. That is arbitrary and drives the
+% whole capture<->non-stim-R^2 tradeoff (a HIGHER ref amp -> fewer, cleaner px -> tighter blinding = more
+% dip/rebound in the residual, but a SMALLER, spatially-biased far-from-site set = a WORSE spont predictor
+% -> lower non-stim R^2; a LOWER ref amp -> the opposite, approaching NATIVE). So we now SWEEP every usable
+% candidate reference amp (unaffected set >= naive_refMinPx), deploy the fixed-config naive from each across
+% ALL amps, and TABULATE the tradeoff (median dip cap / rebound cap / non-stim R^2 / #px). The operating
+% point is set by the naive_refAmp knob (default 3.7 preserves the prior result); the sweep just makes the
+% choice data-driven and auditable instead of hardcoded.
+naive_refAmp   = 3.7;   % reference amp (V) for the fixed predictor config. Numeric = force that amp
+                        %   (default 3.7 = prior behavior); 'auto' = pick the sweep row that MAXIMIZES
+                        %   median dip+rebound capture subject to non-stim R^2 >= naive_refNsFloor.
+naive_refMinPx = 20;    % a candidate ref amp is usable only if its unaffected set has >= this many px
+naive_refNsFloor = 0.35;% 'auto' guard: keep non-stim R^2 >= this while maximizing capture (naive's goal)
+refCands = find(arrayfun(@(a) ~isempty(evZc{a}) && numel(Sc{a})>=naive_refMinPx, 1:nA));
+swRefD=nan(numel(refCands),1); swRefR=swRefD; swRefN=swRefD; swRefNpx=swRefD;
+fprintf('\n[STIMBLIND-NAIVE] reference-amp sweep (deploy fixed config from each ref across all amps):\n');
+fprintf('   %-8s %6s | %10s %10s | %13s\n','refAmp(V)','nPx','medDipCap','medRebCap','med nonStimR2');
+for ci = 1:numel(refCands)
+    aiR = refCands(ci);  Sr = Sc{aiR};
+    dGr = decomposition(Gz(Sr,Sr)+lamR*eye(numel(Sr)));  b0r = dGr\cz(Sr);
+    dC=nan(nA,1); rC=nan(nA,1); nsC=nan(nA,1);
+    for ai = 1:nA
+        if isempty(evZc{ai}), continue; end
+        aff=affected(:,ai);  Su=Sr(~aff(Sr));  if numel(Su)<5, continue; end
+        if numel(Su)==numel(Sr), dGu=dGr; b0u=b0r;
+        else, dGu=decomposition(Gz(Su,Su)+lamR*eye(numel(Su))); b0u=dGu\cz(Su); end
+        [~,~,~,r2ns,dc_,rc_] = native_project(native_nblind, evZc{ai},aAc{ai},dcc{ai},rcc{ai},scc{ai},Su,dGu,b0u, preN,Wb,yte,muY,Zte,sstot);
+        dC(ai)=dc_; rC(ai)=rc_; nsC(ai)=r2ns;
+    end
+    swRefD(ci)=median(dC,'omitnan'); swRefR(ci)=median(rC,'omitnan'); swRefN(ci)=median(nsC,'omitnan'); swRefNpx(ci)=numel(Sr);
+    fprintf('   %-8.2f %6d | %9.0f%% %9.0f%% | %13.3f\n', amps(aiR), numel(Sr), swRefD(ci), swRefR(ci), swRefN(ci));
+end
+REFSWEEP = struct('refAmps',amps(refCands),'nPx',swRefNpx,'medDipCap',swRefD,'medRebCap',swRefR,'medNonStimR2',swRefN);
+if ischar(naive_refAmp) && strcmpi(naive_refAmp,'auto')      % pick max capture s.t. non-stim R^2 floor
+    capScore = swRefD + swRefR;  ok = swRefN>=naive_refNsFloor;
+    if any(ok), cc=find(ok); [~,bi]=max(capScore(cc)); aiRef=refCands(cc(bi));
+    else, [~,bi]=max(swRefN); aiRef=refCands(bi); end
+    fprintf('   --> AUTO picked reference amp = %.2f V (max dip+reb capture with non-stim R^2 >= %.2f)\n', amps(aiRef), naive_refNsFloor);
+else                                                         % forced numeric ref amp (default 3.7)
+    [~,aiRef] = min(abs(amps-naive_refAmp));
+    if isempty(Sc{aiRef}) || numel(Sc{aiRef})<naive_refMinPx % forced ref unusable -> most-constrained usable set
+        [~,mi]=min(swRefNpx);  aiRef=refCands(mi);
+    end
 end
 S_naive = Sc{aiRef};  ampRef = amps(aiRef);
 dGnvR = decomposition(Gz(S_naive,S_naive)+lamR*eye(numel(S_naive)));  b0nvR = dGnvR\cz(S_naive);
@@ -1265,7 +1628,7 @@ if RUN_NATIVE_VAL
     NAIVE_VAL=struct('kFold',kF,'r2test',r2teN,'r2train',r2trN,'hoDipCap',hoDip2,'hoRebCap',hoReb2,'hoPredDip',hoPD2, ...
                      'refAmp',ampRef,'nRefPx',numel(S_naive),'mn',mn,'td',td,'en',en);
 end
-STIMBLIND_NAIVE = struct('amps',amps,'refAmp',ampRef,'S_naive',S_naive, ...
+STIMBLIND_NAIVE = struct('amps',amps,'refAmp',ampRef,'S_naive',S_naive,'refSweep',REFSWEEP, ...
                    'ActualDip',An2d,'GlobalDip',Gn2d,'LocalDip',Ln2d,'ActualReb',An2r,'GlobalReb',Gn2r,'LocalReb',Ln2r, ...
                    'trA',{trA2},'trG',{trG2},'trL',{trL2},'trModel',{trM2},'bUseN',{bUse2},'useMaskN',useMask2, ...
                    'r2full',r2_2full,'r2sb',r2_2sb,'r2nonStim',r2_2ns,'nUse',nUse2,'nCon',nCon2, ...
@@ -1743,6 +2106,133 @@ end
 function s = ternstr(cond, a, b)
 % tiny string-ternary helper (MATLAB has no ?: operator): returns a if cond else b.
 if cond, s = a; else, s = b; end
+end
+
+function c = tern_col(isAff)
+% colour for §10T fit overlay: red-ish for affected, grey-blue for clean.
+if isAff, c = [0.85 0.15 0.15]; else, c = [0.25 0.45 0.75]; end
+end
+
+function tfmap_click(fig, ~)
+% §10T3: locate the clicked amp-subplot + nearest grid pixel, open the TF inspector.
+DB = guidata(fig);
+for ai = 1:numel(DB.axT)
+    ax = DB.axT(ai);  cp = ax.CurrentPoint;  x = cp(1,1);  y = cp(1,2);
+    xl = ax.XLim;  yl = ax.YLim;
+    if x>=xl(1) && x<=xl(2) && y>=yl(1) && y<=yl(2)
+        [~,p] = min((DB.gdC - x).^2 + (DB.gdR - y).^2);
+        tfmap_detail(DB, p, ai);  return;
+    end
+end
+end
+
+function tfmap_detail(DB, p, ai)
+% §10T3: refit the clicked pixel's fixed-order TF and overlay evoked / fit / ipsi reference.
+ri = squeeze(DB.mResp(p, DB.tf_win, ai));  ri = ri(:) - ri(1);
+wp = warning('off','all');                                   % single toggle (no onCleanup/loop -> safe)
+[sys, vaf, ch] = proto_fitTF_fix(ri, DB.Ts, DB.np, DB.nz, DB.nd, DB.nPreZ, DB.opt);
+warning(wp);
+yhat = proto_sim(sys, numel(DB.tf_win), DB.Ts, DB.nPreZ);
+md   = sqrt(mean(([ch.delayMs ch.troughMs]-[DB.dR DB.tR]).^2 ./ [40 80].^2));
+pass = (vaf > DB.vg) && (md < DB.tol);
+f = findobj('Type','figure','Name','TF pixel inspector');
+if isempty(f), f = figure('Name','TF pixel inspector','Color','w','Position',[720 220 640 460]); else, clf(f); figure(f); end
+ax = axes(f);  hold(ax,'on');
+plot(ax, DB.tms_w, ri,   'k',   'LineWidth',1.4);
+plot(ax, DB.tms_w, yhat, 'r--', 'LineWidth',1.3);
+plot(ax, DB.tms_w, DB.rRef, 'Color',[.3 .5 .8], 'LineWidth',1.0);
+yline(ax, 0, ':', 'Color',[.6 .6 .6]);
+legend(ax, {'evoked','TF fit (fixed order)','ipsi reference'}, 'Location','best','FontSize',8);
+xlabel(ax,'ms');  ylabel(ax,'\DeltaF/F');
+title(ax, sprintf('g%d @ %.1fV   VAF=%.0f%% (gate %.0f)   trough=%.0f (ref %.0f)   matchD=%.2f (tol %.2f)   ->  %s', ...
+    p, DB.amps(ai), vaf, DB.vg, ch.troughMs, DB.tR, md, DB.tol, ternstr(pass,'AFFECTED','not')), 'FontSize',9);
+end
+
+function [sys, vaf, ch, ord] = proto_fitTF(r, Ts, maxP, maxZ, maxD, nPreZ, opt)
+% §10T framing-A: SWEEP (np,nz,nd) and keep the AIC-best low-order continuous TF for an
+% impulse-response vector r (evoked, t=0 at first sample). Returns sys, in-window VAF (%),
+% characteristics via proto_chars, and the selected order ord=[np nz nd].
+r  = r(:);  nT = numel(r);
+u  = [zeros(nPreZ,1); 1; zeros(nT-1,1)];
+y  = [zeros(nPreZ,1); r];
+dat = iddata(y, u, Ts);  dat.Tstart = -nPreZ*Ts;
+bestA = inf;  sys = [];  ord = [NaN NaN NaN];   % NOTE: warnings suppressed once by caller (no onCleanup here — its destructor crashes the MCP output layer)
+for nd = 0:maxD
+    for np = 1:maxP
+        for nz = 0:min(np-1, maxZ)
+            try
+                s = tfest(dat, np, nz, opt, 'InputDelay', nd*Ts);
+                a = aic(s);
+                if isfinite(a) && a < bestA, bestA = a; sys = s; ord = [np nz nd]; end
+            catch
+            end
+        end
+    end
+end
+[vaf, ch] = proto_vafch(sys, r, nT, Ts, nPreZ);
+end
+
+function [sys, vaf, ch] = proto_fitTF_fix(r, Ts, np, nz, nd, nPreZ, opt)
+% §10T2: fit ONE continuous TF at a FIXED order (np,nz,nd) — no sweep. Same model class
+% for every pixel (uniform dynamics across contra); one tfest call each.
+r  = r(:);  nT = numel(r);
+u  = [zeros(nPreZ,1); 1; zeros(nT-1,1)];
+y  = [zeros(nPreZ,1); r];
+dat = iddata(y, u, Ts);  dat.Tstart = -nPreZ*Ts;
+sys = [];
+try
+    s = tfest(dat, np, nz, opt, 'InputDelay', nd*Ts);
+    if isfinite(aic(s)), sys = s; end
+catch
+end
+[vaf, ch] = proto_vafch(sys, r, nT, Ts, nPreZ);
+end
+
+function [vaf, ch] = proto_vafch(sys, r, nT, Ts, nPreZ)
+% shared: in-window VAF (%) + characteristics for a fitted sys ([] -> reject cleanly).
+if isempty(sys), vaf = -100; ch = proto_chars([], Ts, nT); return; end
+try
+    yhat = proto_sim(sys, nT, Ts, nPreZ);
+    if any(~isfinite(yhat)), vaf = -100; ch = proto_chars(sys, Ts, nT); return; end   % unstable fit -> reject
+    vaf  = max(-100, 100*(1 - sum((r-yhat).^2)/max(sum((r-mean(r)).^2), eps)));        % floor so nulls stay finite
+    ch   = proto_chars(sys, Ts, nT);
+catch
+    vaf = -100;  ch = proto_chars([], Ts, nT);   % pathological sim/chars -> reject cleanly
+end
+end
+
+function yhat = proto_sim(sys, nT, Ts, nPreZ)
+% simulate the fitted TF's unit-impulse response over nT samples (post-onset window).
+if isempty(sys), yhat = zeros(nT,1); return; end
+u  = [zeros(nPreZ,1); 1; zeros(nT-1,1)];
+yo = sim(sys, iddata([], u, Ts));
+yhat = yo.OutputData(nPreZ+1:end);
+end
+
+function ch = proto_chars(sys, Ts, nT)
+% Extract tunable characteristics from a fitted TF's impulse response:
+% onset delay, trough time/depth, rebound peak/ratio, 5%-settle time, slow tau.
+ch = struct('delayMs',NaN,'troughMs',NaN,'dip',NaN,'reboundMs',NaN, ...
+            'reboundRatio',NaN,'settleMs',NaN,'slowTauMs',NaN);
+if isempty(sys), return; end
+try
+    [yi, ti] = impulse(sys, (0:nT-1)*Ts);   yi = yi(:);   tiMs = ti(:)*1000;
+    ch.delayMs = sys.InputDelay*1000;
+    [dip, iTr] = min(yi);   ch.dip = dip;   ch.troughMs = tiMs(iTr);
+    if iTr < numel(yi)
+        [reb, iRl] = max(yi(iTr:end));  ch.reboundMs = tiMs(iTr+iRl-1);
+        ch.reboundRatio = max(reb,0) / max(abs(dip), eps);
+    else
+        ch.reboundRatio = 0;
+    end
+    tol = 0.05*max(abs(yi));
+    lastEx = find(abs(yi) > tol, 1, 'last');
+    if ~isempty(lastEx), ch.settleMs = tiMs(lastEx); end
+    p  = pole(sys);  ps = p(real(p) < 0);
+    if ~isempty(ps), ch.slowTauMs = -1000/max(real(ps)); end
+catch
+    % leave the NaN-initialised struct (pathological sys) — caller treats as reject
+end
 end
 
 function [bN,yg,rL,r2ns,dipCap,rebCap,r2sb,nCon] = native_project(nb, evZ,aA,dc,rc,stimCols,S,dG,b0, preN,Wb,yte,muY,Zte,sstot)

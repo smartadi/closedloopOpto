@@ -29,25 +29,26 @@ here = fileparts(mfilename('fullpath'));
 % (contra_prediction needs best_sys from tf_fit; motion and prestim use
 %  contra_prediction residuals as the deviation signal)
 run(fullfile(here, 'tf_fit.m'));
+run(fullfile(here, 'ols_tf_pipeline.m'));
  %run(fullfile(here, 'contra_prediction.m'));
 % run(fullfile(here, 'trace_overlay.m'));
 % run(fullfile(here, 'dose_response.m'));
 
-% Motion + pre-stim variance run as TWO PARALLEL STREAMS:
-%   'peakdev' = deviation from trial-averaged response (ORIGINAL method)
-%   'cperr'   = CP-4 contra-prediction error (new route; needs contra_prediction)
-% Each stream tags its output filenames so they never overwrite.
-for dm = {'peakdev','cperr'}
-    dev_metric = dm{1};
-    here = fileparts(mfilename('fullpath'));   % run() cd's away; recompute
-    fprintf('\n=== Stream: dev_metric = %s ===\n', dev_metric);
-    run(fullfile(here, 'motion_analysis.m'));
-    here = fileparts(mfilename('fullpath'));
-    run(fullfile(here, 'prestim_variance.m'));
-end
-clear dev_metric dm
-
-here = fileparts(mfilename('fullpath'));
-run(fullfile(here, 'spatial_spread.m'));
-
-fprintf('\nrun_all complete.\n');
+% % Motion + pre-stim variance run as TWO PARALLEL STREAMS:
+% %   'peakdev' = deviation from trial-averaged response (ORIGINAL method)
+% %   'cperr'   = CP-4 contra-prediction error (new route; needs contra_prediction)
+% % Each stream tags its output filenames so they never overwrite.
+% for dm = {'peakdev','cperr'}
+%     dev_metric = dm{1};
+%     here = fileparts(mfilename('fullpath'));   % run() cd's away; recompute
+%     fprintf('\n=== Stream: dev_metric = %s ===\n', dev_metric);
+%     run(fullfile(here, 'motion_analysis.m'));
+%     here = fileparts(mfilename('fullpath'));
+%     run(fullfile(here, 'prestim_variance.m'));
+% end
+% clear dev_metric dm
+% 
+% here = fileparts(mfilename('fullpath'));
+% run(fullfile(here, 'spatial_spread.m'));
+% 
+% fprintf('\nrun_all complete.\n');
