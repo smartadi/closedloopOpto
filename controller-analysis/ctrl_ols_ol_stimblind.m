@@ -14,9 +14,12 @@
 %   4. Deploy on OL trials: Actual = measured ipsi; Global = unaffected-contra prediction
 %      (the network-shared, ongoing-state component); Local = Actual - Global (the local part).
 %   5. Report how much of the ipsi dip the residual captures  ==  how LOCAL the effect is.
-%      (On m4 this is ~42%: most of the ipsi dip is network-shared, predictable from contra.
-%       We report the split honestly rather than forcing it to 100% -- that would need the KKT
-%       stim-blind constraint, deliberately NOT used here per the pure-pixel choice.)
+%      (On m4, aff_dip_thr=1.33 -> 151 genuinely-flat contra px: Global stays ~flat through stim,
+%       so Local captures ~89% (transient) / ~94% (sustained) of the ipsi dip. I.e. with stim-BLIND
+%       contra pixels the laser-site inhibition is almost entirely LOCAL, NOT network-shared.
+%       The spont held-out R^2 drops 0.87->0.68 because the best predictors -- the homotopic midline
+%       pixels -- are precisely the ones that dip and get dropped. That tradeoff is the pure-pixel
+%       choice; the KKT stim-blind constraint (deliberately NOT used) would keep them and force 100%.)
 %
 % PREREQS
 %   Run ctrl_ols_spont.m (Stage 1) first for THIS session -> data/ctrl_ols_spont_<sess>.mat.
@@ -31,7 +34,7 @@ Fs          = 35;
 % STIM-AFFECTED contra px: MANUAL dip-score threshold, IDENTICAL definition to ctrl_affected_gui.m
 % (trial-averaged %dF trace; score = (trough - onset_ref)/pre_SD; affected where score < -aff_dip_thr).
 % Set aff_dip_thr to the slider value you converged on in the GUI. Adaptive/permutation was rejected.
-aff_dip_thr = 1.5;       % affected if dip score < -aff_dip_thr  (downward dips only)  <-- GUI slider value
+aff_dip_thr = 1.33;      % affected if dip score < -aff_dip_thr  (downward dips only)  <-- GUI slider value
 pre_sd_s    = 6.0;       % baseline-SD window for the score  [-6,0] s
 ref_s       = 1.0;       % onset-reference window  [-1,0] s
 trough_s    = 0.5;       % sliding-window length for the trough (s)
