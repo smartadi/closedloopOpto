@@ -80,12 +80,44 @@ the **peak** metric. Both are reported: `impulse_dose_response_peak.png` (headli
 (0–200 ms, locked), `PEAK_WIN` (0–300 ms), `SEGMENT_GAP_S`. Image registration
 (`BREGMA_PX`, `PX_PER_MM_X/Y`) is imported from the grid config (Fig-0 verified this session).
 
+## Contra→ipsi stim-blind OLS (`impulse_ols.py` + `run_ols.py`) — added 2026-07-16
+Port of the impulse-analysis residual framework (`impulse-analysis/ols_tf_pipeline.m`:
+`local_stimblind_session` + `native_project`) to this module. Isolates the LOCAL stim effect at
+each site as the residual of a spontaneous-trained contra→ipsi predictor whose weights are
+projected BLIND to the stim-coupling subspace:
+```
+Actual = ya            (measured peri-onset ipsi trace, focal pixel, %dF/F)
+Global = bN' · evZ     (stim-blind contra prediction = ongoing network state into the ipsi kernel)
+Local  = ya − Global   (residual = the isolated local stim effect)
+```
+Dual-opsin twist: each trial stims ONE hemisphere, so the OTHER is the unstimulated contra
+predictor. Run per side → excit (left, +) & inhib (right, −) local effects in one session.
+
+Run: `.venv/Scripts/python.exe bilateral/impulse/run_ols.py` → `bilateral/impulse/ols_png/`
+(`ols_decomposition.png`, `ols_dose_response.png`, `ols_weight_maps.png`).
+
+**Two non-obvious knobs (see RESEARCH 2026-07-16):**
+- **500 SVD comps** (`OLS_N_COMPS` in `run_ols.py`), NOT the 50 the dose-response uses. With 50,
+  the ~400-node contra grid spans the whole SVD space → any pixel reconstructs exactly → spont
+  R²=1.0 (trivial). 500 comps make the grid a proper subspace → genuine R² 0.95/0.99.
+- **Dose readout = signed PEAK**, not the 0–300 ms mean: the fast excitatory transient cancels
+  against its undershoot in the mean (peak_mode=3 dilutes it), exactly as for the dose-response.
+- Contra grid = **bregma-midline hemisphere split** (`build_contra_grid`), no hand-drawn ROI.
+
+**First-pass result (single session):** spont contra→ipsi R² = 0.95 (excit) / 0.99 (inhib),
+comparable to AL_0033. Local residual recovers the dose-graded per-side deflection (excit peak
+→ +2.0 %; inhib peak → −1.1 % at 2.5 V) while Global stays stim-blind (~flat) → the local stim
+effect is NOT explained by contra/global state, opposite-sign in the same animal. Mid-amps
+(1.0–1.5 V) near-threshold/noisy; inhib 1.0 V over-flags bled px and Global absorbs part of the dip.
+
 ## Open items / next steps
 - **Recover the sham (amp 0) catch condition** — it fires no laser so it is absent from the
   detected onsets; recover its trial times via the Block↔Timeline clock offset to get a true
   no-stim baseline for the dose-response origin.
-- Replicate the impulse-area **residual / state-dependence** workbench (contra→ipsi) on this
-  bilateral session — the two hemispheres give a natural excit/inhib contrast.
+- **Stage 3 — residual state-dependence** (per-trial residual vs brain state). BLOCKED: no
+  AL_0048 face-motion trace exists yet (only `compute_face_motion_AL0046.m`); pre-stim
+  variance/δ is a KNOWN signal-power confound (retracted 2026-07-02). Get the face-motion trace
+  first — motion is the clean, power-independent state variable.
 - **TF fit** of the impulse response per side (excitatory transient vs inhibitory dip time
   constants); compare to AL_0033/AL_0041 impulse TFs.
 - If any panel is promoted to the paper: re-render through `utils/paperFig`/`paperStyle`.
