@@ -43,9 +43,10 @@ edgeMargin = 12;       % erode mask edge by this many px (drop low-SNR boundary 
 settle_s   = 2.0;      % laser-OFF settle AFTER TRIAL END before a frame counts as spontaneous
 trainFrac  = 2/3;      % temporal train fraction (first block = train, later block = test)
 maxFrm     = 60000;    % cap on spontaneous frames used
-fit_mode   = 'lasso';  % 'ols' | 'ridge' | 'lasso'. SPARSE (lasso) is the default: a small set of
-                       % contra pixels -> an interpretable, Zhiwen-style weight map. OLS is the dense
-                       % unconstrained ceiling (ols_tf_pipeline sec17); ridge never zeros px.
+fit_mode   = 'ols';    % 'ols' | 'ridge' | 'lasso'. DENSE OLS is the default -- we care about R^2
+                       % here (dense 0.87 vs sparse-lasso plateau ~0.68; the extra R^2 is many small
+                       % DISTRIBUTED contra contributions). Lasso stays available for an interpretable
+                       % Zhiwen-style map; ridge never zeros px.
 ridge_lam  = 0.2;      % L2 (ridge mode) / elastic-net L2 fraction (lasso mode: >0 groups neighbours)
 l1_frac    = 0.1;      % L1 penalty fraction (lasso mode only): HIGHER = sparser (fewer active px)
 debias     = true;     % lasso: refit plain OLS on selected pixels (removes L1 shrinkage)
