@@ -5,77 +5,132 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 
 ---
 
-## Open Action Items — as of 2026-06-03
+## Open Action Items — as of 2026-07-06
 
-### Manuscript — Text & Structure
-- [x] Finalize reorganized paragraph structure (punchline → explanation); move remaining content to Methods *(2026-05-08)*
-- [x] Fix broken cross-reference links throughout the draft *(2026-05-08)*
-- [ ] Notify Nick when revised draft (text + figures) is ready for full review *(2026-05-08)*
-- [x] Update remaining figure captions; incorporate Nick's Slack/cloud comments *(2026-04-27, done per 2026-05-11)*
+> Reconciled from the 2026-07-06 meeting's own carry-forward list (the authoritative current snapshot). Older figure/analysis items now folded into the residual-framework pivot or confirmed done are recorded in the meeting entries below, not repeated here.
 
-### Manuscript — Figures (existing)
-- [x] `2026-05-29.1` Unify laser-power color scheme across all panels of the disturbance figure (grayscale for laser intensity; label sessions with colored text, not color-coded data) *(2026-05-29, done 2026-06-11)*
-- [x] `2026-05-29.2` Add significance stars to the variance-ratio stem plot; reformat to show pre- and post-stimulus periods matching the trial-average time-course figure structure *(2026-05-29, done 2026-06-11)*
-- [ ] Generate supplementary panel: spatial spread (ΔF/F inhibition area) vs. laser power; cite Nuoli/Svoboda *(2026-05-08)*
-- [x] Update impulse-response figure: zoom in x-axis on panel A so power levels are distinguishable *(2026-05-08)*
-- [x] Change error bars on impulse-response plots from IQR to 95th-percentile bounds *(2026-05-08, done 2026-05-14)*
-- [ ] Refine transfer-function fit (3-pole model): relax delay parameter τ; report R² on held-out 20% test set *(2026-05-08)*
-- [ ] Re-compute trial MSE using window **t = +1 s to +3 s** post-laser onset; compare to existing results *(2026-05-08)*
-- [ ] Add motion vs. MSE (closed vs. open loop, cross-session) panel + good/bad trial spectral examples to manuscript *(2026-05-08)*
-- [ ] Add sine-wave (preview/feedforward) control results section/figure *(2026-04-27, deferred again 2026-05-08)*
-- [x] Rescale laser input trace on single-trial and average panels *(2026-04-27, done per 2026-05-11)*
-- [x] Unify plot format across the four subpanels in the final figure *(2026-04-27, done per 2026-05-11)*
-- [x] Replace relative (normalized) power spectra with absolute power (ΔF/F²/Hz) *(2026-05-08, done per 2026-05-11)*
+### State-Dependence / Residual Framework (critical path to bioRxiv)
+- [ ] `2026-07-06.1` Produce **signed** (non-absolute-value) residual-deviation plots to test whether high/low laser response is directionally predictable *(2026-07-06)*
+- [ ] `2026-07-06.2` Add **pre-stimulus-window residual as a control**: verify it is flat across delta-power / variance bins (rules out globally bad prediction as the confound) *(2026-07-06)*
+- [ ] `2026-07-06.3` **Finalize the contralateral predictor mask** (currently a greedy worst-case-pixel, uniform-weight mask), then rerun quartile-binned (Q1–Q4) residual-deviation plots on the updated model before claiming significance *(2026-07-06)*
+- [ ] `2026-07-06.4` Run **significance test on the slope** of residual deviation vs. state variables (delta power, pre-stim variance) using the finalized mask *(2026-07-06)*
+- [ ] `2026-07-02.5` Reconcile the **SFN abstract p-value** claim on state-dependence with the corrected residual analysis *(2026-07-02)*
+- [ ] `2026-06-29.9` Identify laser grid locations with **minimal contralateral spread**; restrict residual analysis to those locations to reduce bleed-through confound *(2026-06-29)*
+- [ ] `2026-06-22.9` Re-run residual (local-only) analysis with the corrected predictor; produce clearly labeled trace + scatter plots; **fix mislabeled axes** (Y previously "motion") *(2026-06-22)*
+- [ ] `2026-06-29.13` Reconcile the impulse state-dependence result in the paper draft; get the paper to a state matching the SFN abstract claims **before posting to bioRxiv** *(2026-06-29)*
 
-### Manuscript — New Analyses
-- [ ] `2026-06-03.1` For each CL trial, subtract modeled laser effect (via TF fit from impulse/OL data) to get inferred "no-laser" trace; compare variance distribution of inferred traces to actual no-laser trials to validate approximate linearity; add shuffled-subtraction as null *(2026-06-03)*
-- [ ] `2026-06-03.2` Re-do MSE-vs-delta-power plot: OL/CL binned by **pre-stimulus delta-band fraction** (not total variance); match y-axes across panels *(2026-06-03)*
-- [ ] `2026-06-03.3` Compute instability frequency from full latency distribution (worst-case ~47 ms); plot predicted control-quality degradation vs. input frequency; show alongside delta-power MSE figure *(2026-06-03)*
+### Closed-Loop Analyses (deferred until residual framework is locked)
+- [ ] `2026-06-03.1` For each CL trial, subtract modeled laser effect (TF fit) → inferred "no-laser" trace; compare variance distribution to actual no-laser trials (add shuffled-subtraction null) *(2026-06-03)*
+- [ ] `2026-06-03.2` Re-do MSE-vs-delta-power plot: OL/CL binned by **pre-stimulus delta-band fraction**; match y-axes across panels *(2026-06-03)*
+- [ ] `2026-06-03.3` Compute instability frequency from full latency distribution (worst-case ~47 ms); plot predicted control degradation vs. input frequency *(2026-06-03)*
 - [ ] `2026-06-03.4` Replace variance-binned x-axis in state-dependence figure with delta-band power fraction as primary sorting criterion *(2026-06-03)*
-- [ ] `2026-06-03.5` Produce heatmap of CL vs. OL trials with time on x-axis and trials sorted by delta-band fraction (Curto/Issa style, delta-fraction key) *(2026-06-03)*
-- [x] `2026-05-29.3` Apply log scale (or 1/f correction, or trial-vs-mean difference) to power spectra color axis in the pre-trial-variance trial-sorting figure to make the 2–4 Hz feature visually apparent *(2026-05-29, done 2026-06-11)*
-- [ ] `2026-05-29.4` Consult Joanne's Spiral paper (Fig. 3) for spatially-localized predictor-pixel maps; consider SVD-based left-hemisphere representation (vs. fixed pixels) to predict ipsilateral ROI; compare R² *(2026-05-29)*
-- [ ] Implement **Curto & Issa-style trial-sorting figure**: split trials into synchronized (high pre-stim variance) vs. desynchronized (low pre-stim variance) using ~1 s pre-stim window; sort within groups by absolute fluorescence at t = 0; display ΔF/F heatmaps *(2026-05-11)*
-- [ ] Confirm absolute power spectral plots complete; finalize narrative framing (motion + frequency → trial outcome) and produce summary figure *(2026-05-11)*
-- [ ] Generate **three-layer contralateral-prediction model** figure:
-  - **Pink**: predict ipsilateral ROI from contralateral pixels in spontaneous (no-opto) data
-  - **Orange**: add average open-loop impulse response on top of pink prediction
-  - **Red**: add exact per-trial laser sequence (via transfer-function model) on top; check match to closed-loop traces *(2026-05-11)*
-- [ ] Using the red model (if validated): compute post-hoc **optimal laser sequence** for representative trials; quantify gap vs. actual controller; frame as MPC motivation *(2026-05-11)*
-- [ ] Add motion energy as co-predictor alongside contralateral pixels in pink/red models *(2026-05-11)*
-- [ ] Determine what fraction of high-error closed-loop trials are attributable to 2–4 Hz spontaneous fluctuations vs. motion; prepare summary figure *(2026-05-08)*
+- [ ] `2026-06-03.5` Produce heatmap of CL vs. OL trials, time on x-axis, trials sorted by delta-band fraction (Curto/Issa style) *(2026-06-03)*
+- [ ] `2026-06-03.6` Spatial-spread 2D summary: response **amplitude and onset latency** as joint functions of distance from laser target *(2026-06-03)*
+- [ ] Using the red model (if validated), compute post-hoc **optimal laser sequence** for representative trials; quantify gap vs. actual controller; frame as MPC motivation *(from 2026-05-11)*
+- [ ] `2026-05-29.6` Sine-wave/feedforward sessions on new mouse: ≥4 s / ≥4-cycle stimuli, shorter ITIs; full-grid ping characterization before closed-loop *(2026-05-29)*
 
-### Spatial Spread Characterization
-- [ ] `2026-06-03.6` Produce 2D summary showing both response **amplitude and onset latency** as joint functions of distance from laser target *(2026-06-03)*
-- [x] `2026-05-29.5` Use widefield GUI to step through open-loop trials frame-by-frame; characterize spatial spread of optogenetic effect over time (ping vs. sustained); discuss discrepancy with Whitefield Opto paper Fig. 1 with Anna *(2026-05-29, confirmed done per 2026-06-03 meeting)*
+### New Mouse — Grid Characterization (excitatory + inhibitory opsin)
+- [ ] `2026-06-29.5` Run additional grid sessions (same mouse, same protocol) to assess reliability of excitatory and midline responses; use **lower excitatory laser power** (below 0.5 V) *(2026-06-29)*
+- [ ] `2026-06-29.6` Plot grid data as **trials × time matrix** per location to diagnose whether low-response noise is outlier-trial driven; consider median over mean *(2026-06-29)*
+- [ ] `2026-06-29.7` Build **inverse GUI view**: for a clicked widefield location, show the response trace for all 52 stim positions (find bidirectional-control candidates) *(2026-06-29)*
+- [ ] `2026-06-29.8` Share additional grid sessions with **Dana** once collected *(2026-06-29)*
+- [ ] `2026-06-22.7` Add the excitatory-opsin **spatial-localization result** (hemisphere-contained excitation) to the widefield opto paper *(2026-06-22)*
 
-### Latency Analysis
-- [ ] Optional: insert fixed 2 ms pause in processing code to verify ~14 ms minimum latency shifts *(2026-04-27)*
+### Motorized Treadmill
+- [ ] `2026-07-06.6` Post identified motor specs (model, torque, cost, controller) to the **treadmill Slack channel** for Nick/Matt/Alice *(2026-07-06)*
+- [ ] `2026-07-06.7` Check existing lab **power supplies** (variable-voltage adapters) for ≥3× peak-motor-current rating before buying a new one *(2026-07-06)*
+- [ ] `2026-06-29.2` Add **rotary encoder mount** to the wheel base (reprint or clamp); confirm encoder wiring to Arduino *(2026-06-29)*
+- [ ] `2026-06-29.3` When Alice returns (fall), supervise fixture redesign for motorized/clutch version *(2026-06-29)*
 
-### Mouse Logistics
-- [ ] `2026-05-29.6` For sine-wave/feedforward tracking sessions on new mouse: use longer stimulus duration (≥4 s, ≥4 cycles) and shorter inter-trial intervals; start with full-grid ping characterization before closed-loop *(2026-05-29)*
-- [x] Coordinate with Anna on timeline for retroorbital PHP.eB mouse; begin habituation; run first open-loop sessions with **data saving enabled** *(2026-05-11)*
-- [x] Track habituation timeline for freshly injected mouse (~2 weeks from 2026-05-11) *(2026-05-11)*
-- [x] Run open-loop controller sessions and **save the stimulus/response data** for new mouse(es) *(2026-05-08)*
-- [x] Approach Fabiola with specific mice + virus info; coordinate surgery plan *(2026-04-27)*
-- [x] Check status of existing GCaMP/PHP.eB mice needing head bar + window implants *(2026-04-27)*
-- [x] Ask Anna to identify suitable GCaMP mice for new local viral injections *(2026-04-27, done — two mice now injected per 2026-05-11)*
-
-### Collaboration
-- [ ] `2026-06-03.7` Chat with Anna about today's discussion: laser-subtraction approach, spatial spread characterization (amplitude + latency jointly) *(2026-06-03)*
-- [ ] `2026-05-29.7` Chat with Anna about contralateral spread observations; reconcile with existing spatial-spread characterization data *(2026-05-29)*
-- [ ] Follow up with Zilu on ARIMA/forecasting models for multi-region widefield forecasting *(2026-04-27)*
-- [ ] Prepare widefield dataset (impulse/step responses) for Tim Kim's latent-space forecasting model; arrange joint meeting *(2026-04-27)*
-- [x] Send Nick screenshots: (a) bad/good-trial interactive spectral plots, (b) motion vs. MSE scatter — via Slack *(2026-05-08)*
-- [x] Share CLAUDE.md and RESEARCH.md (or GitHub link) with Nick for departmental AI-tools presentation *(2026-05-08)*
+### People / Logistics
+- [ ] `2026-06-29.11` Train **Alex** (rotation student) to run grid sessions; show full experimental workflow *(2026-06-29)*
+- [ ] Run open-loop controller sessions and **save stimulus/response data** for the upcoming mouse(es) *(from 2026-05-08)*
 
 ### Nick's Items (not Aditya's)
-- [ ] `2026-06-03.8` **Nick**: Reply to Aditya's email *(2026-06-03)*
-- [ ] **Nick**: Create mouse catalog spreadsheet — proposed for lab meeting 2026-05-12 *(2026-04-27, recurring)*
+- [ ] `2026-06-29.4` **Nick**: Confirm with Annie whether she wants to contribute to the treadmill hardware project *(2026-06-29)*
+- [ ] `2026-06-29.12` **Nick**: Confirm protocol-amendment approval; notify Aditya when Alex can handle mice *(2026-06-29)*
+
+### Presumed done (date passed — verify)
+- [x] `2026-07-06.5` Present the SFN story at Data Club (scheduled 2026-07-07) with brief cortical-dynamics/control intro for new lab members *(2026-07-06; date has passed)*
 
 ---
 
 ## Meeting Entries
+
+---
+
+### 2026-07-06
+**Source:** `C:\Users\aditya\OneDrive\Notes\Adick meetings\July 6th.md`
+
+**Overview:** Aditya presented the **residual state-dependence framework**: per-trial residual deviation (|trial residual − trial-average residual|) plotted against pre-stimulus variance, delta power, and motion — **motion shows the clearest effect**. Predictor is now a pixel-based **greedy mask** (worst-case contralateral pixels, uniform weights); Aditya wants to lock the mask before running validation, and will switch scatter plots to quartile bins. Nick asked for a signed (non-abs) version to test directionality, and proposed that pre-stimulus residual should be flat across state bins as a key control (since the contralateral predictor should already capture delta). Motor identified for the treadmill (~10× prior torque, side-shaft, ~$20 + $10 controller); Nick computed ~29–60 RPM suffices at 30 cm/s. Data Club talk scheduled for the next day (SFN story + short intro for new members). Several older items confirmed done (cross-references, motion-energy predictor, motor spec/purchase).
+
+**Key decisions:**
+- Add **signed** residual-deviation plots + **pre-stim residual** flat-across-bins control before claiming significance
+- Finalize the greedy contralateral mask first, then rerun **quartile-binned** residual plots and slope significance test
+- Treadmill: post motor specs to Slack; confirm power-supply current headroom (≥3× peak) before purchase
+- Downstream items (MSE-vs-delta plots, MPC/optimal-laser) stay deferred until residual framework is locked
+
+**AI analysis flags (from transcript):**
+- "Pre-stim residual should be flat" only holds if the predictor's fitting window captures the full delta cycle (~1–4 Hz); use ≥2 s baseline or it may covary with state and falsely mimic a laser effect
+- Cleaner test: **difference-in-differences** — (high-power residual variance) − (matched low-power residual variance) within the same delta/motion bin — removes state-dependent baseline asymmetry; directly addresses the SFN p-value concern
+- Mask finalization is a soft bottleneck gating significance tests, SFN reconciliation, and manuscript figures — set a concrete self-imposed deadline
+
+---
+
+### 2026-07-02
+**Source:** `C:\Users\aditya\OneDrive\Notes\Adick meetings\Jul 2nd.md`
+
+**Overview:** Figures-only walkthrough of the state-dependence analysis; Nick again asked for a structured, slides-based validation of each step. Core narrative reaffirmed: OL linearity holds on average → build PI controller → use controller failure to reveal state-dependence. The **SFN abstract's state-dependence p-value** was flagged as conceptually unclear — apparent state-dependence in impulse responses may reflect baseline jitter rather than nonlinear dynamics. The **SVD-based contralateral predictor map showed anomalous non-blob structure**; Nick traced this to temporal components being scaled by singular values (S×V), so regression weights aren't comparable across components without re-normalizing. Agreed framing: fit predictor on spontaneous data; at low power (no local effect) residual ≈ 0 sets a noise floor; at higher powers, residual-variance increase correlated with motion/delta isolates local state-dependence.
+
+**Key decisions:**
+- Fix SVD component normalization (account for S×V scaling) before producing spatial kernel maps; verify corrected map shows a localized blob
+- Residual framework: low-power trials as null (noise floor) → higher powers compute per-trial residual variance → correlate with motion, delta power, pre-stim variance
+- No presenting without a proper slide deck next time
+- Low-power (~0.5 V) contralateral spread is negligible → bleed-based prediction trick only fails at high powers, not a fundamental limit on the state-dependence claim
+
+**AI analysis flags (from transcript):**
+- **Squaring the regression weights** for visualization discards sign and distorts magnitudes — use signed `U*w` with a diverging colormap; likely a separate cause of the non-blob map from the S×V issue
+- Confirm exactly which matrix is the regressor before concluding weights are miscalibrated: if regressing onto `S*V'`, OLS already accounts for scale — the error is in reconstructing the kernel (`U*w`, not `Σ Uᵢ²·wᵢ`)
+- Low-power residual is not guaranteed zero-mean if there's state-dependent hemispheric asymmetry — split low-power residual by delta tercile; if already state-dependent, use difference-in-differences
+
+---
+
+### 2026-06-29
+**Source:** `C:\Users\aditya\OneDrive\Notes\Adick meetings\Jun 29th.md`
+
+**Overview:** Treadmill wheel fits the rig — proceeding **free-spinning now, motorized/clutch deferred to Alice's return (fall)** under Aditya's supervision; Annie (undergrad) flagged as possible contributor. **Alex (rotation student)** to be trained to run grid sessions; protocol amendment submitted, approval expected next day. Reviewed interactive GUI of 52-spot grid impulse responses (0.5 V): inhibitory spots clean; **excitatory spots show strong oscillatory/higher-order dynamics with large rebounds**; spatial specificity varies widely. Nick identified a **bidirectional-control candidate** — a midline spot inhibited by some laser positions and excited (with rebound) by others. Predictor updated to Johansson's exact SVD method; residual-approach limits discussed (bleed may itself be state-dependent) → restrict to low-bleed locations. Career: Aditya aims to post bioRxiv as soon as defensible and apply to Starfish without waiting for publication.
+
+**Key decisions:**
+- Treadmill: free-spinning first, motorized later (Alice, fall); spec + purchase motor now (overkill torque OK)
+- Restrict state-dependence residual analysis to laser locations with minimal contralateral spread (visually white on opposite hemisphere)
+- Collect additional grid sessions (lower excitatory power, <0.5 V) to confirm midline bidirectional target reliability; use median over mean
+- Train Alex to run grids to free Aditya's time
+- Get paper to SFN-abstract-consistent state before bioRxiv
+
+**AI analysis flags (from transcript):**
+- "50 trials should be enough" — ambiguous grid responses may stem from non-zero-mean pre-stim baselines (insufficient ITI jitter) inflating the mean estimate's variance, not trial count
+- Pre-stimulus SEM/SD bars should straddle zero by construction (baseline-normalized) — if not, check for baseline/pre-stim window overlap or an asymmetric plotting bug
+- Consider **pupil diameter** as a trial-by-trial arousal covariate alongside delta power and motion; bridges to the "wake the mouse up" direction
+- Bidirectional/sleep-induction idea: likely Adamantidis et al. (2007, Nature) or Fernandez et al. (2018, Nat Neurosci) — locate exact ref
+
+---
+
+### 2026-06-22
+**Source:** `C:\Users\aditya\OneDrive\Notes\Adick meetings\Jun 22nd.md`
+
+**Overview:** Treadmill fitting logistics — re-test bare wheel on the axle for camera/LED clearance; a higher-torque motor is needed (estimate from ~1 ft jump of a 40 g mouse → axle torque → ≥2× stall torque). Aditya showed new-mouse impulse data at two sites (inhibitory + excitatory, 50 trials, 0.5 V, 1 s): inhibitory responses clean and consistent with prior mice; **excitatory responses show a large, spatially distinct post-offset rebound** of unclear mechanism. **Excitatory (orange laser) activation is hemisphere-localized with negligible contralateral spread** — a positive result for the widefield opto paper. No full grid run yet; Nick directed running the proper 52-spot grid first. Contralateral SVD-based residual analysis discussed but inconclusive — Nick flagged that state-dependent contralateral bleed could confound the residual, and asked Aditya to first hit Johansson-level R² (~0.95–0.99 at rank 10) before proceeding.
+
+**Key decisions:**
+- Motor spec: max mouse force → axle torque → ≥2× stall torque; Arduino-controllable; use existing axle rotary encoder for closed-loop speed control
+- Run full 52-spot galvo grid (both lasers, multiple powers, **widely jittered ITI 3–9 s**, fully randomized) — no fixed/near-fixed ITI; verify saved timestamps that jitter actually executed
+- Add hemisphere-contained excitation result to the widefield opto paper
+- Reproduce Johansson contra→ipsi R² first; then re-run residual analysis with clean, correctly labeled plots
+
+**AI analysis flags (from transcript):**
+- Fixed-ITI claim ("5 ± 1 s") — ±1 s is too narrow; slow delta rebound from the previous excitatory trial may persist at onset; Nick's 3–9 s range is the fix; verify from timestamps
+- "Closer to midline → smaller contralateral effect" contradicts Johansson (callosal midline areas show strongest contra correlation) — resolve as possible stimulus-location calibration error or bleed-map artifact before finalizing
+- Excitatory rebound looks **non-minimum-phase** — fit a 2nd-order TF with a right-half-plane zero; NMP dynamics would fundamentally limit closed-loop bandwidth and must be noted
+- Test whether contralateral bleed is state-dependent: bin by pre-stim delta power, check if contra amplitude covaries with ipsi amplitude; if so the residual method needs a correction factor
 
 ---
 
