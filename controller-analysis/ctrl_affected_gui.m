@@ -22,10 +22,10 @@
 selField  = 4;
 nSV_load  = 500;
 Fs        = 35;
-pre_s     = 1.0;      % pre-stim window [-pre_s,0] s
-zThr0     = 1.0;      % initial |t|-threshold (slider default). LOWER = more conservative (drops any
-                      % pixel with even a weak reliable dip -> "completely unaffected" spirit).
-two_sided = false;    % false = affected only if it DIPS (z<-zThr); true = |z|>zThr
+pre_s     = 6.0;      % pre-stim window [-6,0] s (trials are 18 s apart -> no overlap with prior stim)
+zThr0     = 1.0;      % initial score threshold (slider default). Score = dip depth in baseline-SD
+                      % units of the TRIAL-AVERAGED trace. LOWER = more conservative (drops weaker dips).
+two_sided = false;    % false = DOWNWARD only (affected iff dip: score < -thr). We only care about dips.
 
 assert(exist('mouse','var') && exist('fields','var'), '[CTRL-AFF] run load_sessions.m first.');
 here = fileparts(mfilename('fullpath'));
@@ -62,20 +62,21 @@ dV = mean(V_cp(:,stimFr),2) - mean(V_cp(:,preFr),2);
 deflMapRaw = Uflat*dV;                                  % [nPix x 1] raw dF deflection
 deflMap = reshape(deflMapRaw ./ max(mimg_cp(:),eps), nY, nX) * 100;   % %dF (sign preserved)
 
-% grid-pixel affectedness: per-trial (mean_stim - mean_pre), then the across-trial t-statistic
-% (deflection / SEM) -- tests whether the stim-window mean is RELIABLY below the pre-window mean.
-% This is the robust normalization (matches ctrl_ols_ol_stimblind Stage 2); single-trial-SD z is
-% swamped by trial noise. defl also kept in %dF for the intuitive absolute readout.
+% grid-pixel affectedness on the TRIAL-AVERAGED response (average over the 92 OL trials FIRST,
+% then measure the dip -- NOT a single-trial statistic):
+%   periAvg(px,t) = mean over trials of the peri-stim %dF trace
+%   deflection    = mean(periAvg over STIM window) - mean(periAvg over PRE window)   (dip -> negative)
+%   score         = deflection / SD(periAvg over PRE window)   = dip depth in baseline-SD units
+% Affected (DOWNWARD only) iff score < -threshold. The pre baseline SD is the residual wobble of
+% the AVERAGED trace over the 6 s pre-window -> a real dip must clear that floor.
 Xg = double(Uflat(gridIdx,:))*V_cp;                     % [nG x T] dF
 mIg = max(mimg_cp(gridIdx),eps);                        % per-grid mean image -> %dF
-defl_tr = zeros(nG,nTr);
-for j=1:nTr
-    seg = Xg(:,onF(j)+rel);
-    defl_tr(:,j) = (mean(seg(:,swin),2) - mean(seg(:,bwin),2)) ./ mIg * 100;   % %dF deflection per trial
-end
-defl = mean(defl_tr,2);                                 % mean deflection (%dF)  (map units)
-tGrid = defl ./ (std(defl_tr,0,2)/sqrt(nTr) + eps);     % across-trial t-stat; dip -> negative
-zGrid = tGrid;                                          % slider operates on the t-stat
+periAvg = zeros(nG,nRel);
+for j=1:nTr, periAvg = periAvg + Xg(:, onF(j)+rel); end
+periAvg = (periAvg / nTr) ./ mIg * 100;                 % [nG x nRel] TRIAL-AVERAGED %dF trace
+defl    = mean(periAvg(:,swin),2) - mean(periAvg(:,bwin),2);   % trial-avg deflection (%dF), dip<0
+base_sd = std(periAvg(:,bwin),0,2) + eps;               % temporal SD of the averaged baseline
+zGrid   = defl ./ base_sd;                              % score (dip depth in baseline-SD units)
 
 % package for callbacks
 GD = struct('Uflat',Uflat,'V',V_cp,'mimg',mimg_cp,'onF',onF,'rel',rel,'pre',pre,'post',post, ...
@@ -91,19 +92,20 @@ figA = figure('Color','w','Tag','ctrl_affected_gui', ...
 GD.axMap = axes('Parent',figA,'Position',[0.04 0.16 0.44 0.76]);
 GD.axPix = axes('Parent',figA,'Position',[0.56 0.16 0.40 0.72]);
 % threshold slider
+sld_max = max(6, ceil(max(abs(zGrid))));                % cover the full score range
 GD.sld = uicontrol(figA,'Style','slider','Units','normalized','Position',[0.10 0.05 0.32 0.03], ...
-    'Min',0.5,'Max',8,'Value',zThr0,'Callback',@(s,~)aff_update(figA));
+    'Min',0.5,'Max',sld_max,'Value',min(zThr0,sld_max),'Callback',@(s,~)aff_update(figA));
 GD.txt = uicontrol(figA,'Style','text','Units','normalized','Position',[0.10 0.085 0.32 0.03], ...
     'String','','BackgroundColor','w','FontSize',10,'HorizontalAlignment','left');
-uicontrol(figA,'Style','text','Units','normalized','Position',[0.04 0.05 0.05 0.03], ...
-    'String','|t| thr','BackgroundColor','w','FontSize',10);
+uicontrol(figA,'Style','text','Units','normalized','Position',[0.035 0.045 0.06 0.035], ...
+    'String','dip score','BackgroundColor','w','FontSize',9);
 guidata(figA, GD);
 set(figA,'WindowButtonDownFcn',@(f,~)aff_click(f));
 aff_draw_map(figA);
 aff_update(figA);
 title(GD.axPix,'click a pixel to inspect its peri-stim trace');
-fprintf('[CTRL-AFF] %s | GUI open. %d OL trials. Slider = |t| thr; click any pixel to inspect.\n', sess_tag, nTr);
-fprintf('[CTRL-AFF] whole-brain deflection map computed; grid t-stat range [%.1f, %.1f]\n', min(zGrid), max(zGrid));
+fprintf('[CTRL-AFF] %s | GUI open. %d OL trials. Pre window [-%.0f,0]s. Slider = dip score; click any pixel.\n', sess_tag, nTr, pre_s);
+fprintf('[CTRL-AFF] trial-averaged dip score (dip / averaged-baseline SD); grid range [%.1f, %.1f] (dips are negative)\n', min(zGrid), max(zGrid));
 
 %% ---- callbacks ----
 function aff_draw_map(figA)
@@ -118,10 +120,10 @@ end
 
 function aff_update(figA)
 GD=guidata(figA); z=get(GD.sld,'Value');
-if GD.two_sided, aff = abs(GD.zGrid) > z; else, aff = GD.zGrid < -z; end
+if GD.two_sided, aff = abs(GD.zGrid) > z; else, aff = GD.zGrid < -z; end   % DOWNWARD dips only
 cols=repmat([0.15 0.55 0.95],GD.nG,1); cols(aff,:)=repmat([0.9 0.15 0.1],nnz(aff),1);
 set(GD.hGrid,'CData',cols,'SizeData',22+18*double(aff));
-set(GD.txt,'String',sprintf('|t|>%.2f  ->  %d affected / %d unaffected  (%.0f%% kept)', ...
+set(GD.txt,'String',sprintf('dip score > %.2f  ->  %d affected / %d unaffected  (%.0f%% kept for predictor)', ...
     z, nnz(aff), GD.nG-nnz(aff), 100*(GD.nG-nnz(aff))/GD.nG));
 title(GD.axMap, sprintf('%s: deflection map + contra grid (red=affected)', strrep(GD.sess_tag,'_','\_')));
 GD.aff=aff; guidata(figA,GD);
@@ -136,10 +138,10 @@ tr=double(GD.Uflat(p,:))*GD.V;                          % pixel dF timecourse
 mI=GD.mimg(r,c); if abs(mI)<eps, mI=1; end
 M=zeros(GD.nTr,numel(GD.rel));
 for j=1:GD.nTr, M(j,:)=tr(GD.onF(j)+GD.rel); end
-M=(M/mI)*100; M=M-mean(M(:,GD.bwin),2);                 % %dF, baseline-sub
-m=mean(M,1); se=std(M,0,1)/sqrt(GD.nTr);
-dtr=mean(M(:,GD.swin),2)-mean(M(:,GD.bwin),2);          % per-trial deflection (%dF)
-defl=mean(dtr); zz=defl/(std(dtr)/sqrt(GD.nTr)+eps);    % t-statistic (matches grid)
+M=(M/mI)*100; M=M-mean(M(:,GD.bwin),2);                 % %dF, per-trial baseline-sub
+m=mean(M,1); se=std(M,0,1)/sqrt(GD.nTr);                % m = TRIAL-AVERAGED trace
+defl=mean(m(GD.swin))-mean(m(GD.bwin));                 % trial-avg deflection (%dF), dip<0
+zz=defl/(std(m(GD.bwin))+eps);                          % score = dip / averaged-baseline SD (matches grid)
 z=get(GD.sld,'Value'); isAff = (GD.two_sided && abs(zz)>z) || (~GD.two_sided && zz<-z);
 ax=GD.axPix; cla(ax); hold(ax,'on'); tt=GD.rel/GD.Fs;
 yl=[min(m-se) max(m+se)]; if diff(yl)<=0, yl=[-1 1]; end
@@ -148,7 +150,7 @@ patch(ax,[0 tt(GD.swin(end)) tt(GD.swin(end)) 0],[yl(1) yl(1) yl(2) yl(2)],[0.9 
 fill(ax,[tt fliplr(tt)],[m+se fliplr(m-se)],[0.2 0.4 0.8],'FaceAlpha',0.2,'EdgeColor','none');
 plot(ax,tt,m,'-','Color',[0.1 0.2 0.6],'LineWidth',1.6); xline(ax,0,'k:'); yline(ax,0,'k:');
 xlim(ax,[tt(1) tt(end)]); xlabel(ax,'time from stim (s)'); ylabel(ax,'\DeltaF/F (%)');
-title(ax, sprintf('px (r%d,c%d): defl=%.2f%%  z=%.2f  ->  %s', r,c,defl,zz, ...
+title(ax, sprintf('px (r%d,c%d): trial-avg dip=%.2f%%  score=%.2f  ->  %s', r,c,defl,zz, ...
     ternA(isAff,'AFFECTED','unaffected')));
 % mark the clicked pixel on the map
 GD2=guidata(figA); if isfield(GD2,'hMark')&&ishandle(GD2.hMark), delete(GD2.hMark); end
