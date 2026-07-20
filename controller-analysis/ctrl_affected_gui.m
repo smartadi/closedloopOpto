@@ -23,7 +23,8 @@ selField  = 4;
 nSV_load  = 500;
 Fs        = 35;
 pre_s     = 1.0;      % pre-stim window [-pre_s,0] s
-zThr0     = 3.0;      % initial z-threshold (slider default)
+zThr0     = 1.0;      % initial |t|-threshold (slider default). LOWER = more conservative (drops any
+                      % pixel with even a weak reliable dip -> "completely unaffected" spirit).
 two_sided = false;    % false = affected only if it DIPS (z<-zThr); true = |z|>zThr
 
 assert(exist('mouse','var') && exist('fields','var'), '[CTRL-AFF] run load_sessions.m first.');
@@ -83,7 +84,10 @@ GD = struct('Uflat',Uflat,'V',V_cp,'mimg',mimg_cp,'onF',onF,'rel',rel,'pre',pre,
     'two_sided',two_sided,'sess_tag',sess_tag,'nTr',nTr,'dur',dur);
 
 %% [GUI] non-blocking
-figA = figure('Color','w','Name',sprintf('Affected detector: %s',sess_tag),'Position',[60 60 1350 640]);
+% Reuse a single window: delete any prior instance of THIS detector so re-runs don't stack windows.
+delete(findall(0,'Type','figure','Tag','ctrl_affected_gui'));
+figA = figure('Color','w','Tag','ctrl_affected_gui', ...
+    'Name',sprintf('Affected detector: %s',sess_tag),'Position',[60 60 1350 640]);
 GD.axMap = axes('Parent',figA,'Position',[0.04 0.16 0.44 0.76]);
 GD.axPix = axes('Parent',figA,'Position',[0.56 0.16 0.40 0.72]);
 % threshold slider
@@ -98,8 +102,8 @@ set(figA,'WindowButtonDownFcn',@(f,~)aff_click(f));
 aff_draw_map(figA);
 aff_update(figA);
 title(GD.axPix,'click a pixel to inspect its peri-stim trace');
-fprintf('[CTRL-AFF] %s | GUI open. %d OL trials. Slider=zThr; click any pixel to inspect.\n', sess_tag, nTr);
-fprintf('[CTRL-AFF] whole-brain deflection map computed; grid z range [%.1f, %.1f]\n', min(zGrid), max(zGrid));
+fprintf('[CTRL-AFF] %s | GUI open. %d OL trials. Slider = |t| thr; click any pixel to inspect.\n', sess_tag, nTr);
+fprintf('[CTRL-AFF] whole-brain deflection map computed; grid t-stat range [%.1f, %.1f]\n', min(zGrid), max(zGrid));
 
 %% ---- callbacks ----
 function aff_draw_map(figA)
