@@ -43,11 +43,11 @@ edgeMargin = 12;       % erode mask edge by this many px (drop low-SNR boundary 
 settle_s   = 2.0;      % laser-OFF settle AFTER TRIAL END before a frame counts as spontaneous
 trainFrac  = 2/3;      % temporal train fraction (first block = train, later block = test)
 maxFrm     = 60000;    % cap on spontaneous frames used
-fit_mode   = 'ols';    % 'ols' | 'ridge' | 'lasso'. Stage 1 default OLS = the unconstrained
-                       % ceiling (ols_tf_pipeline sec17 trains unconstrained too). Sparsity only
-                       % matters for the interpretability panels, not for Global.
-ridge_lam  = 0.2;      % L2 (ridge mode) / elastic-net L2 fraction (lasso mode)
-l1_frac    = 0.1;      % L1 penalty fraction (lasso mode only): HIGHER = sparser
+fit_mode   = 'lasso';  % 'ols' | 'ridge' | 'lasso'. SPARSE (lasso) is the default: a small set of
+                       % contra pixels -> an interpretable, Zhiwen-style weight map. OLS is the dense
+                       % unconstrained ceiling (ols_tf_pipeline sec17); ridge never zeros px.
+ridge_lam  = 0.2;      % L2 (ridge mode) / elastic-net L2 fraction (lasso mode: >0 groups neighbours)
+l1_frac    = 0.1;      % L1 penalty fraction (lasso mode only): HIGHER = sparser (fewer active px)
 debias     = true;     % lasso: refit plain OLS on selected pixels (removes L1 shrinkage)
 redefine_roi = false;  % true = redraw the brain outline + midline for this session
 rng(7,'twister');      % reproducibility (matches ols_tf_pipeline)
@@ -163,10 +163,18 @@ roi_file = fullfile(dataDir, sprintf('cp_roi2_ctrl_%s.mat', sess_tag));
 if ~exist(roi_file,'file') && ~redefine_roi
     fprintf('[CTRL-OLS] no cached ROI for %s -- the draw GUI will open ONCE.\n', sess_tag);
 end
+% plot=false: cp_roi_masks' built-in verification draws imagesc(mimg') (TRANSPOSED codebase
+% view -> midline looks horizontal). Masks are stored NATIVE and are correct (proven by the OL
+% dip + homotopic contra check). We render our own NATIVE overlay (midline vertical) in the VAL
+% figure instead, so nothing shown here is transposed.
 M_cp = cp_roi_masks(mimg_cp, roi_file, px_prim, py_prim, ...
-                    struct('redefine', redefine_roi, 'thr_pctile', 20, 'plot', true));
+                    struct('redefine', redefine_roi, 'thr_pctile', 20, 'plot', false));
 contra_mask = logical(M_cp.contra);  ipsi_mask = logical(M_cp.ipsi);
-fprintf('[CTRL-OLS] masks: contra %d px | ipsi %d px\n', nnz(contra_mask), nnz(ipsi_mask));
+% midline endpoints back in NATIVE (row,col) for drawing (cp_roi_masks stores them transposed:
+% mx=x=col-of-A=native row, my=y=row-of-A=native col). So native (row,col) = (mx, my).
+mid_row = M_cp.mx(:);  mid_col = M_cp.my(:);
+fprintf('[CTRL-OLS] masks: contra(left/predictor) %d px | ipsi(right/target) %d px\n', ...
+    nnz(contra_mask), nnz(ipsi_mask));
 
 %% [CTRL-OLS-GRID] regular contra pixel lattice --------------------------------
 % Uniform lattice at spacing gstep (NOT linspace-trimmed to exactly nGrid -- that drops nodes
@@ -307,8 +315,24 @@ if R2_te < 0.3
 end
 gap = R2_tr - R2_te;
 if gap > 0.15
-    warning('[CTRL-OLS] train-test gap %.3f suggests overfitting with %d regressors -- try ridge/lasso.', gap, nG);
+    warning(['[CTRL-OLS] train-test gap %.3f (%d active px). NB with lasso+debias the train R^2 is ' ...
+             'optimistic (OLS refit on train-selected px); the held-out is the honest number -- lower ' ...
+             'l1_frac to densify, or set debias=false.'], gap, nActive);
 end
+
+% --- orientation check: sparse contra weights should cluster at the HOMOTOPIC mirror of the
+% laser site (a focal homotopic contra hot-spot = no transpose; cp_find_stim_site / Ye et al.).
+mid_c_val = mean(mid_col);
+homo_row  = px_prim;  homo_col = 2*mid_c_val - py_prim;          % mirror the site across the midline
+actw = find(abs(b) > 0);  [~,si] = sort(abs(b(actw)),'descend');
+topK = actw(si(1:min(10,numel(si))));
+wcen_row = sum(grR(topK).*abs(b(topK)))/sum(abs(b(topK)));
+wcen_col = sum(grC(topK).*abs(b(topK)))/sum(abs(b(topK)));
+d_homo = hypot(wcen_row-homo_row, wcen_col-homo_col);
+fprintf(['[CTRL-OLS] orientation check: top-10 contra-weight centroid (row %.0f, col %.0f) vs ' ...
+         'homotopic mirror (row %.0f, col %.0f) = %.0f px %s\n'], ...
+    wcen_row, wcen_col, homo_row, homo_col, d_homo, ...
+    ternstr_ols(d_homo < 80, '-> homotopic, orientation OK', '-> FAR: possible transpose/orientation issue'));
 
 % --- diagnostic figure (PNG; not a paper panel -> per CLAUDE.md export rule) ---
 figV = figure('Color','w','Position',[80 80 1200 700]);
@@ -328,14 +352,23 @@ lims = [min([yte;yhat_te]) max([yte;yhat_te])];
 plot(lims, lims, 'k--', 'LineWidth',0.8);
 axis tight; xlabel('predicted'); ylabel('actual'); title(sprintf('\\rho = %.3f', rho_te));
 
-nexttile(tl,4); hold on;                                          % weight map on the brain
-imagesc(mimg_cp); colormap(gca,'gray'); axis image ij off;
-wn = b / max(abs(b)+eps);
-scatter(grC, grR, 14, wn, 'filled');
-clim([-1 1]); cb = colorbar; cb.Label.String = 'normalised weight';
-colormap(gca, local_bwr());
-plot(py_prim, px_prim, 'g+', 'MarkerSize',10, 'LineWidth',1.5);
-title(sprintf('Contra weights (%d px) + target', nG));
+nexttile(tl,4); hold on;                                          % NATIVE kernel map (midline vertical)
+% Brain as an RGB image (NOT colormapped) so the weights own the axes colormap (diverging).
+gg = mat2gray(mimg_cp);  rgb = repmat(gg,1,1,3);
+aT = 0.16;                                                        % faint hemisphere tints, clean read
+rgb(:,:,3) = rgb(:,:,3) + aT*double(ipsi_mask)  .*(1-rgb(:,:,3)); % ipsi   (right) -> bluish
+rgb(:,:,1) = rgb(:,:,1) + aT*double(contra_mask).*(1-rgb(:,:,1)); % contra (left)  -> reddish
+image(rgb); axis image ij off;
+plot(mid_col, mid_row, 'w--', 'LineWidth',1.1);                   % midline (vertical in native)
+act = find(abs(b) > 0);                                           % SPARSE: active contra px only
+wn  = b(act)/max(abs(b(act))+eps);
+[~,ord] = sort(abs(wn));                                          % strong weights drawn on top
+scatter(grC(act(ord)), grR(act(ord)), 40*abs(wn(ord))+8, wn(ord), 'filled', 'MarkerEdgeColor',[.25 .25 .25]);
+clim([-1 1]); colormap(gca, local_bwr()); cb = colorbar; cb.Label.String = 'weight';
+plot(py_prim, px_prim, 'g+', 'MarkerSize',13, 'LineWidth',2.2);   % laser site (ipsi, right)
+mid_c = mean(mid_col);  mir_col = round(2*mid_c - py_prim);       % homotopic mirror across midline
+plot(mir_col, px_prim, 'o', 'Color',[0 0.7 0], 'MarkerSize',11, 'LineWidth',1.6);  % expected contra hot-spot
+title(sprintf('Sparse contra weights (%d/%d active) + ipsi;  o = homotopic', numel(act), nG));
 
 nexttile(tl,5); hold on;                                          % laser-off coverage
 onsT = ons/Fs;
