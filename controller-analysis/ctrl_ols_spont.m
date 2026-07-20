@@ -98,41 +98,63 @@ if ~used_corr
              'It bears directly on the T1 hemodynamic reviewer objection.'], sess_tag);
 end
 
-% --- target = the controller's OWN regulated readout, reconstructed from U/V ------
-% The controller regulated a kernel-mean of pixels around params.pixel. We rebuild that
-% readout from U/V so the target lives in the SAME pipeline/units as the contra regressors
-% (% dF/F). params.pixel is FLIP-PRONE (impulse-analysis/CLAUDE.md: load/save schemes swap
-% x/y, and getpixel_dFoF's mimg(pixel(2),pixel(1)) read put the pixel on the inhibition RIM).
-% So we build BOTH conventions and keep whichever actually matches the recorded data.dFk.
-p1 = double(d_s.params.pixel(1));  p2 = double(d_s.params.pixel(2));
-if isfield(d_s.params,'kernel'); k_prim = double(d_s.params.kernel); else; k_prim = 2; end
-Uflat = reshape(U_cp, nY_cp*nX_cp, nSV_cp);
-
-kern_read = @(rr,cc) local_kernel_trace(Uflat, V_cp, mimg_cp, rr, cc, k_prim, nY_cp, nX_cp);
-[yA, okA] = kern_read(p1, p2);          % convention A: pixel = (row, col)
-[yB, okB] = kern_read(p2, p1);          % convention B: swapped
-dfk_rec = data.dFk(:);
-nCmp = min([numel(dfk_rec), numel(yA), numel(yB)]);
-cmp = @(v) corr(v(1:nCmp), dfk_rec(1:nCmp), 'rows','complete');
-rA = okA*cmp(yA);  rB = okB*cmp(yB);
-if max(rA,rB) < 0.5
-    warning(['[CTRL-OLS] NEITHER pixel convention reproduces data.dFk (rA=%.3f rB=%.3f). ' ...
-             'The kernel readout, the pixel, or the SVD alignment is wrong -- do NOT trust ' ...
-             'Global/Local until this is resolved.'], rA, rB);
-end
-if rB > rA
-    px_prim = p2;  py_prim = p1;  y_full = yB;  r_match = rB;  conv_tag = 'B (swapped)';
-else
-    px_prim = p1;  py_prim = p2;  y_full = yA;  r_match = rA;  conv_tag = 'A (as-stored)';
-end
-fprintf('[CTRL-OLS] pixel convention %s -> corr(rebuilt, data.dFk) = %.3f (other = %.3f)\n', ...
-    conv_tag, r_match, min(rA,rB));
-
 t_full = t_svd(:);
 if numel(t_full) ~= size(V_cp,2)
     t_full = t_full(1:min(numel(t_full), size(V_cp,2)));
 end
-nF_m = min(numel(y_full), size(V_cp,2));
+Uflat = reshape(U_cp, nY_cp*nX_cp, nSV_cp);
+if isfield(d_s.params,'kernel');  k_prim  = double(d_s.params.kernel);  else; k_prim  = 10;    end
+if isfield(d_s.params,'horizon'); horizon = double(d_s.params.horizon); else; horizon = 40*Fs; end
+
+% --- recording site = DATA-DERIVED laser spot (deepest focal OL inhibition) --------
+% params.pixel is unreliable (flip-prone AND, on m4, sits on the inhibition RIM ~45 px from the
+% true laser center -- verified 2026-07-19, ctrl_dipmap_m4.png). We localise the laser spot the
+% same way the impulse pipeline does: trial-average the peri-stim widefield response on the
+% OPEN-LOOP trials (fixed-ish laser) and take the most-inhibited pixel (cp_find_stim_site,
+% native frame, row=pixel(2)/col=pixel(1) convention). Cached like the impulse side so every
+% stage inherits ONE site. This also confirms the hemisphere: the dip is focal on the RIGHT
+% (ipsi); contra (predictor) = LEFT.
+site_file = fullfile(dataDir, sprintf('cp_stim_site_ctrl_%s.mat', sess_tag));
+if exist(site_file,'file') && ~redefine_roi
+    st = load(site_file);  stim_rc = double(st.rowcol);
+    fprintf('[CTRL-OLS] loaded cached laser site [row %d col %d]\n', stim_rc);
+else
+    ol_starts = sort(d_s.stimStarts(data.nc(:)));
+    onF_ol = zeros(numel(ol_starts),1);
+    for j = 1:numel(ol_starts), [~,onF_ol(j)] = min(abs(t_full - ol_starts(j))); end
+    onF_ol = onF_ol(onF_ol > 0.5*Fs & onF_ol < size(V_cp,2)-Fs);
+    st = cp_find_stim_site(U_cp, double(V_cp), mimg_cp, onF_ol, 'fs', Fs);
+    stim_rc = double(st.rowcol);  save(site_file,'-struct','st');
+    fprintf('[CTRL-OLS] computed laser site [row %d col %d] (depth %.3f) from %d OL trials -> cached\n', ...
+        stim_rc, st.depth, numel(onF_ol));
+end
+px_prim = stim_rc(1);   % ROW of the laser spot
+py_prim = stim_rc(2);   % COL of the laser spot
+
+% --- Actual = SVD raw-kernel fluorescence + rolling baseline at the laser spot -----
+% CRITICAL PIPELINE FACT (RESEARCH 2026-07-18): the paper's `data.dFk` is getpixel_dFoF
+% **mode=0** = RAW binary frames + a `horizon`-sample ROLLING baseline, NOT the SVD mean-image
+% dF/F. Reconstructing the SVD kernel with the mean-image baseline (F/mI*100) gives corr~0.06
+% with data.dFk (different baseline method). FIX (per user): rebuild raw fluorescence from the
+% SVD (F_raw = mI + kernel.U*V) and pass it through the SAME rolling baseline. That trace both
+% (a) reconstructs from the SVD -> is contra-predictable, and (b) tracks data.dFk (corr ~0.90 at
+% the laser spot on m4). First `w` warm-up samples are baseline garbage -> NaN, excluded everywhere.
+[y_full, okY] = local_svd_rolling_dfk(Uflat, V_cp, mimg_cp, px_prim, py_prim, k_prim, horizon, nY_cp, nX_cp);
+assert(okY, '[CTRL-OLS] laser-spot box [row %d col %d] is out of frame or degenerate.', px_prim, py_prim);
+w_warm = max(1, round(horizon)-1);
+nF_m   = min(numel(y_full), size(V_cp,2));
+
+% Validate against the paper's data.dFk (regulated at params.pixel rim; ~0.9 at the spot).
+dfk_rec = data.dFk(:);
+vv = (w_warm+1):min(numel(y_full), numel(dfk_rec));
+r_match = corr(y_full(vv), dfk_rec(vv), 'rows','complete');
+fprintf('[CTRL-OLS] Actual = SVD raw-kernel + %.0f s rolling baseline @ laser spot [row %d col %d]\n', ...
+    horizon/Fs, px_prim, py_prim);
+fprintf('[CTRL-OLS] corr(Actual, paper data.dFk) = %.3f  (warm-up %d frames NaN)\n', r_match, w_warm);
+if r_match < 0.7
+    warning(['[CTRL-OLS] corr(Actual, data.dFk)=%.3f is low (expected ~0.9). Suspect a site/' ...
+             'kernel/horizon or orientation mismatch -- do NOT trust Global/Local until resolved.'], r_match);
+end
 
 %% [CTRL-OLS-MASK] contra (predictor) / ipsi (target) midline masks -------------
 % Same shared helper + same cache naming scheme as the impulse side, so a session's ROI is
@@ -198,14 +220,22 @@ for j = 1:numel(ons)
     i0 = max(i0,1);  i1 = min(i1,nF_m);
     if i1 >= i0; frames = [frames, i0:i1]; end   %#ok<AGROW>
 end
-% also take the pre-first-trial baseline period (pure spontaneous, no stim history)
+% also take the pre-first-trial baseline period (pure spontaneous, no stim history).
+% NB most of this falls inside the rolling-baseline warm-up (first w_warm frames) and is
+% dropped by the isfinite filter below -- Actual is NaN there. Kept for the rare case where
+% the first trial starts after the warm-up ends.
 if ~isempty(ons) && ons(1) > 2
     frames = [1:(ons(1)-2), frames];
 end
 frames = unique(frames);
 frames = frames(frames>=1 & frames<=nF_m);
-frames = frames(isfinite(y_full(frames)'));
+n_pre_warm = numel(frames);
+frames = frames(frames > w_warm);                        % drop rolling-baseline warm-up explicitly
+frames = frames(isfinite(y_full(frames)'));              % and any remaining NaN Actual
+n_dropped_warm = n_pre_warm - numel(frames);
 nSpontRaw = numel(frames);
+fprintf('[CTRL-OLS] dropped %d warm-up/NaN frames (first %.1f s rolling-baseline garbage)\n', ...
+    n_dropped_warm, w_warm/Fs);
 if numel(frames) > maxFrm
     frames = frames(round(linspace(1,numel(frames),maxFrm)));
 end
@@ -272,7 +302,7 @@ fprintf(['\n[CTRL-OLS-VAL] %s | mode=%s nActive=%d/%d\n' ...
     sess_tag, lower(fit_mode), nActive, nG, R2_tr, R2_te, rho_te);
 if R2_te < 0.3
     warning(['[CTRL-OLS] held-out R^2 = %.3f is low. The impulse side reaches ~0.85-0.95. ' ...
-             'Suspect: wrong pixel convention (corr to data.dFk was %.3f), laser-on ' ...
+             'Suspect: Actual-vs-data.dFk corr was %.3f (target build), laser-on ' ...
              'contamination, or too few spontaneous frames.'], R2_te, r_match);
 end
 gap = R2_tr - R2_te;
@@ -338,7 +368,8 @@ OLS.b          = b;          OLS.muY = muY;
 OLS.mu_p       = mu_p;       OLS.sd_p = sd_p;
 OLS.gridIdx    = gridIdx;    OLS.grR = grR;  OLS.grC = grC;  OLS.nG = nG;
 OLS.px_prim    = px_prim;    OLS.py_prim = py_prim;  OLS.k_prim = k_prim;
-OLS.conv_tag   = conv_tag;   OLS.r_match = r_match;
+OLS.horizon    = horizon;    OLS.w_warm = w_warm;    OLS.r_match = r_match;   % Actual = SVD raw-kernel + rolling baseline
+OLS.baseline   = 'svd_raw_kernel_rolling(mode0-match)';
 OLS.frames     = frames;     OLS.itr = itr;  OLS.ite = ite;
 OLS.ons        = ons;        OLS.trial_dur = trial_dur;  OLS.settle_s = settle_s;
 OLS.fit_mode   = lower(fit_mode);  OLS.nActive = nActive;
@@ -351,18 +382,30 @@ save(ols_file, '-struct', 'OLS', '-v7.3');
 fprintf('[CTRL-OLS-SAVE] -> %s\n\n', ols_file);
 
 % ---- local helpers ----------------------------------------------------------
-function [y, ok] = local_kernel_trace(Uflat, V, mimg, rr, cc, k, nY, nX)
-% Kernel-mean %dF/F trace at (rr,cc) rebuilt from U/V. ok=false if the kernel box
-% falls outside the frame or the mean image there is degenerate.
+function [y, ok] = local_svd_rolling_dfk(Uflat, V, mimg, prow, pcol, k, horizon, nY, nX)
+% Actual readout = SVD-reconstructed RAW kernel fluorescence put through the SAME
+% rolling-baseline dF/F as getpixel_dFoF mode=0 (the pipeline data.dFk uses).
+%   F_raw(t) = mI + mean(U_box)*V(:,t)      (U*V is the zero-mean dF; mI = mean image = F0)
+%   base(t)  = trailing mean of F_raw over the last (w+1) samples, w = horizon-1
+%   dFk(t)   = (F_raw - base)/base * 100 ;   first w (warm-up) samples -> NaN
+% Box = row prow, col pcol (getpixel convention: prow=pixel(2), pcol=pixel(1)).
+% ok=false if the box is out of frame or the mean image there is degenerate.
 y = nan(size(V,2),1);  ok = false;
-if rr < 1 || rr > nY || cc < 1 || cc > nX; return; end
-kr = max(1,rr-k):min(nY,rr+k);
-kc = max(1,cc-k):min(nX,cc+k);
+if prow < 1 || prow > nY || pcol < 1 || pcol > nX; return; end
+kr = max(1,prow-k):min(nY,prow+k);
+kc = max(1,pcol-k):min(nX,pcol+k);
 [KR,KC] = ndgrid(kr,kc);
 kidx = sub2ind([nY,nX], KR(:), KC(:));
 mI = mean(mimg(kr,kc),'all');
 if ~isfinite(mI) || abs(mI) < eps; return; end
-y  = ((mean(double(Uflat(kidx,:)),1) * V) / mI * 100).';
+Fsvd = mean(double(Uflat(kidx,:)),1) * V;      % [1 x T] kernel dF reconstruction (zero-mean)
+Fraw = mI + Fsvd(:);                            % [T x 1] raw fluorescence
+w = max(1, round(horizon)-1);
+T = numel(Fraw);  ii = (1:T).';
+cs = [0; cumsum(Fraw)];  lo = max(ii-w, 1);
+base = (cs(ii+1) - cs(lo)) ./ (ii - lo + 1);    % trailing causal mean over <= w+1 samples
+y = (Fraw - base) ./ base * 100;
+y(1:w) = NaN;                                   % ignore warm-up (garbage baseline)
 ok = true;
 end
 
