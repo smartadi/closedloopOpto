@@ -41,25 +41,30 @@ sess_tag = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
 S2 = load(fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', sess_tag)));
 rel = S2.rel(:).';  pre = S2.pre;  trel = rel/Fs;  y_OL = S2.Aa(:);     % OL Actual (baseline-sub)
 
+% TRUE input = the sine-carrier AMPLITUDE (early sessions) or the raw value (later sessions).
+% Must be done at the NATIVE rate: at 35 Hz the 50 Hz carrier aliases into a fake "dither".
+[uAmpFull, uinfo] = cp_laser_amplitude(d_s.inpVals, d_s.inpTime);
+fprintf('[CTRL-LTI] laser command mode = %s (carrier %.1f Hz, %.0f%% of AC power, period %d samp)\n', ...
+    uinfo.mode, uinfo.carrier_hz, 100*uinfo.power_frac, uinfo.period_samples);
+
 nc = data.nc(:);  ol_starts = sort(d_s.stimStarts(nc));
 U = zeros(numel(ol_starts), numel(trel));
 for j = 1:numel(ol_starts)
-    U(j,:) = interp1(d_s.inpTime, d_s.inpVals, ol_starts(j)+trel, 'linear', 0);
+    U(j,:) = interp1(d_s.inpTime, uAmpFull, ol_starts(j)+trel, 'linear', 0);
 end
 u_OL = mean(U,1).';  u_OL = u_OL - mean(u_OL(1:pre));                   % baseline-sub input (pre ~ 0)
-uAbs = mean(U,1).';                                                     % absolute trial-avg command
-fprintf('[CTRL-LTI] %s | %d OL trials | u stim-mean=%.3f (bs), y trough=%.2f%%\n', ...
+uAbs = mean(U,1).';                                                     % absolute trial-avg amplitude
+fprintf('[CTRL-LTI] %s | %d OL trials | u step amplitude=%.3f, y trough=%.2f%%\n', ...
     sess_tag, numel(ol_starts), mean(u_OL(pre+1:end)), min(y_OL));
 
 %% [CTRL-LTI-FIT] identify LTI  u -> y ------------------------------------------
-% Pre-filter the ~15 Hz OL dither out of u (y is already low-pass) so the plant captures the
-% control-bandwidth actuator dynamics, not the dither -- and select by AICc (parsimony), so we
-% don't get lightly-damped resonant poles that a controller would spuriously exploit.
-fc = 6;  [bb,aa] = butter(3, fc/(Fs/2));             % zero-phase LP at 6 Hz (dynamics live < ~3 Hz)
-uf = filtfilt(bb,aa,u_OL);  yf = filtfilt(bb,aa,y_OL);
-z = iddata(yf, uf, 1/Fs);                            % SISO io data (control-bandwidth)
+% u is now the true amplitude (a clean step), so no prefilter is needed -- the earlier 6 Hz LP was
+% only compensating for the aliased carrier. Select by AICc (parsimony) so we don't pick up
+% lightly-damped resonant poles that a controller would spuriously exploit.
+uf = u_OL;  yf = y_OL;
+z = iddata(yf, uf, 1/Fs);                            % SISO io data
 nk = delayest(z, 2, 2, 0, 20);                       % input delay (samples), search 0..20
-fprintf('[CTRL-LTI] LP prefilter fc=%d Hz | estimated input delay = %d samples (%.3f s)\n', fc, nk, nk/Fs);
+fprintf('[CTRL-LTI] estimated input delay = %d samples (%.3f s)\n', nk, nk/Fs);
 
 opt = ssestOptions('Focus','simulation','EnforceStability',true);
 best = struct('aicc',inf);  rows = cell(NXMAX,1);
@@ -120,19 +125,20 @@ fprintf('[CTRL-LTI-FIG] -> %s\n', fig_png);
 
 %% [CTRL-LTI-SAVE] --------------------------------------------------------------
 % actuator budget (for Stage 4b constraint 0<=u<=u_max): the controller's own usage ceiling
-uMaxCL = 0;
+uMaxCL = 0;  u_CL = [];
 if isfield(data,'wc')
     wc = data.wc(:);  cl_starts = sort(d_s.stimStarts(wc));
     Uc = zeros(numel(cl_starts), numel(trel));
-    for j=1:numel(cl_starts), Uc(j,:) = interp1(d_s.inpTime,d_s.inpVals,cl_starts(j)+trel,'linear',0); end
-    uMaxCL = max(mean(Uc,1));                          % max CL trial-avg command
+    for j=1:numel(cl_starts), Uc(j,:) = interp1(d_s.inpTime,uAmpFull,cl_starts(j)+trel,'linear',0); end
+    u_CL   = mean(Uc,1).';                             % PI controller's own command (amplitude)
+    uMaxCL = max(u_CL);                                % its usage ceiling
 end
 LTI = struct();
 LTI.sess_tag=sess_tag; LTI.selField=selField; LTI.Fs=Fs; LTI.Ts=1/Fs;
 LTI.A=A; LTI.B=B; LTI.C=C; LTI.D=D; LTI.nx=best.nx; LTI.nk=nk;
 LTI.fit=best.fit; LTI.dcgain=dcg;
 LTI.trel=trel; LTI.pre=pre; LTI.u_OL=u_OL; LTI.y_OL=y_OL; LTI.yh=yh; LTI.uAbs=uAbs;
-LTI.uMaxCL=uMaxCL; LTI.uMaxHW=max(d_s.inpVals);
+LTI.u_CL=u_CL; LTI.uMaxCL=uMaxCL; LTI.uMaxHW=max(uAmpFull); LTI.uinfo=uinfo;
 lti_file = fullfile(dataDir, sprintf('ctrl_lti_%s.mat', sess_tag));
 save(lti_file, '-struct', 'LTI', '-v7.3');
 fprintf('[CTRL-LTI-SAVE] -> %s | u_max(CL usage)=%.3f  u_max(HW)=%.3f\n\n', lti_file, uMaxCL, LTI.uMaxHW);
