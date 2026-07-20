@@ -51,7 +51,7 @@ if isempty(here) || contains(here,tempdir,'IgnoreCase',true) || contains(here,'E
 end
 dataDir = fullfile(here,'data');
 paper_root = fullfile(here,'..','paper');
-fig_dir = fullfile(paper_root,'images','figure4'); if ~exist(fig_dir,'dir'); mkdir(fig_dir); end
+fig_dir = fullfile(paper_root,'images','predictor_saga'); if ~exist(fig_dir,'dir'); mkdir(fig_dir); end
 
 %% [CTRL-OL-LOAD] Stage 1 cache + U/V + rebuild target ------------------------
 fld = fields{selField};

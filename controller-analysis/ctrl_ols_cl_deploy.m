@@ -41,7 +41,7 @@ if isempty(here) || contains(here,tempdir,'IgnoreCase',true) || contains(here,'E
     here = fullfile(pwd,'controller-analysis');  if ~exist(here,'dir'); here = pwd; end
 end
 dataDir = fullfile(here,'data');
-fig_dir = fullfile(here,'..','paper','images','figure4'); if ~exist(fig_dir,'dir'); mkdir(fig_dir); end
+fig_dir = fullfile(here,'..','paper','images','predictor_saga'); if ~exist(fig_dir,'dir'); mkdir(fig_dir); end
 
 %% [CTRL-CL-LOAD] Stage 1 + Stage 2 caches, U/V, rebuild target ------------------
 fld = fields{selField};

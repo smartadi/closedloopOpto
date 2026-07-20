@@ -65,7 +65,7 @@ dataDir = fullfile(here, 'data');  if ~exist(dataDir,'dir'); mkdir(dataDir); end
 % Anchor the export path to THIS script's directory, not pwd -- the CWD-dependent
 % exist('paper/images') resolver silently writes to projects\paper (see TASKS BUG 2026-07-17).
 paper_root = fullfile(here, '..', 'paper');
-fig_dir = fullfile(paper_root, 'images', 'figure4');
+fig_dir = fullfile(paper_root, 'images', 'predictor_saga');
 if ~exist(fig_dir,'dir'); mkdir(fig_dir); end
 
 %% [CTRL-OLS-LOAD] session + SVD + target readout ------------------------------
