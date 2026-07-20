@@ -7,17 +7,14 @@
 %   * DIP       = (trough - reference), trough = deepest 0.5 s sliding-window mean over [0,dur] s
 %     -> a transient dip that recovers before the stim window ends still counts.
 %   * NORMALIZE by the pre-window SD ([-6,0] s wobble of the averaged trace).
-%   score = (trough - ref) / sd_pre  (negative = dip).  A pixel is AFFECTED (downward only) either
-%   by a manual threshold (slider: score < -thr) OR ADAPTIVELY by a per-pixel permutation null.
-%
-% ADAPTIVE selection (button): for each pixel, recompute the SAME score at nPerm random laser-off
-%   pseudo-onset sets (92 each, matching the real trial count) -> null distribution; the pixel is
-%   affected if its real score is below the alpha-quantile of its own null (one-sided). This adapts
-%   to each pixel's noise/trough-bias instead of one global cut.
+%   score = (trough - ref) / sd_pre  (negative = dip).  A pixel is AFFECTED (downward only) by a
+%   MANUAL threshold (slider: score < -thr) -- the user tunes the cut visually against the
+%   deflection map. (Adaptive permutation selection was tried and rejected 2026-07-20: its null
+%   carries the same trough-min bias, so it explains away the real midline dips as chance.)
 %
 % GUI (non-blocking): background = whole-brain trial-avg deflection map; contra grid coloured
-%   red(affected)/blue(unaffected); slider = manual score thr; [Auto-select] button = permutation
-%   null; click any pixel -> its peri-stim trace over [-10, dur+1] s with ref/trough/windows marked.
+%   red(affected)/blue(unaffected); slider = manual score thr; click any pixel -> its peri-stim
+%   trace over [-10, dur+1] s with ref/trough/windows marked.
 %
 % PREREQS: ctrl_ols_spont.m (Stage 1) -> data/ctrl_ols_spont_<sess>.mat; `mouse`,`fields` in ws.
 
@@ -31,9 +28,6 @@ disp_pre_s = 10.0;     % click-inspector display: onset - 10 s ...
 disp_post_s= 1.0;      % ... to stim_end + 1 s
 trough_s   = 0.5;      % sliding-window length for the trough (s)
 score_thr0 = 1.0;      % manual slider default (score < -thr => affected)
-nPerm      = 200;      % permutation-null iterations for adaptive selection
-alpha_adx  = 0.05;     % adaptive significance (one-sided, dip)
-rng(7,'twister');
 
 assert(exist('mouse','var') && exist('fields','var'), '[CTRL-AFF] run load_sessions.m first.');
 here = fileparts(mfilename('fullpath'));
@@ -82,15 +76,8 @@ for j=1:nTr, preFr=[preFr, onF(j)+rel(iPre)]; stimFr=[stimFr, onF(j)+rel(iStim)]
 dV=mean(V_cp(:,stimFr),2)-mean(V_cp(:,preFr),2);
 deflMap=reshape(Uflat*dV./max(mimg_cp(:),eps),nY,nX)*100;
 
-% laser-off pseudo-onset pool for the permutation null: no real onset within [-pre, dur] of it
-allOn=sort(d_s.stimStarts(isfinite(d_s.stimStarts)&d_s.stimStarts>0));
-onAll=zeros(numel(allOn),1); for j=1:numel(allOn), [~,onAll(j)]=min(abs(t_full-allOn(j))); end
-cand=(dpre+1):(T-dpost);
-bad=false(1,T);
-for k=1:numel(onAll), lo=max(1,onAll(k)-round(dur*Fs)); hi=min(T,onAll(k)+pre); bad(lo:hi)=true; end
-pool=cand(~bad(cand));
-fprintf('[CTRL-AFF] %s | %d OL trials | pseudo-onset pool %d frames | score range [%.2f, %.2f]\n', ...
-    sess_tag, nTr, numel(pool), min(zGrid), max(zGrid));
+fprintf('[CTRL-AFF] %s | %d OL trials | score range [%.2f, %.2f]\n', ...
+    sess_tag, nTr, min(zGrid), max(zGrid));
 
 %% [GUI]
 delete(findall(0,'Type','figure','Tag','ctrl_affected_gui'));
@@ -99,7 +86,7 @@ figA=figure('Color','w','Tag','ctrl_affected_gui','Name',sprintf('Affected detec
 GD=struct('Uflat',Uflat,'V',V_cp,'mimg',mimg_cp,'onF',onF,'rel',rel,'iPre',iPre,'iRef',iRef, ...
     'iStim',iStim,'wlen',wlen,'Fs',Fs,'nY',nY,'nX',nX,'gridIdx',gridIdx,'grR',grR,'grC',grC,'nG',nG, ...
     'zGrid',zGrid,'deflMap',deflMap,'px_prim',px_prim,'py_prim',py_prim,'sess_tag',sess_tag,'nTr',nTr, ...
-    'dur',dur,'pool',pool,'nPerm',nPerm,'alpha',alpha_adx,'mIg',mIg,'mode','manual','pval',[]);
+    'dur',dur,'mIg',mIg);
 GD.axMap=axes('Parent',figA,'Position',[0.04 0.17 0.44 0.75]);
 GD.axPix=axes('Parent',figA,'Position',[0.56 0.16 0.40 0.74]);
 sld_max=max(4,ceil(max(abs(zGrid))));
@@ -109,13 +96,11 @@ GD.txt=uicontrol(figA,'Style','text','Units','normalized','Position',[0.04 0.095
     'String','','BackgroundColor','w','FontSize',10,'HorizontalAlignment','left');
 uicontrol(figA,'Style','text','Units','normalized','Position',[0.035 0.05 0.055 0.035], ...
     'String','dip score','BackgroundColor','w','FontSize',9);
-uicontrol(figA,'Style','pushbutton','Units','normalized','Position',[0.42 0.05 0.14 0.045], ...
-    'String',sprintf('Auto-select (perm p<%.2f)',alpha_adx),'FontSize',9,'Callback',@(b,~)aff_auto(figA));
 guidata(figA,GD);
 set(figA,'WindowButtonDownFcn',@(f,~)aff_click(f));
 aff_draw_map(figA); aff_manual(figA);
 title(GD.axPix,'click a pixel to inspect  [-10, dur+1] s');
-fprintf('[CTRL-AFF] GUI open. Slider=manual score thr; [Auto-select]=per-pixel permutation null.\n');
+fprintf('[CTRL-AFF] GUI open. Slider = manual score threshold (score < -thr => affected).\n');
 
 %% ---- score + callbacks ----
 function sc = dip_score_(A, iRef, iStim, iPre, wlen)
@@ -147,27 +132,9 @@ GD.aff=aff; guidata(figA,GD);
 end
 
 function aff_manual(figA)
-GD=guidata(figA); GD.mode='manual'; guidata(figA,GD);
+GD=guidata(figA);
 z=get(GD.sld,'Value'); aff=GD.zGrid < -z;               % DOWNWARD dips only
 aff_setmask(figA, aff, sprintf('manual: score < -%.2f',z));
-end
-
-function aff_auto(figA)
-GD=guidata(figA);
-set(GD.txt,'String','running permutation null...'); drawnow;
-Xg=double(GD.Uflat(GD.gridIdx,:))*GD.V;                 % recompute grid timecourses
-nRel=numel(GD.rel); null=zeros(GD.nG,GD.nPerm);
-for p=1:GD.nPerm
-    po=GD.pool(randi(numel(GD.pool),GD.nTr,1));
-    acc=zeros(GD.nG,nRel);
-    for j=1:GD.nTr, acc=acc+Xg(:,po(j)+GD.rel); end
-    pa=(acc/GD.nTr)./GD.mIg*100;
-    null(:,p)=dip_score_(pa,GD.iRef,GD.iStim,GD.iPre,GD.wlen);
-end
-pval=mean(null <= GD.zGrid, 2);                          % one-sided: fraction of null <= real (dip)
-aff = pval < GD.alpha;
-GD.pval=pval; GD.mode='adaptive'; guidata(figA,GD);
-aff_setmask(figA, aff, sprintf('adaptive: perm p<%.2f (%d perms)',GD.alpha,GD.nPerm));
 end
 
 function aff_click(figA)
@@ -181,7 +148,7 @@ M=(M/mI)*100; m=mean(M,1); se=std(M,0,1)/sqrt(GD.nTr);   % trial-avg trace (%dF,
 ref=mean(m(GD.iRef));
 Wm=movmean(m(GD.iStim),GD.wlen); [troughv,it]=min(Wm); sd=std(m(GD.iPre))+eps;
 sc=(troughv-ref)/sd; troughT=GD.rel(GD.iStim(it))/GD.Fs;
-z=get(GD.sld,'Value'); isAff = sc < -z;   % click readout uses the manual threshold (map shows active mode)
+z=get(GD.sld,'Value'); isAff = sc < -z;   % click readout uses the manual slider threshold
 vtxt=sprintf('score=%.2f (manual thr -%.2f)',sc,z);
 ax=GD.axPix; cla(ax); hold(ax,'on'); tt=GD.rel/GD.Fs; yl=[min(m-se) max(m+se)]; if diff(yl)<=0,yl=[-1 1];end
 patch(ax,[tt(GD.iPre(1)) 0 0 tt(GD.iPre(1))],[yl(1) yl(1) yl(2) yl(2)],[.6 .6 .6],'FaceAlpha',.10,'EdgeColor','none');

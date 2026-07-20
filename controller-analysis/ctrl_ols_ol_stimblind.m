@@ -7,8 +7,9 @@
 %
 % METHOD (pure unaffected-pixel selection -- user's chosen approach, no weight constraint)
 %   1. Rebuild the spontaneous contra->ipsi setup from the Stage 1 cache (site, ROI, grid, frames).
-%   2. Detect stim-AFFECTED contra grid pixels on the OL trials (across-trial t-test of the
-%      peri-stim deflection). Drop them -> "completely unaffected" contra predictor set.
+%   2. Detect stim-AFFECTED contra grid pixels on the OL trials by the MANUAL dip-score threshold
+%      (identical definition to ctrl_affected_gui.m: trial-avg %dF trace, score = (trough-onset_ref)/
+%      pre_SD, affected where score < -aff_dip_thr). Drop them -> "completely unaffected" set.
 %   3. Fit DENSE OLS on SPONTANEOUS (laser-off) frames using ONLY unaffected px  -> Global.
 %   4. Deploy on OL trials: Actual = measured ipsi; Global = unaffected-contra prediction
 %      (the network-shared, ongoing-state component); Local = Actual - Global (the local part).
@@ -27,12 +28,15 @@
 selField    = 4;         % session index into `fields` (must match a Stage 1 run)
 nSV_load    = 500;
 Fs          = 35;
-aff_thr     = 3.0;       % |t| threshold for STIM-AFFECTED contra px (across-trial transient t-test).
-                         % LOWER = stricter (drop more, more conservative "unaffected"). Also OR'd
-                         % with a sustained-window test below.
-aff_thr_sus = 3.0;       % |t| threshold on the SUSTAINED [0,dur]s deflection (catches slow responders)
-pre_s       = 1.0;       % pre-stim baseline window (s)
-dip_tran_s  = 0.5;       % transient dip window [0,dip_tran_s] s (affected test + capture report)
+% STIM-AFFECTED contra px: MANUAL dip-score threshold, IDENTICAL definition to ctrl_affected_gui.m
+% (trial-averaged %dF trace; score = (trough - onset_ref)/pre_SD; affected where score < -aff_dip_thr).
+% Set aff_dip_thr to the slider value you converged on in the GUI. Adaptive/permutation was rejected.
+aff_dip_thr = 1.5;       % affected if dip score < -aff_dip_thr  (downward dips only)  <-- GUI slider value
+pre_sd_s    = 6.0;       % baseline-SD window for the score  [-6,0] s
+ref_s       = 1.0;       % onset-reference window  [-1,0] s
+trough_s    = 0.5;       % sliding-window length for the trough (s)
+pre_s       = 1.0;       % pre-stim baseline window for the DECOMPOSITION (s)
+dip_tran_s  = 0.5;       % transient dip window [0,dip_tran_s] s (capture report)
 rng(7,'twister');
 
 assert(exist('mouse','var') && exist('fields','var'), ...
@@ -76,39 +80,39 @@ assert(okY, '[CTRL-OL] target rebuild failed at [row %d col %d].', px_prim, py_p
 % contra grid timecourses (dF reconstruction), full session
 Xg_full = double(Uflat(gridIdx,:)) * V_cp;                 % [nG x T]
 
-%% [CTRL-OL-AFFECTED] detect stim-affected contra px on OL trials -------------
-pre  = round(pre_s*Fs);
+%% [CTRL-OL-AFFECTED] detect stim-affected contra px on OL trials (dip-score, matches GUI) ---
 dur  = S1.trial_dur;  post = round(dur*Fs);
-rel  = -pre:post;  nRel = numel(rel);
-bwin = 1:pre;                                   % baseline [-1,0]s
-twin = pre+1:pre+round(dip_tran_s*Fs);          % transient [0,dip_tran]s
-swin = pre+1:pre+post;                          % sustained [0,dur]s
+pre_sd = round(pre_sd_s*Fs);  ref_n = round(ref_s*Fs);  wlen = max(1,round(trough_s*Fs));
 
+% onsets, filtered by the larger (SD) margin so both detection & decomposition windows fit
 ol_starts = sort(d_s.stimStarts(data.nc(:)));
 onF = zeros(numel(ol_starts),1);
 for j = 1:numel(ol_starts), [~,onF(j)] = min(abs(t_full - ol_starts(j))); end
-onF = onF(onF>pre & onF+post<=nF_m);  nTr = numel(onF);
+onF = onF(onF>pre_sd & onF+post<=nF_m);  nTr = numel(onF);
 
-% per-trial deflection matrices (grid) + peri-stim trial average
-Dtran = zeros(nG,nTr);  Dsus = zeros(nG,nTr);  periAvg = zeros(nG,nRel);
-for j = 1:nTr
-    seg = Xg_full(:, onF(j)+rel);
-    seg = seg - mean(seg(:,bwin),2);            % baseline-subtract per pixel
-    Dtran(:,j) = mean(seg(:,twin),2);
-    Dsus(:,j)  = mean(seg(:,swin),2);
-    periAvg = periAvg + seg;
-end
-periAvg = periAvg / nTr;
-% across-trial t-stats (deflection vs 0)
-tt_tran = mean(Dtran,2)./(std(Dtran,0,2)/sqrt(nTr)+eps);
-tt_sus  = mean(Dsus, 2)./(std(Dsus, 0,2)/sqrt(nTr)+eps);
-affected = (abs(tt_tran) > aff_thr) | (abs(tt_sus) > aff_thr_sus);   % OR: any stim response -> affected
+% dip-score windows (relative to onset) -- IDENTICAL to ctrl_affected_gui.m
+relA  = -pre_sd:post;  nRelA = numel(relA);
+iPre  = find(relA>=-pre_sd & relA<0);           % [-6,0)  baseline SD
+iRef  = find(relA>=-ref_n  & relA<0);           % [-1,0)  onset reference
+iStim = find(relA>=0 & relA<=post);             % [0,dur] stim
+mIg   = max(mimg_cp(gridIdx),eps);
+periAvg = zeros(nG,nRelA);
+for j = 1:nTr, periAvg = periAvg + Xg_full(:,onF(j)+relA); end
+periAvg = (periAvg/nTr)./mIg*100;               % trial-avg %dF (NOT baseline-sub) -- matches GUI
+dipScore = local_dip_score(periAvg, iRef, iStim, iPre, wlen);   % negative = dip
+affected = dipScore < -aff_dip_thr;             % DOWNWARD dips only (manual threshold)
 unaff    = ~affected;
-fprintf('[CTRL-OL] affected contra px: %d/%d (|t_tran|>%.1f OR |t_sus|>%.1f) -> %d COMPLETELY UNAFFECTED\n', ...
-    nnz(affected), nG, aff_thr, aff_thr_sus, nnz(unaff));
+fprintf('[CTRL-OL] affected contra px: %d/%d (dip score < -%.2f) -> %d unaffected\n', ...
+    nnz(affected), nG, aff_dip_thr, nnz(unaff));
 if nnz(unaff) < 20
-    warning('[CTRL-OL] only %d unaffected px -- affected threshold may be too strict.', nnz(unaff));
+    warning('[CTRL-OL] only %d unaffected px -- dip threshold may be too strict.', nnz(unaff));
 end
+
+% decomposition windows (baseline [-1,0]s), used by DEPLOY below
+pre  = round(pre_s*Fs);  rel = -pre:post;  nRel = numel(rel);
+bwin = 1:pre;                                   % baseline [-1,0]s
+twin = pre+1:pre+round(dip_tran_s*Fs);          % transient [0,dip_tran]s
+swin = pre+1:pre+post;                          % sustained [0,dur]s
 
 %% [CTRL-OL-FIT] dense OLS on spontaneous, UNAFFECTED px only -----------------
 Su = find(unaff);
@@ -183,8 +187,7 @@ fprintf('[CTRL-OL-FIG] -> %s\n', fig_png);
 %% [CTRL-OL-SAVE] --------------------------------------------------------------
 OL = struct();
 OL.sess_tag=sess_tag; OL.selField=selField;
-OL.affected=affected; OL.unaff=unaff; OL.tt_tran=tt_tran; OL.tt_sus=tt_sus;
-OL.aff_thr=aff_thr; OL.aff_thr_sus=aff_thr_sus;
+OL.affected=affected; OL.unaff=unaff; OL.dipScore=dipScore; OL.aff_dip_thr=aff_dip_thr;
 OL.b=b; OL.mu=mu; OL.sd=sd; OL.muY=muY; OL.Su=Su;
 OL.R2_te=R2_te; OL.R2_tr=R2_tr;
 OL.onF=onF; OL.rel=rel; OL.pre=pre; OL.Fs=Fs;
@@ -194,6 +197,16 @@ OL.px_prim=px_prim; OL.py_prim=py_prim; OL.gridIdx=gridIdx; OL.grR=grR; OL.grC=g
 ol_file = fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', sess_tag));
 save(ol_file, '-struct', 'OL', '-v7.3');
 fprintf('[CTRL-OL-SAVE] -> %s\n\n', ol_file);
+
+% ---- dip score (IDENTICAL to ctrl_affected_gui.m dip_score_; keep in sync) ---
+function sc = local_dip_score(A, iRef, iStim, iPre, wlen)
+% A [N x nRel] trial-averaged %dF traces -> [N x 1] dip score (negative = dip).
+ref    = mean(A(:,iRef),2);
+Wm     = movmean(A(:,iStim), wlen, 2);          % sliding-window mean over stim
+trough = min(Wm,[],2);                          % deepest sub-window (catches transient dips)
+sd     = std(A(:,iPre),0,2) + eps;
+sc     = (trough - ref)./sd;
+end
 
 % ---- local helper (copied from ctrl_ols_spont.m; keep in sync) --------------
 function [y, ok] = local_svd_rolling_dfk(Uflat, V, mimg, prow, pcol, k, horizon, nY, nX)
