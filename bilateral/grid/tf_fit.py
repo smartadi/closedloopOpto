@@ -440,7 +440,8 @@ def _shared_weights(hs, amps, a_ref, weight):
     return np.ones(len(amps))
 
 
-def _fit_order_shared(t, hs, amps, n, peak, fit_gamma=True, weight="amp", a_ref=None):
+def _fit_order_shared(t, hs, amps, n, peak, fit_gamma=True, weight="amp", a_ref=None,
+                      gamma_fixed=1.0):
     """Fit ONE n-mode impulse response h(t) shared by every amplitude.
 
     Response to amplitude a is  f(a)*h(t)  with  f(a) = (a/a_ref)^gamma.  h is therefore the
@@ -475,7 +476,7 @@ def _fit_order_shared(t, hs, amps, n, peak, fit_gamma=True, weight="amp", a_ref=
         p0 = p0 + [1.0]; lo = lo + [GAMMA_BOUNDS[0]]; hi = hi + [GAMMA_BOUNDS[1]]
 
     def drive(p):
-        g = p[nmode] if fit_gamma else 1.0
+        g = p[nmode] if fit_gamma else gamma_fixed
         return [(a / a_ref) ** g for a in amps]
 
     def resid(p):
@@ -485,7 +486,7 @@ def _fit_order_shared(t, hs, amps, n, peak, fit_gamma=True, weight="amp", a_ref=
 
     r = scipy.optimize.least_squares(resid, p0, bounds=(lo, hi), max_nfev=6000)
     base = base_of(r.x)
-    gamma = float(r.x[nmode]) if fit_gamma else 1.0
+    gamma = float(r.x[nmode]) if fit_gamma else float(gamma_fixed)
     if MODEL == "real":
         A, tau, om, ph = r.x[:n], r.x[n:2 * n], None, None
     else:
@@ -496,7 +497,7 @@ def _fit_order_shared(t, hs, amps, n, peak, fit_gamma=True, weight="amp", a_ref=
 
 
 def fit_lti_cv_shared(t, hs, hAs, hBs, amps, orders=ORDERS, margin=CV_MARGIN,
-                      fit_gamma=True, weight="amp"):
+                      fit_gamma=True, weight="amp", gamma_fixed=1.0):
     """Split-half CV order selection for the shared model; CV pooled over amplitudes."""
     post = (t >= 0) & (t <= FIT_TMAX)
     tp = t[post]
@@ -505,7 +506,7 @@ def fit_lti_cv_shared(t, hs, hAs, hBs, amps, orders=ORDERS, margin=CV_MARGIN,
     hBp = [h[post] for h in hBs]
     ia = int(np.argmin(amps))                    # h is the response AT the reference amp
     pk = hsp[ia][np.argmax(np.abs(hsp[ia]))]
-    kw = dict(fit_gamma=fit_gamma, weight=weight)
+    kw = dict(fit_gamma=fit_gamma, weight=weight, gamma_fixed=gamma_fixed)
 
     cv = []
     for n in orders:
@@ -535,7 +536,8 @@ def fit_lti_cv_shared(t, hs, hAs, hBs, amps, orders=ORDERS, margin=CV_MARGIN,
                 gamma=params["gamma"], base=base, yhat=yh, t=tp)
 
 
-def fit_shared(orders=ORDERS, cache=True, fit_gamma=True, weight="amp", tag=None):
+def fit_shared(orders=ORDERS, cache=True, fit_gamma=True, weight="amp", tag=None,
+               gamma_fixed=1.0):
     """One TF per (stim, readout) pair, SHARED across amplitudes (amp = input scale)."""
     z = cross_response.load_cached2()
     H, sites, window = z["H"], z["sites"], z["window"]          # H (nA,nS,nS,nW)
@@ -575,7 +577,7 @@ def fit_shared(orders=ORDERS, cache=True, fit_gamma=True, weight="amp", tag=None
             if not ok:
                 continue
             f = fit_lti_cv_shared(window, hs, hAs, hBs, amps, orders=orders,
-                                  fit_gamma=fit_gamma, weight=weight)
+                                  fit_gamma=fit_gamma, weight=weight, gamma_fixed=gamma_fixed)
             bfull = _impulse(window, f["theta"], f["A"], f["tau"], f["om"], f["ph"])
             base[s, r] = bfull
             for ai in range(nA):
@@ -590,7 +592,7 @@ def fit_shared(orders=ORDERS, cache=True, fit_gamma=True, weight="amp", tag=None
         print(f"  shared fit stim {s+1:2d}/{nS}  median pooled R2={np.nanmedian(r2[s]):.2f}",
               end="\r")
     print()
-    gtxt = "gamma FREE" if fit_gamma else "gamma=1 (linear)"
+    gtxt = "gamma FREE" if fit_gamma else f"gamma={gamma_fixed:.3f} (fixed)"
     print(f"shared fit {nS}x{nS} ({MODEL}, {gtxt}, weight={weight}); order hist "
           f"{np.bincount(order.ravel(), minlength=6)[1:]}, median pooled R2={np.nanmedian(r2):.2f}, "
           f"median CV-R2={np.nanmedian(cvr2):.2f}")
