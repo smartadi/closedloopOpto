@@ -419,10 +419,37 @@ def fit_all_amps(orders=ORDERS, selection="cv", cache=True):
 CACHE_TFS = cross_response.CACHE.parent / "grid_tf_fits_shared.npz"
 
 
-def _fit_order_shared(t, hs, amps, n, peak):
-    """Fit ONE n-mode impulse response h(t) shared by every amplitude; response to amp a is
-    a*h(t). Returns (params, base, yhat_per_amp, sse). `peak` seeds the PER-UNIT-AMPLITUDE
-    scale (i.e. already divided by its amplitude)."""
+GAMMA_BOUNDS = (0.1, 3.0)   # static input-nonlinearity exponent f(a)=(a/a_ref)^gamma.
+                            # gamma=1 -> strictly linear in laser amplitude. The measured focal
+                            # gain ratio is ~1.49 at doubled power -> gamma ~= 0.57 (saturating).
+
+
+def _shared_weights(hs, amps, a_ref, weight):
+    """Per-amplitude residual scale. The raw residual f(a)*b - h_a grows with a, so an
+    UNWEIGHTED shared fit is dominated by the largest amplitude (SSE weight ~ (a2/a1)^2 = 4:1
+    here) — the high-amp data sets h and the low amp is then scored on a curve it never
+    influenced. Weighting equalises each amplitude's contribution.
+      "none" — raw (legacy; high-amp dominated)
+      "amp"  — divide by a/a_ref (known, parameter-free; responses scale ~linearly with a)
+      "rms"  — divide by each amp's own response RMS (data-derived, fully size-equalising)
+    """
+    if weight == "amp":
+        return np.asarray([a / a_ref for a in amps], float)
+    if weight == "rms":
+        return np.asarray([np.sqrt(np.nanmean(h ** 2)) + 1e-12 for h in hs], float)
+    return np.ones(len(amps))
+
+
+def _fit_order_shared(t, hs, amps, n, peak, fit_gamma=True, weight="amp", a_ref=None):
+    """Fit ONE n-mode impulse response h(t) shared by every amplitude.
+
+    Response to amplitude a is  f(a)*h(t)  with  f(a) = (a/a_ref)^gamma.  h is therefore the
+    response AT the reference amplitude (a_ref = smallest amp), which removes the h<->f scale
+    degeneracy. gamma=1 (fit_gamma=False) is the strict amplitude-linear model.
+    Returns (params, base, yhat_per_amp, sse) — sse UNWEIGHTED so it stays comparable.
+    """
+    a_ref = float(np.min(amps)) if a_ref is None else float(a_ref)
+    w = _shared_weights(hs, amps, a_ref, weight)
     sign = np.sign(peak) or 1.0
     a0 = abs(peak) if abs(peak) > 0 else 1e-3
     tau0 = list(np.geomspace(0.05, 0.4, n))
@@ -430,49 +457,61 @@ def _fit_order_shared(t, hs, amps, n, peak):
         p0 = [sign * a0] + [-sign * a0 * 0.5] * (n - 1) + tau0
         lo = [-1.0] * n + [1e-3] * n
         hi = [1.0] * n + [3.0] * n
+        nmode = 2 * n
 
         def base_of(p):
-            return _impulse(t, 0.0, p[:n], p[n:])
+            return _impulse(t, 0.0, p[:n], p[n:2 * n])
     else:
         om0 = list(2 * np.pi * np.geomspace(2.0, 10.0, n))
         p0 = [sign * a0] * n + tau0 + om0 + [0.0] * n
         lo = [-1.0] * n + [1e-3] * n + [0.0] * n + [-np.pi] * n
         hi = [1.0] * n + [3.0] * n + [OMEGA_MAX] * n + [np.pi] * n
+        nmode = 4 * n
 
         def base_of(p):
-            return _impulse(t, 0.0, p[:n], p[n:2 * n], p[2 * n:3 * n], p[3 * n:])
+            return _impulse(t, 0.0, p[:n], p[n:2 * n], p[2 * n:3 * n], p[3 * n:4 * n])
+
+    if fit_gamma:
+        p0 = p0 + [1.0]; lo = lo + [GAMMA_BOUNDS[0]]; hi = hi + [GAMMA_BOUNDS[1]]
+
+    def drive(p):
+        g = p[nmode] if fit_gamma else 1.0
+        return [(a / a_ref) ** g for a in amps]
 
     def resid(p):
         b = base_of(p)
-        return np.concatenate([a * b - h for a, h in zip(amps, hs)])
+        return np.concatenate([(d * b - h) / wi
+                               for d, h, wi in zip(drive(p), hs, w)])
 
     r = scipy.optimize.least_squares(resid, p0, bounds=(lo, hi), max_nfev=6000)
     base = base_of(r.x)
+    gamma = float(r.x[nmode]) if fit_gamma else 1.0
     if MODEL == "real":
-        A, tau, om, ph = r.x[:n], r.x[n:], None, None
+        A, tau, om, ph = r.x[:n], r.x[n:2 * n], None, None
     else:
-        A, tau, om, ph = r.x[:n], r.x[n:2 * n], r.x[2 * n:3 * n], r.x[3 * n:]
-    yh = [a * base for a in amps]
+        A, tau, om, ph = r.x[:n], r.x[n:2 * n], r.x[2 * n:3 * n], r.x[3 * n:4 * n]
+    yh = [(a / a_ref) ** gamma * base for a in amps]
     sse = float(sum(np.sum((y - h) ** 2) for y, h in zip(yh, hs)))
-    return dict(theta=0.0, A=A, tau=tau, om=om, ph=ph), base, yh, sse
+    return dict(theta=0.0, A=A, tau=tau, om=om, ph=ph, gamma=gamma), base, yh, sse
 
 
-def fit_lti_cv_shared(t, hs, hAs, hBs, amps, orders=ORDERS, margin=CV_MARGIN):
-    """Split-half CV order selection for the shared (amplitude-as-input) model; CV score is
-    pooled over amplitudes. Refits on the full per-amp means."""
+def fit_lti_cv_shared(t, hs, hAs, hBs, amps, orders=ORDERS, margin=CV_MARGIN,
+                      fit_gamma=True, weight="amp"):
+    """Split-half CV order selection for the shared model; CV pooled over amplitudes."""
     post = (t >= 0) & (t <= FIT_TMAX)
     tp = t[post]
     hsp = [h[post] for h in hs]
     hAp = [h[post] for h in hAs]
     hBp = [h[post] for h in hBs]
-    ia = int(np.argmax(amps))
-    pk = hsp[ia][np.argmax(np.abs(hsp[ia]))] / amps[ia]     # per-unit-amplitude seed
+    ia = int(np.argmin(amps))                    # h is the response AT the reference amp
+    pk = hsp[ia][np.argmax(np.abs(hsp[ia]))]
+    kw = dict(fit_gamma=fit_gamma, weight=weight)
 
     cv = []
     for n in orders:
         try:
-            _, _, yA, _ = _fit_order_shared(tp, hAp, amps, n, pk)
-            _, _, yB, _ = _fit_order_shared(tp, hBp, amps, n, pk)
+            _, _, yA, _ = _fit_order_shared(tp, hAp, amps, n, pk, **kw)
+            _, _, yB, _ = _fit_order_shared(tp, hBp, amps, n, pk, **kw)
             cv.append(0.5 * (_r2(np.concatenate(yA), np.concatenate(hBp))
                              + _r2(np.concatenate(yB), np.concatenate(hAp))))
         except Exception:
@@ -484,7 +523,7 @@ def fit_lti_cv_shared(t, hs, hAs, hBs, amps, orders=ORDERS, margin=CV_MARGIN):
     else:
         nbest, cv_best = orders[0], np.nan
 
-    params, base, yh, sse = _fit_order_shared(tp, hsp, amps, nbest, pk)
+    params, base, yh, sse = _fit_order_shared(tp, hsp, amps, nbest, pk, **kw)
     r2a = [1.0 - np.sum((y - h) ** 2) / (np.sum((h - h.mean()) ** 2) + 1e-12)
            for y, h in zip(yh, hsp)]
     allh = np.concatenate(hsp)
@@ -493,10 +532,10 @@ def fit_lti_cv_shared(t, hs, hAs, hBs, amps, orders=ORDERS, margin=CV_MARGIN):
                 theta=0.0, tau=np.asarray(params["tau"]), A=np.asarray(params["A"]),
                 om=None if params["om"] is None else np.asarray(params["om"]),
                 ph=None if params["ph"] is None else np.asarray(params["ph"]),
-                base=base, yhat=yh, t=tp)
+                gamma=params["gamma"], base=base, yhat=yh, t=tp)
 
 
-def fit_shared(orders=ORDERS, cache=True):
+def fit_shared(orders=ORDERS, cache=True, fit_gamma=True, weight="amp", tag=None):
     """One TF per (stim, readout) pair, SHARED across amplitudes (amp = input scale)."""
     z = cross_response.load_cached2()
     H, sites, window = z["H"], z["sites"], z["window"]          # H (nA,nS,nS,nW)
@@ -517,7 +556,9 @@ def fit_shared(orders=ORDERS, cache=True):
     Amp = np.full((nS, nS, max(ORDERS)), np.nan)
     Om = np.full((nS, nS, max(ORDERS)), np.nan)
     Ph = np.full((nS, nS, max(ORDERS)), np.nan)
+    Gam = np.full((nS, nS), np.nan)
     Hs = np.array(H, float)
+    a_ref = float(np.min(amps))
 
     for s in range(nS):
         for r in range(nS):
@@ -533,14 +574,15 @@ def fit_shared(orders=ORDERS, cache=True):
                 hs.append(hz); hAs.append(HA[ai, s, r] - off); hBs.append(HB[ai, s, r] - off)
             if not ok:
                 continue
-            f = fit_lti_cv_shared(window, hs, hAs, hBs, amps, orders=orders)
+            f = fit_lti_cv_shared(window, hs, hAs, hBs, amps, orders=orders,
+                                  fit_gamma=fit_gamma, weight=weight)
             bfull = _impulse(window, f["theta"], f["A"], f["tau"], f["om"], f["ph"])
             base[s, r] = bfull
             for ai in range(nA):
-                yhat[ai, s, r] = amps[ai] * bfull
+                yhat[ai, s, r] = (amps[ai] / a_ref) ** f["gamma"] * bfull
                 gain[ai, s, r] = yhat[ai, s, r][np.argmax(np.abs(yhat[ai, s, r]))]
             order[s, r] = f["order"]; r2[s, r] = f["r2"]; cvr2[s, r] = f["cvr2"]
-            r2a[:, s, r] = f["r2_amp"]
+            r2a[:, s, r] = f["r2_amp"]; Gam[s, r] = f["gamma"]
             n = len(f["tau"]); o = np.argsort(f["tau"])
             tau[s, r, :n] = f["tau"][o]; Amp[s, r, :n] = f["A"][o]
             if f["om"] is not None:
@@ -548,18 +590,28 @@ def fit_shared(orders=ORDERS, cache=True):
         print(f"  shared fit stim {s+1:2d}/{nS}  median pooled R2={np.nanmedian(r2[s]):.2f}",
               end="\r")
     print()
-    print(f"shared fit {nS}x{nS} (amp as input, {MODEL}); order hist "
+    gtxt = "gamma FREE" if fit_gamma else "gamma=1 (linear)"
+    print(f"shared fit {nS}x{nS} ({MODEL}, {gtxt}, weight={weight}); order hist "
           f"{np.bincount(order.ravel(), minlength=6)[1:]}, median pooled R2={np.nanmedian(r2):.2f}, "
           f"median CV-R2={np.nanmedian(cvr2):.2f}")
     for ai in range(nA):
         print(f"  amp {amps[ai]}: median R2={np.nanmedian(r2a[ai]):.2f}")
+    if fit_gamma:
+        gg = Gam[cvr2 > 0]
+        gg = gg[np.isfinite(gg)]
+        if gg.size:
+            print(f"  gamma (CV-R2>0 pairs, n={gg.size}): median={np.median(gg):.3f}  "
+                  f"IQR=[{np.percentile(gg,25):.3f},{np.percentile(gg,75):.3f}]  "
+                  f"(1.0 = amplitude-linear)")
+    out = CACHE_TFS if tag is None else CACHE_TFS.with_name(f"grid_tf_fits_shared_{tag}.npz")
     if cache:
-        np.savez(CACHE_TFS, H=Hs, Hstd=Hstd, yhat=yhat, base=base, sites=sites, window=window,
+        np.savez(out, H=Hs, Hstd=Hstd, yhat=yhat, base=base, sites=sites, window=window,
                  amps=np.array(amps, float), order=order, r2=r2, r2_amp=r2a, cvr2=cvr2,
-                 gain=gain, tau=tau, A=Amp, om=Om, ph=Ph, model=MODEL)
-        print("cached ->", CACHE_TFS)
+                 gain=gain, tau=tau, A=Amp, om=Om, ph=Ph, gamma=Gam, model=MODEL,
+                 fit_gamma=fit_gamma, weight=weight, a_ref=a_ref)
+        print("cached ->", out)
     return dict(H=Hs, yhat=yhat, base=base, sites=sites, window=window, amps=amps, order=order,
-                r2=r2, r2_amp=r2a, cvr2=cvr2, gain=gain, tau=tau, A=Amp, om=Om, ph=Ph)
+                r2=r2, r2_amp=r2a, cvr2=cvr2, gain=gain, tau=tau, A=Amp, om=Om, ph=Ph, gamma=Gam)
 
 
 # --------------------------------------------------------------------------- #
@@ -631,7 +683,15 @@ def prototype(save="grid_png/tf_prototype.png"):
 if __name__ == "__main__":
     import sys
     if "shared" in sys.argv:
-        fit_shared()
+        # Three variants isolate the two effects:
+        #   linW  weighted, gamma=1  -> how much of the amp-1.0 failure was LS high-amp dominance
+        #   (default) weighted, gamma free -> how much of the remainder is saturation
+        if "linear" in sys.argv:
+            fit_shared(fit_gamma=False, weight="amp", tag="linw")
+        elif "raw" in sys.argv:
+            fit_shared(fit_gamma=False, weight="none", tag="raw")
+        else:
+            fit_shared(fit_gamma=True, weight="amp")
     elif "2amp" in sys.argv:
         fit_all_amps()
     elif "all" in sys.argv:
