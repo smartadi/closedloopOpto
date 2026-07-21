@@ -407,6 +407,162 @@ def fit_all_amps(orders=ORDERS, selection="cv", cache=True):
 
 
 # --------------------------------------------------------------------------- #
+# SHARED variant: ONE transfer function for ALL amplitudes, with the laser amplitude entering
+# as the INPUT. The response to amplitude a is a*h(t) — there is deliberately NO free per-amp
+# gain, because physically the bigger drive is what makes the response bigger, not a different
+# system. This is the strict LTI statement (same dynamics AND same sensitivity).
+#
+# NOTE: this model FORCES a 2.0x ratio between amp 1.0 and 2.0, while the measured focal ratio
+# is ~1.4-1.5x. The resulting systematic residual is therefore not a fit failure — it IS the
+# quantity that measures saturation / departure from amplitude-linearity. Compare its per-amp
+# R2 against the per-amp independent fits (fit_all_amps) to size that gap.
+CACHE_TFS = cross_response.CACHE.parent / "grid_tf_fits_shared.npz"
+
+
+def _fit_order_shared(t, hs, amps, n, peak):
+    """Fit ONE n-mode impulse response h(t) shared by every amplitude; response to amp a is
+    a*h(t). Returns (params, base, yhat_per_amp, sse). `peak` seeds the PER-UNIT-AMPLITUDE
+    scale (i.e. already divided by its amplitude)."""
+    sign = np.sign(peak) or 1.0
+    a0 = abs(peak) if abs(peak) > 0 else 1e-3
+    tau0 = list(np.geomspace(0.05, 0.4, n))
+    if MODEL == "real":
+        p0 = [sign * a0] + [-sign * a0 * 0.5] * (n - 1) + tau0
+        lo = [-1.0] * n + [1e-3] * n
+        hi = [1.0] * n + [3.0] * n
+
+        def base_of(p):
+            return _impulse(t, 0.0, p[:n], p[n:])
+    else:
+        om0 = list(2 * np.pi * np.geomspace(2.0, 10.0, n))
+        p0 = [sign * a0] * n + tau0 + om0 + [0.0] * n
+        lo = [-1.0] * n + [1e-3] * n + [0.0] * n + [-np.pi] * n
+        hi = [1.0] * n + [3.0] * n + [OMEGA_MAX] * n + [np.pi] * n
+
+        def base_of(p):
+            return _impulse(t, 0.0, p[:n], p[n:2 * n], p[2 * n:3 * n], p[3 * n:])
+
+    def resid(p):
+        b = base_of(p)
+        return np.concatenate([a * b - h for a, h in zip(amps, hs)])
+
+    r = scipy.optimize.least_squares(resid, p0, bounds=(lo, hi), max_nfev=6000)
+    base = base_of(r.x)
+    if MODEL == "real":
+        A, tau, om, ph = r.x[:n], r.x[n:], None, None
+    else:
+        A, tau, om, ph = r.x[:n], r.x[n:2 * n], r.x[2 * n:3 * n], r.x[3 * n:]
+    yh = [a * base for a in amps]
+    sse = float(sum(np.sum((y - h) ** 2) for y, h in zip(yh, hs)))
+    return dict(theta=0.0, A=A, tau=tau, om=om, ph=ph), base, yh, sse
+
+
+def fit_lti_cv_shared(t, hs, hAs, hBs, amps, orders=ORDERS, margin=CV_MARGIN):
+    """Split-half CV order selection for the shared (amplitude-as-input) model; CV score is
+    pooled over amplitudes. Refits on the full per-amp means."""
+    post = (t >= 0) & (t <= FIT_TMAX)
+    tp = t[post]
+    hsp = [h[post] for h in hs]
+    hAp = [h[post] for h in hAs]
+    hBp = [h[post] for h in hBs]
+    ia = int(np.argmax(amps))
+    pk = hsp[ia][np.argmax(np.abs(hsp[ia]))] / amps[ia]     # per-unit-amplitude seed
+
+    cv = []
+    for n in orders:
+        try:
+            _, _, yA, _ = _fit_order_shared(tp, hAp, amps, n, pk)
+            _, _, yB, _ = _fit_order_shared(tp, hBp, amps, n, pk)
+            cv.append(0.5 * (_r2(np.concatenate(yA), np.concatenate(hBp))
+                             + _r2(np.concatenate(yB), np.concatenate(hAp))))
+        except Exception:
+            cv.append(-np.inf)
+    cv = np.asarray(cv)
+    if np.any(np.isfinite(cv)):
+        i_best = int(np.where(cv >= np.nanmax(cv) - margin)[0].min())
+        nbest, cv_best = orders[i_best], float(cv[i_best])
+    else:
+        nbest, cv_best = orders[0], np.nan
+
+    params, base, yh, sse = _fit_order_shared(tp, hsp, amps, nbest, pk)
+    r2a = [1.0 - np.sum((y - h) ** 2) / (np.sum((h - h.mean()) ** 2) + 1e-12)
+           for y, h in zip(yh, hsp)]
+    allh = np.concatenate(hsp)
+    r2_pool = 1.0 - sse / (np.sum((allh - allh.mean()) ** 2) + 1e-12)
+    return dict(order=nbest, cvr2=cv_best, r2=r2_pool, r2_amp=np.asarray(r2a), sse=sse,
+                theta=0.0, tau=np.asarray(params["tau"]), A=np.asarray(params["A"]),
+                om=None if params["om"] is None else np.asarray(params["om"]),
+                ph=None if params["ph"] is None else np.asarray(params["ph"]),
+                base=base, yhat=yh, t=tp)
+
+
+def fit_shared(orders=ORDERS, cache=True):
+    """One TF per (stim, readout) pair, SHARED across amplitudes (amp = input scale)."""
+    z = cross_response.load_cached2()
+    H, sites, window = z["H"], z["sites"], z["window"]          # H (nA,nS,nS,nW)
+    amps = [round(float(a), 3) for a in z["amps"]]
+    Hstd = z["Hstd"] if "Hstd" in z else np.zeros_like(H)
+    nA, nS, nW = H.shape[0], len(sites), len(window)
+    HA, HB, amps_cv, _ = split_half_means_amp()
+    assert amps_cv == amps, f"amp mismatch {amps_cv} vs {amps}"
+
+    yhat = np.zeros((nA, nS, nS, nW))
+    base = np.zeros((nS, nS, nW))                              # the shared h(t), per unit amp
+    order = np.zeros((nS, nS), int)
+    r2 = np.full((nS, nS), np.nan)                             # pooled over amps
+    r2a = np.full((nA, nS, nS), np.nan)                        # per amp
+    cvr2 = np.full((nS, nS), np.nan)
+    gain = np.zeros((nA, nS, nS))
+    tau = np.full((nS, nS, max(ORDERS)), np.nan)
+    Amp = np.full((nS, nS, max(ORDERS)), np.nan)
+    Om = np.full((nS, nS, max(ORDERS)), np.nan)
+    Ph = np.full((nS, nS, max(ORDERS)), np.nan)
+    Hs = np.array(H, float)
+
+    for s in range(nS):
+        for r in range(nS):
+            hs, hAs, hBs, ok = [], [], [], True
+            for ai in range(nA):
+                h = H[ai, s, r]
+                if not np.all(np.isfinite(h)) or not np.all(np.isfinite(HA[ai, s, r])) \
+                        or not np.all(np.isfinite(HB[ai, s, r])):
+                    ok = False
+                    break
+                hz, off = _zero_onset(window, h)
+                Hs[ai, s, r] = hz
+                hs.append(hz); hAs.append(HA[ai, s, r] - off); hBs.append(HB[ai, s, r] - off)
+            if not ok:
+                continue
+            f = fit_lti_cv_shared(window, hs, hAs, hBs, amps, orders=orders)
+            bfull = _impulse(window, f["theta"], f["A"], f["tau"], f["om"], f["ph"])
+            base[s, r] = bfull
+            for ai in range(nA):
+                yhat[ai, s, r] = amps[ai] * bfull
+                gain[ai, s, r] = yhat[ai, s, r][np.argmax(np.abs(yhat[ai, s, r]))]
+            order[s, r] = f["order"]; r2[s, r] = f["r2"]; cvr2[s, r] = f["cvr2"]
+            r2a[:, s, r] = f["r2_amp"]
+            n = len(f["tau"]); o = np.argsort(f["tau"])
+            tau[s, r, :n] = f["tau"][o]; Amp[s, r, :n] = f["A"][o]
+            if f["om"] is not None:
+                Om[s, r, :n] = f["om"][o]; Ph[s, r, :n] = f["ph"][o]
+        print(f"  shared fit stim {s+1:2d}/{nS}  median pooled R2={np.nanmedian(r2[s]):.2f}",
+              end="\r")
+    print()
+    print(f"shared fit {nS}x{nS} (amp as input, {MODEL}); order hist "
+          f"{np.bincount(order.ravel(), minlength=6)[1:]}, median pooled R2={np.nanmedian(r2):.2f}, "
+          f"median CV-R2={np.nanmedian(cvr2):.2f}")
+    for ai in range(nA):
+        print(f"  amp {amps[ai]}: median R2={np.nanmedian(r2a[ai]):.2f}")
+    if cache:
+        np.savez(CACHE_TFS, H=Hs, Hstd=Hstd, yhat=yhat, base=base, sites=sites, window=window,
+                 amps=np.array(amps, float), order=order, r2=r2, r2_amp=r2a, cvr2=cvr2,
+                 gain=gain, tau=tau, A=Amp, om=Om, ph=Ph, model=MODEL)
+        print("cached ->", CACHE_TFS)
+    return dict(H=Hs, yhat=yhat, base=base, sites=sites, window=window, amps=amps, order=order,
+                r2=r2, r2_amp=r2a, cvr2=cvr2, gain=gain, tau=tau, A=Amp, om=Om, ph=Ph)
+
+
+# --------------------------------------------------------------------------- #
 def _nearest(sites, ref, exclude=()):
     """Index of the site closest to coordinate `ref`, excluding given indices."""
     d = np.hypot(sites[:, 0] - ref[0], sites[:, 1] - ref[1])
@@ -474,7 +630,9 @@ def prototype(save="grid_png/tf_prototype.png"):
 
 if __name__ == "__main__":
     import sys
-    if "2amp" in sys.argv:
+    if "shared" in sys.argv:
+        fit_shared()
+    elif "2amp" in sys.argv:
         fit_all_amps()
     elif "all" in sys.argv:
         fit_all()
