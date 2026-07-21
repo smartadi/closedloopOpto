@@ -22,12 +22,6 @@ These claims have identified problems and must be revisited before submission. E
 
 ---
 
-## Variable refernce plotting and literture
-we have added a feedforward and a preview based controller to the experiment pipeline, we need to add the literature, results and discussions
-- [ ] add plots for variable sine wave
-- [ ] need to classify feedforward vs preview
-- [ ] need to add coparision against naive CL.
-
 ## Manuscript corrections (Closedloop_edit)
 
 ### results_edit.tex
