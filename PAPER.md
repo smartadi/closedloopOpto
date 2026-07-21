@@ -99,12 +99,12 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3I | Fig3 | paper/images/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_Fr — OL/CL variance ratio: Pre/Stim/Post; Wilcoxon stars |
 | 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post |
 | 3K | Fig3 | paper/images/figure3/ol_tf_trial_avg.pdf | 12 × 4 | vector | ±std | tf_fit.m fig_tf_paper — OL trial avg + TF pred, 3 sessions |
-| 5A | Fig5 | *(feedforward control system — illustrator)* | 6 × 4 | — | — | external |
-| 5B | Fig5 | paper/images/figure5/sine_5B_rmse_time_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | ±SEM | **RMSE** over time, 4 modes — **CL+prev is the only mode whose error falls within the trial** |
-| 5C | Fig5 | paper/images/figure5/sine_5C_variance_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | — | across-trial variance over time, 4 modes |
-| 5D | Fig5 | paper/images/figure5/sine_5D_single_trial_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | — | one representative trial, all 4 modes in one panel + reference; **no x-axis** (shares col1 time base) |
-| 5E | Fig5 | paper/images/figure5/sine_5E_trialavg_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial average, all 4 modes + reference; **no x-axis** (shares col1 time base) |
-| 5F | Fig5 | paper/images/figure5/sine_5F_trialavg_input_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial-average **input/command**, 4 modes — carries the col1 time axis + scalebar |
+| 5A | Fig5 | *(feedforward control system — illustrator)* | 6 × 4 | — | — | external; physical row 1 |
+| 5B | Fig5 | paper/images/figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | — | one representative trial, all 4 modes in one panel + reference; **no x-axis** (shares col1 time base) |
+| 5C | Fig5 | paper/images/figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial average, all 4 modes + reference; **no x-axis** (shares col1 time base) |
+| 5D | Fig5 | paper/images/figure5/sine_5D_trialavg_input_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial-average **input/command**, 4 modes — carries the col1 time axis + scalebar |
+| 5E | Fig5 | paper/images/figure5/sine_5E_rmse_time_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | ±SEM | **RMSE** over time, 4 modes — **CL+prev is the only mode whose error falls within the trial**; physical row 1 |
+| 5F | Fig5 | paper/images/figure5/sine_5F_variance_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | — | across-trial variance over time, 4 modes; physical row 1 |
 | 5G | Fig5 | paper/images/figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf | 5.3 × 5.4 | vector | — | trial **RMSE** half-violins, 4 modes (+ Wilcoxon in console) |
 | 5H | Fig5 | paper/images/figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf | 5.3 × 5.4 | vector | — | 1 Hz phase lag per mode — preview's lag cancellation |
 | T-A | Methods fig:cost_landscape | paper/images/tuning/grid_cost_surface_AL_0033_0305.pdf | 6 × 5 | vector | — | gain_grid.m — PI gain-grid cost surface J(Kp,Ki), AL_0033 03-05 (PRIMARY: clean interior min ~0.05,0.1) |
@@ -113,7 +113,7 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 
 > **Fig 5 sine-wave (feedforward) section — AL_0048, right/inhibitory, 1 Hz sine, 4 s.** Source: `bilateral/sine_ff_paper_panels.m` (run after `bilateral/load_bilateral.m`). Design is **4-mode**, not OL-vs-CL binary: `ff_analysis_cond` 2=OL, 1=OL+preview, 3=CL, 0=CL+preview (rig "FF Analysis" button). Colour code: **red family = open loop, green family = closed loop; lighter = +preview**.
 > **Single session (2026-07-21 decision)** — `2026-07-14/1` (200 trials; Kp .08, **Ki 0**, Kref .05, amp 2). The second session `2026-07-01/6` (87 trials; Kp .08, **Ki .01**, Kref .075, amp 3) is **excluded from the figure** but stays on record below, because two claims were resting on it.
-> **Paper-ready claims (this session):** (a) **Feedback reduces tracking error** — OL vs CL Wilcoxon **p=0.00077 (n=97)**. (b) **Preview cancels the plant's phase lag** — OL 168→15 ms, CL 101→−26 ms; `previewT_steps=5` = **143 ms @35 Hz ≈ the measured ~160 ms lag**, i.e. the lookahead is matched to the delay. (c) **CL+preview is the only mode whose error falls within the trial** (16.07→13.45 for 0–1 s vs 1–4 s) — panel **5B**.
+> **Paper-ready claims (this session):** (a) **Feedback reduces tracking error** — OL vs CL Wilcoxon **p=0.00077 (n=97)**. (b) **Preview cancels the plant's phase lag** — OL 168→15 ms, CL 101→−26 ms; `previewT_steps=5` = **143 ms @35 Hz ≈ the measured ~160 ms lag**, i.e. the lookahead is matched to the delay. (c) **CL+preview is the only mode whose error falls within the trial** (16.07→13.45 for 0–1 s vs 1–4 s) — panel **5E**.
 > **⚠ Units: every error number quoted in this block is OLD `MSE`.** Fig 5 moved to **RMSE** (2026-07-21) to match the Fig 3 locked decision, so all of these magnitudes (16.07→13.45, 20.2→23.7, 28.2→20.6, variance 17.9→23.2) **must be recomputed** when `sine_ff_paper_panels.m` is rerun — do not paste them into the manuscript as-is. The **p-values are safe**: Wilcoxon is rank-based and RMSE is a monotone transform of MSE, so p=0.00077 / p=0.32 carry over unchanged.
 > **⚠ What dropping 2026-07-01/6 costs:** claim (a) was previously the *robust* result precisely because it held across **both** parameter settings (p=0.0046, n=43 there; p=0.00077, n=97 here). As a single-session figure it is now **one Ki=0 session, unreplicated in-figure**. The 07-01 numbers are not wrong — they are just no longer shown. If a referee presses on n=1, the fastest answer is to restore 07-01 as a supplementary panel rather than re-run anything. Claim (c) likewise held in both (14.41→11.88 there).
 > **Claims caveats (read before writing):** (i) **Preview does NOT reduce MSE in this session** (OL 20.2→23.7, p=0.32) — it raised OL variance (17.9→23.2). Report preview as **lag-cancellation + settling, not an MSE reduction**. In 07-01 preview *did* help (28.2→20.6), so the effect is parameter-dependent and **Ki=0 here is the prime suspect**; a matched-parameter rerun is the clean test. (ii) dF/F is **uncorrected blue SVD** (`corr/` holds only temporal comps; `getpixel_dFoF` falls back to blue). (iii) This session's MSE distribution has heavy outliers (trials to ~250–300) — motion exclusion (`motThresh=1.5`) not yet applied; Wilcoxon is rank-based so p-values hold, but means are skewed. (iv) Onsets come from `traj_on` epochs, NOT `findStims` (whose `horizon` fallback puts them ~36 s early — see RESEARCH.md 2026-07-15). Full detail: RESEARCH.md.
@@ -340,16 +340,18 @@ Sine-wave (feedforward) section — panels exported individually, stitched in Il
 **Single session: `2026-07-14/1`** (200 tr, Ki 0). The second session `2026-07-01/6` is
 excluded from the figure (2026-07-21 decision) — no `_s1`/`_s2` suffixes, one file per panel.
 **All four modes live in ONE panel** per trace figure (not 4 separate per-mode panels) —
-mode is encoded by colour, so 5D/5E/5F each carry all of OL / OL+prev / CL / CL+prev.
+mode is encoded by colour, so 5B/5C/5D each carry all of OL / OL+prev / CL / CL+prev.
 ```
-row1:  5A(6×4)[ext]   5B(5.2×4)   5C(5.2×4)
+row1:  5A(6×4)[ext]   5E(5.2×4)   5F(5.2×4)
 
-row2:  col1[11.4]:  5D(11.4×3.5) / 5E(11.4×3.5) / 5F(11.4×3.5)
+row2:  col1[11.4]:  5B(11.4×3.5) / 5C(11.4×3.5) / 5D(11.4×3.5)
        col2[5.3]:   5G(5.3×5.4)  / 5H(5.3×5.4)
 ```
-Panel key: **5A** system diagram · **5B** RMSE over time · **5C** across-trial variance ·
-**5D** single trial · **5E** trial average · **5F** trial-average input ·
+Panel key: **5A** system diagram · **5B** single trial · **5C** trial average ·
+**5D** trial-average input · **5E** RMSE over time · **5F** across-trial variance ·
 **5G** trial-RMSE distribution · **5H** phase lag.
+Letters run in logical order (A schematic → B–D the trial stack → E–F the summary series →
+G–H the distributions); the *physical* top row is therefore A, E, F.
 
 Fit checks (gap=0.3 cm):
 - row1: 6 + 5.2 + 5.2 + 2×0.3 = **17.0/17** ✓ (exact)
@@ -358,8 +360,26 @@ Fit checks (gap=0.3 cm):
 - col2 inner height: 2×5.4 + 0.3 = **11.1 cm** ✓ (columns flush — this is what sets 5G/5H
   height at 5.4: solve `2h + 0.3 = 3×3.5 + 0.6`)
 - **Total height: 4 + 0.3 + 11.1 = 15.4 cm** ✓ (well under a 23 cm page — ~7.6 cm spare)
-- Alternative if you want the taller house H=4 in col1: 5D/5E/5F at 11.4×4 → col2 at 5.3×6.15,
+- Alternative if you want the taller house H=4 in col1: 5B/5C/5D at 11.4×4 → col2 at 5.3×6.15,
   block 12.6, total **16.9 cm** — still fits. Current 3.5 keeps the trace aspect ~3.3:1.
-- **Shared x-axis in col1:** 5D/5E/5F are the same 4 s time base stacked — only the bottom
-  panel (5F) should carry the time axis/scalebar; 5D/5E drop theirs. That is what buys the
-  vertical room and makes the stack read as one object.
+- **Shared x-axis in col1:** 5B/5C/5D are the same 4 s time base stacked — only the bottom
+  panel (5D, the input) should carry the time axis/scalebar; 5B/5C drop theirs. That is what
+  buys the vertical room and makes the stack read as one object.
+
+##### Fig 5 — draft manuscript caption
+> Values marked `[TBD]` are the RMSE magnitudes still to be recomputed (the recorded ones are
+> stale MSE). Phase lags, p-values and n are unaffected and are final.
+
+**Figure 5. Preview cancels the plant's phase lag and feedback reduces tracking error during 1 Hz sinusoidal reference tracking.**
+All panels: mouse AL_0048, right (inhibitory) hemisphere, 1 Hz sinusoidal reference, 4 s trials, one session (2026-07-14; 200 trials; Kp = 0.08, Ki = 0, Kref = 0.05). Four control modes appear throughout — open loop (OL), open loop with preview (OL+prev), closed loop (CL), and closed loop with preview (CL+prev): **red family = open loop, green family = closed loop, lighter shade = with preview**. Preview advances the reference by 5 samples = 143 ms at 35 Hz, matched to the measured ~160 ms plant lag. Shading is ±SEM across trials unless noted.
+
+**(A)** Control-system schematic. The preview path feeds the reference forward by 143 ms; the feedback path closes on the online kernel-mean ΔF/F.
+**(B)** One representative trial per mode, with the sinusoidal reference overlaid (dashed). Time axis shared with C and D.
+**(C)** Trial-averaged response per mode. Time axis shared with B and D.
+**(D)** Trial-averaged laser command per mode, on its own scale in stimulus units. Carries the time axis for B–D.
+**(E)** Tracking error (RMSE) against time within the trial. CL+prev is the only mode whose error falls within the trial ([TBD] over 0–1 s vs [TBD] over 1–4 s).
+**(F)** Across-trial variance of the response over time, per mode.
+**(G)** Per-trial RMSE by mode (half-violins, dot = median). Closing the loop reduces tracking error (Wilcoxon signed-rank, **p = 7.7 × 10⁻⁴, n = 97**). Preview does not reduce error in this session (p = 0.32); it raises open-loop variance instead.
+**(H)** Phase lag of the response relative to the 1 Hz reference, per mode. Preview cancels the lag: **168 → 15 ms** open loop, **101 → −26 ms** closed loop.
+
+ΔF/F is computed from an uncorrected blue SVD. Trial onsets are taken from `traj_on` epochs.
