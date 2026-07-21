@@ -98,7 +98,7 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3H | Fig3 | paper/images/figure3/all_MSE_sessions.pdf | 7.8 × 4 | image 300dpi | — | variance_mse.m fig_G — cross-session MSE violin; mean dot too large (open task) |
 | 3I | Fig3 | paper/images/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_Fr — OL/CL variance ratio: Pre/Stim/Post; Wilcoxon stars |
 | 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post |
-| 3K | Fig3 | paper/images/figure3/ol_tf_trial_avg.pdf | 12 × 4 | vector | ±std | tf_fit.m fig_tf_paper — OL trial avg + TF pred, 3 sessions |
+| 3K | Fig3 | paper/images/figure3/ol_tf_trial_avg.pdf | 6 × 4 | vector | — | tf_fit.m fig_tf_paper — **MERGED 2026-07-17**: was a 1×3 tiled 12×4 (one column per session); now ONE axis with all 3 sessions overlaid on the session gradient, solid = OL trial mean, dashed = TF fit. Orders AIC-picked with np capped at 2 (R² 0.22/0.77/0.89). ±std ribbon dropped in the merge |
 | 5A | Fig5 | *(feedforward control system — illustrator)* | 6 × 4 | — | — | external; physical row 1 |
 | 5B | Fig5 | paper/images/figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | — | one representative trial, all 4 modes in one panel + reference; **no x-axis** (shares col1 time base) |
 | 5C | Fig5 | paper/images/figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial average, all 4 modes + reference; **no x-axis** (shares col1 time base) |
@@ -386,3 +386,32 @@ All panels: mouse AL_0048, right (inhibitory) hemisphere, 1 Hz sinusoidal refere
 **(H)** Phase lag of the response relative to the 1 Hz reference, per mode. Preview cancels the lag: **168 → 15 ms** open loop, **101 → −26 ms** closed loop.
 
 ΔF/F is computed from an uncorrected blue SVD. Trial onsets are taken from `traj_on` epochs.
+
+---
+
+## Draft manuscript captions — Figs 1–4
+Same house style as the Fig 5 caption above (results-first title sentence, shared preamble,
+then per-panel text). **Statistics are deliberately left as `[n]` / `[p]` placeholders** where
+I do not have a verified number on file — fill from the source script's console output rather
+than from memory. Fig 5's caption lives with its layout above.
+
+### Figure 1 — draft caption
+**Figure 1. A closed-loop optogenetic system for controlling cortical population activity in real time.**
+**(A)** Widefield imaging light path. **(B)** Combined optogenetic, electrophysiology and widefield preparation. **(C)** Example spatial SVD component of the widefield signal (AL_0039, 2025-04-19), showing the cortical parcellation from which the control readout is drawn. **(D)** Software interface linking image acquisition, online ΔF/F estimation and laser command. **(E)** Control-system block diagram: the measured kernel-mean ΔF/F is compared against the reference, and a PI controller sets the 638 nm laser command. **(F)** End-to-end loop latency from frame exposure to laser update.
+> Panels A, B, D, E, F are schematics/external images; only C is script-generated. Sizes are still `?` in the layout block — set them before assembly.
+
+### Figure 2 — draft caption
+**Figure 2. Focal optogenetic inhibition produces a graded, low-order response whose magnitude depends on ongoing cortical state.**
+All panels: mouse AL_0033 unless noted; inhibition energy is the mean ΔF/F over 0–200 ms after laser onset.
+**(A)** Single-session ΔF/F responses to increasing laser amplitude (2025-01-29). Shading is ±1 SD across trials, shown for the lowest and highest amplitudes to bracket the spread. **(B)** Inhibition energy against laser amplitude for each session, with linear fits; error bars are ±SEM across trials. **(C)** Measured impulse response against the fitted transfer function (±std). **(D)** Step response of the same preparation. **(E)** Across-trial variance around laser onset, with fitted slopes (±SEM). **(F)** Per-trial prediction error against normalised motion (0–1, per session), pooled across sessions; circles = no motion, triangles = motion. **(G)** Pre-stimulus variance against inhibition depth, per amplitude, after motion exclusion. **(H)** Trials sorted by pre-stimulus variance: frequency×trial heatmap with the accompanying trial-rank and delta-power scatters.
+> Panel F's x-axis is **per-session min-max normalised** motion (2026-07-21), not a z-score.
+
+### Figure 3 — draft caption
+**Figure 3. Closed-loop feedback reduces both trial-to-trial variability and tracking error relative to open loop.**
+All panels: 13 sessions across two mice (AL_0033, AL_0039); reference −5 % ΔF/F; error is RMSE over 0–3 s after laser onset unless noted. Open loop and closed loop are shown in red and green throughout.
+**(A)** A single representative trial, open loop versus closed loop. **(B)** All trials with the trial average (±std). **(C)** Trial-averaged laser command. **(D)** Across-trial variance over time. **(E)** Per-trial RMSE distribution (half-violins). **(F)** Cross-session variance trace (±SEM). **(G)** Per-session trial averages, faint, with the cross-session mean in bold (±SEM). **(H)** Cross-session error distribution; this panel reports **MAE**, not RMSE. **(I)** Open/closed-loop variance ratio split by window (pre, stim, post); asterisks are Wilcoxon. **(J)** Open/closed-loop RMSE ratio split by window (pre, 0–1 s, 1–3 s, post). **(K)** Open-loop trial averages for three step-response sessions with their fitted transfer functions (dashed); model orders were AIC-selected with poles capped at two (R² = 0.22, 0.77, 0.89).
+> Two things to check before submission: panel H is genuinely MAE and must stay labelled so (project decision 2026-07-16), and 3H/3J filenames still say "MSE" although the metric is RMSE.
+
+### Figure 4 — draft caption *(skeleton — panels not yet chosen)*
+**Figure 4. Controller performance depends on the cortical state that precedes each trial.**
+> Cannot be written properly until the panel set is fixed. Candidate content, from the layout block: pre-stimulus state deviation against error; motion-quartile error summary; pre-stimulus variance and delta power against error on a common trial pool; ΔF/F heatmaps sorted by delta power or by variance. Once panels are chosen, follow the Fig 3 pattern — a shared preamble naming sessions, reference and error window, then one sentence per panel.
