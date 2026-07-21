@@ -99,21 +99,22 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3I | Fig3 | paper/images/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_Fr — OL/CL variance ratio: Pre/Stim/Post; Wilcoxon stars |
 | 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post |
 | 3K | Fig3 | paper/images/figure3/ol_tf_trial_avg.pdf | 12 × 4 | vector | ±std | tf_fit.m fig_tf_paper — OL trial avg + TF pred, 3 sessions |
-| 5 (system) | Fig5 | *(feedforward control system — illustrator)* | 8 × 3 | — | — | external |
-| 5A | Fig5 | paper/images/figure5/sine_5A_{OL,OL_prev,CL,CL_prev}_AL_0048_{2026-07-01_6,2026-07-14_1}.pdf | 4 × 3 | vector | — | sine_ff_paper_panels.m — per-mode all trials (grey) + mean (mode colour) + reference; 4 modes × 2 sessions = 8 files |
-| 5B | Fig5 | paper/images/figure5/sine_5B_trialavg_AL_0048_*.pdf | 8.35 × 3 | vector | ±SEM | trial-avg of all 4 modes + reference, one file per session |
-| 5C | Fig5 | paper/images/figure5/sine_5C_variance_AL_0048_*.pdf | 5.4 × 3 | vector | — | across-trial variance over time, 4 modes |
-| 5D | Fig5 | paper/images/figure5/sine_5D_mse_violin_AL_0048_*.pdf | 5.4 × 3 | vector | — | trial MSE half-violins, 4 modes (+ Wilcoxon in console) |
-| 5E | Fig5 | paper/images/figure5/sine_5E_mse_time_AL_0048_*.pdf | 5.4 × 3 | vector | ±SEM | MSE over time — **CL+prev is the only mode whose error falls within the trial (both sessions)** |
-| 5F | Fig5 | paper/images/figure5/sine_5F_gain_phase_AL_0048_*.pdf | 8.35 × 3 | vector | — | 1 Hz gain (bars) + phase lag (squares) — preview's lag cancellation |
+| 5 (system) | Fig5 | *(feedforward control system — illustrator)* | 8 × 3.5 | — | — | external |
+| 5A | Fig5 | paper/images/figure5/sine_5A_{OL,OL_prev,CL,CL_prev}_AL_0048_2026-07-14_1.pdf | 4 × 4 | vector | — | sine_ff_paper_panels.m — per-mode all trials (grey) + mean (mode colour) + reference; 4 modes = 4 files |
+| 5B | Fig5 | paper/images/figure5/sine_5B_trialavg_AL_0048_2026-07-14_1.pdf | 17 × 4 | vector | ±SEM | trial-avg of all 4 modes + reference |
+| 5C | Fig5 | paper/images/figure5/sine_5C_variance_AL_0048_2026-07-14_1.pdf | 5.4 × 4 | vector | — | across-trial variance over time, 4 modes |
+| 5D | Fig5 | paper/images/figure5/sine_5D_mse_violin_AL_0048_2026-07-14_1.pdf | 5.4 × 4 | vector | — | trial MSE half-violins, 4 modes (+ Wilcoxon in console) |
+| 5E | Fig5 | paper/images/figure5/sine_5E_mse_time_AL_0048_2026-07-14_1.pdf | 5.4 × 4 | vector | ±SEM | MSE over time — **CL+prev is the only mode whose error falls within the trial** |
+| 5F | Fig5 | paper/images/figure5/sine_5F_gain_phase_AL_0048_2026-07-14_1.pdf | 8.35 × 4 | vector | — | 1 Hz gain (bars) + phase lag (squares) — preview's lag cancellation |
 | T-A | Methods fig:cost_landscape | paper/images/tuning/grid_cost_surface_AL_0033_0305.pdf | 6 × 5 | vector | — | gain_grid.m — PI gain-grid cost surface J(Kp,Ki), AL_0033 03-05 (PRIMARY: clean interior min ~0.05,0.1) |
 | T-B | Methods fig:cost_landscape | paper/images/tuning/grid_cost_surface_AL_0034_1017.pdf | 6 × 5 | vector | — | gain_grid.m — same, AL_0034 10-17 — **dur=4 VARIANT**: this session ran a 4 s stim (vs 3 s elsewhere) so J is scored over [0 4] s (parameter-dependence exhibit). CROSS-MOUSE replication of low-cost basin. min J=30.2 at (Kp=0.3,Ki=0.02). CAVEAT: dur & mouse covary (10-17 is the only dur=4 AND only AL_0034 grid) → variant exhibit, not a clean dur-controlled comparison |
 | T-C | Methods fig:cost_landscape | paper/images/tuning/autotune_convergence_both.pdf | 12 × 8 | vector | — | AUTO-TUNE convergence, BOTH mice side-by-side (AL_0033 03-17 + AL_0034 10-25 e1); accepted Kdata/Kval — (Kp,Ki) path + cost staircase (16.6→12.3 / 11.9→4.6). Singles also exported: `autotune_convergence_AL_0033_0317.pdf`, `..._AL_0034_1025e1.pdf` |
 
 > **Fig 5 sine-wave (feedforward) section — AL_0048, right/inhibitory, 1 Hz sine, 4 s.** Source: `bilateral/sine_ff_paper_panels.m` (run after `bilateral/load_bilateral.m`). Design is **4-mode**, not OL-vs-CL binary: `ff_analysis_cond` 2=OL, 1=OL+preview, 3=CL, 0=CL+preview (rig "FF Analysis" button). Colour code: **red family = open loop, green family = closed loop; lighter = +preview**.
-> **Two sessions exported side-by-side** (Illustrator: one column each) — s1 `2026-07-01/6` (87 trials; Kp .08, **Ki .01**, Kref .075, amp 3) and s2 `2026-07-14/1` (200 trials; Kp .08, **Ki 0**, Kref .05, amp 2).
-> **Paper-ready claims (what replicates):** (a) **Feedback reduces tracking error** — OL vs CL Wilcoxon **p=0.0046 (s1, n=43)** and **p=0.00077 (s2, n=97)**; the robust result, significant across both parameter settings. (b) **Preview cancels the plant's phase lag** — 156→−5 ms (s1) and 168→15 ms (s2) for OL, 125→13 / 101→−26 ms for CL; `previewT_steps=5` = **143 ms @35 Hz ≈ the measured ~160 ms lag**, i.e. the lookahead is matched to the delay. (c) **CL+preview is the only mode whose error falls within the trial** in BOTH sessions (14.41→11.88 and 16.07→13.45 for 0–1 s vs 1–4 s) — panel 5E.
-> **Claims caveats (read before writing):** (i) **Preview's MSE benefit does NOT replicate** — it helped in s1 (OL 28.2→20.6) but not s2 (20.2→23.7, p=0.32), because preview raised OL variance (17.9→23.2); report preview as lag-cancellation + settling, **not** as an MSE reduction. (ii) The two sessions differ in Ki/Kref/amp → **absolute MSE is not comparable across sessions**; only within-session mode contrasts are. Ki=0 in s2 is the prime suspect for the preview difference — a matched-parameter rerun is the clean test. (iii) dF/F is **uncorrected blue SVD** (`corr/` holds only temporal comps; `getpixel_dFoF` falls back to blue). (iv) s2's MSE distribution has heavy outliers (trials to ~250–300) — motion exclusion (`motThresh=1.5`) not yet applied; Wilcoxon is rank-based so p-values hold, but means are skewed. (v) Onsets come from `traj_on` epochs, NOT `findStims` (whose `horizon` fallback puts them ~36 s early — see RESEARCH.md 2026-07-15). Full detail: RESEARCH.md.
+> **Single session (2026-07-21 decision)** — `2026-07-14/1` (200 trials; Kp .08, **Ki 0**, Kref .05, amp 2). The second session `2026-07-01/6` (87 trials; Kp .08, **Ki .01**, Kref .075, amp 3) is **excluded from the figure** but stays on record below, because two claims were resting on it.
+> **Paper-ready claims (this session):** (a) **Feedback reduces tracking error** — OL vs CL Wilcoxon **p=0.00077 (n=97)**. (b) **Preview cancels the plant's phase lag** — OL 168→15 ms, CL 101→−26 ms; `previewT_steps=5` = **143 ms @35 Hz ≈ the measured ~160 ms lag**, i.e. the lookahead is matched to the delay. (c) **CL+preview is the only mode whose error falls within the trial** (16.07→13.45 for 0–1 s vs 1–4 s) — panel 5E.
+> **⚠ What dropping 2026-07-01/6 costs:** claim (a) was previously the *robust* result precisely because it held across **both** parameter settings (p=0.0046, n=43 there; p=0.00077, n=97 here). As a single-session figure it is now **one Ki=0 session, unreplicated in-figure**. The 07-01 numbers are not wrong — they are just no longer shown. If a referee presses on n=1, the fastest answer is to restore 07-01 as a supplementary panel rather than re-run anything. Claim (c) likewise held in both (14.41→11.88 there).
+> **Claims caveats (read before writing):** (i) **Preview does NOT reduce MSE in this session** (OL 20.2→23.7, p=0.32) — it raised OL variance (17.9→23.2). Report preview as **lag-cancellation + settling, not an MSE reduction**. In 07-01 preview *did* help (28.2→20.6), so the effect is parameter-dependent and **Ki=0 here is the prime suspect**; a matched-parameter rerun is the clean test. (ii) dF/F is **uncorrected blue SVD** (`corr/` holds only temporal comps; `getpixel_dFoF` falls back to blue). (iii) This session's MSE distribution has heavy outliers (trials to ~250–300) — motion exclusion (`motThresh=1.5`) not yet applied; Wilcoxon is rank-based so p-values hold, but means are skewed. (iv) Onsets come from `traj_on` epochs, NOT `findStims` (whose `horizon` fallback puts them ~36 s early — see RESEARCH.md 2026-07-15). Full detail: RESEARCH.md.
 
 > Secondary-analysis "controller tuning" figure (gain grid + auto-tuning). **METHODS-ONLY** (AL 2026-06-29): lives as `fig:cost_landscape` in `methods_edit.tex` §gain_opt (A=grid 03-05, B=grid 10-17 cross-mouse, C=autotune both mice) — NO Results section / no main figure number.
 > **Paper-ready panel set:** **Grid** — T-A cost surface AL_0033 03-05 + T-B AL_0034 10-17 (cross-mouse basin replication). **Auto-tune** — T-C convergence in BOTH mice side-by-side (cost descends monotonically → the model-free tuner works across mice). **Same-mouse link:** AL_0033 grid basin (T-A, ≈0.05,0.1) ≈ where AL_0033 autotune settles (T-C left, 0.068,0.064).
@@ -334,26 +335,25 @@ Fit checks: **pending** — sizes not set.
 
 #### Fig 5  [total=17  gap=0.3]
 Sine-wave (feedforward) section — panels exported individually, stitched in Illustrator.
-Two session columns: **s1 = 2026-07-01/6 (87 tr, Ki .01)**, **s2 = 2026-07-14/1 (200 tr, Ki 0)**.
-`_s1` / `_s2` = the two per-session files of the same panel.
+**Single session: `2026-07-14/1`** (200 tr, Ki 0). The second session `2026-07-01/6` is
+excluded from the figure (2026-07-21 decision) — no `_s1`/`_s2` suffixes, one file per panel.
 ```
-row0:  5(system)(8×3)[ext]
+row0:  5(system)(8×3.5)[ext]
 
-row1:  5A_OL(4×3)  5A_OLprev(4×3)  5A_CL(4×3)  5A_CLprev(4×3)      <- s1
-row2:  5A'_OL(4×3) 5A'_OLprev(4×3) 5A'_CL(4×3) 5A'_CLprev(4×3)     <- s2
+row1:  5A_OL(4×4)  5A_OLprev(4×4)  5A_CL(4×4)  5A_CLprev(4×4)
 
-row3:  5B_s1(8.35×3)   5B_s2(8.35×3)
-row4:  5C_s1(5.4×3)    5D_s1(5.4×3)    5E_s1(5.4×3)
-row5:  5C_s2(5.4×3)    5D_s2(5.4×3)    5E_s2(5.4×3)
-row6:  5F_s1(8.35×3)   5F_s2(8.35×3)
+row2:  5B(17×4)
+row3:  5C(5.4×4)   5D(5.4×4)   5E(5.4×4)
+row4:  5F(8.35×4)
 ```
 Fit checks (gap=0.3 cm):
-- row1/row2: 4×4.0 + 3×0.3 = **16.9/17** ✓ (+0.1 — tight, no margin for error)
-- row3: 8.35+8.35 + 0.3 = **17.0/17** ✓ (exact)
-- row4/row5: 3×5.4 + 2×0.3 = **16.8/17** ✓ (+0.2)
-- row6: 8.35+8.35 + 0.3 = **17.0/17** ✓ (exact)
-- **Column height: system(3) + 6 rows×3 + 6×0.3 = 22.8 cm** ⚠ at the full-page ceiling
-  (assumes ~23 cm printable height — confirm against the target journal).
-- Height history: the previous all-H=4 sizing came to **25.5 cm** — over a page. H was
-  dropped 4→3 throughout to fit; widths were re-expanded to fill 17 (old row3 wasted 4.7 cm,
-  old row6 wasted 6.7 cm).
+- row0: system 8/17 — `[ext]`, sized in Illustrator (9.0 cm free alongside)
+- row1: 4×4.0 + 3×0.3 = **16.9/17** ✓ (+0.1 — tight, no margin for error)
+- row2: **17.0/17** ✓ (exact — 5B widened 6→17; it was half of a two-session row)
+- row3: 3×5.4 + 2×0.3 = **16.8/17** ✓ (+0.2)
+- row4: 5F 8.35/17 (**8.65 cm free** — drop the system diagram here instead of row0 if you
+  want the whitespace recovered)
+- **Column height: 3.5 + 4×4 + 4×0.3 = 20.7 cm** ✓ (~2.3 cm under a 23 cm page)
+- Sizing note: H=4 is preserved as originally specified. It fits now only because dropping
+  the second session removed 3 rows — the two-session version at H=4 came to 25.5 cm (over
+  a page), which is what forced the earlier H=3 experiment. With one session H=4 is fine.
