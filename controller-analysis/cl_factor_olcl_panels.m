@@ -1,140 +1,134 @@
 % controller-analysis/cl_factor_olcl_panels.m
-% Figure-4 individual panels: each error factor vs tracking RMSE, OPEN vs CLOSED loop.
-% Exports one vector PDF per factor (Illustrator-assembled into Fig 4).
+% Figure-4 individual panels: each error factor vs tracking error, OL vs CL.
+% One vector PDF per factor, matched to the canonical motion panel
+% (motion_mse_significance.m) so the three assemble as one figure in Illustrator.
 %
-% Three factors, each binned into per-session quartiles (edges pooled over OL+CL
-% within a session), then pooled across sessions -- IDENTICAL design to the
-% existing motion panel (motion_analysis.m figQp) so the three form one family:
-%   initial deviation  |dF/F(onset) - ref|            [POSITIVE CONTROL: onset
-%                                                       sample is inside the RMSE
-%                                                       window -> intentional]
-%   motion energy      mean z-motion^2, -2 -> stim end
-%   delta power        log10 band power 1-4 Hz, -2 -> stim end
+% Style (neuroscience convention):
+%   - title = the claim
+%   - quartile bars of within-session z-scored trial RMSE, OL (red) vs CL (green)
+%   - a single significance star = OL-vs-CL SLOPE INTERACTION (per-session
+%     polyfit slope of z-RMSE on the factor, Wilcoxon signed-rank OL vs CL) --
+%     i.e. "does feedback change this factor's effect on error", the panel's claim
+%   - no verbose stats text; y-axis just 'RMSE (z)'
+%   - legend drawn ONCE (motion panel only)
 %
-% Visual = pooled quartile mean RMSE +/- SEM, OL (red) vs CL (green).
-% Stat   = per-session standardized slope (within-session Pearson r of RMSE on
-%          the factor), OL vs CL, Wilcoxon signed-rank across sessions -- the
-%          same session-level test the manuscript motion paragraph reports, so
-%          it is not trial-level pseudoreplicated.
+% Factors:
+%   init-dev  |dF/F(onset)-ref|              [POSITIVE CONTROL]
+%   motion    mean z-motion, onset->trial end [canonical, matches manuscript p]
+%   delta     log10 band power 1-4 Hz, -2 s -> stim end
 %
 % Requires: load_sessions.m has run (mouse, fields in workspace).
 clc; close all;
+PS = paperStyle(); setPaperDefaults();
 
-PS = paperStyle();
-setPaperDefaults();
+if exist(fullfile('paper','images'),'dir'); paper_root='paper';
+elseif exist(fullfile('..','paper','images'),'dir'); paper_root=fullfile('..','paper');
+else; paper_root='paper'; warning('cannot locate paper/ -- exporting locally.'); end
 
-if exist(fullfile('paper','images'), 'dir'); paper_root = 'paper';
-elseif exist(fullfile('..','paper','images'), 'dir'); paper_root = fullfile('..','paper');
-else; paper_root = 'paper'; warning('cannot locate paper/ -- exporting locally.'); end
-
-colOL = [1 0 0]; colCL = [0 0.5 0];
-if isfield(PS,'col_ol'); colOL = PS.col_ol; end
-if isfield(PS,'col_cl'); colCL = PS.col_cl; end
-
-Fs=35; c0=36; c0_mot=71; c0_l=106; nBins=4;
+Fs=35; c0=36; c0_l=106; nBins=4;
+LEGEND_ON = 'motion';          % which single panel carries the OL/CL legend
 bandpow = @(seg,lo,hi) local_bandpow(seg,Fs,lo,hi);
 
-% ---- factor specs: extractor returns per-trial x for OL (nc) and CL (wc) ----
-F(1).name='Initial deviation';  F(1).file='factor_olcl_initdev.pdf';
-F(1).xlab='Initial deviation quartile'; F(1).need_mot=false; F(1).posctrl=true;
+F(1).key='initdev'; F(1).file='factor_olcl_initdev.pdf'; F(1).need_mot=false;
+F(1).title='Initial deviation affects both loops equally';   % positive control (n.s. interaction expected)
+F(1).xlab='Initial deviation quartile';
 F(1).get=@(dk,ref,dur) deal(abs(dk.ncDfk(:,c0)-ref), abs(dk.wcDfk(:,c0)-ref));
 
-F(2).name='Motion energy';      F(2).file='factor_olcl_motion.pdf';
-F(2).xlab='Motion-energy quartile'; F(2).need_mot=true;  F(2).posctrl=false;
-F(2).get=@(dk,ref,dur) motion_energy(dk,dur,Fs,c0_mot);
+F(2).key='motion'; F(2).file='factor_olcl_motion.pdf'; F(2).need_mot=true;
+F(2).title='Closed loop rejects motion disturbance';
+F(2).xlab='Motion quartile (low \rightarrow high)';
+F(2).get=@(dk,ref,dur) motion_meas(dk,dur,Fs);
 
-F(3).name='Delta power';        F(3).file='factor_olcl_delta.pdf';
-F(3).xlab='Delta-power quartile (log_{10})'; F(3).need_mot=false; F(3).posctrl=false;
-F(3).get=@(dk,ref,dur) delta_power(dk,c0_l,Fs,bandpow);
+F(3).key='delta'; F(3).file='factor_olcl_delta.pdf'; F(3).need_mot=false;
+F(3).title='Closed loop does not reject delta-band disturbance';
+F(3).xlab='Delta-power quartile (low \rightarrow high)';
+F(3).get=@(dk,ref,dur) delta_meas(dk,c0_l,Fs,bandpow);
 
 for fi = 1:numel(F)
-    binNC = cell(1,nBins); binCL = cell(1,nBins);
-    rNC=[]; rCL=[]; nTr=0; nSess=0;
+    slopeOL=nan(numel(fields),1); slopeCL=nan(numel(fields),1);
+    zbinOL=cell(1,nBins); zbinCL=cell(1,nBins);
 
     for k = 1:numel(fields)
         s = mouse.(fields{k});
         if isfield(s,'skip') && s.skip; continue; end
         if ~isfield(s,'data');          continue; end
         if F(fi).need_mot && ~s.has_motion; continue; end
-        dk = s.data; ref = s.d.ref; dur = s.d.params.dur;
+        dk=s.data; ref=s.d.ref; dur=s.d.params.dur;
         if F(fi).need_mot && ~isfield(dk,'wcmotion'); continue; end
 
-        [xnc, xcl] = F(fi).get(dk, ref, dur);
-        ync = dk.er_ncDfk(:); ycl = dk.er_wcDfk(:);
-        m_nc = min(numel(xnc),numel(ync)); m_cl = min(numel(xcl),numel(ycl));
-        xnc=xnc(1:m_nc); ync=ync(1:m_nc); xcl=xcl(1:m_cl); ycl=ycl(1:m_cl);
+        [xnc,xcl] = F(fi).get(dk,ref,dur);
+        ync=dk.er_ncDfk(:); ycl=dk.er_wcDfk(:);
+        m1=min(numel(xnc),numel(ync)); m2=min(numel(xcl),numel(ycl));
+        xnc=xnc(1:m1); ync=ync(1:m1); xcl=xcl(1:m2); ycl=ycl(1:m2);
+        g1=isfinite(xnc)&isfinite(ync); g2=isfinite(xcl)&isfinite(ycl);
+        xnc=xnc(g1); ync=ync(g1); xcl=xcl(g2); ycl=ycl(g2);
+        if numel(ync)<10 || numel(ycl)<10; continue; end
 
-        gnc = isfinite(xnc)&isfinite(ync); gcl = isfinite(xcl)&isfinite(ycl);
-        xnc=xnc(gnc); ync=ync(gnc); xcl=xcl(gcl); ycl=ycl(gcl);
-        if numel(xnc)<5 || numel(xcl)<5; continue; end
+        % z-score RMSE within session by pooled OL+CL (removes level, keeps slope)
+        mu=mean([ync;ycl]); sg=std([ync;ycl]);
+        znc=(ync-mu)/sg; zcl=(ycl-mu)/sg;
 
-        % per-session standardized slope = within-session Pearson r
-        rNC(end+1) = corr(xnc,ync); %#ok<*AGROW>
-        rCL(end+1) = corr(xcl,ycl);
+        bo=polyfit(xnc,znc,1); slopeOL(k)=bo(1);
+        bc=polyfit(xcl,zcl,1); slopeCL(k)=bc(1);
 
-        % per-session quartile edges from pooled OL+CL, then bin each condition
-        edges = quantile([xnc;xcl], linspace(0,1,nBins+1));
-        edges(1)=-inf; edges(end)=inf;
-        bnc = discretize(xnc, edges); bcl = discretize(xcl, edges);
+        edges=quantile([xnc;xcl],linspace(0,1,nBins+1)); edges(1)=-inf; edges(end)=inf;
+        bnc=discretize(xnc,edges); bcl=discretize(xcl,edges);
         for b=1:nBins
-            binNC{b} = [binNC{b}; ync(bnc==b)];
-            binCL{b} = [binCL{b}; ycl(bcl==b)];
+            zbinOL{b}=[zbinOL{b}; znc(bnc==b)];
+            zbinCL{b}=[zbinCL{b}; zcl(bcl==b)];
         end
-        nTr = nTr + numel(xnc) + numel(xcl); nSess = nSess + 1;
     end
 
-    % signed-rank OL vs CL slopes across sessions
-    [p_sr,~] = signrank(rNC(:), rCL(:));
-    fprintf('\n[%s] %d sessions, %d trials\n', F(fi).name, nSess, nTr);
-    fprintf('  median within-session r: OL %+.3f | CL %+.3f | signrank p=%.4g (n=%d)\n', ...
-        median(rNC), median(rCL), p_sr, nSess);
+    v=isfinite(slopeOL)&isfinite(slopeCL);
+    p_diff=signrank(slopeOL(v),slopeCL(v));
+    star = sig_star(p_diff);
+    fprintf('[%s] n=%d sess | slope OL %+.3f CL %+.3f | interaction signrank p=%.4g -> %s\n', ...
+        F(fi).key, sum(v), median(slopeOL(v)), median(slopeCL(v)), p_diff, star);
 
-    m_nc = cellfun(@mean, binNC); e_nc = cellfun(@(x) std(x)/sqrt(max(numel(x),1)), binNC);
-    m_cl = cellfun(@mean, binCL); e_cl = cellfun(@(x) std(x)/sqrt(max(numel(x),1)), binCL);
-    xb = 1:nBins;
+    mO=cellfun(@mean,zbinOL); eO=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),zbinOL);
+    mC=cellfun(@mean,zbinCL); eC=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),zbinCL);
 
-    fig = paperFig(6,4); ax = axes(fig); hold(ax,'on');
-    errorbar(ax, xb-0.1, m_nc, e_nc, 'o-', 'Color',colOL, 'LineWidth',PS.lw_mean, ...
-        'MarkerSize',3,'MarkerFaceColor',colOL,'CapSize',3,'DisplayName','Open loop');
-    errorbar(ax, xb+0.1, m_cl, e_cl, 'o-', 'Color',colCL, 'LineWidth',PS.lw_mean, ...
-        'MarkerSize',3,'MarkerFaceColor',colCL,'CapSize',3,'DisplayName','Closed loop');
-    xlim(ax,[0.5 nBins+0.5]); xticks(ax,xb);
-    xticklabels(ax,{'Q1','Q2','Q3','Q4'});
-    xlabel(ax, F(fi).xlab, 'FontWeight','bold','FontSize',6);
-    ylabel(ax, 'RMSE (%\DeltaF/F), 0-3 s', 'FontWeight','bold','FontSize',6);
-    set(ax,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
-    lg = legend(ax,'Box','off','Location','northwest','FontSize',5); lg.ItemTokenSize=[6 6];
-    ttl = F(fi).name;
-    if F(fi).posctrl; ttl = [ttl ' (positive control)']; end
-    title(ax, ttl, 'FontSize',6,'FontWeight','bold');
+    fig=paperFig(6,4); ax=gca; hold(ax,'on'); xq=1:nBins; w=0.35;
+    bar(ax,xq-w/2,mO,w,'FaceColor',PS.col_ol,'EdgeColor','none','DisplayName','Open loop');
+    bar(ax,xq+w/2,mC,w,'FaceColor',PS.col_cl,'EdgeColor','none','DisplayName','Closed loop');
+    errorbar(ax,xq-w/2,mO,eO,'k','LineStyle','none','LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
+    errorbar(ax,xq+w/2,mC,eC,'k','LineStyle','none','LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
+    set(ax,'XTick',1:nBins,'XTickLabel',{'Q1','Q2','Q3','Q4'}, ...
+        'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+    xlabel(ax,F(fi).xlab,'FontSize',6,'FontWeight','bold');
+    ylabel(ax,'RMSE (z)','FontSize',6,'FontWeight','bold');
+    title(ax,F(fi).title,'FontSize',6,'FontWeight','bold');
 
-    yl = ylim(ax);
-    text(ax, 0.55, yl(1)+0.06*range(yl), ...
-        sprintf('slope OL %+.2f / CL %+.2f  p=%.3g  n=%d/%d', ...
-                median(rNC), median(rCL), p_sr, nSess, nTr), ...
-        'FontSize',4.5,'FontWeight','bold','Color',[0.2 0.2 0.2]);
-    hold(ax,'off');
+    % single interaction star, top-centre
+    yl=ylim(ax); ys=yl(2);
+    text(ax,mean([1 nBins]),ys,star,'HorizontalAlignment','center', ...
+        'VerticalAlignment','top','FontSize',8,'FontWeight','bold');
+    ylim(ax,[yl(1) ys+0.10*range(yl)]);
+
+    if strcmp(F(fi).key,LEGEND_ON)
+        lg=legend(ax,'Location','northwest'); paperLegend(lg);
+    end
 
     paperExport(fig, fullfile(paper_root,'images','figure4',F(fi).file));
     fprintf('  exported %s\n', F(fi).file);
 end
 
 %% ---- helpers ----
-function [xnc,xcl] = motion_energy(dk,dur,Fs,c0_mot)
+function [xnc,xcl]=motion_meas(dk,dur,Fs)
     nc=dk.ncmotion; wc=dk.wcmotion; ncol=size(nc,2);
-    onset = ncol - Fs*dur;                 % robust to stored window
-    if onset<1; onset=c0_mot; end
-    ws=max(1,onset-round(2*Fs)); we=min(ncol,onset+round(dur*Fs)-1);
-    xnc=mean(nc(:,ws:we).^2,2); xcl=mean(wc(:,ws:we).^2,2);
+    onset=ncol-Fs*dur; ws=max(1,onset); we=min(ncol,onset+dur*Fs);   % during-trial
+    xnc=mean(nc(:,ws:we),2); xcl=mean(wc(:,ws:we),2);
 end
-function [xnc,xcl] = delta_power(dk,c0_l,Fs,bandpow)
-    sa=c0_l-round(2*Fs); sb=c0_l+round(3*Fs);
-    nc=dk.pncDfk_l; wc=dk.pwcDfk_l;
+function [xnc,xcl]=delta_meas(dk,c0_l,Fs,bandpow)
+    sa=c0_l-round(2*Fs); sb=c0_l+round(3*Fs); nc=dk.pncDfk_l; wc=dk.pwcDfk_l;
     xnc=nan(size(nc,1),1); xcl=nan(size(wc,1),1);
     for t=1:size(nc,1); xnc(t)=log10(max(bandpow(nc(t,sa:sb),1,4),eps)); end
     for t=1:size(wc,1); xcl(t)=log10(max(bandpow(wc(t,sa:sb),1,4),eps)); end
 end
-function p = local_bandpow(seg,Fs,lo,hi)
+function s=sig_star(p)
+    if p<1e-3; s='***'; elseif p<1e-2; s='**'; elseif p<0.05; s='*'; else; s='n.s.'; end
+end
+function p=local_bandpow(seg,Fs,lo,hi)
     seg=detrend(double(seg(:)).','linear'); N=numel(seg);
     w=hann(N).'; P=abs(fft(seg.*w)).^2; P=P(1:floor(N/2)+1);
     fr=(0:floor(N/2))*Fs/N; p=sum(P(fr>=lo & fr<hi));
