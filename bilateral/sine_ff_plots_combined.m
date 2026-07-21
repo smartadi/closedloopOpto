@@ -2,16 +2,24 @@
 % Feedforward sine-wave section — panels in analysisPlots_combined.m style.
 % 4 mode columns (OL | OL+prev | CL | CL+prev) instead of the OL|CL pair.
 %
-%   paper/images/figure4/sine_panel_A_<sfx>.pdf  – single trial example   (17 x 4)
-%   paper/images/figure4/sine_panel_B_<sfx>.pdf  – all trials + average   (17 x 4)  +/-std
-%   paper/images/figure4/sine_panel_C_<sfx>.pdf  – average 638 input, mW   (17 x 3)  +/-std
-%   paper/images/figure4/sine_panel_D_<sfx>.pdf  – variance over time     (3 x 3.5)
-%   paper/images/figure4/sine_panel_E_<sfx>.pdf  – trial MSE half-violin  (3 x 3)
-%   paper/images/figure4/sine_panel_F_<sfx>.pdf  – PHASE LAG (deg) by mode (3 x 3.5)
+% Panel lettering follows PAPER.md "Fig 5" (2026-07-21). Letters run in LOGICAL
+% order; the physical top row of the assembled figure is A, E, F.
+%
+%   paper/images/figure5/sine_5B_single_trial_<sfx>.pdf   – single trial     (12.5 x 3.5)
+%   paper/images/figure5/sine_5C_trialavg_<sfx>.pdf       – trials + average (12.5 x 3.5) +/-std
+%   paper/images/figure5/sine_5D_trialavg_input_<sfx>.pdf – avg 638 input mW (12.5 x 3.5) +/-std
+%   paper/images/figure5/sine_5E_rmse_time_<sfx>.pdf      – RMSE over time   (5.2 x 4)   +/-SEM
+%   paper/images/figure5/sine_5F_variance_<sfx>.pdf       – variance vs time (5.2 x 4)
+%   paper/images/figure5/sine_5G_rmse_violin_<sfx>.pdf    – trial RMSE violin(4.2 x 5.4)
+%   paper/images/figure5/sine_5H_phase_lag_<sfx>.pdf      – PHASE LAG (deg)  (4.2 x 5.4)
+%   (5A = system schematic, drawn in Illustrator — not produced here.)
 %
 % Style delegated to paperStyle / setPaperDefaults / paperAxes / paperLegend.
 % Requires: load_bilateral.m has been run (`sessions` in workspace).
-% Row fit (total 17, gap 0.3): D+E+F = 3+3+3+0.6 = 9.6 OK
+% Fits (total 17, gap 0.3): row1 5A+5E+5F = 6+5.2+5.2+0.6 = 17.0 OK
+%                           row2 col1(12.5) + col2(4.2) + 0.3 = 17.0 OK
+% Col1 (5B/5C/5D) shares one time base: only 5D carries a labelled time bar.
+% ERROR METRIC = RMSE (sqrt of mean squared error), matching the Fig 3 decision.
 
 %% ---- Knobs -------------------------------------------------------------
 SESSION_TAG = 's2';        % s1 = AL_0048 2026-07-01/6 (87 tr); s2 = 2026-07-14/1 (200 tr)
@@ -20,7 +28,7 @@ PRE         = 2;           % s before onset
 POST        = 2;           % s after trajectory end
 EX_TRIAL    = 6;           % which trial (within mode) for the single-trial panel
 INP_SCALE   = 2;           % scale on the 638 command (mW) so it reads on the dF/F axis
-MSE_CLIP_P  = 95;          % panel E y-limit percentile (s2 has heavy motion outliers)
+RMSE_CLIP_P = 95;          % 5G y-limit percentile (s2 has heavy motion outliers)
 EXPORT      = true;        % paper panels -> vector PDF
 EXPORT_PNG  = true;        % also mirror each panel as a 300-dpi PNG (figure4/png/)
 PREVIEW_DIR = '';          % non-empty -> also drop 200-dpi PNG previews there
@@ -45,13 +53,14 @@ elseif exist(fullfile('..','paper','images'), 'dir')
 else
     paper_root = 'paper';
 end
-outDir = fullfile(paper_root, 'images', 'figure4');
+outDir = fullfile(paper_root, 'images', 'figure5');
 if EXPORT && ~exist(outDir,'dir'); mkdir(outDir); end
 pngDir = fullfile(outDir, 'png');
 if EXPORT && EXPORT_PNG && ~exist(pngDir,'dir'); mkdir(pngDir); end
 
 MODE_CODES  = [2 1 3 0];
 MODE_LABELS = {'Open-Loop', 'OL + Preview', 'Closed-Loop', 'CL + Preview'};
+MODE_SHORT  = {'OL', 'OL+p', 'CL', 'CL+p'};   % compact labels for 5G / 5H ticks
 % red family = open loop, green family = closed loop; lighter = +preview
 MODE_COLS   = [1.00 0.00 0.00;
                1.00 0.55 0.25;
@@ -73,7 +82,7 @@ x1 = 0; x2 = dur;
 [v, calib] = laser_v2mw(v, sess.td, 638);
 fprintf('%s: 638 calib %s (%.2f mW at 3 V)\n', sfx, calib.date, laser_v2mw(3, sess.td, 638));
 traces = cell(1,nMode); refs = cell(1,nMode); inps = cell(1,nMode);
-mseV   = cell(1,nMode); nTr = zeros(1,nMode);
+rmseV  = cell(1,nMode); nTr = zeros(1,nMode);
 sideMask = strcmp({sess.trial_meta.side}, SIDE);
 for m = 1:nMode
     trials = [sess.trial_meta(([sess.trial_meta.ff_cond]==MODE_CODES(m)) & sideMask).trial_idx];
@@ -86,20 +95,26 @@ for m = 1:nMode
         refs{m}   = [refs{m}; Rj(:)'];
         inps{m}   = [inps{m}; interp1(tt, v, d.timeBlue(i0)+T, 'linear', 0)];
         seg = dFoF(i0 : i0+round(dur*fs));
-        mseV{m}   = [mseV{m}; mean((seg(:) - Rj(:)).^2)];
+        % RMSE, not MSE — sample-normalised root-mean-square error, matching the
+        % Fig 3 project-wide decision (2026-07-16). sqrt is monotone, so every
+        % rank-based stat (Wilcoxon) is unchanged; only magnitudes/units differ.
+        rmseV{m}  = [rmseV{m}; sqrt(mean((seg(:) - Rj(:)).^2))];
     end
     nTr(m) = size(traces{m},1);
 end
 refPlot = mean(cell2mat(refs(:)), 1);
 
 %% ---- Shared 4-column layout (normalised) ------------------------------
-PW = 17;
+% PW is the col1 width from PAPER.md Fig 5 (12.5 cm, ~2/3 of the 17 cm measure).
+% Positions below are normalised, so narrowing PW narrows each mode sub-column
+% proportionally (~2.9 cm per mode at 12.5).
+PW = 12.5;
 lm = 0.05; rm = 0.01; cg = 0.02;
 cW  = (1 - lm - rm - 3*cg) / 4;
 cL  = lm + (0:3)*(cW + cg);
 
-%% A: single trial -------------------------------------------------------
-fig_A = paperFig(PW, 4);
+%% 5B: single trial (col1 row1) -------------------------------------------
+fig_A = paperFig(PW, 3.5);
 bm = 0.12; tm = 0.12; axH = 1 - bm - tm;
 axA = gobjects(1,nMode);
 for m = 1:nMode
@@ -116,7 +131,8 @@ for m = 1:nMode
     addStimPatch(axA(m), x1, x2);
     uistack(findobj(axA(m),'Type','line'), 'top'); hold(axA(m),'off');
     if m == 1
-        paperAxes(axA(m), 'XLength',1, 'YLength',3, 'XLabel','1 s', 'YLabel','3% dF/F');
+        % X arm unlabelled: 5D carries the time bar for the whole col1 stack
+        paperAxes(axA(m), 'XLength',1, 'YLength',3, 'XLabel','', 'YLabel','3% dF/F');
     else
         paperAxes(axA(m));
     end
@@ -124,12 +140,12 @@ for m = 1:nMode
         'HorizontalAlignment','center', 'Clipping','off');
 end
 linkaxes(axA,'x');
-if EXPORT; paperExport(fig_A, fullfile(outDir, sprintf('sine_panel_A_%s.pdf', sfx)));
-    if EXPORT_PNG; paperExport(fig_A, fullfile(pngDir, sprintf('sine_panel_A_%s.png', sfx))); end; end
-prev(fig_A, 'A');
+if EXPORT; paperExport(fig_A, fullfile(outDir, sprintf('sine_5B_single_trial_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_A, fullfile(pngDir, sprintf('sine_5B_single_trial_%s.png', sfx))); end; end
+prev(fig_A, '5B');
 
-%% B: all trials + average -----------------------------------------------
-fig_B = paperFig(PW, 4);
+%% 5C: all trials + average (col1 row2) -----------------------------------
+fig_B = paperFig(PW, 3.5);
 bm = 0.12; tm = 0.12; axH = 1 - bm - tm;
 axB = gobjects(1,nMode); hLeg = gobjects(1,3);
 for m = 1:nMode
@@ -145,7 +161,8 @@ for m = 1:nMode
     addStimPatch(axB(m), x1, x2);
     uistack(findobj(axB(m),'Type','line'), 'top'); hold(axB(m),'off');
     if m == 1
-        paperAxes(axB(m), 'XLength',1, 'YLength',2, 'XLabel','1 s', 'YLabel','2% dF/F');
+        % X arm unlabelled: 5D carries the time bar for the whole col1 stack
+        paperAxes(axB(m), 'XLength',1, 'YLength',2, 'XLabel','', 'YLabel','2% dF/F');
         hLeg(1) = h1; hLeg(2) = h2;
     else
         paperAxes(axB(m));
@@ -157,12 +174,12 @@ lgd = legend(axB(1), [hLeg(1) hLeg(2)], {'mean \pm std','Ref'}, 'Orientation','h
 paperLegend(lgd); lgd.Units = 'normalized';
 lgd.Position(2) = 0.01; lgd.Position(1) = 0.5 - lgd.Position(3)/2;
 linkaxes(axB,'x');
-if EXPORT; paperExport(fig_B, fullfile(outDir, sprintf('sine_panel_B_%s.pdf', sfx)));
-    if EXPORT_PNG; paperExport(fig_B, fullfile(pngDir, sprintf('sine_panel_B_%s.png', sfx))); end; end
-prev(fig_B, 'B');
+if EXPORT; paperExport(fig_B, fullfile(outDir, sprintf('sine_5C_trialavg_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_B, fullfile(pngDir, sprintf('sine_5C_trialavg_%s.png', sfx))); end; end
+prev(fig_B, '5C');
 
-%% C: average inputs -----------------------------------------------------
-fig_C = paperFig(PW, 3);
+%% 5D: average inputs (col1 row3 — carries the shared time axis) ----------
+fig_C = paperFig(PW, 3.5);
 bm = 0.15; tm = 0.08; axH = 1 - bm - tm;
 axC = gobjects(1,nMode);
 for m = 1:nMode
@@ -183,12 +200,50 @@ for m = 1:nMode
     end
 end
 linkaxes(axC,'x');
-if EXPORT; paperExport(fig_C, fullfile(outDir, sprintf('sine_panel_C_%s.pdf', sfx)));
-    if EXPORT_PNG; paperExport(fig_C, fullfile(pngDir, sprintf('sine_panel_C_%s.png', sfx))); end; end
-prev(fig_C, 'C');
+if EXPORT; paperExport(fig_C, fullfile(outDir, sprintf('sine_5D_trialavg_input_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_C, fullfile(pngDir, sprintf('sine_5D_trialavg_input_%s.png', sfx))); end; end
+prev(fig_C, '5D');
 
-%% D: variance over time -------------------------------------------------
-fig_D = paperFig(3, 3.5);
+%% 5E: RMSE over time (row1) ----------------------------------------------
+% Per-timepoint squared error is averaged across trials (mean +/- SEM), then the
+% mean and both band edges are sqrt'd so the axis reads in RMSE (dF/F) units.
+% sqrt is monotone, so the band still brackets the same trials -- but it becomes
+% ASYMMETRIC after the transform, which is correct, not a bug.
+nRef  = round(dur*fs);
+fig_RM = paperFig(5.2, 4);
+lmE = 0.17; rmE = 0.05; bmE = 0.14; tmE = 0.08;
+ax_rm = axes(fig_RM, 'Position', [lmE, bmE, 1-lmE-rmE, 1-bmE-tmE]); hold(ax_rm,'on');
+for m = 1:nMode
+    E   = (traces{m}(:, nPre+1 : nPre+1+nRef) - refs{m}).^2;
+    mu  = mean(E,1);  sem = std(E,0,1)/sqrt(size(E,1));
+    lo  = sqrt(max(mu-sem, 0));  hi = sqrt(mu+sem);
+    fill(ax_rm, [Tref fliplr(Tref)], [hi fliplr(lo)], MODE_COLS(m,:), ...
+        'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
+    plot(ax_rm, Tref, sqrt(mu), 'Color', MODE_COLS(m,:), 'LineWidth', PS.lw_mean, ...
+        'DisplayName', MODE_LABELS{m});
+end
+xlim(ax_rm, [0 dur]); hold(ax_rm,'off');
+% No in-panel legend: at 5.2 cm it lands on top of the traces. The mode colour key
+% is carried by the 5B/5C column titles in the assembled figure.
+text(ax_rm, -0.13, 0.5, 'RMSE (% dF/F)', 'Units','normalized', 'Rotation',90, ...
+    'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
+    'FontSize',PS.fs, 'FontWeight',PS.fw, 'Color','k', 'Clipping','off');
+paperAxes(ax_rm, 'XLength',1, 'YLength',2, 'XLabel','1 s', 'YLabel','2');
+% Early-vs-late split behind claim (c): which modes improve within the trial?
+iE = Tref <= 1;  iL = Tref > 1;
+fprintf('\n[5E] RMSE early (0-1 s) -> late (1-%g s), per mode:\n', dur);
+for m = 1:nMode
+    E  = (traces{m}(:, nPre+1 : nPre+1+nRef) - refs{m}).^2;
+    rE = sqrt(mean(mean(E(:,iE),1)));  rL = sqrt(mean(mean(E(:,iL),1)));
+    fprintf('   %-14s %6.3f -> %6.3f  (%+.3f)%s\n', MODE_LABELS{m}, rE, rL, rL-rE, ...
+        repmat('  <- falls', 1, rL < rE));
+end
+if EXPORT; paperExport(fig_RM, fullfile(outDir, sprintf('sine_5E_rmse_time_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_RM, fullfile(pngDir, sprintf('sine_5E_rmse_time_%s.png', sfx))); end; end
+prev(fig_RM, '5E');
+
+%% 5F: variance over time (row1) ------------------------------------------
+fig_D = paperFig(5.2, 4);
 lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
 ax_var = axes(fig_D, 'Position', [lm2, bm2, 1-lm2-rm2, 1-bm2-tm2]); hold(ax_var,'on');
 for m = 1:nMode
@@ -202,41 +257,58 @@ uistack(findobj(ax_var,'Type','line'), 'top'); hold(ax_var,'off');
 paperAxes(ax_var, 'XLength',1, 'YLength',10, 'XLabel','1 s', 'YLabel','10');
 text(ax_var, -0.12, 0.5, 'Variance across trials', 'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', 'Color','k', 'Clipping','off');
-if EXPORT; paperExport(fig_D, fullfile(outDir, sprintf('sine_panel_D_%s.pdf', sfx)));
-    if EXPORT_PNG; paperExport(fig_D, fullfile(pngDir, sprintf('sine_panel_D_%s.png', sfx))); end; end
-prev(fig_D, 'D');
+if EXPORT; paperExport(fig_D, fullfile(outDir, sprintf('sine_5F_variance_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_D, fullfile(pngDir, sprintf('sine_5F_variance_%s.png', sfx))); end; end
+prev(fig_D, '5F');
 
-%% E: MSE half-violin ----------------------------------------------------
-fig_E = paperFig(3, 3);
+%% 5G: trial RMSE half-violin (col2 row1) ---------------------------------
+fig_E = paperFig(4.2, 5.4);
 lm2e = 0.13; rm2e = 0.05; bm2e = 0.15; tm2e = 0.10;
 ax_mse = axes(fig_E, 'Position', [lm2e, bm2e, 1-lm2e-rm2e, 1-bm2e-tm2e]); hold(ax_mse,'on');
 hw = 0.34;
-% Robust y-limit: the MSE tail is dominated by a few motion trials (to ~300),
-% which otherwise compress every violin to a sliver. Axis is CLIPPED (density
-% is still estimated on the full data); state this in the caption.
-allMse  = cell2mat(mseV(:));
-mseTop  = prctile(allMse, MSE_CLIP_P);
-nClip   = sum(allMse > mseTop);
+% Robust y-limit: the RMSE tail is dominated by a few motion trials, which
+% otherwise compress every violin to a sliver. Axis is CLIPPED (density is still
+% estimated on the full data); state this in the caption.
+allRmse = cell2mat(rmseV(:));
+rmseTop = prctile(allRmse, RMSE_CLIP_P);
+nClip   = sum(allRmse > rmseTop);
 for m = 1:nMode
     if nTr(m) < 2; continue; end
-    [fk, yk] = ksdensity(mseV{m}); fk = fk/max(fk)*hw;
+    [fk, yk] = ksdensity(rmseV{m}); fk = fk/max(fk)*hw;
     fill(ax_mse, [m-fk, m*ones(size(fk))], [yk, fliplr(yk)], MODE_COLS(m,:), ...
         'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
-    plot(ax_mse, m+0.12, mean(mseV{m}), '*', 'Color', MODE_COLS(m,:), ...
+    plot(ax_mse, m+0.12, mean(rmseV{m}), '*', 'Color', MODE_COLS(m,:), ...
         'MarkerSize', 4, 'LineWidth', 0.75, 'HandleVisibility','off');
 end
-xlim(ax_mse, [0.4 nMode+0.6]); ylim(ax_mse, [0 mseTop]);
+xlim(ax_mse, [0.4 nMode+0.6]); ylim(ax_mse, [0 rmseTop]);
 hold(ax_mse,'off');
-fprintf('[E] MSE axis clipped at p%d = %.1f (%d/%d trials above, off-axis)\n', ...
-    MSE_CLIP_P, mseTop, nClip, numel(allMse));
-text(ax_mse, -0.12, 0.5, 'Trial MSE', 'Units','normalized', 'Rotation',90, ...
+fprintf('[5G] RMSE axis clipped at p%d = %.2f (%d/%d trials above, off-axis)\n', ...
+    RMSE_CLIP_P, rmseTop, nClip, numel(allRmse));
+% Wilcoxon rank-sum on the paper contrasts. RMSE is a monotone transform of MSE,
+% so these p-values are IDENTICAL to the ones computed on MSE.
+try
+    pOLCL = ranksum(rmseV{1}, rmseV{3});
+    pOLpv = ranksum(rmseV{1}, rmseV{2});
+    fprintf('[5G] OL vs CL p=%.4g  |  OL vs OL+prev p=%.4g\n', pOLCL, pOLpv);
+catch ME_rs
+    fprintf('[5G] ranksum unavailable: %s\n', ME_rs.message);
+end
+text(ax_mse, -0.12, 0.5, 'Trial RMSE (% dF/F)', 'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', 'Color','k', 'Clipping','off');
-paperAxes(ax_mse);
-if EXPORT; paperExport(fig_E, fullfile(outDir, sprintf('sine_panel_E_%s.pdf', sfx)));
-    if EXPORT_PNG; paperExport(fig_E, fullfile(pngDir, sprintf('sine_panel_E_%s.png', sfx))); end; end
-prev(fig_E, 'E');
+% Mode labels under each violin — without these the four are only distinguishable
+% by colour, which does not survive greyscale printing.
+for m = 1:nMode
+    text(ax_mse, m, -0.02*rmseTop, MODE_SHORT{m}, 'HorizontalAlignment','center', ...
+        'VerticalAlignment','top', 'FontSize',PS.fs, 'FontWeight',PS.fw, 'Clipping','off');
+end
+% Y scale bar: paperAxes(ax) alone strips every tick, leaving the RMSE axis with
+% no readable scale. X arm is unlabelled (the x axis is categorical).
+paperAxes(ax_mse, 'XLength',0.5, 'YLength',2, 'XLabel','', 'YLabel','2');
+if EXPORT; paperExport(fig_E, fullfile(outDir, sprintf('sine_5G_rmse_violin_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_E, fullfile(pngDir, sprintf('sine_5G_rmse_violin_%s.png', sfx))); end; end
+prev(fig_E, '5G');
 
-%% F: PHASE LAG by mode --------------------------------------------------
+%% 5H: PHASE LAG by mode (col2 row2) --------------------------------------
 % 1 Hz fundamental fit of mean response vs mean reference. Dashed grey line =
 % the preview lookahead (previewT_steps / fs), which OL's lag should match.
 Xf   = [ones(numel(Tref),1), sin(2*pi*sn.hz*Tref).', cos(2*pi*sn.hz*Tref).'];
@@ -253,7 +325,7 @@ end
 % preview lookahead as an equivalent phase at the drive frequency (deg)
 prevLook = 360 * sn.hz * sess.d.input_params(find([sess.trial_meta.ff_cond]>=0,1), 8) / fs;
 
-fig_F = paperFig(3, 3.5);
+fig_F = paperFig(4.2, 5.4);
 % wide left margin: this is the only small panel with a numeric y-axis, so the
 % tick labels + ylabel must fit inside the figure box or raster export clips them
 lm2f = 0.30; rm2f = 0.05; bm2f = 0.20; tm2f = 0.08;
@@ -269,12 +341,12 @@ text(ax_ph, nMode+0.55, prevLook, sprintf('preview %.0f\\circ', prevLook), ...
     'FontSize', PS.fs, 'Clipping','off');
 hold(ax_ph,'off');
 xlim(ax_ph, [0.4 nMode+0.6]);
-ax_ph.XTick = 1:nMode; ax_ph.XTickLabel = {'OL','OL+p','CL','CL+p'};
+ax_ph.XTick = 1:nMode; ax_ph.XTickLabel = MODE_SHORT;
 ax_ph.XTickLabelRotation = 30;
 ylabel(ax_ph, 'Phase lag (\circ)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
 set(ax_ph, 'Box','off', 'TickDir','out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
-if EXPORT; paperExport(fig_F, fullfile(outDir, sprintf('sine_panel_F_phaselag_%s.pdf', sfx)));
-    if EXPORT_PNG; paperExport(fig_F, fullfile(pngDir, sprintf('sine_panel_F_phaselag_%s.png', sfx))); end; end
+if EXPORT; paperExport(fig_F, fullfile(outDir, sprintf('sine_5H_phase_lag_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_F, fullfile(pngDir, sprintf('sine_5H_phase_lag_%s.png', sfx))); end; end
 prev(fig_F, 'F');
 
 fprintf('\n[%s] %s exp %d — n per mode: %s\n', SESSION_TAG, sess.td, sess.en, mat2str(nTr));
