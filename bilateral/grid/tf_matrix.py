@@ -75,10 +75,10 @@ def gain_matrix(z, save="grid_tf_gain_matrix.png"):
     return order, split
 
 
-def amp_compare(z, cvr2_min=0.2, r2_strong=0.4, save="grid_tf_amp_compare.png"):
+def amp_compare(z, cvr2_min=0.2, save="grid_tf_amp_compare.png"):
     """Cross-amp linearity + pole-stability + R2 distributions. Uses only pairs well fit at
     BOTH amps for the tau-stability panel; the linearity slope is reported both over ALL pairs
-    (noise-attenuated) and over the well-fit subset (min in-sample R2 >= r2_strong), which is
+    (noise-attenuated) and over the well-fit subset (min held-out CV-R2 >= cvr2_min), which is
     the honest scaling estimate — the sea of near-zero off-diagonal noise pairs otherwise pulls
     the through-origin slope toward zero (regression dilution)."""
     amps, gain, r2, cvr2, tau, A = z["amps"], z["gain"], z["r2"], z["cvr2"], z["tau"], z["A"]
@@ -93,10 +93,14 @@ def amp_compare(z, cvr2_min=0.2, r2_strong=0.4, save="grid_tf_amp_compare.png"):
     # HONEST scaling: the on-site (diagonal) focal responses, where signal >> measurement noise.
     # The all-pairs peak-gain regression is dominated by weak, sign-flipping off-diagonal pairs
     # (regression dilution), so it is reported only as a faint reference. Focal = physical dose.
+    # Gate on HELD-OUT CV-R2, not in-sample R2. Under the osc (damped-sinusoid) model R2 no
+    # longer separates signal from noise — weak pairs reach in-sample R2~0.81 while generalizing
+    # at CV-R2~-2.1 — so an R2 gate admits pure overfit (it let 42 diagonal pairs through vs 17
+    # under the real model, degrading the focal fit to r=0.59). CV-R2 is the honest filter.
     nS = tau.shape[1]
     di = np.arange(nS)
     dg0, dg1 = gain[0][di, di], gain[1][di, di]
-    dwell = (r2[0][di, di] >= r2_strong) & (r2[1][di, di] >= r2_strong) \
+    dwell = (cvr2[0][di, di] >= cvr2_min) & (cvr2[1][di, di] >= cvr2_min) \
         & np.isfinite(dg0) & np.isfinite(dg1)
     sg0, sg1 = dg0[dwell], dg1[dwell]
     slope_s = float(np.sum(sg0 * sg1) / np.sum(sg0 * sg0)) if dwell.sum() > 3 else np.nan
@@ -118,7 +122,7 @@ def amp_compare(z, cvr2_min=0.2, r2_strong=0.4, save="grid_tf_amp_compare.png"):
     lim = np.nanpercentile(np.abs(np.r_[gg0, gg1]), 99)
     ax[0].scatter(gg0, gg1, s=6, alpha=0.22, c="silver", edgecolors="none", label="all pairs")
     ax[0].scatter(sg0, sg1, s=30, alpha=0.85, c="crimson", edgecolors="k", linewidths=0.3,
-                  label=f"on-site focal (R2>={r2_strong:g})")
+                  label=f"on-site focal (CV-R2>={cvr2_min:g})")
     xs = np.array([-lim, lim])
     ax[0].plot(xs, slope_s * xs, "r-", lw=1.6, label=f"focal slope={slope_s:.2f}")
     ax[0].plot(xs, slope * xs, ":", c="grey", lw=1.0, label=f"all-pairs slope={slope:.2f} (diluted)")
@@ -158,7 +162,7 @@ def amp_compare(z, cvr2_min=0.2, r2_strong=0.4, save="grid_tf_amp_compare.png"):
     fig.savefig(out, dpi=150); plt.close(fig)
     print("wrote", out)
     print(f"  gain linearity ALL pairs: slope={slope:.3f}, n={finite.sum()} (noise-attenuated, ignore)")
-    print(f"  gain linearity ON-SITE FOCAL (R2>={r2_strong:g}): slope={slope_s:.3f}, r={r_lin_s:.3f}, "
+    print(f"  gain linearity ON-SITE FOCAL (CV-R2>={cvr2_min:g}): slope={slope_s:.3f}, r={r_lin_s:.3f}, "
           f"median ratio={ratio_s:.2f}, n={dwell.sum()} (linear would be {a1/a0:.2f})")
     if well.sum() > 3:
         print(f"  dominant-tau median ratio a{a1}/a{a0} = "
