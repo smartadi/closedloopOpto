@@ -1,10 +1,14 @@
 """tf_fit.py — fit low-order LTI transfer functions to the s->r impulse responses.
 
 Each H[s, r, :] (from cross_response.py) is the empirical impulse response from stim site
-s to readout r. We fit a delayed all-pole TF, whose impulse response is a sum of
-exponentials:  h(t) = sum_i A_i * exp(-(t-theta)/tau_i)  for t >= theta.
-That is the impulse response of K * prod_i 1/(s + 1/tau_i) (poles at -1/tau_i; residue
-pattern A_i absorbs the zeros). Real poles, opposite-sign residues give a rise-then-decay.
+s to readout r. We fit a low-order LTI TF as a sum of DAMPED SINUSOID modes (MODEL="osc"):
+    h(t) = sum_i A_i * exp(-(t-theta)/tau_i) * sin(om_i*(t-theta) + ph_i)   for t >= theta
+Each mode is a complex-conjugate pole pair at -1/tau_i +- j*om_i. Setting om->0 recovers the
+legacy pure-decay (real-pole) model, MODEL="real", which is retained for comparison.
+
+Model class adopted 2026-07-20 from tf_sweep.py (150-pair sweep, matched tmax): real poles
+CANNOT oscillate, but the responses rebound/overshoot, so the rebound was structurally
+unmodellable and capped R2. Held-out CV-R2: real ord-3 0.232 -> osc ord-3 0.637.
 NOTE: the transport-delay (lag) term theta is currently DISABLED (pinned to 0) — scanning a
 per-pair onset lag was absorbing real early dynamics, so fits now start at t=0.
 
@@ -48,32 +52,65 @@ def _zero_onset(t, h):
     return h - off, off
 
 
-def _impulse(t, theta, A, tau):
-    """Sum-of-exponentials impulse response, zero before the delay theta."""
+MODEL = "osc"        # "osc": each mode is a DAMPED SINUSOID B*exp(-t/sig)*sin(om*t+ph), i.e. a
+                     # complex-conjugate pole pair. "real": legacy pure-decay modes (real poles).
+                     # Adopted 2026-07-20 from the tf_sweep.py 150-pair sweep: at matched
+                     # tmax=0.6 the osc family nearly TRIPLES held-out CV-R2 (real ord-3 0.232 ->
+                     # osc ord-3 0.637). Reason is structural, not extra parameters: a sum of
+                     # DECAYING real exponentials cannot oscillate, but the responses visibly
+                     # rebound/overshoot (cf. the 7-8 Hz graph-wave modes), so the rebound was
+                     # unmodellable -> a hard R2 ceiling. osc contains real as the om->0 limit.
+OMEGA_MAX = 2 * np.pi * 15.0     # rad/s — cap mode frequency at 15 Hz (well above the ~7-8 Hz
+                                 # network modes; the frame rate is 70 Hz -> Nyquist 35 Hz).
+
+
+def _impulse(t, theta, A, tau, om=None, ph=None):
+    """Impulse response as a sum of modes, zero before the delay theta.
+
+    om/ph supplied -> damped sinusoids  sum_i A_i*exp(-(t-theta)/tau_i)*sin(om_i*(t-theta)+ph_i)
+    om/ph None     -> legacy sum of pure decaying exponentials (real poles).
+    """
     out = np.zeros_like(t)
     m = t >= theta
     dt = t[m] - theta
-    out[m] = sum(a * np.exp(-dt / tk) for a, tk in zip(A, tau))
+    if om is None:
+        out[m] = sum(a * np.exp(-dt / tk) for a, tk in zip(A, tau))
+    else:
+        out[m] = sum(b * np.exp(-dt / s) * np.sin(o * dt + p)
+                     for b, s, o, p in zip(A, tau, om, ph))
     return out
 
 
 def _fit_order(t, h, n, peak):
-    """Fit an n-pole sum-of-exponentials (no lag; theta pinned to 0); return (params,yhat,sse)."""
+    """Fit an n-mode model (no lag; theta pinned to 0); return (params, yhat, sse).
+    Params per mode: real -> (A, tau); osc -> (A, tau, om, ph). Seeds put h(0)~0, matching the
+    onset-zeroed data (phases seeded at 0 so sin(0)=0)."""
     sign = np.sign(peak) or 1.0
-    A0 = [sign * abs(peak)] + [-sign * abs(peak) * 0.5] * (n - 1)   # rise/decay seed
+    a = abs(peak) if abs(peak) > 0 else 1e-3
     tau0 = list(np.geomspace(0.05, 0.4, n))
-    p0 = A0 + tau0
-    lo = [-1.0] * n + [1e-3] * n
-    hi = [1.0] * n + [3.0] * n
+    if MODEL == "real":
+        p0 = [sign * a] + [-sign * a * 0.5] * (n - 1) + tau0
+        lo = [-1.0] * n + [1e-3] * n
+        hi = [1.0] * n + [3.0] * n
 
-    def resid(p):
-        A, tau = p[:n], p[n:]
-        return _impulse(t, 0.0, A, tau) - h
+        def resid(p):
+            return _impulse(t, 0.0, p[:n], p[n:]) - h
+    else:
+        om0 = list(2 * np.pi * np.geomspace(2.0, 10.0, n))
+        p0 = [sign * a] * n + tau0 + om0 + [0.0] * n
+        lo = [-1.0] * n + [1e-3] * n + [0.0] * n + [-np.pi] * n
+        hi = [1.0] * n + [3.0] * n + [OMEGA_MAX] * n + [np.pi] * n
+
+        def resid(p):
+            return _impulse(t, 0.0, p[:n], p[n:2 * n], p[2 * n:3 * n], p[3 * n:]) - h
 
     r = scipy.optimize.least_squares(resid, p0, bounds=(lo, hi), max_nfev=4000)
-    A, tau = r.x[:n], r.x[n:]
-    yhat = _impulse(t, 0.0, A, tau)
-    return dict(theta=0.0, A=A, tau=tau), yhat, float(np.sum((yhat - h) ** 2))
+    if MODEL == "real":
+        A, tau, om, ph = r.x[:n], r.x[n:], None, None
+    else:
+        A, tau, om, ph = r.x[:n], r.x[n:2 * n], r.x[2 * n:3 * n], r.x[3 * n:]
+    yhat = _impulse(t, 0.0, A, tau, om, ph)
+    return dict(theta=0.0, A=A, tau=tau, om=om, ph=ph), yhat, float(np.sum((yhat - h) ** 2))
 
 
 def fit_lti(t, h, orders=ORDERS, criterion="bic"):
@@ -96,13 +133,16 @@ def fit_lti(t, h, orders=ORDERS, criterion="bic"):
             params, yhat, sse = _fit_order(tp, hp, n, peak)
         except Exception:
             continue
-        k = 2 * n                                        # (A,tau) per pole; no lag term
+        k = (4 if MODEL == "osc" else 2) * n     # params per mode; no lag term
         pen = k * np.log(n_obs) if criterion == "bic" else 2 * k
         ic = n_obs * np.log(sse / n_obs + 1e-30) + pen
         r2 = 1.0 - sse / ss_tot
+        tv = np.asarray(params["tau"])
+        ov = None if params["om"] is None else np.asarray(params["om"])
         cand = dict(order=n, ic=ic, r2=r2, sse=sse, theta=params["theta"],
-                    tau=np.asarray(params["tau"]), A=np.asarray(params["A"]),
-                    poles=-1.0 / np.asarray(params["tau"]),
+                    tau=tv, A=np.asarray(params["A"]),
+                    om=ov, ph=None if params["ph"] is None else np.asarray(params["ph"]),
+                    poles=(-1.0 / tv) if ov is None else (-1.0 / tv + 1j * ov),
                     gain=yhat[np.argmax(np.abs(yhat))], yhat=yhat, t=tp)
         if best is None or ic < best["ic"]:
             best = cand
@@ -175,9 +215,13 @@ def fit_lti_cv(t, h, hA, hB, orders=ORDERS, margin=CV_MARGIN):
         nbest, cv_best = orders[0], np.nan
     params, yhat, sse = _fit_order(tp, hp, nbest, hp[np.argmax(np.abs(hp))])
     sst = np.sum((hp - hp.mean()) ** 2) + 1e-12
+    tv = np.asarray(params["tau"])
+    ov = None if params["om"] is None else np.asarray(params["om"])
     return dict(order=nbest, cvr2=cv_best,
-                r2=1.0 - sse / sst, sse=sse, theta=0.0, tau=np.asarray(params["tau"]),
-                A=np.asarray(params["A"]), poles=-1.0 / np.asarray(params["tau"]),
+                r2=1.0 - sse / sst, sse=sse, theta=0.0, tau=tv,
+                A=np.asarray(params["A"]),
+                om=ov, ph=None if params["ph"] is None else np.asarray(params["ph"]),
+                poles=(-1.0 / tv) if ov is None else (-1.0 / tv + 1j * ov),
                 gain=yhat[np.argmax(np.abs(yhat))], yhat=yhat, t=tp)
 
 
@@ -212,8 +256,10 @@ def fit_all(orders=ORDERS, selection="cv", criterion="bic", cache=True):
     cvr2 = np.full((nS, nS), np.nan)
     gain = np.zeros((nS, nS))
     delay = np.zeros((nS, nS))
-    tau = np.full((nS, nS, max(ORDERS)), np.nan)     # poles (s), sorted ascending
-    Amp = np.full((nS, nS, max(ORDERS)), np.nan)     # residues, aligned to tau
+    tau = np.full((nS, nS, max(ORDERS)), np.nan)     # mode decay const (s), sorted ascending
+    Amp = np.full((nS, nS, max(ORDERS)), np.nan)     # mode amplitudes, aligned to tau
+    Om = np.full((nS, nS, max(ORDERS)), np.nan)      # mode frequencies (rad/s), aligned (osc)
+    Ph = np.full((nS, nS, max(ORDERS)), np.nan)      # mode phases (rad), aligned (osc)
     Hs = np.array(H, float)                          # onset-zeroed copy (fit + store this)
     for s in range(nS):
         for r in range(nS):
@@ -224,12 +270,15 @@ def fit_all(orders=ORDERS, selection="cv", criterion="bic", cache=True):
                 cvr2[s, r] = f["cvr2"]
             else:
                 f = fit_lti(window, h, orders=orders, criterion=criterion)
-            yhat[s, r] = _impulse(window, f["theta"], f["A"], f["tau"])
+            yhat[s, r] = _impulse(window, f["theta"], f["A"], f["tau"], f["om"], f["ph"])
             order[s, r] = f["order"]; r2[s, r] = f["r2"]; gain[s, r] = f["gain"]
             delay[s, r] = f["theta"]
             n = len(f["tau"]); o = np.argsort(f["tau"])
             tau[s, r, :n] = np.asarray(f["tau"])[o]
             Amp[s, r, :n] = np.asarray(f["A"])[o]
+            if f["om"] is not None:
+                Om[s, r, :n] = np.asarray(f["om"])[o]
+                Ph[s, r, :n] = np.asarray(f["ph"])[o]
         print(f"  fit stim {s+1:2d}/{nS}  median R2(row)={np.nanmedian(r2[s]):.2f}", end="\r")
     print()
     print(f"fit all {nS}x{nS} ({selection}); order hist "
@@ -237,10 +286,12 @@ def fit_all(orders=ORDERS, selection="cv", criterion="bic", cache=True):
           + (f", median CV-R2={np.nanmedian(cvr2):.2f}" if selection == "cv" else ""))
     if cache:
         np.savez(CACHE_TF, H=Hs, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window,
-                 label=label, order=order, r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp)
+                 label=label, order=order, r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau,
+                 A=Amp, om=Om, ph=Ph, model=MODEL)
         print("cached ->", CACHE_TF)
     return dict(H=Hs, Hsem=Hsem, Hstd=Hstd, yhat=yhat, sites=sites, window=window, order=order,
-                r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp, label=label)
+                r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp, om=Om, ph=Ph,
+                model=MODEL, label=label)
 
 
 # --------------------------------------------------------------------------- #
@@ -311,8 +362,10 @@ def fit_all_amps(orders=ORDERS, selection="cv", cache=True):
     cvr2 = np.full((nA, nS, nS), np.nan)
     gain = np.zeros((nA, nS, nS))
     delay = np.zeros((nA, nS, nS))
-    tau = np.full((nA, nS, nS, max(ORDERS)), np.nan)         # poles (s), ascending
-    Amp = np.full((nA, nS, nS, max(ORDERS)), np.nan)         # residues, aligned to tau
+    tau = np.full((nA, nS, nS, max(ORDERS)), np.nan)         # mode decay const (s), ascending
+    Amp = np.full((nA, nS, nS, max(ORDERS)), np.nan)         # mode amplitudes, aligned to tau
+    Om = np.full((nA, nS, nS, max(ORDERS)), np.nan)          # mode freqs (rad/s), aligned (osc)
+    Ph = np.full((nA, nS, nS, max(ORDERS)), np.nan)          # mode phases (rad), aligned (osc)
     Hs = np.array(H, float)                                  # onset-zeroed copy (fit + store)
     for ai in range(nA):
         for s in range(nS):
@@ -328,12 +381,15 @@ def fit_all_amps(orders=ORDERS, selection="cv", cache=True):
                     cvr2[ai, s, r] = f["cvr2"]
                 else:
                     f = fit_lti(window, h, orders=orders)
-                yhat[ai, s, r] = _impulse(window, f["theta"], f["A"], f["tau"])
+                yhat[ai, s, r] = _impulse(window, f["theta"], f["A"], f["tau"], f["om"], f["ph"])
                 order[ai, s, r] = f["order"]; r2[ai, s, r] = f["r2"]
                 gain[ai, s, r] = f["gain"]; delay[ai, s, r] = f["theta"]
                 n = len(f["tau"]); o = np.argsort(f["tau"])
                 tau[ai, s, r, :n] = np.asarray(f["tau"])[o]
                 Amp[ai, s, r, :n] = np.asarray(f["A"])[o]
+                if f["om"] is not None:
+                    Om[ai, s, r, :n] = np.asarray(f["om"])[o]
+                    Ph[ai, s, r, :n] = np.asarray(f["ph"])[o]
             print(f"  amp {amps[ai]}  stim {s+1:2d}/{nS}  median R2(row)={np.nanmedian(r2[ai, s]):.2f}",
                   end="\r")
         print()
@@ -343,10 +399,11 @@ def fit_all_amps(orders=ORDERS, selection="cv", cache=True):
     if cache:
         np.savez(CACHE_TF2, H=Hs, Hstd=Hstd, yhat=yhat, sites=sites, window=window,
                  amps=np.array(amps, float), order=order, r2=r2, cvr2=cvr2, gain=gain,
-                 delay=delay, tau=tau, A=Amp)
+                 delay=delay, tau=tau, A=Amp, om=Om, ph=Ph, model=MODEL)
         print("cached ->", CACHE_TF2)
     return dict(H=Hs, Hstd=Hstd, yhat=yhat, sites=sites, window=window, amps=amps, order=order,
-                r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp)
+                r2=r2, cvr2=cvr2, gain=gain, delay=delay, tau=tau, A=Amp, om=Om, ph=Ph,
+                model=MODEL)
 
 
 # --------------------------------------------------------------------------- #

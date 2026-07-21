@@ -48,16 +48,41 @@ BRAIN_CACHE = DATA / "grid_brain.npz"
 ST = [pe.withStroke(linewidth=2.0, foreground="black")]
 
 
-def poles_zeros(tau, A):
-    """Poles (-1/tau, real) and zeros (roots of the residue numerator) of the TF, in 1/s."""
-    tau = tau[~np.isnan(tau)]; A = A[~np.isnan(A)]
+def poles_zeros(tau, A, om=None, ph=None):
+    """Poles and zeros of the fitted TF, in 1/s.
+
+    osc modes (om supplied): mode i is A_i*exp(-t/tau_i)*sin(om_i*t + ph_i), i.e. a
+    complex-conjugate pole pair at -1/tau_i +- j*om_i with numerator
+    A_i*[sin(ph_i)*s + (sin(ph_i)/tau_i + om_i*cos(ph_i))] over (s+1/tau_i)^2 + om_i^2.
+    real modes (om None/NaN): poles -1/tau_i, numerator A_i.
+    Zeros = roots of the numerator sum over the common denominator.
+    """
+    m = ~np.isnan(tau)
+    tau, A = tau[m], A[m]
     a = 1.0 / tau
-    if len(a) <= 1:
-        return -a, np.array([])
-    nco = np.zeros(len(a))
+    has_osc = om is not None and np.any(np.isfinite(np.asarray(om)[m]))
+    if not has_osc:
+        if len(a) <= 1:
+            return -a, np.array([])
+        nco = np.zeros(len(a))
+        for i in range(len(a)):
+            nco = np.polyadd(nco, A[i] * np.poly(-np.delete(a, i)))
+        return -a, np.roots(nco)
+
+    om, ph = np.asarray(om)[m], np.asarray(ph)[m]
+    dens = [np.array([1.0, 2 * ai, ai * ai + oi * oi]) for ai, oi in zip(a, om)]
+    nums = [np.array([Ai * np.sin(pi), Ai * (np.sin(pi) * ai + oi * np.cos(pi))])
+            for Ai, ai, oi, pi in zip(A, a, om, ph)]
+    total = np.array([0.0])
     for i in range(len(a)):
-        nco += A[i] * np.poly(-np.delete(a, i))
-    return -a, np.roots(nco)
+        term = nums[i]
+        for j in range(len(a)):
+            if j != i:
+                term = np.polymul(term, dens[j])
+        total = np.polyadd(total, term)
+    poles = np.concatenate([[-ai + 1j * oi, -ai - 1j * oi] for ai, oi in zip(a, om)])
+    zeros = np.roots(total) if np.any(np.abs(total) > 1e-30) else np.array([])
+    return poles, zeros
 
 
 def corner_scale(ax, t0, ymax, dt=1.0):
@@ -78,6 +103,8 @@ def main():
     Hstd = z["Hstd"] if "Hstd" in z.files else np.zeros_like(H)
     gain, order, tau, A = z["gain"], z["order"], z["tau"], z["A"]
     cvr2 = z["cvr2"] if "cvr2" in z.files else np.zeros_like(gain)
+    om = z["om"] if "om" in z.files else None      # osc-model mode freqs (rad/s), None if legacy
+    ph = z["ph"] if "ph" in z.files else None
     bz = np.load(BRAIN_CACHE, allow_pickle=True)
     mimg, px, sp, ny, nx = bz["mimg"], bz["px"], float(bz["sp"]), int(bz["ny"]), int(bz["nx"])
     tz = cr.load_trials()
@@ -156,11 +183,16 @@ def main():
 
     def report(X):
         print(f"\n=== STIM {coord(X)} - fitted TF per readout (poles & zeros 1/s, by |gain|) ===")
+        def _fmt(v):
+            v = complex(v)
+            return f"{v.real:.1f}" if abs(v.imag) < 1e-6 else f"{v.real:.1f}{v.imag:+.1f}j"
+
         for r in np.argsort(-np.abs(gain[X])):
-            p, zr = poles_zeros(tau[X, r], A[X, r])
-            ps = ", ".join(f"{v:.1f}" for v in p)
-            zs = ", ".join((f"{v.real:.1f}" if abs(v.imag) < 1e-6 else f"{v.real:.1f}{v.imag:+.1f}j")
-                           for v in zr)
+            p, zr = poles_zeros(tau[X, r], A[X, r],
+                                None if om is None else om[X, r],
+                                None if ph is None else ph[X, r])
+            ps = ", ".join(_fmt(v) for v in p)
+            zs = ", ".join(_fmt(v) for v in zr)
             print(f"  {coord(r)} n{int(order[X,r])} g{gain[X,r]:+.4f}  p[{ps}] z[{zs}]")
 
     def build_selector():
