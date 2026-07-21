@@ -195,8 +195,8 @@ All MATLAB-exported figures, including those not yet assigned to a paper panel. 
 
 | Var | Size (cm W×H) | Export path | Format | Active? | Notes |
 |-----|--------------|-------------|--------|---------|-------|
-| fig_ps_mse | 6 × 4 | paper/images/figure4/prestim_dev_vs_mse.pdf | vector | yes | Pre-stim state deviation vs MSE (OL+CL) |
-| figQp | 6 × 4 | paper/images/figure4/motion_quartile_combined.pdf | vector | yes | Motion quartile MSE summary (pooled sessions) |
+| fig_ps_mse | 6 × 4 | paper/images/figure4/prestim_dev_vs_mse.pdf | vector | ⚠ **no — circular** | x = \|dFk(t=0)−ref\| lies *inside* the y RMSE window (0–3 s); slope guaranteed by autocorrelation. Audited 2026-07-21. Do not promote to a panel. |
+| figQp | 6 × 4 | paper/images/figure4/motion_quartile_combined.pdf | vector | yes | Motion quartile RMSE summary (pooled sessions). **Only power-independent state regressor in the old candidate set.** Window is −2→+3 s (not purely pre-stim). |
 
 #### Uniformity checklist
 - [ ] Font: 6 pt bold throughout — audit `impulse-analysis/tf_fit.m` and `impulse-analysis/dose_response.m`
@@ -309,13 +309,29 @@ Fit checks (last computed, gap=0.3):
 ---
 
 #### Fig 4  [total=17  gap=0.3]
-State-dependence of controller performance — how pre-stim brain state (motion, pre-stim
-variance, delta power) predicts closed-loop vs open-loop error. **Panels not yet fixed** —
-sizes `?` until the set is chosen.
-Candidate sources (see "All generated figures" log): `controller-analysis/motion_analysis.m`
-(`prestim_dev_vs_mse.pdf` 6×4, `motion_quartile_combined.pdf` 6×4) · `trial_state_mse.m`
-(fig J6 — variance + delta power vs RMSE on one trial pool) · `spectral_mse_sort.m`
-(J4/J5 — dF/F heatmaps sorted by delta power / variance) · `prestim_variance.m` (K2).
+State-dependence of controller performance — how pre-stim brain state predicts closed-loop vs
+open-loop error. **Panels not yet fixed** — sizes `?` until the set is chosen.
+
+> ⚠ **CANDIDATE LIST AUDITED 2026-07-21 — most of the original candidates are unusable.** The old
+> list predates the 2026-07-01 signal-power retraction. Audit result (RESEARCH 2026-07-21):
+>
+> | Candidate | Status |
+> |---|---|
+> | `prestim_variance.m` K2 · `spectral_mse_sort.m` | **FILES DELETED** (commit `6080273`). "J4/J5" **never existed** in any commit — that description was fictional. |
+> | `motion_analysis.m` `fig_ps_mse` (`prestim_dev_vs_mse.pdf`) | **CIRCULAR — do not use.** x = \|dFk(t=0)−ref\| is the *first sample inside* the y-window (RMSE of dFk over 0–3 s). Positive slope is guaranteed by autocorrelation alone. |
+> | `trial_state_mse.m` (the "J6" fig) | **ALGEBRAICALLY CIRCULAR — do not use.** x = var(dFk, 0–3 s), y = RMSE(dFk, 0–3 s), *identical window*: RMSE² = var + (mean−ref)². Also no `paperExport` call. |
+> | `motion_analysis.m` `figQp` (`motion_quartile_combined.pdf`) | ✅ **USABLE** — motion energy is the only power-independent regressor in the old set. Caveat: its window is −2→+3 s, so it is not purely *pre*-stim; the `pre_trial_3s` mode is the clean version. |
+>
+> **New primary source: `controller-analysis/ctrl_state_dependence.m` (Stage 5, 2026-07-21)** — state
+> estimated as the stim-blind contra-derived Global, not as a magnitude of the ipsi signal. Its
+> `s_lvl→o_act` pair is the one genuinely cross-signal, window-disjoint result and is the intended
+> Fig 4 headline. Its `s_var→o_loc` and `s_dst→o_loc` pairs are same-signal and must NOT become
+> panels as-is. Currently **single-session + exploratory styling** (no `paperFig`/`paperStyle`,
+> exports to `paper/images/predictor_saga/`) — blocked on the Stage 1→2 cross-session sweep.
+>
+> Across the entire old candidate set, the OL-vs-CL slope comparison that motivates the figure was
+> **never computed in code** — only two `polyfit` coefficients printed on the retired K2 axes for
+> visual comparison. Stage 5 is the first script to actually test it (trial bootstrap, 5000).
 ```
 row1:  4A(?×?)  4B(?×?)
 row2:  4C(?×?)  4D(?×?)

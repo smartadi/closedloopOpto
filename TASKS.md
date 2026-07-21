@@ -41,6 +41,17 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Run low-frequency spectral attribution (Fig 4 section): on motion-clean trials (z-motion ≤1.5), fraction of top-quartile high-error CL trials with elevated pre-stim 1–4 Hz absolute power (`ncFreqPow`/`wcFreqPow`); write results into Fig-4 `\todo`. Methods done (`methods.tex` sec:disturbance)
 - [ ] Supplementary Fig S (`fig:lowfreq_examples`): AL to pick representative low-/high-error motion-clean CL trial spectra; placeholder in `methods.tex`
 
+### ⚠ Fig 4 (state-dependence) — candidate panels audited 2026-07-21, most are UNUSABLE
+> The Fig-4 candidate list predates the 2026-07-01 signal-power retraction and was never re-read in its light. Full audit → RESEARCH 2026-07-21 (×3). Panel set is still unfixed; PAPER.md Fig-4 block now carries the verdicts.
+- [ ] **Fix the Stage-5 `s_var→o_loc` pair before the cross-session sweep** — state and outcome are both magnitudes of the same ipsi trace `A`, so the "OL b=0.031 ≈ CL b=0.033 ⇒ state-dependent actuator gain" reading is **not identified** (a shared power artifact predicts identical slopes too). Either drop the actuator-gain claim or re-run against a power-independent state (normalized δ ratio / motion). Doing this first stops the sweep being spent on an uninterpretable pair.
+- [ ] **Sweep Stage 1→2→5 across the other 11 sessions** — `s_lvl→o_act` (contra-derived state → ipsi outcome, cross-signal + window-disjoint) is the one clean pair and the intended Fig-4 headline, but is single-session with a bootstrap CI touching 0 ([−0.501, +0.001]). Each session needs its ROI drawn once (`redefine_roi` in `ctrl_ols_spont.m`), so this is not a trivial batch.
+- [ ] **Robustness of `s_lvl→o_act` to low-`s_lvl` OL outliers** — Theil-Sen / robust regression; the OL line spans a wider x-range than CL.
+- [ ] **Promote `ctrl_state_dependence.m` to paper-panel styling** — currently exploratory (raw `figure()`, `tiledlayout`, `sgtitle` with a debug tag, variable names as axis labels, exports PNG to `paper/images/predictor_saga/`). Needs `paperFig`/`paperStyle` + a real export path once the panel set is fixed.
+- [ ] **Plot the two power-independent states that already exist in code but sit on no axis** — the normalized 1–4 Hz δ ratio (`trial_state_mse.m:108-111`, currently only `fprintf`ed) and `ncFreqSpec`/`S_norm` (`controllerData.m:34`). These are the admissible spectral states; the retired panels used absolute power instead.
+- [ ] **Decide the fate of `fig_ps_mse`** (`prestim_dev_vs_mse.pdf`) — circular (x is the first sample inside the y window). Delete, or keep as a supplementary "why we don't use this" control.
+- [ ] (if a variance panel is still wanted) Re-run `trial_state_mse.m` with `varWinMode='pre2trial'` — restores window-disjointness; the current `'trial'` setting makes x and y the same statistic of the same samples. Also note this figure has **no `paperExport` call**.
+- [ ] Sweep the other sub-area CLAUDE.md files for the same doc rot found in `controller-analysis/CLAUDE.md` (script names that no longer resolve): `git log --diff-filter=D --name-only` → grep the deleted names.
+
 ---
 
 ## 🟡 Next sprint

@@ -18,8 +18,8 @@ CONTROLLER trials"** block in `TASKS.md` for the full step list. Groundwork: sca
 - `variance_mse.m` — OL/CL variance, MSE violin, windowed MSE (Figs F, G)
 - `step_response.m` — trial-averaged dF/F, step response (Fig H)
 - `motion_analysis.m` — pre-stim state vs MSE, motion vs MSE, onset deviation
-- `spectral_mse_sort.m` — dF/F heatmaps sorted by delta power (J4) or variance (J5)
-- `prestim_variance.m` — pre-stim dFk variance as trial sort key (K figures)
+- ~~`spectral_mse_sort.m`~~ — **RETIRED** (deleted in commit `6080273`). Its real figures were `fig_I`/`fig_J`/`fig_J2`, sorted by **MSE** — the "J4/J5 sorted by delta power/variance" described here previously **never existed** in any commit. Recover from `git show 6080273^:controller-analysis/spectral_mse_sort.m` if needed.
+- ~~`prestim_variance.m`~~ — **RETIRED** (deleted in commit `6080273`). Held the K-figures (K2/K2m/K2z/K2w). Recover via `git show 6080273^:...` if the K2 pre-stim-variance panel is revived.
 - `trial_state_mse.m` — merged figure J6: variance + delta power both vs MSE on same trial pool (from pncDfk_l + ncFreqPow); tests "high trial variance → high MSE, same trials show high delta"
 - `widebrain_arx.m` — contralateral ARX model, OL TF fit, WB prediction layers
 
@@ -53,7 +53,7 @@ Cache check: `isfield(tmp, 'd')` — if missing, reinitialise and re-save.
 
 ## Open questions (see TASKS.md for priority)
 1. Verify widebrain ARX R²_spont > 0.3; interpret OL vs CL residuals
-2. Compare K2 OL vs CL slopes — flat CL slope = controller decoupling pre-stim state from outcome
+2. ~~Compare K2 OL vs CL slopes~~ — **SUPERSEDED 2026-07-21** by `ctrl_state_dependence.m` (Stage 5), which answers the same question with a stim-blind contra-derived state (`s_lvl`) instead of the power-confounded pre-stim `dFk` variance. K2 itself is retired with `prestim_variance.m`. Result: OL b=0.340 vs CL b=0.084 (4× shallower CL) — but single-session and the bootstrap CI touches 0.
 3. Implement three-layer contralateral prediction model (pink/orange/red) — see FINDINGS.md
 4. Implement Curto & Issa-style trial-sorting figure
 
