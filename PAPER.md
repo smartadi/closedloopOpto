@@ -22,13 +22,6 @@ These claims have identified problems and must be revisited before submission. E
 
 ---
 
-## CL vs OL analysis
-- [ ] add comparision purely focused on disturbance rejection, ie the last two seconds, so that activity settles for that refernce for both OL and CL.
-- [ ] freq analysis we added was confusing Nick, and we shold rightfully use the absolute power values instead of using normalizations and ratios.
-- [ ] **Controller performance vs initial state at stim onset**: add a section/plot showing trial MSE (OL and CL) as a function of |dF/F deviation from 0| at t=0 (stim onset). Per-trial scatter or binned mean +/- SEM, OL vs CL overlaid. Key question: does OL MSE increase with initial deviation (larger initial error → harder to correct passively) while CL MSE stays flat (feedback decouples initial state from outcome)? A flat CL slope vs steep OL slope is the mechanistic argument for why closed-loop control is valuable. Implement in `plottingScript.m` using `dk.ncDfk(:, c0_g2)` as the deviation measure per trial.
-
-
-
 ## Variable refernce plotting and literture
 we have added a feedforward and a preview based controller to the experiment pipeline, we need to add the literature, results and discussions
 - [ ] add plots for variable sine wave
