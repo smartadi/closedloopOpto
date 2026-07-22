@@ -41,7 +41,7 @@ F(2).get=@(dk,ref,dur) motion_meas(dk,dur,Fs);
 
 F(3).key='delta'; F(3).file='factor_olcl_delta.pdf'; F(3).need_mot=false;
 F(3).title='Closed loop does not reject delta-band disturbance';
-F(3).xlab='Relative-delta quartile (low \rightarrow high)';
+F(3).xlab='Relative 2-4 Hz quartile (low \rightarrow high)';
 F(3).get=@(dk,ref,dur) delta_meas(dk,c0_l,Fs,bandpow);
 
 for fi = 1:numel(F)
@@ -129,11 +129,11 @@ function [xnc,xcl]=motion_meas(dk,dur,Fs)
     xnc=mean(nc(:,ws:we),2); xcl=mean(wc(:,ws:we),2);
 end
 function [xnc,xcl]=delta_meas(dk,c0_l,Fs,bandpow)
-    % RELATIVE delta (power-independent): band 1-4 Hz / total 0.4-10 Hz
+    % RELATIVE 2-4 Hz (the hard-to-control sub-band): band 2-4 Hz / total 0.4-10 Hz
     sa=c0_l-round(2*Fs); sb=c0_l+round(3*Fs); nc=dk.pncDfk_l; wc=dk.pwcDfk_l;
     xnc=nan(size(nc,1),1); xcl=nan(size(wc,1),1);
-    for t=1:size(nc,1); xnc(t)=bandpow(nc(t,sa:sb),1,4)/max(bandpow(nc(t,sa:sb),0.4,10),eps); end
-    for t=1:size(wc,1); xcl(t)=bandpow(wc(t,sa:sb),1,4)/max(bandpow(wc(t,sa:sb),0.4,10),eps); end
+    for t=1:size(nc,1); xnc(t)=bandpow(nc(t,sa:sb),2,4)/max(bandpow(nc(t,sa:sb),0.4,10),eps); end
+    for t=1:size(wc,1); xcl(t)=bandpow(wc(t,sa:sb),2,4)/max(bandpow(wc(t,sa:sb),0.4,10),eps); end
 end
 function s=sig_star(p)
     if p<1e-3; s='***'; elseif p<1e-2; s='**'; elseif p<0.05; s='*'; else; s='n.s.'; end

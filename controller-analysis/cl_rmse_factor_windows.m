@@ -43,7 +43,7 @@ c0_mot  = 71;    % onset col, wcmotion
 c0_l    = 106;   % onset col, pwcDfk_l
 mot_pre = 2;
 spec_pre_s = 2; spec_post_s = 3;        % delta window: -2 -> stim end (dur=3)
-slow_bnd = [0.4 1]; delta_bnd = [1 4]; tot_bnd = [0.4 10];
+slow_bnd = [0.4 1]; delta_bnd = [1 4]; hi_bnd = [2 4]; tot_bnd = [0.4 10];
 
 % RMSE sub-windows (cols in wcDfk, non-overlapping)
 eE = c0 : c0+round(1*Fs);               % 0 -> 1 s
@@ -91,7 +91,7 @@ for k = 1:numel(fields)
         pt = bandpow(seg, tot_bnd(1),   tot_bnd(2));
         xdel(t)  = pd;
         xslow(t) = ps;
-        xrel(t)  = pd / max(pt, eps);                 % relative delta (power-indep)
+        xrel(t)  = bandpow(seg,hi_bnd(1),hi_bnd(2)) / max(pt, eps);  % relative 2-4 Hz (hard-to-control sub-band)
         xpre(t)  = bandpow(pseg, delta_bnd(1), delta_bnd(2));  % delta, pre-stim only
     end
 
@@ -116,8 +116,8 @@ fprintf('\n[cl_rmse_factor_windows] %d valid CL trials.\n', n);
 
 % Predictor matrices (X1 raw, X2 raw energy [matches cl_mse_factors], X3 = log10 delta)
 Ld = log10(Xdel);                            % kept for the robustness panel
-Zabs = zscore([X1, X2, Xrel]);               % primary model -- RELATIVE delta (power-independent)
-pred_names = {'Initial dev','Motion','Rel. delta'};
+Zabs = zscore([X1, X2, Xrel]);               % primary model -- RELATIVE 2-4 Hz (power-independent)
+pred_names = {'Initial dev','Motion','Rel 2-4 Hz'};
 
 %% ── Collinearity ─────────────────────────────────────────────────────────────
 R = corr([X1 X2 Ld]);
@@ -261,7 +261,7 @@ title(ax,'Delta effect vs magnitude control','FontSize',6,'FontWeight','bold');
 hold(ax,'off');
 
 title(tl, sprintf(['CL error factors by window  (n=%d trials, 9 sessions)   ' ...
-    'delta = RELATIVE power 1-4 Hz / 0.4-10 Hz, -2 s to stim end'], n),'FontSize',7,'FontWeight','bold');
+    'delta = RELATIVE power 2-4 Hz / 0.4-10 Hz, -2 s to stim end'], n),'FontSize',7,'FontWeight','bold');
 
 paperExport(fig, fullfile(paper_root,'images','figure4','cl_rmse_factor_windows.png'));
 fprintf('\n[cl_rmse_factor_windows] Exported cl_rmse_factor_windows.png\n');
