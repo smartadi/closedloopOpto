@@ -46,7 +46,7 @@ F(3).get=@(dk,ref,dur) delta_meas(dk,c0_l,Fs,bandpow);
 
 for fi = 1:numel(F)
     slopeOL=nan(numel(fields),1); slopeCL=nan(numel(fields),1);
-    zbinOL=cell(1,nBins); zbinCL=cell(1,nBins);
+    rbinOL=cell(1,nBins); rbinCL=cell(1,nBins);   % RAW RMSE per quartile
 
     for k = 1:numel(fields)
         s = mouse.(fields{k});
@@ -64,18 +64,19 @@ for fi = 1:numel(F)
         xnc=xnc(g1); ync=ync(g1); xcl=xcl(g2); ycl=ycl(g2);
         if numel(ync)<10 || numel(ycl)<10; continue; end
 
-        % z-score RMSE within session by pooled OL+CL (removes level, keeps slope)
+        % STAT: per-session slope on z-scored RMSE (within-session, pooled OL+CL)
+        % -- kept z-scored so the interaction test matches the manuscript method.
         mu=mean([ync;ycl]); sg=std([ync;ycl]);
         znc=(ync-mu)/sg; zcl=(ycl-mu)/sg;
-
         bo=polyfit(xnc,znc,1); slopeOL(k)=bo(1);
         bc=polyfit(xcl,zcl,1); slopeCL(k)=bc(1);
 
+        % VISUAL: RAW RMSE (%dF/F) per quartile (z-score confused NL)
         edges=quantile([xnc;xcl],linspace(0,1,nBins+1)); edges(1)=-inf; edges(end)=inf;
         bnc=discretize(xnc,edges); bcl=discretize(xcl,edges);
         for b=1:nBins
-            zbinOL{b}=[zbinOL{b}; znc(bnc==b)];
-            zbinCL{b}=[zbinCL{b}; zcl(bcl==b)];
+            rbinOL{b}=[rbinOL{b}; ync(bnc==b)];
+            rbinCL{b}=[rbinCL{b}; ycl(bcl==b)];
         end
     end
 
@@ -85,8 +86,8 @@ for fi = 1:numel(F)
     fprintf('[%s] n=%d sess | slope OL %+.3f CL %+.3f | interaction signrank p=%.4g -> %s\n', ...
         F(fi).key, sum(v), median(slopeOL(v)), median(slopeCL(v)), p_diff, star);
 
-    mO=cellfun(@mean,zbinOL); eO=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),zbinOL);
-    mC=cellfun(@mean,zbinCL); eC=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),zbinCL);
+    mO=cellfun(@mean,rbinOL); eO=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),rbinOL);
+    mC=cellfun(@mean,rbinCL); eC=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),rbinCL);
 
     fig=paperFig(6,4); ax=gca; hold(ax,'on'); xq=1:nBins; w=0.35;
     bar(ax,xq-w/2,mO,w,'FaceColor',PS.col_ol,'EdgeColor','none','DisplayName','Open loop');
@@ -96,10 +97,9 @@ for fi = 1:numel(F)
     set(ax,'XTick',1:nBins,'XTickLabel',{'Q1','Q2','Q3','Q4'}, ...
         'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
     xlabel(ax,F(fi).xlab,'FontSize',6,'FontWeight','bold');
-    ylabel(ax,'RMSE (z)','FontSize',6,'FontWeight','bold');
-    title(ax,F(fi).title,'FontSize',6,'FontWeight','bold');
+    ylabel(ax,'RMSE (%\DeltaF/F)','FontSize',6,'FontWeight','bold');
 
-    % single interaction star, top-centre
+    % single interaction star, top-centre (no title -- claim goes in caption)
     yl=ylim(ax); ys=yl(2);
     text(ax,mean([1 nBins]),ys,star,'HorizontalAlignment','center', ...
         'VerticalAlignment','top','FontSize',8,'FontWeight','bold');
@@ -109,8 +109,10 @@ for fi = 1:numel(F)
         lg=legend(ax,'Location','northwest'); paperLegend(lg);
     end
 
-    paperExport(fig, fullfile(paper_root,'images','figure4',F(fi).file));
-    fprintf('  exported %s\n', F(fi).file);
+    [~,base]=fileparts(F(fi).file);
+    paperExport(fig, fullfile(paper_root,'images','figure4',[base '.png']));   % PNG, no title
+    paperExport(fig, fullfile(paper_root,'images','figure4',[base '.pdf']));   % vector too
+    fprintf('  exported %s.png / .pdf\n', base);
 end
 
 %% ---- helpers ----
