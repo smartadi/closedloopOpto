@@ -617,6 +617,100 @@ def fit_shared(orders=ORDERS, cache=True, fit_gamma=True, weight="amp", tag=None
 
 
 # --------------------------------------------------------------------------- #
+# RANK-1 shared-shape model (adopted 2026-07-21): each pair's response is ONE data-derived
+# waveform w(t) shared across amplitudes, with a FREE gain per amplitude:  h_a(t) = g_a * w(t).
+# w is the first right singular vector of the onset-zeroed [amp x time] matrix; g_a the per-amp
+# projection. This is the amplitude-linearity CEILING (median per-amp R2 ~0.90) — strictly more
+# general than the a^gamma model because the per-amp gains are unconstrained, so the dose-response
+# g_2/g_1 is READ OFF per pair with no functional-form assumption. No LTI constraint on the shape.
+CACHE_R1 = cross_response.CACHE.parent / "grid_tf_fits_rank1.npz"
+
+
+def _rank1(M):
+    """Best one-shape + per-row-gain fit of M (nA, T). Returns (w (T,), gains (nA,), recon)."""
+    U, S, Vt = np.linalg.svd(M, full_matrices=False)
+    w = Vt[0]
+    j = int(np.argmax(np.abs(w)))
+    sgn = np.sign(w[j]) or 1.0                       # fix sign so w's peak is positive
+    w = w * sgn
+    gains = U[:, 0] * S[0] * sgn
+    return w, gains, np.outer(gains, w)
+
+
+def fit_rank1(cache=True):
+    """One free shape + per-amp gain per (stim, readout) pair, over the [0, FIT_TMAX] window."""
+    z = cross_response.load_cached2()
+    H, sites, window = z["H"], z["sites"], z["window"]        # H (nA,nS,nS,nW)
+    amps = [round(float(a), 3) for a in z["amps"]]
+    nA, nS, nW = H.shape[0], len(sites), len(window)
+    HA, HB, amps_cv, _ = split_half_means_amp()
+    assert amps_cv == amps, f"amp mismatch {amps_cv} vs {amps}"
+    post = (window >= 0) & (window <= FIT_TMAX)
+    tpost = window[post]
+
+    shape = np.full((nS, nS, post.sum()), np.nan)
+    gain_amp = np.full((nA, nS, nS), np.nan)                  # per-amp linear gain g_a
+    ratio = np.full((nS, nS), np.nan)                         # g[max]/g[min] dose-response
+    peak = np.full((nA, nS, nS), np.nan)                      # signed peak of the reconstruction
+    r2 = np.full((nS, nS), np.nan)                            # pooled over amps
+    r2a = np.full((nA, nS, nS), np.nan)                       # per amp
+    cvr2 = np.full((nS, nS), np.nan)
+    yhat = np.zeros((nA, nS, nS, nW))
+    ia0, ia1 = int(np.argmin(amps)), int(np.argmax(amps))
+
+    def r2_amp(recon, M):
+        return [1 - np.sum((recon[a] - M[a]) ** 2) / (np.sum((M[a] - M[a].mean()) ** 2) + 1e-12)
+                for a in range(nA)]
+
+    for s in range(nS):
+        for r in range(nS):
+            offs, M, ok = [], [], True
+            for ai in range(nA):
+                h = H[ai, s, r]
+                if not (np.all(np.isfinite(h)) and np.all(np.isfinite(HA[ai, s, r]))
+                        and np.all(np.isfinite(HB[ai, s, r]))):
+                    ok = False; break
+                hz, off = _zero_onset(window, h)
+                offs.append(off); M.append(hz[post])
+            if not ok:
+                continue
+            M = np.array(M)
+            w, g, recon = _rank1(M)
+            shape[s, r] = w
+            gain_amp[:, s, r] = g
+            ratio[s, r] = g[ia1] / g[ia0] if g[ia0] != 0 else np.nan
+            ra = r2_amp(recon, M)
+            r2a[:, s, r] = ra
+            r2[s, r] = 1 - np.sum((recon - M) ** 2) / (np.sum((M - M.mean()) ** 2) + 1e-12)
+            for ai in range(nA):
+                yhat[ai, s, r, post] = recon[ai]
+                peak[ai, s, r] = recon[ai][np.argmax(np.abs(recon[ai]))]
+            # split-half CV: shared shape+gains from half A, score on half B (and vice versa)
+            MA = np.array([HA[ai, s, r][post] - offs[ai] for ai in range(nA)])
+            MB = np.array([HB[ai, s, r][post] - offs[ai] for ai in range(nA)])
+            _, _, rA = _rank1(MA)
+            _, _, rB = _rank1(MB)
+            cvr2[s, r] = 0.5 * (_r2(rA.ravel(), MB.ravel()) + _r2(rB.ravel(), MA.ravel()))
+        print(f"  rank-1 fit stim {s+1:2d}/{nS}  median R2={np.nanmedian(r2[s]):.2f}", end="\r")
+    print()
+    good = cvr2 > 0
+    print(f"rank-1 (one shape + per-amp gain) {nS}x{nS}: median pooled R2={np.nanmedian(r2):.2f}, "
+          f"median CV-R2={np.nanmedian(cvr2):.2f}, CV>0 pairs={good.sum()}")
+    for ai in range(nA):
+        print(f"  amp {amps[ai]}: median R2={np.nanmedian(r2a[ai][good]):.2f}")
+    rr = ratio[good]; rr = rr[np.isfinite(rr)]
+    print(f"  dose-response gain ratio a{amps[ia1]}/a{amps[ia0]} (CV>0): median={np.median(rr):.3f} "
+          f"IQR=[{np.percentile(rr,25):.3f},{np.percentile(rr,75):.3f}] (linear={amps[ia1]/amps[ia0]:.1f})")
+    if cache:
+        np.savez(CACHE_R1, shape=shape, tpost=tpost, gain=peak, gain_amp=gain_amp, ratio=ratio,
+                 yhat=yhat, sites=sites, window=window, amps=np.array(amps, float),
+                 r2=r2, r2_amp=r2a, cvr2=cvr2, H=H)
+        print("cached ->", CACHE_R1)
+    return dict(shape=shape, tpost=tpost, gain=peak, gain_amp=gain_amp, ratio=ratio, yhat=yhat,
+                sites=sites, window=window, amps=amps, r2=r2, r2_amp=r2a, cvr2=cvr2)
+
+
+# --------------------------------------------------------------------------- #
 def _nearest(sites, ref, exclude=()):
     """Index of the site closest to coordinate `ref`, excluding given indices."""
     d = np.hypot(sites[:, 0] - ref[0], sites[:, 1] - ref[1])
@@ -684,7 +778,9 @@ def prototype(save="grid_png/tf_prototype.png"):
 
 if __name__ == "__main__":
     import sys
-    if "shared" in sys.argv:
+    if "rank1" in sys.argv:
+        fit_rank1()
+    elif "shared" in sys.argv:
         # Three variants isolate the two effects:
         #   linW  weighted, gamma=1  -> how much of the amp-1.0 failure was LS high-amp dominance
         #   (default) weighted, gamma free -> how much of the remainder is saturation
