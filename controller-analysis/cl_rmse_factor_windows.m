@@ -115,9 +115,9 @@ n = numel(YE);
 fprintf('\n[cl_rmse_factor_windows] %d valid CL trials.\n', n);
 
 % Predictor matrices (X1 raw, X2 raw energy [matches cl_mse_factors], X3 = log10 delta)
-Ld = log10(Xdel);
-Zabs = zscore([X1, X2, Ld]);                 % primary model
-pred_names = {'Initial dev','Motion','Delta power'};
+Ld = log10(Xdel);                            % kept for the robustness panel
+Zabs = zscore([X1, X2, Xrel]);               % primary model -- RELATIVE delta (power-independent)
+pred_names = {'Initial dev','Motion','Rel. delta'};
 
 %% ── Collinearity ─────────────────────────────────────────────────────────────
 R = corr([X1 X2 Ld]);
@@ -261,7 +261,7 @@ title(ax,'Delta effect vs magnitude control','FontSize',6,'FontWeight','bold');
 hold(ax,'off');
 
 title(tl, sprintf(['CL error factors by window  (n=%d trials, 9 sessions)   ' ...
-    'delta = log_{10} power 1-4 Hz, -2 s to stim end'], n),'FontSize',7,'FontWeight','bold');
+    'delta = RELATIVE power 1-4 Hz / 0.4-10 Hz, -2 s to stim end'], n),'FontSize',7,'FontWeight','bold');
 
 paperExport(fig, fullfile(paper_root,'images','figure4','cl_rmse_factor_windows.png'));
 fprintf('\n[cl_rmse_factor_windows] Exported cl_rmse_factor_windows.png\n');
