@@ -22,7 +22,7 @@
 % ERROR METRIC = RMSE (sqrt of mean squared error), matching the Fig 3 decision.
 
 %% ---- Knobs -------------------------------------------------------------
-SESSION_TAG = 's2';        % s1 = AL_0048 2026-07-01/6 (87 tr); s2 = 2026-07-14/1 (200 tr); s3 = 2026-07-21/1 (198 sine tr — ⚠ analysis pixel SUSPECT, see RESEARCH 2026-07-22)
+SESSION_TAG = 's2';        % s1 = AL_0048 2026-07-01/6 (87 tr); s2 = 2026-07-14/1 (200 tr, Fig 5 primary); s3 = 2026-07-21/1 (198 sine tr, pixel_R=[407 367]; preview REPLICATES, OL-vs-CL ns p=0.36)
 SIDE        = 'right';
 PRE         = 2;           % s before onset
 POST        = 2;           % s after trajectory end

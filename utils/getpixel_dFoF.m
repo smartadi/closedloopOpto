@@ -12,7 +12,13 @@ pixel = double(pixel);
 serverRoot = expPath(d.mn, d.td, d.en);
 
 if ~exist('data', 'dir'); mkdir('data'); end
-pathData = fullfile('data', append(d.mn, 'pixel', d.td(6:7), d.td(9:10), int2str(d.en), '.mat'));
+% Cache key MUST include the pixel: a session can request more than one pixel
+% (e.g. bilateral left+right in one load). Keying only on session caused the
+% second pixel to load the first pixel's cached trace (2026-07-22 bug: s3 right
+% side served the left-hemisphere trace). Old session-only caches are orphaned
+% and harmless; they simply recompute once under the new per-pixel name.
+pathData = fullfile('data', append(d.mn, 'pixel', d.td(6:7), d.td(9:10), int2str(d.en), ...
+    '_', int2str(round(pixel(1,1))), '_', int2str(round(pixel(1,2))), '.mat'));
 dFk = [];
 
 if exist(pathData, 'file') && r == 1
