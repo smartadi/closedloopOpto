@@ -66,6 +66,7 @@ sessions_def = {
   % 'AL_0048', '2026-06-05',    2,  100,   [NaN NaN],   [NaN NaN];
   'AL_0048', '2026-07-01',    6,   99,   [NaN NaN],   [NaN NaN];  % sine FF-analysis, 4 modes, right side
   'AL_0048', '2026-07-14',    1,  NaN,   [NaN NaN],   [NaN NaN];  % new session; imaging preprocessed, controller CSVs pending
+  'AL_0048', '2026-07-21',    1,  258,   [NaN NaN],   [NaN NaN];  % sine FF-analysis, 4 modes, right side. 258 trials = 7 warm-up + 200 sine (two 100-trial iterations, ONE continuous kk clock, already unified in input_params) + 51 stationary-reference (ff_cond=-1 -> auto-excluded by the mode filter; IGNORED for now per 2026-07-22). ⚠ pixel_R auto-resolves to [153 367], FAR from s2's [410 346] at the SAME galvo target -> almost certainly a flipped/wrong params.pixel; response weak, OL~CL. SET the correct pixel_R here (data-derived stim site) + recompute (r_bil=0) before trusting s3 numbers.
 };
 
 % ---- FF-analysis build column map (2026-07 controller build) -------------
