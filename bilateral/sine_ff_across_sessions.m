@@ -24,7 +24,7 @@ MODE_COLS   = [1.00 0.00 0.00;    % OL       red
                1.00 0.55 0.25;    % OL+prev  orange
                0.00 0.40 0.85;    % CL       blue
                0.00 0.50 0.00];   % CL+prev  green
-SESS_MARK   = {'o','^','s'};      % one marker per session
+SESS_MARK   = 'o';                % same marker for every session (aligned vertically)
 nS = numel(SESS_TAGS); nMode = numel(MODE_CODES);
 
 PS = paperStyle(); setPaperDefaults();
@@ -63,7 +63,6 @@ end
 metrics = {RMSE, VARr, LAG};
 ylabs   = {'Trial RMSE (% dF/F)', 'Across-trial variance', 'Phase lag (\circ)'};
 fnames  = {'sine_combined_rmse.pdf', 'sine_combined_variance.pdf', 'sine_combined_phase.pdf'};
-jit = linspace(-0.14, 0.14, nS);
 
 for p = 1:3
     M = metrics{p};
@@ -75,19 +74,15 @@ for p = 1:3
         yline(ax, 0, 'k-', 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
     end
 
-    % faint paired lines: each session across the 4 modes
+    % faint paired lines: each session across the 4 modes (all at integer x)
     for si = 1:nS
-        plot(ax, (1:nMode)+jit(si), M(si,:), '-', 'Color', [0.6 0.6 0.6 0.45], ...
+        plot(ax, 1:nMode, M(si,:), '-', 'Color', [0.6 0.6 0.6 0.45], ...
             'LineWidth', 0.5, 'HandleVisibility','off');
     end
-    % session points, coloured by mode, marker by session
-    hS = gobjects(1,nS);
-    for si = 1:nS
-        for m = 1:nMode
-            h = plot(ax, m+jit(si), M(si,m), SESS_MARK{si}, 'MarkerSize', 4, ...
-                'MarkerFaceColor', MODE_COLS(m,:), 'MarkerEdgeColor', 'none');
-            if m==1; hS(si)=h; end
-        end
+    % session points — same marker/colour per mode, aligned vertically at each x
+    for m = 1:nMode
+        plot(ax, m*ones(1,nS), M(:,m), SESS_MARK, 'MarkerSize', 4, ...
+            'MarkerFaceColor', MODE_COLS(m,:), 'MarkerEdgeColor', 'none');
     end
     % across-session mean bar per mode
     for m = 1:nMode
@@ -99,7 +94,6 @@ for p = 1:3
     ax.XTick = 1:nMode; ax.XTickLabel = MODE_SHORT; ax.XTickLabelRotation = 30;
     ylabel(ax, ylabs{p}, 'FontSize', PS.fs, 'FontWeight', PS.fw);
     set(ax, 'Box','off', 'TickDir','out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
-    lg = legend(hS, SESS_TAGS, 'Location','best'); paperLegend(lg);
     if EXPORT; paperExport(fig, fullfile(outDir, fnames{p})); end
 end
 
