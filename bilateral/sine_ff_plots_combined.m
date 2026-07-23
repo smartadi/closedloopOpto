@@ -61,12 +61,13 @@ if EXPORT && EXPORT_PNG && ~exist(pngDir,'dir'); mkdir(pngDir); end
 MODE_CODES  = [2 1 3 0];
 MODE_LABELS = {'Open-Loop', 'OL + Preview', 'Closed-Loop', 'CL + Preview'};
 MODE_SHORT  = {'OL', 'OL+p', 'CL', 'CL+p'};   % compact labels for 5G / 5H ticks
-% red family = open loop, green family = closed loop; lighter = +preview
-MODE_COLS   = [1.00 0.00 0.00;
-               1.00 0.55 0.25;
-               0.00 0.50 0.00;
-               0.25 0.75 0.35];
-COL_INP     = [PS.col_inp_ol; 1 0.6 0.9; PS.col_inp_cl; 0.4 0.8 1.0];
+% Per-mode colour code (2026-07-23): OL=red, OL+prev=orange, CL=blue,
+% CL+prev=green (the green CL used to be). Order matches MODE_CODES [2 1 3 0].
+MODE_COLS   = [1.00 0.00 0.00;    % OL       red
+               1.00 0.55 0.25;    % OL+prev  orange
+               0.00 0.40 0.85;    % CL       blue
+               0.00 0.50 0.00];   % CL+prev  green
+COL_INP     = MODE_COLS;   % input command uses each mode's own colour (2026-07-23)
 nMode = numel(MODE_CODES);
 
 nPre = round(PRE*fs); nPost = round((dur+POST)*fs);
