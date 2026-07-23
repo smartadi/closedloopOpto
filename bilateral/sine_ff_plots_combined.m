@@ -67,7 +67,9 @@ MODE_COLS   = [1.00 0.00 0.00;    % OL       red
                1.00 0.55 0.25;    % OL+prev  orange
                0.00 0.40 0.85;    % CL       blue
                0.00 0.50 0.00];   % CL+prev  green
-COL_INP     = MODE_COLS;   % input command uses each mode's own colour (2026-07-23)
+% Input command = fixed gray on every panel (context, not a compared quantity);
+% mode colour is reserved for the response. Drawn solid + bold (2026-07-23).
+COL_INP     = repmat([0.55 0.55 0.55], size(MODE_COLS,1), 1);
 nMode = numel(MODE_CODES);
 
 nPre = round(PRE*fs); nPost = round((dur+POST)*fs);
@@ -123,7 +125,7 @@ for m = 1:nMode
     plot(axA(m), T, zeros(size(T)), 'k', 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
     k = min(EX_TRIAL, nTr(m));
     plot(axA(m), T, INP_SCALE*inps{m}(k,:), 'Color', COL_INP(m,:), ...
-        'LineWidth', PS.lw_inp, 'HandleVisibility','off');
+        'LineWidth', PS.lw_mean, 'HandleVisibility','off');
     plot(axA(m), T, traces{m}(k,:), 'Color', MODE_COLS(m,:), ...
         'LineWidth', PS.lw_mean, 'HandleVisibility','off');
     plot(axA(m), Tref, refPlot, '--k', 'LineWidth', PS.lw_ref, 'HandleVisibility','off');

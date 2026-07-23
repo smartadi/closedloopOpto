@@ -70,7 +70,7 @@ ax_B = axes(fig_A, 'Position', [c2L, bm, cW, axH]);
 hold(ax_A, 'on');
 plot(ax_A, T, zeros(1,length(T)), 'k', 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
 plot(ax_A, tt(k_nc:k2_nc)-tt(k_nc), 5*v(k_nc:k2_nc), ...
-    'Color', colInpOL, 'LineWidth', PS.lw_inp, 'HandleVisibility','off');
+    'Color', colInpOL, 'LineWidth', PS.lw_mean, 'HandleVisibility','off');
 plot(ax_A, T, dFk((i_nc-3*35):(i_nc+35*(dur+3))), ...
     'Color', colOL, 'LineWidth', PS.lw_mean, 'HandleVisibility','off');
 plot(ax_A, Tref, d.ref*ones(1,length(Tref)), '--k', 'LineWidth', PS.lw_ref, 'HandleVisibility','off');
@@ -92,7 +92,7 @@ text(ax_A, 3*dur/4, 7, 'OL Stim', 'Color', colInpOL, ...
 hold(ax_B, 'on');
 plot(ax_B, T, zeros(1,length(T)), 'k', 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
 plot(ax_B, tt(k_wc:k2_wc)-tt(k_wc), 4*v(k_wc:k2_wc), ...
-    'Color', colInpCL, 'LineWidth', PS.lw_inp, 'HandleVisibility','off');
+    'Color', colInpCL, 'LineWidth', PS.lw_mean, 'HandleVisibility','off');
 hOL_s  = plot(ax_B, NaN, NaN, 'Color', colOL, 'LineWidth', PS.lw_mean);
 hCL_s  = plot(ax_B, T, dFk((i_wc-3*35):(i_wc+35*(dur+3))), 'Color', colCL, 'LineWidth', PS.lw_mean);
 hRef_s = plot(ax_B, Tref, d.ref*ones(1,length(Tref)), '--k', 'LineWidth', PS.lw_ref);

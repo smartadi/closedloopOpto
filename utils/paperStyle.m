@@ -27,10 +27,12 @@ PS.sca_lw  = 1.5;   % LineWidth
 PS.sca_gap = 0.05;  % LabelGap
 
 % --- canonical color palette ---
-PS.col_ol     = [1   0   0  ];   % open-loop mean trace
-PS.col_cl     = [0  0.5  0  ];   % closed-loop mean trace
-PS.col_inp_ol = [1   0   1  ];   % OL laser input
-PS.col_inp_cl = [0  0.5  1  ];   % CL laser input
+PS.col_ol     = [1    0    0   ];  % open-loop response  (red)
+PS.col_cl     = [0    0.40 0.85];  % closed-loop response (blue; was green, 2026-07-23)
+% Input command = fixed gray on every panel (context, not a compared quantity);
+% mode colour is reserved for the response. Both OL/CL inputs share the gray.
+PS.col_inp_ol = [0.55 0.55 0.55];  % OL laser input (gray)
+PS.col_inp_cl = [0.55 0.55 0.55];  % CL laser input (gray)
 PS.col_fit    = [0.2 0.4 0.8];   % TF fit / model prediction
 PS.col_zero   = [0   0   0  ];   % zero / reference line
 
