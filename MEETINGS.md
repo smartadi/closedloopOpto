@@ -5,21 +5,29 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 
 ---
 
-## Open Action Items — as of 2026-07-06
+## Open Action Items — as of 2026-07-22
 
-> Reconciled from the 2026-07-06 meeting's own carry-forward list (the authoritative current snapshot). Older figure/analysis items now folded into the residual-framework pivot or confirmed done are recorded in the meeting entries below, not repeated here.
+> Reconciled from the 2026-07-22 meeting's own carry-forward list (the authoritative current snapshot). Older figure/analysis items folded into the residual-framework pivot or confirmed done are recorded in the meeting entries below, not repeated here.
 
 ### State-Dependence / Residual Framework (critical path to bioRxiv)
 - [ ] `2026-07-06.1` Produce **signed** (non-absolute-value) residual-deviation plots to test whether high/low laser response is directionally predictable *(2026-07-06)*
 - [ ] `2026-07-06.2` Add **pre-stimulus-window residual as a control**: verify it is flat across delta-power / variance bins (rules out globally bad prediction as the confound) *(2026-07-06)*
 - [ ] `2026-07-06.3` **Finalize the contralateral predictor mask** (currently a greedy worst-case-pixel, uniform-weight mask), then rerun quartile-binned (Q1–Q4) residual-deviation plots on the updated model before claiming significance *(2026-07-06)*
 - [ ] `2026-07-06.4` Run **significance test on the slope** of residual deviation vs. state variables (delta power, pre-stim variance) using the finalized mask *(2026-07-06)*
+- [ ] `2026-07-17.8` Finalize the **pre-stim prediction-error control figure** (color-coded scatter); verify high-prediction-error trials do NOT cluster at high residual deviations *(2026-07-17)*
 - [ ] `2026-07-02.5` Reconcile the **SFN abstract p-value** claim on state-dependence with the corrected residual analysis *(2026-07-02)*
 - [ ] `2026-06-29.9` Identify laser grid locations with **minimal contralateral spread**; restrict residual analysis to those locations to reduce bleed-through confound *(2026-06-29)*
 - [ ] `2026-06-22.9` Re-run residual (local-only) analysis with the corrected predictor; produce clearly labeled trace + scatter plots; **fix mislabeled axes** (Y previously "motion") *(2026-06-22)*
 - [ ] `2026-06-29.13` Reconcile the impulse state-dependence result in the paper draft; get the paper to a state matching the SFN abstract claims **before posting to bioRxiv** *(2026-06-29)*
 
-### Closed-Loop Analyses (deferred until residual framework is locked)
+### Sine-Wave / Preview Controller (manuscript)
+- [ ] `2026-07-17.1` **Exclude drowsy/outlier trials and recompute per-condition MSE** for the four-mode sine-wave experiment (OL / OL+preview / CL / CL+preview) *(2026-07-17)*
+- [ ] `2026-07-17.2` Repeat sine-wave tracking session(s) with a **water-restricted mouse** for cleaner behavioral state (plan for the water-restriction logistics) *(2026-07-17)*
+- [ ] `2026-05-29.6` Sine-wave/feedforward sessions on new mouse: ≥4 s / ≥4-cycle stimuli, shorter ITIs; full-grid ping characterization before closed-loop *(2026-05-29)*
+
+### Disturbance-Rejection / Closed-Loop Analyses (deferred until residual framework is locked)
+- [ ] `2026-07-22.3` Add an **"open-loop-optimized" reference trace** (contra prediction + average laser effect) to the trial-by-trial residual plots; compute residual flatness in baseline + deviation during stim for OL vs CL *(2026-07-22)*
+- [ ] `2026-07-22.4` **Quantify disturbance rejection per trial**: how much the CL (blue) residual deviates from the OL-optimized reference, related to pre-stim state (delta power, motion) *(2026-07-22)*
 - [ ] `2026-06-03.1` For each CL trial, subtract modeled laser effect (TF fit) → inferred "no-laser" trace; compare variance distribution to actual no-laser trials (add shuffled-subtraction null) *(2026-06-03)*
 - [ ] `2026-06-03.2` Re-do MSE-vs-delta-power plot: OL/CL binned by **pre-stimulus delta-band fraction**; match y-axes across panels *(2026-06-03)*
 - [ ] `2026-06-03.3` Compute instability frequency from full latency distribution (worst-case ~47 ms); plot predicted control degradation vs. input frequency *(2026-06-03)*
@@ -27,17 +35,33 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [ ] `2026-06-03.5` Produce heatmap of CL vs. OL trials, time on x-axis, trials sorted by delta-band fraction (Curto/Issa style) *(2026-06-03)*
 - [ ] `2026-06-03.6` Spatial-spread 2D summary: response **amplitude and onset latency** as joint functions of distance from laser target *(2026-06-03)*
 - [ ] Using the red model (if validated), compute post-hoc **optimal laser sequence** for representative trials; quantify gap vs. actual controller; frame as MPC motivation *(from 2026-05-11)*
-- [ ] `2026-05-29.6` Sine-wave/feedforward sessions on new mouse: ≥4 s / ≥4-cycle stimuli, shorter ITIs; full-grid ping characterization before closed-loop *(2026-05-29)*
 
-### New Mouse — Grid Characterization (excitatory + inhibitory opsin)
-- [ ] `2026-06-29.5` Run additional grid sessions (same mouse, same protocol) to assess reliability of excitatory and midline responses; use **lower excitatory laser power** (below 0.5 V) *(2026-06-29)*
+### Dual-Opsin — Excitatory Hemisphere & Bidirectional Single-Site Control
+- [ ] `2026-07-22.1` **Check motion videos** from excitatory-side grid sessions — is the oscillatory rebound in the impulse response correlated with mouse movement/twitching? (rule out artifact before any PD redesign) *(2026-07-22)*
+- [ ] `2026-07-22.2` **Fit TFs (poles + zeros) to excitatory and inhibitory** hemisphere impulse responses; explicitly quantify the difference in dominant time constants + oscillation frequency *(2026-07-22)*
+- [ ] `2026-07-17.7` Run **impulse-response characterization on the excitatory hemisphere** of the dual-opsin mouse; compare TF to inhibitory side *(2026-07-17)* — subsumed by `2026-07-22.2`
+- [ ] `2026-07-17.5` Ask **Anna Lee** about availability of the **CamKII-C1V1 mouse** (different virus) for closed-loop experiments *(2026-07-17)*
+- [ ] `2026-07-17.6` Identify cortical locations with **overlapping inhibitory + excitatory spatial footprints** from grid maps; attempt a bidirectional single-site control experiment *(2026-07-17)*
+- [ ] `2026-06-29.5` Run additional grid sessions to assess reliability of excitatory and midline responses; use **lower excitatory laser power** (below 0.5 V) *(2026-06-29)*
 - [ ] `2026-06-29.6` Plot grid data as **trials × time matrix** per location to diagnose whether low-response noise is outlier-trial driven; consider median over mean *(2026-06-29)*
 - [ ] `2026-06-29.7` Build **inverse GUI view**: for a clicked widefield location, show the response trace for all 52 stim positions (find bidirectional-control candidates) *(2026-06-29)*
 - [ ] `2026-06-29.8` Share additional grid sessions with **Dana** once collected *(2026-06-29)*
 - [ ] `2026-06-22.7` Add the excitatory-opsin **spatial-localization result** (hemisphere-contained excitation) to the widefield opto paper *(2026-06-22)*
 
-### Motorized Treadmill
-- [ ] `2026-07-06.6` Post identified motor specs (model, torque, cost, controller) to the **treadmill Slack channel** for Nick/Matt/Alice *(2026-07-06)*
+### Cortical Dynamics Theory (local vs. sub-cortical generation) — NEW, keep discussion-scope only
+- [ ] `2026-07-17.10` Write down the framing anchor: **"Are mesoscale cortical dynamics locally generated or sub-cortically imposed?"** — key empirical constraint is OL suppression shifts the mean but NOT the variance of fluctuations *(2026-07-17)*
+- [ ] **Forecast test (AI-flagged, existing data):** fit AR/VAR on baseline widefield; at opto onset forecast from raw (suppressed) level vs zero-mean-shifted level; better method reveals level-relative vs absolute dynamics *(2026-07-17)*
+
+### Spike Sorting / Closed-Loop Ephys — NEW
+- [ ] `2026-07-22.5` **Validate the Python spike-sorting re-implementation** (~50 ms latency); once validated, reach out to the original author (Streams) to share results *(2026-07-22)*
+- [ ] `2026-07-22.6` Coordinate with Nick + lab to **define the target closed-loop ephys experiment**: probe type, opsin/mouse availability, manipulation modality *(2026-07-22)*
+
+### Grid Calibration / Rig Visualization — NEW
+- [ ] `2026-07-22.7` Discuss with **Anna & Fabio** a software fix to **overlay grid points on the brain image** (Pylon frame) live during experiments, accounting for Bregma/Lambda calibration *(2026-07-22)*
+
+### Motorized Treadmill / Passive Wheel
+- [ ] `2026-07-17.3` **Place the passive running wheel** (no motor needed) in the imaging rig now to promote desynchronized trials; add rotary encoder when feasible *(2026-07-17)*
+- [ ] `2026-07-06.6` / `2026-07-17.4` Post identified motor specs (model, torque, cost, controller) to the **treadmill Slack channel** for Nick/Matt/Alice *(2026-07-06 → 2026-07-17)*
 - [ ] `2026-07-06.7` Check existing lab **power supplies** (variable-voltage adapters) for ≥3× peak-motor-current rating before buying a new one *(2026-07-06)*
 - [ ] `2026-06-29.2` Add **rotary encoder mount** to the wheel base (reprint or clamp); confirm encoder wiring to Arduino *(2026-06-29)*
 - [ ] `2026-06-29.3` When Alice returns (fall), supervise fixture redesign for motorized/clutch version *(2026-06-29)*
@@ -47,6 +71,7 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [ ] Run open-loop controller sessions and **save stimulus/response data** for the upcoming mouse(es) *(from 2026-05-08)*
 
 ### Nick's Items (not Aditya's)
+- [ ] `2026-07-17.9` **Nick**: Simulate an **inhibitory DC input into the Kurtow & Harris model**; check whether output variance is preserved (tests whether that model class is consistent with the variance-flat observation) *(2026-07-17)*
 - [ ] `2026-06-29.4` **Nick**: Confirm with Annie whether she wants to contribute to the treadmill hardware project *(2026-06-29)*
 - [ ] `2026-06-29.12` **Nick**: Confirm protocol-amendment approval; notify Aditya when Alex can handle mice *(2026-06-29)*
 
@@ -56,6 +81,43 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 ---
 
 ## Meeting Entries
+
+---
+
+### 2026-07-22
+**Source:** `C:\Users\aditya\OneDrive\Notes\Adick meetings\Jul 22nd.md`
+
+**Overview:** Sine-wave tracking on the dual-opsin mouse (inhibitory hemisphere, 3 sessions) — preview compensation improves phase alignment but not MSE meaningfully. The **excitatory hemisphere shows markedly different impulse dynamics** from the inhibitory side: faster decay + pronounced rebound oscillation → dominant second-order dynamics, implying a derivative (PD) term is needed in any controller for that side. Nick flagged the excitatory rebound may be **motion artifact** (mouse twitching to stim); Aditya has video but hasn't checked. Walked through the trial-by-trial residual framework (orange = contra prediction, black = actual, blue = residual); Nick proposed adding an **"open-loop-optimized" reference** (orange + average laser effect) as a third comparison line to rigorously isolate CL gain over OL. Aditya has a **Python spike-sorting re-implementation** (~50 ms latency, from a collaborator's C++ repo, re-written with Claude) — discussion of closed-loop ephys viability + which manipulation/mouse line. Grid calibration: wants a **live grid-point overlay** on the brain image to catch edge/midline placement; Nick suggested looping in Anna and Fabio.
+
+**Key decisions:**
+- Add the **OL-optimized reference** (contra prediction + average laser effect) to the residual plots; quantify CL disturbance rejection as deviation of the blue residual from that reference, related to pre-stim state (delta, motion)
+- **Rule out motion artifact** for the excitatory rebound BEFORE any PD-controller redesign
+- **Fit TFs (poles + zeros) to both hemispheres**; quantify difference in dominant time constants + oscillation frequency
+- Spike-sorting: **validate first**, then contact the original author (Streams); define the target ephys experiment (probe / opsin / manipulation) with the lab
+
+**AI analysis flags (from transcript):**
+- Excitatory rebound is not necessarily network recurrence: **C1V1's slow off-kinetics (~100 ms)** can produce a post-excitation rebound via residual depolarization block — weigh alongside the motion-artifact check before redesigning the controller
+- 50 ms spike-sorting latency is only ~2× widefield's ~28 ms/frame — confirm sorting latency (not the neural signal / population averaging) is the actual bottleneck before investing further in the ephys pipeline
+
+---
+
+### 2026-07-17
+**Source:** `C:\Users\aditya\OneDrive\Notes\Adick meetings\Jul 17th.md`
+
+**Overview:** Sine-wave tracking with **four controller modes** (OL, OL+preview, CL, CL+preview) — preview-compensated versions give the best phase alignment (~5-frame / 51° lag correction) with reduced MSE, though drowsy-trial tail variability inflates variance. Nick suggested placing the **passive (no-motor) running wheel** in the rig immediately to promote desynchronized state (encoder later). Bidirectional single-site control via the dual-opsin mouse discussed (find sites with overlapping inhib + excit footprints). For the manuscript, Aditya showed a **color-coded scatter to rule out pre-stim prediction error** as a confound for the state-dependence result — Nick agreed it's needed. Extended theory discussion: OL suppression **shifts the mean of ongoing fluctuations but NOT their variance** → raises whether mesoscale dynamics are locally generated or sub-cortically imposed. Nick proposed simulating an inhibitory input into the **Kurtow & Harris** model to test whether it predicts variance preservation.
+
+**Key decisions:**
+- **Exclude drowsy/outlier trials and recompute per-condition MSE** for the four-mode experiment; repeat with a water-restricted mouse for cleaner state
+- Finalize the **pre-stim prediction-error control figure** (verify high-prediction-error trials don't cluster at high residual deviations)
+- Run impulse characterization on the **excitatory hemisphere**; compare TF to inhibitory side
+- **Deploy the passive wheel now** (encoder attachment later)
+- Nick to simulate inhibitory DC input into Kurtow & Harris; keep the **local-vs-subcortical question as a discussion-section anchor**, not a new experiment arc
+
+**AI analysis flags (from transcript):**
+- **Forecast test** as a direct empirical probe: fit AR/VAR on baseline widefield, at opto onset forecast from both the raw (suppressed) level and the zero-mean-shifted level; if the shifted forecast tracks the actual post-stim trace better, it supports "sub-cortical drive + additive laser effect" WITHOUT needing the Kurtow & Harris sim — doable on existing data
+- **Single-subject sine-wave data** (one mouse) is insufficient for statistical claims; prioritize water restriction / C1V1 mouse before these appear in a figure
+- **Scope-creep risk:** agree explicitly to keep the sub-cortical dynamics question as a discussion argument, not a new experiment set
+- "Joanne's paper on cortical propagation" mentioned but not cited by name — retrieve + cite precisely (possibly Huo et al.)
 
 ---
 

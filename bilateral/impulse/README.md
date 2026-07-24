@@ -82,14 +82,20 @@ the **peak** metric. Both are reported: `impulse_dose_response_peak.png` (headli
 
 ## Contra→ipsi stim-blind OLS (`impulse_ols.py` + `run_ols.py`) — added 2026-07-16
 Port of the impulse-analysis residual framework (`impulse-analysis/ols_tf_pipeline.m`:
-`local_stimblind_session` + `native_project`) to this module. Isolates the LOCAL stim effect at
-each site as the residual of a spontaneous-trained contra→ipsi predictor whose weights are
-projected BLIND to the stim-coupling subspace:
+`local_stimblind_session` + `select_wlasso`/`cd_lasso`) to this module. Isolates the LOCAL stim
+effect at each site as the residual of a spontaneous-trained contra→ipsi predictor built to be
+stim-blind:
 ```
 Actual = ya            (measured peri-onset ipsi trace, focal pixel, %dF/F)
-Global = bN' · evZ     (stim-blind contra prediction = ongoing network state into the ipsi kernel)
+Global = b' · evZ      (sparse distal contra prediction — carries the honest LEAK)
 Local  = ya − Global   (residual = the isolated local stim effect)
 ```
+**Model = §17d [STIMBLIND-SELECT]** (sole model since NATIVE was retired upstream 2026-07-18):
+keep the stim-UNAFFECTED contra px, then fit the spont OLS with an L1 penalty that GROWS toward
+the ipsi site (`select_l1frac=0.15`, `select_pen_near=2.0`, `select_pen_far=0.2`), so surviving
+predictors are FEW and FAR from the site. There is NO dip-blinding constraint, so Global measures
+a real leak. ⚠ The retired NATIVE KKT model zeroed the predicted dip by construction — its ~100%
+"capture" was guaranteed, not a finding. Do not reintroduce it.
 Dual-opsin twist: each trial stims ONE hemisphere, so the OTHER is the unstimulated contra
 predictor. Run per side → excit (left, +) & inhib (right, −) local effects in one session.
 
@@ -104,11 +110,38 @@ Run: `.venv/Scripts/python.exe bilateral/impulse/run_ols.py` → `bilateral/impu
   against its undershoot in the mean (peak_mode=3 dilutes it), exactly as for the dose-response.
 - Contra grid = **bregma-midline hemisphere split** (`build_contra_grid`), no hand-drawn ROI.
 
-**First-pass result (single session):** spont contra→ipsi R² = 0.95 (excit) / 0.99 (inhib),
-comparable to AL_0033. Local residual recovers the dose-graded per-side deflection (excit peak
-→ +2.0 %; inhib peak → −1.1 % at 2.5 V) while Global stays stim-blind (~flat) → the local stim
-effect is NOT explained by contra/global state, opposite-sign in the same animal. Mid-amps
-(1.0–1.5 V) near-threshold/noisy; inhib 1.0 V over-flags bled px and Global absorbs part of the dip.
+**Brain mask (REQUIRED first step).** The contra grid is built from the hand-drawn ROI —
+see `brain_mask.py` and draw it once per session before running:
+```bash
+.venv/Scripts/python.exe bilateral/impulse/brain_mask.py    # outline + 2 midline pts -> masks/*.json
+```
+⚠ Do NOT fall back to a bare intensity threshold: `mimg > percentile(mimg, 20)` keeps 80 % of the
+frame BY CONSTRUCTION and sweeps the ventral/skull band in as contra predictors (RESEARCH
+2026-07-21). `thr_pctile` is only a floor applied INSIDE the drawn outline.
+
+**Result (single session, SELECT, peak-based capture/leak — the valid readout).**
+Mask QC: brain 192 537 px (61 % of frame), contra/ipsi 95 521/97 016 (balanced 48/52 % →
+midline well placed). Spont contra→ipsi R² = **0.986** (excit) / **0.993** (inhib) on the full
+grid (455/471 nodes); the sparse SELECT fit keeps only **2–8 predictors** (predR² 0.66–0.74).
+
+| side | capture | leak | reading |
+|---|---|---|---|
+| left / excitatory | **90 %** | 10 % | local effect is spatially CONFINED — distal px are ~stim-blind |
+| right / inhibitory | **61 %** | 39 % | dip PROPAGATES — ~40 % is predictable from far contra px |
+
+The inhibitory leak is **dose-graded** (Global peak −0.49 → −0.84 across amps), so it is genuine
+stim propagation, not predictor noise. This excit-confined vs inhib-broad asymmetry is the
+headline dual-opsin claim, and it lines up with AL_0033 `[CP-STIMAFF]` ("~95% of contra
+co-suppresses = network coupling"). **Not yet replicated** (n=1 session).
+
+⚠ Open caveats (in priority order):
+1. **Extreme sparsity** — nActive 2–8. Inhib 2.5 V selects just **2** predictors yet leaks 71 %;
+   either genuine broad propagation or the bled detector failing to exclude stim-affected px.
+2. **L1 shrinkage** — `select_wlasso` does not debias, so Global is shrunk → capture is an
+   UPPER bound (same bias upstream in MATLAB §17d).
+3. **Bled-detector instability** — per-amp drop counts non-monotonic (excit 247/87/57/31/222).
+4. Exclude **inhib 1.5 V** and **excit 0.5 V** (near-threshold, Actual≈0 → ratios blow up);
+   both flagged `!` in the runner output.
 
 ## Open items / next steps
 - **Recover the sham (amp 0) catch condition** — it fires no laser so it is absent from the

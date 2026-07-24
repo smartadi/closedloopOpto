@@ -1,11 +1,22 @@
 """impulse_ols.py — contra->ipsi stim-blind OLS predictor for the AL_0048 dual-opsin session.
 
 Python port of the impulse-analysis MATLAB pipeline (`ols_tf_pipeline.m`:
-`local_stimblind_session` + `native_project`) into the bilateral/impulse module. Isolates the
-LOCAL stim effect at each photostim site as the residual of a spontaneous-trained contra->ipsi
-predictor whose weights are projected BLIND to the stim-coupling subspace, so the residual
-carries the full evoked deflection (the "Local" component), while the prediction carries only
-ongoing network state flowing into the ipsi kernel (the "Global" component).
+`local_stimblind_session` + `select_wlasso`/`cd_lasso`) into the bilateral/impulse module.
+Isolates the LOCAL stim effect at each photostim site as the residual of a spontaneous-trained
+contra->ipsi predictor built to be stim-blind, so the residual carries the evoked deflection
+(the "Local" component) while the prediction carries ongoing network state flowing into the ipsi
+kernel (the "Global" component).
+
+MODEL = §17d [STIMBLIND-SELECT]: keep the stim-UNAFFECTED contra pixels (per-amp bled map), then
+fit the spontaneous OLS with an L1 penalty that GROWS toward the ipsi stim site, so the surviving
+predictors are FEW and FAR from the site (least stim-contaminated). There is NO dip-blinding
+constraint, so Global is an HONEST LEAK: the residual captures the dip only insofar as those
+distal predictors are genuinely stim-blind.
+
+  [RETIRED 2026-07-18, upstream] The former §17b NATIVE KKT predictor (keep ALL unaffected px and
+  zero the predicted dip by an equality constraint on a blind subspace) was removed upstream and
+  is NOT ported here: it cancelled the dip BY CONSTRUCTION, so its ~100% dip capture was
+  guaranteed rather than informative. SELECT's capture/leak split is the meaningful readout.
 
 Dual-opsin twist: every trial stims ONE hemisphere, so the OTHER hemisphere is the unstimulated
 "contra" predictor of global state on that trial. Run per side -> excitatory (left, +dF/F) and
@@ -40,10 +51,12 @@ class OLSConfig:
     pre_s: float = 0.5       # peri-onset pre window (baseline)
     post_s: float = 1.0      # peri-onset post window
     dip_win_s: float = 0.300  # inhibition/excitation energy window (data-driven, S15 SETTLETIME)
-    n_blind: int = 4         # # blind sub-windows for the KKT stim-subspace projection
     bc_z_thr: float = 1.28   # bled-pixel z threshold (LOWER = more contra px dropped)
-    thr_pctile: float = 20   # brain-mask percentile on the mean image
-    midline_margin_mm: float = 0.5  # gutter (mm) excluded either side of the bregma midline
+    # --- SELECT (§17d) sparse, distance-weighted stim-blind fit -------------------------
+    select_l1frac: float = 0.15   # L1 strength (fraction of max|rescaled Z'y|); higher = sparser
+    select_pen_near: float = 2.0  # L1 weight AT the ipsi site (expensive -> near px dropped)
+    select_pen_far: float = 0.2   # L1 weight at the FARTHEST px (cheap -> far px retained)
+    thr_pctile: float = 20   # intensity FLOOR inside the drawn outline (not a mask on its own)
     n_boot_couple: int = 200
     n_boot_bled: int = 300
     max_base_trl: int = 500  # cap on 0V pseudo-catch onsets
@@ -68,30 +81,18 @@ def _onsets_in_movie(svd_t, start_t, pre_n, post_n, n_frames):
     return onf[keep]
 
 
-def build_contra_grid(mimg, bregma_px, site_xy, cfg):
-    """Eroded, subsampled grid over the CONTRA hemisphere (opposite the photostim site).
+def build_contra_grid(mask, cfg):
+    """Eroded, subsampled grid over a given CONTRA mask (uniform lattice, ~n_grid nodes).
 
-    Brain mask = mimg above `thr_pctile`; hemispheres split at the bregma x-midline with a
-    `midline_margin_mm` gutter; contra = the side NOT containing the site. Mirrors the MATLAB
-    grid build (uniform eroded lattice, ~n_grid nodes) but derives the mask from the midline
-    rather than a hand-drawn ROI.
+    `mask` is the hand-drawn contra hemisphere from `brain_mask.get_masks` — the project's
+    single source of truth for this ROI. (Previously this function derived its own mask by
+    thresholding + a bregma-x split; that was NOT a brain mask — `mimg > percentile(mimg, 20)`
+    keeps 80% of the frame by construction and swept in the ventral/skull band. See RESEARCH
+    2026-07-21.)
 
     Returns (rows, cols) integer pixel arrays of the kept grid nodes.
     """
-    ny, nx = mimg.shape
-    thr = np.percentile(mimg, cfg.thr_pctile)
-    brain = mimg > thr
-
-    mid_x = bregma_px[0]
-    margin_px = cfg.midline_margin_mm * PX_PER_MM_X_REF
-    site_left = site_xy[0] < mid_x            # site on the left (smaller x) side of midline
-    xx = np.arange(nx)[None, :] * np.ones((ny, 1))
-    if site_left:                             # contra = right hemisphere
-        hemi = xx > (mid_x + margin_px)
-    else:                                     # contra = left hemisphere
-        hemi = xx < (mid_x - margin_px)
-    mask = brain & hemi
-
+    ny, nx = mask.shape
     rC, cC = np.where(mask)
     rmn, rmx, cmn, cmx = rC.min(), rC.max(), cC.min(), cC.max()
     d = max(1, int(round(np.sqrt(mask.sum() / cfg.n_grid))))
@@ -116,10 +117,6 @@ def build_contra_grid(mimg, bregma_px, site_xy, cfg):
         if not blk.all():
             keep[g] = False
     return gr[keep], gc[keep]
-
-
-# module-level px/mm for the midline gutter (set by the runner from the shared grid config)
-PX_PER_MM_X_REF = 1.0
 
 
 def _recon(u_grid, v_cols):
@@ -153,31 +150,50 @@ def _peri_z(u_grid, V, mu_p, sd_p, onf, rel, pre_n):
     return ev, z
 
 
-def _native_project(n_blind, ev_z, ya, dip_cols, stim_cols, S, dG_inv, b0, pre_n, wb,
-                    yte, muY, Zte, sstot):
-    """NATIVE stim-blind KKT projection (port of native_project).
-
-    Split the coupling window `stim_cols` into `n_blind` sub-windows, blind the prediction to
-    each sub-window's mean evoked contra direction, return constrained weights + Global/residual
-    traces + held-out R^2. `dG_inv` is a callable solving G[S,S] x = rhs.
+def cd_lasso(G, c, dg, lam1, lam2=0.0, max_iter=400):
+    """Coordinate-descent ELASTIC NET (port of cd_lasso):
+        min_b  1/2||y - Z b||^2 + lam1*||b||_1 + (lam2/2)*||b||_2^2
+    from precomputed G = Z'Z, c = Z'(y - mean(y)), dg = diag(G). lam2=0 -> pure lasso.
     """
-    edg = np.round(np.linspace(0, stim_cols.size, n_blind + 1)).astype(int)
-    D = np.zeros((S.size, n_blind))
-    for q in range(n_blind):
-        cc = stim_cols[edg[q]:edg[q + 1]]
-        if cc.size:
-            D[:, q] = ev_z[np.ix_(S, cc)].mean(1)
-    D = D[:, np.any(np.abs(D) > 0, axis=0)]
-    if D.size:
-        GD = dG_inv(D)                                    # G[S,S]^-1 D
-        bN = b0 - GD @ (np.linalg.pinv(D.T @ GD) @ (D.T @ b0))
-    else:
-        bN = b0.copy()
-    yg = ev_z[S, :].T @ bN
-    yg = yg - yg[:pre_n].mean()
-    rL = ya - yg
-    r2sb = 1 - np.sum((yte - (muY + Zte[:, S] @ bN)) ** 2) / sstot
-    return bN, yg, rL, r2sb
+    p = c.size
+    b = np.zeros(p)
+    Gb = np.zeros(p)
+    for _ in range(max_iter):
+        maxd = 0.0
+        for j in range(p):
+            rj = c[j] - Gb[j] + dg[j] * b[j]              # partial residual for coord j
+            bj = np.sign(rj) * max(abs(rj) - lam1, 0.0) / (dg[j] + lam2)
+            dbj = bj - b[j]
+            if dbj != 0.0:
+                Gb += G[:, j] * dbj
+                b[j] = bj
+                if abs(dbj) > maxd:
+                    maxd = abs(dbj)
+        if maxd < 1e-6 * max(1.0, np.max(np.abs(b))):
+            break
+    return b
+
+
+def select_wlasso(G, c, S, gamma, l1frac, lamR):
+    """SELECT model (port of select_wlasso): sparse, DISTANCE-WEIGHTED spont contra->ipsi fit
+    restricted to predictor set S:
+        min_b ||y - Z_S b||^2 + lam1 * sum_i (1/gamma_i)|b_i| + lam2||b||^2
+    The 1/gamma_i penalty GROWS toward the ipsi site (gamma small near, large far), so near-ipsi
+    predictors are expensive (dropped) and far ones cheap (retained) -> few predictors, all FAR
+    from ipsi. Solved by column-rescaling b_i = gamma_i a_i, turning the weighted L1 into a
+    UNIFORM lasso in a.
+    """
+    b = np.zeros(G.shape[0])
+    if S.size == 0:
+        return b
+    g = gamma[S]
+    Gs = np.outer(g, g) * G[np.ix_(S, S)]                 # Z~'Z~ with Z~ = Z_S diag(g)
+    cs = g * c[S]
+    dgs = np.diag(Gs).copy()
+    lam1 = l1frac * np.max(np.abs(cs))                    # L1 scaled to the rescaled target
+    a = cd_lasso(Gs, cs, dgs, lam1, lamR)
+    b[S] = g * a                                          # undo the rescale
+    return b
 
 
 # ------------------------------------------------------------------ per-side engine
@@ -277,17 +293,18 @@ def stimblind_side(S, focal_px, sign, cfg, verbose=True):
     blk0_pct, m0 = _peri_block(u_grid, mi_grid, V, onf0, rel, pre_n)           # 0V baseline
     m_resp = np.full((n_g, wb, n_a), np.nan)
     ev_z = np.full((n_g, wb, n_a), np.nan)
-    ya_by_amp, blk_ipsi_by_amp = [], []
+    ya_by_amp, blk_ipsi_by_amp, z_by_amp = [], [], []
     nT_amp = np.zeros(n_a, dtype=int)
     for ai, a in enumerate(amps):
         onf = onf_by_amp[ai]
         nT_amp[ai] = onf.size
         if onf.size == 0:
-            ya_by_amp.append(None); blk_ipsi_by_amp.append(None); continue
+            ya_by_amp.append(None); blk_ipsi_by_amp.append(None); z_by_amp.append(None); continue
         _, m_amp = _peri_block(u_grid, mi_grid, V, onf, rel, pre_n)
         m_resp[:, :, ai] = m_amp - m0
-        evz, _ = _peri_z(u_grid, V, mu_p, sd_p, onf, rel, pre_n)
+        evz, zblk = _peri_z(u_grid, V, mu_p, sd_p, onf, rel, pre_n)
         ev_z[:, :, ai] = evz
+        z_by_amp.append(zblk.astype(np.float32))   # (nG, Wb, nT) for single-trial predictions
         # ipsi actual peri-onset (per-trial then trial-avg), %dF/F
         idx = (onf[:, None] + rel[None, :]).ravel()
         yblk = ((spat @ V[idx].T) / mi_ipsi * 100.0).reshape(onf.size, wb)
@@ -336,47 +353,68 @@ def stimblind_side(S, focal_px, sign, cfg, verbose=True):
         z = (e_dip[:, ai] - nd.mean(1)) / np.maximum(nd.std(1), 1e-12)
         bled[:, ai] = z > cfg.bc_z_thr
 
-    # --- NATIVE stim-blind projection per amp -------------------------------------------
+    # --- SELECT (§17d) sparse, DISTANCE-WEIGHTED stim-blind fit per amp -------------------
+    # L1 penalty grows toward the ipsi site -> few predictors, all FAR from it. No dip-blinding,
+    # so Global is an HONEST LEAK. Distance in ARRAY coords (display orientation is an isometry).
+    lamR = cfg.lam_rel * np.mean(np.diag(G))
+    selD = np.hypot(gc - focal_px[0], gr - focal_px[1])   # focal_px = (x=col, y=row)
+    selDn = (selD - selD.min()) / max(selD.max() - selD.min(), 1e-12)
+    gammaS = 1.0 / (cfg.select_pen_near * (1 - selDn) + cfg.select_pen_far * selDn)
+
     sstot = max(np.sum((y_sp_te - y_sp_te.mean()) ** 2), 1e-12)
     A_dip = np.full(n_a, np.nan); G_dip = np.full(n_a, np.nan); L_dip = np.full(n_a, np.nan)
-    r2_clean = np.full(n_a, np.nan); n_drop = np.zeros(n_a, dtype=int)
+    r2_clean = np.full(n_a, np.nan)
+    n_drop = np.zeros(n_a, dtype=int); n_active = np.zeros(n_a, dtype=int)
     trA, trG, trL, b_clean = [], [], [], []
+    pred_by_amp, resid_by_amp = [], []      # single-trial (nT, Wb) prediction + residual
     for ai in range(n_a):
         onf = onf_by_amp[ai]
         if onf.size == 0 or np.all(np.isnan(ev_z[:, :, ai])):
-            trA.append(None); trG.append(None); trL.append(None); b_clean.append(None); continue
-        active = ~bled[:, ai]
+            trA.append(None); trG.append(None); trL.append(None); b_clean.append(None)
+            pred_by_amp.append(None); resid_by_amp.append(None); continue
+        active = ~bled[:, ai]                             # keep stim-UNAFFECTED px
         if active.sum() < 5:
             active = np.ones(n_g, dtype=bool)
         Sset = np.where(active)[0]
         n_drop[ai] = n_g - Sset.size
-        Gss = G[np.ix_(Sset, Sset)] + cfg.lam_rel * np.mean(np.diag(G)) * np.eye(Sset.size)
-        Gss_lu = np.linalg.inv(Gss)          # small (|active| x |active|); reused for b0 + GD
-        b0 = Gss_lu @ cz[Sset]
         ya = ya_by_amp[ai]
-        bN, yg, rL, r2sb = _native_project(
-            cfg.n_blind, ev_z[:, :, ai], ya, dip_cols, cpl_cols, Sset,
-            lambda M, _M=Gss_lu: _M @ M, b0, pre_n, wb, y_sp_te, muY, Zte, sstot)
-        r2_clean[ai] = r2sb
-        bfull = np.zeros(n_g); bfull[Sset] = bN; b_clean.append(bfull)
+        bfull = select_wlasso(G, cz, Sset, gammaS, cfg.select_l1frac, lamR)
+        n_active[ai] = int(np.count_nonzero(bfull))
+        yg = ev_z[:, :, ai].T @ bfull                     # Global = sparse distal prediction
+        yg = yg - yg[:pre_n].mean()
+        rL = ya - yg                                      # Local = residual (carries the dip)
+        r2_clean[ai] = 1 - np.sum((y_sp_te - (muY + Zte @ bfull)) ** 2) / sstot
+        b_clean.append(bfull)
         trA.append(ya); trG.append(yg); trL.append(rL)
         A_dip[ai] = ya[dip_cols].mean(); G_dip[ai] = yg[dip_cols].mean(); L_dip[ai] = rL[dip_cols].mean()
+        # single-trial stim-blind prediction + residual (the DV the state-dep stage operates on)
+        ptr = np.einsum("g,gwt->tw", bfull, z_by_amp[ai].astype(np.float64))
+        ptr = ptr - ptr[:, :pre_n].mean(1, keepdims=True)
+        pred_by_amp.append(ptr)
+        resid_by_amp.append(blk_ipsi_by_amp[ai] - ptr)
 
     med_local_pct = np.nanmedian(100 * L_dip / A_dip)
+    med_leak_pct = np.nanmedian(100 * G_dip / A_dip)
     if verbose:
-        print(f"    grid nodes={n_g}  spont R2(full)={r2_ols:.3f}  "
-              f"couple_win={couple_win_s*1000:.0f}ms  medLocal%={med_local_pct:.0f}")
+        print(f"    grid nodes={n_g}  spont R2(full)={r2_ols:.3f}  couple_win={couple_win_s*1000:.0f}ms"
+              f"  medCapture={med_local_pct:.0f}%  medLeak={med_leak_pct:.0f}%"
+              f"  nActive={n_active.min()}-{n_active.max()}")
 
     return dict(
         amps=amps, rel=rel, fs=fs, pre_n=pre_n, sign=sign,
         Actual=A_dip, Global=G_dip, Local=L_dip,
         trA=trA, trG=trG, trL=trL,
-        r2_ols=r2_ols, r2_clean=r2_clean, n_drop=n_drop, n_g=n_g,
-        med_local_pct=med_local_pct, dip_cols=dip_cols, cpl_cols=cpl_cols,
+        r2_ols=r2_ols, r2_clean=r2_clean, n_drop=n_drop, n_active=n_active, n_g=n_g,
+        med_local_pct=med_local_pct, med_leak_pct=med_leak_pct,
+        selD=selD, gammaS=gammaS, dip_cols=dip_cols, cpl_cols=cpl_cols,
         couple_win_s=couple_win_s, null_win_s=null_win_s,
         b_ols=b_ols, b_clean=b_clean, bled=bled, grid_rc=(gr, gc),
         blk_ipsi_by_amp=blk_ipsi_by_amp, ev_z=ev_z, mu_p=mu_p, sd_p=sd_p,
         nT_amp=nT_amp, focal_px=focal_px,
+        pred_by_amp=pred_by_amp, resid_by_amp=resid_by_amp,
+        # held-out spontaneous prediction (what r2_ols / r2_clean actually mean)
+        y_te=y_sp_te, yhat_te_ols=yhat_te,
+        yhat_te_select=(muY + Zte @ b_clean[-1]) if b_clean and b_clean[-1] is not None else None,
     )
 
 
