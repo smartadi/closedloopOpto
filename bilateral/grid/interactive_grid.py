@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 """interactive_grid.py — interactive perturbation-response explorer over the brain.
 
-TWO-CLICK FLOW — click 1 picks the STIM site, click 2 picks the READOUT site:
-  • SELECTOR (plain brain map): click a node X -> X becomes the stim site.
+TWO-CLICK FLOW — click 1 picks the STIM site, click 2 picks the READOUT:
+  • SELECTOR (plain brain map): LEFT-click a node X -> X becomes the stim site.
+    RIGHT-click ANYWHERE on this map -> readout at that PIXEL (not restricted to the 52
+    nodes): the pair inspector opens in pixel mode, fitting that ROI on the fly from the
+    cached SVD basis and showing the full-frame dF/F snapshot with the ROI marked.
   • EFFERENT (brain map of traces): every site shows H[X, ·], the trial-mean dF/F response
     to stimulating X (thick blue), ±2 SD band (faint), TF prediction (orange), model-order
     label, red stim line at t=0. Poles/zeros printed to the console. Then click any node Y:
@@ -11,6 +14,10 @@ TWO-CLICK FLOW — click 1 picks the STIM site, click 2 picks the READOUT site:
         this pair's place in the population dose-response.
       - shift-click  -> TRIALS: 10×5 grid of every single trial for (X -> Y) at the display
         amplitude, trial mean overlaid — the averaging check.
+
+  • FIELD MAPS (press `m`): for the current stim site, three brain maps side by side —
+    signed matched-time dF/F, dominant time constant, and peak latency at every readout.
+    Unreliable readouts (CV-R² ≤ 0) are drawn hollow.
 
 Amplitude: the 2026-07-10 grid ran TWO laser powers [1.0, 2.0]. The brain maps draw ONE of
 them (default the highest, `--amp 1.0` to switch, or press `a` to toggle live); the pair
@@ -45,7 +52,8 @@ import matplotlib.patheffects as pe
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cross_response as cr
-from pair_inspector import PairInspector, poles_zeros   # poles_zeros lives with the TF algebra
+import tf_fit
+from pair_inspector import PairInspector, poles_zeros, dominant_tau   # TF algebra lives there
 
 DATA = Path(__file__).resolve().parents[2] / "data"
 TF_CACHE = DATA / "grid_tf_fits_2amp.npz"     # per-amp independent fits (tf_fit.py 2amp)
@@ -195,7 +203,8 @@ def main():
             sel["ring"].remove()
         sel["ring"] = sel["ax"].scatter([px[X, 0]], [px[X, 1]], s=240, facecolors="none",
                                         edgecolors="yellow", linewidths=2.6, zorder=4)
-        t = sel["fig"].suptitle(f"SELECT stim site — clicked {coord(X)}  (efferent map updates)",
+        t = sel["fig"].suptitle(f"STIM SITE {coord(X)} — left-click a node to change,  "
+                                f"RIGHT-CLICK any pixel to read out there",
                                 fontsize=12, color="white", y=0.99)
         t.set_path_effects(ST)
         sel["fig"].canvas.draw_idle()
@@ -208,7 +217,7 @@ def main():
 
     effv = build_brain()
     sel = build_selector()
-    views = {"trials": None, "pair": None}
+    views = {"trials": None, "pair": None, "fields": None}
     X0 = int(np.nanargmax(np.abs(D["gain"][np.arange(nS), np.arange(nS)])))
     state = {"X": X0, "Y": None, "live": False}
 
@@ -222,11 +231,71 @@ def main():
                rel_fn=lambda j: D["cvr2"][X, j])
         report(X)
 
-    def show_pair(s, r):
-        """Open/refresh the full two-amplitude inspector for this (stim, readout) pair."""
+    def inspector():
         if views["pair"] is None:
             views["pair"] = PairInspector(xlim=XLIM, trials=tz, live=state.get("live", False))
-        views["pair"].show(s, r, D["ai"])
+        return views["pair"]
+
+    def show_pair(s, r):
+        """Open/refresh the full two-amplitude inspector for this (stim, readout) pair."""
+        inspector().show(s, r, D["ai"])
+
+    def show_pixel(s, cx, cy):
+        """Same inspector, but the readout is an arbitrary PIXEL rather than a grid node."""
+        try:
+            inspector().show_pixel(s, cx, cy, D["ai"])
+        except FileNotFoundError as e:
+            print(f"[pixel mode unavailable] {e}")
+
+    def field_maps(X):
+        """Three brain maps for stim site X: matched-time gain, dominant tau, peak latency.
+
+        Matched time = each readout's own |peak| time inside the fit window, so the gain map
+        cannot mix the excitatory and suppression lobes (see pair_inspector.matched_time).
+        """
+        fit = (window >= 0) & (window <= tf_fit.FIT_TMAX)
+        ixf = np.where(fit)[0]
+        Hx = D["H"][X]                                        # (nS, nW)
+        k = np.nanargmax(np.abs(np.nan_to_num(Hx[:, fit])), axis=1)
+        ix = ixf[k]
+        gm = Hx[np.arange(nS), ix]                            # signed dF/F at each peak
+        lat = window[ix] * 1000.0                             # ms
+        tau_d = np.array([dominant_tau(D["tau"][X, j], D["A"][X, j]) for j in range(nS)]) * 1000
+        ok = D["cvr2"][X] > 0
+        if views["fields"] is None or not plt.fignum_exists(views["fields"]["fig"].number):
+            f, axx = plt.subplots(1, 3, figsize=(15.5, 5.6), constrained_layout=True)
+            views["fields"] = dict(fig=f, axes=axx, cbars=[])
+            if state.get("live"):
+                f.show()
+        f, axx = views["fields"]["fig"], views["fields"]["axes"]
+        for cb in views["fields"]["cbars"]:
+            try:
+                cb.remove()
+            except Exception:
+                pass
+        views["fields"]["cbars"] = []
+        gl = float(np.nanpercentile(np.abs(gm[ok]), 98)) if ok.any() else 0.01
+        # tau clim on the 10-90th percentile: a couple of readouts fit a slow mode LONGER than
+        # the 600 ms fit window, and letting those set the scale flattens everything else.
+        tlo, thi = (np.nanpercentile(tau_d[ok], [10, 90]) if ok.any() else (0, 300))
+        specs = [(gm, "RdBu_r", (-gl, gl), "signed dF/F at each readout's peak"),
+                 (tau_d, "viridis", (tlo, thi), f"dominant τ (ms)  [clipped {tlo:.0f}–{thi:.0f}]"),
+                 (lat, "magma", (0, tf_fit.FIT_TMAX * 1000), "peak latency (ms)")]
+        for ax, (v, cm, cl, ttl) in zip(axx, specs):
+            ax.clear()
+            ax.imshow(mimg, cmap="gray", extent=[0, nx, ny, 0], aspect="equal")
+            ax.scatter(px[~ok, 0], px[~ok, 1], s=110, facecolors="none", edgecolors="0.6",
+                       linewidths=1.0)
+            sc = ax.scatter(px[ok, 0], px[ok, 1], c=v[ok], cmap=cm, vmin=cl[0], vmax=cl[1],
+                            s=150, edgecolors="white", linewidths=0.6)
+            ax.scatter([px[X, 0]], [px[X, 1]], s=320, facecolors="none", edgecolors="lime",
+                       linewidths=2.4)
+            ax.set_xlim(0, nx); ax.set_ylim(ny, 0); ax.axis("off")
+            ax.set_title(ttl, fontsize=10)
+            views["fields"]["cbars"].append(f.colorbar(sc, ax=ax, fraction=0.045, pad=0.02))
+        f.suptitle(f"FIELDS @ amp {D['amp']:.1f} — stim {coord(X)} (lime)   "
+                   f"hollow = CV-R²≤0 (fit does not generalize)", fontsize=12)
+        f.canvas.draw_idle()
 
     def show_trials(s, r):
         dff, m = cr.extract_trials_amp(tz, s, r, D["amp"])
@@ -273,18 +342,35 @@ def main():
         views["pair"].fig.savefig(outdir / "view_pair_inspector.png", dpi=130)
         show_trials(X0, Y0)                        # shift-click path, same pair
         views["trials"]["fig"].savefig(outdir / "view_trials.png", dpi=110)
-        print(f"wrote view_selector.png, view_efferent.png, view_pair_inspector.png, "
-              f"view_trials.png  ({coord(X0)} → {coord(Y0)}, amp {D['amp']:.1f})")
+        field_maps(X0)                             # 'm' path
+        views["fields"]["fig"].savefig(outdir / "view_fields.png", dpi=130)
+        made = ["view_selector.png", "view_efferent.png", "view_pair_inspector.png",
+                "view_trials.png", "view_fields.png"]
+        try:                                       # right-click path: readout at Y0's pixel
+            show_pixel(X0, float(px[Y0, 0]), float(px[Y0, 1]))
+            views["pair"].fig.savefig(outdir / "view_pixel_inspector.png", dpi=130)
+            made.append("view_pixel_inspector.png")
+        except Exception as e:
+            print(f"[pixel render skipped] {type(e).__name__}: {e}")
+        print(f"wrote {', '.join(made)}  ({coord(X0)} → {coord(Y0)}, amp {D['amp']:.1f})")
         return
 
-    # Map 1 (selector): click nearest site -> set stim X -> Map 2 (efferent field) redraws
+    # Map 1 (selector): LEFT-click nearest site -> set stim X -> efferent map redraws.
+    # RIGHT-click any pixel -> readout THERE (arbitrary ROI, fitted on the fly).
     def on_select(event):
+        if event.inaxes is not sel["ax"] or event.xdata is None:
+            return
+        if event.button == 3:
+            show_pixel(state["X"], float(event.xdata), float(event.ydata))
+            return
         X = nearest_site(event, sel["ax"])
         if X is None:
             return
         state["X"] = X
         mark_selector(sel, X)
         draw_efferent(X)
+        if views["fields"] is not None and plt.fignum_exists(views["fields"]["fig"].number):
+            field_maps(X)
     sel["fig"].canvas.mpl_connect("button_press_event", on_select)
 
     # Map 2 (efferent): click a node = READOUT pick -> pair inspector (both amps).
@@ -299,8 +385,11 @@ def main():
             show_pair(state["X"], state["Y"])
     effv["fig"].canvas.mpl_connect("button_press_event", on_efferent)
 
-    # 'a' toggles which laser amplitude the brain maps draw (the inspector always shows both)
+    # 'a' toggles the displayed laser amplitude; 'm' opens/refreshes the field maps
     def on_key(event):
+        if event.key == "m":
+            field_maps(state["X"])
+            return
         if event.key != "a" or len(amps) < 2:
             return
         set_amp((D["ai"] + 1) % len(amps))
@@ -308,6 +397,8 @@ def main():
         if state["Y"] is not None and views["pair"] is not None \
                 and plt.fignum_exists(views["pair"].fig.number):
             show_pair(state["X"], state["Y"])
+        if views["fields"] is not None and plt.fignum_exists(views["fields"]["fig"].number):
+            field_maps(state["X"])
     for f_ in (sel["fig"], effv["fig"]):
         f_.canvas.mpl_connect("key_press_event", on_key)
 

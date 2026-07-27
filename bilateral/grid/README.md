@@ -27,8 +27,9 @@ New grid coding goes here (Python). The analysis is split into single-responsibi
 - `legacy/`     — pre-refactor monolith (`grid_analysis_monolith.py`), the MATLAB port
   (`grid_analysis.m`, for already-preprocessed sessions), and the source notebook. Frozen.
 
-### Interactive explorer (two-click: stim site → readout site)
+### Interactive explorer (two-click: stim site → readout)
 ```bash
+.venv/Scripts/python.exe bilateral/grid/svd_cache.py                   # once: pixel mode
 .venv/Scripts/python.exe bilateral/grid/interactive_grid.py            # live
 .venv/Scripts/python.exe bilateral/grid/interactive_grid.py save       # static PNGs
 .venv/Scripts/python.exe bilateral/grid/interactive_grid.py --amp 1.0  # other laser power
@@ -36,13 +37,29 @@ New grid coding goes here (Python). The analysis is split into single-responsibi
 - `interactive_grid.py` — SELECTOR map (click 1 = stim site X) + EFFERENT map (every site's
   response to X). Click 2 on the efferent map picks the readout Y and opens the **pair
   inspector**; **shift-click** gives the old 10×5 single-trial grid; **`a`** toggles which
-  laser amplitude the maps draw (the inspector always shows both).
+  laser amplitude the maps draw (the inspector always shows both); **`m`** opens the **field
+  maps** (signed matched-time dF/F, dominant τ, peak latency at every readout, hollow where
+  CV-R²≤0). **Right-click any pixel** on the selector map to read out *there* instead of at a
+  grid node — the stim must stay on the grid, the readout need not.
+- `svd_cache.py` — one network pass caching `U[:,:,:50]` + `V[:,:50]` + `svdT` + meanImage to
+  `data/grid_svd_<subject>_<date>_n50.npz` (~105 MB, gitignored). **Stamped** with
+  subject/date/n_comps; `load()` refuses a cache that does not match `config.py`.
+- `pixel_probe.py` — turns a clicked pixel into the same objects the site pipeline produces:
+  ROI time-series from the cached basis, per-amp trials, on-the-fly TF fit with split-half CV,
+  and the full-frame dF/F snapshot. Probing the pixel at a site's own centre reproduces that
+  site's cached fit exactly (order, CV-R², R² identical; |ΔH| ~1e-9 = float32 rounding), so
+  pixel and site numbers are directly comparable.
+  ⚠ The split-half halves must each be baselined with their OWN pre-onset mean (as
+  `tf_fit.split_half_means` does). Using the pooled baseline instead leaves a between-half
+  offset in the halves and depresses CV-R² badly — a CV-R² 0.92 pair read 0.27.
 - `pair_inspector.py` — one (X→Y) pair in six panels: (A) trial mean ±SEM + independent TF
   fit at *each* amp, (B) the shared amp-as-input fit (residual = saturation), (C) s-plane
   poles/zeros of both amps (overlap ⇒ amplitude-invariant dynamics), (D) the fitted modes
   drawn separately with τ and ω/2π plus a **cancellation factor** (Σ|A|/peak — large means the
   individual τ's are not identifiable), (E) single-trial raster, (F) this pair's dose-response
   against the population at a **matched time** `t*`. Numeric report underneath.
+  In **pixel mode** panel B becomes the full-frame dF/F snapshot with the readout ROI boxed
+  and the stim site marked, and the fits are computed on the fly instead of read from cache.
 - ⚠ The explorer reads the **2-amp** caches (`grid_tf_fits_2amp.npz`, `grid_trials_2amp.npz`).
   Until 2026-07-27 it read the single-amp caches and silently showed **amp 2.0 only**.
 - ⚠ Panel F uses dF/F at `t*` (the high-amp |peak| time), **not** the stored per-amp `gain`:

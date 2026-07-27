@@ -1,36 +1,47 @@
 #!/usr/bin/env python
-"""pair_inspector.py — everything about ONE (stim site -> readout site) pair, both amplitudes.
+"""pair_inspector.py — everything about ONE (stim site -> readout) pair, both amplitudes.
 
 Opened by `interactive_grid.py` on the second click of the two-click flow:
-click 1 on the SELECTOR map picks the stim site S, click 2 on the EFFERENT map picks the
-readout R. This window then answers, for that pair:
+click 1 on the SELECTOR map picks the stim site S, click 2 picks the readout. The readout can
+be either of two things, and the six panels are the same for both:
+
+  * a GRID SITE  (left-click a node on the efferent map)  -> `show(S, R, ai)`
+  * ANY PIXEL    (right-click anywhere on the selector map) -> `show_pixel(S, cx, cy, ai)`
+    The stim must stay on the grid — that is where the laser went — but the readout is only an
+    ROI choice. Pixel fits are computed on the fly from the cached SVD basis (`pixel_probe`).
 
   A  does the response scale with laser power?   trial mean +/-SEM at amp 1.0 and 2.0,
-     with the INDEPENDENT per-amp TF fits overlaid (dashed).
-  B  is it amplitude-LINEAR?                     the SHARED fit (one h(t), amp as input,
-     forces x2). Its systematic residual IS the saturation — not a bad fit.
+     with the INDEPENDENT per-amp TF fits overlaid (dashed), and t* marked.
+  B  site mode: is it amplitude-LINEAR? the SHARED fit (one h(t), amp as input, forces x2) —
+     its systematic residual IS the saturation, not a misfit.
+     pixel mode: WHERE is this pixel? the full-frame dF/F snapshot for this stim site with the
+     ROI box drawn on it (the SVD "pixel viewer" display).
   C  what are the timescales?                    poles/zeros of both amps in the s-plane.
      Amplitude-invariant poles = the LTI check (population median tau ratio 0.965).
   D  which timescale carries the response?       the fitted modes drawn one by one
-     (A*exp(-t/tau)*sin(om*t+ph)), labelled with tau and om/2pi.
+     (A*exp(-t/tau)*sin(om*t+ph)), labelled with tau and om/2pi, plus a CANCELLATION factor:
+     sum|A| / peak. Large values mean the modes cancel and the individual tau are not
+     separately identifiable even though their sum fits.
   E  is the mean trustworthy?                    single-trial raster at the display amp.
-  F  where does this pair sit in the population?  peak gain @1.0 vs @2.0 against all pairs,
-     with the focal (on-site) dose-response slope.
+  F  where does this pair sit in the population?  dF/F at a MATCHED time t* @1.0 vs @2.0
+     against all site pairs, with the focal (on-site) dose-response slope.
 
-Reads only cached fits — no network, no refitting:
+Reads cached fits — no network:
   data/grid_tf_fits_2amp.npz          independent TF per amp   (tf_fit.py 2amp)
   data/grid_tf_fits_shared_gglob.npz  shared TF, amp as input  (tf_fit.py shared, optional)
   data/grid_cross_response_2amp.npz   trial counts for the SEM
   data/grid_trials_2amp.npz           single trials            (cross_response.py 2amp)
+  data/grid_svd_<subj>_<date>_n50.npz SVD basis, pixel mode only (svd_cache.py)
 
-Standing caveat, printed on the figure: under the damped-sinusoid model an in-sample R2 of
-~0.8 is reachable on pure noise, so panel C greys itself out when the held-out CV-R2 <= 0.
+Standing caveat, enforced on the figure: under the damped-sinusoid model an in-sample R2 of
+~0.8 is reachable on pure noise, so panel C fades itself when the held-out CV-R2 <= 0.
 """
 from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
 
+import config as cfg
 import cross_response as cr
 import tf_fit
 
@@ -57,7 +68,7 @@ def poles_zeros(tau, A, om=None, ph=None):
     Zeros = roots of the numerator sum over the common denominator.
     """
     m = ~np.isnan(tau)
-    tau, A = tau[m], A[m]
+    tau, A = np.asarray(tau)[m], np.asarray(A)[m]
     a = 1.0 / tau
     has_osc = om is not None and np.any(np.isfinite(np.asarray(om)[m]))
     if not has_osc:
@@ -88,11 +99,11 @@ def dominant_tau(tau_vec, A_vec):
     """Time constant carrying the largest-magnitude residue — the pole that sets the shape.
     (Same rule as tf_matrix._dominant_tau; duplicated so importing this module does not pull
     in tf_matrix, which forces the Agg backend at import time.)"""
+    tau_vec, A_vec = np.asarray(tau_vec), np.asarray(A_vec)
     m = np.isfinite(tau_vec) & np.isfinite(A_vec)
     if not m.any():
         return np.nan
-    tv, av = tau_vec[m], A_vec[m]
-    return float(tv[np.argmax(np.abs(av))])
+    return float(tau_vec[m][np.argmax(np.abs(A_vec[m]))])
 
 
 def _fmt_c(v):
@@ -100,14 +111,24 @@ def _fmt_c(v):
     return f"{v.real:.1f}" if abs(v.imag) < 1e-6 else f"{v.real:.1f}{v.imag:+.1f}j"
 
 
-# --------------------------------------------------------------------------- #
 def _load(p):
     z = np.load(p, allow_pickle=True)
     return {k: z[k] for k in z.files}
 
 
+def matched_time(window, h_hi):
+    """Index/time of the high-amp |peak| INSIDE the fit window — the time at which every amp
+    is compared. Signed per-amp peaks can land on different lobes of a biphasic response
+    (excitatory ~70 ms, suppression ~140-240 ms), which makes a raw gain ratio meaningless."""
+    fit = (window >= 0) & (window <= tf_fit.FIT_TMAX)
+    ixf = np.where(fit)[0]
+    k = int(np.nanargmax(np.abs(np.nan_to_num(h_hi[fit]))))
+    return int(ixf[k]), float(window[ixf[k]])
+
+
+# --------------------------------------------------------------------------- #
 class PairInspector:
-    """Holds the caches + one reusable figure; `show(S, R, ai)` redraws it in place."""
+    """Holds the caches + one reusable figure; `show`/`show_pixel` redraw it in place."""
 
     def __init__(self, xlim=(-0.5, 1.0), trials=None, live=True):
         if not TF2.exists():
@@ -121,6 +142,7 @@ class PairInspector:
         self.ntri = np.load(XR2)["ntri"] if XR2.exists() else None   # (nA, nS), lazy key read
         self.xlim, self.live = xlim, live
         self.fig = None
+        self.sv = None                                    # SVD basis, loaded on first pixel use
         self.pop = self._population()
 
     # -- data ---------------------------------------------------------------
@@ -130,17 +152,8 @@ class PairInspector:
                 return _load(DATA / n), n
         return None, None
 
-    def _matched_gain(self):
-        """Every amp's response evaluated at the SAME time — the highest amp's |peak| time
-        inside the fit window.
-
-        WHY not the stored `gain`: that is the signed peak of each amp's own fit, and the
-        responses are BIPHASIC (excitatory lobe ~70 ms, suppression ~140-240 ms). A pair can
-        therefore peak on the positive lobe at one amp and the negative lobe at the other, so
-        the raw gain ratio mixes lobes and is meaningless (it also drags the population
-        through-origin slope). Matching the time makes the dose-response sign-consistent by
-        construction. Returns (gm (nA,nS,nS), t_star (nS,nS)).
-        """
+    def _matched_gain_all(self):
+        """Matched-time dF/F for EVERY site pair -> (gm (nA,nS,nS), tstar (nS,nS))."""
         H, W = self.Z["H"], self.window
         fit = (W >= 0) & (W <= tf_fit.FIT_TMAX)
         ixf = np.where(fit)[0]
@@ -150,10 +163,10 @@ class PairInspector:
         return H[:, I, J, ix], W[ix]
 
     def _population(self):
-        """Cross-pair reference numbers this pair is compared against."""
+        """Cross-pair reference numbers every pair is compared against."""
         cv = self.Z["cvr2"]
         nS = len(self.sites)
-        gm, tstar = self._matched_gain()
+        gm, tstar = self._matched_gain_all()
         ok = np.all(cv > 0, 0)                       # generalizes at BOTH amps
         foc = np.eye(nS, dtype=bool) & ok            # on-site (focal) pairs — the honest set
         x, y = gm[0][foc], gm[1][foc]
@@ -166,124 +179,221 @@ class PairInspector:
     def lab(self, j):
         return f"({self.sites[j,0]:+.1f},{self.sites[j,1]:+.0f})"
 
+    # -- packs: turn a readout choice into the common panel input ------------
+    def _pack_site(self, S, R, ai):
+        Z, nA = self.Z, len(self.amps)
+        d = float(np.hypot(*(self.sites[R] - self.sites[S])))
+        P = dict(
+            ai=ai, amps=self.amps, window=self.window, mode="site",
+            H=Z["H"][:, S, R], yhat=Z["yhat"][:, S, R], Hstd=Z["Hstd"][:, S, R],
+            ntri=(self.ntri[:, S] if self.ntri is not None else np.full(nA, np.nan)),
+            order=Z["order"][:, S, R], r2=Z["r2"][:, S, R], cvr2=Z["cvr2"][:, S, R],
+            gain=Z["gain"][:, S, R], tau=Z["tau"][:, S, R], A=Z["A"][:, S, R],
+            om=Z["om"][:, S, R], ph=Z["ph"][:, S, R],
+            tstar=float(self.pop["tstar"][S, R]),
+            gm=np.array([self.pop["gm"][a, S, R] for a in range(nA)]),
+            raster=lambda a, S=S, R=R: cr.extract_trials_amp(self.tz, S, R, self.amps[a])[0],
+            title=(f"PAIR  stim {self.lab(S)}  →  readout {self.lab(R)}   ({d:.1f} mm apart)"),
+            fitted="cached (tf_fit.py 2amp)",
+        )
+        if self.ZS is not None:
+            P["B"] = dict(kind="shared", H=self.ZS["H"][:, S, R], yhat=self.ZS["yhat"][:, S, R],
+                          gamma=float(self.ZS["gamma"][S, R]) if "gamma" in self.ZS else np.nan,
+                          name=self.shared_name)
+        else:
+            P["B"] = dict(kind="none", msg="no shared-fit cache\n\nrun:  python tf_fit.py shared")
+        return P
+
+    def _pack_pixel(self, S, cx, cy, ai):
+        """Readout = an arbitrary pixel ROI. Fits are computed here, on the fly."""
+        import pixel_probe as pp
+        if self.sv is None:
+            self.sv = pp.load()
+        W, nA = self.window, len(self.amps)
+        ts, meta = pp.pixel_series(self.sv, cx, cy)
+        H = np.full((nA, len(W)), np.nan)
+        yhat = np.zeros((nA, len(W)))
+        Hstd = np.zeros((nA, len(W)))
+        nmax = self.Z["tau"].shape[-1]
+        tau = np.full((nA, nmax), np.nan); Amp = np.full((nA, nmax), np.nan)
+        om = np.full((nA, nmax), np.nan); ph = np.full((nA, nmax), np.nan)
+        order = np.zeros(nA, int); r2 = np.full(nA, np.nan); cvr2 = np.full(nA, np.nan)
+        gain = np.full(nA, np.nan); ntri = np.zeros(nA, int)
+        base_ix = int(self.tz["base_ix"])
+        dffs = []
+        for a in range(nA):
+            fluo = pp.trial_fluo(self.tz, ts, self.sv["svdT"], S, self.amps[a])
+            ntri[a] = fluo.shape[0]
+            if fluo.shape[0] == 0:
+                dffs.append(np.zeros((0, len(W))))
+                continue
+            f, h, dff = pp.fit_pixel(W, fluo, base_ix)
+            dffs.append(dff)
+            H[a] = h
+            Hstd[a] = np.nanstd(dff, 0)
+            if f is None:
+                continue
+            yhat[a] = tf_fit._impulse(W, f["theta"], f["A"], f["tau"], f["om"], f["ph"])
+            order[a], r2[a] = f["order"], f["r2"]
+            cvr2[a] = f.get("cvr2", np.nan)
+            gain[a] = f["gain"]
+            o = np.argsort(f["tau"]); n = len(o)
+            tau[a, :n] = np.asarray(f["tau"])[o]; Amp[a, :n] = np.asarray(f["A"])[o]
+            if f["om"] is not None:
+                om[a, :n] = np.asarray(f["om"])[o]; ph[a, :n] = np.asarray(f["ph"])[o]
+        ix, ts_star = matched_time(W, H[-1])
+        ml, ap = pp.px_to_mm(cx, cy)
+        return dict(
+            ai=ai, amps=self.amps, window=W, mode="pixel",
+            H=H, yhat=yhat, Hstd=Hstd, ntri=ntri, order=order, r2=r2, cvr2=cvr2,
+            gain=gain, tau=tau, A=Amp, om=om, ph=ph,
+            tstar=ts_star, gm=H[:, ix],
+            raster=lambda a, d=dffs: d[a],
+            title=(f"PAIR  stim {self.lab(S)}  →  PIXEL ({int(cx)},{int(cy)}) px = "
+                   f"({ml:+.1f},{ap:+.1f}) mm   [ROI ±{meta['rad']} px]"),
+            fitted="on the fly (pixel ROI, split-half CV)",
+            B=dict(kind="snapshot", img=pp.snapshot(self.sv, self.tz, S, self.amps[ai]),
+                   box=meta["box"], site=(cfg.BREGMA_PX[0] + self.sites[S, 0] * cfg.PX_PER_MM_X,
+                                          cfg.BREGMA_PX[1] + self.sites[S, 1] * cfg.PX_PER_MM_Y),
+                   amp=self.amps[ai]),
+        )
+
     # -- figure -------------------------------------------------------------
     def _figure(self):
         if self.fig is not None and plt.fignum_exists(self.fig.number):
             for ax in self.axs.values():
-                ax.clear()
+                ax.clear(); ax.set_axis_on()
             self.txt.clear(); self.txt.axis("off")
+            for cb in self._cbars:
+                try:
+                    cb.remove()
+                except Exception:
+                    pass
+            self._cbars = []
             return
         fig = plt.figure(figsize=(15.5, 9.2))
         gs = fig.add_gridspec(3, 3, height_ratios=[1.0, 1.0, 0.55], hspace=0.42, wspace=0.24,
                               left=0.055, right=0.985, top=0.90, bottom=0.03)
         self.fig = fig
-        self.axs = {k: fig.add_subplot(gs[i // 3, i % 3])
-                    for i, k in enumerate("ABCDEF")}
+        self.axs = {k: fig.add_subplot(gs[i // 3, i % 3]) for i, k in enumerate("ABCDEF")}
         self.txt = fig.add_subplot(gs[2, :]); self.txt.axis("off")
+        self._cbars = []
         if self.live:
             fig.show()
 
     def show(self, S, R, ai=None):
-        """Draw the full inspector for stim site S -> readout site R. `ai` = display amp index."""
+        """Grid-site readout."""
         ai = len(self.amps) - 1 if ai is None else int(ai)
+        self._render(self._pack_site(S, R, ai))
+
+    def show_pixel(self, S, cx, cy, ai=None):
+        """Arbitrary-pixel readout (fits computed on the fly)."""
+        ai = len(self.amps) - 1 if ai is None else int(ai)
+        self._render(self._pack_pixel(S, cx, cy, ai))
+
+    def _render(self, P):
         self._figure()
-        Z, W = self.Z, self.window
-        nA = len(self.amps)
-        cv = [float(Z["cvr2"][a, S, R]) for a in range(nA)]
-        gn = [float(Z["gain"][a, S, R]) for a in range(nA)]
-        td = [dominant_tau(Z["tau"][a, S, R], Z["A"][a, S, R]) for a in range(nA)]
-
-        self._panel_data(self.axs["A"], S, R)
-        self._panel_shared(self.axs["B"], S, R)
-        self._panel_splane(self.axs["C"], S, R, cv)
-        self._panel_modes(self.axs["D"], S, R, ai)
-        self._panel_raster(self.axs["E"], S, R, ai)
-        self._panel_population(self.axs["F"], S, R, gn)
-        self._panel_text(S, R, cv, gn, td, ai)
-
-        d = float(np.hypot(*(self.sites[R] - self.sites[S])))
-        self.fig.suptitle(f"PAIR  stim {self.lab(S)}  →  readout {self.lab(R)}"
-                          f"   ({d:.1f} mm apart)   ·   AL_0048 2026-07-10 grid,"
-                          f" amps {self.amps}   ·   display amp {self.amps[ai]:.1f}",
-                          fontsize=12, y=0.975)
+        self._panel_data(self.axs["A"], P)
+        self._panel_B(self.axs["B"], P)
+        self._panel_splane(self.axs["C"], P)
+        self._panel_modes(self.axs["D"], P)
+        self._panel_raster(self.axs["E"], P)
+        self._panel_population(self.axs["F"], P)
+        self._panel_text(P)
+        self.fig.suptitle(f"{P['title']}   ·   AL_0048 {cfg.DATE} grid, amps {P['amps']}"
+                          f"   ·   display amp {P['amps'][P['ai']]:.1f}", fontsize=12, y=0.975)
         self.fig.canvas.draw_idle()
 
     # -- panels -------------------------------------------------------------
-    def _panel_data(self, ax, S, R):
+    def _panel_data(self, ax, P):
         """A — trial mean +/-SEM at every amp, independent per-amp TF fits dashed."""
-        Z, W = self.Z, self.window
-        ax.axvline(self.pop["tstar"][S, R], c="0.35", lw=0.8, ls=":", zorder=0)
-        for a, c in zip(range(len(self.amps)), AC):
-            h, yh = Z["H"][a, S, R], Z["yhat"][a, S, R]
-            if self.ntri is not None:
-                sem = Z["Hstd"][a, S, R] / np.sqrt(max(int(self.ntri[a, S]), 1))
+        W = P["window"]
+        ax.axvline(P["tstar"], c="0.35", lw=0.8, ls=":", zorder=0)
+        for a, c in zip(range(len(P["amps"])), AC):
+            h = P["H"][a]
+            n = P["ntri"][a]
+            if np.isfinite(n) and n > 0:
+                sem = P["Hstd"][a] / np.sqrt(max(int(n), 1))
                 ax.fill_between(W, h - sem, h + sem, color=c, alpha=0.18, lw=0)
-            ax.plot(W, h, c=c, lw=1.6, label=f"amp {self.amps[a]:.1f}  data")
-            ax.plot(W, yh, c=c, lw=1.1, ls="--",
-                    label=f"amp {self.amps[a]:.1f}  fit (CV-R² {Z['cvr2'][a,S,R]:+.2f})")
-        self._decorate(ax, f"A  data + INDEPENDENT fit per amp   (band = ±SEM, "
-                           f"dotted = t* {self.pop['tstar'][S,R]*1000:.0f} ms)")
+            ax.plot(W, h, c=c, lw=1.6, label=f"amp {P['amps'][a]:.1f}  data")
+            ax.plot(W, P["yhat"][a], c=c, lw=1.1, ls="--",
+                    label=f"amp {P['amps'][a]:.1f}  fit (CV-R² {P['cvr2'][a]:+.2f})")
+        self._decorate(ax, P, f"A  data + INDEPENDENT fit per amp   (band = ±SEM, "
+                              f"dotted = t* {P['tstar']*1000:.0f} ms)")
         ax.legend(fontsize=6.5, loc="upper right", framealpha=0.9)
 
-    def _panel_shared(self, ax, S, R):
-        """B — the shared (amp-as-input) fit: its residual measures saturation."""
-        if self.ZS is None:
-            ax.text(0.5, 0.5, "no shared-fit cache\n\nrun:  python tf_fit.py shared",
-                    ha="center", va="center", transform=ax.transAxes, fontsize=9, color="0.4")
+    def _panel_B(self, ax, P):
+        """B — shared amp-as-input fit (site mode) or the full-frame SVD snapshot (pixel)."""
+        B = P["B"]
+        if B["kind"] == "none":
+            ax.text(0.5, 0.5, B["msg"], ha="center", va="center", transform=ax.transAxes,
+                    fontsize=9, color="0.4")
             ax.set_title("B  SHARED fit (amp = input)", fontsize=9.5); ax.axis("off")
             return
-        Z, W = self.ZS, self.window
-        for a, c in zip(range(len(self.amps)), AC):
-            ax.plot(W, Z["H"][a, S, R], c=c, lw=1.6, label=f"amp {self.amps[a]:.1f}  data")
-            ax.plot(W, Z["yhat"][a, S, R], c=c, lw=1.1, ls="--")
-        g = Z["gamma"][S, R] if "gamma" in Z else np.nan
-        gt = f"   γ={float(g):.2f}" if np.isfinite(g) else ""
-        self._decorate(ax, f"B  SHARED fit — ONE h(t), amp is the input{gt}\n"
-                           f"   residual = saturation, not misfit   [{self.shared_name}]")
-        ax.legend(fontsize=6.5, loc="upper right", framealpha=0.9)
+        if B["kind"] == "shared":
+            W = P["window"]
+            for a, c in zip(range(len(P["amps"])), AC):
+                ax.plot(W, B["H"][a], c=c, lw=1.6, label=f"amp {P['amps'][a]:.1f}  data")
+                ax.plot(W, B["yhat"][a], c=c, lw=1.1, ls="--")
+            gt = f"   γ={B['gamma']:.2f}" if np.isfinite(B["gamma"]) else ""
+            self._decorate(ax, P, f"B  SHARED fit — ONE h(t), amp is the input{gt}\n"
+                                  f"   residual = saturation, not misfit   [{B['name']}]")
+            ax.legend(fontsize=6.5, loc="upper right", framealpha=0.9)
+            return
+        # pixel mode: the SVD display — full-frame dF/F for this stim site
+        img = B["img"]
+        cl = cfg.SPATIAL_CLIM
+        im = ax.imshow(img, cmap="RdBu_r", vmin=-cl, vmax=cl, interpolation="nearest")
+        x0, x1, y0, y1 = B["box"]
+        ax.add_patch(plt.Rectangle((x0, y0), x1 - x0, y1 - y0, fill=False, ec="lime", lw=1.6))
+        ax.scatter(*B["site"], s=90, marker="+", c="k", lw=1.6)
+        ax.set_xticks([]); ax.set_yticks([])
+        ax.set_title(f"B  full-frame dF/F @ amp {B['amp']:.1f}   ({cfg.STIM_WIN[0]*1000:.0f}–"
+                     f"{cfg.STIM_WIN[1]*1000:.0f} ms)\n"
+                     f"green = readout ROI, + = stim site   (±{cl*100:.0f}%)", fontsize=9.5)
+        # horizontal: a right-hand colorbar here lands in panel C's ylabel
+        self._cbars.append(self.fig.colorbar(im, ax=ax, orientation="horizontal",
+                                             fraction=0.05, pad=0.03))
 
-    def _panel_splane(self, ax, S, R, cv):
+    def _panel_splane(self, ax, P):
         """C — poles/zeros of both amps. Amplitude-invariant poles = LTI holds."""
-        Z = self.Z
         allp, nz_off = [], 0
-        for a, c in zip(range(len(self.amps)), AC):
-            p, z = poles_zeros(Z["tau"][a, S, R], Z["A"][a, S, R],
-                               Z["om"][a, S, R], Z["ph"][a, S, R])
-            allp.append(np.asarray(p))
-            dim = cv[a] <= 0
+        zs = []
+        for a, c in zip(range(len(P["amps"])), AC):
+            p, z = poles_zeros(P["tau"][a], P["A"][a], P["om"][a], P["ph"][a])
+            allp.append(np.asarray(p)); zs.append(np.asarray(z))
+            dim = not (P["cvr2"][a] > 0)
             ax.scatter(np.real(p), np.imag(p), marker="x", s=90, lw=2.0, c=c,
-                       alpha=0.25 if dim else 1.0, label=f"amp {self.amps[a]:.1f} poles")
+                       alpha=0.25 if dim else 1.0, label=f"amp {P['amps'][a]:.1f} poles")
             if len(z):
                 ax.scatter(np.real(z), np.imag(z), marker="o", s=60, facecolors="none",
                            edgecolors=c, lw=1.6, alpha=0.25 if dim else 1.0)
         # scale to the POLES: zeros routinely sit hundreds of 1/s out and would squash the
         # pole cluster (which is the thing being compared across amps) into the axis edge.
-        pp = np.concatenate(allp) if allp else np.array([0j])
-        xr = max(float(np.max(np.abs(np.real(pp)))) * 1.35, 5.0)
-        yr = max(float(np.max(np.abs(np.imag(pp)))) * 1.35, 5.0)
-        for a in range(len(self.amps)):
-            _, z = poles_zeros(Z["tau"][a, S, R], Z["A"][a, S, R],
-                               Z["om"][a, S, R], Z["ph"][a, S, R])
-            nz_off += int(np.sum((np.abs(np.real(z)) > xr) | (np.abs(np.imag(z)) > yr)))
+        pp_ = np.concatenate(allp) if allp else np.array([0j])
+        xr = max(float(np.max(np.abs(np.real(pp_)))) * 1.35, 5.0)
+        yr = max(float(np.max(np.abs(np.imag(pp_)))) * 1.35, 5.0)
+        for z in zs:
+            if len(z):
+                nz_off += int(np.sum((np.abs(np.real(z)) > xr) | (np.abs(np.imag(z)) > yr)))
         ax.set_xlim(-xr, 0.45 * xr); ax.set_ylim(-yr, yr)
         ax.axvline(0, c="k", lw=0.8); ax.axhline(0, c="0.7", lw=0.6, ls=":")
         ax.set(xlabel="Re  (1/s)   ← faster decay", ylabel="Im  (rad/s)")
         ax.grid(alpha=0.25)
-        bad = [f"{self.amps[a]:.1f}" for a in range(len(self.amps)) if cv[a] <= 0]
+        bad = [f"{P['amps'][a]:.1f}" for a in range(len(P["amps"])) if not P["cvr2"][a] > 0]
         sub = f"   ⚠ CV-R²≤0 at amp {', '.join(bad)} — faded, do not trust" if bad else \
               (f"   ({nz_off} zero(s) off-scale)" if nz_off else "")
         ax.set_title("C  s-plane: × poles, ○ zeros\n"
                      f"overlap ⇒ amplitude-invariant dynamics{sub}", fontsize=9.5)
         ax.legend(fontsize=6.5, loc="best", framealpha=0.9)
 
-    def _panel_modes(self, ax, S, R, ai):
+    def _panel_modes(self, ax, P):
         """D — the fitted modes drawn separately: which timescale carries the response."""
-        Z, W = self.Z, self.window
-        tau, A = Z["tau"][ai, S, R], Z["A"][ai, S, R]
-        om, ph = Z["om"][ai, S, R], Z["ph"][ai, S, R]
+        W, ai = P["window"], P["ai"]
+        tau, A, om, ph = P["tau"][ai], P["A"][ai], P["om"][ai], P["ph"][ai]
         m = np.isfinite(tau) & np.isfinite(A)
-        ax.plot(W, Z["H"][ai, S, R], c="0.55", lw=1.3, label="data")
-        ax.plot(W, Z["yhat"][ai, S, R], c="k", lw=1.4, ls="--", label="fit (sum)")
+        ax.plot(W, P["H"][ai], c="0.55", lw=1.3, label="data")
+        ax.plot(W, P["yhat"][ai], c="k", lw=1.4, ls="--", label="fit (sum)")
         cmap = plt.get_cmap("viridis")
         idx = np.where(m)[0]
         for k, i in enumerate(idx):
@@ -296,21 +406,22 @@ class PairInspector:
         # keep the DATA readable: individual modes can be an order of magnitude larger than
         # their sum when they cancel. `cancel` reports that ill-conditioning explicitly —
         # a large value means the individual τ's are not separately identifiable.
-        peak = max(float(np.nanmax(np.abs(Z["yhat"][ai, S, R]))),
-                   float(np.nanmax(np.abs(Z["H"][ai, S, R]))), 1e-6)
+        peak = max(float(np.nanmax(np.abs(P["yhat"][ai]))),
+                   float(np.nanmax(np.abs(np.nan_to_num(P["H"][ai])))), 1e-6)
         cancel = float(np.nansum(np.abs(A[m]))) / peak
         ax.set_ylim(-3.0 * peak, 3.0 * peak)
-        self._decorate(ax, f"D  mode decomposition @ amp {self.amps[ai]:.1f}  "
-                           f"(order {int(Z['order'][ai,S,R])})\n"
-                           f"cancellation ×{cancel:.0f}"
-                           f"{'  ⚠ individual τ not identifiable' if cancel > 4 else ''}")
+        self._decorate(ax, P, f"D  mode decomposition @ amp {P['amps'][ai]:.1f}  "
+                              f"(order {int(P['order'][ai])})\n"
+                              f"cancellation ×{cancel:.0f}"
+                              f"{'  ⚠ individual τ not identifiable' if cancel > 4 else ''}")
         ax.legend(fontsize=6.5, loc="upper right", framealpha=0.9)
 
-    def _panel_raster(self, ax, S, R, ai):
+    def _panel_raster(self, ax, P):
         """E — every single trial for this pair at the display amp (the averaging check)."""
-        dff, mean = cr.extract_trials_amp(self.tz, S, R, self.amps[ai])
+        ai = P["ai"]
+        dff = P["raster"](ai)
         tw = self.tz["window"]
-        if dff.size == 0:
+        if dff is None or dff.size == 0:
             ax.text(0.5, 0.5, "no trials at this amp", ha="center", va="center",
                     transform=ax.transAxes); ax.axis("off"); return
         cl = float(np.nanpercentile(np.abs(dff), 98)) or 0.01
@@ -320,15 +431,15 @@ class PairInspector:
         ax.set(xlabel="time from stim (s)", ylabel="trial")
         if self.xlim:
             ax.set_xlim(*self.xlim)
-        ax.set_title(f"E  single trials @ amp {self.amps[ai]:.1f}  (n={dff.shape[0]}, "
+        ax.set_title(f"E  single trials @ amp {P['amps'][ai]:.1f}  (n={dff.shape[0]}, "
                      f"±{cl*100:.1f}% scale)", fontsize=9.5)
-        self.fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02)
+        self._cbars.append(self.fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02))
 
-    def _panel_population(self, ax, S, R, gn):
-        """F — this pair's dose-response against every pair's, at MATCHED time t*."""
+    def _panel_population(self, ax, P):
+        """F — this pair's dose-response against every site pair's, at matched time t*."""
         g, ok, foc = self.pop["gm"], self.pop["ok"], self.pop["foc"]
-        ax.scatter(g[0][ok], g[1][ok], s=8, c="0.75", lw=0, label=f"all pairs CV-R²>0 "
-                                                                 f"(n={self.pop['n_ok']})")
+        ax.scatter(g[0][ok], g[1][ok], s=8, c="0.75", lw=0,
+                   label=f"all site pairs CV-R²>0 (n={self.pop['n_ok']})")
         ax.scatter(g[0][foc], g[1][foc], s=26, c="darkorange", ec="0.3", lw=0.4,
                    label=f"focal / on-site (n={int(foc.sum())})")
         lim = float(np.nanpercentile(np.abs(g[:, ok]), 99.5)) * 1.15
@@ -338,66 +449,68 @@ class PairInspector:
         if np.isfinite(self.pop["slope"]):
             ax.plot(xs, self.pop["slope"] * xs, c="green", lw=1.2,
                     label=f"focal slope {self.pop['slope']:.2f}")
-        gx, gy = g[0][S, R], g[1][S, R]
+        gx, gy = float(P["gm"][0]), float(P["gm"][-1])
         ax.axhline(gy, c="red", lw=0.7, ls=":", zorder=4)      # crosshair: readable even if
         ax.axvline(gx, c="red", lw=0.7, ls=":", zorder=4)      # the legend covers the marker
         ax.scatter([gx], [gy], s=210, marker="*", c="red", ec="k", lw=0.6, zorder=5,
-                   label="this pair")
+                   label="this pair" + (" (pixel)" if P["mode"] == "pixel" else ""))
         ax.axhline(0, c="0.8", lw=0.6); ax.axvline(0, c="0.8", lw=0.6)
+        lim = max(lim, abs(gx) * 1.15, abs(gy) * 1.15)
         ax.set(xlim=(-lim, lim), ylim=(-lim, lim), aspect="equal",
-               xlabel=f"dF/F @ t*, amp {self.amps[0]:.1f}",
-               ylabel=f"dF/F @ t*, amp {self.amps[-1]:.1f}")
+               xlabel=f"dF/F @ t*, amp {P['amps'][0]:.1f}",
+               ylabel=f"dF/F @ t*, amp {P['amps'][-1]:.1f}")
         ax.set_title("F  amplitude scaling at MATCHED time t* — pair vs population",
                      fontsize=9.5)
         ax.legend(fontsize=6.0, loc="lower right", framealpha=0.9)
 
-    def _panel_text(self, S, R, cv, gn, td, ai):
+    def _panel_text(self, P):
         """Numeric report under the panels — the numbers you would otherwise read off by eye."""
-        Z = self.Z
-        nA = len(self.amps)
-        rows = []
-        rows.append(f"{'':<16}" + "".join(f"{'amp '+format(a,'.1f'):>16}" for a in self.amps)
-                    + f"{'ratio hi/lo':>16}{'population':>26}")
-        rows.append("-" * (16 + 16 * nA + 16 + 26))
-        rows.append(f"{'order':<16}" + "".join(f"{int(Z['order'][a,S,R]):>16d}" for a in range(nA))
-                    + f"{'':>16}{'':>26}")
-        rows.append(f"{'R² (in-sample)':<16}"
-                    + "".join(f"{Z['r2'][a,S,R]:>16.3f}" for a in range(nA))
-                    + f"{'':>16}{'not a quality metric':>26}")
-        rows.append(f"{'CV-R² (held-out)':<16}" + "".join(f"{cv[a]:>+16.3f}" for a in range(nA))
-                    + f"{'':>16}" + f"{'gate on this: >0':>26}")
+        nA, ai = len(P["amps"]), P["ai"]
+        cv, gn, td = P["cvr2"], P["gain"], [dominant_tau(P["tau"][a], P["A"][a])
+                                            for a in range(nA)]
+        rows = [f"{'':<16}" + "".join(f"{'amp '+format(a,'.1f'):>16}" for a in P["amps"])
+                + f"{'ratio hi/lo':>16}{'population':>26}",
+                "-" * (16 + 16 * nA + 16 + 26),
+                f"{'trials':<16}" + "".join(f"{int(P['ntri'][a]):>16d}" for a in range(nA))
+                + f"{'':>16}{P['fitted']:>26}",
+                f"{'order':<16}" + "".join(f"{int(P['order'][a]):>16d}" for a in range(nA))
+                + f"{'':>16}{'':>26}",
+                f"{'R² (in-sample)':<16}" + "".join(f"{P['r2'][a]:>16.3f}" for a in range(nA))
+                + f"{'':>16}{'not a quality metric':>26}",
+                f"{'CV-R² (held-out)':<16}" + "".join(f"{cv[a]:>+16.3f}" for a in range(nA))
+                + f"{'':>16}{'gate on this: >0':>26}"]
         gr = abs(gn[-1]) / abs(gn[0]) if gn[0] else np.nan
         flip = np.sign(gn[0]) != np.sign(gn[-1])
         rows.append(f"{'peak gain':<16}" + "".join(f"{gn[a]:>+16.4f}" for a in range(nA))
                     + f"{gr:>16.2f}"
                     + f"{('⚠ LOBE FLIP — ignore' if flip else 'own-peak, each amp'):>26}")
-        gm, ts = self.pop["gm"], self.pop["tstar"][S, R]
-        gmv = [float(gm[a, S, R]) for a in range(nA)]
-        gmr = abs(gmv[-1]) / abs(gmv[0]) if gmv[0] else np.nan
-        rows.append(f"{'dF/F @ t*='+format(ts*1000,'.0f')+'ms':<16}"
-                    + "".join(f"{gmv[a]:>+16.4f}" for a in range(nA))
+        gm = [float(v) for v in P["gm"]]
+        gmr = abs(gm[-1]) / abs(gm[0]) if gm[0] else np.nan
+        rows.append(f"{'dF/F @ t*='+format(P['tstar']*1000,'.0f')+'ms':<16}"
+                    + "".join(f"{gm[a]:>+16.4f}" for a in range(nA))
                     + f"{gmr:>16.2f}" + f"{'focal median '+format(POP_GAIN_RATIO,'.2f'):>26}")
         tr = td[-1] / td[0] if td[0] else np.nan
         rows.append(f"{'dominant τ (ms)':<16}"
                     + "".join(f"{td[a]*1000:>16.0f}" for a in range(nA))
                     + f"{tr:>16.2f}" + f"{'LTI: median '+format(POP_TAU_RATIO,'.3f'):>26}")
         for a in range(nA):
-            p, z = poles_zeros(Z["tau"][a, S, R], Z["A"][a, S, R],
-                               Z["om"][a, S, R], Z["ph"][a, S, R])
-            rows.append(f"{'poles @'+format(self.amps[a],'.1f')+' (1/s)':<16}  "
+            p, z = poles_zeros(P["tau"][a], P["A"][a], P["om"][a], P["ph"][a])
+            rows.append(f"{'poles @'+format(P['amps'][a],'.1f')+' (1/s)':<16}  "
                         + ", ".join(_fmt_c(v) for v in p)
                         + ("   |  zeros " + ", ".join(_fmt_c(v) for v in z) if len(z) else ""))
         self.txt.text(0.0, 1.0, "\n".join(rows), family="monospace", fontsize=8,
                       va="top", ha="left", transform=self.txt.transAxes)
-        note = ("⚠  CV-R² ≤ 0 at the display amp: the fit does not predict held-out "
-                "trials — read panels A/E (data), not C/D (model).") if cv[ai] <= 0 else \
-               (f"fit window 0–{tf_fit.FIT_TMAX:g} s (ITI ≈ 0.71 s → beyond ~±0.7 s "
+        bad = not (cv[ai] > 0)
+        note = ("⚠  CV-R² ≤ 0 at the display amp: the fit does not predict held-out trials — "
+                "read panels A/E (data), not C/D (model)." if bad else
+                f"fit window 0–{tf_fit.FIT_TMAX:g} s (ITI ≈ 0.71 s → beyond ~±0.7 s "
                 f"neighbouring stims contaminate the average).")
+        if P["mode"] == "pixel":
+            note += "   Pixel ROIs are smaller/noisier than site ROIs — expect lower CV-R²."
         self.txt.text(0.0, -0.02, note, fontsize=8.5, va="top", ha="left",
-                      color="crimson" if cv[ai] <= 0 else "0.35",
-                      transform=self.txt.transAxes)
+                      color="crimson" if bad else "0.35", transform=self.txt.transAxes)
 
-    def _decorate(self, ax, title):
+    def _decorate(self, ax, P, title):
         ax.axhline(0, c="0.7", lw=0.6, ls=":")
         ax.axvline(0, c="red", lw=0.9)
         ax.axvspan(0, tf_fit.FIT_TMAX, color="0.85", alpha=0.35, lw=0, zorder=0)
@@ -407,12 +520,13 @@ class PairInspector:
         ax.set_title(title, fontsize=9.5)
 
 
-def strongest_pair(Z=None):
-    """(S, R) of the largest |peak gain| among pairs that generalize at both amps — a
-    sensible default pair for a headless render."""
+def strongest_pair(Z=None, off_diagonal=False):
+    """(S, R) of the largest |peak gain| among pairs that generalize at both amps."""
     Z = _load(TF2) if Z is None else Z
     g = np.abs(Z["gain"][-1])
     g = np.where(np.all(Z["cvr2"] > 0, 0), g, -np.inf)
+    if off_diagonal:
+        np.fill_diagonal(g, -np.inf)
     S, R = np.unravel_index(int(np.argmax(g)), g.shape)
     return int(S), int(R)
 
@@ -424,7 +538,7 @@ if __name__ == "__main__":
     if save:
         matplotlib.use("Agg")
     pi = PairInspector(live=not save)
-    S, R = strongest_pair(pi.Z)
+    S, R = strongest_pair(pi.Z, off_diagonal=True)
     pi.show(S, R)
     if save:
         out = Path(__file__).resolve().parent / "grid_png"
