@@ -10,7 +10,8 @@ Structure
   ACT 0  PREMISE   — what is being controlled, and how it is measured
   ACT 1  OPEN LOOP — fixed command, feedback arm visibly BROKEN; responses miss
   ACT 2  CLOSED LOOP — feedback arm live; controller corrects, responses converge
-  ACT 3  VERDICT   — tracking error and trial-to-trial variability, with numbers
+  ACT 3  VERDICT   — the whole dataset: per-session tracking error and the
+                     window-specific variance ratio (Fig. 3G / 3I equivalents)
 
 Explanatory devices
   - an animated CONTROL-LOOP SCHEMATIC (reference → Σ → PI → laser → cortex →
@@ -19,15 +20,19 @@ Explanatory devices
   - a shaded TARGET BAND around the reference, so "on target" is legible without
     knowing what ΔF/F is; % time-in-band is reported.
   - timed CAPTIONS that narrate each beat, and act cards between sections.
-  - one HERO TRIAL per condition played slowly and dissected, then the remaining
-    trials as a fast montage.
+  - THREE REAL-TIME TRIALS per condition (1x speed, spanning the session's RMSE
+    distribution so they are representative, not cherry-picked), each narrated,
+    interleaved with fast montage chunks of the remaining trials.
+  - a closing CROSS-SESSION summary from all 13 sessions / 2 mice
+    (presentation/assets/xsession_stats.mat, built by export_xsession_stats.m).
 
 Science + wording follow the manuscript (Closedloop_edit/results.tex): PI feedback
 with feedforward compensation, reference tracking, and disturbance rejection
 (trial-to-trial variance reduction that is specific to the stimulation window).
 Colours follow the updated paper scheme: OL = red, CL = blue, input = gray.
 
-Data: presentation/assets/demo_data_<key>.npz  (build_demo_data.py)
+Data: presentation/assets/demo_data_<key>.npz   (build_demo_data.py)
+      presentation/assets/xsession_stats.mat   (export_xsession_stats.m)
 
 Run:
   .venv/Scripts/python.exe presentation/make_video_talk.py --session m13 --probe 0.5
@@ -226,6 +231,27 @@ def main():
     VAR_DROP = 100 * (1 - var_cl / var_ol); VAR_RATIO = var_ol / var_cl
     inband = lambda M: 100 * np.mean(np.abs(Y[M][:, stim] - REF) <= BANDW)
     BAND_OL, BAND_CL = inband(ol_m), inband(cl_m)
+
+    # ---- cross-session summary (all 13 sessions) for the closing panels -----
+    # from export_xsession_stats.m; the Figure-3 quantities, recomputed per session
+    import scipy.io as sio
+    X = sio.loadmat(os.path.join(ASSETS, "xsession_stats.mat"))
+    xs = {k: X[k].ravel().astype(float) for k in
+          ("rmse_ol", "rmse_cl", "var_ol", "var_cl",
+           "var_ol_pre", "var_cl_pre", "var_ol_post", "var_cl_post")}
+    xmice = [str(m[0]) for m in X["mice"].ravel()]
+    X_NTRIALS = int(np.nansum(X["nOL"].ravel()) + np.nansum(X["nCL"].ravel()))
+    NSESS = len(xs["rmse_ol"]); NMICE = len(set(xmice))
+    X_RMSE_DROP = 100 * np.median(1 - xs["rmse_cl"] / xs["rmse_ol"])
+    X_NBETTER = int(np.sum(xs["rmse_cl"] < xs["rmse_ol"]))
+    X_RATIO = {"pre": xs["var_ol_pre"] / xs["var_cl_pre"],
+               "stim": xs["var_ol"] / xs["var_cl"],
+               "post": xs["var_ol_post"] / xs["var_cl_post"]}
+    X_PR = float(X["p_r"].ravel()[0]); X_PV = float(X["p_v"].ravel()[0])
+    print(f"  cross-session: n={NSESS} sessions / {NMICE} mice | RMSE -{X_RMSE_DROP:.0f}% "
+          f"({X_NBETTER}/{NSESS} improved, p={X_PR:.1e}) | variance ratio "
+          f"pre {np.median(X_RATIO['pre']):.2f} / stim {np.median(X_RATIO['stim']):.2f} "
+          f"/ post {np.nanmedian(X_RATIO['post']):.2f}")
     print(f"[{args.session}] RMSE OL {RMSE_OL:.2f} -> CL {RMSE_CL:.2f} ({RMSE_DROP:.0f}% lower) | "
           f"var {var_ol:.2f} -> {var_cl:.2f} ({VAR_DROP:.0f}% lower, {VAR_RATIO:.1f}x) | "
           f"in-band {BAND_OL:.0f}% -> {BAND_CL:.0f}%")
@@ -264,26 +290,43 @@ def main():
         return rgba
 
     # ---- frame schedule: intro | OL act | CL act | verdict ------------------
-    INTRO, OUTRO, HERO, FAST = 108, 132, 60, 8
+    # HERO = true real time: one output frame per real frame of the window
+    HERO = int(round(args.fps * (t.max() - t.min())))
+    INTRO, OUTRO, FAST, NHERO = 108, 200, 8, 3
     ol_idx = [i for i in range(Ntr) if LOOP[i] == "OL"]
     cl_idx = [i for i in range(Ntr) if LOOP[i] == "CL"]
-    # hero trials: the most typical OL trial, and a well-controlled CL trial
-    hero_ol = int(ol_idx[np.argmin(np.abs(rmse[ol_idx] - np.median(rmse[ol_idx])))])
-    hero_cl = int(cl_idx[np.argmin(rmse[cl_idx])])
+
+    def pick_heroes(idx, qs):
+        """trials spanning the RMSE distribution — representative, not cherry-picked"""
+        out = []
+        for q in qs:
+            target = np.quantile(rmse[idx], q)
+            cand = [i for i in idx if i not in out]
+            out.append(int(cand[int(np.argmin(np.abs(rmse[cand] - target)))]))
+        return out
+
+    heroes_ol = pick_heroes(ol_idx, [0.25, 0.50, 0.80])
+    heroes_cl = pick_heroes(cl_idx, [0.20, 0.50, 0.75])
+    hero_cl = heroes_cl[0]                      # best CL trial, used for the finale
+    print(f"  real-time trials: OL {heroes_ol} | CL {heroes_cl}  ({HERO} frames each)")
 
     sched = []
     for k in range(INTRO):
         sched.append(dict(ph="intro", k=k))
 
-    def add_act(name, hero, rest):
-        for j, tau in enumerate(np.linspace(0, NWIN - 1, HERO).round().astype(int)):
-            sched.append(dict(ph=name, tr=hero, tau=int(tau), hero=True, j=j, nj=HERO))
-        for i in rest:
-            for tau in np.linspace(0, NWIN - 1, FAST).round().astype(int):
-                sched.append(dict(ph=name, tr=int(i), tau=int(tau), hero=False))
+    def add_act(name, heroes, rest):
+        """hero (real time) → montage chunk → hero → chunk → hero → chunk"""
+        chunks = np.array_split(np.array(rest), NHERO) if len(rest) else [np.array([])] * NHERO
+        for hi, h in enumerate(heroes):
+            for j, tau in enumerate(np.linspace(0, NWIN - 1, HERO).round().astype(int)):
+                sched.append(dict(ph=name, tr=int(h), tau=int(tau), hero=True,
+                                  hi=hi, j=j, nj=HERO))
+            for i in chunks[hi]:
+                for tau in np.linspace(0, NWIN - 1, FAST).round().astype(int):
+                    sched.append(dict(ph=name, tr=int(i), tau=int(tau), hero=False))
 
-    add_act("ol", hero_ol, [i for i in ol_idx if i != hero_ol])
-    add_act("cl", hero_cl, [i for i in cl_idx if i != hero_cl])
+    add_act("ol", heroes_ol, [i for i in ol_idx if i not in heroes_ol])
+    add_act("cl", heroes_cl, [i for i in cl_idx if i not in heroes_cl])
     for k in range(OUTRO):
         sched.append(dict(ph="outro", k=k))
     total = len(sched)
@@ -308,8 +351,8 @@ def main():
         style_ax(ax)
 
     # ---- title bar ----
-    fig.text(0.032, 0.945, "CLOSED-LOOP CONTROL OF CORTICAL ACTIVITY", color=TXT,
-             fontsize=20, fontweight="bold", va="center")
+    fig.text(0.032, 0.945, "TARGETED CLOSED-LOOP OPTOGENETIC CONTROL OF CORTICAL DYNAMICS",
+             color=TXT, fontsize=16.5, fontweight="bold", va="center")
     act_label = fig.text(0.976, 0.945, "", color=MUTE, fontsize=11,
                          fontweight="bold", va="center", ha="right")
     from matplotlib.lines import Line2D
@@ -328,7 +371,7 @@ def main():
                       fontweight="bold", loc="left", pad=4)
     axBrain.set_facecolor(BG)
     axBrain.imshow(anat_rgba, interpolation="bilinear", zorder=0)
-    axim = axBrain.imshow(act_rgba(hero_ol, 0), interpolation="bilinear",
+    axim = axBrain.imshow(act_rgba(heroes_ol[0], 0), interpolation="bilinear",
                           animated=True, zorder=1)
     axBrain.set_xticks([]); axBrain.set_yticks([]); axBrain.grid(False)
     for s in axBrain.spines.values():
@@ -408,13 +451,55 @@ def main():
     score = fig.text(0.976, 0.895, "", color=CL_C, fontsize=11, fontweight="bold",
                      va="top", ha="right")
 
+    # ---- closing panels: the whole dataset (mirrors Fig. 3G and 3I) ---------
+    # built once, hidden until the verdict act.
+    axS1 = fig.add_subplot(gs[10:92, 59:77])
+    axS2 = fig.add_subplot(gs[10:92, 84:100])
+    for ax in (axS1, axS2):
+        style_ax(ax); ax.set_visible(False)
+
+    # S1: per-session paired tracking RMSE, open loop -> closed loop
+    for a, b in zip(xs["rmse_ol"], xs["rmse_cl"]):
+        axS1.plot([0, 1], [a, b], color="#9aa2b1", lw=1.0, alpha=0.75, zorder=2)
+    axS1.plot(np.zeros(NSESS), xs["rmse_ol"], "o", color=OL_C, ms=6, zorder=3)
+    axS1.plot(np.ones(NSESS), xs["rmse_cl"], "o", color=CL_C, ms=6, zorder=3)
+    axS1.plot([0, 1], [xs["rmse_ol"].mean(), xs["rmse_cl"].mean()], color=TXT,
+              lw=3.0, zorder=4)
+    _lo = min(xs["rmse_ol"].min(), xs["rmse_cl"].min())
+    _hi = max(xs["rmse_ol"].max(), xs["rmse_cl"].max())
+    axS1.set_ylim(_lo - 0.15 * (_hi - _lo), _hi + 0.30 * (_hi - _lo))
+    axS1.set_xlim(-0.35, 1.35); axS1.set_xticks([0, 1])
+    axS1.set_xticklabels(["open\nloop", "closed\nloop"], fontsize=9, fontweight="bold")
+    axS1.set_ylabel("tracking RMSE  (%ΔF/F)", color=MUTE, fontsize=8.5)
+    axS1.set_title(f"EVERY SESSION IMPROVES  ({X_NBETTER}/{NSESS})", color=TXT,
+                   fontsize=9.5, fontweight="bold", loc="left", pad=5)
+    axS1.text(0.5, 0.965, f"−{X_RMSE_DROP:.0f}%   p = {X_PR:.1e}", transform=axS1.transAxes,
+              ha="center", va="top", fontsize=9.5, fontweight="bold", color=CL_C)
+
+    # S2: OL/CL variance ratio, by window — elevated only during stimulation
+    wx = [0, 1, 2]
+    for k in range(NSESS):
+        axS2.plot(wx, [X_RATIO["pre"][k], X_RATIO["stim"][k], X_RATIO["post"][k]],
+                  color="#9aa2b1", lw=1.0, alpha=0.7, zorder=2)
+    med = [np.nanmedian(X_RATIO[w]) for w in ("pre", "stim", "post")]
+    axS2.plot(wx, med, "-o", color=CL_C, lw=3.0, ms=7, zorder=4)
+    axS2.axhline(1.0, color=TXT, ls="--", lw=1.2, zorder=3)
+    axS2.set_xlim(-0.35, 2.35); axS2.set_xticks(wx)
+    axS2.set_xticklabels(["before", "during", "after"], fontsize=9, fontweight="bold")
+    axS2.set_ylabel("variance ratio   open loop / closed loop", color=MUTE, fontsize=8.5)
+    axS2.set_title("ONLY DURING STIMULATION", color=TXT,
+                   fontsize=9.5, fontweight="bold", loc="left", pad=5)
+    axS2.text(1.0, med[1], f"  {med[1]:.2f}×", color=CL_C, fontsize=10,
+              fontweight="bold", va="bottom", ha="left")
+
     # ---- act card overlay ----
     card_bg = plt.Rectangle((0, 0), 1, 1, transform=fig.transFigure, facecolor=BG,
                             edgecolor="none", zorder=50, visible=False)
     fig.add_artist(card_bg)
-    card_t = fig.text(0.5, 0.56, "", ha="center", va="center", fontsize=40,
-                      fontweight="bold", color=TXT, zorder=51, visible=False)
-    card_s = fig.text(0.5, 0.44, "", ha="center", va="center", fontsize=17,
+    card_t = fig.text(0.5, 0.55, "", ha="center", va="center", fontsize=38,
+                      fontweight="bold", color=TXT, zorder=51, visible=False,
+                      linespacing=1.35)
+    card_s = fig.text(0.5, 0.38, "", ha="center", va="center", fontsize=17,
                       color=MUTE, zorder=51, visible=False)
 
     def show_card(title, sub, alpha):
@@ -435,15 +520,28 @@ def main():
         (0.56, "A laser drives an inhibitory opsin nearby, pushing that activity down."),
         (0.80, f"The goal: hold the region at {REF:.0f}% ΔF/F — inside the green band."),
     ]
+    # one narration set per real-time trial (played at true 1× speed)
     OL_HERO_BEATS = [
-        (0.00, "OPEN LOOP: the laser plays a fixed command, computed in advance."),
-        (0.33, "Nothing is measured back — the loop is broken."),
-        (0.62, "So spontaneous fluctuations go uncorrected, and the response misses the band."),
+        [(0.00, "OPEN LOOP, in real time: the laser plays a fixed command, computed in advance."),
+         (0.30, "Nothing is measured back — the loop is broken."),
+         (0.58, "So spontaneous fluctuations go uncorrected, and the response drifts off target.")],
+        [(0.00, "A second trial — the identical command is delivered again."),
+         (0.35, "But the brain starts from a different state, so it lands somewhere else."),
+         (0.65, "The system has no way to notice, and no way to correct.")],
+        [(0.00, "A third trial. Same command, another outcome."),
+         (0.35, "The error simply persists for the full three seconds."),
+         (0.65, "This scatter across trials is what feedback should remove.")],
     ]
     CL_HERO_BEATS = [
-        (0.00, "CLOSED LOOP: now the measured ΔF/F is fed back and compared to the target."),
-        (0.33, "The PI controller turns that error into a correction, every single frame."),
-        (0.62, "The command now changes shape trial by trial — that is feedback at work."),
+        [(0.00, "CLOSED LOOP, in real time: the measured ΔF/F is fed back and compared to the target."),
+         (0.30, "The PI controller turns that error into a correction — every single frame."),
+         (0.58, "Watch the laser command: it is no longer flat. It is being computed live.")],
+        [(0.00, "A second closed-loop trial, starting from a different brain state."),
+         (0.35, "The controller pushes activity into the band and holds it there."),
+         (0.65, "Proportional acts on the error now; integral removes any lasting offset.")],
+        [(0.00, "A third trial — and it lands in the same place as the last two."),
+         (0.35, "The command differs, because the disturbance differed."),
+         (0.65, "Same outcome from different starting points: that is disturbance rejection.")],
     ]
 
     def beat(beats, frac):
@@ -460,10 +558,9 @@ def main():
         seen = list(dict.fromkeys(x["tr"] for x in shown))
 
         # ---------- act cards ----------
-        if ph == "intro" and s["k"] < 34:
-            a = 1.0 if s["k"] < 22 else 1.0 - (s["k"] - 22) / 12
-            show_card("Can we hold a brain region at a set-point?",
-                      "closed-loop optogenetic control of cortical activity", a)
+        if ph == "intro" and s["k"] < 40:
+            a = 1.0 if s["k"] < 28 else 1.0 - (s["k"] - 28) / 12
+            show_card("Targeted closed-loop optogenetic\ncontrol of cortical dynamics", "", a)
         elif ph in ("ol", "cl") and fnum - act_start[ph] < 26:
             k = fnum - act_start[ph]
             a = 1.0 if k < 15 else 1.0 - (k - 15) / 11
@@ -485,8 +582,9 @@ def main():
                 a = 0.0
             if a > 0.02:
                 show_card("Feedback controls cortical activity",
-                          f"tracking error −{RMSE_DROP:.0f}%     ·     "
-                          f"trial-to-trial variability −{VAR_DROP:.0f}%", a)
+                          f"across {NSESS} sessions in {NMICE} mice:   tracking error "
+                          f"−{X_RMSE_DROP:.0f}%   ·   {np.median(X_RATIO['stim']):.1f}× less "
+                          f"trial-to-trial variance", a)
             else:
                 hide_card()
         else:
@@ -498,38 +596,24 @@ def main():
             act_label.set_text("THE SETUP"); act_label.set_color(MUTE)
             narr.set_text(beat(INTRO_BEATS, frac)); narr.set_color(TXT)
             loop.draw(closed=True, phase=frac * 2.0, active=frac > 0.5)
-            axim.set_data(act_rgba(hero_ol, int(frac * PRE)))
+            axim.set_data(act_rgba(heroes_ol[0], int(frac * PRE)))
             laser_pip.set_text("")
             onoff.set_text("")
             return
 
         if ph == "outro":
-            act_label.set_text("THE RESULT"); act_label.set_color(CL_C)
-            narr.set_text(f"Closed loop held the target more accurately and far more "
-                          f"repeatably — {VAR_RATIO:.1f}× less trial-to-trial variance.")
+            act_label.set_text("ALL SESSIONS"); act_label.set_color(CL_C)
+            narr.set_text(f"Closed loop lowered tracking error in {X_NBETTER} of {NSESS} "
+                          f"sessions, and cut trial-to-trial variance "
+                          f"{np.median(X_RATIO['stim']):.1f}× — only while the loop was running.")
             narr.set_color(TXT)
             loop.draw(closed=True, phase=s["k"] / 22.0, active=True)
-            score.set_text(f"tracking error −{RMSE_DROP:.0f}%   ·   "
-                           f"variability −{VAR_DROP:.0f}%   "
-                           f"({len(ol_idx)} OL / {len(cl_idx)} CL trials)")
-            # draw the FINAL state explicitly, so the closing frames are complete
-            # regardless of playback history (and so --probe is truthful here)
-            for i in range(Ntr):
-                if i not in trial_lines:
-                    axAvg.plot(t, smooth(Y[i], 7), color=CL_C if LOOP[i] == "CL" else OL_C,
-                               lw=0.6, alpha=0.16, zorder=3)
-                    trial_lines.append(i)
-            ol_mean.set_data(t, smooth(np.mean(Y[ol_m], 0), 7))
-            cl_mean.set_data(t, smooth(np.mean(Y[cl_m], 0), 7))
-            ol_var.set_data(t, smooth(np.var(Y[ol_m], axis=0), 7))
-            cl_var.set_data(t, smooth(np.var(Y[cl_m], axis=0), 7))
-            avg_leg.set_visible(True); var_leg.set_visible(True)
-            axAvg.set_title("TRIAL AVERAGE  —  closed loop sits on target, "
-                            "open loop falls short", color=TXT, fontsize=9.5,
-                            fontweight="bold", loc="left", pad=5)
-            axVar.set_title("TRIAL-TO-TRIAL VARIABILITY  —  feedback rejects the "
-                            "disturbance", color=TXT, fontsize=9.5,
-                            fontweight="bold", loc="left", pad=5)
+            score.set_text(f"ALL EXPERIMENTS   ·   {NSESS} sessions   ·   {NMICE} mice"
+                           f"   ·   {X_NTRIALS:,} trials")
+            # the closing frames leave the single session behind and show the
+            # whole dataset instead (Fig. 3-style)
+            axAvg.set_visible(False); axVar.set_visible(False)
+            axS1.set_visible(True); axS2.set_visible(True)
             # hold the rig on the best closed-loop trial, mid-stimulation
             axim.set_data(act_rgba(hero_cl, PRE + int(1.2 * 35)))
             roi_glow.set_alpha(0.5); laser_pip.set_text("● LASER ON")
@@ -572,8 +656,10 @@ def main():
 
         if s.get("hero"):
             frac = s["j"] / max(s["nj"] - 1, 1)
-            narr.set_text(beat(OL_HERO_BEATS if not closed else CL_HERO_BEATS, frac))
+            sets = CL_HERO_BEATS if closed else OL_HERO_BEATS
+            narr.set_text(beat(sets[min(s.get("hi", 0), len(sets) - 1)], frac))
             narr.set_color(TXT)
+            act_label.set_text(("CLOSED LOOP" if closed else "OPEN LOOP") + "   ·   REAL TIME")
         else:
             k = len([x for x in shown if LOOP[x["tr"]] == ("CL" if closed else "OL")])
             ntot = len(cl_idx) if closed else len(ol_idx)
