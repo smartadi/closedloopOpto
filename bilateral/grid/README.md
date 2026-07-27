@@ -27,6 +27,30 @@ New grid coding goes here (Python). The analysis is split into single-responsibi
 - `legacy/`     — pre-refactor monolith (`grid_analysis_monolith.py`), the MATLAB port
   (`grid_analysis.m`, for already-preprocessed sessions), and the source notebook. Frozen.
 
+### Interactive explorer (two-click: stim site → readout site)
+```bash
+.venv/Scripts/python.exe bilateral/grid/interactive_grid.py            # live
+.venv/Scripts/python.exe bilateral/grid/interactive_grid.py save       # static PNGs
+.venv/Scripts/python.exe bilateral/grid/interactive_grid.py --amp 1.0  # other laser power
+```
+- `interactive_grid.py` — SELECTOR map (click 1 = stim site X) + EFFERENT map (every site's
+  response to X). Click 2 on the efferent map picks the readout Y and opens the **pair
+  inspector**; **shift-click** gives the old 10×5 single-trial grid; **`a`** toggles which
+  laser amplitude the maps draw (the inspector always shows both).
+- `pair_inspector.py` — one (X→Y) pair in six panels: (A) trial mean ±SEM + independent TF
+  fit at *each* amp, (B) the shared amp-as-input fit (residual = saturation), (C) s-plane
+  poles/zeros of both amps (overlap ⇒ amplitude-invariant dynamics), (D) the fitted modes
+  drawn separately with τ and ω/2π plus a **cancellation factor** (Σ|A|/peak — large means the
+  individual τ's are not identifiable), (E) single-trial raster, (F) this pair's dose-response
+  against the population at a **matched time** `t*`. Numeric report underneath.
+- ⚠ The explorer reads the **2-amp** caches (`grid_tf_fits_2amp.npz`, `grid_trials_2amp.npz`).
+  Until 2026-07-27 it read the single-amp caches and silently showed **amp 2.0 only**.
+- ⚠ Panel F uses dF/F at `t*` (the high-amp |peak| time), **not** the stored per-amp `gain`:
+  the responses are biphasic, so a pair can peak on the positive lobe at one amp and the
+  negative lobe at the other, making the raw gain ratio meaningless. The matched-time focal
+  slope (1.53, CV-gated n=16) is a **different estimator** from the 1.24 through-origin
+  peak-gain slope in the 2026-07-17 log — do not quote them interchangeably.
+
 ## How to run
 ```bash
 .venv/Scripts/python.exe bilateral/grid/run_grid.py

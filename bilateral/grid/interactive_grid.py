@@ -1,25 +1,29 @@
 #!/usr/bin/env python
 """interactive_grid.py — interactive perturbation-response explorer over the brain.
 
-THREE linked windows, driven by clicks:
-  • EFFERENT (primary brain map): click a node X -> every site shows H[X, ·], the
-    trial-mean dF/F response to stimulating X (thick blue), ±2 SD band (faint),
-    TF prediction (orange), model-order label, red stim line at t=0. The SAME click also
-    refreshes the afferent map below. Poles/zeros printed to the console.
-  • AFFERENT (2nd brain map): keyed off the same X -> column H[·, X]: each site Y shows
-    X's trial-mean response WHEN Y was stimmed. X's own panel framed red. Click any node Y
-    on THIS map ->
-  • TRIALS (3rd window): a 10×5 grid of every individual trial for (stim Y -> readout X),
-    each with the trial mean overlaid (same mean as the brain map) — the averaging check.
-    The inspected Y is framed green on the afferent map.
+TWO-CLICK FLOW — click 1 picks the STIM site, click 2 picks the READOUT site:
+  • SELECTOR (plain brain map): click a node X -> X becomes the stim site.
+  • EFFERENT (brain map of traces): every site shows H[X, ·], the trial-mean dF/F response
+    to stimulating X (thick blue), ±2 SD band (faint), TF prediction (orange), model-order
+    label, red stim line at t=0. Poles/zeros printed to the console. Then click any node Y:
+      - plain click  -> PAIR INSPECTOR (`pair_inspector.py`): both amplitudes, independent
+        + shared TF fits, s-plane poles/zeros, mode decomposition, single-trial raster and
+        this pair's place in the population dose-response.
+      - shift-click  -> TRIALS: 10×5 grid of every single trial for (X -> Y) at the display
+        amplitude, trial mean overlaid — the averaging check.
 
-Data: cached TF fits (`tf_fit.py all`) + brain image (`cross_response.py brain`) +
-ROI time-series (`cross_response.py`, the trials cache). Single trials reconstruct with
-no network read.
+Amplitude: the 2026-07-10 grid ran TWO laser powers [1.0, 2.0]. The brain maps draw ONE of
+them (default the highest, `--amp 1.0` to switch, or press `a` to toggle live); the pair
+inspector always shows both.
+
+Data: cached 2-amp TF fits (`tf_fit.py 2amp`) + brain image (`cross_response.py brain`) +
+per-amp ROI time-series (`cross_response.py 2amp`). Single trials reconstruct with no
+network read.
 
 Run (interactive):   .venv/Scripts/python.exe bilateral/grid/interactive_grid.py
 Run (static PNGs):    .venv/Scripts/python.exe bilateral/grid/interactive_grid.py save
 Set display window:   ... interactive_grid.py --xlim -1 1
+Pick the amplitude:   ... interactive_grid.py --amp 1.0
 """
 import sys
 from pathlib import Path
@@ -41,48 +45,12 @@ import matplotlib.patheffects as pe
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cross_response as cr
+from pair_inspector import PairInspector, poles_zeros   # poles_zeros lives with the TF algebra
 
 DATA = Path(__file__).resolve().parents[2] / "data"
-TF_CACHE = DATA / "grid_tf_fits.npz"
+TF_CACHE = DATA / "grid_tf_fits_2amp.npz"     # per-amp independent fits (tf_fit.py 2amp)
 BRAIN_CACHE = DATA / "grid_brain.npz"
 ST = [pe.withStroke(linewidth=2.0, foreground="black")]
-
-
-def poles_zeros(tau, A, om=None, ph=None):
-    """Poles and zeros of the fitted TF, in 1/s.
-
-    osc modes (om supplied): mode i is A_i*exp(-t/tau_i)*sin(om_i*t + ph_i), i.e. a
-    complex-conjugate pole pair at -1/tau_i +- j*om_i with numerator
-    A_i*[sin(ph_i)*s + (sin(ph_i)/tau_i + om_i*cos(ph_i))] over (s+1/tau_i)^2 + om_i^2.
-    real modes (om None/NaN): poles -1/tau_i, numerator A_i.
-    Zeros = roots of the numerator sum over the common denominator.
-    """
-    m = ~np.isnan(tau)
-    tau, A = tau[m], A[m]
-    a = 1.0 / tau
-    has_osc = om is not None and np.any(np.isfinite(np.asarray(om)[m]))
-    if not has_osc:
-        if len(a) <= 1:
-            return -a, np.array([])
-        nco = np.zeros(len(a))
-        for i in range(len(a)):
-            nco = np.polyadd(nco, A[i] * np.poly(-np.delete(a, i)))
-        return -a, np.roots(nco)
-
-    om, ph = np.asarray(om)[m], np.asarray(ph)[m]
-    dens = [np.array([1.0, 2 * ai, ai * ai + oi * oi]) for ai, oi in zip(a, om)]
-    nums = [np.array([Ai * np.sin(pi), Ai * (np.sin(pi) * ai + oi * np.cos(pi))])
-            for Ai, ai, oi, pi in zip(A, a, om, ph)]
-    total = np.array([0.0])
-    for i in range(len(a)):
-        term = nums[i]
-        for j in range(len(a)):
-            if j != i:
-                term = np.polymul(term, dens[j])
-        total = np.polyadd(total, term)
-    poles = np.concatenate([[-ai + 1j * oi, -ai - 1j * oi] for ai, oi in zip(a, om)])
-    zeros = np.roots(total) if np.any(np.abs(total) > 1e-30) else np.array([])
-    return poles, zeros
 
 
 def corner_scale(ax, t0, ymax, dt=1.0):
@@ -98,19 +66,37 @@ def corner_scale(ax, t0, ymax, dt=1.0):
 
 
 def main():
+    if not TF_CACHE.exists():
+        raise FileNotFoundError(f"{TF_CACHE} missing — run `python tf_fit.py 2amp` first")
     z = np.load(TF_CACHE, allow_pickle=True)
-    H, yhat, sites, window = z["H"], z["yhat"], z["sites"], z["window"]
-    Hstd = z["Hstd"] if "Hstd" in z.files else np.zeros_like(H)
-    gain, order, tau, A = z["gain"], z["order"], z["tau"], z["A"]
-    cvr2 = z["cvr2"] if "cvr2" in z.files else np.zeros_like(gain)
-    om = z["om"] if "om" in z.files else None      # osc-model mode freqs (rad/s), None if legacy
-    ph = z["ph"] if "ph" in z.files else None
+    sites, window = z["sites"], z["window"]
+    amps = [float(a) for a in z["amps"]]
+    # every fitted array carries a leading amp axis; the brain maps draw ONE amp at a time.
+    ALL = {k: z[k] for k in ("H", "yhat", "Hstd", "gain", "order", "tau", "A", "cvr2", "om", "ph")
+           if k in z.files}
+    if "--amp" in sys.argv:
+        want = float(sys.argv[sys.argv.index("--amp") + 1])
+        if not any(abs(want - a) < 1e-6 for a in amps):
+            raise SystemExit(f"--amp {want} not in this session's amps {amps}")
+        AI = int(np.argmin([abs(want - a) for a in amps]))
+    else:
+        AI = len(amps) - 1                                   # default: highest power
     bz = np.load(BRAIN_CACHE, allow_pickle=True)
     mimg, px, sp, ny, nx = bz["mimg"], bz["px"], float(bz["sp"]), int(bz["ny"]), int(bz["nx"])
-    tz = cr.load_trials()
-    roi_ts = tz["roi_ts"].astype(np.float64)
-    svdT, onset_t, pos, base_ix, twin = tz["svdT"], tz["onset_t"], tz["pos"], int(tz["base_ix"]), tz["window"]
+    tz = cr.load_trials2()
     nS = len(sites)
+    print(f"amps in session: {amps}; brain maps drawing amp {amps[AI]:.1f} "
+          f"(--amp to change, or press 'a' to toggle)")
+
+    # D = the currently displayed amplitude's slice of every fitted array. `set_amp` rebinds it
+    # in place so the drawing closures below never need to know which amp is showing.
+    D = {}
+
+    def set_amp(ai):
+        for k, v in ALL.items():
+            D[k] = v[ai]
+        D["ai"], D["amp"] = ai, amps[ai]
+    set_amp(AI)
 
     post = window >= 0
     # fixed ±5% dF/F scale across ALL panels (comparable). The old per-sample 99.5th-pct
@@ -187,13 +173,13 @@ def main():
             v = complex(v)
             return f"{v.real:.1f}" if abs(v.imag) < 1e-6 else f"{v.real:.1f}{v.imag:+.1f}j"
 
-        for r in np.argsort(-np.abs(gain[X])):
-            p, zr = poles_zeros(tau[X, r], A[X, r],
-                                None if om is None else om[X, r],
-                                None if ph is None else ph[X, r])
+        for r in np.argsort(-np.abs(D["gain"][X])):
+            p, zr = poles_zeros(D["tau"][X, r], D["A"][X, r],
+                                D["om"][X, r] if "om" in D else None,
+                                D["ph"][X, r] if "ph" in D else None)
             ps = ", ".join(_fmt(v) for v in p)
             zs = ", ".join(_fmt(v) for v in zr)
-            print(f"  {coord(r)} n{int(order[X,r])} g{gain[X,r]:+.4f}  p[{ps}] z[{zs}]")
+            print(f"  {coord(r)} n{int(D['order'][X,r])} g{D['gain'][X,r]:+.4f}  p[{ps}] z[{zs}]")
 
     def build_selector():
         """Map 1: a plain clickable brain (mean image + site dots). Click picks the stim site."""
@@ -222,20 +208,29 @@ def main():
 
     effv = build_brain()
     sel = build_selector()
-    views = {"trials": None}
-    X0 = int(np.nanargmax(np.abs(gain[np.arange(nS), np.arange(nS)])))
+    views = {"trials": None, "pair": None}
+    X0 = int(np.nanargmax(np.abs(D["gain"][np.arange(nS), np.arange(nS)])))
     state = {"X": X0, "Y": None, "live": False}
 
     def draw_efferent(X):
-        render(effv, lambda j: H[X, j], lambda j: Hstd[X, j], lambda j: yhat[X, j],
-               lambda j: order[X, j], {X: "red"}, X,
-               f"EFFERENT — stim {coord(X)} → response at every site   "
-               f"blue=trial mean  band=±2SD  orange=TF (faint = low CV-R²)",
-               rel_fn=lambda j: cvr2[X, j])
+        render(effv, lambda j: D["H"][X, j], lambda j: D["Hstd"][X, j],
+               lambda j: D["yhat"][X, j],
+               lambda j: D["order"][X, j], {X: "red"}, X,
+               f"EFFERENT @ amp {D['amp']:.1f} — stim {coord(X)} → response at every site   "
+               f"blue=trial mean  band=±2SD  orange=TF (faint = low CV-R²)   "
+               f"click=pair inspector, shift-click=single trials, 'a'=toggle amp",
+               rel_fn=lambda j: D["cvr2"][X, j])
         report(X)
 
+    def show_pair(s, r):
+        """Open/refresh the full two-amplitude inspector for this (stim, readout) pair."""
+        if views["pair"] is None:
+            views["pair"] = PairInspector(xlim=XLIM, trials=tz, live=state.get("live", False))
+        views["pair"].show(s, r, D["ai"])
+
     def show_trials(s, r):
-        dff, m = cr.extract_trials(roi_ts, svdT, onset_t, pos, sites, twin, base_ix, s, r)
+        dff, m = cr.extract_trials_amp(tz, s, r, D["amp"])
+        twin = tz["window"]
         n = dff.shape[0]
         yl = float(np.nanpercentile(np.abs(dff[:, post]), 99) * 1.15) or YMAX
         if views["trials"] is None or not plt.fignum_exists(views["trials"]["fig"].number):
@@ -257,7 +252,7 @@ def main():
                 ax.text(0.03, 0.97, f"{k+1}", transform=ax.transAxes, fontsize=5, va="top", c="0.4")
             else:
                 ax.axis("off")
-        f.suptitle(f"All {n} trials — stim {coord(s)} → readout {coord(r)}   "
+        f.suptitle(f"All {n} trials @ amp {D['amp']:.1f} — stim {coord(s)} → readout {coord(r)}   "
                    f"blue = single trial   orange = trial mean (±{yl*100:.1f}% scale)", fontsize=11)
         f.tight_layout(rect=[0, 0, 1, 0.98])
         f.canvas.draw_idle()
@@ -269,7 +264,17 @@ def main():
         outdir = Path(__file__).resolve().parent / "grid_png"; outdir.mkdir(exist_ok=True)
         sel["fig"].savefig(outdir / "view_selector.png", dpi=130)
         effv["fig"].savefig(outdir / "view_efferent.png", dpi=130)
-        print("wrote view_selector.png, view_efferent.png")
+        # headless proof of the second click: the strongest OFF-SITE readout of the default
+        # stim site (the self-pair is trivially strongest and would not demo a real pair)
+        gsel = np.where(D["cvr2"][X0] > 0, np.abs(D["gain"][X0]), -np.inf)
+        gsel[X0] = -np.inf
+        Y0 = int(np.nanargmax(gsel))
+        show_pair(X0, Y0)
+        views["pair"].fig.savefig(outdir / "view_pair_inspector.png", dpi=130)
+        show_trials(X0, Y0)                        # shift-click path, same pair
+        views["trials"]["fig"].savefig(outdir / "view_trials.png", dpi=110)
+        print(f"wrote view_selector.png, view_efferent.png, view_pair_inspector.png, "
+              f"view_trials.png  ({coord(X0)} → {coord(Y0)}, amp {D['amp']:.1f})")
         return
 
     # Map 1 (selector): click nearest site -> set stim X -> Map 2 (efferent field) redraws
@@ -282,13 +287,29 @@ def main():
         draw_efferent(X)
     sel["fig"].canvas.mpl_connect("button_press_event", on_select)
 
-    # Map 2 (efferent): click a node -> single-trial view of (stim X -> that readout)
+    # Map 2 (efferent): click a node = READOUT pick -> pair inspector (both amps).
+    # shift-click keeps the old behaviour: the 10x5 single-trial grid at the display amp.
     def on_efferent(event):
         if event.inaxes not in effv["axs"]:
             return
         state["Y"] = effv["axs"][event.inaxes]
-        show_trials(state["X"], state["Y"])
+        if getattr(event, "key", None) == "shift":
+            show_trials(state["X"], state["Y"])
+        else:
+            show_pair(state["X"], state["Y"])
     effv["fig"].canvas.mpl_connect("button_press_event", on_efferent)
+
+    # 'a' toggles which laser amplitude the brain maps draw (the inspector always shows both)
+    def on_key(event):
+        if event.key != "a" or len(amps) < 2:
+            return
+        set_amp((D["ai"] + 1) % len(amps))
+        draw_efferent(state["X"])
+        if state["Y"] is not None and views["pair"] is not None \
+                and plt.fignum_exists(views["pair"].fig.number):
+            show_pair(state["X"], state["Y"])
+    for f_ in (sel["fig"], effv["fig"]):
+        f_.canvas.mpl_connect("key_press_event", on_key)
 
     state["live"] = True
     plt.show()
