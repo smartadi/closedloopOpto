@@ -43,6 +43,11 @@ var_ol_pre = nan(n,1); var_cl_pre = nan(n,1);
 var_ol_post= nan(n,1); var_cl_post= nan(n,1);
 nOL = nan(n,1); nCL = nan(n,1);
 keys = cell(n,1); mice = cell(n,1);
+NT = 176;                       % common time axis for the variance traces
+t_axis = ((0:NT-1) - PRE) / FS;
+vtr_ol = nan(n, NT); vtr_cl = nan(n, NT);          % variance across trials vs time
+rmse_ol_e = nan(n,1); rmse_cl_e = nan(n,1);        % 0-1 s  (settling regime)
+rmse_ol_s = nan(n,1); rmse_cl_s = nan(n,1);        % 1-3 s  (steady-state regime)
 
 for k = 1:n
     td = S(k).td;
@@ -67,6 +72,19 @@ for k = 1:n
         var_ol_post(k) = mean(var(Yo(:,post), 0, 1));
         var_cl_post(k) = mean(var(Yc(:,post), 0, 1));
     end
+    % --- variance-vs-time traces, resampled onto the common axis ---
+    vo = var(Yo, 0, 1); vc = var(Yc, 0, 1);
+    vtr_ol(k,:) = interp1(t, vo, t_axis, 'linear', 'extrap');
+    vtr_cl(k,:) = interp1(t, vc, t_axis, 'linear', 'extrap');
+
+    % --- RMSE split by regime within the stimulation window (Fig 3J) ---
+    e_win = t >= 0 & t <= 1;            % settling
+    s_win = t >  1 & t <= DUR;          % steady state
+    rmse_ol_e(k) = mean(sqrt(mean((Yo(:,e_win) - REF).^2, 2)));
+    rmse_cl_e(k) = mean(sqrt(mean((Yc(:,e_win) - REF).^2, 2)));
+    rmse_ol_s(k) = mean(sqrt(mean((Yo(:,s_win) - REF).^2, 2)));
+    rmse_cl_s(k) = mean(sqrt(mean((Yc(:,s_win) - REF).^2, 2)));
+
     nOL(k) = size(Yo,1); nCL(k) = size(Yc,1);
     keys{k} = S(k).key; mice{k} = S(k).mn;
     fprintf('%-4s %s  OL n=%3d rmse %.2f var %.2f | CL n=%3d rmse %.2f var %.2f\n', ...
@@ -93,5 +111,6 @@ end
 out = fullfile(ROOT, 'presentation', 'assets', 'xsession_stats.mat');
 save(out, 'keys','mice','rmse_ol','rmse_cl','var_ol','var_cl', ...
      'var_ol_pre','var_cl_pre','var_ol_post','var_cl_post','nOL','nCL', ...
+     'vtr_ol','vtr_cl','t_axis','rmse_ol_e','rmse_cl_e','rmse_ol_s','rmse_cl_s', ...
      'p_r','p_v','REF','DUR','-v7');
 fprintf('wrote %s\n', out);

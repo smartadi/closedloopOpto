@@ -45,25 +45,48 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as manim
+import matplotlib.ticker as mticker
 import imageio_ffmpeg
+
+_SUPS = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def _sup(n):
+    """render an integer exponent as Unicode superscript digits"""
+    return str(int(n)).translate(_SUPS)
 
 matplotlib.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "presentation", "assets")
 
-# ---- palette (light purple theme; condition colours per the paper) ----------
-BG = "#f0eaf8"; PANEL2 = "#f9f6fd"; EDGE = "#ccc3df"; GRID = "#e9e3f3"
-TXT = "#1b2230"; MUTE = "#6b7688"
-OL_C = "#ff0000"          # open loop   (paper: red)
-CL_C = "#0066d9"          # closed loop (paper: blue)
+# ---- palette --------------------------------------------------------------
+# Condition colours are LOCKED to the paper (open loop red, closed loop blue)
+# and are identical in every theme; only the deck around them changes. The
+# "bone" deck is a warm neutral so the two saturated hues are the only strong
+# colours on screen; "lavender" is the original purple deck.
+THEMES = {
+    "bone": dict(BG="#f5f2ec", PANEL2="#fffdf8", EDGE="#ddd6c8", GRID="#eae4d8",
+                 TXT="#15191f", MUTE="#6f7581", HAIR="#e2dbcd", LINK="#bcb5a8",
+                 STIMF="#f3d4cf", ACCENT="#a3672f", DEAD="#cac3b6"),
+    "lavender": dict(BG="#f0eaf8", PANEL2="#f9f6fd", EDGE="#ccc3df", GRID="#e9e3f3",
+                     TXT="#1b2230", MUTE="#6b7688", HAIR="#d9d1ea", LINK="#a8a0bd",
+                     STIMF="#f6c9d0", ACCENT="#7d5bd0", DEAD="#c3c9d4"),
+}
+OL_C = "#ff0000"          # open loop   (paper: red)   -- locked
+CL_C = "#0066d9"          # closed loop (paper: blue)  -- locked
 INP_C = "#8c8c8c"         # laser input (paper: gray, bold)
-REFC = "#1b2230"          # reference line
 BAND = "#bfe3c4"          # on-target band
-STIMF = "#f6c9d0"         # stimulation window shading
 ROIC = "#e11fbf"; GLOW = "#ff2e6a"
-ACCENT = "#7d5bd0"        # narration / schematic accent
-DEAD = "#c3c9d4"          # a broken / inactive loop arm
+
+
+def apply_theme(name):
+    """set the deck colours as module globals (called before the figure is built)"""
+    globals().update(THEMES[name])
+    globals()["REFC"] = THEMES[name]["TXT"]
+
+
+apply_theme("bone")
 
 BANDW = 1.0               # target band half-width, %ΔF/F
 
@@ -206,7 +229,10 @@ def main():
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--probe", type=float, default=None,
                     help="render ONE frame at fraction [0..1] to a PNG and exit")
+    ap.add_argument("--theme", default="bone", choices=sorted(THEMES),
+                    help="deck palette; condition colours are locked either way")
     args = ap.parse_args()
+    apply_theme(args.theme)
 
     from scipy import ndimage
     from matplotlib.colors import Normalize
@@ -238,7 +264,10 @@ def main():
     X = sio.loadmat(os.path.join(ASSETS, "xsession_stats.mat"))
     xs = {k: X[k].ravel().astype(float) for k in
           ("rmse_ol", "rmse_cl", "var_ol", "var_cl",
-           "var_ol_pre", "var_cl_pre", "var_ol_post", "var_cl_post")}
+           "var_ol_pre", "var_cl_pre", "var_ol_post", "var_cl_post",
+           "rmse_ol_e", "rmse_cl_e", "rmse_ol_s", "rmse_cl_s", "nOL", "nCL")}
+    xs_v = {"ol": X["vtr_ol"].astype(float), "cl": X["vtr_cl"].astype(float)}
+    tx = X["t_axis"].ravel().astype(float)
     xmice = [str(m[0]) for m in X["mice"].ravel()]
     X_NTRIALS = int(np.nansum(X["nOL"].ravel()) + np.nansum(X["nCL"].ravel()))
     NSESS = len(xs["rmse_ol"]); NMICE = len(set(xmice))
@@ -451,46 +480,164 @@ def main():
     score = fig.text(0.976, 0.895, "", color=CL_C, fontsize=11, fontweight="bold",
                      va="top", ha="right")
 
-    # ---- closing panels: the whole dataset (mirrors Fig. 3G and 3I) ---------
-    # built once, hidden until the verdict act.
-    axS1 = fig.add_subplot(gs[10:92, 59:77])
-    axS2 = fig.add_subplot(gs[10:92, 84:100])
-    for ax in (axS1, axS2):
-        style_ax(ax); ax.set_visible(False)
+    # ======================= closing SLIDE: the paper figure ==================
+    # The verdict is a standalone, paper-styled slide over the whole dataset —
+    # the video does NOT return to the single-trial template. Panels mirror
+    # Fig. 3: across-trial variance, OL-vs-CL tracking RMSE, and the RMSE ratio
+    # split by regime within the trial (settling vs steady state, Fig. 3J).
+    INK = TXT
 
-    # S1: per-session paired tracking RMSE, open loop -> closed loop
-    for a, b in zip(xs["rmse_ol"], xs["rmse_cl"]):
-        axS1.plot([0, 1], [a, b], color="#9aa2b1", lw=1.0, alpha=0.75, zorder=2)
-    axS1.plot(np.zeros(NSESS), xs["rmse_ol"], "o", color=OL_C, ms=6, zorder=3)
-    axS1.plot(np.ones(NSESS), xs["rmse_cl"], "o", color=CL_C, ms=6, zorder=3)
-    axS1.plot([0, 1], [xs["rmse_ol"].mean(), xs["rmse_cl"].mean()], color=TXT,
-              lw=3.0, zorder=4)
-    _lo = min(xs["rmse_ol"].min(), xs["rmse_cl"].min())
-    _hi = max(xs["rmse_ol"].max(), xs["rmse_cl"].max())
-    axS1.set_ylim(_lo - 0.15 * (_hi - _lo), _hi + 0.30 * (_hi - _lo))
-    axS1.set_xlim(-0.35, 1.35); axS1.set_xticks([0, 1])
-    axS1.set_xticklabels(["open\nloop", "closed\nloop"], fontsize=9, fontweight="bold")
-    axS1.set_ylabel("tracking RMSE  (%ΔF/F)", color=MUTE, fontsize=8.5)
-    axS1.set_title(f"EVERY SESSION IMPROVES  ({X_NBETTER}/{NSESS})", color=TXT,
-                   fontsize=9.5, fontweight="bold", loc="left", pad=5)
-    axS1.text(0.5, 0.965, f"−{X_RMSE_DROP:.0f}%   p = {X_PR:.1e}", transform=axS1.transAxes,
-              ha="center", va="top", fontsize=9.5, fontweight="bold", color=CL_C)
+    # per-artist base alpha, so a group can be faded in without losing the
+    # translucency the fills were drawn with
+    _a0 = {}
 
-    # S2: OL/CL variance ratio, by window — elevated only during stimulation
-    wx = [0, 1, 2]
-    for k in range(NSESS):
-        axS2.plot(wx, [X_RATIO["pre"][k], X_RATIO["stim"][k], X_RATIO["post"][k]],
-                  color="#9aa2b1", lw=1.0, alpha=0.7, zorder=2)
-    med = [np.nanmedian(X_RATIO[w]) for w in ("pre", "stim", "post")]
-    axS2.plot(wx, med, "-o", color=CL_C, lw=3.0, ms=7, zorder=4)
-    axS2.axhline(1.0, color=TXT, ls="--", lw=1.2, zorder=3)
-    axS2.set_xlim(-0.35, 2.35); axS2.set_xticks(wx)
-    axS2.set_xticklabels(["before", "during", "after"], fontsize=9, fontweight="bold")
-    axS2.set_ylabel("variance ratio   open loop / closed loop", color=MUTE, fontsize=8.5)
-    axS2.set_title("ONLY DURING STIMULATION", color=TXT,
-                   fontsize=9.5, fontweight="bold", loc="left", pad=5)
-    axS2.text(1.0, med[1], f"  {med[1]:.2f}×", color=CL_C, fontsize=10,
-              fontweight="bold", va="bottom", ha="left")
+    def reg(arts):
+        for a_ in arts:
+            _a0.setdefault(a_, 1.0 if a_.get_alpha() is None else a_.get_alpha())
+        return arts
+
+    def ax_arts(ax):
+        """every artist of an axes that participates in the reveal fade"""
+        return reg(list(ax.lines) + list(ax.collections) + list(ax.texts)
+                   + list(ax.patches) + list(ax.images) + list(ax.get_ygridlines())
+                   + list(ax.get_xticklabels()) + list(ax.get_yticklabels()))
+
+    def fade(arts, f):
+        for a_ in arts:
+            a_.set_alpha(_a0[a_] * f)
+            a_.set_visible(f > 0.01)
+
+    def dot_size(nn):
+        """marker area ∝ trials contributed by that session"""
+        nn = np.asarray(nn, float)
+        return 22 + 110 * (nn - nn.min()) / max(float(np.ptp(nn)), 1e-9)
+
+    def paper_ax(ax, ny=3):
+        """deck aesthetic: no panel fill, no spines, one recessive horizontal grid"""
+        ax.patch.set_alpha(0.0)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        ax.set_axisbelow(True)
+        ax.xaxis.grid(False)
+        ax.yaxis.grid(True, color=HAIR, lw=0.9, alpha=0.9, zorder=0)
+        ax.yaxis.set_major_locator(mticker.MaxNLocator(ny))
+        ax.tick_params(colors=MUTE, labelsize=9.5, length=0, pad=5)
+        for lab in ax.get_xticklabels():
+            lab.set_color(TXT); lab.set_fontsize(10.5)
+
+    def strip(ax, cols, xs_, colors, med, xlabels, ratio=False):
+        """paired per-session strip: links, dots sized by trial count, ink median"""
+        sz = dot_size(xs["nOL"] + xs["nCL"])
+        for k in range(NSESS):
+            ax.plot(cols, [v[k] for v in xs_], color=LINK, lw=1.0, alpha=0.5, zorder=2)
+        for i, (v, c) in enumerate(zip(xs_, colors)):
+            ax.scatter(np.full(NSESS, cols[i]), v, s=sz, color=c, edgecolors=BG,
+                       linewidths=1.4, zorder=3)
+        ax.plot(cols, med, color=INK, lw=2.8, solid_capstyle="round", zorder=4)
+        if ratio:
+            ax.axhline(1.0, color=MUTE, ls=(0, (4, 3)), lw=1.1, zorder=1)
+        ax.set_xlim(cols[0] - 0.55, cols[-1] + 0.55)
+        ax.set_xticks(cols); ax.set_xticklabels(xlabels)
+
+    # three columns: the wide time course, then the two control comparisons.
+    # (The paired OL-vs-CL RMSE panel was cut — its number lives in the footer.)
+    CX = (0.200, 0.545, 0.855)
+    axQ1 = fig.add_axes([0.080, 0.150, 0.240, 0.435])
+    axQ1b = fig.add_axes([0.470, 0.150, 0.150, 0.435])
+    axQ3 = fig.add_axes([0.7875, 0.150, 0.135, 0.435])
+    slide_axes = [axQ1, axQ1b, axQ3]
+
+    # --- Q1: across-trial variance vs time (mean +/- SEM over sessions) ------
+    vo_m = np.nanmean(xs_v["ol"], axis=0); vc_m = np.nanmean(xs_v["cl"], axis=0)
+    vo_e = np.nanstd(xs_v["ol"], axis=0) / np.sqrt(NSESS)
+    vc_e = np.nanstd(xs_v["cl"], axis=0) / np.sqrt(NSESS)
+    axQ1.axvspan(0, DUR, color="#ffffff", alpha=0.55, lw=0, zorder=0)
+    axQ1.fill_between(tx, vo_m - vo_e, vo_m + vo_e, color=OL_C, alpha=0.15, lw=0)
+    axQ1.fill_between(tx, vc_m - vc_e, vc_m + vc_e, color=CL_C, alpha=0.15, lw=0)
+    axQ1.plot(tx, vo_m, color=OL_C, lw=2.2, solid_capstyle="round")
+    axQ1.plot(tx, vc_m, color=CL_C, lw=2.2, solid_capstyle="round")
+    axQ1.set_xlim(tx.min(), tx.max()); axQ1.set_ylim(0, 10.6)
+    axQ1.set_xticks([0, DUR]); axQ1.set_xticklabels(["0", f"{DUR:g} s"])
+    # direct labels instead of a legend box (identity is never colour-alone)
+    axQ1.text(1.5, 10.1, "laser on", ha="center", va="top", fontsize=9.5, color=MUTE)
+    axQ1.text(1.5, np.interp(1.5, tx, vo_m + vo_e) + 0.35, "open loop", ha="center",
+              va="bottom", fontsize=10.5, fontweight="bold", color=OL_C)
+    axQ1.text(1.5, np.interp(1.5, tx, vc_m - vc_e) - 0.35, "closed loop", ha="center",
+              va="top", fontsize=10.5, fontweight="bold", color=CL_C)
+
+    # --- Q1b: variance ratio (OL/CL) by window -- the specificity control -----
+    # Feedback should only suppress variability while the loop is closed: the
+    # ratio must sit at 1 before and after stimulation, and rise only during.
+    win_r = [X_RATIO["pre"], X_RATIO["stim"], X_RATIO["post"]]
+    med_w = [float(np.nanmedian(w)) for w in win_r]
+    strip(axQ1b, [0, 1, 2], win_r, (MUTE, CL_C, MUTE), med_w,
+          ["before", "during", "after"], ratio=True)
+
+    # --- Q3: RMSE ratio (OL/CL) by regime within the trial (Fig. 3J) ---------
+    rat_e = xs["rmse_ol_e"] / xs["rmse_cl_e"]      # 0-1 s, settling
+    rat_s = xs["rmse_ol_s"] / xs["rmse_cl_s"]      # 1-3 s, steady state
+    strip(axQ3, [0, 1], [rat_e, rat_s], (MUTE, CL_C),
+          [np.median(rat_e), np.median(rat_s)],
+          ["0–1 s\nsettling", "1–3 s\nsteady"], ratio=True)
+
+    for ax in slide_axes:
+        paper_ax(ax); ax.set_visible(False)
+
+    # ---- typographic header row: the number leads, the plot supports --------
+    X_VAR_DROP = 100 * np.median(1 - xs["var_cl"] / xs["var_ol"])
+    _pexp = int(np.floor(np.log10(X_PR)))
+    P_STR = f"p = {X_PR / 10 ** _pexp:.1f}×10{_sup(_pexp)}"
+
+    from matplotlib.colors import LinearSegmentedColormap
+    OLCL = LinearSegmentedColormap.from_list("olcl", [OL_C, CL_C])
+    _ramp = np.linspace(0, 1, 256)[None, :]
+
+    def grad_rule(cx, y, w=0.062, h=0.0055):
+        """hairline open-loop→closed-loop gradient, tying a number to its plot"""
+        a = fig.add_axes([cx - w / 2, y, w, h]); a.set_axis_off()
+        a.imshow(_ramp, aspect="auto", cmap=OLCL, interpolation="bilinear")
+        return a
+
+    slide_t = fig.text(0.5, 0.884, "Feedback controls cortical activity", ha="center",
+                       va="center", fontsize=31, fontweight="bold", color=INK,
+                       zorder=40, visible=False)
+    ax_trule = grad_rule(0.5, 0.836, w=0.085, h=0.0065)
+    slide_axes_extra = [ax_trule]
+    slide_s = fig.text(0.5, 0.050, f"{NSESS} sessions   ·   {NMICE} mice   ·   "
+                       f"{X_NTRIALS:,} trials   ·   tracking RMSE −{X_RMSE_DROP:.0f}% "
+                       f"in {X_NBETTER}/{NSESS} sessions ({P_STR})   ·   "
+                       f"dot size = trials per session",
+                       ha="center", va="center", fontsize=10.5, color=MUTE,
+                       zorder=40, visible=False)
+    slide_head = reg([slide_t, slide_s]) + ax_arts(ax_trule)
+
+    # (hero number, hero size, hero colour, two-line caption) per column
+    COLS = [
+        (f"−{X_VAR_DROP:.0f}%", 34, INK,
+         "trial-to-trial variability\nwhile the loop is closed"),
+        (f"{med_w[0]:.1f}× · {med_w[2]:.1f}×", 27, MUTE,
+         "before and after —\nvariability unchanged"),
+        (f"{np.median(rat_s):.1f}×", 34, INK,
+         "error falls further once\nthe transient has settled"),
+    ]
+    slide_groups, slide_h = [], []
+    for cx, (hero, hsz, hcol, cap), pax in zip(CX, COLS, slide_axes):
+        th = fig.text(cx, 0.750, hero, ha="center", va="center", fontsize=hsz,
+                      fontweight="bold", color=hcol, zorder=40, visible=False)
+        tc = fig.text(cx, 0.648, cap, ha="center", va="center", fontsize=11,
+                      color=MUTE, linespacing=1.55, zorder=40, visible=False)
+        gax = grad_rule(cx, 0.706)
+        slide_h += [th, tc]
+        slide_axes_extra.append(gax)
+        slide_groups.append(reg([th, tc]) + ax_arts(gax) + ax_arts(pax))
+
+    slide_cap = fig.text(0.5, -1, "", visible=False)   # retired: numbers carry it
+    slide_texts = [slide_t, slide_s] + slide_h
+    slide_all_axes = slide_axes + slide_axes_extra
+    for _a in slide_all_axes:
+        _a.set_visible(False)
+    for _g in [slide_head] + slide_groups:      # start fully faded out
+        fade(_g, 0.0)
 
     # ---- act card overlay ----
     card_bg = plt.Rectangle((0, 0), 1, 1, transform=fig.transFigure, facecolor=BG,
@@ -569,24 +716,7 @@ def main():
             else:
                 show_card("CLOSED LOOP", "measure the error, correct it, every frame", a)
         elif ph == "outro":
-            # fade the card in, hold, then fade it back OUT so the video ends on
-            # the completed evidence rather than on a blank card
-            k = s["k"]
-            if k < 12:
-                a = k / 12
-            elif k < 58:
-                a = 1.0
-            elif k < 80:
-                a = 1.0 - (k - 58) / 22
-            else:
-                a = 0.0
-            if a > 0.02:
-                show_card("Feedback controls cortical activity",
-                          f"across {NSESS} sessions in {NMICE} mice:   tracking error "
-                          f"−{X_RMSE_DROP:.0f}%   ·   {np.median(X_RATIO['stim']):.1f}× less "
-                          f"trial-to-trial variance", a)
-            else:
-                hide_card()
+            hide_card()          # the verdict IS the slide; no card over it
         else:
             hide_card()
 
@@ -602,28 +732,20 @@ def main():
             return
 
         if ph == "outro":
-            act_label.set_text("ALL SESSIONS"); act_label.set_color(CL_C)
-            narr.set_text(f"Closed loop lowered tracking error in {X_NBETTER} of {NSESS} "
-                          f"sessions, and cut trial-to-trial variance "
-                          f"{np.median(X_RATIO['stim']):.1f}× — only while the loop was running.")
-            narr.set_color(TXT)
-            loop.draw(closed=True, phase=s["k"] / 22.0, active=True)
-            score.set_text(f"ALL EXPERIMENTS   ·   {NSESS} sessions   ·   {NMICE} mice"
-                           f"   ·   {X_NTRIALS:,} trials")
-            # the closing frames leave the single session behind and show the
-            # whole dataset instead (Fig. 3-style)
-            axAvg.set_visible(False); axVar.set_visible(False)
-            axS1.set_visible(True); axS2.set_visible(True)
-            # hold the rig on the best closed-loop trial, mid-stimulation
-            axim.set_data(act_rgba(hero_cl, PRE + int(1.2 * 35)))
-            roi_glow.set_alpha(0.5); laser_pip.set_text("● LASER ON")
-            laser_pip.set_color(CL_C); onoff.set_text("stimulation on")
-            df_line.set_data(t, Y[hero_cl]); df_line.set_color(CL_C)
-            df_head.set_data([t[-1]], [Y[hero_cl][-1]]); df_head.set_color(CL_C)
-            if u_fill[0] is not None:
-                u_fill[0].remove()
-            u_line.set_data(t, U[hero_cl])
-            u_fill[0] = axU.fill_between(t, 0, U[hero_cl], color=INP_C, alpha=0.22)
+            # hand over completely to the paper-style summary slide: every
+            # single-trial element is hidden, nothing returns to the template
+            for _ax in (axBrain, axCB, axLoop, axDF, axU, axAvg, axVar):
+                _ax.set_visible(False)
+            for _tx in (narr, narr_tag, score, act_label):
+                _tx.set_visible(False)
+            for _ax in slide_all_axes:
+                _ax.set_visible(True)
+            # build the slide column by column rather than dropping it whole:
+            # title first, then each claim ~0.45 s apart, each over ~0.3 s
+            k = s["k"]
+            fade(slide_head, float(np.clip(k / 9.0, 0, 1)))
+            for gi, grp in enumerate(slide_groups):
+                fade(grp, float(np.clip((k - (14 + 13 * gi)) / 9.0, 0, 1)))
             return
 
         # ---------- trial playback ----------
