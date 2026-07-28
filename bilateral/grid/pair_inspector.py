@@ -3,7 +3,7 @@
 
 Opened by `interactive_grid.py` on the second click of the two-click flow:
 click 1 on the SELECTOR map picks the stim site S, click 2 picks the readout. The readout can
-be either of two things, and the six panels are the same for both:
+be either of two things, and the four panels are the same for both:
 
   * a GRID SITE  (left-click a node on the efferent map)  -> `show(S, R, ai)`
   * ANY PIXEL    (right-click anywhere on the selector map) -> `show_pixel(S, cx, cy, ai)`
@@ -16,15 +16,15 @@ be either of two things, and the six panels are the same for both:
      its systematic residual IS the saturation, not a misfit.
      pixel mode: WHERE is this pixel? the full-frame dF/F snapshot for this stim site with the
      ROI box drawn on it (the SVD "pixel viewer" display).
-  C  what are the timescales?                    poles/zeros of both amps in the s-plane.
-     Amplitude-invariant poles = the LTI check (population median tau ratio 0.965).
-  D  which timescale carries the response?       the fitted modes drawn one by one
+  C  which timescale carries the response?       the fitted modes drawn one by one
      (A*exp(-t/tau)*sin(om*t+ph)), labelled with tau and om/2pi, plus a CANCELLATION factor:
      sum|A| / peak. Large values mean the modes cancel and the individual tau are not
      separately identifiable even though their sum fits.
-  E  is the mean trustworthy?                    single-trial raster at the display amp.
-  F  where does this pair sit in the population?  dF/F at a MATCHED time t* @1.0 vs @2.0
-     against all site pairs, with the focal (on-site) dose-response slope.
+  D  is the mean trustworthy?                    single-trial raster at the display amp.
+
+The s-plane pole/zero panel and the population dose-response scatter were dropped on request
+(2026-07-28). Their content survives in the numeric report: the poles and zeros are listed per
+amplitude, and the population's focal dose-response slope sits next to this pair's own ratio.
 
 Reads cached fits — no network:
   data/grid_tf_fits_2amp.npz          independent TF per amp   (tf_fit.py 2amp)
@@ -33,8 +33,10 @@ Reads cached fits — no network:
   data/grid_trials_2amp.npz           single trials            (cross_response.py 2amp)
   data/grid_svd_<subj>_<date>_n50.npz SVD basis, pixel mode only (svd_cache.py)
 
-Standing caveat, enforced on the figure: under the damped-sinusoid model an in-sample R2 of
-~0.8 is reachable on pure noise, so panel C fades itself when the held-out CV-R2 <= 0.
+Standing caveat, called out on the figure: under the damped-sinusoid model an in-sample R2 of
+~0.8 is reachable on pure noise, so gate on the held-out CV-R2 (> 0), never on R2. When the
+display amp's CV-R2 <= 0 the report says so in red: read the data panels (A, D), not the model
+ones (B, C).
 """
 from pathlib import Path
 
@@ -271,11 +273,11 @@ class PairInspector:
                     pass
             self._cbars = []
             return
-        fig = plt.figure(figsize=(15.5, 9.2))
-        gs = fig.add_gridspec(3, 3, height_ratios=[1.0, 1.0, 0.55], hspace=0.42, wspace=0.24,
-                              left=0.055, right=0.985, top=0.90, bottom=0.03)
+        fig = plt.figure(figsize=(13.0, 9.4))
+        gs = fig.add_gridspec(3, 2, height_ratios=[1.0, 1.0, 0.62], hspace=0.42, wspace=0.20,
+                              left=0.065, right=0.955, top=0.90, bottom=0.03)
         self.fig = fig
-        self.axs = {k: fig.add_subplot(gs[i // 3, i % 3]) for i, k in enumerate("ABCDEF")}
+        self.axs = {k: fig.add_subplot(gs[i // 2, i % 2]) for i, k in enumerate("ABCD")}
         self.txt = fig.add_subplot(gs[2, :]); self.txt.axis("off")
         self._cbars = []
         if self.live:
@@ -295,10 +297,8 @@ class PairInspector:
         self._figure()
         self._panel_data(self.axs["A"], P)
         self._panel_B(self.axs["B"], P)
-        self._panel_splane(self.axs["C"], P)
-        self._panel_modes(self.axs["D"], P)
-        self._panel_raster(self.axs["E"], P)
-        self._panel_population(self.axs["F"], P)
+        self._panel_modes(self.axs["C"], P)
+        self._panel_raster(self.axs["D"], P)
         self._panel_text(P)
         self.fig.suptitle(f"{P['title']}   ·   AL_0048 {cfg.DATE} grid, amps {P['amps']}"
                           f"   ·   display amp {P['amps'][P['ai']]:.1f}", fontsize=12, y=0.975)
@@ -355,38 +355,6 @@ class PairInspector:
         self._cbars.append(self.fig.colorbar(im, ax=ax, orientation="horizontal",
                                              fraction=0.05, pad=0.03))
 
-    def _panel_splane(self, ax, P):
-        """C — poles/zeros of both amps. Amplitude-invariant poles = LTI holds."""
-        allp, nz_off = [], 0
-        zs = []
-        for a, c in zip(range(len(P["amps"])), AC):
-            p, z = poles_zeros(P["tau"][a], P["A"][a], P["om"][a], P["ph"][a])
-            allp.append(np.asarray(p)); zs.append(np.asarray(z))
-            dim = not (P["cvr2"][a] > 0)
-            ax.scatter(np.real(p), np.imag(p), marker="x", s=90, lw=2.0, c=c,
-                       alpha=0.25 if dim else 1.0, label=f"amp {P['amps'][a]:.1f} poles")
-            if len(z):
-                ax.scatter(np.real(z), np.imag(z), marker="o", s=60, facecolors="none",
-                           edgecolors=c, lw=1.6, alpha=0.25 if dim else 1.0)
-        # scale to the POLES: zeros routinely sit hundreds of 1/s out and would squash the
-        # pole cluster (which is the thing being compared across amps) into the axis edge.
-        pp_ = np.concatenate(allp) if allp else np.array([0j])
-        xr = max(float(np.max(np.abs(np.real(pp_)))) * 1.35, 5.0)
-        yr = max(float(np.max(np.abs(np.imag(pp_)))) * 1.35, 5.0)
-        for z in zs:
-            if len(z):
-                nz_off += int(np.sum((np.abs(np.real(z)) > xr) | (np.abs(np.imag(z)) > yr)))
-        ax.set_xlim(-xr, 0.45 * xr); ax.set_ylim(-yr, yr)
-        ax.axvline(0, c="k", lw=0.8); ax.axhline(0, c="0.7", lw=0.6, ls=":")
-        ax.set(xlabel="Re  (1/s)   ← faster decay", ylabel="Im  (rad/s)")
-        ax.grid(alpha=0.25)
-        bad = [f"{P['amps'][a]:.1f}" for a in range(len(P["amps"])) if not P["cvr2"][a] > 0]
-        sub = f"   ⚠ CV-R²≤0 at amp {', '.join(bad)} — faded, do not trust" if bad else \
-              (f"   ({nz_off} zero(s) off-scale)" if nz_off else "")
-        ax.set_title("C  s-plane: × poles, ○ zeros\n"
-                     f"overlap ⇒ amplitude-invariant dynamics{sub}", fontsize=9.5)
-        ax.legend(fontsize=6.5, loc="best", framealpha=0.9)
-
     def _panel_modes(self, ax, P):
         """D — the fitted modes drawn separately: which timescale carries the response."""
         W, ai = P["window"], P["ai"]
@@ -410,7 +378,7 @@ class PairInspector:
                    float(np.nanmax(np.abs(np.nan_to_num(P["H"][ai])))), 1e-6)
         cancel = float(np.nansum(np.abs(A[m]))) / peak
         ax.set_ylim(-3.0 * peak, 3.0 * peak)
-        self._decorate(ax, P, f"D  mode decomposition @ amp {P['amps'][ai]:.1f}  "
+        self._decorate(ax, P, f"C  mode decomposition @ amp {P['amps'][ai]:.1f}  "
                               f"(order {int(P['order'][ai])})\n"
                               f"cancellation ×{cancel:.0f}"
                               f"{'  ⚠ individual τ not identifiable' if cancel > 4 else ''}")
@@ -431,37 +399,9 @@ class PairInspector:
         ax.set(xlabel="time from stim (s)", ylabel="trial")
         if self.xlim:
             ax.set_xlim(*self.xlim)
-        ax.set_title(f"E  single trials @ amp {P['amps'][ai]:.1f}  (n={dff.shape[0]}, "
+        ax.set_title(f"D  single trials @ amp {P['amps'][ai]:.1f}  (n={dff.shape[0]}, "
                      f"±{cl*100:.1f}% scale)", fontsize=9.5)
         self._cbars.append(self.fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02))
-
-    def _panel_population(self, ax, P):
-        """F — this pair's dose-response against every site pair's, at matched time t*."""
-        g, ok, foc = self.pop["gm"], self.pop["ok"], self.pop["foc"]
-        ax.scatter(g[0][ok], g[1][ok], s=8, c="0.75", lw=0,
-                   label=f"all site pairs CV-R²>0 (n={self.pop['n_ok']})")
-        ax.scatter(g[0][foc], g[1][foc], s=26, c="darkorange", ec="0.3", lw=0.4,
-                   label=f"focal / on-site (n={int(foc.sum())})")
-        lim = float(np.nanpercentile(np.abs(g[:, ok]), 99.5)) * 1.15
-        xs = np.array([-lim, lim])
-        ax.plot(xs, xs, c="0.4", ls=":", lw=1.0, label="identity (×1)")
-        ax.plot(xs, 2 * xs, c="0.4", ls="--", lw=1.0, label="strict linear (×2)")
-        if np.isfinite(self.pop["slope"]):
-            ax.plot(xs, self.pop["slope"] * xs, c="green", lw=1.2,
-                    label=f"focal slope {self.pop['slope']:.2f}")
-        gx, gy = float(P["gm"][0]), float(P["gm"][-1])
-        ax.axhline(gy, c="red", lw=0.7, ls=":", zorder=4)      # crosshair: readable even if
-        ax.axvline(gx, c="red", lw=0.7, ls=":", zorder=4)      # the legend covers the marker
-        ax.scatter([gx], [gy], s=210, marker="*", c="red", ec="k", lw=0.6, zorder=5,
-                   label="this pair" + (" (pixel)" if P["mode"] == "pixel" else ""))
-        ax.axhline(0, c="0.8", lw=0.6); ax.axvline(0, c="0.8", lw=0.6)
-        lim = max(lim, abs(gx) * 1.15, abs(gy) * 1.15)
-        ax.set(xlim=(-lim, lim), ylim=(-lim, lim), aspect="equal",
-               xlabel=f"dF/F @ t*, amp {P['amps'][0]:.1f}",
-               ylabel=f"dF/F @ t*, amp {P['amps'][-1]:.1f}")
-        ax.set_title("F  amplitude scaling at MATCHED time t* — pair vs population",
-                     fontsize=9.5)
-        ax.legend(fontsize=6.0, loc="lower right", framealpha=0.9)
 
     def _panel_text(self, P):
         """Numeric report under the panels — the numbers you would otherwise read off by eye."""
@@ -488,7 +428,8 @@ class PairInspector:
         gmr = abs(gm[-1]) / abs(gm[0]) if gm[0] else np.nan
         rows.append(f"{'dF/F @ t*='+format(P['tstar']*1000,'.0f')+'ms':<16}"
                     + "".join(f"{gm[a]:>+16.4f}" for a in range(nA))
-                    + f"{gmr:>16.2f}" + f"{'focal median '+format(POP_GAIN_RATIO,'.2f'):>26}")
+                    + f"{gmr:>16.2f}"
+                    + f"{'focal slope '+format(self.pop['slope'],'.2f'):>26}")
         tr = td[-1] / td[0] if td[0] else np.nan
         rows.append(f"{'dominant τ (ms)':<16}"
                     + "".join(f"{td[a]*1000:>16.0f}" for a in range(nA))

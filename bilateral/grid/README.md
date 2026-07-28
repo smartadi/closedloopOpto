@@ -52,21 +52,24 @@ New grid coding goes here (Python). The analysis is split into single-responsibi
   ⚠ The split-half halves must each be baselined with their OWN pre-onset mean (as
   `tf_fit.split_half_means` does). Using the pooled baseline instead leaves a between-half
   offset in the halves and depresses CV-R² badly — a CV-R² 0.92 pair read 0.27.
-- `pair_inspector.py` — one (X→Y) pair in six panels: (A) trial mean ±SEM + independent TF
-  fit at *each* amp, (B) the shared amp-as-input fit (residual = saturation), (C) s-plane
-  poles/zeros of both amps (overlap ⇒ amplitude-invariant dynamics), (D) the fitted modes
-  drawn separately with τ and ω/2π plus a **cancellation factor** (Σ|A|/peak — large means the
-  individual τ's are not identifiable), (E) single-trial raster, (F) this pair's dose-response
-  against the population at a **matched time** `t*`. Numeric report underneath.
+- `pair_inspector.py` — one (X→Y) pair in four panels: (A) trial mean ±SEM + independent TF
+  fit at *each* amp, (B) the shared amp-as-input fit (residual = saturation), (C) the fitted
+  modes drawn separately with τ and ω/2π plus a **cancellation factor** (Σ|A|/peak — large
+  means the individual τ's are not identifiable), (D) single-trial raster. A numeric report
+  underneath carries order, R², CV-R², peak gain, dF/F at the matched time `t*`, dominant τ,
+  and the poles/zeros per amplitude.
   In **pixel mode** panel B becomes the full-frame dF/F snapshot with the readout ROI boxed
   and the stim site marked, and the fits are computed on the fly instead of read from cache.
+  (An s-plane pole/zero panel and a population dose-response scatter were dropped 2026-07-28
+  on request; both survive as numbers in the report.)
 - ⚠ The explorer reads the **2-amp** caches (`grid_tf_fits_2amp.npz`, `grid_trials_2amp.npz`).
-  Until 2026-07-27 it read the single-amp caches and silently showed **amp 2.0 only**.
-- ⚠ Panel F uses dF/F at `t*` (the high-amp |peak| time), **not** the stored per-amp `gain`:
-  the responses are biphasic, so a pair can peak on the positive lobe at one amp and the
-  negative lobe at the other, making the raw gain ratio meaningless. The matched-time focal
-  slope (1.53, CV-gated n=16) is a **different estimator** from the 1.24 through-origin
-  peak-gain slope in the 2026-07-17 log — do not quote them interchangeably.
+  Until 2026-07-28 it read the single-amp caches and silently showed **amp 2.0 only**.
+- ⚠ Cross-amp comparison uses dF/F at `t*` (the high-amp |peak| time), **not** the stored
+  per-amp `gain`: the responses are biphasic, so a pair can peak on the positive lobe at one
+  amp and the negative lobe at the other, making the raw gain ratio meaningless (the report
+  flags those pairs `⚠ LOBE FLIP`). The matched-time focal slope (1.53, CV-gated n=16) is a
+  **different estimator** from the 1.24 through-origin peak-gain slope in the 2026-07-17 log —
+  do not quote them interchangeably.
 
 ## How to run
 ```bash
