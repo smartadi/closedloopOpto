@@ -244,6 +244,63 @@ else
     fprintf('[CTRL-SID-V2] actuator path: latent DC gain %.3f %%dF/u (no Stage-4a cache to compare)\n', dcZ_pct);
 end
 
+%% [CTRL-SID-BFIT] repair the input path: refit (B,D) by SIMULATION -------------
+% n4sid ran in prediction focus, so the Kalman path K absorbed most of the step response
+% and B came out 2.6x too weak vs the trusted Stage-4a plant (RESEARCH 2026-07-28). A and C
+% (the DYNAMICS and the observation geometry) are what subspace ID is good at and are kept;
+% only the input path is re-solved, by least squares, so the model REPRODUCES the measured
+% OL trial-averaged response. With A,C fixed the map (B,D) -> simulated output is LINEAR:
+%     x(t) = S(t) B,   S(t+1) = A S(t) + I*u_d(t),   y(t) = C S(t) B + D u_d(t)
+% so this is an exact LS solve, not an iterative fit. u_d = u delayed by nk (the delay is
+% kept OUT of the state so the modal table shows real dynamics, not nk poles at the origin).
+Ybar = zeros(numel(relW), nOut);  ubar = zeros(numel(relW), 1);
+for j = 1:numel(ol_on)
+    Ybar = Ybar + (Yall(ol_on(j)+relW,:) - yoffset)./yscale;
+    ubar = ubar + u_full(ol_on(j)+relW);
+end
+Ybar = Ybar/numel(ol_on);  ubar = ubar/numel(ol_on);
+Ybar = Ybar - mean(Ybar(1:preN,:), 1);                 % start from rest
+ubar = ubar - mean(ubar(1:preN));
+u_d  = [zeros(nk,1); ubar(1:end-nk)];                  % input delay, applied explicitly
+
+nT = numel(relW);  Sx = zeros(nx, nx);
+Phi = zeros(nT*nOut, nx + nOut);  rhs = zeros(nT*nOut, 1);
+for t = 1:nT
+    ridx = (t-1)*nOut + (1:nOut);                      % NOT `rows` -- that is the sweep cell array
+    Phi(ridx, 1:nx)     = C * Sx;                      % dY/dB
+    Phi(ridx, nx+1:end) = eye(nOut) * u_d(t);          % dY/dD
+    rhs(ridx)           = Ybar(t,:).';
+    Sx = A*Sx + eye(nx)*u_d(t);                        % propagate AFTER using it
+end
+lamB  = 1e-6 * trace(Phi.'*Phi)/size(Phi,2);
+theta = (Phi.'*Phi + lamB*eye(nx+nOut)) \ (Phi.'*rhs);
+B_pred = B;  D_pred = D;                               % keep the prediction-focus versions
+B = theta(1:nx);  D = theta(nx+1:end);
+simFit = 1 - norm(rhs - Phi*theta)/max(norm(rhs - mean(rhs)), eps);
+dcZ_new = dcgain(ss(A,B,C(iZ,:),D(iZ),1/Fs)) * yscale(iZ);
+fprintf('[CTRL-SID-BFIT] input path re-solved: sim fit %.1f%% | ipsi DC gain %.3f -> %.3f %%dF/u\n', ...
+    100*simFit, dcgain(ss(A,B_pred,C(iZ,:),D_pred(iZ),1/Fs))*yscale(iZ), dcZ_new);
+if exist('L4','var')
+    fprintf('[CTRL-SID-BFIT] Stage-4a SISO reference = %.3f %%dF/u  (ratio %.2f)\n', ...
+        L4.dcgain, dcZ_new/L4.dcgain);
+end
+% contra leak, re-checked on the REPAIRED input path
+dcB = dcgain(ss(A,B,C,D,1/Fs));
+fprintf('[CTRL-SID-BFIT] leak re-check: |DC| regulated %.3f | contra max %.3f, median %.3f\n', ...
+    abs(dcB(iZ)), max(abs(dcB(1:iZ-1))), median(abs(dcB(1:iZ-1))));
+
+%% [CTRL-SID-PATTERN] forward pattern of the Stage-2 predictor -------------------
+% The Stage-2 weights `b` are a FILTER over 249 correlated pixels; plotting them as a
+% spatial map is the Haufe et al. 2014 error. Convert to the forward pattern here, and
+% report how far apart the two are -- rho well below 1 means the filter was never safe
+% to plot. (RESEARCH 2026-07-28 method-bug entry.)
+[patt, pinfo] = cp_weight_pattern(Xg_full(Su,:), S2.b, S2.mu, S2.sd, S2.muY);
+filt = S2.b(:);
+fprintf('[CTRL-SID-PATTERN] filter-vs-pattern corr = %+.3f over %d contra px (1.0 would mean the filter was safe to plot)\n', ...
+    pinfo.rho_ab, numel(Su));
+fprintf('[CTRL-SID-PATTERN] sign disagreements: %d/%d px (%.0f%%)\n', ...
+    nnz(sign(filt) ~= sign(patt)), numel(Su), 100*nnz(sign(filt) ~= sign(patt))/numel(Su));
+
 %% [CTRL-SID-FIG] ---------------------------------------------------------------
 figS = figure('Color','w','Position',[50 50 1400 780]);
 tl = tiledlayout(figS, 2, 3, 'TileSpacing','compact','Padding','compact');
@@ -316,6 +373,14 @@ SID.ol_on=ol_on; SID.cl_on=cl_on; SID.nTrain=nTrain; SID.kPred=kPred;
 SID.r2_full=r2_full; SID.r2_ipsi=r2_ipsi; SID.r2_cl=r2_cl; SID.r2_cl_ipsi=r2_cl_ipsi;
 SID.dcZ_pct=dcZ_pct; SID.uinfo=uinfo; SID.uMaxHW=max(uAmpFull);
 SID.sweep=rows;
+% repaired input path (use B/D above; B_pred/D_pred kept for the record)
+SID.B_pred=B_pred; SID.D_pred=D_pred; SID.simFit=simFit; SID.dcZ_new=dcZ_new;
+SID.NoiseVariance=m.NoiseVariance;             % innovations covariance, for the modal H2 split
+SID.Ybar=Ybar; SID.ubar=ubar; SID.u_d=u_d;     % OL trial-averaged response (all channels)
+% Stage-2 predictor: filter vs forward pattern (Haufe), for the spatial maps
+SID.patt=patt; SID.filt=filt; SID.rho_ab=pinfo.rho_ab;
+SID.mimg=mimg_cp;                              % brain background for spatial rendering
+SID.mIg=mIg;
 sid_file = fullfile(dataDir, sprintf('ctrl_subspace_id_%s.mat', sess_tag));
 save(sid_file, '-struct', 'SID', '-v7.3');
 fprintf('[CTRL-SID-SAVE] -> %s\n\n', sid_file);
