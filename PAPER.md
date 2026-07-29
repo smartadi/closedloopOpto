@@ -54,11 +54,11 @@ These claims have identified problems and must be revisited before submission. E
 
 ---
 
-### Paper story (figure-level) — updated 2026-07-23
+### Paper story (figure-level) — updated 2026-07-29
 - **Fig 1 — System architecture.** Widefield + opto interface, SVD readout, control-loop schematic.
 - **Fig 2 — System properties.** Impulse response + step response with **their LTI (TF) fits**; state dependence on the **raw trial**; state dependence of the **residual**.
 - **Fig 3 — Controller results.** Closed-loop vs open-loop (single-session example + cross-session summary).
-- **Fig 4 — Controller state dependence.** Trial RMSE vs **initial deviation**, **motion**, **delta power**; their **contribution in a combined error (RMSE) model**; **residual-based** state dependence.
+- **Fig 4 — Controller state dependence.** Three blocks, in order: (1) **trial-average state dependence** — pre-stim state (contra-derived Global level) → true trial outcome, OL steep vs CL flat (`ctrl_state_dependence.m`); (2) **error-contribution model** — per-trial RMSE regressed on **initial deviation**, **motion**, **relative δ power** (`cl_mse_factors.m` / `cl_rmse_factor_windows.m`); (3) **residual-based state dependence** — disturbance rejection ρ = ‖A−ref‖/‖G‖ vs motion & δ quartiles (`internal_model_principle.m` `[IMP-STATE-QUARTILE]`).
 - **Fig 5 — Feedforward / preview model.** Single-session results on **s3** (dark-screen session) + **combined stats across s1/s2/s3** (total RMSE, total variance, phase lag).
 
 > Moves vs prior plan: the **step LTI fit** (`ol_tf_trial_avg.pdf`, was panel 3K) moves to **Fig 2** to sit with the impulse TF fit. **Fig 5** primary session flips **s2 → s3** (the 2026-07-21 "s2 primary" note predates s3) and adds the 3 across-session panels from `sine_ff_across_sessions.m`.
@@ -98,18 +98,18 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post |
 | 2I (was 3K) | Fig2 | paper/images/figure3/ol_tf_trial_avg.pdf | 6 × 4 | vector | — | tf_fit.m fig_tf_paper — **MOVED to Fig 2 (2026-07-23)** as the step-response LTI fit, beside the impulse TF fit (2C). ONE axis, all 3 sessions on the session gradient, solid = OL trial mean, dashed = TF fit. Orders AIC-picked with np capped at 2 (R² 0.22/0.77/0.89). Export path still under figure3/ — move to figure2/ on next regen |
 | 5A | Fig5 | *(feedforward control system — illustrator)* | 6 × 4 | — | — | external; physical row 1 |
-| 5B | Fig5 | paper/images/figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | — | one representative trial, all 4 modes in one panel + reference; **no x-axis** (shares col1 time base) |
-| 5C | Fig5 | paper/images/figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial average, all 4 modes + reference; **no x-axis** (shares col1 time base) |
-| 5D | Fig5 | paper/images/figure5/sine_5D_trialavg_input_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial-average **input/command**, 4 modes — carries the col1 time axis + scalebar |
-| 5E | Fig5 | paper/images/figure5/sine_5E_rmse_time_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | ±SEM | **RMSE** over time, 4 modes — **CL+prev is the only mode whose error falls within the trial**; physical row 1 |
-| 5F | Fig5 | paper/images/figure5/sine_5F_variance_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | — | across-trial variance over time, 4 modes; physical row 1 |
-| 5G | Fig5 | paper/images/figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf | 5.3 × 5.4 | vector | — | trial **RMSE** half-violins, 4 modes (+ Wilcoxon in console) |
-| 5H | Fig5 | paper/images/figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf | 5.3 × 5.4 | vector | — | 1 Hz phase lag per mode — preview's lag cancellation |
+| 5B | Fig5 | paper/images/figure5/sine_5B_single_trial_AL_0048_2026-07-21_1.pdf | 11.4 × 3.5 | vector | — | one representative trial, all 4 modes in one panel + reference; **no x-axis** (shares col1 time base) |
+| 5C | Fig5 | paper/images/figure5/sine_5C_trialavg_AL_0048_2026-07-21_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial average, all 4 modes + reference; **no x-axis** (shares col1 time base) |
+| 5D | Fig5 | paper/images/figure5/sine_5D_trialavg_input_AL_0048_2026-07-21_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial-average **input/command**, 4 modes — carries the col1 time axis + scalebar |
+| 5E | Fig5 | paper/images/figure5/sine_5E_rmse_time_AL_0048_2026-07-21_1.pdf | 5.2 × 4 | vector | ±SEM | **RMSE** over time, 4 modes; physical row 1. (s3 early→late: OL −0.40, OL+p +0.09, CL +0.06, CL+p −0.02 — do NOT repeat the old "CL+prev only mode that falls" claim; it's false, OL falls most here) |
+| 5F | Fig5 | paper/images/figure5/sine_5F_variance_AL_0048_2026-07-21_1.pdf | 5.2 × 4 | vector | — | across-trial variance over time, 4 modes; physical row 1 |
+| ~~5G~~ | — | ~~sine_5G_rmse_violin~~ | — | — | — | **DROPPED 2026-07-29** — replaced by combined 5I (across-session RMSE). Still generated by the script; not a paper panel |
+| ~~5H~~ | — | ~~sine_5H_phase_lag~~ | — | — | — | **DROPPED 2026-07-29** — replaced by combined 5K (across-session phase). Still generated by the script; not a paper panel |
 | 5I | Fig5 | paper/images/figure5/sine_combined_rmse.pdf | 5.5 × 4.5 | vector | — | **across-session** total RMSE, 4 modes × 3 sessions (points aligned + mean bar); sine_ff_across_sessions.m. CL<OL in all 3 |
 | 5J | Fig5 | paper/images/figure5/sine_combined_variance.pdf | 5.5 × 4.5 | vector | — | **across-session** total variance, 4 modes × 3 sessions; sine_ff_across_sessions.m. CL<OL in all 3 |
 | 5K | Fig5 | paper/images/figure5/sine_combined_phase.pdf | 5.5 × 4.5 | vector | — | **across-session** 1 Hz phase lag, 4 modes × 3 sessions; sine_ff_across_sessions.m. Preview→~0° in all 3 |
 
-> **Fig 5 session switch (2026-07-23):** single-session panels 5B–5H move from s2 (`2026-07-14/1`) to **s3 (`2026-07-21/1`, dark screen)** — regeneration PENDING (`SESSION_TAG='s3'` in `sine_ff_plots_combined.m`, then re-export; file suffix becomes `AL_0048_2026-07-21_1`). Panel-composition decision pending: do 5I/5J/5K (combined) REPLACE the single-session summary panels 5G/5H, or sit alongside them? s3 feedback (OL-vs-CL) is n.s. within-session (p=0.36) — the combined 5I/5J carry the quantitative feedback claim; s3's single-session role is the illustrative example + preview lag cancellation.
+> **Fig 5 session switch (2026-07-29): DONE.** Single-session panels regenerated on **s3 (`2026-07-21/1`, dark screen)** — `SESSION_TAG='s3'` is now the script default; suffix `AL_0048_2026-07-21_1`. Composition decided: **combined 5I/5J/5K REPLACE single-session 5G/5H** (dropped above). Fig 5 panel set = 5A (schematic) · 5B/5C/5D (s3 traces: single trial / trial-avg / input) · 5E/5F (s3 time-resolved RMSE + variance) · 5I/5J/5K (combined s1/s2/s3 RMSE / variance / phase). s3 feedback (OL-vs-CL) is n.s. within-session (p=0.36) — the quantitative feedback claim rides on combined 5I/5J (CL<OL in all 3 sessions); s3's single-session role is the illustrative example + preview lag cancellation (5C, phase in 5K).
 | T-A | Methods fig:cost_landscape | paper/images/tuning/grid_cost_surface_AL_0033_0305.pdf | 6 × 5 | vector | — | gain_grid.m — PI gain-grid cost surface J(Kp,Ki), AL_0033 03-05 (PRIMARY: clean interior min ~0.05,0.1) |
 | T-B | Methods fig:cost_landscape | paper/images/tuning/grid_cost_surface_AL_0034_1017.pdf | 6 × 5 | vector | — | gain_grid.m — same, AL_0034 10-17 — **dur=4 VARIANT**: this session ran a 4 s stim (vs 3 s elsewhere) so J is scored over [0 4] s (parameter-dependence exhibit). CROSS-MOUSE replication of low-cost basin. min J=30.2 at (Kp=0.3,Ki=0.02). CAVEAT: dur & mouse covary (10-17 is the only dur=4 AND only AL_0034 grid) → variant exhibit, not a clean dur-controlled comparison |
 | T-C | Methods fig:cost_landscape | paper/images/tuning/autotune_convergence_both.pdf | 12 × 8 | vector | — | AUTO-TUNE convergence, BOTH mice side-by-side (AL_0033 03-17 + AL_0034 10-25 e1); accepted Kdata/Kval — (Kp,Ki) path + cost staircase (16.6→12.3 / 11.9→4.6). Singles also exported: `autotune_convergence_AL_0033_0317.pdf`, `..._AL_0034_1025e1.pdf` |
@@ -326,29 +326,37 @@ Fit checks (last computed, gap=0.3):
 
 #### Fig 4  [total=17  gap=0.3]
 **Closed-loop feedback rejects a state-dependent disturbance carried by the contralateral hemisphere.**
-Reframed 2026-07-29: Fig 4 is now built on the **residual / internal-model decomposition**
-(`controller-analysis/internal_model_principle.m`, A = Global + Local) and its **state-dependence**
-(`[IMP-STATE-QUARTILE]`). Global = stim-blind contra→ipsi prediction (the no-controller disturbance);
-Local = A − G (controller effect). Rejection metric ρ = ‖A−ref‖/‖G‖ over 1–3 s (0 = full rejection).
+Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
+> **Block 1 — trial-average state dependence** (`ctrl_state_dependence.m`, Stage 5): the pre-stim
+> state (stim-blind contra-derived Global level `s_lvl`) predicts the *true* trial outcome (absolute
+> Actual over 1→dur s, `o_act`). OL slope steep, CL slope flat → the controller decouples the outcome
+> from ongoing brain state. This is the coarse, whole-trial version of the story.
+> **Block 2 — error-contribution model** (`cl_mse_factors.m` / `cl_rmse_factor_windows.m`): per-trial
+> RMSE regressed on **initial deviation + motion energy + relative δ power**; ΔR² waterfall /
+> standardized coefficients show which state factors drive residual error.
+> **Block 3 — residual state dependence** (`internal_model_principle.m`): the fine-grained mechanism —
+> Actual = Global + Local decomposition, disturbance rejection ρ = ‖A−ref‖/‖G‖ over 1–3 s (0 = full
+> rejection), and ρ classified by motion & δ quartiles (`[IMP-STATE-QUARTILE]`).
 
-> **Panel plan** (source = `internal_model_principle.m` unless noted). Currently **single-session
-> (m4 = AL_0033 2025-02-26)** + exploratory styling → these are *drafts*; production panels await the
-> **Stage 1→2 cross-session sweep** (automated affected detector, C2) + `paperFig`/`paperStyle`.
+> **Panel plan.** Currently **single-session (m4 = AL_0033 2025-02-26)** + exploratory styling → these
+> are *drafts*; production panels await the **Stage 1→2 cross-session sweep** (automated affected
+> detector, C2) + `paperFig`/`paperStyle`.
 >
-> | Panel | Content | Source |
-> |---|---|---|
-> | 4A | Decomposition + example trial: Actual = Global (contra-predicted disturbance) + Local (controller effect) | `[IMP-PROOF-FIG]` (c) / new schematic |
-> | 4B | Predictor validity: contra→ipsi CV-R² (Global vs Global+Local) + pre-stim control | `[IMP-PROOF-FIG]` (a) |
-> | 4C | Disturbance rejection ρ = ‖E‖/‖D‖ (1–3 s), OL vs CL | `[IMP-REJECT]` summary (b) |
-> | 4D | ρ vs motion-energy quartile (OL/CL) | `[IMP-STATE-QUARTILE]` |
-> | 4E | ρ vs relative-δ (2–4 Hz) quartile (OL/CL) | `[IMP-STATE-QUARTILE]` |
-> | (supp) | Distributed contra co-suppression (proves Global = shared-network disturbance) | `stim_network_coupling.m` `[SNC]` |
+> | Panel | Block | Content | Source |
+> |---|---|---|---|
+> | 4A | 1 | Trial-average state dependence: pre-stim Global level (state) → absolute Actual outcome; OL steep vs CL flat slope (bootstrap OL−CL slope diff) | `ctrl_state_dependence.m` (`s_lvl→o_act`) |
+> | 4B | 2 | Error-contribution model: per-trial RMSE regressed on initial deviation + motion + relative δ; ΔR² / standardized coefficients | `cl_mse_factors.m` / `cl_rmse_factor_windows.m` |
+> | 4C | 3 | Residual decomposition + rejection: Actual = Global (contra-predicted disturbance) + Local (controller effect); rejection ρ = ‖A−ref‖/‖G‖ (1–3 s), OL vs CL | `[IMP-PROOF-FIG]` / `[IMP-REJECT]` |
+> | 4D | 3 | ρ vs motion-energy quartile (OL/CL) | `[IMP-STATE-QUARTILE]` |
+> | 4E | 3 | ρ vs relative-δ (2–4 Hz) quartile (OL/CL) | `[IMP-STATE-QUARTILE]` |
+> | (supp) | — | Predictor validity: contra→ipsi CV-R² (Global vs Global+Local) + pre-stim control; distributed contra co-suppression (proves Global = shared-network disturbance) | `[IMP-PROOF-FIG]` (a) · `stim_network_coupling.m` `[SNC]` |
 >
-> **State definitions MATCH the Fig-4 factor analysis** (`cl_rmse_factor_windows.m`): motion = mean
-> z-motion² over −2 s→trial-end; δ = **relative** 2–4 Hz power (bandpow 2-4 / 0.4-10) over −2 s→stim-end.
-> Outcome classified = **1–3 s rejection ρ only**. Cross-session inference (to build): per-session
-> Spearman r_s(state, ρ), signrank across sessions, OL-vs-CL paired — via `imp_build_session` +
-> `imp_reject_core` + a `imp_state_across_sessions.m` (mirrors `imp_reject_across_sessions.m`).
+> **State definitions are IDENTICAL across all three blocks** (they inherit `cl_rmse_factor_windows.m`):
+> motion = mean z-motion² over −2 s→trial-end; δ = **relative** 2–4 Hz power (bandpow 2-4 / 0.4-10)
+> over −2 s→stim-end. Block-3 outcome classified = **1–3 s rejection ρ only**. Cross-session inference
+> (to build): per-session Spearman r_s(state, outcome), signrank across sessions, OL-vs-CL paired — via
+> `imp_build_session` + `imp_reject_core` + `imp_state_across_sessions.m` (mirrors
+> `imp_reject_across_sessions.m`); block-1 slopes via the `ctrl_state_dependence` bootstrap across sessions.
 
 <details><summary>Prior state-dependence candidate audit (2026-07-21, superseded by the residual reframe)</summary>
 
@@ -375,8 +383,8 @@ Local = A − G (controller effect). Rejection metric ρ = ‖A−ref‖/‖G‖
 </details>
 
 ```
-row1 (5):  4A(schematic+example)   4B(pred R²)
-row2 (5):  4C(reject ρ)  4D(ρ|motion)  4E(ρ|δ)
+row1 (block1→block2):  4A(state→outcome, OL vs CL)   4B(error-contribution model)
+row2 (block3):          4C(decomp + reject ρ)  4D(ρ|motion)  4E(ρ|δ)
 ```
 Fit checks: **pending** — sizes set once panels are re-exported at paperStyle from the cross-session sweep.
 
@@ -457,9 +465,9 @@ All panels: 13 sessions across two mice (AL_0033, AL_0039); reference −5 % ΔF
 **(A)** A single representative trial, open loop versus closed loop. **(B)** All trials with the trial average (±std). **(C)** Trial-averaged laser command. **(D)** Across-trial variance over time. **(E)** Per-trial RMSE distribution (half-violins). **(F)** Cross-session variance trace (±SEM). **(G)** Per-session trial averages, faint, with the cross-session mean in bold (±SEM). **(H)** Cross-session error distribution; this panel reports **MAE**, not RMSE. **(I)** Open/closed-loop variance ratio split by window (pre, stim, post); asterisks are Wilcoxon. **(J)** Open/closed-loop RMSE ratio split by window (pre, 0–1 s, 1–3 s, post). **(K)** Open-loop trial averages for three step-response sessions with their fitted transfer functions (dashed); model orders were AIC-selected with poles capped at two (R² = 0.22, 0.77, 0.89).
 > Two things to check before submission: panel H is genuinely MAE and must stay labelled so (project decision 2026-07-16), and 3H/3J filenames still say "MSE" although the metric is RMSE.
 
-### Figure 4 — draft caption *(residual / internal-model reframe, 2026-07-29)*
-**Figure 4. Closed-loop feedback rejects a state-dependent disturbance carried by the contralateral hemisphere.**
+### Figure 4 — draft caption *(three-block state-dependence reframe, 2026-07-29)*
+**Figure 4. Closed-loop feedback decouples the controlled response from a state-dependent disturbance carried by the contralateral hemisphere.**
 > Draft on the representative session (m4 = AL_0033, 2025-02-26); cross-session stats to fill from the sweep. Open loop red, closed loop blue. Rejection ρ over the 1–3 s steady-state window (0 = full rejection, 1 = disturbance passes).
 >
-> **(A)** Decomposition of the controlled ipsilateral response into a Global component — the activity predicted from the contralateral hemisphere with no controller input (the disturbance) — and a Local component (actual − Global, the controller/laser effect), with one representative trial. **(B)** Cross-validated variance of the ipsilateral response explained by the contralateral predictor alone versus the predictor plus the average local response, with the pre-stimulus (no-laser) control; the disturbance predictor generalizes on held-out pre-stimulus windows (R² = [OL], [CL]). **(C)** Per-trial disturbance rejection ρ = ‖A−ref‖/‖G‖ over 1–3 s, open versus closed loop; closed loop rejects more of the disturbance (median ρ [OL] vs [CL], rank-sum p = [p]). **(D)** ρ binned by pre-trial motion energy quartile (low→high) and **(E)** by relative 2–4 Hz (delta) power quartile, for open and closed loop; Spearman r_s per condition. State definitions match the factor windows of Fig. [motion] (−2 s→trial end).
-> Panel sources: A,B `[IMP-PROOF-FIG]`; C `[IMP-REJECT]`; D,E `[IMP-STATE-QUARTILE]` (`internal_model_principle.m`). Supplementary: distributed contralateral co-suppression (`stim_network_coupling.m`) supports treating Global as a shared-network disturbance.
+> **(A)** Trial-average state dependence. The pre-stimulus brain state — quantified as the level of the stim-blind contralateral-derived prediction (Global) — predicts the true trial outcome (magnitude of the actual ipsilateral response over 1→3 s). Open loop shows a steep positive slope; closed loop is flat, showing that feedback decouples the outcome from ongoing state (bootstrap OL−CL slope difference, [Δslope], p = [p]). **(B)** Error-contribution model. Per-trial tracking error (RMSE) regressed on initial deviation, motion energy, and relative 2–4 Hz power; ΔR² for each factor over the base model. **(C)** Residual decomposition and rejection. The controlled ipsilateral response splits into a Global component (activity predicted from the contralateral hemisphere with no controller input — the disturbance) and a Local component (actual − Global, the controller effect); per-trial disturbance rejection ρ = ‖A−ref‖/‖G‖ over 1–3 s is lower in closed loop (median ρ [OL] vs [CL], rank-sum p = [p]). **(D)** ρ binned by pre-trial motion-energy quartile (low→high) and **(E)** by relative 2–4 Hz (delta) power quartile, open and closed loop; Spearman r_s per condition. State definitions are identical across all three blocks (motion −2 s→trial end; relative δ −2 s→stim end).
+> Panel sources: A `ctrl_state_dependence.m` (`s_lvl→o_act`); B `cl_mse_factors.m` / `cl_rmse_factor_windows.m`; C `[IMP-PROOF-FIG]`/`[IMP-REJECT]`; D,E `[IMP-STATE-QUARTILE]` (`internal_model_principle.m`). Supplementary: contra→ipsi predictor CV-R² validity + distributed contralateral co-suppression (`stim_network_coupling.m`) supports treating Global as a shared-network disturbance.
