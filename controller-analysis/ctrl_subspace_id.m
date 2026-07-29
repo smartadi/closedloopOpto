@@ -43,7 +43,15 @@
 selField   = 4;          % session index into `fields`; 4 = m4 (AL_0033 2025-02-26)
 nSV_load   = 500;
 Fs         = 35;
-nPOD       = 8;          % # contra measurement channels (POD modes over unaffected nodes)
+px_set     = 'all';      % CONTRA PIXELS entering the observation space:
+                         %  'all'        = every contra grid pixel (DEFAULT). Correct for the
+                         %                 SPATIAL/observation question -- censoring the
+                         %                 stim-affected midline cluster would delete real
+                         %                 structure and bias every map.
+                         %  'unaffected' = the Stage-2 stim-blind subset. Required ONLY for the
+                         %                 residual work, where Global must be laser-blind for
+                         %                 Local = Actual - Global to mean anything. (user 2026-07-29)
+nPOD       = 8;          % # contra measurement channels (POD modes over the pixel set)
 region_mode= 'pod';      % 'pod' = data-driven orthogonal channels (default, stim-blind basis)
                          % 'parcel' = spatial k-means on unaffected node coords (interpretable)
 NXMAX      = 12;         % latent state orders to sweep
@@ -80,9 +88,15 @@ S1 = load(s1_file);  S2 = load(s2_file);
 gridIdx = S1.gridIdx;  grR = S1.grR;  grC = S1.grC;  nG = S1.nG;
 px_prim = S1.px_prim;  py_prim = S1.py_prim;
 frames  = S1.frames;   itr = S1.itr;  w_warm = S1.w_warm;  dur = S1.trial_dur;
-Su      = S2.Su(:);                       % unaffected contra nodes (indices into the grid)
-fprintf('\n[CTRL-SID] %s | site [row %d col %d] | %d grid px | %d UNAFFECTED (stim-blind)\n', ...
-    sess_tag, px_prim, py_prim, nG, numel(Su));
+affected = logical(S2.affected(:));  unaff = logical(S2.unaff(:));
+switch lower(px_set)
+    case 'all',        Su = (1:nG).';        % every contra grid pixel
+    case 'unaffected', Su = S2.Su(:);        % Stage-2 stim-blind subset
+    otherwise, error('[CTRL-SID] unknown px_set ''%s''.', px_set);
+end
+aff_in = affected(Su);                       % which of the analysed pixels are stim-affected
+fprintf('\n[CTRL-SID] %s | site [row %d col %d] | %d grid px | px_set=''%s'' -> %d px (%d stim-affected)\n', ...
+    sess_tag, px_prim, py_prim, nG, px_set, numel(Su), nnz(aff_in));
 
 serverRoot = expPath(mn, td, en);
 [U_cp, V_cp, t_svd, mimg_cp] = loadUVt(serverRoot, nSV_load);
@@ -103,7 +117,7 @@ assert(numel(ztrace) >= nF_m, '[CTRL-SID] data.dFk (%d) shorter than SVD frames 
 % Basis is built on SPONTANEOUS TRAIN frames only, so the measurement definition never
 % sees a stim trial -- the channels stay stim-blind by construction, not by assertion.
 spTr = frames(itr);  spTr = spTr(spTr <= nF_m);
-Xu   = Xpct(Su, :);                                   % [p x T] unaffected nodes only
+Xu   = Xpct(Su, :);                                   % [p x T] the analysed contra pixel set
 mu_c = mean(Xu(:,spTr), 2);
 sd_c = std(Xu(:,spTr), 0, 2);  sd_c(sd_c == 0) = 1;
 Zu   = (Xu - mu_c) ./ sd_c;                           % z-scored per node (no bright-node dominance)
@@ -204,12 +218,15 @@ fprintf('[CTRL-SID] SELECTED nx=%d | held-out R^2_z=%.3f | AICc=%.1f\n', nx, bes
 %% [CTRL-SID-VALIDATE] --------------------------------------------------------
 [A,B,C,D,K] = idssdata(m);
 
-% V0  LEAK CHECK: u must not drive the "unaffected" contra channels. Compare the steady-state
-%     input gain of each contra channel to the regulated channel's. Large contra gain =>
-%     the Stage-2 unaffected selection leaked stim-driven pixels into the measurement vector.
+% V0  STIM DRIVE ON THE CONTRA CHANNELS. Under px_set='unaffected' this is a LEAK CHECK
+%     (contra gain should be << regulated, or the stim-blind selection leaked). Under
+%     px_set='all' it is not a check but a MEASUREMENT: the affected midline pixels are in
+%     the channels on purpose, so real stim drive here is expected and informative -- it is
+%     the SNC distributed co-suppression showing up in the observation space.
 dc = dcgain(ss(A,B,C,D,1/Fs));
-fprintf('[CTRL-SID-V0] |DC gain| regulated = %.3f | contra channels: max %.3f, median %.3f (want << regulated)\n', ...
-    abs(dc(iZ)), max(abs(dc(1:iZ-1))), median(abs(dc(1:iZ-1))));
+if strcmpi(px_set,'unaffected'), tagV0 = 'want << regulated'; else, tagV0 = 'stim drive expected'; end
+fprintf('[CTRL-SID-V0] |DC gain| regulated = %.3f | contra channels: max %.3f, median %.3f (%s)\n', ...
+    abs(dc(iZ)), max(abs(dc(1:iZ-1))), median(abs(dc(1:iZ-1))), tagV0);
 
 % V1  held-out k-step prediction, and the ablation that answers the user's question:
 %     does seeing CONTRA improve prediction of the ipsi readout over an ipsi-only model?
@@ -284,9 +301,9 @@ if exist('L4','var')
     fprintf('[CTRL-SID-BFIT] Stage-4a SISO reference = %.3f %%dF/u  (ratio %.2f)\n', ...
         L4.dcgain, dcZ_new/L4.dcgain);
 end
-% contra leak, re-checked on the REPAIRED input path
+% contra stim drive, re-measured on the REPAIRED input path
 dcB = dcgain(ss(A,B,C,D,1/Fs));
-fprintf('[CTRL-SID-BFIT] leak re-check: |DC| regulated %.3f | contra max %.3f, median %.3f\n', ...
+fprintf('[CTRL-SID-BFIT] contra stim drive (repaired B): |DC| regulated %.3f | contra max %.3f, median %.3f\n', ...
     abs(dcB(iZ)), max(abs(dcB(1:iZ-1))), median(abs(dcB(1:iZ-1))));
 
 %% [CTRL-SID-PATTERN] forward pattern of the Stage-2 predictor -------------------
@@ -294,12 +311,20 @@ fprintf('[CTRL-SID-BFIT] leak re-check: |DC| regulated %.3f | contra max %.3f, m
 % spatial map is the Haufe et al. 2014 error. Convert to the forward pattern here, and
 % report how far apart the two are -- rho well below 1 means the filter was never safe
 % to plot. (RESEARCH 2026-07-28 method-bug entry.)
-[patt, pinfo] = cp_weight_pattern(Xg_full(Su,:), S2.b, S2.mu, S2.sd, S2.muY);
+% The FILTER exists only on the pixels the Stage-2 model was fit on (its stim-blind subset).
+% The PATTERN is cov(x_j, yhat), which is defined for EVERY pixel -- so the pattern map
+% covers the full analysed set even when the predictor did not.
+[~, pinfo] = cp_weight_pattern(Xg_full(S2.Su,:), S2.b, S2.mu, S2.sd, S2.muY);
+patt = cp_weight_pattern(Xg_full(Su,:), [], [], [], [], pinfo.yhat);
 filt = S2.b(:);
-fprintf('[CTRL-SID-PATTERN] filter-vs-pattern corr = %+.3f over %d contra px (1.0 would mean the filter was safe to plot)\n', ...
-    pinfo.rho_ab, numel(Su));
-fprintf('[CTRL-SID-PATTERN] sign disagreements: %d/%d px (%.0f%%)\n', ...
-    nnz(sign(filt) ~= sign(patt)), numel(Su), 100*nnz(sign(filt) ~= sign(patt))/numel(Su));
+[tf_, filt_loc] = ismember(S2.Su(:), Su);              % where the filter's pixels sit in Su
+ok = tf_ & filt_loc > 0;
+rho_ab = corr(filt(ok), patt(filt_loc(ok)));
+nflip  = nnz(sign(filt(ok)) ~= sign(patt(filt_loc(ok))));
+fprintf('[CTRL-SID-PATTERN] pattern over %d px | filter defined on %d px (Stage-2 stim-blind subset)\n', ...
+    numel(Su), nnz(ok));
+fprintf('[CTRL-SID-PATTERN] filter-vs-pattern corr = %+.3f (1.0 would mean the filter was safe to plot); sign disagreements %d/%d (%.0f%%)\n', ...
+    rho_ab, nflip, nnz(ok), 100*nflip/max(nnz(ok),1));
 
 %% [CTRL-SID-FIG] ---------------------------------------------------------------
 figS = figure('Color','w','Position',[50 50 1400 780]);
@@ -378,7 +403,8 @@ SID.B_pred=B_pred; SID.D_pred=D_pred; SID.simFit=simFit; SID.dcZ_new=dcZ_new;
 SID.NoiseVariance=m.NoiseVariance;             % innovations covariance, for the modal H2 split
 SID.Ybar=Ybar; SID.ubar=ubar; SID.u_d=u_d;     % OL trial-averaged response (all channels)
 % Stage-2 predictor: filter vs forward pattern (Haufe), for the spatial maps
-SID.patt=patt; SID.filt=filt; SID.rho_ab=pinfo.rho_ab;
+SID.patt=patt; SID.filt=filt; SID.rho_ab=rho_ab; SID.filt_loc=filt_loc; SID.filt_ok=ok;
+SID.px_set=px_set; SID.affected=affected; SID.unaff=unaff; SID.aff_in=aff_in;
 SID.mimg=mimg_cp;                              % brain background for spatial rendering
 SID.mIg=mIg;
 sid_file = fullfile(dataDir, sprintf('ctrl_subspace_id_%s.mat', sess_tag));

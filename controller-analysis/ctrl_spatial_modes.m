@@ -58,8 +58,11 @@ nx = S.nx; iZ = S.iZ; Ts = S.Ts; Fs = S.Fs;
 Cz = C(iZ,:);  Cc = C(1:iZ-1,:);                    % ipsi row / contra block
 yscale = S.yscale(:);  Wmix = S.Wmix;  sd_c = S.sd_c(:);
 Su = S.Su(:);  grR = S.grR(:);  grC = S.grC(:);  mimg = S.mimg;
-fprintf('\n[CTRL-MODE] %s | nx=%d | %d contra channels | %d contra px\n', ...
-    sess_tag, nx, iZ-1, numel(Su));
+aff_in = false(numel(Su),1);
+if isfield(S,'aff_in'), aff_in = logical(S.aff_in(:)); end
+px_set = 'unaffected';  if isfield(S,'px_set'), px_set = S.px_set; end
+fprintf('\n[CTRL-MODE] %s | nx=%d | %d contra channels | %d contra px (px_set=''%s'', %d stim-affected)\n', ...
+    sess_tag, nx, iZ-1, numel(Su), px_set, nnz(aff_in));
 
 %% [CTRL-MODE-MODAL] ------------------------------------------------------------
 [V, Lam] = eig(A);
@@ -211,7 +214,7 @@ f2 = figure('Color','w','Position',[40 40 320*nS 640]);
 t2 = tiledlayout(f2,2,nS,'TileSpacing','compact','Padding','compact');
 for q = 1:nS
     nexttile(t2,q);
-    local_brainmap(mimg, grR(Su), grC(Su), MAP(:,q), local_divmap(), true);
+    local_brainmap(mimg, grR(Su), grC(Su), MAP(:,q), local_divmap(), true, aff_in);
     title(sprintf('mode %d: \\tau=%.2fs%s\n%.0f%% of ipsi var', q, M(q).tau, ...
         local_freqstr(M(q)), 100*M(q).share), 'FontSize', 9);
     nexttile(t2, nS+q);
@@ -231,17 +234,22 @@ exportgraphics(f2, p2, 'Resolution', 300);  fprintf('[CTRL-MODE-FIG] -> %s\n', p
 %% [CTRL-MODE-FIG-PATTERN] filter vs forward pattern ----------------------------
 f3 = figure('Color','w','Position',[40 40 1300 420]);
 t3 = tiledlayout(f3,1,3,'TileSpacing','compact','Padding','compact');
+% The filter lives only on the pixels Stage 2 was fit on; the pattern covers the full set.
+fok = true(numel(S.filt),1);  floc = (1:numel(S.filt)).';
+if isfield(S,'filt_ok'),  fok  = logical(S.filt_ok(:)); end
+if isfield(S,'filt_loc'), floc = S.filt_loc(:);         end
+fS = Su(floc(fok));  fv = S.filt(fok);  pv = S.patt(floc(fok));
 nexttile(t3,1);
-local_brainmap(mimg, grR(Su), grC(Su), S.filt, local_divmap(), true);
-title(sprintf('FILTER  b  (what was being plotted)\nnot spatially interpretable'), 'FontSize',10);
+local_brainmap(mimg, grR(fS), grC(fS), fv, local_divmap(), true);
+title(sprintf('FILTER  b  (what was being plotted)\nnot spatially interpretable; %d px', numel(fv)), 'FontSize',10);
 nexttile(t3,2);
-local_brainmap(mimg, grR(Su), grC(Su), S.patt, local_divmap(), true);
-title(sprintf('PATTERN  a = cov(x, yhat)  (Haufe)\nthis is the map'), 'FontSize',10);
+local_brainmap(mimg, grR(Su), grC(Su), S.patt, local_divmap(), true, aff_in);
+title(sprintf('PATTERN  a = cov(x, yhat)  (Haufe)\nthis is the map; all %d px, affected ringed', numel(Su)), 'FontSize',10);
 nexttile(t3,3);
-scatter(S.filt, S.patt, 14, [0.2 0.4 0.8], 'filled', 'MarkerFaceAlpha',0.5); grid on;
+scatter(fv, pv, 14, [0.2 0.4 0.8], 'filled', 'MarkerFaceAlpha',0.5); grid on;
 xlabel('filter weight b'); ylabel('forward pattern a');
 title(sprintf('\\rho = %+.3f   (sign flips: %.0f%% of px)', S.rho_ab, ...
-    100*nnz(sign(S.filt)~=sign(S.patt))/numel(S.filt)), 'FontSize',10);
+    100*nnz(sign(fv)~=sign(pv))/max(numel(fv),1)), 'FontSize',10);
 sgtitle(f3, sprintf('[CTRL-MODE] Stage-2 predictor: filter vs forward pattern  %s', strrep(sess_tag,'_','\_')));
 p3 = fullfile(fig_dir, sprintf('ctrl_spatial_pattern_%s.png', sess_tag));
 exportgraphics(f3, p3, 'Resolution', 300);  fprintf('[CTRL-MODE-FIG] -> %s\n', p3);
@@ -259,8 +267,9 @@ save(md_file, '-struct', 'MD', '-v7.3');
 fprintf('[CTRL-MODE-SAVE] -> %s\n\n', md_file);
 
 %% ---- helpers -----------------------------------------------------------------
-function local_brainmap(mimg, rr, cc, vals, cmap, symmetric)
-% gray brain + scatter of grid nodes coloured by vals
+function local_brainmap(mimg, rr, cc, vals, cmap, symmetric, affmask)
+% gray brain + scatter of grid nodes coloured by vals. affmask (optional) rings the
+% stim-affected nodes so the reader can see where they sit rather than having them hidden.
 g = mat2gray(mimg, [prctile(mimg(:),1) prctile(mimg(:),99)]);
 image(repmat(g,1,1,3)); axis image ij off; hold on;
 if symmetric
@@ -269,6 +278,9 @@ else
     cl = [min(vals(:)) max(vals(:))];  if diff(cl)==0, cl = cl + [-1 1]; end
 end
 scatter(cc, rr, 26, vals, 'filled');
+if nargin >= 7 && any(affmask)
+    scatter(cc(affmask), rr(affmask), 44, 'o', 'MarkerEdgeColor',[0 0 0], 'LineWidth',0.7);
+end
 colormap(gca, cmap); clim(cl); colorbar;
 end
 

@@ -1,4 +1,4 @@
-function [a, info] = cp_weight_pattern(X, b, mu, sd, y0)
+function [a, info] = cp_weight_pattern(X, b, mu, sd, y0, yhat_ext)
 %CP_WEIGHT_PATTERN  Forward PATTERN from backward-model weights (Haufe et al. 2014).
 %
 %   a = CP_WEIGHT_PATTERN(X, b) converts the weights `b` of a backward (decoding)
@@ -26,6 +26,11 @@ function [a, info] = cp_weight_pattern(X, b, mu, sd, y0)
 %     mu  [p x 1]  (optional) per-regressor mean used to z-score at fit time. Default 0.
 %     sd  [p x 1]  (optional) per-regressor sd used to z-score at fit time.   Default 1.
 %     y0  [1 x 1]  (optional) prediction intercept. Only shifts yhat; does not affect a.
+%     yhat_ext [T x 1] (optional) use THIS prediction instead of computing one from b.
+%                  Pass b = [] with it. This is the form to use when you want the pattern
+%                  over a LARGER pixel set than the predictor was fit on: the pattern is
+%                  just cov(x_j, yhat), which is defined for every pixel, whereas the
+%                  filter exists only for the regressors actually in the model.
 %
 %   OUTPUTS
 %     a    [p x 1]  forward pattern, in units of  cov(X_j, yhat)  -- plot THIS.
@@ -38,18 +43,27 @@ function [a, info] = cp_weight_pattern(X, b, mu, sd, y0)
 %
 %   See also CP_WEIGHT_COMPOSITE.
 
-narginchk(2, 5);
+narginchk(2, 6);
 [p, T] = size(X);
 b = b(:);
-assert(numel(b) == p, 'cp_weight_pattern: b has %d entries but X has %d rows.', numel(b), p);
 if nargin < 3 || isempty(mu), mu = zeros(p,1); end
 if nargin < 4 || isempty(sd), sd = ones(p,1);  end
 if nargin < 5 || isempty(y0), y0 = 0;          end
+if nargin < 6, yhat_ext = []; end
 mu = mu(:); sd = sd(:); sd(sd == 0) = 1;
 
-Z    = (X - mu) ./ sd;                 % z-scored exactly as at fit time
-yhat = (Z.' * b) + y0;                 % [T x 1]
-yc   = yhat - mean(yhat);
+if ~isempty(yhat_ext)
+    yhat = yhat_ext(:);
+    assert(numel(yhat) == T, ...
+        'cp_weight_pattern: yhat_ext has %d samples but X has %d columns.', numel(yhat), T);
+else
+    assert(numel(b) == p, ...
+        'cp_weight_pattern: b has %d entries but X has %d rows (pass yhat_ext to use a larger pixel set).', ...
+        numel(b), p);
+    Z    = (X - mu) ./ sd;             % z-scored exactly as at fit time
+    yhat = (Z.' * b) + y0;             % [T x 1]
+end
+yc = yhat - mean(yhat);
 
 % a_j = cov(x_j, yhat).  Computed on the RAW regressors so the pattern lives in the
 % data's own units and stays interpretable per pixel.
@@ -63,9 +77,9 @@ info.p        = p;
 info.T        = T;
 % Diagnostic: how far apart are the filter and the pattern? corr ~1 means the filter
 % happened to be safe to plot; anything lower means it was not.
-if std(b) > 0 && std(a) > 0
+if numel(b) == p && std(b) > 0 && std(a) > 0
     info.rho_ab = corr(b, a);
 else
-    info.rho_ab = NaN;
+    info.rho_ab = NaN;                 % not comparable (external yhat / larger pixel set)
 end
 end
