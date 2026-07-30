@@ -24,10 +24,13 @@ for s = 1:nS
     mn = SESS{s,1}; td = SESS{s,2}; en = SESS{s,3}; ref = SESS{s,4};
 
     d = initialize_data(mn, en, td);
-    % 17-col build: input_params col2 (kk) marks the trial END, not the onset,
-    % so findStims mode1 puts d.stimStarts `dur` seconds late. Shift back to the
-    % true stim onset before any windowing / controllerData scoring.
-    d.stimStarts = d.stimStarts - d.params.dur;
+    % ONSET CONVENTION for this 2026-07 controller build (verified 2026-07-30):
+    % input_params col2 (kk) is the ABSOLUTE sample index into timeBlue at the
+    % trial END. There is NO params.horizon, so findStims mode1 (kk - 40*35)
+    % lands ~40 s early — wrong. True stim window = [timeBlue(kk)-dur, timeBlue(kk)].
+    kk = round(d.input_params(:,2));
+    d.stimStarts = d.timeBlue(kk) - d.params.dur;
+    d.stimEnds   = d.timeBlue(kk);
     d.ref = ref;
     data = getpixel_dFoF(d, 1, d.params.pixel, 1);      % mode 1 = SVD recon
     t = size(d.input_params,1);                          % all trials valid
