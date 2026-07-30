@@ -11,6 +11,10 @@
 PS = paperStyle(); setPaperDefaults();
 fs = 35; PRE = 3; POST = 3;
 EXPORT = true; EXPORT_PNG = true;
+% Both sessions embed a Kp TUNING sweep in their early trials; only the LAST
+% T_KEEP trials are the interleaved OL/CL block with Kp LOCKED (AL_0048 Kp=0.05,
+% AL_0051 Kp=0.075). Analyse only those (matches controllerData's `t`).
+T_KEEP = 100;
 
 SESS = { 'AL_0048','2026-07-29',2,-5;
          'AL_0051','2026-07-29',2,-5 };
@@ -25,8 +29,9 @@ for s = 1:size(SESS,1)
     dur = d.params.dur; col3 = d.input_params(:,3); x1=0; x2=dur;
     nPre=round(PRE*fs); nPost=round((dur+POST)*fs); T=(-nPre:nPost)/fs;
 
+    N = numel(col3); keep = (1:N)' > N - T_KEEP;   % last T_KEEP trials = Kp locked
     grab = @(rows) cell2mat(arrayfun(@(r) local_win(dFk,tB,d.stimStarts(r),nPre,nPost), rows(:), 'uni',0));
-    OL = grab(find(col3==0)); CL = grab(find(col3==1));
+    OL = grab(find(col3==0 & keep)); CL = grab(find(col3==1 & keep));
     OL = OL(all(isfinite(OL),2),:); CL = CL(all(isfinite(CL),2),:);
 
     % --- laser command: auto-pick the ACTIVE channel (differs by mouse:
@@ -46,7 +51,7 @@ for s = 1:size(SESS,1)
     fsi = 1/median(diff(tIn)); nPreI = round(0.5*fsi); nPostI = round((dur+0.5)*fsi);
     Ti = (-nPreI:nPostI)/fsi;
     grabI = @(rows) cell2mat(arrayfun(@(r) local_win(inp,tIn,d.stimStarts(r),nPreI,nPostI), rows(:), 'uni',0));
-    OLi = grabI(find(col3==0)); CLi = grabI(find(col3==1));
+    OLi = grabI(find(col3==0 & keep)); CLi = grabI(find(col3==1 & keep));
     OLi = OLi(all(isfinite(OLi),2),:); CLi = CLi(all(isfinite(CLi),2),:);
     inStim = T>=0 & T<=dur;
     rmseV = { sqrt(mean((OL(:,inStim)-ref).^2,2)), sqrt(mean((CL(:,inStim)-ref).^2,2)) };

@@ -32,6 +32,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Fill in author names and affiliations — `main.tex` L62 (blocked on AL input)
 - [ ] Three remaining content `\todo` gaps in `results.tex`: §pre-stim brain state (L64–68), §low-freq spectral attribution (L112), §contra→ipsi prediction (L130) — see "Analysis still needed" below.
 - [ ] Add Chrimson spatial-spread citation — `methods_edit.tex` L292 `\todo` (Nuo Li / Svoboda). NOT in refs.bib yet; needs exact paper from AL before adding a bib entry (do not fabricate).
+- [ ] **ON AL APPROVAL** — add a short Methods paragraph for the disturbance-rejection metric: ρ = 1 − ‖A−ref‖/‖G‖ over the settled 1–3 s window, where A = canonical ipsi dFk, G = stim-blind contra-global prediction (the no-controller disturbance), ref = −5. Note the ρ = 1−transmission = −β equivalence with Q2. Basis: `internal_model_principle.m` `[IMP-REJECT]`; result CL>OL p=1.6e-6 (RESEARCH 2026-07-27). Do NOT draft until AL says go.
 
 ### Analysis still needed for text
 - [ ] Run TF fit across all 3 impulse sessions; compare poles/time constants between sessions — `Impulse_mouseDataAnalysis_all.m`
@@ -56,8 +57,12 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ## 🟡 Next sprint
 
+### New controller mice (AL_0048, AL_0051) — 2026-07-29 static-ref sessions
+- [ ] **Run a dedicated controller-tuning experiment for BOTH AL_0048 and AL_0051** (user 2026-07-30). The 2026-07-29 sessions embed the Kp sweep in their early trials (locked-Kp OL/CL is only the LAST ~100), so a clean standalone gain-grid/auto-tune session per mouse is still needed (cf. `controller-tuning`). Feeds a proper per-mouse tuned gain + the cost-landscape methods figure.
+- [~] Fold AL_0048 + AL_0051 (last-100 locked-Kp block) into the Fig 3 session-pooled figures + repeat the Fig 4 state-dependence analysis with them included (in progress 2026-07-30). See [[project_new_controller_mice]].
+
 ### Meeting-driven — Nick 2026-07-17 / 07-22 (new; see MEETINGS.md)
-- [ ] **Four-mode sine-wave MSE** (`Analysis_variable.m`): exclude drowsy/outlier trials (flag pre-stim ΔF/F var > 2.5 SD of session median), recompute per-condition MSE for OL / OL+preview / CL / CL+preview; report mean±SD + repeated-measures ANOVA. Preview gives ~5-frame/51° lag correction. `2026-07-17.1` ⚠ single mouse — not a stats claim until replicated (water-restricted / C1V1).
+- [x] 2026-07-28 — **Four-mode sine-wave MSE DONE** (`bilateral/sine_ff_across_sessions.m`, AL_0048 inhib hemisphere, 3 sessions). Added drowsy-exclusion (pre-stim var > median+2.5·SD → 16/478 excl), pooled clean RMSE, xcorr phase lag, Friedman/KW stats. **Finding: RMSE win is CLOSED-LOOP, not preview** — OL vs CL p=1.5e-4; OL vs OL+prev n.s. (p=0.49). Preview corrects phase (5.0 fr/51.4°) but not RMSE. Friedman n=3 p=0.060 (underpowered). `2026-07-17.1`. **User decisions open:** (a) PDF panels clean vs raw; (b) reframe narrative (preview=phase, RMSE=feedback); (c) ⚠ n=3 → repeat water-restricted before any stats claim.
 - [ ] **OL-optimized reference line for disturbance rejection** (Nick, `2026-07-22.3/.4`): add a third trace = contra prediction + average laser effect ("orange + avg laser") to the trial-by-trial residual plots; per trial compute L2 of (actual − OL-optimized) over the stim window, contrast OL vs CL, and regress against pre-stim delta power + motion. This is the concrete disturbance-rejection metric — ties into the ⭐ PORT objective-2 ceiling below.
 - [ ] **Excitatory-hemisphere motion-artifact check** (`2026-07-22.1`): the excit impulse rebound oscillation may be mouse twitching — check the grid-session motion videos for movement correlated with the rebound BEFORE attributing it to 2nd-order network dynamics or redesigning a PD controller. Also weigh C1V1 slow off-kinetics (~100 ms → depolarization-block rebound). Prereq for the excit-vs-inhib TF fit (already tracked under Bilateral: "TF-fit each side's AL_0048 impulse response").
 - [ ] **Pre-stim prediction-error control figure** (`2026-07-17.8`): finalize the color-coded scatter showing high-prediction-error trials do NOT cluster at high residual deviations (rules out globally-bad prediction as the state-dependence confound). Nick agreed this argument is needed in the paper.
