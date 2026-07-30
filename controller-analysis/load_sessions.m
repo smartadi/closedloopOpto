@@ -77,9 +77,24 @@ mouse.m12.mn = 'AL_0033'; mouse.m12.td = '2025-04-19';
 mouse.m12.en = 1;
 mouse.m12.trials = 100;
 
-mouse.m13.mn = 'AL_0039'; mouse.m13.td = '2025-04-20'; 
+mouse.m13.mn = 'AL_0039'; mouse.m13.td = '2025-04-20';
 mouse.m13.en = 2;
 mouse.m13.trials = 100;
+
+% New static-reference controller mice (2026-07-29). 17-col rig build: onset =
+% timeBlue(col2)-dur (col2 = trial-END abs index, no horizon), SVD-mode pixel,
+% ref -5. Only the LAST 100 trials (Kp LOCKED) are the OL/CL block; earlier
+% trials are the Kp tuning sweep. AL_0050 excluded (poor stim). See
+% project_new_controller_mice memory. newbuild flag drives the loop branch.
+mouse.m14.mn = 'AL_0048'; mouse.m14.td = '2026-07-29';
+mouse.m14.en = 2;
+mouse.m14.trials = 100;
+mouse.m14.newbuild = true;
+
+mouse.m15.mn = 'AL_0051'; mouse.m15.td = '2026-07-29';
+mouse.m15.en = 2;
+mouse.m15.trials = 100;
+mouse.m15.newbuild = true;
 
 
 
@@ -123,7 +138,18 @@ for k = 1:length(fields)
         else
             mouse.(fields{k}).d = initialize_data(mn_k, en_k, td_k);
 
+            isNew = isfield(mouse.(fields{k}), 'newbuild') && mouse.(fields{k}).newbuild;
+            if isNew
+                % 17-col build: input_params col2 (kk) = ABSOLUTE sample index at
+                % the trial END, no params.horizon -> findStims mode1 is ~40 s off.
+                % Correct onset = timeBlue(kk) - dur. (Verified 2026-07-30.)
+                kk = round(mouse.(fields{k}).d.input_params(:,2));
+                mouse.(fields{k}).d.stimStarts = mouse.(fields{k}).d.timeBlue(kk) - mouse.(fields{k}).d.params.dur;
+                mouse.(fields{k}).d.stimEnds   = mouse.(fields{k}).d.timeBlue(kk);
+            end
+
             mode = 0;  % from binary image
+            if isNew; mode = 1; end   % new build has no local raw frames -> SVD recon
             r    = 1;  % use dFk cache
             mouse.(fields{k}).data = getpixel_dFoF(mouse.(fields{k}).d, mode, mouse.(fields{k}).d.params.pixel, r);
 
