@@ -34,7 +34,15 @@ for s = 1:size(SESS,1)
     c594 = d.inpVals594(:)'; c638 = d.inpVals638(:)';
     if max(c638) >= max(c594); inp = c638; tIn = d.inpTime638(:)'; lasNm = '638';
     else;                       inp = c594; tIn = d.inpTime594(:)'; lasNm = '594'; end
-    fprintf('[%s] active laser = %s nm (max %.2f)\n', mn, lasNm, max(inp));
+    % Convert command Volts -> mW via the session's rig calibration. If no calib
+    % exists for this wavelength/date, fall back to raw V (flagged in the label).
+    inpUnit = 'mW';
+    try
+        inp = laser_v2mw(inp, td, str2double(lasNm));
+    catch ME_cal
+        inpUnit = 'V'; fprintf('[%s] no %s-nm calib (%s) -> input stays in Volts\n', mn, lasNm, ME_cal.message);
+    end
+    fprintf('[%s] active laser = %s nm (peak %.2f %s)\n', mn, lasNm, max(inp), inpUnit);
     fsi = 1/median(diff(tIn)); nPreI = round(0.5*fsi); nPostI = round((dur+0.5)*fsi);
     Ti = (-nPreI:nPostI)/fsi;
     grabI = @(rows) cell2mat(arrayfun(@(r) local_win(inp,tIn,d.stimStarts(r),nPreI,nPostI), rows(:), 'uni',0));
@@ -106,7 +114,7 @@ for s = 1:size(SESS,1)
     hC=plot(ax,Ti,mean(CLi),'Color',PS.col_cl,'LineWidth',PS.lw_mean);
     xlim(ax,[-0.5 dur+0.5]); yl=ylim(ax); ylim(ax,[min(0,yl(1)) yl(2)]);
     addStimPatch(ax,x1,x2); uistack(findobj(ax,'Type','line'),'top'); hold(ax,'off');
-    paperAxes(ax,'XLength',1,'YLength',1,'XLabel','1 s','YLabel','1 mW');
+    paperAxes(ax,'XLength',1,'YLength',1,'XLabel','1 s','YLabel',sprintf('1 %s',inpUnit));
     lg=legend([hO hC],SHORT,'Location','northeast'); paperLegend(lg);
     text(ax,0.5,1.06,sprintf('%s — laser command (%s nm)',mn,lasNm),'Units','normalized','HorizontalAlignment','center','Interpreter','none','Clipping','off');
     exp2(figF,sprintf('ctrl_input_%s',mn));
