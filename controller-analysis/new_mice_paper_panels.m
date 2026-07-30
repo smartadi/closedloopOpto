@@ -28,6 +28,18 @@ for s = 1:size(SESS,1)
     grab = @(rows) cell2mat(arrayfun(@(r) local_win(dFk,tB,d.stimStarts(r),nPre,nPost), rows(:), 'uni',0));
     OL = grab(find(col3==0)); CL = grab(find(col3==1));
     OL = OL(all(isfinite(OL),2),:); CL = CL(all(isfinite(CL),2),:);
+
+    % --- laser command: auto-pick the ACTIVE channel (differs by mouse:
+    % AL_0048 drives 638, AL_0051 drives 594; the other channel is flat noise) ---
+    c594 = d.inpVals594(:)'; c638 = d.inpVals638(:)';
+    if max(c638) >= max(c594); inp = c638; tIn = d.inpTime638(:)'; lasNm = '638';
+    else;                       inp = c594; tIn = d.inpTime594(:)'; lasNm = '594'; end
+    fprintf('[%s] active laser = %s nm (max %.2f)\n', mn, lasNm, max(inp));
+    fsi = 1/median(diff(tIn)); nPreI = round(0.5*fsi); nPostI = round((dur+0.5)*fsi);
+    Ti = (-nPreI:nPostI)/fsi;
+    grabI = @(rows) cell2mat(arrayfun(@(r) local_win(inp,tIn,d.stimStarts(r),nPreI,nPostI), rows(:), 'uni',0));
+    OLi = grabI(find(col3==0)); CLi = grabI(find(col3==1));
+    OLi = OLi(all(isfinite(OLi),2),:); CLi = CLi(all(isfinite(CLi),2),:);
     inStim = T>=0 & T<=dur;
     rmseV = { sqrt(mean((OL(:,inStim)-ref).^2,2)), sqrt(mean((CL(:,inStim)-ref).^2,2)) };
     try; pR = ranksum(rmseV{1},rmseV{2}); catch; pR = NaN; end
@@ -84,8 +96,24 @@ for s = 1:size(SESS,1)
     paperAxes(ax,'XLength',0.5,'YLength',2,'XLabel','','YLabel','2');
     exp2(figE,sprintf('ctrl_rmse_%s',mn));
 
-    fprintf('[%s] OL n=%d (RMSE %.2f) | CL n=%d (RMSE %.2f) | p=%.3g | -> %s\n', ...
-        mn, size(OL,1), median(rmseV{1}), size(CL,1), median(rmseV{2}), pR, outDir);
+    %% Panel 4: average laser command (638) OL vs CL ----------------------
+    figF = paperFig(6,4);
+    ax = axes(figF,'Position',[0.12 0.14 0.84 0.78]); hold(ax,'on');
+    plot(ax,Ti,zeros(size(Ti)),'k','LineWidth',PS.lw_zero,'HandleVisibility','off');
+    fill(ax,[Ti fliplr(Ti)],[mean(OLi)+std(OLi) fliplr(mean(OLi)-std(OLi))],PS.col_ol,'FaceAlpha',PS.fa,'EdgeColor','none','HandleVisibility','off');
+    fill(ax,[Ti fliplr(Ti)],[mean(CLi)+std(CLi) fliplr(mean(CLi)-std(CLi))],PS.col_cl,'FaceAlpha',PS.fa,'EdgeColor','none','HandleVisibility','off');
+    hO=plot(ax,Ti,mean(OLi),'Color',PS.col_ol,'LineWidth',PS.lw_mean);
+    hC=plot(ax,Ti,mean(CLi),'Color',PS.col_cl,'LineWidth',PS.lw_mean);
+    xlim(ax,[-0.5 dur+0.5]); yl=ylim(ax); ylim(ax,[min(0,yl(1)) yl(2)]);
+    addStimPatch(ax,x1,x2); uistack(findobj(ax,'Type','line'),'top'); hold(ax,'off');
+    paperAxes(ax,'XLength',1,'YLength',1,'XLabel','1 s','YLabel','1 mW');
+    lg=legend([hO hC],SHORT,'Location','northeast'); paperLegend(lg);
+    text(ax,0.5,1.06,sprintf('%s — laser command (%s nm)',mn,lasNm),'Units','normalized','HorizontalAlignment','center','Interpreter','none','Clipping','off');
+    exp2(figF,sprintf('ctrl_input_%s',mn));
+
+    fprintf('[%s] OL n=%d (RMSE %.2f) | CL n=%d (RMSE %.2f) | p=%.3g | input OL peak %.2f CL peak %.2f | -> %s\n', ...
+        mn, size(OL,1), median(rmseV{1}), size(CL,1), median(rmseV{2}), pR, ...
+        max(mean(OLi)), max(mean(CLi)), outDir);
 end
 
 function local_export = deal_export(fig, outDir, base, EXPORT, EXPORT_PNG)
