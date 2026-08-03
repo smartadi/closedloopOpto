@@ -30,13 +30,19 @@
 % (x=215, y=250) px: the grid module's BREGMA_PX x=280 is ~65 px off for THIS session, a shift
 % that both spots agree on independently (see RESEARCH 2026-08-02).
 %
-% ⚠ KNOWN ASYMMETRY (RESEARCH 2026-08-02): on the INHIBITORY side the strongest suppression is
-% NOT at the illuminated spot but ~2.6 mm anterior ([row 272 col 355], -2.05% at the top amp vs
-% -1.16% at the spot). SITE_MODE selects which one this loader uses. 'calibrated' (default) keeps
-% the readout at the illuminated spot = the actuator, which is what an impulse/TF analysis is
-% about; 'response' takes the global strongest focus instead. This is a real experimental
-% finding (likely inhibitory-opsin expression offset from the intended target), not a bug --
-% do not silently switch modes without saying which was used.
+% ⚠ THE INHIBITORY READOUT IS 2.6 mm FROM THE ILLUMINATED SPOT -- READ THIS BEFORE CLAIMING
+% "LOCAL". On the inhibitory side the strongest suppression is NOT where the laser pointed. The
+% 0-200 ms energy (n=100/amp, signed-rank vs baseline) decides it:
+%     illuminated spot [387,326]: -0.78 (p=0.018) / -0.23 (p=0.55) / -0.86 (p=3e-4)  <- NON-monotone
+%     anterior focus   [272,355]: -0.60 (p=0.005) / -1.41 (p=1e-8) / -1.61 (p=2e-9)  <- clean dose
+% The illuminated spot has no usable dose-response (the middle amplitude is not even significant),
+% so SITE_MODE defaults to 'response' = the data-derived deepest focal inhibition. That is also
+% what the project's locked site rule says (root CLAUDE.md: the site is data-derived, params.pixel
+% is not trusted). Most likely the inhibitory opsin expresses anterior to the intended target.
+% CONSEQUENCE, do not lose it: the readout sits ~2.6 mm from the illumination, so AL_0048's
+% inhibitory "impulse response" is a response of a CONNECTED region, not of the illuminated
+% tissue. Any TF / local-effect claim built on this session must say so. Set SITE_MODE =
+% 'calibrated' to put the readout back on the spot (and accept a flat dose-response).
 %
 % MOTION: the session records BOTH face.mp4 and eye.mp4; the project uses FACE, not eye (user,
 % 2026-08-02). What was missing is only the Facemap output (face_proc.mat) -- see [BLI-MOTION]
@@ -55,7 +61,13 @@ BLI.plateau_s = 0.02;                    % window over which the command amplitu
 BLI.ampTol = 0.1;                        % amplitude rounding (V)
 BLI.nSV = 500;  BLI.kern = 10;           % SVD comps; kernel half-width (px) for the dF readout
 BLI.SITE_RAD = 35;                       % search radius (px) around the calibrated spot
-BLI.SITE_MODE = 'calibrated';            % 'calibrated' (spot, DEFAULT) | 'response' (global focus)
+BLI.SITES = {'R'};                       % which galvo spots to register. USER 2026-08-02:
+                                         % INHIBITION ONLY -> {'R'}. Use {'L','R'} to bring the
+                                         % excitatory site back (it is fully supported below).
+BLI.SITE_MODE = 'response';              % 'response' = data-derived deepest focal response
+                                         % (DEFAULT, see the site note in the header)
+                                         % 'calibrated' = strongest response within SITE_RAD of
+                                         % the galvo-calibrated spot
 BLI.dip_win = [0 0.20];                  % energy window (project-locked peak_mode=3)
 BLI.win_s = 3.0;                         % +/- window for the per-trial traces
 % galvo volts->mm (this session's hardwareInfo.json) + pixel registration
@@ -145,7 +157,10 @@ respMap = @(sel) mean(cell2mat(arrayfun(@(f) (mean(Ufb*V_b(:,f+swb),2) - mean(Uf
 xa = uA(:) - mean(uA);  denA = sum(xa.^2);
 
 sides = {'L','R'};  signs = [+1 -1];       % L = excitatory (max), R = inhibitory (min)
-for sI = 1:2
+sIlist = find(ismember(sides, BLI.SITES));
+if isempty(sIlist); error('[BLI] BLI.SITES = %s matches no site (use ''L'' and/or ''R'').', strjoin(BLI.SITES,',')); end
+fprintf('[BLI] registering site(s): %s\n', strjoin(sides(sIlist), ', '));
+for sI = sIlist
     if sI==1, selSide = onSide < 0; else, selSide = onSide > 0; end   % L = galvoX<0, R = galvoX>0
     Sm = zeros(nYb*nXb, nAb);
     for a = 1:nAb, Sm(:,a) = respMap(selSide & onAmp==uA(a)); end
@@ -239,7 +254,13 @@ for sI = 1:2
     fprintf('[BLI] registered as allExperiments(%d)  site %s  | trials/amp %s\n', ...
         e, sides{sI}, mat2str(cellfun(@numel, imp.Peak_imp)'));
 end
-fprintf(['[BLI] DONE. AL_0048 is entries %d (L, excitatory) and %d (R, inhibitory).\n' ...
+nNew = numel(sIlist);
+fprintf(['[BLI] DONE. AL_0048 registered as %d entr%s (%s), indices %s.\n' ...
          '      Next: ONE ROI draw for this mouse -- run the pipeline with selExp = %d; cp_roi_masks\n' ...
-         '      opens once and the same cp_roi2_ file serves BOTH sites (ipsi = side of the primary px).\n'], ...
-    numel(allExperiments)-1, numel(allExperiments), numel(allExperiments)-1);
+         '      opens once (ipsi = the hemisphere holding the primary pixel, so one file serves any site).\n'], ...
+    nNew, ternstr_bli(nNew==1,'y','ies'), strjoin(sides(sIlist),'+'), ...
+    mat2str(numel(allExperiments)-nNew+1 : numel(allExperiments)), numel(allExperiments)-nNew+1);
+
+function s = ternstr_bli(c,a,b)
+if c, s = a; else, s = b; end
+end
