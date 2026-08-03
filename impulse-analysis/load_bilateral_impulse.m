@@ -26,15 +26,19 @@
 % excitatory side and the min on the inhibitory side. Calibration comes from the session's own
 % hardwareInfo.json (mmPerV_X 1.1111, mmPerV_Y -1.0753, bregmaOffset 0.4424/1.8099), which puts
 % the two spots at (-2.52,-2.98) and (+2.48,-2.98) mm from bregma -- i.e. the intended mirrored
-% design. Pixel registration is the widefield rig constant (57.8 px/mm) with bregma at
-% (x=215, y=250) px: the grid module's BREGMA_PX x=280 is ~65 px off for THIS session, a shift
-% that both spots agree on independently (see RESEARCH 2026-08-02).
+% design. Pixel registration is the widefield rig constant (57.8 px/mm) with the grid module's
+% bregma (x=280, y=250) px, VERIFIED against this session's own anatomy: mirror-symmetry of the
+% mean image peaks at col 275 (corr 0.82) and the hand-drawn midline sits at col 278 (col 215
+% scores 0.17). An earlier version of this file inferred x=215 from the two response foci and
+% was WRONG -- the foci are displaced from the illumination, the registration is fine.
 %
 % ⚠ THE INHIBITORY READOUT IS 2.6 mm FROM THE ILLUMINATED SPOT -- READ THIS BEFORE CLAIMING
 % "LOCAL". On the inhibitory side the strongest suppression is NOT where the laser pointed. The
 % 0-200 ms energy (n=100/amp, signed-rank vs baseline) decides it:
-%     illuminated spot [387,326]: -0.78 (p=0.018) / -0.23 (p=0.55) / -0.86 (p=3e-4)  <- NON-monotone
-%     anterior focus   [272,355]: -0.60 (p=0.005) / -1.41 (p=1e-8) / -1.61 (p=2e-9)  <- clean dose
+%     illuminated spot [422,423]: -0.50 (p=0.014) / -0.12 (p=0.66) / -0.32 (p=0.074) <- NON-monotone
+%     anterior focus   [272,355]: -0.47 (p=0.005) / -1.42 (p=5e-9) / -1.61 (p=5e-9)  <- clean dose
+% (re-measured 2026-08-02 at the CORRECTED calibrated spot [422,423]; the earlier quote used
+%  [387,326], the spot position implied by the retracted bregma x=215. Same verdict, stronger.)
 % The illuminated spot has no usable dose-response (the middle amplitude is not even significant),
 % so SITE_MODE defaults to 'response' = the data-derived deepest focal inhibition. That is also
 % what the project's locked site rule says (root CLAUDE.md: the site is data-derived, params.pixel
@@ -73,7 +77,7 @@ BLI.win_s = 3.0;                         % +/- window for the per-trial traces
 % galvo volts->mm (this session's hardwareInfo.json) + pixel registration
 BLI.mmPerV = [1.1111111111111112, -1.075268817204301];
 BLI.bregmaOffV = [0.44240536910566763, 1.8098660744628157];
-BLI.bregma_px = [215, 250];              % (x,y) px -- x corrected for THIS session (see header)
+BLI.bregma_px = [280, 250];              % (x,y) px, from the grid module -- VERIFIED, see header
 BLI.px_per_mm = [57.8, -57.8];
 
 if ~exist('impulseDir','var') || isempty(impulseDir)
@@ -234,6 +238,12 @@ for sI = sIlist
     allExperiments(e).mn = BLI.mn;  allExperiments(e).td = BLI.td;  allExperiments(e).en = BLI.en;
     allExperiments(e).site = sides{sI};          % NEW field: which galvo spot this entry is
     allExperiments(e).sess_tag = tagS;           % NEW: site-qualified tag for the ROI/site caches
+    % ANTERIOR direction in NATIVE image (row,col), from this session's own bregma calibration:
+    % row = bregma_y + mm_AP*px_per_mm(2) with px_per_mm(2) < 0, so anterior (mm_AP > 0) means a
+    % SMALLER row -> anterior is UP in the native view. ols_tf_pipeline's pick_orient uses this to
+    % break the up/down tie; without it the legacy "site below centroid" rule flips this session
+    % upside down (its inhibitory readout is 2.6 mm ANTERIOR of the spot, unlike AL_0033/AL_0041).
+    allExperiments(e).ant_rc = [-sign(BLI.px_per_mm(2)) 0];
     allExperiments(e).imp = imp;
     allExperiments(e).uAmp = uA(:);
     allExperiments(e).DF_imp = DF_imp_b;

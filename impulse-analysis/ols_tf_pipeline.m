@@ -98,15 +98,34 @@ serverRoot = expPath(mn, td, en);
 [nY_cp, nX_cp] = size(mimg_cp);
 nSV_cp = size(U_cp, 3);
 
-d_tmp   = loadData(serverRoot, mn, td, en);
-py_prim = double(d_tmp.params.pixel(1));
-px_prim = double(d_tmp.params.pixel(2));
-k_prim  = double(d_tmp.params.kernel);
-clear d_tmp
+% Cache tag for the site + ROI files. Bilateral two-spot sessions (AL_0048) register one
+% entry PER GALVO SITE under the SAME mn/td/en, so those entries carry a site-qualified
+% `sess_tag` (e.g. AL_0048_0715_e1_R); without it two sites would collide on one cache name.
+if isfield(allExperiments, 'sess_tag') && ~isempty(allExperiments(selExp).sess_tag)
+    sess_tag_cp = allExperiments(selExp).sess_tag;
+else
+    sess_tag_cp = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
+end
+
+% loadData only works on the closed-loop controller rig (needs input_params.csv / states.csv /
+% params.mat). The bilateral impulse session is a Signals experiment with none of those, so its
+% nominal pixel/kernel come from the loader instead. With USE_DATA_SITE the pixel is overwritten
+% by the data-derived site below anyway; k_prim falls back to the project default 10.
+try
+    d_tmp   = loadData(serverRoot, mn, td, en);
+    py_prim = double(d_tmp.params.pixel(1));
+    px_prim = double(d_tmp.params.pixel(2));
+    k_prim  = double(d_tmp.params.kernel);
+    clear d_tmp
+catch
+    py_prim = NaN;  px_prim = NaN;  k_prim = 10;
+    fprintf('[SETUP] no controller-rig params for %s (Signals session) -- using the data-derived site, k_prim=%d\n', ...
+        sess_tag_cp, k_prim);
+end
 
 % (3) Data-derived photostim site + retarget y_full (same as [CP-SITE])
 if USE_DATA_SITE
-    site_file = fullfile(dataDir, sprintf('cp_stim_site_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+    site_file = fullfile(dataDir, sprintf('cp_stim_site_%s.mat', sess_tag_cp));
     if exist(site_file,'file')
         SS = load(site_file);  stim_rc = double(SS.rowcol);
         fprintf('[SITE] loaded cached site [row %d col %d]\n', stim_rc);
@@ -135,7 +154,7 @@ nF_m = min(numel(y_full), size(V_cp,2));
 % the workspace (valid_cp_svd, from contra_prediction.m); (b) the cached ROI geometry
 % (cp_roi2_*.mat, loaded — no draw); (c) error with instructions. The draw GUI only
 % ever opens from contra_prediction.m S04, which is the single source of truth.
-roi_file = fullfile(dataDir, sprintf('cp_roi2_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+roi_file = fullfile(dataDir, sprintf('cp_roi2_%s.mat', sess_tag_cp));
 if exist('valid_cp_svd','var') && exist('ipsi_mask_cp','var') && isequal(size(valid_cp_svd),[nY_cp nX_cp])
     contra_mask = logical(valid_cp_svd);  ipsi_mask = logical(ipsi_mask_cp);
     fprintf('[MASK] reusing contra + ipsi masks from workspace\n');
@@ -239,7 +258,8 @@ D.mimg=mimg_cp; D.k=k_prim; D.Fs=Fs; D.ipsi=logical(ipsi_mask);
 % canonical imagesc(mimg')). Every overlay draws Torient.imgOp(mimg) and places grid/site via
 % orient_fwd, and clicks invert through the SAME Torient, so the choice is display-only and pixel
 % selection is unaffected on any session.
-Torient = resolve_orient(disp_orient, contra_mask, ipsi_mask, px_prim, py_prim, nY_cp, nX_cp);
+Torient = resolve_orient(disp_orient, contra_mask, ipsi_mask, px_prim, py_prim, nY_cp, nX_cp, ...
+                         get_ant_rc(allExperiments(selExp)));
 [dspGr, dspGc] = orient_fwd(Torient, grR, grC);            % grid pixels -> display (row,col)
 [dspSr, dspSc] = orient_fwd(Torient, px_prim, py_prim);    % laser site  -> display (row,col)
 oI_ = Torient.imgOp(mimg_cp);  dspImg = (oI_-min(oI_(:)))/max(max(oI_(:))-min(oI_(:)),eps);  % oriented brain [Hd x Wd]
@@ -1031,16 +1051,27 @@ delta_r = fr(1:nB_r)>=1 & fr(1:nB_r)<=4;                       % 1-4 Hz delta ba
 tot_r   = fr(1:nB_r)>=0.5 & fr(1:nB_r)<=30;                    % broadband for the RELATIVE-delta ratio
 
 % session motion trace (same source as cp_residual_core: 2x-sampled -> decimate to blue rate)
+% PREFER the trace the loader already put on the experiment entry (`mv_z`, z-scored at blue
+% cadence). Sessions loaded outside the controller rig -- e.g. the AL_0048 bilateral impulse,
+% registered by load_bilateral_impulse.m -- have no input_params.csv, so `loadData` throws and
+% motion would silently be NaN even though the face video was processed. Fall back to loadData
+% for the original sessions, which do not carry mv_z on the entry.
 motz_full = [];
-try
-    dM = loadData(serverRoot, mn, td, en);
-    if isfield(dM,'motion') && isfield(dM.motion,'motion_1')
-        mot_full = double(dM.motion.motion_1(1:2:end));
-        motz_full = (mot_full - mean(mot_full,'omitnan'))/max(std(mot_full,'omitnan'),eps);
+if isfield(allExperiments, 'mv_z') && ~isempty(allExperiments(selExp).mv_z) && ...
+        any(isfinite(allExperiments(selExp).mv_z))
+    motz_full = double(allExperiments(selExp).mv_z(:));
+    fprintf('[STATEDEP] motion from allExperiments(%d).mv_z (%d samples)\n', selExp, numel(motz_full));
+else
+    try
+        dM = loadData(serverRoot, mn, td, en);
+        if isfield(dM,'motion') && isfield(dM.motion,'motion_1')
+            mot_full = double(dM.motion.motion_1(1:2:end));
+            motz_full = (mot_full - mean(mot_full,'omitnan'))/max(std(mot_full,'omitnan'),eps);
+        end
+        clear dM
+    catch ME
+        fprintf('[STATEDEP] motion trace unavailable (%s) -> Motion column will be NaN.\n', ME.message);
     end
-    clear dM
-catch ME
-    fprintf('[STATEDEP] motion trace unavailable (%s) -> Motion column will be NaN.\n', ME.message);
 end
 
 DVz=[]; GNz=[]; L1z=[]; LD=[]; PRE=[]; POST=[]; MOT=[]; PVv=[]; DPa=[]; DPr=[]; AMPv=[]; AMPi=[]; TRi=[]; ldMean=nan(nA,1); ldStd=nan(nA,1);
@@ -1464,7 +1495,11 @@ if RUN_SESSION_VIEWER
                   'l1_frac',l1_frac,'ridge',ridge,'debias',debias,'disp_orient',disp_orient);
     D.T = Torient;                                              % keep D self-describing in the cache
     preload = struct('sel',selExp,'D',D,'px',px_prim,'py',py_prim,'T',Torient);
-    local_session_viewer(cfgV, allExperiments, allSelExp, preload);
+    % allSelExp is the 3-session default list; drop anything not actually loaded (a single-session
+    % workspace -- e.g. the AL_0048-only run -- would otherwise index past the end of allExperiments)
+    viewList = allSelExp(allSelExp >= 1 & allSelExp <= numel(allExperiments));
+    if isempty(viewList); viewList = selExp; end
+    local_session_viewer(cfgV, allExperiments, viewList, preload);
     fprintf('\n[VIEWER] session-picker map (%s): pick a session; click any IPSI pixel -> contra weights refit.\n', fit_mode);
 else
     % viewer disabled -> record the site-pixel weights headlessly for the current session
@@ -2212,7 +2247,8 @@ for ai=1:nA
 end
 medLocalPct=median(100*L_dip./A_dip,'omitnan');
 % orient the brain map + grid/site the same way the main script does (session-safe display)
-Tor = pick_orient(logical(M.contra), logical(M.ipsi), px_prim, py_prim, nY, nX);
+Tor = pick_orient(logical(M.contra), logical(M.ipsi), px_prim, py_prim, nY, nX, ...
+                  get_ant_rc(allExperiments(sel)));
 [gdR,gdC] = orient_fwd(Tor, grR, grC);  [sdR,sdC] = orient_fwd(Tor, px_prim, py_prim);
 oiB = Tor.imgOp(mimg_cp);  gimg = (oiB-min(oiB(:)))/max(max(oiB(:))-min(oiB(:)),eps);
 BC = struct('mResp',mResp,'blk0',blk0,'m0',m0,'nT_amp',nT_amp,'nT0',nT0, ...
@@ -2494,12 +2530,15 @@ lin=imgOp(reshape(1:H*W,[H W]));              % display pos -> original linear i
 T.posOfOrig=zeros(H*W,1); T.posOfOrig(lin(:))=(1:numel(lin))';   % original linear -> display pos
 end
 
-function T = resolve_orient(knob, contra, ipsi, siteRow, siteCol, H, W)
+function T = resolve_orient(knob, contra, ipsi, siteRow, siteCol, H, W, antRC)
 % Turn the disp_orient knob into a display transform. 'auto' auto-normalizes via pick_orient;
 % every other value is a FIXED dihedral view. make_orient builds fwd/inv numerically for any op,
 % so overlay + click-inverse stay consistent regardless of the choice (display-only).
+% antRC (optional): [dRow dCol] in NATIVE image coords pointing ANTERIOR (from the session's
+% bregma registration). When given it replaces the site-below tiebreaker -- see pick_orient.
+if nargin < 8, antRC = []; end
 switch lower(knob)
-    case 'auto',      T = pick_orient(contra, ipsi, siteRow, siteCol, H, W);
+    case 'auto',      T = pick_orient(contra, ipsi, siteRow, siteCol, H, W, antRC);
     case 'native',    T = make_orient(@(A)A, H, W);
     case 'transpose', T = make_orient(@(A)A.', H, W);
     case 'rot90',     T = make_orient(@(A)rot90(A,1), H, W);
@@ -2511,22 +2550,53 @@ switch lower(knob)
 end
 end
 
-function T = pick_orient(contra, ipsi, siteRow, siteCol, H, W)
+function T = pick_orient(contra, ipsi, siteRow, siteCol, H, W, antRC)
 % Choose the dihedral view (of 8) that (1) puts IPSI rightmost with a VERTICAL midline
-% (contra/ipsi separated horizontally), then (2) breaks the residual up/down flip so the SITE
-% lands in the LOWER half (site below the brain centroid) — matching the conventional dorsal
-% view (anterior up) the original AL_0033 display used. Term (1) dominates (x1000); term (2)
-% is the tiebreaker between the two views that both satisfy (1) (they differ only by flipud).
+% (contra/ipsi separated horizontally), then (2) breaks the residual up/down flip so the view is
+% the conventional dorsal one (ANTERIOR UP). Term (1) dominates (x1000); term (2) is the
+% tiebreaker between the two views that both satisfy (1) (they differ only by flipud).
+%
+% Term (2) has two forms:
+%   antRC given  -- [dRow dCol] pointing ANTERIOR in NATIVE coords, from the session's bregma
+%                   registration. Score the view in which that vector points UP (display row
+%                   DECREASING). This is the correct, anatomy-anchored rule.
+%   antRC empty  -- legacy fallback: put the SITE in the LOWER half (site below the brain
+%                   centroid). This was written for AL_0033, whose stim site is POSTERIOR, and it
+%                   silently FLIPS any session whose site is anterior (AL_0048's inhibitory
+%                   readout sits 2.6 mm anterior of the spot -> whole session displayed upside
+%                   down). Kept only so the AL_0033/AL_0041 displays are bit-identical to before.
+if nargin < 7, antRC = []; end
 ops={@(A)A,@(A)rot90(A,1),@(A)rot90(A,2),@(A)rot90(A,3), ...
      @(A)fliplr(A),@(A)rot90(fliplr(A),1),@(A)rot90(fliplr(A),2),@(A)rot90(fliplr(A),3)};
 brain=contra|ipsi; best=-inf; T=[];
+% anterior probe: two native pixels, centroid and centroid + a step ANTERIOR
+if ~isempty(antRC)
+    [bR,bC]=find(brain);  c0=[mean(bR) mean(bC)];
+    step=40*antRC(:).'/max(norm(antRC),eps);
+    pA=min(max(round(c0+step),1),[H W]);  p0=min(max(round(c0),1),[H W]);
+end
 for o=1:numel(ops)
     Tt=make_orient(ops{o},H,W);
     cD=ops{o}(contra); iD=ops{o}(ipsi);
     [cr,cc]=find(cD); [ir,ic]=find(iD);  [br,~]=find(ops{o}(brain));
-    [sR,~]=orient_fwd(Tt,siteRow,siteCol);
-    score=1000*((mean(ic)-mean(cc)) - abs(mean(ir)-mean(cr))) + (sR-mean(br));  % ipsi-right (dom) + site-below
+    if ~isempty(antRC)
+        [rA,~]=orient_fwd(Tt,pA(1),pA(2));  [r0,~]=orient_fwd(Tt,p0(1),p0(2));
+        tie = r0 - rA;                       % >0 when anterior points UP in the display
+    else
+        [sR,~]=orient_fwd(Tt,siteRow,siteCol);
+        tie = sR - mean(br);                 % legacy: site below the centroid
+    end
+    score=1000*((mean(ic)-mean(cc)) - abs(mean(ir)-mean(cr))) + tie;
     if score>best, best=score; T=Tt; end
+end
+end
+
+function a = get_ant_rc(ae)
+% Session's ANTERIOR direction in native (row,col), if the loader registered one. Sessions
+% without bregma registration return [] -> pick_orient keeps its legacy site-below tiebreaker.
+a = [];
+if isstruct(ae) && isfield(ae,'ant_rc') && numel(ae.ant_rc)==2 && all(isfinite(ae.ant_rc))
+    a = double(ae.ant_rc(:)).';
 end
 end
 
@@ -2575,7 +2645,7 @@ else                                                     % first visit: ~17 s SV
     title(ax,sprintf('loading %s  (first visit, ~15 s SVD read) ...',lbl)); axis(ax,'off'); drawnow;
     [D,px,py,contra,ipsi]=local_load_session(sel,VS.cfg,VS.allExp);
     knob=VS.cfg.disp_orient; if isempty(knob), knob='auto'; end
-    T=resolve_orient(knob,contra,ipsi,px,py,D.nY,D.nX);
+    T=resolve_orient(knob,contra,ipsi,px,py,D.nY,D.nX,get_ant_rc(ae));
     VS.cache(sel)=struct('D',D,'px',px,'py',py,'T',T);   % containers.Map is a handle -> persists
 end
 Idisp=T.imgOp(D.mimg); g=(Idisp-min(Idisp(:)))/max(max(Idisp(:))-min(Idisp(:)),eps);
