@@ -38,8 +38,10 @@
 % finding (likely inhibitory-opsin expression offset from the intended target), not a bug --
 % do not silently switch modes without saying which was used.
 %
-% NO MOTION: this session has no face_proc.mat, so mv_z is NaN. Motion is therefore unavailable
-% as a state for AL_0048 -- its state-dependence can only use the spectral (rel-delta) markers.
+% MOTION: the session records BOTH face.mp4 and eye.mp4; the project uses FACE, not eye (user,
+% 2026-08-02). What was missing is only the Facemap output (face_proc.mat) -- see [BLI-MOTION]
+% and `run_facemap.py`. Once that exists, motion is available here exactly as in the other
+% sessions; until then mv_z is NaN and a warning says so.
 %
 % RUN: after load_experiments.m (which builds `allExperiments` for the 3 original sessions);
 % this APPENDS entries 4 (L) and 5 (R).
@@ -87,6 +89,34 @@ onGx  = arrayfun(@(i) median(gx_b(max(1,i-nPre):i)), ix);
 onSide = sign(onGx);                                            % -1 = LEFT spot, +1 = RIGHT spot
 fprintf('[BLI] %s %s e%d: %d laser onsets | amps %s | L %d / R %d\n', BLI.mn, BLI.td, BLI.en, ...
     numel(onT), mat2str(unique(onAmp)'), nnz(onSide<0), nnz(onSide>0));
+
+%% [BLI-MOTION] face-camera motion energy ------------------------------------------
+% Motion state = FACEMAP's `motion_1` (same definition as every other session:
+% load_experiments does `mv = d.motion.motion_1(1:2:end)` then z-scores). The face camera is
+% triggered with the widefield at 2 frames per blue frame, hence the 1:2:end.
+% AL_0048 2026-07-15 shipped face.mp4 + face_ROI.mat but NO face_proc.mat -- the video was
+% recorded and never processed. `impulse-analysis/run_facemap.py` produces it with AL_0041's
+% settings (sbin=4, motSVD only); it is searched for on the server first, then locally.
+% Eye video exists too and is deliberately NOT used (user, 2026-08-02).
+mvz_b = [];
+faceCands = { fullfile(expPath(BLI.mn,BLI.td,BLI.en),'face_proc.mat'), ...
+              fullfile(BLI.dataDir, sprintf('%s_%s_%d_face_proc.mat', BLI.mn, BLI.td, BLI.en)) };
+for fc = faceCands
+    if exist(fc{1},'file')
+        Fp = load(fc{1},'motion_1');
+        if isfield(Fp,'motion_1') && ~isempty(Fp.motion_1)
+            mvraw = double(Fp.motion_1(:));
+            mvz_b = zscore(mvraw(1:2:end));            % face frames -> blue-frame cadence
+            fprintf('[BLI] motion: %d face frames -> %d samples from %s\n', ...
+                numel(mvraw), numel(mvz_b), fc{1});
+        end
+        break
+    end
+end
+if isempty(mvz_b)
+    warning(['[BLI] no face_proc.mat found -- motion state unavailable for this session. ' ...
+             'Run: impulse-analysis/run_facemap.py --subject %s --date %s --exp %d'], BLI.mn, BLI.td, BLI.en);
+end
 
 %% [BLI-SVD] widefield + calibrated spot pixels ------------------------------------
 serverRoot = expPath(BLI.mn, BLI.td, BLI.en);
@@ -169,7 +199,19 @@ for sI = 1:2
         imp.Peak_imp{a} = mean(trM(:, dipC), 2);
         imp.Peak_imp_mean(a) = mean(imp.Peak_imp{a}, 'omitnan');
         imp.Peak_imp_dev{a} = imp.Peak_imp{a} - imp.Peak_imp_mean(a);
-        imp.mot{a} = nan(numel(fA),1);          % no face_proc.mat for this session
+        % per-trial motion, IDENTICAL definition to load_experiments: sum of z-scored motion
+        % energy over +/-35 samples (+/-1 s) around onset, plus the windowed trace.
+        if ~isempty(mvz_b)
+            nMv = numel(mvz_b);  cumMv = [0; cumsum(mvz_b)];
+            i0 = max(1, fA-35);  i1 = min(nMv, fA+35);
+            imp.mot{a} = (cumMv(i1+1) - cumMv(i0));
+            idxM = min(max(fA(:) + relW, 1), nMv);
+            imp.motTrace{a} = mvz_b(idxM);
+        else
+            imp.mot{a} = nan(numel(fA),1);
+            imp.motTrace{a} = nan(numel(fA), numel(relW));
+        end
+        imp.mot_mean(a) = mean(imp.mot{a},'omitnan');
         DF_imp_b(a,:) = mean(trM,1,'omitnan');
     end
 
@@ -182,7 +224,13 @@ for sI = 1:2
     allExperiments(e).DF_imp = DF_imp_b;
     allExperiments(e).dF = dF_b(:);
     allExperiments(e).timeBlue = t_b;
-    allExperiments(e).mv_z = nan(numel(t_b),1);  % no motion trace
+    if ~isempty(mvz_b)
+        mvz_e = mvz_b(1:min(numel(mvz_b), numel(t_b)));
+        mvz_e(end+1:numel(t_b)) = NaN;           % pad if the camera stopped a frame early
+        allExperiments(e).mv_z = mvz_e;
+    else
+        allExperiments(e).mv_z = nan(numel(t_b),1);
+    end
     allExperiments(e).mimg = mimg_b;
     allExperiments(e).mI1 = mIk;
     allExperiments(e).brainMask = mimg_b(:) > 0.1*max(mimg_b(:));
