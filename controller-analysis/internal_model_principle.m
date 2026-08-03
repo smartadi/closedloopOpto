@@ -68,7 +68,7 @@ gridIdx=S1.gridIdx; px_prim=S1.px_prim; py_prim=S1.py_prim; k_prim=S1.k_prim;
 horizon=S1.horizon; dur=S1.trial_dur;
 b=S2.b; mu=S2.mu; sd=S2.sd; muY=S2.muY; Su=S2.Su;
 
-[U_cp,V_cp,t_svd,mimg_cp] = loadUVt(expPath(mn,td,en), nSV_load);
+[U_cp,V_cp,t_svd,mimg_cp] = cp_loadUVt(expPath(mn,td,en), nSV_load, d_s.timeBlue);
 V_cp=double(V_cp); [nY,nX]=size(mimg_cp); nSV=size(U_cp,3);
 Uflat=reshape(U_cp,nY*nX,nSV); t_full=t_svd(:); nF=min(size(V_cp,2),numel(t_full));
 [y_full,ok] = local_svd_rolling_dfk(Uflat,V_cp,mimg_cp,px_prim,py_prim,k_prim,horizon,nY,nX);
@@ -80,7 +80,14 @@ Gall = muY + (((Xg(Su,:)-mu)./sd).')*b;                    % stim-blind Global, 
 pre=round(pre_s*Fs); post=round(dur*Fs); rel=-pre:post;
 bwin=1:pre; twin=pre+1:pre+post;
 resp = pre+1 : pre+round(resp_s*Fs);                       % [0, resp_s] s window
-grab = @(ons) deal_trials(ons, t_full, y_full, Gall, rel, pre, post, nF);
+% Actual A = the paper's referenced ipsi trace data.dFk (ref=-5 lives in THIS scale);
+% Global G = Gall from the Stage-2 predictor, which must ALSO be canonical (target_mode='canonical').
+dfk_canon = data.dFk(:);
+assert(numel(dfk_canon) >= nF, '[IMP] data.dFk (%d) shorter than SVD frames (%d).', numel(dfk_canon), nF);
+if isfield(S2,'target_mode') && ~strcmp(S2.target_mode,'canonical')
+    warning('[IMP] Stage-2 cache is target_mode=''%s'' (not canonical) -- A(dFk) and G(y_full) are in DIFFERENT scales; rerun ctrl_ols_ol_stimblind.m with target_mode=''canonical''.', S2.target_mode);
+end
+grab = @(ons) deal_trials(ons, t_full, dfk_canon, Gall, rel, pre, post, nF);
 [Aol,Gol,nOL] = grab(sort(d_s.stimStarts(data.nc(:))));
 [Acl,Gcl,nCL] = grab(sort(d_s.stimStarts(data.wc(:))));
 tt = rel/Fs;
@@ -150,101 +157,110 @@ fprintf('  CV-R2  M3b contra-global + TRIAL-AVG     %.3f\n', R2_M3b);
 fprintf('  residual variance  baseline(pre) %.3f  post(M3) %.3f   ratio %.2f (1=noise floor)\n', ...
     var_pre, var_post, nf_ratio);
 
-% ---- OL-proof figure ----
-[~,iEX]=min(abs(recRMSE_ol-median(recRMSE_ol)));          % representative OL trial
-rbarL_all = mean(Lol,1);                                  % avg LOCAL residual
-rbarA_all = mean(Ar_ol,1);                                % avg ACTUAL response (direct trial-avg)
-sd_res = std(Lol,0,1);                                    % residual SD(t) = std of local
-col_da = [0.95 0.45 0.10];                                % direct-trial-avg prediction colour (orange)
-figp=figure('Color','w','Position',[40 80 1500 430]);
-tlp=tiledlayout(figp,1,3,'TileSpacing','compact','Padding','compact');
-% (a) nested CV-R2 (4 models) + pre-stim contra->ipsi control
-axa=nexttile(tlp,1); vv=[R2_M1 R2_M2 R2_M3 R2_M3b];
-bar(axa,vv,0.7,'FaceColor',col_ol,'EdgeColor','none');
-set(axa,'XTick',1:4,'XTickLabel',{'contra','trial-avg','+resid','+trial-avg'}, ...
-    'Box','off','TickDir','out','FontSize',8); ylim(axa,[0 1]);
-ylabel(axa,'cross-validated R^2');
-title(axa,sprintf('(a) nested models (OL)   [pre-stim contra R^2=%.2f]',R2_pre),'FontWeight','normal');
-for bi=1:4; text(axa,bi,max(vv(bi),0)+0.04,sprintf('%.2f',vv(bi)),'HorizontalAlignment','center','FontSize',8); end
-% (b) residual SD(t) vs baseline noise floor
-axb=nexttile(tlp,2); hold(axb,'on');
-plot(axb,tt,sd_res,'-','Color',col_ol,'LineWidth',1.6,'DisplayName','residual SD');
-yline(axb,sqrt(var_pre),'--','Color',[.4 .4 .4],'LineWidth',1.2,'DisplayName','baseline noise floor');
-xline(axb,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
-xlabel(axb,'time from stim (s)'); ylabel(axb,'residual SD (%\DeltaF/F)'); xlim(axb,[tt(1) tt(end)]);
-title(axb,sprintf('(b) residual vs noise floor  (post/pre var %.2f)',nf_ratio),'FontWeight','normal');
-legend(axb,'Location','northwest','Box','off');
-% (c) example OL trial: actual ipsi, contra-global, both predictions
-axc=nexttile(tlp,3); hold(axc,'on');
-xline(axc,0,':','Color',[.5 .5 .5],'HandleVisibility','off'); yline(axc,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
-plot(axc,tt,Ar_ol(iEX,:),'-','Color','k','LineWidth',1.5,'DisplayName','ipsi (actual)');
-plot(axc,tt,Gr_ol(iEX,:),'-','Color',[.6 .6 .6],'LineWidth',1.1,'DisplayName','contra-global');
-plot(axc,tt,Gr_ol(iEX,:)+rbarL_all,'--','Color',col_ol,'LineWidth',1.4,'DisplayName','contra + avg residual');
-plot(axc,tt,Gr_ol(iEX,:)+rbarA_all,':','Color',col_da,'LineWidth',1.5,'DisplayName','contra + trial-avg');
-xlabel(axc,'time from stim (s)'); ylabel(axc,'response (%\DeltaF/F)'); xlim(axc,[tt(1) tt(end)]);
-title(axc,sprintf('(c) OL example (trial %d)',iEX),'FontWeight','normal'); legend(axc,'Location','southwest','Box','off');
-sgtitle(figp,sprintf('[IMP] OL null-model: ipsi \\approx contra-global + avg OL response   %s   (OL n=%d)', ...
-    strrep(sess_tag,'_','\_'),nOL));
-olpng=fullfile(fig_dir,sprintf('internal_model_principle_olproof_%s.png',sess_tag));
-exportgraphics(figp,olpng,'Resolution',300); fprintf('[IMP-OL-PROOF-FIG] -> %s\n',olpng);
+% ---- OL predicted-vs-actual R2 (proof/gallery/predfit drawn COMBINED with CL in [IMP-*-FIG] below) ----
+pred_ol = Gr_ol + mean(Lol,1);                               % contra-global + avg OL residual
+xt = reshape(pred_ol(:,resp),[],1); yt = reshape(Ar_ol(:,resp),[],1);
+r2tp_ol = 1 - sum((yt-xt).^2)/sum((yt-mean(yt)).^2);         % per-timepoint R2
+xm_ol = mean(pred_ol(:,resp),2); ym_ol = mean(Ar_ol(:,resp),2);
+r2tr_ol = 1 - sum((ym_ol-xm_ol).^2)/sum((ym_ol-mean(ym_ol)).^2);   % per-trial-mean R2
+fprintf('[IMP-OL-PREDPLOT] per-timepoint R2=%.3f | per-trial-mean R2=%.3f\n', r2tp_ol, r2tr_ol);
 
-%% [IMP-OL-GALLERY] trial-by-trial: Actual vs (Gr + avg OL residual) ------------
-nsh = min(24,nOL); nc_g=6; nr_g=ceil(nsh/nc_g);
-figg=figure('Color','w','Position',[20 20 1720 960]);
-tlg=tiledlayout(figg,nr_g,nc_g,'TileSpacing','compact','Padding','compact');
-ax1=[];
-for jj=1:nsh
-    axg=nexttile(tlg,jj); if jj==1; ax1=axg; end; hold(axg,'on');
-    pred  = Gr_ol(jj,:)+rbarL_all;                        % contra-global + avg residual
-    predb = Gr_ol(jj,:)+rbarA_all;                        % contra-global + trial-average
-    rmse_j = sqrt(mean((Ar_ol(jj,resp)-pred(resp)).^2));
-    xline(axg,0,':','Color',[.6 .6 .6],'HandleVisibility','off'); yline(axg,0,':','Color',[.85 .85 .85],'HandleVisibility','off');
-    plot(axg,tt,Ar_ol(jj,:),'-','Color','k','LineWidth',1.0,'DisplayName','ipsi (actual)');
-    plot(axg,tt,pred,'--','Color',col_ol,'LineWidth',1.0,'DisplayName','contra + avg residual');
-    plot(axg,tt,predb,':','Color',col_da,'LineWidth',1.0,'DisplayName','contra + trial-avg');
-    xlim(axg,[tt(1) tt(end)]);
-    title(axg,sprintf('tr %d   rmse %.1f',jj,rmse_j),'FontWeight','normal','FontSize',8);
-    if jj~=1; set(axg,'XTickLabel',[],'YTickLabel',[]); end
+%% [IMP-CL-NULLMODEL] closed-loop null-model STATS via shared reporter ----------
+% (Stats only; OL/CL figures are drawn COMBINED in [IMP-*-FIG] below.)
+R_CL = imp_null_report('CL', Acl, Gcl, Ar_cl, Gr_cl, Lcl, nCL, resp, bwin);
+
+%% [IMP-PROOF-FIG] combined OL/CL null-model proof (2x3: OL top row, CL bottom) --
+col_da = [0.95 0.45 0.10];                                   % trial-avg prediction colour (orange)
+[~,iEX_ol]=min(abs(recRMSE_ol-median(recRMSE_ol)));          % representative OL trial
+[~,iEX_cl]=min(abs(recRMSE_cl-median(recRMSE_cl)));          % representative CL trial
+PF(1)=struct('nm','OL','col',col_ol,'vv',[R2_M1 R2_M2 R2_M3 R2_M3b],'R2pre',R2_pre, ...
+    'varpre',var_pre,'nf',nf_ratio,'Ar',Ar_ol,'Gr',Gr_ol,'L',Lol,'iEX',iEX_ol,'n',nOL);
+PF(2)=struct('nm','CL','col',col_cl,'vv',[R_CL.R2_M1 R_CL.R2_M2 R_CL.R2_M3 R_CL.R2_M3b],'R2pre',R_CL.R2_pre, ...
+    'varpre',R_CL.var_pre,'nf',R_CL.nf_ratio,'Ar',Ar_cl,'Gr',Gr_cl,'L',Lcl,'iEX',iEX_cl,'n',nCL);
+figp=figure('Color','w','Position',[40 40 1500 800]);
+tlp=tiledlayout(figp,2,3,'TileSpacing','compact','Padding','compact');
+for rr=1:2
+    P=PF(rr); rbarL=mean(P.L,1); rbarA=mean(P.Ar,1); sd_res=std(P.L,0,1);
+    axa=nexttile(tlp,(rr-1)*3+1);
+    bar(axa,P.vv,0.7,'FaceColor',P.col,'EdgeColor','none');
+    set(axa,'XTick',1:4,'XTickLabel',{'contra','trial-avg','+resid','+trial-avg'},'Box','off','TickDir','out','FontSize',8);
+    ylim(axa,[min(0,min(P.vv))-0.02 1]); ylabel(axa,'cross-validated R^2');
+    title(axa,sprintf('(%s-a) nested models   [pre-stim contra R^2=%.2f]',P.nm,P.R2pre),'FontWeight','normal');
+    for bi=1:4; text(axa,bi,max(P.vv(bi),0)+0.04,sprintf('%.2f',P.vv(bi)),'HorizontalAlignment','center','FontSize',8); end
+    axb=nexttile(tlp,(rr-1)*3+2); hold(axb,'on');
+    plot(axb,tt,sd_res,'-','Color',P.col,'LineWidth',1.6,'DisplayName','residual SD');
+    yline(axb,sqrt(P.varpre),'--','Color',[.4 .4 .4],'LineWidth',1.2,'DisplayName','baseline noise floor');
+    xline(axb,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
+    xlabel(axb,'time from stim (s)'); ylabel(axb,'residual SD (%\DeltaF/F)'); xlim(axb,[tt(1) tt(end)]);
+    title(axb,sprintf('(%s-b) residual vs noise floor  (post/pre var %.2f)',P.nm,P.nf),'FontWeight','normal');
+    legend(axb,'Location','northwest','Box','off');
+    axc=nexttile(tlp,(rr-1)*3+3); hold(axc,'on');
+    xline(axc,0,':','Color',[.5 .5 .5],'HandleVisibility','off'); yline(axc,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
+    plot(axc,tt,P.Ar(P.iEX,:),'-','Color','k','LineWidth',1.5,'DisplayName','ipsi (actual)');
+    plot(axc,tt,P.Gr(P.iEX,:),'-','Color',[.6 .6 .6],'LineWidth',1.1,'DisplayName','contra-global');
+    plot(axc,tt,P.Gr(P.iEX,:)+rbarL,'--','Color',P.col,'LineWidth',1.4,'DisplayName','contra + avg residual');
+    plot(axc,tt,P.Gr(P.iEX,:)+rbarA,':','Color',col_da,'LineWidth',1.5,'DisplayName','contra + trial-avg');
+    xlabel(axc,'time from stim (s)'); ylabel(axc,'response (%\DeltaF/F)'); xlim(axc,[tt(1) tt(end)]);
+    title(axc,sprintf('(%s-c) example (trial %d)',P.nm,P.iEX),'FontWeight','normal'); legend(axc,'Location','southwest','Box','off');
 end
-legend(ax1,'FontSize',7,'Box','off','Location','southwest');
-sgtitle(figg,sprintf('[IMP] OL trial-by-trial: ipsi vs contra-global + avg OL response   %s   (first %d of %d OL trials)', ...
-    strrep(sess_tag,'_','\_'),nsh,nOL));
-galpng=fullfile(fig_dir,sprintf('internal_model_principle_ol_trialfit_%s.png',sess_tag));
-exportgraphics(figg,galpng,'Resolution',200); fprintf('[IMP-OL-GALLERY] -> %s\n',galpng);
+sgtitle(figp,sprintf('[IMP] null-model: ipsi \\approx contra-global + avg response   %s   (OL top n=%d / CL bottom n=%d)', ...
+    strrep(sess_tag,'_','\_'),nOL,nCL));
+proofpng=fullfile(fig_dir,sprintf('internal_model_principle_proof_%s.png',sess_tag));
+exportgraphics(figp,proofpng,'Resolution',300); fprintf('[IMP-PROOF-FIG] -> %s\n',proofpng);
 
-%% [IMP-OL-PREDPLOT] predicted vs actual goodness-of-fit (OL) -------------------
-pred_ol = Gr_ol + rbarL_all;                                  % contra-global + avg OL residual
-xt = reshape(pred_ol(:,resp),[],1); yt = reshape(Ar_ol(:,resp),[],1);   % per-timepoint
-r2_tp = 1 - sum((yt-xt).^2)/sum((yt-mean(yt)).^2);
-xm = mean(pred_ol(:,resp),2); ym = mean(Ar_ol(:,resp),2);     % per-trial mean
-r2_tr = 1 - sum((ym-xm).^2)/sum((ym-mean(ym)).^2);
-figpp=figure('Color','w','Position',[60 90 1120 440]);
+%% [IMP-GALLERY-FIG] combined trial-by-trial (4x6: OL rows 1-2, CL rows 3-4) -----
+ngal=12;                                                     % trials/condition (2 rows x 6)
+figg=figure('Color','w','Position',[20 20 1720 980]);
+tlg=tiledlayout(figg,4,6,'TileSpacing','compact','Padding','compact'); axg1=[];
+GF={Ar_ol,Gr_ol,mean(Lol,1),mean(Ar_ol,1),col_ol,'OL',nOL; Ar_cl,Gr_cl,mean(Lcl,1),mean(Ar_cl,1),col_cl,'CL',nCL};
+for bl=1:2
+    Arb=GF{bl,1}; Grb=GF{bl,2}; rL=GF{bl,3}; rA=GF{bl,4}; colb=GF{bl,5}; nmb=GF{bl,6}; nb=GF{bl,7};
+    for jj=1:min(ngal,nb)
+        tile=(bl-1)*12+jj; axg=nexttile(tlg,tile); if isempty(axg1); axg1=axg; end; hold(axg,'on');
+        pred=Grb(jj,:)+rL; predb=Grb(jj,:)+rA; rmse_j=sqrt(mean((Arb(jj,resp)-pred(resp)).^2));
+        xline(axg,0,':','Color',[.6 .6 .6],'HandleVisibility','off'); yline(axg,0,':','Color',[.85 .85 .85],'HandleVisibility','off');
+        plot(axg,tt,Arb(jj,:),'-','Color','k','LineWidth',1.0,'DisplayName','ipsi (actual)');
+        plot(axg,tt,pred,'--','Color',colb,'LineWidth',1.0,'DisplayName','contra + avg residual');
+        plot(axg,tt,predb,':','Color',col_da,'LineWidth',1.0,'DisplayName','contra + trial-avg');
+        xlim(axg,[tt(1) tt(end)]); title(axg,sprintf('%s tr %d   rmse %.1f',nmb,jj,rmse_j),'FontWeight','normal','FontSize',8);
+        if tile~=1; set(axg,'XTickLabel',[],'YTickLabel',[]); end
+    end
+end
+legend(axg1,'FontSize',7,'Box','off','Location','southwest');
+sgtitle(figg,sprintf('[IMP] trial-by-trial: ipsi vs contra-global + avg response   %s   (%d OL rows 1-2 / %d CL rows 3-4)', ...
+    strrep(sess_tag,'_','\_'),min(ngal,nOL),min(ngal,nCL)));
+galpng=fullfile(fig_dir,sprintf('internal_model_principle_trialfit_%s.png',sess_tag));
+exportgraphics(figg,galpng,'Resolution',200); fprintf('[IMP-GALLERY-FIG] -> %s\n',galpng);
+
+%% [IMP-PREDFIT-FIG] combined predicted-vs-actual (OL+CL overlaid, 1x2) ----------
+pred_cl = Gr_cl + mean(Lcl,1);
+figpp=figure('Color','w','Position',[60 80 1160 470]);
 tlpp=tiledlayout(figpp,1,2,'TileSpacing','compact','Padding','compact');
-% (a) per-timepoint scatter
-ax1=nexttile(tlpp,1); hold(ax1,'on');
-rng(3,'twister'); s=randperm(numel(xt),min(4000,numel(xt)));
-scatter(ax1,xt(s),yt(s),6,col_ol,'filled','MarkerFaceAlpha',0.10,'HandleVisibility','off');
-lims=[min([xt;yt]) max([xt;yt])]; plot(ax1,lims,lims,'k-','LineWidth',1,'HandleVisibility','off');
-axis(ax1,'square'); xlim(ax1,lims); ylim(ax1,lims); grid(ax1,'on');
-xlabel(ax1,'predicted (%\DeltaF/F)'); ylabel(ax1,'actual ipsi (%\DeltaF/F)');
-title(ax1,sprintf('(a) per-timepoint   R^2=%.2f',r2_tp),'FontWeight','normal');
-% (b) per-trial mean scatter
-ax2=nexttile(tlpp,2); hold(ax2,'on');
-scatter(ax2,xm,ym,22,col_ol,'filled','MarkerFaceAlpha',0.5,'HandleVisibility','off');
-lims2=[min([xm;ym]) max([xm;ym])]; plot(ax2,lims2,lims2,'k-','LineWidth',1,'HandleVisibility','off');
-axis(ax2,'square'); xlim(ax2,lims2); ylim(ax2,lims2); grid(ax2,'on');
-xlabel(ax2,'predicted trial-mean (%\DeltaF/F)'); ylabel(ax2,'actual trial-mean (%\DeltaF/F)');
-title(ax2,sprintf('(b) per-trial mean   R^2=%.2f',r2_tr),'FontWeight','normal');
-sgtitle(figpp,sprintf('[IMP] OL prediction vs actual: contra-global + avg OL response   %s   (n=%d, single session)', ...
-    strrep(sess_tag,'_','\_'),nOL));
-ppng=fullfile(fig_dir,sprintf('internal_model_principle_ol_predfit_%s.png',sess_tag));
-exportgraphics(figpp,ppng,'Resolution',300); fprintf('[IMP-OL-PREDPLOT] -> %s\n',ppng);
-fprintf('[IMP-OL-PREDPLOT] per-timepoint R2=%.3f | per-trial-mean R2=%.3f\n', r2_tp, r2_tr);
-
-%% [IMP-CL-NULLMODEL] closed-loop: same prediction analysis via shared reporter --
-% (OL above is inline; CL runs the identical proof + gallery + predfit here.)
-R_CL = imp_null_report('CL', col_cl, col_da, Acl, Gcl, Ar_cl, Gr_cl, Lcl, ...
-    recRMSE_cl, nCL, resp, bwin, tt, fig_dir, sess_tag);
+% (a) per-timepoint scatter, both conditions overlaid
+axs1=nexttile(tlpp,1); hold(axs1,'on'); rng(3,'twister');
+xo=reshape(pred_ol(:,resp),[],1); yo=reshape(Ar_ol(:,resp),[],1);
+xk=reshape(pred_cl(:,resp),[],1); yk=reshape(Ar_cl(:,resp),[],1);
+so=randperm(numel(xo),min(3000,numel(xo))); sk=randperm(numel(xk),min(3000,numel(xk)));
+scatter(axs1,xo(so),yo(so),6,col_ol,'filled','MarkerFaceAlpha',0.08,'DisplayName',sprintf('OL R^2=%.2f',r2tp_ol));
+scatter(axs1,xk(sk),yk(sk),6,col_cl,'filled','MarkerFaceAlpha',0.08,'DisplayName',sprintf('CL R^2=%.2f',R_CL.r2_tp));
+lims=[min([xo;yo;xk;yk]) max([xo;yo;xk;yk])]; plot(axs1,lims,lims,'k-','LineWidth',1,'HandleVisibility','off');
+axis(axs1,'square'); xlim(axs1,lims); ylim(axs1,lims); grid(axs1,'on');
+xlabel(axs1,'predicted (%\DeltaF/F)'); ylabel(axs1,'actual ipsi (%\DeltaF/F)');
+title(axs1,'(a) per-timepoint','FontWeight','normal'); legend(axs1,'Location','northwest','Box','off');
+% (b) per-trial mean scatter, both conditions overlaid
+axs2=nexttile(tlpp,2); hold(axs2,'on');
+xmo=mean(pred_ol(:,resp),2); ymo=mean(Ar_ol(:,resp),2);
+xmk=mean(pred_cl(:,resp),2); ymk=mean(Ar_cl(:,resp),2);
+scatter(axs2,xmo,ymo,22,col_ol,'filled','MarkerFaceAlpha',0.5,'DisplayName',sprintf('OL R^2=%.2f',r2tr_ol));
+scatter(axs2,xmk,ymk,22,col_cl,'filled','MarkerFaceAlpha',0.5,'DisplayName',sprintf('CL R^2=%.2f',R_CL.r2_tr));
+lims2=[min([xmo;ymo;xmk;ymk]) max([xmo;ymo;xmk;ymk])]; plot(axs2,lims2,lims2,'k-','LineWidth',1,'HandleVisibility','off');
+axis(axs2,'square'); xlim(axs2,lims2); ylim(axs2,lims2); grid(axs2,'on');
+xlabel(axs2,'predicted trial-mean (%\DeltaF/F)'); ylabel(axs2,'actual trial-mean (%\DeltaF/F)');
+title(axs2,'(b) per-trial mean','FontWeight','normal'); legend(axs2,'Location','northwest','Box','off');
+sgtitle(figpp,sprintf('[IMP] prediction vs actual: contra-global + avg response   %s   (OL n=%d / CL n=%d)', ...
+    strrep(sess_tag,'_','\_'),nOL,nCL));
+predpng=fullfile(fig_dir,sprintf('internal_model_principle_predfit_%s.png',sess_tag));
+exportgraphics(figpp,predpng,'Resolution',300); fprintf('[IMP-PREDFIT-FIG] -> %s\n',predpng);
 
 %% [IMP-Q2] disturbance compensation: dL ~ dG -----------------------------------
 dG_ol = Gr_ol-mean(Gr_ol,1); dL_ol = Lol-Lbar_ol; dA_ol = Ar_ol-mean(Ar_ol,1);
@@ -352,43 +368,248 @@ fprintf('  (variance-ratio CI excludes 1: %s)  n_OL=%d n_CL=%d, single session\n
     ternS(~isempty(sig),'YES','no'), nOL, nCL);
 
 %% [IMP-Q3-FIG] -----------------------------------------------------------------
-figI = figure('Color','w','Position',[40 80 1500 430]);
+FSq = 14;                                                    % base font size (larger, cleaner)
+figI = figure('Color','w','Position',[40 80 1500 480]);
 tl = tiledlayout(figI,1,3,'TileSpacing','compact','Padding','compact');
 
 % (1) trial-average residual +- SEM
 ax1=nexttile(tl,1); hold(ax1,'on');
 shade_(ax1, tt, mLol, seLol, col_ol);
 shade_(ax1, tt, mLcl, seLcl, col_cl);
-hO=plot(ax1,tt,mLol,'-','Color',col_ol,'LineWidth',1.6,'DisplayName','OL residual');
-hC=plot(ax1,tt,mLcl,'-','Color',col_cl,'LineWidth',1.6,'DisplayName','CL residual');
+hO=plot(ax1,tt,mLol,'-','Color',col_ol,'LineWidth',1.8,'DisplayName','OL residual');
+hC=plot(ax1,tt,mLcl,'-','Color',col_cl,'LineWidth',1.8,'DisplayName','CL residual');
 xline(ax1,0,':','Color',[.5 .5 .5]); yline(ax1,0,':','Color',[.5 .5 .5]);
-xlabel(ax1,'time from stim (s)'); ylabel(ax1,'residual L = A - G  (%\DeltaF/F)');
-title(ax1,'(a) trial-average residual','FontWeight','normal');
-legend(ax1,[hO hC],'Location','southwest','Box','off'); xlim(ax1,[tt(1) tt(end)]);
+xlabel(ax1,'time from stim (s)','FontSize',FSq+1); ylabel(ax1,'residual L = A − G  (%\DeltaF/F)','FontSize',FSq+1);
+title(ax1,'(a) trial-average residual','FontWeight','normal','FontSize',FSq+2);
+set(ax1,'Box','off','TickDir','out','FontSize',FSq);
+legend(ax1,[hO hC],'Location','southwest','Box','off','FontSize',FSq); xlim(ax1,[tt(1) tt(end)]);
 
 % (2) trial-to-trial SD over time
 ax2=nexttile(tl,2); hold(ax2,'on');
 xline(ax2,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
-plot(ax2,tt,sdLol,'-','Color',col_ol,'LineWidth',1.6,'DisplayName','OL');
-plot(ax2,tt,sdLcl,'-','Color',col_cl,'LineWidth',1.6,'DisplayName','CL');
-xlabel(ax2,'time from stim (s)'); ylabel(ax2,'trial-to-trial SD of residual  (%\DeltaF/F)');
-title(ax2,'(b) residual variability','FontWeight','normal');
-legend(ax2,'Location','northwest','Box','off'); xlim(ax2,[tt(1) tt(end)]);
+plot(ax2,tt,sdLol,'-','Color',col_ol,'LineWidth',1.8,'DisplayName','OL');
+plot(ax2,tt,sdLcl,'-','Color',col_cl,'LineWidth',1.8,'DisplayName','CL');
+xlabel(ax2,'time from stim (s)','FontSize',FSq+1); ylabel(ax2,'trial-to-trial SD  (%\DeltaF/F)','FontSize',FSq+1);
+title(ax2,'(b) residual variability','FontWeight','normal','FontSize',FSq+2);
+set(ax2,'Box','off','TickDir','out','FontSize',FSq);
+legend(ax2,'Location','northwest','Box','off','FontSize',FSq); xlim(ax2,[tt(1) tt(end)]);
 
 % (3) per-trial mean residual: OL vs CL spread
 ax3=nexttile(tl,3); hold(ax3,'on');
 beeswarm_(ax3, 1, sOL, col_ol); beeswarm_(ax3, 2, sCL, col_cl);
-errorbar(ax3,1-0.28,mean(sOL),std(sOL),'ko','MarkerFaceColor',col_ol,'MarkerSize',6,'LineWidth',1.0,'CapSize',4);
-errorbar(ax3,2+0.28,mean(sCL),std(sCL),'ko','MarkerFaceColor',col_cl,'MarkerSize',6,'LineWidth',1.0,'CapSize',4);
-set(ax3,'XTick',[1 2],'XTickLabel',{'OL','CL'}); xlim(ax3,[0.5 2.5]);
-ylabel(ax3,'per-trial mean residual over [0,3]s  (%\DeltaF/F)');
-title(ax3,sprintf('(c) residual spread  var ratio %.2f [%.2f,%.2f]',vratio,vr_ci(1),vr_ci(2)),'FontWeight','normal');
+errorbar(ax3,1-0.28,mean(sOL),std(sOL),'ko','MarkerFaceColor',col_ol,'MarkerSize',7,'LineWidth',1.0,'CapSize',5);
+errorbar(ax3,2+0.28,mean(sCL),std(sCL),'ko','MarkerFaceColor',col_cl,'MarkerSize',7,'LineWidth',1.0,'CapSize',5);
+set(ax3,'XTick',[1 2],'XTickLabel',{'OL','CL'},'Box','off','TickDir','out','FontSize',FSq); xlim(ax3,[0.5 2.5]);
+ylabel(ax3,'per-trial mean residual  (%\DeltaF/F)','FontSize',FSq+1);
+title(ax3,'(c) residual spread','FontWeight','normal','FontSize',FSq+2);
 
-sgtitle(figI, sprintf('[IMP] Q3 residual OL vs CL   %s   (OL n=%d, CL n=%d, single session)', ...
-    strrep(sess_tag,'_','\_'), nOL, nCL));
+sgtitle(figI, sprintf('residual  OL vs CL   %s', strrep(sess_tag,'_','\_')),'FontSize',FSq+3,'FontWeight','bold');
 fig_png = fullfile(fig_dir, sprintf('internal_model_principle_q3_%s.png', sess_tag));
 exportgraphics(figI, fig_png, 'Resolution', 300);
 fprintf('[IMP-Q3-FIG] -> %s\n', fig_png);
+
+%% [IMP-COMPARE] OL vs CL: fixed-response null model & the active-control excess -
+figc=figure('Color','w','Position',[50 80 1500 430]);
+tlc=tiledlayout(figc,1,3,'TileSpacing','compact','Padding','compact');
+% (a) null-model fit R2 (OL vs CL)
+axca=nexttile(tlc,1);
+ba=bar(axca,[R2_M3 R_CL.R2_M3],0.6,'FaceColor','flat'); ba.CData(1,:)=col_ol; ba.CData(2,:)=col_cl;
+set(axca,'XTickLabel',{'OL','CL'},'Box','off','TickDir','out'); ylim(axca,[0 1]);
+ylabel(axca,'null-model CV-R^2  (contra + avg resp)');
+title(axca,'(a) fixed-response model fit','FontWeight','normal');
+text(axca,1,R2_M3+0.03,sprintf('%.2f',R2_M3),'HorizontalAlignment','center');
+text(axca,2,R_CL.R2_M3+0.03,sprintf('%.2f',R_CL.R2_M3),'HorizontalAlignment','center');
+% (b) fixed-response residual SD(t) with per-condition noise floors
+axcb=nexttile(tlc,2); hold(axcb,'on');
+flo_ol=mean(sdLol(bwin)); flo_cl=mean(sdLcl(bwin));
+plot(axcb,tt,sdLol,'-','Color',col_ol,'LineWidth',1.6,'DisplayName','OL residual SD');
+plot(axcb,tt,sdLcl,'-','Color',col_cl,'LineWidth',1.6,'DisplayName','CL residual SD');
+yline(axcb,flo_ol,'--','Color',col_ol,'LineWidth',1.0,'HandleVisibility','off');
+yline(axcb,flo_cl,'--','Color',col_cl,'LineWidth',1.0,'HandleVisibility','off');
+xline(axcb,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
+xlabel(axcb,'time from stim (s)'); ylabel(axcb,'fixed-response residual SD (%\DeltaF/F)'); xlim(axcb,[tt(1) tt(end)]);
+title(axcb,'(b) residual excess = active control','FontWeight','normal');
+legend(axcb,'Location','northwest','Box','off');
+% (c) noise-floor ratio (integrated residual excess)
+axcc=nexttile(tlc,3);
+bc=bar(axcc,[nf_ratio R_CL.nf_ratio],0.6,'FaceColor','flat'); bc.CData(1,:)=col_ol; bc.CData(2,:)=col_cl;
+set(axcc,'XTickLabel',{'OL','CL'},'Box','off','TickDir','out');
+yline(axcc,1,':','Color',[.4 .4 .4],'HandleVisibility','off');
+ylabel(axcc,'residual var / baseline  (noise-floor ratio)');
+title(axcc,'(c) residual excess over noise floor','FontWeight','normal');
+text(axcc,1,nf_ratio+0.1,sprintf('%.1f\\times',nf_ratio),'HorizontalAlignment','center');
+text(axcc,2,R_CL.nf_ratio+0.1,sprintf('%.1f\\times',R_CL.nf_ratio),'HorizontalAlignment','center');
+sgtitle(figc,sprintf('[IMP] OL vs CL: fixed-response null model & active-control excess   %s   (OL n=%d, CL n=%d)', ...
+    strrep(sess_tag,'_','\_'),nOL,nCL));
+cpng=fullfile(fig_dir,sprintf('internal_model_principle_olcl_compare_%s.png',sess_tag));
+exportgraphics(figc,cpng,'Resolution',300); fprintf('[IMP-COMPARE] -> %s\n',cpng);
+
+%% [IMP-REJECT] per-trial disturbance transmission: rho = ||A-ref|| / ||G|| ------
+% Disturbance is time-varying = stim-blind contra prediction, zero-referenced:
+%     D_k(t) = G_k(t)              (what the ipsi WOULD do with no controller)
+% Subdued error on the controlled trial, referenced to the target:
+%     E_k(t) = A_k(t) - ref        (how far the ACTUAL ipsi sits from target)
+% Metric = residual-to-disturbance RMS ratio over the window:
+%     rho_k = ||E_k|| / ||D_k||    over the response window.
+% rho=0 perfect rejection (E sits at ref); rho=1 disturbance passes unattenuated;
+% rho>1 amplified. LOWER = better rejection (this is the raw ratio, not 1-ratio).
+if isfield(d_s,'ref') && ~isempty(d_s.ref); ref = d_s.ref; else; ref = -5; end
+% Split the response into two physically distinct sub-windows:
+%   w_tr  = 0-1 s : dominated by the laser-evoked initial deviation (common OL/CL)
+%   w_rej = 1-3 s : settled window -> pure disturbance rejection (headline stats)
+w_tr  = pre+1              : pre+round(1*Fs);
+w_rej = pre+round(1*Fs)+1  : pre+round(resp_s*Fs);
+rejW  = @(A,G,w) sqrt(mean((A(:,w)-ref).^2,2)) ./ sqrt(mean(G(:,w).^2,2));   % per-trial ||E||/||D|| on window w
+poolW = @(A,G,w) sqrt(sum((A(:,w)-ref).^2,'all')/sum(G(:,w).^2,'all'));      % pooled ||E||/||D|| on window w
+
+rho_ol_tr=rejW(Aol,Gol,w_tr);   rho_cl_tr=rejW(Acl,Gcl,w_tr);      % 0-1 s transient (init-dev)
+rho_ol=rejW(Aol,Gol,w_rej);     rho_cl=rejW(Acl,Gcl,w_rej);        % 1-3 s transmission (headline)
+Dmag_ol=sqrt(mean(Gol(:,w_rej).^2,2));   Dmag_cl=sqrt(mean(Gcl(:,w_rej).^2,2));  % disturbance RMS (1-3s)
+Emag_ol=sqrt(mean((Aol(:,w_rej)-ref).^2,2)); Emag_cl=sqrt(mean((Acl(:,w_rej)-ref).^2,2));
+p_tr  = ranksum(rho_ol_tr,rho_cl_tr);   p_rho = ranksum(rho_ol,rho_cl);
+rhoP_ol=poolW(Aol,Gol,w_rej);  rhoP_cl=poolW(Acl,Gcl,w_rej);
+fprintf('\n[IMP-REJECT] per-trial transmission  rho = ||A-ref||/||G||  (0=full rejection, ref=%.1f)\n',ref);
+fprintf('  0-1 s (transient / init-dev): med OL %.3f  CL %.3f  (rank-sum p=%.3g)\n',median(rho_ol_tr),median(rho_cl_tr),p_tr);
+fprintf('  1-3 s (settled transmission): med OL %.3f  CL %.3f  (rank-sum p=%.3g)  <-- headline (lower=better)\n',median(rho_ol),median(rho_cl),p_rho);
+fprintf('  1-3 s pooled rho           : OL %.3f  CL %.3f\n',rhoP_ol,rhoP_cl);
+
+% ---- trial gallery: disturbance D=G (gray), actual A without ref-subtraction
+%      (light dashed), and subdued error E=A-ref (colored, pre-stim lighter). The
+%      raw A shows pre-stim A~G~0 -> the reference is effectively zero before the
+%      laser; post-stim the referenced error E is what the metric compares to D. --
+ncols = 4;
+gsel = @(n) max(1,min(n,round(linspace(0.10,0.90,ncols)*n)));
+[~,so]=sort(rho_ol); idxO=so(gsel(nOL));
+[~,sc]=sort(rho_cl); idxC=sc(gsel(nCL));
+figr=figure('Color','w','Position',[40 60 1500 620]);
+tlr=tiledlayout(figr,2,ncols,'TileSpacing','compact','Padding','compact');
+rowspec = {Aol,Gol,idxO,rho_ol,col_ol,'OL'; Acl,Gcl,idxC,rho_cl,col_cl,'CL'};
+for rr=1:2
+    A=rowspec{rr,1}; G=rowspec{rr,2}; idx=rowspec{rr,3}; rhov=rowspec{rr,4}; col=rowspec{rr,5}; nm=rowspec{rr,6};
+    for cc=1:ncols
+        ax=nexttile(tlr,(rr-1)*ncols+cc); k=idx(cc);
+        h = plot_reject_panel(ax, tt, G(k,:), A(k,:), ref, col, resp_s);
+        title(ax,sprintf('%s trial %d   ||E||/||D||=%.2f',nm,k,rhov(k)),'FontWeight','normal');
+        if cc==1; ylabel(ax,'%\DeltaF/F'); end
+        if rr==2; xlabel(ax,'time from stim (s)'); end
+        if rr==1 && cc==1; legend(ax,[h.D h.A h.E],'Location','northwest','Box','off'); end
+    end
+end
+sgtitle(figr,sprintf('[IMP-REJECT] rejection gallery  %s  (D=contra disturbance, E=A-ref; shaded = 1-3 s rejection window)', ...
+    strrep(sess_tag,'_','\_')));
+rejpng=fullfile(fig_dir,sprintf('internal_model_principle_reject_gallery_%s.png',sess_tag));
+exportgraphics(figr,rejpng,'Resolution',300); fprintf('[IMP-REJECT] -> %s\n',rejpng);
+
+% ---- summary: rejection distributions + rejection vs disturbance size ----------
+FS = 14;                                                     % base font size (larger, cleaner)
+figs=figure('Color','w','Position',[50 80 1500 480]);
+tls=tiledlayout(figs,1,3,'TileSpacing','compact','Padding','compact');
+% --- (a) 0-1 s transient window ; (b) 1-3 s rejection window (jitter dist + median) ---
+for pp=1:2
+    if pp==1; ro=rho_ol_tr; rc=rho_cl_tr; ttl='(a) 0–1 s transient';
+    else;     ro=rho_ol;    rc=rho_cl;    ttl='(b) 1–3 s settled'; end
+    ax=nexttile(tls,pp); hold(ax,'on');
+    scatter(ax,1+0.09*randn(nOL,1),ro,22,col_ol,'filled','MarkerFaceAlpha',.5);
+    scatter(ax,2+0.09*randn(nCL,1),rc,22,col_cl,'filled','MarkerFaceAlpha',.5);
+    plot(ax,[0.72 1.28],[median(ro) median(ro)],'-','Color',col_ol,'LineWidth',2.8);
+    plot(ax,[1.72 2.28],[median(rc) median(rc)],'-','Color',col_cl,'LineWidth',2.8);
+    yline(ax,1,'--','Color',[.7 .7 .7],'HandleVisibility','off');   % 1 = disturbance passes (no rejection)
+    yline(ax,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
+    set(ax,'XTick',[1 2],'XTickLabel',{'OL','CL'},'Box','off','TickDir','out','FontSize',FS); xlim(ax,[0.5 2.5]);
+    if pp==1; ylabel(ax,'transmission  ||E|| / ||D||','FontSize',FS+1); end
+    title(ax,ttl,'FontWeight','normal','FontSize',FS+2);
+end
+axc=nexttile(tls,3); hold(axc,'on');
+scatter(axc,Dmag_ol,rho_ol,24,col_ol,'filled','MarkerFaceAlpha',.55,'DisplayName','OL');
+scatter(axc,Dmag_cl,rho_cl,24,col_cl,'filled','MarkerFaceAlpha',.55,'DisplayName','CL');
+yline(axc,1,'--','Color',[.7 .7 .7],'HandleVisibility','off');
+yline(axc,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
+xlabel(axc,'disturbance ||G|| (RMS %\DeltaF/F)','FontSize',FS+1); ylabel(axc,'transmission  ||E|| / ||D||','FontSize',FS+1);
+set(axc,'Box','off','TickDir','out','FontSize',FS);
+title(axc,'(c) vs disturbance size','FontWeight','normal','FontSize',FS+2);
+legend(axc,'Location','southeast','Box','off','FontSize',FS);
+sgtitle(figs,sprintf('disturbance rejection   %s',strrep(sess_tag,'_','\_')),'FontSize',FS+3,'FontWeight','bold');
+rej2png=fullfile(fig_dir,sprintf('internal_model_principle_reject_summary_%s.png',sess_tag));
+exportgraphics(figs,rej2png,'Resolution',300); fprintf('[IMP-REJECT] -> %s\n',rej2png);
+
+%% [IMP-REJECT-CLICK] interactive: click a point in (rho vs disturbance size, 1-3 s) -> reveal that trial
+% Left = the panel-(c) scatter, clickable. Click any dot -> right panel shows that trial's
+% disturbance D=G (gray) and subdued error E=A-ref (colored), shaded 1-3 s rejection window.
+CK = struct('tt',tt,'ref',ref,'w_rej',w_rej,'resp_s',resp_s,'col_ol',col_ol,'col_cl',col_cl, ...
+    'Aol',Aol,'Gol',Gol,'Acl',Acl,'Gcl',Gcl);
+CK.x    = [Dmag_ol; Dmag_cl];               % disturbance ||G||_{1-3}
+CK.y    = [rho_ol;  rho_cl];                % rejection rho_{1-3}
+CK.cond = [ones(nOL,1); 2*ones(nCL,1)];     % 1=OL, 2=CL
+CK.tidx = [(1:nOL)'; (1:nCL)'];             % within-condition trial index
+figCK = figure('Color','w','Position',[60 90 1320 520],'Name',sprintf('[IMP-REJECT] click a trial  %s',sess_tag));
+tlk = tiledlayout(figCK,1,2,'TileSpacing','compact','Padding','compact');
+axS = nexttile(tlk,1); hold(axS,'on');      % clickable scatter
+hOL = scatter(axS,Dmag_ol,rho_ol,28,col_ol,'filled','MarkerFaceAlpha',.6);
+hCL = scatter(axS,Dmag_cl,rho_cl,28,col_cl,'filled','MarkerFaceAlpha',.6);
+yline(axS,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
+xlabel(axS,'disturbance ||G||_{1-3} (RMS %\DeltaF/F)'); ylabel(axS,'rejection \rho_{1-3}');
+title(axS,'click a point \rightarrow inspect its trial'); box(axS,'off'); set(axS,'TickDir','out');
+legend(axS,[hOL hCL],{'OL','CL'},'Location','southeast','Box','off');
+axI = nexttile(tlk,2); title(axI,'(click a point on the left)'); box(axI,'off'); set(axI,'TickDir','out');
+CK.axS = axS; CK.axI = axI; CK.hMark = [];
+guidata(figCK, CK);
+set(figCK,'WindowButtonDownFcn',@(f,~)imp_reject_click(f));
+fprintf('[IMP-REJECT-CLICK] interactive figure open -- click points to reveal trials.\n');
+
+%% [IMP-STATE-QUARTILE] rho_{1-3} vs pre-stim state (motion / delta power) -------
+% Classify the per-trial rejection ratio rho_{1-3}=||E||/||D|| (lower=better) by
+% two pre-stim states, binned into quartiles Q1(low)->Q4(high):
+%   motion       = mean movement over the 2 s pre-stim window (data.*motion, 1:70)
+%   delta power  = mean absolute 2-4 Hz band power over pre-onset bins (data.*FreqPow)
+% Quartile edges are POOLED over OL+CL so Q1..Q4 are the SAME absolute state for
+% both conditions. State arrays are stored in nc/wc order -> re-sorted by onset and
+% edge-dropped to match the rho_ol/rho_cl trial order (same as deal_trials).
+% State definitions MATCH the figure-4 factor analysis (cl_rmse_factor_windows.m),
+% recomputed here from primitives (d.motion, data.dFk) so no cache field is needed:
+%   motion = mean z-motion^2 over -2 s -> trial end          (energy; d.motion is z-scored)
+%   delta  = RELATIVE 2-4 Hz power = bandpow(2-4)/bandpow(0.4-10) over -2 s -> stim end
+%            (per-trial periodogram: linear detrend + Hann, identical local_bandpow)
+% NB (as in fig-4): the window spans -2 s through the trial, not pre-stim only.
+% States come from the SHARED helper utils/imp_trial_states.m so this section and the
+% cross-session batch (imp_state_across_sessions.m) can never drift apart.
+STx = imp_trial_states(d_s, data, t_full, pre, post, nF, Fs);
+haveMot = STx.haveMot;
+if ~haveMot; warning('[IMP-STATE-QUARTILE] d.motion/timeBlue absent -- motion panel skipped.'); end
+assert(STx.n_ol==nOL && STx.n_cl==nCL, ...
+    '[IMP-STATE-QUARTILE] onset/rho trial-count mismatch (OL %d/%d, CL %d/%d).', STx.n_ol,nOL,STx.n_cl,nCL);
+
+STQ = struct('name',{},'ol',{},'cl',{});
+if haveMot; STQ(end+1)=struct('name',STx.names{1},'ol',STx.mot_ol,'cl',STx.mot_cl); end
+STQ(end+1)=struct('name',STx.names{2},'ol',STx.delt_ol,'cl',STx.delt_cl);
+nSt=numel(STQ);
+figQ=figure('Color','w','Position',[50 70 620*nSt 480]); FSq=13;
+tlq=tiledlayout(figQ,1,nSt,'TileSpacing','compact','Padding','compact');
+fprintf('\n[IMP-STATE-QUARTILE] rho_{1-3}=||E||/||D|| vs pre-stim state (quartiles; lower rho=better)\n');
+for s=1:nSt
+    so=STQ(s).ol; sc=STQ(s).cl;
+    sv=[so;sc]; sv=sv(isfinite(sv));
+    ed=quantile(sv,[0 .25 .5 .75 1]); ed(1)=-inf; ed(end)=inf;
+    qo=discretize(so,ed); qc=discretize(sc,ed);
+    [mo,eo,no]=local_qstat(rho_ol,qo); [mc,ec,nc_]=local_qstat(rho_cl,qc);
+    [rs_o,po]=corr(so,rho_ol,'type','Spearman','rows','complete');
+    [rs_c,pc]=corr(sc,rho_cl,'type','Spearman','rows','complete');
+    STQ(s).q_ol=qo; STQ(s).q_cl=qc; STQ(s).med_ol=mo; STQ(s).med_cl=mc; STQ(s).n_ol=no; STQ(s).n_cl=nc_;
+    STQ(s).rs_ol=rs_o; STQ(s).rs_cl=rs_c; STQ(s).p_ol=po; STQ(s).p_cl=pc; STQ(s).edges=ed;
+    fprintf('  %-26s OL Spearman r=%+.2f (p=%.2g) med Q1->Q4 [%s] | CL r=%+.2f (p=%.2g) [%s]\n', ...
+        STQ(s).name, rs_o,po, sprintf('%.2f ',mo), rs_c,pc, sprintf('%.2f ',mc));
+    ax=nexttile(tlq,s); hold(ax,'on');
+    errorbar(ax,(1:4)-0.06,mo,eo,'-o','Color',col_ol,'LineWidth',1.8,'MarkerFaceColor',col_ol,'CapSize',4,'DisplayName','OL');
+    errorbar(ax,(1:4)+0.06,mc,ec,'-o','Color',col_cl,'LineWidth',1.8,'MarkerFaceColor',col_cl,'CapSize',4,'DisplayName','CL');
+    yline(ax,1,'--','Color',[.7 .7 .7],'HandleVisibility','off');   % 1 = disturbance passes (no rejection)
+    set(ax,'XTick',1:4,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out','FontSize',FSq); xlim(ax,[0.5 4.5]);
+    xlabel(ax,sprintf('%s  (low \\rightarrow high)',STQ(s).name),'FontSize',FSq+1);
+    if s==1; ylabel(ax,'transmission  ||E|| / ||D||','FontSize',FSq+1); end
+    title(ax,sprintf('OL r_s=%+.2f  |  CL r_s=%+.2f',rs_o,rs_c),'FontWeight','normal','FontSize',FSq+1);
+    if s==1; legend(ax,'Location','best','Box','off','FontSize',FSq); end
+end
+sgtitle(figQ,sprintf('rejection vs pre-stim state (quartiles)   %s',strrep(sess_tag,'_','\_')),'FontSize',FSq+3,'FontWeight','bold');
+stqpng=fullfile(fig_dir,sprintf('internal_model_principle_state_quartile_%s.png',sess_tag));
+exportgraphics(figQ,stqpng,'Resolution',300); fprintf('[IMP-STATE-QUARTILE] -> %s\n',stqpng);
 
 %% [IMP-SAVE] -------------------------------------------------------------------
 IMP = struct('sess_tag',sess_tag,'nOL',nOL,'nCL',nCL,'tt',tt, ...
@@ -401,6 +622,10 @@ IMP = struct('sess_tag',sess_tag,'nOL',nOL,'nCL',nCL,'tt',tt, ...
     'dbeta_ci',dbeta_ci,'comp_ol',comp_ol,'comp_cl',comp_cl, ...
     'R2_pre',R2_pre,'R2_M1',R2_M1,'R2_M2',R2_M2,'R2_M3',R2_M3,'R2_M3b',R2_M3b, ...
     'R_CL',R_CL);
+IMP.ref=ref; IMP.rho_ol=rho_ol; IMP.rho_cl=rho_cl; IMP.rhoP_ol=rhoP_ol; IMP.rhoP_cl=rhoP_cl;
+IMP.rho_ol_tr=rho_ol_tr; IMP.rho_cl_tr=rho_cl_tr; IMP.p_tr=p_tr; IMP.p_rho=p_rho;
+IMP.Dmag_ol=Dmag_ol; IMP.Dmag_cl=Dmag_cl; IMP.Emag_ol=Emag_ol; IMP.Emag_cl=Emag_cl;
+IMP.STQ=STQ;   % [IMP-STATE-QUARTILE] rho vs pre-stim motion / delta-power quartiles
 imp_file = fullfile(dataDir, sprintf('internal_model_principle_%s.mat', sess_tag));
 save(imp_file,'-struct','IMP','-v7.3');
 fprintf('[IMP-SAVE] -> %s\n\n', imp_file);
@@ -449,11 +674,73 @@ end
 
 function s=ternS(c,a,b); if c, s=a; else, s=b; end; end
 
-function R = imp_null_report(cond,col,col_da,A,G,Ar,Gr,L,recR,n,resp,bwin,tt,fig_dir,sess_tag)
-% Null-model report for one condition: nested LOO-CV models (contra-global +
-% average response), pre-stim control, noise floor, trial-by-trial gallery, and
-% predicted-vs-actual goodness-of-fit. Mirrors the inline OL sections.
-lc = lower(cond);
+function imp_reject_click(f)
+% [IMP-REJECT-CLICK] callback: snap the click to the nearest scatter point and
+% draw that trial via the shared panel (D=G gray, A no-ref light dashed, E=A-ref
+% colored with pre-stim lighter). Metric = ||E||/||D|| (lower = better rejection).
+CK = guidata(f);
+cp = get(CK.axS,'CurrentPoint'); xc = cp(1,1); yc = cp(1,2);
+xl = get(CK.axS,'XLim'); yl = get(CK.axS,'YLim');            % normalize axes so x,y are comparable
+[~,i] = min(((CK.x-xc)/max(diff(xl),eps)).^2 + ((CK.y-yc)/max(diff(yl),eps)).^2);
+if CK.cond(i)==1, A=CK.Aol; G=CK.Gol; col=CK.col_ol; nm='OL'; else, A=CK.Acl; G=CK.Gcl; col=CK.col_cl; nm='CL'; end
+k = CK.tidx(i);  tt = CK.tt;
+if ~isempty(CK.hMark) && ishandle(CK.hMark), delete(CK.hMark); end
+CK.hMark = plot(CK.axS, CK.x(i), CK.y(i), 'ko','MarkerSize',12,'LineWidth',1.7); guidata(f,CK);
+ax = CK.axI; delete(allchild(ax)); hold(ax,'off');   % clear ALL children incl. hidden-handle (pre-stim) lines
+h = plot_reject_panel(ax, tt, G(k,:), A(k,:), CK.ref, col, CK.resp_s, true);   % raw-A pre-stim only
+xlabel(ax,'time from stim (s)'); ylabel(ax,'%\DeltaF/F');
+w = CK.w_rej; Dm = sqrt(mean(G(k,w).^2)); Em = sqrt(mean((A(k,w)-CK.ref).^2)); rho = Em/Dm;
+title(ax,sprintf('%s trial %d:  ||E||/||D||=%.2f   ||G||=%.2f   ||E||=%.2f',nm,k,rho,Dm,Em),'FontWeight','normal');
+legend(ax,[h.D h.A h.E],'Location','northwest','Box','off');
+end
+
+function h = plot_reject_panel(ax, tt, Dk, Ak, ref, col, resp_s, aPreOnly)
+% One rejection trial panel, shared by the gallery and the click reveal:
+%   D = G        disturbance / stim-blind contra prediction         (gray, solid)
+%   A (no ref)   raw actual ipsi, NOT ref-subtracted                (light dashed)
+%                -> pre-stim A ~ G ~ 0, i.e. the reference is effectively zero
+%                   before the laser; post-stim A shows the true suppression.
+%   E = A - ref  subdued error (the metric numerator); pre-stim drawn lighter to
+%                mark the ref-zero baseline, post-stim in full condition colour.
+% aPreOnly (default false): draw the raw-A dashed trace pre-stim only (t<0).
+if nargin<8 || isempty(aPreOnly), aPreOnly=false; end
+hold(ax,'on');
+Ek = Ak - ref;  ipre = tt<0;  ipost = ~ipre;
+lcol = col + 0.55*([1 1 1]-col);                            % lighter tint of the condition colour
+if aPreOnly, aY = Ak(ipre); else, aY = Ak; end             % A samples that will be shown
+yl = [min([Dk aY Ek])-1, max([Dk aY Ek])+1];
+patch(ax,[1 resp_s resp_s 1],[yl(1) yl(1) yl(2) yl(2)],[.92 .92 .92],'EdgeColor','none','HandleVisibility','off');
+yline(ax,0,':','Color',[.6 .6 .6],'HandleVisibility','off');
+xline(ax,0,':','Color',[.6 .6 .6],'HandleVisibility','off');
+h.D = plot(ax,tt,Dk,'-','Color',[.45 .45 .45],'LineWidth',1.2,'DisplayName','disturbance D = contra pred');
+if aPreOnly
+    h.A = plot(ax,tt(ipre),Ak(ipre),'--','Color',lcol,'LineWidth',1.1,'DisplayName','actual A (no ref, pre-stim)');
+else
+    h.A = plot(ax,tt,Ak,'--','Color',lcol,'LineWidth',1.1,'DisplayName','actual A (no ref)');
+end
+plot(ax,tt(ipre),Ek(ipre),'-','Color',lcol,'LineWidth',1.2,'HandleVisibility','off');   % pre-stim error (ref-zero baseline)
+h.E = plot(ax,tt(ipost),Ek(ipost),'-','Color',col,'LineWidth',1.6,'DisplayName','subdued error E = A - ref');
+xlim(ax,[tt(1) tt(end)]); ylim(ax,yl); box(ax,'off'); set(ax,'TickDir','out');
+end
+
+
+
+
+
+function [m,e,n] = local_qstat(y,q)
+% median, SEM-of-median (~1.2533*SD/sqrt(n)) and count of y within each quartile bin q=1..4
+m=nan(1,4); e=nan(1,4); n=zeros(1,4);
+for k=1:4
+    yk=y(q==k); yk=yk(isfinite(yk)); n(k)=numel(yk);
+    if n(k)>0, m(k)=median(yk); e(k)=1.2533*std(yk)/sqrt(max(1,n(k))); end
+end
+end
+
+function R = imp_null_report(cond,A,G,Ar,Gr,L,n,resp,bwin)
+% Null-model STATS for one condition: nested LOO-CV models (contra-global + avg
+% response), pre-stim control, noise floor, predicted-vs-actual R2. Returns ONLY
+% numbers -- the OL/CL figures are drawn COMBINED by the caller
+% ([IMP-PROOF-FIG]/[IMP-GALLERY-FIG]/[IMP-PREDFIT-FIG]) so each is one figure.
 % --- nested LOO-CV models ---
 SST = sum((Ar(:,resp)-mean(Ar(:,resp),'all')).^2,'all');
 res1 = Ar(:,resp)-Gr(:,resp);
@@ -470,88 +757,19 @@ R.R2_M3=1-sum(res3(:).^2)/SST; R.R2_M3b=1-sum(res3b(:).^2)/SST;
 Apre=A(:,bwin); Gpre=G(:,bwin);
 R.R2_pre = 1 - sum((Apre(:)-Gpre(:)).^2)/sum((Apre(:)-mean(Apre(:))).^2);
 Lpre = Ar(:,bwin)-Gr(:,bwin);
-var_pre=var(Lpre(:)); var_post=var(res3(:)); R.nf_ratio=var_post/var_pre;
+R.var_pre=var(Lpre(:)); var_post=var(res3(:)); R.nf_ratio=var_post/R.var_pre;
 fprintf('\n[IMP-%s-PROOF] %s: ipsi ~= contra-global + avg %s response  (LOO-CV)\n',cond,cond,cond);
 fprintf('  CONTROL  contra-global -> ipsi, PRE-STIM   R2 = %.3f\n',R.R2_pre);
 fprintf('  CV-R2  contra-only %.3f | trial-avg %.3f | contra+resid %.3f | contra+trial-avg %.3f\n', ...
     R.R2_M1,R.R2_M2,R.R2_M3,R.R2_M3b);
-fprintf('  noise-floor  baseline %.3f  post %.3f  ratio %.2f\n',var_pre,var_post,R.nf_ratio);
-rbarL_all=mean(L,1); rbarA_all=mean(Ar,1); sd_res=std(L,0,1);
-[~,iEX]=min(abs(recR-median(recR)));
-% --- proof figure ---
-figp=figure('Color','w','Position',[40 80 1500 430]);
-tlp=tiledlayout(figp,1,3,'TileSpacing','compact','Padding','compact');
-axa=nexttile(tlp,1); vv=[R.R2_M1 R.R2_M2 R.R2_M3 R.R2_M3b];
-bar(axa,vv,0.7,'FaceColor',col,'EdgeColor','none');
-set(axa,'XTick',1:4,'XTickLabel',{'contra','trial-avg','+resid','+trial-avg'},'Box','off','TickDir','out','FontSize',8);
-ylim(axa,[min(0,min(vv))-0.02 1]); ylabel(axa,'cross-validated R^2');
-title(axa,sprintf('(a) nested models (%s)   [pre-stim contra R^2=%.2f]',cond,R.R2_pre),'FontWeight','normal');
-for bi=1:4; text(axa,bi,max(vv(bi),0)+0.04,sprintf('%.2f',vv(bi)),'HorizontalAlignment','center','FontSize',8); end
-axb=nexttile(tlp,2); hold(axb,'on');
-plot(axb,tt,sd_res,'-','Color',col,'LineWidth',1.6,'DisplayName','residual SD');
-yline(axb,sqrt(var_pre),'--','Color',[.4 .4 .4],'LineWidth',1.2,'DisplayName','baseline noise floor');
-xline(axb,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
-xlabel(axb,'time from stim (s)'); ylabel(axb,'residual SD (%\DeltaF/F)'); xlim(axb,[tt(1) tt(end)]);
-title(axb,sprintf('(b) residual vs noise floor  (post/pre var %.2f)',R.nf_ratio),'FontWeight','normal');
-legend(axb,'Location','northwest','Box','off');
-axc=nexttile(tlp,3); hold(axc,'on');
-xline(axc,0,':','Color',[.5 .5 .5],'HandleVisibility','off'); yline(axc,0,':','Color',[.5 .5 .5],'HandleVisibility','off');
-plot(axc,tt,Ar(iEX,:),'-','Color','k','LineWidth',1.5,'DisplayName','ipsi (actual)');
-plot(axc,tt,Gr(iEX,:),'-','Color',[.6 .6 .6],'LineWidth',1.1,'DisplayName','contra-global');
-plot(axc,tt,Gr(iEX,:)+rbarL_all,'--','Color',col,'LineWidth',1.4,'DisplayName','contra + avg residual');
-plot(axc,tt,Gr(iEX,:)+rbarA_all,':','Color',col_da,'LineWidth',1.5,'DisplayName','contra + trial-avg');
-xlabel(axc,'time from stim (s)'); ylabel(axc,'response (%\DeltaF/F)'); xlim(axc,[tt(1) tt(end)]);
-title(axc,sprintf('(c) %s example (trial %d)',cond,iEX),'FontWeight','normal'); legend(axc,'Location','southwest','Box','off');
-sgtitle(figp,sprintf('[IMP] %s null-model: ipsi \\approx contra-global + avg %s response   %s   (%s n=%d)', ...
-    cond,cond,strrep(sess_tag,'_','\_'),cond,n));
-p1=fullfile(fig_dir,sprintf('internal_model_principle_%sproof_%s.png',lc,sess_tag));
-exportgraphics(figp,p1,'Resolution',300); fprintf('[IMP-%s-PROOF-FIG] -> %s\n',cond,p1);
-% --- trial-by-trial gallery ---
-nsh=min(24,n); nc_g=6; nr_g=ceil(nsh/nc_g);
-figg=figure('Color','w','Position',[20 20 1720 960]);
-tlg=tiledlayout(figg,nr_g,nc_g,'TileSpacing','compact','Padding','compact'); axg1=[];
-for jj=1:nsh
-    axg=nexttile(tlg,jj); if jj==1; axg1=axg; end; hold(axg,'on');
-    pred=Gr(jj,:)+rbarL_all; predb=Gr(jj,:)+rbarA_all;
-    rmse_j=sqrt(mean((Ar(jj,resp)-pred(resp)).^2));
-    xline(axg,0,':','Color',[.6 .6 .6],'HandleVisibility','off'); yline(axg,0,':','Color',[.85 .85 .85],'HandleVisibility','off');
-    plot(axg,tt,Ar(jj,:),'-','Color','k','LineWidth',1.0,'DisplayName','ipsi (actual)');
-    plot(axg,tt,pred,'--','Color',col,'LineWidth',1.0,'DisplayName','contra + avg residual');
-    plot(axg,tt,predb,':','Color',col_da,'LineWidth',1.0,'DisplayName','contra + trial-avg');
-    xlim(axg,[tt(1) tt(end)]); title(axg,sprintf('tr %d   rmse %.1f',jj,rmse_j),'FontWeight','normal','FontSize',8);
-    if jj~=1; set(axg,'XTickLabel',[],'YTickLabel',[]); end
-end
-legend(axg1,'FontSize',7,'Box','off','Location','southwest');
-sgtitle(figg,sprintf('[IMP] %s trial-by-trial: ipsi vs contra-global + avg %s response   %s   (first %d of %d %s trials)', ...
-    cond,cond,strrep(sess_tag,'_','\_'),nsh,n,cond));
-p2=fullfile(fig_dir,sprintf('internal_model_principle_%s_trialfit_%s.png',lc,sess_tag));
-exportgraphics(figg,p2,'Resolution',200); fprintf('[IMP-%s-GALLERY] -> %s\n',cond,p2);
-% --- predicted vs actual goodness-of-fit ---
-pred_all=Gr+rbarL_all;
+fprintf('  noise-floor  baseline %.3f  post %.3f  ratio %.2f\n',R.var_pre,var_post,R.nf_ratio);
+% --- predicted-vs-actual R2 (scatter drawn combined by caller) ---
+pred_all=Gr+mean(L,1);
 xt=reshape(pred_all(:,resp),[],1); yt=reshape(Ar(:,resp),[],1);
 R.r2_tp=1-sum((yt-xt).^2)/sum((yt-mean(yt)).^2);
 xm=mean(pred_all(:,resp),2); ym=mean(Ar(:,resp),2);
 R.r2_tr=1-sum((ym-xm).^2)/sum((ym-mean(ym)).^2);
-figpp=figure('Color','w','Position',[60 90 1120 440]);
-tlpp=tiledlayout(figpp,1,2,'TileSpacing','compact','Padding','compact');
-axs1=nexttile(tlpp,1); hold(axs1,'on');
-rng(3,'twister'); s=randperm(numel(xt),min(4000,numel(xt)));
-scatter(axs1,xt(s),yt(s),6,col,'filled','MarkerFaceAlpha',0.10,'HandleVisibility','off');
-lims=[min([xt;yt]) max([xt;yt])]; plot(axs1,lims,lims,'k-','LineWidth',1,'HandleVisibility','off');
-axis(axs1,'square'); xlim(axs1,lims); ylim(axs1,lims); grid(axs1,'on');
-xlabel(axs1,'predicted (%\DeltaF/F)'); ylabel(axs1,'actual ipsi (%\DeltaF/F)');
-title(axs1,sprintf('(a) per-timepoint   R^2=%.2f',R.r2_tp),'FontWeight','normal');
-axs2=nexttile(tlpp,2); hold(axs2,'on');
-scatter(axs2,xm,ym,22,col,'filled','MarkerFaceAlpha',0.5,'HandleVisibility','off');
-lims2=[min([xm;ym]) max([xm;ym])]; plot(axs2,lims2,lims2,'k-','LineWidth',1,'HandleVisibility','off');
-axis(axs2,'square'); xlim(axs2,lims2); ylim(axs2,lims2); grid(axs2,'on');
-xlabel(axs2,'predicted trial-mean (%\DeltaF/F)'); ylabel(axs2,'actual trial-mean (%\DeltaF/F)');
-title(axs2,sprintf('(b) per-trial mean   R^2=%.2f',R.r2_tr),'FontWeight','normal');
-sgtitle(figpp,sprintf('[IMP] %s prediction vs actual: contra-global + avg %s response   %s   (n=%d, single session)', ...
-    cond,cond,strrep(sess_tag,'_','\_'),n));
-p3=fullfile(fig_dir,sprintf('internal_model_principle_%s_predfit_%s.png',lc,sess_tag));
-exportgraphics(figpp,p3,'Resolution',300);
-fprintf('[IMP-%s-PREDPLOT] -> %s | per-tp R2=%.3f per-trial R2=%.3f\n',cond,p3,R.r2_tp,R.r2_tr);
+fprintf('[IMP-%s-PREDPLOT] per-timepoint R2=%.3f | per-trial-mean R2=%.3f\n',cond,R.r2_tp,R.r2_tr);
 end
 
 function [y, ok] = local_svd_rolling_dfk(Uflat, V, mimg, prow, pcol, k, horizon, nY, nX)

@@ -36,6 +36,9 @@ selField   = 4;        % session index into `fields`. 4 = m4 (AL_0033 2025-02-26
                        % session (custom_idx = [4 9 11]) -> has OL steps for Stage 2 detection.
                        % NOTE: m1 (AL_0033 2025-01-20 e3) has NO widefield SVD on the server
                        % (raw 101 GB widefield.tar, never decomposed) -- excluded. See RESEARCH 2026-07-18.
+% BATCH override: the cross-session builder (imp_xsess_build) sets BATCH_selField so
+% this script can be run in a loop without editing the knob. Interactive use ignores it.
+if exist('BATCH_selField','var') && ~isempty(BATCH_selField); selField = BATCH_selField; end
 nSV_load   = 500;      % SVD components to load (matches ols_tf_pipeline)
 Fs         = 35;       % widefield blue frame rate
 nGrid      = 500;      % target contra grid size
@@ -87,7 +90,10 @@ fprintf('\n[CTRL-OLS] session %s (%s)\n', fld, sess_tag);
 % method was developed on, which would make any Global/Local comparison across the two
 % non-comparable. loadUVt also REPORTS which branch it took -> we record it below.
 serverRoot = expPath(mn, td, en);
-[U_cp, V_cp, t_svd, mimg_cp] = loadUVt(serverRoot, nSV_load);
+% cp_loadUVt = loadUVt + a d.timeBlue fallback for the 5 sessions that ship no
+% svdTemporalComponents.timestamps.npy (m6 m7 m8 m11 m12). Identical behaviour when the
+% timestamps exist. See utils/cp_loadUVt.m + RESEARCH 2026-08-02.
+[U_cp, V_cp, t_svd, mimg_cp] = cp_loadUVt(serverRoot, nSV_load, d_s.timeBlue);
 V_cp = double(V_cp);
 [nY_cp, nX_cp] = size(mimg_cp);  nSV_cp = size(U_cp,3);
 used_corr = exist(fullfile(serverRoot,'corr','svdTemporalComponents_corr.npy'),'file') > 0;

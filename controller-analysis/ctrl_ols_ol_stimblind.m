@@ -29,18 +29,27 @@
 
 %% [CTRL-OL-CFG] knobs ---------------------------------------------------------
 selField    = 4;         % session index into `fields` (must match a Stage 1 run)
+% BATCH override (see ctrl_ols_spont.m): set by imp_xsess_build for the cross-session sweep.
+if exist('BATCH_selField','var') && ~isempty(BATCH_selField); selField = BATCH_selField; end
 nSV_load    = 500;
 Fs          = 35;
 % STIM-AFFECTED contra px: MANUAL dip-score threshold, IDENTICAL definition to ctrl_affected_gui.m
 % (trial-averaged %dF trace; score = (trough - onset_ref)/pre_SD; affected where score < -aff_dip_thr).
 % Set aff_dip_thr to the slider value you converged on in the GUI. Adaptive/permutation was rejected.
-aff_dip_thr = 1.33;      % affected if dip score < -aff_dip_thr  (downward dips only)  <-- GUI slider value
+aff_dip_thr = 1.33;      % DEFAULT; OVERRIDDEN by the GUI-saved threshold (ctrl_aff_thr_<sess>.mat) if present
 pre_sd_s    = 6.0;       % baseline-SD window for the score  [-6,0] s
 ref_s       = 1.0;       % onset-reference window  [-1,0] s
 trough_s    = 0.5;       % sliding-window length for the trough (s)
 pre_s       = 1.0;       % pre-stim baseline window for the DECOMPOSITION (s)
 dip_tran_s  = 0.5;       % transient dip window [0,dip_tran_s] s (capture report)
 rng(7,'twister');
+
+% TARGET for the contra->ipsi regression (the ipsi trace G is trained to predict):
+%   'canonical' = the paper's referenced ipsi trace data.dFk (ref=-5 is defined in THIS scale) <-- USE
+%   'yfull'     = SVD raw-kernel + rolling-baseline reconstruction (legacy; ~1.5x scale, overshoots ref)
+% The legacy y_full is only ~0.9-correlated with data.dFk and ~1.5x its amplitude, so ||A-ref|| in
+% y_full units is invalid (CL overshoots ref). Regress onto data.dFk so A and G share the ref frame.
+target_mode = 'canonical';
 
 assert(exist('mouse','var') && exist('fields','var'), ...
     '[CTRL-OL] run controller-analysis/load_sessions.m first (need `mouse`,`fields`).');
@@ -59,6 +68,15 @@ d_s  = mouse.(fld).d;  data = mouse.(fld).data;
 mn = mouse.(fld).mn; td = mouse.(fld).td; en = mouse.(fld).en;
 sess_tag = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
 
+% dip threshold: prefer the value you tuned + saved in ctrl_affected_gui.m ("Build predictor")
+thr_file = fullfile(dataDir, sprintf('ctrl_aff_thr_%s.mat', sess_tag));
+if exist(thr_file,'file')
+    Tt = load(thr_file,'aff_dip_thr'); aff_dip_thr = Tt.aff_dip_thr;
+    fprintf('[CTRL-OL] dip threshold = %.2f  (GUI-tuned, from %s)\n', aff_dip_thr, thr_file);
+else
+    fprintf('[CTRL-OL] dip threshold = %.2f  (default; run ctrl_affected_gui.m + Build predictor to set your own)\n', aff_dip_thr);
+end
+
 s1_file = fullfile(dataDir, sprintf('ctrl_ols_spont_%s.mat', sess_tag));
 assert(exist(s1_file,'file')>0, '[CTRL-OL] Stage 1 cache missing: %s -- run ctrl_ols_spont.m first.', s1_file);
 S1 = load(s1_file);
@@ -70,7 +88,8 @@ fprintf('[CTRL-OL] %s | Stage 1: site [row %d col %d], %d contra grid px, %d spo
     sess_tag, px_prim, py_prim, nG, numel(frames));
 
 serverRoot = expPath(mn, td, en);
-[U_cp, V_cp, t_svd, mimg_cp] = loadUVt(serverRoot, nSV_load);
+% timestamps-npy fallback for the uncorrected sessions -- see utils/cp_loadUVt.m
+[U_cp, V_cp, t_svd, mimg_cp] = cp_loadUVt(serverRoot, nSV_load, d_s.timeBlue);
 V_cp = double(V_cp);
 [nY_cp, nX_cp] = size(mimg_cp);  nSV_cp = size(U_cp,3);
 Uflat = reshape(U_cp, nY_cp*nX_cp, nSV_cp);
@@ -79,6 +98,41 @@ t_full = t_svd(:);  nF_m = min(size(V_cp,2), numel(t_full));
 % Actual = SVD raw-kernel + rolling baseline at the laser site (same as Stage 1)
 [y_full, okY] = local_svd_rolling_dfk(Uflat, V_cp, mimg_cp, px_prim, py_prim, k_prim, horizon, nY_cp, nX_cp);
 assert(okY, '[CTRL-OL] target rebuild failed at [row %d col %d].', px_prim, py_prim);
+
+% --- select regression TARGET: referenced canonical data.dFk (ref=-5) or legacy y_full ---
+switch target_mode
+    case 'canonical'
+        ytrace = data.dFk(:);                              % paper getpixel_dFoF trace (ref=-5 frame)
+        % data.dFk can be a frame or two short of the SVD (m8: 42614 vs 42615) -- the two
+        % come from different readers of the same acquisition. Clamp for a small shortfall,
+        % error only if the mismatch is big enough to mean a genuinely different recording.
+        if numel(ytrace) < nF_m
+            assert(nF_m - numel(ytrace) <= 10, ...
+                '[CTRL-OL] data.dFk (%d) shorter than SVD frames (%d) by %d -- not a rounding difference.', ...
+                numel(ytrace), nF_m, nF_m - numel(ytrace));
+            fprintf('[CTRL-OL] data.dFk is %d frame(s) short of the SVD -- clamping to %d frames.\n', ...
+                nF_m - numel(ytrace), numel(ytrace));
+            nF_m = numel(ytrace);
+            % Stage 1 chose its spontaneous `frames` against the longer SVD, so a trailing
+            % frame can now be out of range. Drop those and remap the train/test index sets
+            % (itr/ite index INTO frames, so they must be renumbered, not just filtered).
+            keepF = frames <= nF_m;
+            if ~all(keepF)
+                map = cumsum(keepF);
+                itr = map(itr(keepF(itr)));  ite = map(ite(keepF(ite)));
+                frames = frames(keepF);
+                fprintf('[CTRL-OL] dropped %d out-of-range spontaneous frame(s) after clamping.\n', nnz(~keepF));
+            end
+        end
+        vvc = (w_warm+1):min(numel(ytrace),numel(y_full));
+        fprintf('[CTRL-OL] TARGET = canonical data.dFk (ref-referenced).  corr(y_full,dFk)=%.3f  scale y_full/dFk=%.2f\n', ...
+            corr(y_full(vvc),ytrace(vvc),'rows','complete'), std(y_full(vvc),'omitnan')/std(ytrace(vvc),'omitnan'));
+    case 'yfull'
+        ytrace = y_full;
+        fprintf('[CTRL-OL] TARGET = legacy y_full (SVD rolling recon; NOT ref-referenced).\n');
+    otherwise
+        error('[CTRL-OL] unknown target_mode ''%s''.', target_mode);
+end
 
 % contra grid timecourses (dF reconstruction), full session
 Xg_full = double(Uflat(gridIdx,:)) * V_cp;                 % [nG x T]
@@ -122,7 +176,7 @@ Su = find(unaff);
 Xs = Xg_full(Su, frames);
 mu = mean(Xs(:,itr),2);  sd = std(Xs(:,itr),0,2);  sd(sd==0) = 1;   % TRAIN z-score
 Ztr = ((Xs(:,itr)-mu)./sd).';  Zte = ((Xs(:,ite)-mu)./sd).';
-ys = y_full(frames);  ytr = ys(itr);  yte = ys(ite);  muY = mean(ytr);
+ys = ytrace(frames);  ytr = ys(itr);  yte = ys(ite);  muY = mean(ytr);
 b  = (Ztr.'*Ztr + 1e-6*mean(sum(Ztr.^2))*eye(numel(Su))) \ (Ztr.'*(ytr-muY));
 r2f = @(y,yh) 1 - sum((y(:)-yh(:)).^2)/max(sum((y(:)-mean(y(:))).^2),eps);
 R2_te = r2f(yte, muY+Zte*b);  R2_tr = r2f(ytr, muY+Ztr*b);
@@ -135,7 +189,7 @@ Gall = muY + (((Xg_full(Su,:)-mu)./sd).') * b;             % [T x 1]
 %% [CTRL-OL-DEPLOY] OL Actual / Global / Local -------------------------------
 A_tr = zeros(nTr,nRel);  G_tr = zeros(nTr,nRel);
 for j = 1:nTr
-    A_tr(j,:) = y_full(onF(j)+rel).';
+    A_tr(j,:) = ytrace(onF(j)+rel).';
     G_tr(j,:) = Gall(onF(j)+rel).';
 end
 bl = @(M) M - mean(M(:,bwin),2);                          % per-trial baseline-subtract
@@ -191,7 +245,7 @@ fprintf('[CTRL-OL-FIG] -> %s\n', fig_png);
 OL = struct();
 OL.sess_tag=sess_tag; OL.selField=selField;
 OL.affected=affected; OL.unaff=unaff; OL.dipScore=dipScore; OL.aff_dip_thr=aff_dip_thr;
-OL.b=b; OL.mu=mu; OL.sd=sd; OL.muY=muY; OL.Su=Su;
+OL.b=b; OL.mu=mu; OL.sd=sd; OL.muY=muY; OL.Su=Su; OL.target_mode=target_mode;
 OL.R2_te=R2_te; OL.R2_tr=R2_tr;
 OL.onF=onF; OL.rel=rel; OL.pre=pre; OL.Fs=Fs;
 OL.A_tr=A_tr; OL.G_tr=G_tr; OL.L_tr=L_tr; OL.Aa=Aa; OL.Gg=Gg; OL.Lo=Lo;
