@@ -78,6 +78,17 @@ disp_orient = 'auto'; % DISPLAY orientation of ALL brain-map overlays (§8,§10,
                       % DISPLAY-ONLY: overlay + grid + click-to-refit follow the SAME transform, so
                       % pixel selection is unaffected by this choice (proven consistent for any op).
 
+% BATCH-DRIVER HOOK. Any field of an `OLS_OVERRIDE` struct in the caller's workspace replaces the
+% knob of the same name, so a driver can run this script headless (e.g. RUN_ALLSESS=true,
+% allSelExp=[3 1 2], affect_mode='matched' to skip the interactive TF gate) WITHOUT editing the
+% file and leaving the edited knobs behind for the next person. Applied here for the knobs above and
+% again after §10T2's affect_mode. eval is the only way to write a script-scope variable by name.
+if exist('OLS_OVERRIDE','var') && isstruct(OLS_OVERRIDE)
+    for f_ = fieldnames(OLS_OVERRIDE).'
+        if exist(f_{1},'var'), eval([f_{1} ' = OLS_OVERRIDE.(f_{1});']); end   %#ok<EVLDIR>
+    end
+end
+
 % Reproducibility: seed the RNG so the 0V bootstrap nulls (§10 affect, §14 bleedchar, validation) are
 % IDENTICAL run-to-run. This removes the borderline-pixel flip-flop (pixels near the z-threshold flipping
 % in/out every run) that made stim-affected detection inconsistent -- the score is deterministic, only the
@@ -516,6 +527,9 @@ for ai = 1:nA
     if ~isfinite(setMsA(ai)), setMsA(ai) = rel(tf_win(end))/Fs*1000; end
 end
 affect_mode = 'tf';                                          % 'matched' (=§10) | 'tf' (=this) -> which map feeds §17b
+if exist('OLS_OVERRIDE','var') && isstruct(OLS_OVERRIDE) && isfield(OLS_OVERRIDE,'affect_mode')
+    affect_mode = OLS_OVERRIDE.affect_mode;                  % batch-driver hook (see top of file)
+end
 
 % ---- BASELINE fluctuation per pixel: PRE-stim (tf_preSec s before) + POST-response (settled) activity ----
 % This floor is compared to the FITTED dip DIPtf (trough of the fit to the trial-MEAN evoked), so it MUST be
@@ -1040,16 +1054,11 @@ STIMBLIND_SELECT = struct('amps',amps,'ActualDip',As_dip,'GlobalDip',Gs_dip,'Loc
 % delta are SIGNAL-POWER CONFOUNDS (both ~ signal power, entangled with the DV magnitude); the
 % admissible POWER-INDEPENDENT states are MOTION and RELATIVE delta (delta/total). All four are
 % reported; the two confounded ones are flagged, not interpreted as genuine state-dependence.
-tsec    = rel(:)/Fs;  preCols = find(tsec>=-0.2 & tsec<0);     % matched pre-onset control window (cols into peri-onset)
-postCtrlCols = ((Wb-round(0.2*Fs)+1):Wb).';                    % matched POST-settle control window (last 0.2 s of the trace,
-                                                              % well past the rebound-settle ~770 ms) -> 2nd prediction-quality probe
-vd_preN = round(1*Fs);  vd_postN = round(0.5*Fs);             % var/delta window [-1,+0.5]s (peri-stim, CP-RES)
-motPreN = round(2*Fs);  motPostN = round(0.5*Fs);            % motion window  [-2,+0.5]s
-nWvd = vd_preN+vd_postN+1;  win_r = hann(nWvd);  W_r = sum(win_r.^2);
-nfft_r = 2^nextpow2(nWvd);  fr = (0:nfft_r-1)'/nfft_r*Fs;  nB_r = floor(nfft_r/2)+1;
-delta_r = fr(1:nB_r)>=1 & fr(1:nB_r)<=4;                       % 1-4 Hz delta band
-tot_r   = fr(1:nB_r)>=0.5 & fr(1:nB_r)<=30;                    % broadband for the RELATIVE-delta ratio
-
+% The per-trial DV + state computation itself lives in utils/imp_statedep_trials.m -- the SAME
+% function the headless per-session engine (§18) calls, so the interactive result here and the
+% cross-session batch cannot drift apart on a window constant. Window definitions are documented
+% there; they are the 2026-06-26 cp_residual_core windows.
+%
 % session motion trace (same source as cp_residual_core: 2x-sampled -> decimate to blue rate)
 % PREFER the trace the loader already put on the experiment entry (`mv_z`, z-scored at blue
 % cadence). Sessions loaded outside the controller rig -- e.g. the AL_0048 bilateral impulse,
@@ -1074,58 +1083,23 @@ else
     end
 end
 
-DVz=[]; GNz=[]; L1z=[]; LD=[]; PRE=[]; POST=[]; MOT=[]; PVv=[]; DPa=[]; DPr=[]; AMPv=[]; AMPi=[]; TRi=[]; ldMean=nan(nA,1); ldStd=nan(nA,1);
-trAll=cell(nA,1); ygAll=cell(nA,1); rlAll=cell(nA,1);      % per-trial traces for TRIALPRED fig + clickable scatter
-for ai = 1:nA
-    onF = onFcell{ai};  nT = numel(onF);
-    if nT==0 || isempty(bUseS{ai}), continue; end
-    b  = bUseS{ai};  dc = inhCols{ai};  if isempty(dc), dc = dipCols; end   % SELECT §17d per-amp sparse far-from-ipsi weights
-    idx = onF(:).'+rel(:);
-    Zp  = (double(Uflat(gridIdx,:))*double(V_cp(:,idx(:))) - mu_p)./sd_p;  Zp = reshape(Zp,nG,Wb,nT);
-    A   = reshape(double(y_full(idx(:))),Wb,nT);  A = A - mean(A(1:preN,:),1);   % single-trial actual (baselined)
-    ld=nan(nT,1); dpre=nan(nT,1); dpost=nan(nT,1); mt=nan(nT,1); pvv=nan(nT,1); dpa=nan(nT,1); dpr=nan(nT,1);
-    YG=nan(Wb,nT); RL=nan(Wb,nT);                          % per-trial predicted + residual traces
-    for j = 1:nT
-        yg = (b.'*Zp(:,:,j)).';  yg = yg - mean(yg(1:preN));   % single-trial stim-blind (Global) prediction
-        rL = A(:,j) - yg;                                      % single-trial Local residual (stim effect)
-        YG(:,j)=yg;  RL(:,j)=rL;                               % keep traces for plotting + click inspector
-        ld(j)   = mean(rL(dc));                                % 0-200 ms Local dip = per-trial stim effect (DV)
-        dpre(j)  = mean(rL(preCols).^2);                       % pre-onset residual energy = prediction quality (control)
-        dpost(j) = mean(rL(postCtrlCols).^2);                  % post-SETTLE residual energy = 2nd prediction-quality probe
-        ion = onF(j);
-        mw = ion-motPreN:ion+motPostN;
-        if ~isempty(motz_full) && mw(1)>=1 && mw(end)<=numel(motz_full), mt(j)=sum(abs(motz_full(mw))); end
-        gp = ion-vd_preN:ion+vd_postN;
-        if gp(1)>=1 && gp(end)<=nF_m
-            sp = double(y_full(gp));  pvv(j) = var(sp,'omitnan');
-            Xf = fft(sp(:).*win_r, nfft_r);  pw = abs(Xf(1:nB_r)).^2 * 2/(Fs*W_r);
-            dpa(j) = mean(pw(delta_r),'omitnan');
-            dpr(j) = dpa(j)/max(mean(pw(tot_r),'omitnan'),eps);  % RELATIVE delta (power-independent)
-        end
-    end
-    trAll{ai}=A;  ygAll{ai}=YG;  rlAll{ai}=RL;
-    ldMean(ai) = mean(ld,'omitnan');  ldStd(ai) = std(ld,'omitnan');
-    % ---- THREE candidate DVs, all on the SAME dip window dc, all z-scored WITHIN amp ------------------
-    % Within-amp centering removes the dose-response mean (the trial-averaged Local dip) so only the
-    % trial-to-trial spread AROUND that mean is tested against state. DV-primacy is decided from the data
-    % (2026-07-18): the 2026-07-01 A2 result was that at the true laser focus the SIGNED effect collapses
-    % while the UNSIGNED (L1) deviation survives -> the defensible claim may be PREDICTABILITY, not size.
-    %   (1) DIPmean  SIGNED mean residual over dc, minus the amp mean. Carries DIRECTION: <0 = deeper dip
-    %                than the amp template, >0 = shallower. (the original DV)
-    %   (2) GAIN     TEMPLATE-GAIN <r,mu>/<mu,mu> against the amp-mean residual template mu. Shape-aware
-    %                (uses the whole window profile, not just its mean) -> better SNR than a window mean;
-    %                1.0 = this trial matches the template, >1 = scaled-up response. SIGNED/directional.
-    %   (3) L1DEV    mean |r - mu| over dc: UNSIGNED deviation from the template = per-trial UNPREDICTABILITY.
-    %                Cannot cancel a deep-then-shallow mixture the way a signed mean can.
-    muT = mean(RL(dc,:),2,'omitnan');                      % amp-mean residual template over the dip window
-    gn  = (RL(dc,:).'*muT)/max(muT.'*muT, eps);            % (2) template gain per trial
-    l1d = mean(abs(RL(dc,:) - muT),1).';                   % (3) unsigned deviation from the template
-    sdf = @(x) (x-mean(x,'omitnan'))./max(std(x,'omitnan'),eps);
-    DVz  = [DVz;  sdf(ld)];   GNz = [GNz; sdf(gn)];  L1z = [L1z; sdf(l1d)];       %#ok<AGROW>  the 3 DVs
-    LD = [LD; ld];   PRE = [PRE; dpre];   POST = [POST; dpost];                  %#ok<AGROW>  raw dip + pre/post pred-error
-    MOT  = [MOT;  mt];  PVv = [PVv; pvv];  DPa = [DPa; dpa];  DPr = [DPr; dpr];  %#ok<AGROW>
-    AMPv = [AMPv; amps(ai)*ones(nT,1)];  AMPi = [AMPi; ai*ones(nT,1)];  TRi = [TRi; (1:nT).'];  %#ok<AGROW>
-end
+% ---- per-trial DVs + state markers (shared engine; see utils/imp_statedep_trials.m) -------------
+% THREE candidate DVs on the same dip window, each z-scored WITHIN amp so the dose-response mean
+% (the trial-averaged Local dip) is removed and only the trial-to-trial spread is tested:
+%   (1) DIPmean  SIGNED mean residual over dc, minus the amp mean. <0 = deeper than the template.
+%   (2) GAIN     template gain <r,mu>/<mu,mu>. Shape-aware (whole window profile), SIGNED.
+%   (3) L1DEV    mean |r - mu|: UNSIGNED deviation = per-trial UNPREDICTABILITY. Cannot cancel a
+%                deep-then-shallow mixture the way a signed mean can.
+% DV-primacy is decided from the data (2026-07-18): the 2026-07-01 A2 result was that at the true
+% laser focus the SIGNED effect collapses while L1 survives -> the defensible claim may be
+% PREDICTABILITY, not response size.
+ST_ = imp_statedep_trials(struct('Uflat',Uflat,'gridIdx',gridIdx,'V',V_cp,'mu_p',mu_p,'sd_p',sd_p, ...
+        'y_full',y_full,'nF',nF_m,'onFcell',{onFcell},'bUse',{bUseS},'dipCols',{inhCols}, ...
+        'rel',rel,'preN',preN,'Wb',Wb,'Fs',Fs,'amps',amps,'motz',motz_full,'wantTraces',true));
+DVz=ST_.DVz; GNz=ST_.GAINz; L1z=ST_.L1DEVz; LD=ST_.LD; PRE=ST_.PRE; POST=ST_.POST;
+MOT=ST_.MOT; PVv=ST_.PVv; DPa=ST_.DPa; DPr=ST_.DPr;
+AMPv=ST_.AMPv; AMPi=ST_.AMPi; TRi=ST_.TRi; ldMean=ST_.ldMean; ldStd=ST_.ldStd;
+trAll=ST_.trA; ygAll=ST_.trG; rlAll=ST_.trL;   % per-trial traces for TRIALPRED + clickable scatter
 
 % --- Fig (TRIALPRED): 5 example trials/amp — row1 ipsi actual+pred(+amp-avg), row2 residual(+avg) ---
 % Requested "before state-dep": shows the per-trial decomposition the state test operates on. Top row
@@ -2257,11 +2231,44 @@ BC = struct('mResp',mResp,'blk0',blk0,'m0',m0,'nT_amp',nT_amp,'nT0',nT0, ...
             'gimg',gimg,'amps',amps,'nA',nA,'nG',nG,'rel',rel,'Fs',Fs,'preN',preN,'Wb',Wb, ...
             'couple_win_s',couple_win_s,'null_win_s',null_win_s,'dip_win_s',cfg.dip_win_s);
 
+% --- PER-TRIAL state-dependence payload (same engine as the interactive §17c) -------------------
+% §18 previously returned only per-amp TRIAL AVERAGES, which is exactly the information the state
+% test does NOT use -- the state statistic lives in the trial-to-trial spread AROUND the amp mean.
+% Calling utils/imp_statedep_trials here (the identical function §17c calls) is what makes the
+% 3-session state comparison possible without a human at the keyboard for each session.
+motz_s = local_session_motion(sel, allExperiments, serverRoot, mn, td, en);
+ST = imp_statedep_trials(struct('Uflat',Uflat,'gridIdx',gridIdx,'V',V_cp,'mu_p',mu_p,'sd_p',sd_p, ...
+        'y_full',y_full,'nF',numel(y_full),'onFcell',{onFcell},'bUse',{bCleanA},'dipCols',dipCols, ...
+        'rel',rel,'preN',preN,'Wb',Wb,'Fs',Fs,'amps',amps,'motz',motz_s,'wantTraces',false));
+fprintf('   [ST] %-24s %d trials | motion %s\n', label, numel(ST.LD), ...
+        ternstr(any(isfinite(ST.MOT)), sprintf('OK (%d finite)',nnz(isfinite(ST.MOT))), 'UNAVAILABLE -> NaN'));
+
 S = struct('label',label,'sel',sel,'amps',amps,'Actual',A_dip,'Global',G_dip,'Local',L_dip,'BC',BC, ...
            'trA',{trA},'trG',{trG},'trL',{trL},'rel',rel,'Fs',Fs,'preN',preN, ...
            'r2_ols',r2_ols,'r2clean',r2clean,'nDrop',nDrop,'nActive',nActA,'medLocalPct',medLocalPct,'nG',nG, ...
            'bledA',bledA,'cleanMaskA',cleanMaskA,'bCleanA',{bCleanA}, ...
-           'couple_win_s',couple_win_s,'null_win_s',null_win_s);
+           'couple_win_s',couple_win_s,'null_win_s',null_win_s,'ST',ST);
+end
+
+function motz = local_session_motion(sel, allExperiments, serverRoot, mn, td, en)
+% Session motion trace, z-scored at blue cadence. Prefers the trace the loader already attached
+% (`mv_z`, e.g. load_bilateral_impulse for Signals sessions where loadData cannot open the folder);
+% falls back to loadData's motion.motion_1 for the original controller-rig sessions. Returns []
+% when neither is available -- imp_statedep_trials then leaves MOT as NaN rather than guessing.
+motz = [];
+if isfield(allExperiments,'mv_z') && ~isempty(allExperiments(sel).mv_z) && ...
+        any(isfinite(allExperiments(sel).mv_z))
+    motz = double(allExperiments(sel).mv_z(:));  return
+end
+try
+    dM = loadData(serverRoot, mn, td, en);
+    if isfield(dM,'motion') && isfield(dM.motion,'motion_1')
+        m = double(dM.motion.motion_1(1:2:end));
+        motz = (m - mean(m,'omitnan'))/max(std(m,'omitnan'), eps);
+    end
+catch
+    % leave empty -> Motion column NaN, reported by the caller
+end
 end
 
 function bleed_detail(DB, p, ai)
