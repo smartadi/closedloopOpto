@@ -22,17 +22,34 @@ function T = imp_tf_fit_session(A, fs, tWin, opts)
 % these fits often fail; failures come back NaN rather than being silently dropped.
 %
 % INPUTS
-%   A     one element of allExperiments (needs .DF_imp, .uAmp, .mn, .td, .en)
+% CROSS-SESSION COMPARISON SUPPORT. Two options exist purely so sessions can be compared fairly:
+%   opts.ampRange  restrict the amplitudes used to BUILD h(t) to [lo hi] V. Sessions here do not
+%                  span the same drive range (AL_0033 0.5-4.9 V over 9 amps; AL_0041 0.7-2.7 V
+%                  over 4-6), and h is amp^2-weighted, so an unrestricted fit sets AL_0033's time
+%                  constants from its 3.7-4.9 V responses and AL_0041's from ~2.7 V. If the
+%                  dynamics depend on amplitude at all, a tau difference between those fits is an
+%                  amplitude-range artefact, not a session difference. Fitting every session over
+%                  the COMMON range makes the comparison like-for-like. Scoring still covers every
+%                  amplitude, so extrapolation beyond the fit range stays visible.
+%   opts.nBoot     bootstrap over TRIALS (resample within amplitude -> rebuild the amp-averages ->
+%                  refit at the SELECTED order -> tau). Gives a within-session CI, without which
+%                  three different tau values cannot be told from fit noise. The order is held
+%                  fixed across draws on purpose: re-sweeping would plot model-selection jitter.
+%
+% INPUTS
+%   A     one element of allExperiments (needs .DF_imp, .uAmp, .mn, .td, .en; .imp.dfImp for nBoot)
 %   fs    frame rate (Hz)                    tWin  half-width of the DF_imp window (s)
 %   opts  .maxPoles (3) .maxZeros (3) .maxDelay (0) .tFit_s (0.5) .per_amp_fit (true)
-%         .verbose (true)
+%         .verbose (true) .ampRange ([] = all) .nBoot (0 = off)
 %
 % OUTPUT T: label, order (np/nz/nd), sys, poles, tau (s), dcgain, h (unit-sample response),
 %   uA, R2 (LTI-constrained), gFree, gRatio (=gFree/uA), rho, R2free, R2_loao, R2_pool,
-%   linSlope/linR2 (proportionality fit through the origin), tau_amp [nAmp x maxPoles], ok.
+%   linSlope/linR2 (proportionality fit through the origin), tau_amp [nAmp x maxPoles],
+%   ampFit (amplitudes used for h), tauBoot [nBoot x maxPoles], tauCI [maxPoles x 2], tauSD, ok.
 
 if nargin < 4, opts = struct(); end
-def = struct('maxPoles',3,'maxZeros',3,'maxDelay',0,'tFit_s',0.5,'per_amp_fit',true,'verbose',true);
+def = struct('maxPoles',3,'maxZeros',3,'maxDelay',0,'tFit_s',0.5,'per_amp_fit',true, ...
+             'verbose',true,'ampRange',[],'nBoot',0);
 fn = fieldnames(def);
 for i = 1:numel(fn), if ~isfield(opts,fn{i}) || isempty(opts.(fn{i})), opts.(fn{i}) = def.(fn{i}); end, end
 
@@ -52,8 +69,15 @@ nPost  = numel(iPost);
 % strong amplitudes set the time constants (an unweighted mean drags the poles toward the noisy
 % weak-amp shape). Zero-amplitude rows are gap-fill placeholders and are excluded.
 validAmp = uA > 0;
+if ~isempty(opts.ampRange)
+    validAmp = validAmp & uA >= opts.ampRange(1)-1e-9 & uA <= opts.ampRange(2)+1e-9;
+end
+T.ampRange = opts.ampRange;  T.ampFit = uA(validAmp);
 if nnz(validAmp) < 2
-    if opts.verbose, fprintf('  [TF] %s: fewer than 2 non-zero amplitudes -- skipped\n', T.label); end
+    if opts.verbose
+        fprintf('  [TF] %s: fewer than 2 amplitudes in the fit range %s -- skipped\n', ...
+            T.label, mat2str(opts.ampRange));
+    end
     return
 end
 w_amp  = uA(validAmp).^2;  w_amp = w_amp/sum(w_amp);
@@ -167,11 +191,70 @@ if opts.per_amp_fit
     end
 end
 T.tau_amp = tau_amp;
+
+% ---- bootstrap over trials -> within-session CI on the time constants -------------------------
+% Without this, three sessions with three different tau are uninterpretable: you cannot tell a real
+% inter-experiment difference from fit noise. Resampling TRIALS (not time points) is the right unit
+% because trials are the independent replicates. The model ORDER is held at the selected value
+% across draws -- re-sweeping would make the CI a picture of model-selection instability instead of
+% parameter uncertainty.
+T.tauBoot = [];  T.tauCI = [];  T.tauSD = [];
+if opts.nBoot > 0
+    if ~isfield(A,'imp') || ~isfield(A.imp,'dfImp')
+        if opts.verbose, fprintf('  [TF] %s: no per-trial dfImp -- bootstrap skipped\n', T.label); end
+    else
+        T.tauBoot = local_boot_tau(A.imp.dfImp, uA, validAmp, iPost, nPre, Ts, best, opts);
+        nOK = sum(all(isfinite(T.tauBoot(:,1)),2));
+        if nOK >= 20
+            T.tauCI = [prctile(T.tauBoot, 2.5, 1).' , prctile(T.tauBoot, 97.5, 1).'];
+            T.tauSD = std(T.tauBoot, 0, 1, 'omitnan').';
+        elseif opts.verbose
+            fprintf('  [TF] %s: only %d/%d bootstrap refits succeeded -- CI not reported\n', ...
+                nOK, opts.nBoot, T.label);
+        end
+    end
+end
 T.ok = true;
 
 if opts.verbose
-    fprintf('  [TF] %-24s  %dp%dz%dd | tau %s s | pooled R2 %.3f | gain slope %.3f\n', ...
-        T.label, T.np, T.nz, T.nd, mat2str(round(T.tau(:).',4)), T.R2_pool, T.linSlope);
+    ciStr = '';
+    if ~isempty(T.tauCI) && ~isempty(T.tau)
+        ciStr = sprintf(' | tau1 95%%CI [%.0f %.0f] ms', 1000*T.tauCI(1,1), 1000*T.tauCI(1,2));
+    end
+    rngStr = 'all amps';
+    if ~isempty(opts.ampRange), rngStr = sprintf('%.1f-%.1f V', opts.ampRange(1), opts.ampRange(2)); end
+    fprintf('  [TF] %-24s  %dp%dz%dd | %s | tau %s s | pooled R2 %.3f | slope %.3f%s\n', ...
+        T.label, T.np, T.nz, T.nd, rngStr, mat2str(round(T.tau(:).',4)), T.R2_pool, T.linSlope, ciStr);
+end
+end
+
+% =================================================================================================
+function tb = local_boot_tau(dfImp, uA, validAmp, iPost, nPre, Ts, best, opts)
+% Trial bootstrap: for each draw, resample trials WITH REPLACEMENT within every fitted amplitude,
+% rebuild that amplitude's trial average, rebuild the amp^2-weighted h(t), refit at the fixed
+% selected order, and take the time constants. Draws whose refit fails or is unsafe come back NaN.
+idx = find(validAmp);
+tb  = nan(opts.nBoot, opts.maxPoles);
+w   = uA(idx).^2;  w = w/sum(w);
+for b = 1:opts.nBoot
+    DFb = nan(numel(idx), numel(iPost));
+    bad = false;
+    for j = 1:numel(idx)
+        tr = dfImp{idx(j)};
+        if isempty(tr) || size(tr,1) < 2, bad = true; break; end
+        pick = randi(size(tr,1), size(tr,1), 1);
+        DFb(j,:) = mean(tr(pick, iPost), 1, 'omitnan');
+    end
+    if bad, continue; end
+    hn = sum((DFb ./ uA(idx)) .* w, 1, 'omitnan').';
+    vt = isfinite(hn);
+    if nnz(vt) < best.np + 3, continue; end
+    sysB = local_fit_one(hn(vt), nPre, Ts, best.np, best.nz, best.nd);
+    if isempty(sysB), continue; end
+    p  = pole(sysB);
+    tt = sort(-1./real(p(real(p) < 0)), 'descend');
+    n  = min(numel(tt), opts.maxPoles);
+    tb(b, 1:n) = tt(1:n).';
 end
 end
 

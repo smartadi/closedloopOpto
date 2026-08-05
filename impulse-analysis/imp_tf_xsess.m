@@ -40,22 +40,53 @@ if ~exist('TFX_PRIMARY','var') || isempty(TFX_PRIMARY)
     TFX_PRIMARY = find(arrayfun(@(A) contains(A.mn,'AL_0033'), allExperiments(TFX_SEL)), 1);
     if isempty(TFX_PRIMARY), TFX_PRIMARY = 1; end     % index INTO TFX_SEL
 end
+if ~exist('TFX_NBOOT','var')   || isempty(TFX_NBOOT),   TFX_NBOOT   = 300;  end   % trial bootstrap draws
+if ~exist('TFX_MATCHED','var') || isempty(TFX_MATCHED), TFX_MATCHED = true; end   % common-range refit
 tfxOpts = struct('maxPoles',3, ...   % sweep 1..3. 4p lets AIC overfit the clean ipsi trace.
                  'maxZeros',3, ...   % nz < np enforced -> strictly proper -> h(0)=0
                  'maxDelay',0, ...   % onset frame IS t=0; no dead time
                  'tFit_s',0.5, ...   % post-onset fit window (s)
                  'per_amp_fit',true, ...
-                 'verbose',true);
+                 'verbose',true, ...
+                 'ampRange',[], ...
+                 'nBoot',TFX_NBOOT);
 
 addpath(fullfile(fileparts(mfilename('fullpath')),'..','utils'));
+rng(3,'twister');                     % reproducible trial bootstrap
 
 fprintf('\n================ [TFX] impulse LTI model across %d sessions ================\n', numel(TFX_SEL));
+fprintf('FULL-RANGE fits (each session over its own amplitudes):\n');
 S = cell(numel(TFX_SEL),1);
 for k = 1:numel(TFX_SEL)
     S{k} = imp_tf_fit_session(allExperiments(TFX_SEL(k)), fs, tWin, tfxOpts);
 end
 okS = cellfun(@(s) isfield(s,'ok') && s.ok, S);
 if ~any(okS), error('[TFX] no session produced a usable fit.'); end
+
+%% ---- (0) MATCHED-RANGE refit: the only fair cross-session comparison --------------------------
+% The sessions do not span the same drive range and h(t) is amp^2-weighted, so an unrestricted fit
+% takes AL_0033's time constants from its 3.7-4.9 V responses and AL_0041's from ~2.7 V. Comparing
+% those directly confounds session with amplitude range. Refit everything over the overlap.
+SM = cell(numel(TFX_SEL),1);  commonRange = [];
+if TFX_MATCHED
+    lo = -inf; hi = inf;
+    for k = 1:numel(TFX_SEL)
+        u = allExperiments(TFX_SEL(k)).uAmp(:);  u = u(u > 0);
+        if isempty(u), continue; end
+        lo = max(lo, min(u));  hi = min(hi, max(u));
+    end
+    if isfinite(lo) && isfinite(hi) && hi > lo
+        commonRange = [lo hi];
+        fprintf('\nMATCHED-RANGE fits (common amplitude window %.2f-%.2f V, present in every session):\n', lo, hi);
+        oM = tfxOpts;  oM.ampRange = commonRange;
+        for k = 1:numel(TFX_SEL)
+            SM{k} = imp_tf_fit_session(allExperiments(TFX_SEL(k)), fs, tWin, oM);
+        end
+    else
+        fprintf('\n[TFX] no common amplitude window across these sessions -- matched refit skipped.\n');
+    end
+end
+okM = cellfun(@(s) ~isempty(s) && isfield(s,'ok') && s.ok, SM);
 
 %% ---- (1) model order + dynamics per session --------------------------------------------------
 fprintf('\n[TFX-MODEL] selected order and dynamics per session\n');
@@ -70,15 +101,75 @@ for k = 1:numel(S)
         s.label, s.np, s.nz, s.nd, t1, t2, s.dcgain, s.R2_pool, s.nAmpUsed, tag);
 end
 
-% agreement of the slowest time constant across sessions -- the "do the dynamics replicate" number
-tau1 = nan(numel(S),1);
-for k = 1:numel(S), if okS(k) && ~isempty(S{k}.tau), tau1(k) = S{k}.tau(1); end, end
-if nnz(isfinite(tau1)) >= 2
-    fprintf('   --> slowest tau across sessions: %s ms  (mean %.1f, CV %.2f)\n', ...
-        mat2str(round(1000*tau1(isfinite(tau1)).',1)), 1000*mean(tau1,'omitnan'), ...
-        std(tau1,'omitnan')/max(mean(tau1,'omitnan'),eps));
-    fprintf('       CV is the agreement statistic: small => the preparation has one characteristic\n');
-    fprintf('       time constant; large => the "low-order LTI" claim is session-specific.\n');
+%% ---- (1b) DO THE DYNAMICS REPLICATE? between-session spread vs within-session uncertainty -----
+% The decisive comparison, and the reason the bootstrap exists. Three sessions with three different
+% tau values mean nothing on their own -- the question is whether they differ by MORE than the fit
+% noise within each session. So:
+%     between = SD of tau1 across sessions
+%     within  = mean bootstrap SD of tau1 (trial resampling, order held fixed)
+%     ratio   = between / within
+% ratio ~ 1  -> the sessions are consistent with one shared time constant; report the pooled value.
+% ratio >> 1 -> genuine inter-experiment variability; report the model FORM as general and the
+%               parameter as session-specific, with the range.
+% Reported for the matched-amplitude fits as PRIMARY (the like-for-like comparison) and for the
+% full-range fits as secondary, because a difference in the latter can be an amplitude-range effect.
+fprintf('\n[TFX-REPLICATE] does the slowest time constant replicate across sessions?\n');
+sets = {'FULL range', S, okS; 'MATCHED range', SM, okM};
+tau1F = nan(numel(S),1);  tau1M = nan(numel(S),1);
+for si = 1:size(sets,1)
+    lbl = sets{si,1};  SS = sets{si,2};  oo = sets{si,3};
+    if ~any(oo), continue; end
+    t1 = nan(numel(SS),1);  sd1 = nan(numel(SS),1);  ci1 = nan(numel(SS),2);
+    for k = 1:numel(SS)
+        if ~oo(k) || isempty(SS{k}.tau), continue; end
+        t1(k) = SS{k}.tau(1);
+        if isfield(SS{k},'tauSD') && ~isempty(SS{k}.tauSD), sd1(k) = SS{k}.tauSD(1); end
+        if isfield(SS{k},'tauCI') && ~isempty(SS{k}.tauCI), ci1(k,:) = SS{k}.tauCI(1,:); end
+    end
+    if si == 1, tau1F = t1; else, tau1M = t1; end
+    fprintf('   %s:\n', lbl);
+    for k = 1:numel(SS)
+        if ~isfinite(t1(k)), continue; end
+        tag = '';  if k == TFX_PRIMARY, tag = '  <-- PRIMARY'; end
+        if isfinite(ci1(k,1))
+            fprintf('      %-24s tau1 = %6.1f ms  [95%% CI %6.1f  %6.1f]%s\n', ...
+                SS{k}.label, 1000*t1(k), 1000*ci1(k,1), 1000*ci1(k,2), tag);
+        else
+            fprintf('      %-24s tau1 = %6.1f ms  (no CI)%s\n', SS{k}.label, 1000*t1(k), tag);
+        end
+    end
+    if nnz(isfinite(t1)) >= 2
+        btw = std(t1,'omitnan');  wth = mean(sd1,'omitnan');
+        fprintf('      between-session SD %.1f ms | mean within-session (bootstrap) SD %.1f ms', 1000*btw, 1000*wth);
+        if isfinite(wth) && wth > 0
+            r = btw/wth;
+            fprintf(' | ratio %.2f -> %s\n', r, ternstr_tfx(r < 1.5, ...
+                'CONSISTENT with one shared time constant', 'genuine inter-experiment variability'));
+        else
+            fprintf(' | ratio n/a (no bootstrap)\n');
+        end
+        fprintf('      mean %.1f ms, range %.1f-%.1f ms, CV %.2f\n', 1000*mean(t1,'omitnan'), ...
+            1000*min(t1), 1000*max(t1), std(t1,'omitnan')/max(mean(t1,'omitnan'),eps));
+    end
+end
+
+% pairwise, non-parametric: fraction of bootstrap draws in which one session's tau exceeds another's
+fprintf('\n[TFX-PAIRWISE] P(tau1_i > tau1_j) from the trial bootstrap (matched range where available)\n');
+fprintf('   0.5 = indistinguishable; near 0 or 1 = the sessions really differ.\n');
+SP = SM;  okP = okM;  if ~any(okM), SP = S; okP = okS; end
+for i = 1:numel(SP)
+    for j = i+1:numel(SP)
+        if ~okP(i) || ~okP(j), continue; end
+        if ~isfield(SP{i},'tauBoot') || isempty(SP{i}.tauBoot) || ...
+           ~isfield(SP{j},'tauBoot') || isempty(SP{j}.tauBoot), continue; end
+        bi = SP{i}.tauBoot(:,1);  bj = SP{j}.tauBoot(:,1);
+        n  = min(numel(bi), numel(bj));
+        v  = isfinite(bi(1:n)) & isfinite(bj(1:n));
+        if nnz(v) < 20, continue; end
+        p  = mean(bi(v) > bj(v));
+        fprintf('   %-22s vs %-22s  P = %.3f%s\n', SP{i}.label, SP{j}.label, p, ...
+            ternstr_tfx(p < 0.05 || p > 0.95, '  *', ''));
+    end
 end
 
 %% ---- (2) amplitude correctness ---------------------------------------------------------------
@@ -157,14 +248,40 @@ yline(ax1,0,'k:'); xlabel(ax1,'time from onset (ms)'); ylabel(ax1,'h(t), peak-no
 title(ax1,'fitted impulse response (shape)','FontSize',9,'FontWeight','bold');
 legend(ax1,'Location','southeast','FontSize',6,'Box','off');
 
-ax2 = subplot(2,3,2); hold(ax2,'on'); box(ax2,'on');       % time constants
-for k = 1:numel(S)
-    if ~okS(k) || isempty(S{k}.tau), continue; end
-    tt = 1000*S{k}.tau(:);
-    plot(ax2, k*ones(numel(tt),1), tt, 'o', 'Color', cS(k,:), 'MarkerFaceColor', cS(k,:), 'MarkerSize',7);
+ax2 = subplot(2,3,2); hold(ax2,'on'); box(ax2,'on');       % tau forest: matched (filled) vs full (open)
+% This is the panel that answers "do the dynamics replicate": per-session tau1 with a bootstrap CI,
+% against a band for the cross-session mean +/- SD. Overlapping CIs => one shared time constant.
+if any(okM)
+    tm = 1000*tau1M(isfinite(tau1M));
+    if numel(tm) >= 2
+        yl = [mean(tm)-std(tm), mean(tm)+std(tm)];
+        patch(ax2, [0.4 numel(S)+0.6 numel(S)+0.6 0.4], [yl(1) yl(1) yl(2) yl(2)], ...
+              [0.85 0.85 0.85], 'EdgeColor','none', 'FaceAlpha',0.5, 'HandleVisibility','off');
+        yline(ax2, mean(tm), '-', 'Color',[0.45 0.45 0.45], 'LineWidth',1, 'HandleVisibility','off');
+    end
 end
+for k = 1:numel(S)
+    if okM(k) && ~isempty(SM{k}.tau)                                   % matched range = PRIMARY
+        y = 1000*SM{k}.tau(1);
+        if isfield(SM{k},'tauCI') && ~isempty(SM{k}.tauCI)
+            plot(ax2, [k k]-0.12, 1000*SM{k}.tauCI(1,:), '-', 'Color', cS(k,:), 'LineWidth',1.4);
+        end
+        plot(ax2, k-0.12, y, 'o', 'Color', cS(k,:), 'MarkerFaceColor', cS(k,:), 'MarkerSize',7);
+    end
+    if okS(k) && ~isempty(S{k}.tau)                                    % full range = secondary
+        y = 1000*S{k}.tau(1);
+        if isfield(S{k},'tauCI') && ~isempty(S{k}.tauCI)
+            plot(ax2, [k k]+0.12, 1000*S{k}.tauCI(1,:), '-', 'Color', cS(k,:), 'LineWidth',1.0);
+        end
+        plot(ax2, k+0.12, y, 'o', 'Color', cS(k,:), 'MarkerFaceColor','w', 'MarkerSize',6, 'LineWidth',1.1);
+    end
+end
+xlim(ax2,[0.4 numel(S)+0.6]);
 set(ax2,'XTick',1:numel(S),'XTickLabel',cellfun(@(s)s.label(1:min(7,end)), S, 'uni',0),'FontSize',7);
-ylabel(ax2,'time constant (ms)'); title(ax2,'poles \rightarrow \tau per session','FontSize',9,'FontWeight','bold');
+ylabel(ax2,'\tau_1 (ms)');
+ttl2 = '\tau_1 per session (filled = matched range)';
+if ~isempty(commonRange), ttl2 = sprintf('\\tau_1: matched %.1f-%.1f V (filled) vs full (open)', commonRange); end
+title(ax2, ttl2, 'FontSize',9,'FontWeight','bold');
 
 ax3 = subplot(2,3,3); hold(ax3,'on'); box(ax3,'on');       % AMPLITUDE CORRECTNESS: gFree vs amp
 mx = 0;
@@ -225,5 +342,10 @@ catch ME
     fprintf('\n[TFX] figure export skipped (%s)\n', ME.message);
 end
 
-TFX = struct('sessions',{S},'ok',okS,'sel',TFX_SEL,'primary',TFX_PRIMARY,'opts',tfxOpts);
-fprintf('[TFX] -> TFX struct (per-session models + amplitude/shape/LOAO scores).\n');
+TFX = struct('sessions',{S},'ok',okS,'matched',{SM},'okMatched',okM,'commonRange',commonRange, ...
+             'tau1_full',tau1F,'tau1_matched',tau1M, ...
+             'sel',TFX_SEL,'primary',TFX_PRIMARY,'opts',tfxOpts,'nBoot',TFX_NBOOT);
+fprintf('[TFX] -> TFX struct (full + matched-range models, tau CIs, amplitude/shape/LOAO scores).\n');
+
+% ---- local helpers -------------------------------------------------------------------------------
+function s = ternstr_tfx(c, a, b),  if c, s = a; else, s = b; end,  end
