@@ -5,9 +5,16 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 
 ---
 
-## Open Action Items — as of 2026-07-22
+## Open Action Items — as of 2026-07-28
 
-> Reconciled from the 2026-07-22 meeting's own carry-forward list (the authoritative current snapshot). Older figure/analysis items folded into the residual-framework pivot or confirmed done are recorded in the meeting entries below, not repeated here.
+> Reconciled from the 2026-07-28 meeting's own carry-forward list (the authoritative current snapshot). Older figure/analysis items folded into the residual-framework pivot or confirmed done are recorded in the meeting entries below, not repeated here.
+
+### Disturbance-Rejection Metric & Multi-Mouse Sessions — NEW (2026-07-28, critical path)
+- [ ] `2026-07-28.1` **Invert the disturbance-rejection metric to a plain energy ratio** — actual trial energy / disturbance energy, so **1 = no work done** and **< 1 = controller gain**; drop the minus-one offset (current ρ = 1 − ‖A−ref‖/‖G‖) *(2026-07-28)*
+- [ ] `2026-07-28.2` **Test whether the pre-stim baseline offset in the DR scatter is state-dependent laser gain**, not controller work: correlate the offset with pre-stim delta power / motion; regress stim-period residual amplitude on pre-stim delta with an **OL×CL interaction term** (significant interaction ⇒ gain variability, not controller failure) *(2026-07-28)*
+- [ ] `2026-07-28.3` **Run the CL PI-controller experiment on AL_0048, AL_0050 and AL_0051**; include all three in the state-dependence analysis to firm up the p = 0.039 result *(2026-07-28)*
+- [ ] `2026-07-28.4` **Add the contralateral trace to the trial-by-trial residual plot** so "stays-around-zero" trials can be read against the contra prediction *(2026-07-28)*
+- [ ] `2026-07-28.5` **Check AL_0051 expression level** (confirm with Anna if needed); schedule grid characterization + CL session *(2026-07-28)*
 
 ### State-Dependence / Residual Framework (critical path to bioRxiv)
 - [ ] `2026-07-06.1` Produce **signed** (non-absolute-value) residual-deviation plots to test whether high/low laser response is directionally predictable *(2026-07-06)*
@@ -37,7 +44,7 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [ ] Using the red model (if validated), compute post-hoc **optimal laser sequence** for representative trials; quantify gap vs. actual controller; frame as MPC motivation *(from 2026-05-11)*
 
 ### Dual-Opsin — Excitatory Hemisphere & Bidirectional Single-Site Control
-- [ ] `2026-07-22.1` **Check motion videos** from excitatory-side grid sessions — is the oscillatory rebound in the impulse response correlated with mouse movement/twitching? (rule out artifact before any PD redesign) *(2026-07-22)*
+- [x] `2026-07-22.1` **Check motion videos** from excitatory-side grid sessions — **DONE 2026-07-28: rebound is NOT motion artifact, it is a genuine neural response.** PD/2nd-order redesign is now unblocked *(2026-07-22 → closed 2026-07-28)*
 - [ ] `2026-07-22.2` **Fit TFs (poles + zeros) to excitatory and inhibitory** hemisphere impulse responses; explicitly quantify the difference in dominant time constants + oscillation frequency *(2026-07-22)*
 - [ ] `2026-07-17.7` Run **impulse-response characterization on the excitatory hemisphere** of the dual-opsin mouse; compare TF to inhibitory side *(2026-07-17)* — subsumed by `2026-07-22.2`
 - [ ] `2026-07-17.5` Ask **Anna Lee** about availability of the **CamKII-C1V1 mouse** (different virus) for closed-loop experiments *(2026-07-17)*
@@ -55,6 +62,11 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 ### Spike Sorting / Closed-Loop Ephys — NEW
 - [ ] `2026-07-22.5` **Validate the Python spike-sorting re-implementation** (~50 ms latency); once validated, reach out to the original author (Streams) to share results *(2026-07-22)*
 - [ ] `2026-07-22.6` Coordinate with Nick + lab to **define the target closed-loop ephys experiment**: probe type, opsin/mouse availability, manipulation modality *(2026-07-22)*
+- [ ] `2026-07-28.7` **Decide the sorting approach for the target experiment**: Kilosort-based (~50 ms latency, high precision, needs 50 s blocks) vs simple threshold/template matching (sub-10 ms, lower precision) *(2026-07-28)*
+
+### Treadmill / Rig Hardware — NEW
+- [ ] `2026-07-28.6` **Purchase the identified motor** (approved); bench-test noise in situ; if too loud → foam housing and/or belt drive to offset the motor from the mouse; slow torque ramp-up *(2026-07-28)*
+- [ ] **Noise pre-check (AI-flagged):** record a widefield session with the motor running at target speed but the wheel decoupled from the mouse; look for motor-frequency peaks in the ΔF/F power spectrum before investing in full sessions *(2026-07-28)*
 
 ### Grid Calibration / Rig Visualization — NEW
 - [ ] `2026-07-22.7` Discuss with **Anna & Fabio** a software fix to **overlay grid points on the brain image** (Pylon frame) live during experiments, accounting for Bregma/Lambda calibration *(2026-07-22)*
@@ -81,6 +93,27 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 ---
 
 ## Meeting Entries
+
+---
+
+### 2026-07-28
+**Source:** `C:\Users\aditya\OneDrive\Notes\Adick meetings\July 28th.md`
+
+**Overview:** Presented the updated **disturbance-rejection framework** — residual (local-only ipsi activity) isolates the laser effect, and a ratio metric quantifies how much energy the controller removes relative to the contra-predicted disturbance. Nick's main critique: **pre-stimulus baseline offsets in the DR scatter** suggest the metric may be partly capturing **trial-by-trial gain variability in the laser response** (state-dependent actuator scaling) rather than controller work. He also wants the metric **inverted to a plain energy ratio** (1 = no work, <1 = gain) instead of the current 1 − ‖·‖/‖·‖ form. Motion-video check came back: the **excitatory-hemisphere oscillatory rebound is NOT motion artifact** — it is a genuine neural response (closes `2026-07-22.1`, unblocks the PD/2nd-order redesign). Mouse inventory: **AL_0051 is the next CL candidate**; AL_0048 has one usable session (post-laser-calibration caveat) and **AL_0050 has weaker expression**; Nick wants all three in the pooled state-dependence analysis to firm up **p = 0.039**. Sparse **graph/network dynamics model** floated as a future analysis (site-to-site TFs across the grid → impose sparsity → dominant propagation paths); no results yet. **Motorized treadmill motor approved for purchase**; noise flagged as the risk (foam housing / belt drive / slow torque ramp).
+
+**Key decisions:**
+- **Invert the DR metric** to `‖y_actual‖² / ‖y_disturbance‖²` over the stim window; report median ± IQR separately for OL and CL, Wilcoxon signed-rank for paired sessions
+- **Interrogate the baseline offset** before claiming controller gain — regress stim-period residual amplitude on pre-stim delta power with an **OL×CL interaction**; a significant interaction means state-dependent laser gain, not controller failure
+- **Pool AL_0048 + AL_0050 + AL_0051 CL sessions** into the state-dependence analysis (p = 0.039 is preliminary until then)
+- **Add the contra trace** to the trial-by-trial residual plot (third line alongside actual/residual)
+- Excitatory rebound is **real neural dynamics** — motion-artifact hypothesis retired
+- Buy the treadmill motor; **noise-test before rig install**
+
+**AI analysis flags (from transcript):**
+- **p = 0.039 is not yet stable** — it rests on sessions predating the AL_0048 laser-calibration fix and on a contra predictor mask that is still unfinalized (`2026-07-06.3` open). Treat as preliminary; lock the mask *and* add the new sessions before quoting it
+- **AL_0050's tenuous expression may dilute rather than strengthen** the pooled result — run a quick impulse-response check on AL_0050 before committing full CL sessions (⚠ consistent with the existing local note that AL_0050 was excluded for poor stim)
+- **Split the state-dependence figure by *source* of desynchronization** (high running speed vs spontaneous low-delta) — Aditya framed these as mechanistically distinct (motion = predictable state, unpredictable direction; synchronized = predictable direction, unpredictable laser gain); splitting makes the "designer's dilemma" concrete rather than qualitative
+- Network model pointers: `scipy.signal`/`control` for per-site-pair discrete TFs → cluster sites by dominant poles; **DYNOTEARS** (Pamfil et al. 2020, UAI) for the sparse directed graph fit with lagged dependencies
 
 ---
 
