@@ -1,0 +1,3855 @@
+[
+ {
+  "date": "2026-04-22",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-04-22\\1",
+  "expdef": "",
+  "exptype": "",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-04-22",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-04-22\\2",
+  "expdef": "opto_miniGrid",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-04-22",
+  "exp": "3",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-04-22\\3",
+  "expdef": "",
+  "exptype": "",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-04-22",
+  "exp": "4",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-04-22\\4",
+  "expdef": "opto_brainGridOrange",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-05",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-05\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 124.0,
+  "lasers": {
+   "594": {
+    "n_bouts": 13,
+    "kind": "constant step",
+    "n_left": 6,
+    "n_right": 7,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.7,
+      "n": 4,
+      "dur_med": 0.036,
+      "dur_min": 0.028,
+      "dur_max": 1.718,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.7,
+      "n": 3,
+      "dur_med": 1.972,
+      "dur_min": 1.972,
+      "dur_max": 1.972,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 3.4,
+      "n": 3,
+      "dur_med": 1.972,
+      "dur_min": 0.029,
+      "dur_max": 1.982,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 3.4,
+      "n": 3,
+      "dur_med": 0.028,
+      "dur_min": 0.028,
+      "dur_max": 1.972,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-05",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-05\\2",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 18874,
+  "cam_only": false,
+  "ip_rows": 100,
+  "ip_cols": 9,
+  "dur_s": 543.5,
+  "lasers": {
+   "594": {
+    "n_bouts": 100,
+    "kind": "impulse (single-frame pulses)",
+    "n_left": 50,
+    "n_right": 50,
+    "groups": [
+     {
+      "side": "L",
+      "galvo_x_v": -1.5,
+      "cmd_v": 3.4,
+      "n": 30,
+      "dur_med": 0.029,
+      "dur_min": 0.014,
+      "dur_max": 1.972,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.7,
+      "n": 29,
+      "dur_med": 1.97,
+      "dur_min": 0.02,
+      "dur_max": 1.986,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.4,
+      "n": 21,
+      "dur_med": 1.967,
+      "dur_min": 0.018,
+      "dur_max": 1.988,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.5,
+      "cmd_v": 1.7,
+      "n": 20,
+      "dur_med": 0.029,
+      "dur_min": 0.016,
+      "dur_max": 1.972,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-07",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-07\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": false,
+  "n_frames": 41083,
+  "cam_only": false,
+  "ip_rows": 200,
+  "ip_cols": 9,
+  "dur_s": 1178.0,
+  "lasers": {
+   "594": {
+    "n_bouts": 200,
+    "kind": "constant step",
+    "n_left": 100,
+    "n_right": 100,
+    "groups": [
+     {
+      "side": "L",
+      "galvo_x_v": -1.0,
+      "cmd_v": 0.8,
+      "n": 47,
+      "dur_med": 0.972,
+      "dur_min": 0.952,
+      "dur_max": 0.991,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.4,
+      "n": 45,
+      "dur_med": 0.972,
+      "dur_min": 0.952,
+      "dur_max": 0.99,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -0.5,
+      "cmd_v": 0.8,
+      "n": 31,
+      "dur_med": 0.971,
+      "dur_min": 0.951,
+      "dur_max": 0.986,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 3.4,
+      "n": 29,
+      "dur_med": 0.972,
+      "dur_min": 0.952,
+      "dur_max": 0.986,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.0,
+      "cmd_v": 3.4,
+      "n": 26,
+      "dur_med": 0.972,
+      "dur_min": 0.957,
+      "dur_max": 0.988,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 0.8,
+      "n": 22,
+      "dur_med": 0.972,
+      "dur_min": 0.951,
+      "dur_max": 0.99,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-11",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-11\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 3385,
+  "cam_only": false,
+  "ip_rows": 1,
+  "ip_cols": 0,
+  "dur_s": 101.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-11",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-11\\2",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 1777,
+  "cam_only": false,
+  "ip_rows": 40,
+  "ip_cols": 12,
+  "dur_s": 55.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-11",
+  "exp": "3",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-11\\3",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 6392,
+  "cam_only": false,
+  "ip_rows": 14,
+  "ip_cols": 12,
+  "dur_s": 187.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-11",
+  "exp": "4",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-11\\4",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 2654,
+  "cam_only": false,
+  "ip_rows": 7,
+  "ip_cols": 9,
+  "dur_s": 80.0,
+  "lasers": {
+   "594": {
+    "n_bouts": 6,
+    "kind": "constant step",
+    "n_left": 2,
+    "n_right": 4,
+    "groups": [
+     {
+      "side": "L",
+      "galvo_x_v": -1.5,
+      "cmd_v": 0.9,
+      "n": 2,
+      "dur_med": 0.963,
+      "dur_min": 0.954,
+      "dur_max": 0.972,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.5,
+      "cmd_v": 3.4,
+      "n": 2,
+      "dur_med": 0.972,
+      "dur_min": 0.972,
+      "dur_max": 0.972,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 0.0,
+      "cmd_v": 0.9,
+      "n": 1,
+      "dur_med": 0.99,
+      "dur_min": 0.99,
+      "dur_max": 0.99,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.0,
+      "cmd_v": 3.4,
+      "n": 1,
+      "dur_med": 0.972,
+      "dur_min": 0.972,
+      "dur_max": 0.972,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-11",
+  "exp": "5",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-11\\5",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 10275,
+  "cam_only": false,
+  "ip_rows": 40,
+  "ip_cols": 9,
+  "dur_s": 298.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 20,
+    "kind": "constant step",
+    "n_left": 0,
+    "n_right": 20,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 3.0,
+      "cmd_v": 0.9,
+      "n": 17,
+      "dur_med": 0.972,
+      "dur_min": 0.961,
+      "dur_max": 0.972,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.0,
+      "cmd_v": 0.8,
+      "n": 3,
+      "dur_med": 0.971,
+      "dur_min": 0.961,
+      "dur_max": 0.971,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-11",
+  "exp": "6",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-11\\6",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 14863,
+  "cam_only": false,
+  "ip_rows": 40,
+  "ip_cols": 9,
+  "dur_s": 429.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 40,
+    "kind": "constant step",
+    "n_left": 20,
+    "n_right": 20,
+    "groups": [
+     {
+      "side": "L",
+      "galvo_x_v": -0.5,
+      "cmd_v": 0.4,
+      "n": 20,
+      "dur_med": 0.972,
+      "dur_min": 0.965,
+      "dur_max": 0.986,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.0,
+      "cmd_v": 1.7,
+      "n": 20,
+      "dur_med": 0.972,
+      "dur_min": 0.96,
+      "dur_max": 0.984,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-12",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-12\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 60.5,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-12",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-12\\2",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 11.5,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-12",
+  "exp": "3",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-12\\3",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 21.5,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-12",
+  "exp": "4",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-12\\4",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 31564,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 906.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 70,
+    "kind": "continuous / closed-loop",
+    "n_left": 0,
+    "n_right": 70,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.5,
+      "n": 33,
+      "dur_med": 3.0,
+      "dur_min": 2.954,
+      "dur_max": 3.032,
+      "flat_frac": 0.94
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 4.5,
+      "n": 6,
+      "dur_med": 3.003,
+      "dur_min": 3.0,
+      "dur_max": 5.172,
+      "flat_frac": 0.67
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.7,
+      "n": 4,
+      "dur_med": 1.996,
+      "dur_min": 1.0,
+      "dur_max": 3.028,
+      "flat_frac": 0.75
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.6,
+      "n": 3,
+      "dur_med": 3.008,
+      "dur_min": 3.0,
+      "dur_max": 5.098,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.3,
+      "n": 3,
+      "dur_med": 3.0,
+      "dur_min": 2.989,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.9,
+      "n": 3,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.003,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.9,
+      "n": 2,
+      "dur_med": 3.0,
+      "dur_min": 2.998,
+      "dur_max": 3.002,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 4.0,
+      "n": 2,
+      "dur_med": 3.008,
+      "dur_min": 3.0,
+      "dur_max": 3.015,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.3,
+      "n": 2,
+      "dur_med": 3.006,
+      "dur_min": 3.0,
+      "dur_max": 3.012,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.1,
+      "n": 2,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.001,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.2,
+      "n": 1,
+      "dur_med": 1.398,
+      "dur_min": 1.398,
+      "dur_max": 1.398,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.2,
+      "n": 1,
+      "dur_med": 3.028,
+      "dur_min": 3.028,
+      "dur_max": 3.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.7,
+      "n": 1,
+      "dur_med": 2.996,
+      "dur_min": 2.996,
+      "dur_max": 2.996,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.7,
+      "n": 1,
+      "dur_med": 3.02,
+      "dur_min": 3.02,
+      "dur_max": 3.02,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.8,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.0,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.6,
+      "n": 1,
+      "dur_med": 2.914,
+      "dur_min": 2.914,
+      "dur_max": 2.914,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.4,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 4.3,
+      "n": 1,
+      "dur_med": 2.999,
+      "dur_min": 2.999,
+      "dur_max": 2.999,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.0,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-12",
+  "exp": "5",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-12\\5",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 892.5,
+  "lasers": {
+   "638": {
+    "n_bouts": 150,
+    "kind": "constant step",
+    "n_left": 75,
+    "n_right": 75,
+    "groups": [
+     {
+      "side": "L",
+      "galvo_x_v": -1.5,
+      "cmd_v": 0.9,
+      "n": 75,
+      "dur_med": 0.972,
+      "dur_min": 0.956,
+      "dur_max": 0.986,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 3.4,
+      "n": 75,
+      "dur_med": 0.972,
+      "dur_min": 0.958,
+      "dur_max": 0.987,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-20",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-20\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 40438,
+  "cam_only": false,
+  "ip_rows": 200,
+  "ip_cols": 9,
+  "dur_s": 1159.5,
+  "lasers": {
+   "638": {
+    "n_bouts": 200,
+    "kind": "constant step",
+    "n_left": 100,
+    "n_right": 100,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 3.4,
+      "n": 63,
+      "dur_med": 0.972,
+      "dur_min": 0.958,
+      "dur_max": 0.988,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.5,
+      "cmd_v": 3.4,
+      "n": 55,
+      "dur_med": 0.972,
+      "dur_min": 0.958,
+      "dur_max": 0.992,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.5,
+      "cmd_v": 1.7,
+      "n": 45,
+      "dur_med": 0.972,
+      "dur_min": 0.952,
+      "dur_max": 0.986,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.7,
+      "n": 37,
+      "dur_med": 0.972,
+      "dur_min": 0.959,
+      "dur_max": 0.988,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-20",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-20\\2",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 27361,
+  "cam_only": false,
+  "ip_rows": 61,
+  "ip_cols": 18,
+  "dur_s": 786.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 61,
+    "kind": "constant step",
+    "n_left": 0,
+    "n_right": 61,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.4,
+      "n": 32,
+      "dur_med": 3.0,
+      "dur_min": 2.98,
+      "dur_max": 3.02,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 4.5,
+      "n": 28,
+      "dur_med": 3.0,
+      "dur_min": 2.914,
+      "dur_max": 3.022,
+      "flat_frac": 0.29
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.6,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-20",
+  "exp": "3",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-20\\3",
+  "expdef": "",
+  "exptype": "",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 6,
+  "ip_cols": 18,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-23",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-23\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 2882.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 1848,
+    "kind": "impulse (single-frame pulses)",
+    "n_left": 655,
+    "n_right": 1193,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 0.5,
+      "cmd_v": 1.4,
+      "n": 531,
+      "dur_med": 0.468,
+      "dur_min": 0.254,
+      "dur_max": 3.084,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": 0.0,
+      "cmd_v": 1.4,
+      "n": 216,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.0,
+      "cmd_v": 1.4,
+      "n": 204,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.4,
+      "n": 187,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.0,
+      "cmd_v": 1.4,
+      "n": 175,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.4,
+      "n": 143,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.4,
+      "n": 138,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.5,
+      "cmd_v": 1.4,
+      "n": 128,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -3.0,
+      "cmd_v": 1.4,
+      "n": 126,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-23",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-23\\2",
+  "expdef": "opto_brainGrid638",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-23",
+  "exp": "3",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-23\\3",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 287.5,
+  "lasers": {
+   "638": {
+    "n_bouts": 138,
+    "kind": "impulse (single-frame pulses)",
+    "n_left": 48,
+    "n_right": 90,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 0.5,
+      "cmd_v": 1.4,
+      "n": 49,
+      "dur_med": 0.45,
+      "dur_min": 0.276,
+      "dur_max": 1.795,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.5,
+      "cmd_v": 1.4,
+      "n": 18,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.0,
+      "cmd_v": 1.4,
+      "n": 13,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.0,
+      "cmd_v": 1.4,
+      "n": 12,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.4,
+      "n": 12,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.5,
+      "cmd_v": 1.4,
+      "n": 11,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": 0.0,
+      "cmd_v": 1.4,
+      "n": 10,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.4,
+      "n": 7,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.4,
+      "n": 6,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-23",
+  "exp": "4",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-23\\4",
+  "expdef": "opto_brainGrid638",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-23",
+  "exp": "5",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-23\\5",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 272.5,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-24",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-24\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 177.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-24",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-24\\2",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 95249,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 2726.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 1843,
+    "kind": "impulse (single-frame pulses)",
+    "n_left": 452,
+    "n_right": 1391,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 0.5,
+      "cmd_v": 1.4,
+      "n": 739,
+      "dur_med": 0.389,
+      "dur_min": 0.024,
+      "dur_max": 2.389,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.0,
+      "cmd_v": 1.4,
+      "n": 201,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -0.5,
+      "cmd_v": 1.4,
+      "n": 187,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.4,
+      "n": 170,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.5,
+      "cmd_v": 1.4,
+      "n": 153,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.0,
+      "cmd_v": 1.4,
+      "n": 151,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 4.0,
+      "cmd_v": 1.4,
+      "n": 130,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.5,
+      "cmd_v": 1.4,
+      "n": 112,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-24",
+  "exp": "3",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-24\\3",
+  "expdef": "opto_brainGrid638",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-06-24",
+  "exp": "4",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-24\\4",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 80.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 2,
+    "kind": "modulated (sine / carrier)",
+    "n_left": 0,
+    "n_right": 2,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.2,
+      "n": 1,
+      "dur_med": 2.994,
+      "dur_min": 2.994,
+      "dur_max": 2.994,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.4,
+      "n": 1,
+      "dur_med": 3.002,
+      "dur_min": 3.002,
+      "dur_max": 3.002,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-24",
+  "exp": "5",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-24\\5",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 44551,
+  "cam_only": false,
+  "ip_rows": 104,
+  "ip_cols": 17,
+  "dur_s": 1277.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 106,
+    "kind": "continuous / closed-loop",
+    "n_left": 0,
+    "n_right": 106,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.3,
+      "n": 59,
+      "dur_med": 3.0,
+      "dur_min": 2.98,
+      "dur_max": 3.036,
+      "flat_frac": 0.86
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.8,
+      "n": 8,
+      "dur_med": 2.995,
+      "dur_min": 1.672,
+      "dur_max": 3.012,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.1,
+      "n": 7,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.022,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.9,
+      "n": 6,
+      "dur_med": 2.996,
+      "dur_min": 1.696,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.5,
+      "n": 5,
+      "dur_med": 3.0,
+      "dur_min": 2.314,
+      "dur_max": 3.002,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.0,
+      "n": 5,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.012,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.2,
+      "n": 4,
+      "dur_med": 3.007,
+      "dur_min": 3.0,
+      "dur_max": 3.286,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.7,
+      "n": 4,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.022,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 2.4,
+      "n": 1,
+      "dur_med": 3.028,
+      "dur_min": 3.028,
+      "dur_max": 3.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 2.3,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.7,
+      "n": 1,
+      "dur_med": 3.005,
+      "dur_min": 3.005,
+      "dur_max": 3.005,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.6,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.4,
+      "n": 1,
+      "dur_med": 0.092,
+      "dur_min": 0.092,
+      "dur_max": 0.092,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 2.2,
+      "n": 1,
+      "dur_med": 3.002,
+      "dur_min": 3.002,
+      "dur_max": 3.002,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 2.0,
+      "n": 1,
+      "dur_med": 2.999,
+      "dur_min": 2.999,
+      "dur_max": 2.999,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.4,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-06-26",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-06-26\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 1224.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 119,
+    "kind": "modulated (sine / carrier)",
+    "n_left": 0,
+    "n_right": 119,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.4,
+      "n": 42,
+      "dur_med": 2.928,
+      "dur_min": 0.056,
+      "dur_max": 3.025,
+      "flat_frac": 0.12
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.5,
+      "n": 24,
+      "dur_med": 2.921,
+      "dur_min": 0.385,
+      "dur_max": 3.022,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.6,
+      "n": 22,
+      "dur_med": 2.829,
+      "dur_min": 0.314,
+      "dur_max": 3.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.3,
+      "n": 12,
+      "dur_med": 1.123,
+      "dur_min": 0.057,
+      "dur_max": 3.014,
+      "flat_frac": 0.42
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.7,
+      "n": 10,
+      "dur_med": 2.974,
+      "dur_min": 0.714,
+      "dur_max": 3.013,
+      "flat_frac": 0.2
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.8,
+      "n": 6,
+      "dur_med": 3.007,
+      "dur_min": 3.0,
+      "dur_max": 3.029,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.1,
+      "n": 1,
+      "dur_med": 0.768,
+      "dur_min": 0.768,
+      "dur_max": 0.768,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.9,
+      "n": 1,
+      "dur_med": 1.8,
+      "dur_min": 1.8,
+      "dur_max": 1.8,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.0,
+      "n": 1,
+      "dur_med": 0.494,
+      "dur_min": 0.494,
+      "dur_max": 0.494,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-01",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-01\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 409.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 5,
+    "kind": "constant step",
+    "n_left": 0,
+    "n_right": 5,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.7,
+      "n": 5,
+      "dur_med": 3.0,
+      "dur_min": 2.999,
+      "dur_max": 3.029,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-01",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-01\\2",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 415.5,
+  "lasers": {
+   "638": {
+    "n_bouts": 17,
+    "kind": "continuous / closed-loop",
+    "n_left": 0,
+    "n_right": 17,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.1,
+      "n": 3,
+      "dur_med": 3.586,
+      "dur_min": 3.0,
+      "dur_max": 4.457,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.2,
+      "n": 3,
+      "dur_med": 2.57,
+      "dur_min": 1.514,
+      "dur_max": 2.844,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.9,
+      "n": 3,
+      "dur_med": 3.628,
+      "dur_min": 1.628,
+      "dur_max": 3.629,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.6,
+      "n": 2,
+      "dur_med": 2.652,
+      "dur_min": 1.772,
+      "dur_max": 3.532,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.0,
+      "n": 2,
+      "dur_med": 1.421,
+      "dur_min": 0.442,
+      "dur_max": 2.4,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.7,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.5,
+      "n": 1,
+      "dur_med": 2.989,
+      "dur_min": 2.989,
+      "dur_max": 2.989,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.4,
+      "n": 1,
+      "dur_med": 0.686,
+      "dur_min": 0.686,
+      "dur_max": 0.686,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.8,
+      "n": 1,
+      "dur_med": 2.388,
+      "dur_min": 2.388,
+      "dur_max": 2.388,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-01",
+  "exp": "3",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-01\\3",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 45.5,
+  "lasers": {}
+ },
+ {
+  "date": "2026-07-01",
+  "exp": "4",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-01\\4",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 95825,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 2742.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 2269,
+    "kind": "continuous / closed-loop",
+    "n_left": 1782,
+    "n_right": 487,
+    "groups": [
+     {
+      "side": "L",
+      "galvo_x_v": 0.0,
+      "cmd_v": 0.9,
+      "n": 836,
+      "dur_med": 0.603,
+      "dur_min": 0.253,
+      "dur_max": 5.104,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": 0.0,
+      "cmd_v": 1.4,
+      "n": 457,
+      "dur_med": 0.783,
+      "dur_min": 0.266,
+      "dur_max": 4.192,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 0.0,
+      "cmd_v": 0.9,
+      "n": 84,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -0.5,
+      "cmd_v": 1.4,
+      "n": 82,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 0.0,
+      "cmd_v": 1.4,
+      "n": 75,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.0,
+      "cmd_v": 1.4,
+      "n": 74,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.5,
+      "cmd_v": 0.9,
+      "n": 72,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -0.5,
+      "cmd_v": 0.9,
+      "n": 70,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.5,
+      "cmd_v": 1.4,
+      "n": 68,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.4,
+      "n": 65,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.5,
+      "cmd_v": 0.9,
+      "n": 61,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -3.5,
+      "cmd_v": 1.4,
+      "n": 54,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.9,
+      "n": 50,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.0,
+      "cmd_v": 0.9,
+      "n": 49,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.0,
+      "cmd_v": 1.4,
+      "n": 48,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.5,
+      "cmd_v": 1.4,
+      "n": 44,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.0,
+      "cmd_v": 0.9,
+      "n": 42,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -3.5,
+      "cmd_v": 0.9,
+      "n": 38,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-01",
+  "exp": "5",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-01\\5",
+  "expdef": "opto_brainGrid638",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-07-01",
+  "exp": "6",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-01\\6",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 47244,
+  "cam_only": false,
+  "ip_rows": 87,
+  "ip_cols": 17,
+  "dur_s": 1354.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 113,
+    "kind": "modulated (sine / carrier)",
+    "n_left": 0,
+    "n_right": 113,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.1,
+      "n": 27,
+      "dur_med": 3.686,
+      "dur_min": 0.17,
+      "dur_max": 3.828,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.2,
+      "n": 24,
+      "dur_med": 3.686,
+      "dur_min": 0.307,
+      "dur_max": 3.738,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.6,
+      "n": 8,
+      "dur_med": 3.636,
+      "dur_min": 0.588,
+      "dur_max": 4.314,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.5,
+      "n": 8,
+      "dur_med": 3.697,
+      "dur_min": 2.787,
+      "dur_max": 4.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.7,
+      "n": 8,
+      "dur_med": 3.63,
+      "dur_min": 0.486,
+      "dur_max": 4.004,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.4,
+      "n": 5,
+      "dur_med": 1.457,
+      "dur_min": 0.428,
+      "dur_max": 3.828,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.3,
+      "n": 5,
+      "dur_med": 1.372,
+      "dur_min": 0.516,
+      "dur_max": 4.014,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.0,
+      "n": 5,
+      "dur_med": 0.4,
+      "dur_min": 0.286,
+      "dur_max": 2.514,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.9,
+      "n": 4,
+      "dur_med": 3.757,
+      "dur_min": 0.457,
+      "dur_max": 4.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.8,
+      "n": 3,
+      "dur_med": 3.686,
+      "dur_min": 1.6,
+      "dur_max": 3.8,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.7,
+      "n": 3,
+      "dur_med": 0.2,
+      "dur_min": 0.2,
+      "dur_max": 0.2,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.9,
+      "n": 3,
+      "dur_med": 0.429,
+      "dur_min": 0.12,
+      "dur_max": 0.514,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.8,
+      "n": 3,
+      "dur_med": 0.257,
+      "dur_min": 0.188,
+      "dur_max": 0.382,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.4,
+      "n": 2,
+      "dur_med": 0.284,
+      "dur_min": 0.2,
+      "dur_max": 0.368,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 2.0,
+      "n": 1,
+      "dur_med": 3.576,
+      "dur_min": 3.576,
+      "dur_max": 3.576,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.6,
+      "n": 1,
+      "dur_med": 0.085,
+      "dur_min": 0.085,
+      "dur_max": 0.085,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 2.1,
+      "n": 1,
+      "dur_med": 3.714,
+      "dur_min": 3.714,
+      "dur_max": 3.714,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 2.4,
+      "n": 1,
+      "dur_med": 4.0,
+      "dur_min": 4.0,
+      "dur_max": 4.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 2.3,
+      "n": 1,
+      "dur_med": 3.66,
+      "dur_min": 3.66,
+      "dur_max": 3.66,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-10",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-10\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 492.5,
+  "lasers": {
+   "638": {
+    "n_bouts": 1,
+    "kind": "impulse (single-frame pulses)",
+    "n_left": 0,
+    "n_right": 1,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.7,
+      "n": 1,
+      "dur_med": 0.027,
+      "dur_min": 0.027,
+      "dur_max": 0.027,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-10",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-10\\2",
+  "expdef": "opto_bilateralImpulse638",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-07-10",
+  "exp": "3",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-10\\3",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 203357,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 5814.5,
+  "lasers": {
+   "638": {
+    "n_bouts": 2800,
+    "kind": "impulse (single-frame pulses)",
+    "n_left": 774,
+    "n_right": 2026,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 0.0,
+      "cmd_v": 0.7,
+      "n": 790,
+      "dur_med": 0.63,
+      "dur_min": 0.26,
+      "dur_max": 4.446,
+      "flat_frac": 0.16
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 0.0,
+      "cmd_v": 1.3,
+      "n": 426,
+      "dur_med": 0.755,
+      "dur_min": 0.264,
+      "dur_max": 4.332,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 0.7,
+      "n": 107,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.027,
+      "flat_frac": 0.75
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.3,
+      "n": 107,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.3,
+      "n": 104,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.7,
+      "n": 101,
+      "dur_med": 0.024,
+      "dur_min": 0.023,
+      "dur_max": 0.027,
+      "flat_frac": 0.82
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 1.3,
+      "n": 77,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 0.5,
+      "cmd_v": 1.3,
+      "n": 77,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 0.5,
+      "cmd_v": 0.7,
+      "n": 74,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.92
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -0.5,
+      "cmd_v": 0.7,
+      "n": 74,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.78
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.0,
+      "cmd_v": 1.3,
+      "n": 72,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.0,
+      "cmd_v": 0.7,
+      "n": 71,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.8
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -0.5,
+      "cmd_v": 1.3,
+      "n": 67,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.7,
+      "n": 66,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.89
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.6,
+      "n": 56,
+      "dur_med": 0.028,
+      "dur_min": 0.027,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.0,
+      "n": 56,
+      "dur_med": 0.027,
+      "dur_min": 0.027,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 0.3,
+      "n": 56,
+      "dur_med": 0.026,
+      "dur_min": 0.026,
+      "dur_max": 0.026,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.3,
+      "n": 53,
+      "dur_med": 0.026,
+      "dur_min": 0.026,
+      "dur_max": 0.026,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.0,
+      "n": 52,
+      "dur_med": 0.027,
+      "dur_min": 0.027,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.6,
+      "n": 51,
+      "dur_med": 0.028,
+      "dur_min": 0.027,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -3.0,
+      "cmd_v": 0.7,
+      "n": 50,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.82
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.5,
+      "cmd_v": 1.3,
+      "n": 47,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -3.0,
+      "cmd_v": 1.3,
+      "n": 44,
+      "dur_med": 0.024,
+      "dur_min": 0.024,
+      "dur_max": 0.024,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.5,
+      "cmd_v": 0.7,
+      "n": 44,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.82
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 0.0,
+      "cmd_v": 1.2,
+      "n": 32,
+      "dur_med": 1.644,
+      "dur_min": 0.837,
+      "dur_max": 3.642,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.6,
+      "n": 11,
+      "dur_med": 0.026,
+      "dur_min": 0.023,
+      "dur_max": 0.027,
+      "flat_frac": 0.82
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 0.6,
+      "n": 7,
+      "dur_med": 0.026,
+      "dur_min": 0.023,
+      "dur_max": 0.027,
+      "flat_frac": 0.71
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 0.0,
+      "cmd_v": 0.6,
+      "n": 6,
+      "dur_med": 0.439,
+      "dur_min": 0.313,
+      "dur_max": 0.784,
+      "flat_frac": 0.67
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 0.5,
+      "cmd_v": 0.6,
+      "n": 5,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.8
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -3.0,
+      "cmd_v": 0.6,
+      "n": 4,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.023,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 3.5,
+      "cmd_v": 0.6,
+      "n": 4,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.023,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -0.5,
+      "cmd_v": 0.6,
+      "n": 3,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.023,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.0,
+      "cmd_v": 0.6,
+      "n": 3,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.67
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 1.5,
+      "cmd_v": 0.6,
+      "n": 3,
+      "dur_med": 0.023,
+      "dur_min": 0.023,
+      "dur_max": 0.024,
+      "flat_frac": 0.67
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-10",
+  "exp": "4",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-10\\4",
+  "expdef": "opto_bilateralImpulse638",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-07-10",
+  "exp": "5",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-10\\5",
+  "expdef": "opto_bilateralImpulse638",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-07-10",
+  "exp": "6",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-10\\6",
+  "expdef": "opto_brainGrid638",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-07-14",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-14\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 113302,
+  "cam_only": false,
+  "ip_rows": 214,
+  "ip_cols": 17,
+  "dur_s": 3241.5,
+  "lasers": {
+   "638": {
+    "n_bouts": 364,
+    "kind": "modulated (sine / carrier)",
+    "n_left": 0,
+    "n_right": 364,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.6,
+      "n": 127,
+      "dur_med": 3.571,
+      "dur_min": 0.182,
+      "dur_max": 3.856,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.5,
+      "n": 45,
+      "dur_med": 1.2,
+      "dur_min": 0.028,
+      "dur_max": 3.589,
+      "flat_frac": 0.07
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.7,
+      "n": 43,
+      "dur_med": 1.343,
+      "dur_min": 0.086,
+      "dur_max": 4.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.8,
+      "n": 33,
+      "dur_med": 1.029,
+      "dur_min": 0.143,
+      "dur_max": 4.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.9,
+      "n": 28,
+      "dur_med": 1.394,
+      "dur_min": 0.034,
+      "dur_max": 4.029,
+      "flat_frac": 0.04
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.4,
+      "n": 22,
+      "dur_med": 0.343,
+      "dur_min": 0.029,
+      "dur_max": 1.058,
+      "flat_frac": 0.09
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.0,
+      "n": 14,
+      "dur_med": 1.538,
+      "dur_min": 0.286,
+      "dur_max": 3.514,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.1,
+      "n": 14,
+      "dur_med": 0.634,
+      "dur_min": 0.086,
+      "dur_max": 4.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.3,
+      "n": 6,
+      "dur_med": 0.116,
+      "dur_min": 0.057,
+      "dur_max": 0.524,
+      "flat_frac": 0.5
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.3,
+      "n": 5,
+      "dur_med": 0.343,
+      "dur_min": 0.314,
+      "dur_max": 0.571,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.2,
+      "n": 4,
+      "dur_med": 2.286,
+      "dur_min": 0.629,
+      "dur_max": 3.986,
+      "flat_frac": 0.25
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.7,
+      "n": 3,
+      "dur_med": 0.632,
+      "dur_min": 0.544,
+      "dur_max": 3.039,
+      "flat_frac": 0.33
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.4,
+      "n": 3,
+      "dur_med": 0.932,
+      "dur_min": 0.828,
+      "dur_max": 1.771,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.2,
+      "n": 2,
+      "dur_med": 1.974,
+      "dur_min": 1.486,
+      "dur_max": 2.461,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.0,
+      "n": 2,
+      "dur_med": 1.385,
+      "dur_min": 1.257,
+      "dur_max": 1.514,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.3,
+      "n": 2,
+      "dur_med": 0.368,
+      "dur_min": 0.278,
+      "dur_max": 0.458,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.5,
+      "n": 2,
+      "dur_med": 0.414,
+      "dur_min": 0.372,
+      "dur_max": 0.456,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 4.5,
+      "n": 2,
+      "dur_med": 0.535,
+      "dur_min": 0.442,
+      "dur_max": 0.628,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.0,
+      "n": 2,
+      "dur_med": 2.101,
+      "dur_min": 0.343,
+      "dur_max": 3.858,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 4.3,
+      "n": 1,
+      "dur_med": 0.046,
+      "dur_min": 0.046,
+      "dur_max": 0.046,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.3,
+      "n": 1,
+      "dur_med": 0.342,
+      "dur_min": 0.342,
+      "dur_max": 0.342,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 4.0,
+      "n": 1,
+      "dur_med": 0.428,
+      "dur_min": 0.428,
+      "dur_max": 0.428,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.8,
+      "n": 1,
+      "dur_med": 0.486,
+      "dur_min": 0.486,
+      "dur_max": 0.486,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.6,
+      "n": 1,
+      "dur_med": 0.286,
+      "dur_min": 0.286,
+      "dur_max": 0.286,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-15",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-15\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 154176,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 4409.5,
+  "lasers": {
+   "638": {
+    "n_bouts": 600,
+    "kind": "impulse (single-frame pulses)",
+    "n_left": 300,
+    "n_right": 300,
+    "groups": [
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.0,
+      "n": 100,
+      "dur_med": 0.027,
+      "dur_min": 0.027,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 0.3,
+      "n": 100,
+      "dur_med": 0.026,
+      "dur_min": 0.026,
+      "dur_max": 0.026,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 0.3,
+      "n": 100,
+      "dur_med": 0.026,
+      "dur_min": 0.026,
+      "dur_max": 0.026,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.6,
+      "n": 100,
+      "dur_med": 0.028,
+      "dur_min": 0.027,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.5,
+      "cmd_v": 1.0,
+      "n": 100,
+      "dur_med": 0.027,
+      "dur_min": 0.027,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.6,
+      "n": 100,
+      "dur_med": 0.028,
+      "dur_min": 0.027,
+      "dur_max": 0.028,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-15",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-15\\2",
+  "expdef": "opto_Impulse638",
+  "exptype": "",
+  "has_block": true,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": false,
+  "ip_rows": 0,
+  "ip_cols": 0,
+  "dur_s": 0.0,
+  "lasers": {}
+ },
+ {
+  "date": "2026-07-21",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-21\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": true,
+  "n_frames": 150013,
+  "cam_only": false,
+  "ip_rows": 258,
+  "ip_cols": 17,
+  "dur_s": 4308.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 375,
+    "kind": "continuous / closed-loop",
+    "n_left": 49,
+    "n_right": 326,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.7,
+      "n": 143,
+      "dur_med": 3.571,
+      "dur_min": 0.085,
+      "dur_max": 3.943,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.6,
+      "n": 35,
+      "dur_med": 0.6,
+      "dur_min": 0.342,
+      "dur_max": 3.513,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.5,
+      "n": 32,
+      "dur_med": 0.383,
+      "dur_min": 0.093,
+      "dur_max": 2.314,
+      "flat_frac": 0.03
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 3.4,
+      "n": 31,
+      "dur_med": 3.0,
+      "dur_min": 2.984,
+      "dur_max": 3.034,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.9,
+      "n": 25,
+      "dur_med": 1.466,
+      "dur_min": 0.314,
+      "dur_max": 4.027,
+      "flat_frac": 0.04
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.8,
+      "n": 24,
+      "dur_med": 1.528,
+      "dur_min": 0.286,
+      "dur_max": 4.016,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.4,
+      "n": 20,
+      "dur_med": 0.257,
+      "dur_min": 0.044,
+      "dur_max": 0.657,
+      "flat_frac": 0.2
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.0,
+      "n": 18,
+      "dur_med": 1.514,
+      "dur_min": 0.37,
+      "dur_max": 3.914,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 4.5,
+      "n": 10,
+      "dur_med": 3.0,
+      "dur_min": 2.984,
+      "dur_max": 3.028,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.1,
+      "n": 8,
+      "dur_med": 1.772,
+      "dur_min": 0.483,
+      "dur_max": 3.926,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.2,
+      "n": 6,
+      "dur_med": 2.064,
+      "dur_min": 0.514,
+      "dur_max": 4.0,
+      "flat_frac": 0.17
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.5,
+      "n": 5,
+      "dur_med": 0.542,
+      "dur_min": 0.229,
+      "dur_max": 2.731,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.3,
+      "n": 3,
+      "dur_med": 0.486,
+      "dur_min": 0.428,
+      "dur_max": 3.856,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.3,
+      "n": 3,
+      "dur_med": 0.086,
+      "dur_min": 0.03,
+      "dur_max": 0.343,
+      "flat_frac": 0.67
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.4,
+      "n": 2,
+      "dur_med": 0.921,
+      "dur_min": 0.228,
+      "dur_max": 1.615,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.7,
+      "n": 1,
+      "dur_med": 4.029,
+      "dur_min": 4.029,
+      "dur_max": 4.029,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.6,
+      "n": 1,
+      "dur_med": 0.64,
+      "dur_min": 0.64,
+      "dur_max": 0.64,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 2.1,
+      "n": 1,
+      "dur_med": 0.628,
+      "dur_min": 0.628,
+      "dur_max": 0.628,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.0,
+      "n": 1,
+      "dur_med": 1.314,
+      "dur_min": 1.314,
+      "dur_max": 1.314,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 2.7,
+      "n": 1,
+      "dur_med": 1.646,
+      "dur_min": 1.646,
+      "dur_max": 1.646,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.4,
+      "n": 1,
+      "dur_med": 1.514,
+      "dur_min": 1.514,
+      "dur_max": 1.514,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 2.4,
+      "n": 1,
+      "dur_med": 1.048,
+      "dur_min": 1.048,
+      "dur_max": 1.048,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.2,
+      "n": 1,
+      "dur_med": 0.4,
+      "dur_min": 0.4,
+      "dur_max": 0.4,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.8,
+      "n": 1,
+      "dur_med": 1.342,
+      "dur_min": 1.342,
+      "dur_max": 1.342,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 1.7,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 1.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-29",
+  "exp": "1",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-29\\1",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": false,
+  "wf_corr": false,
+  "n_frames": 0,
+  "cam_only": true,
+  "ip_rows": 84,
+  "ip_cols": 17,
+  "dur_s": 1342.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 84,
+    "kind": "continuous / closed-loop",
+    "n_left": 15,
+    "n_right": 69,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.5,
+      "n": 30,
+      "dur_med": 3.0,
+      "dur_min": 2.984,
+      "dur_max": 3.034,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 4.5,
+      "n": 10,
+      "dur_med": 3.016,
+      "dur_min": 2.999,
+      "dur_max": 3.029,
+      "flat_frac": 0.5
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.0,
+      "n": 6,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.006,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.6,
+      "n": 5,
+      "dur_med": 3.0,
+      "dur_min": 2.992,
+      "dur_max": 3.037,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.1,
+      "n": 3,
+      "dur_med": 2.998,
+      "dur_min": 2.986,
+      "dur_max": 2.999,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.4,
+      "n": 3,
+      "dur_med": 3.0,
+      "dur_min": 1.076,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.3,
+      "n": 3,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.008,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.5,
+      "cmd_v": 4.5,
+      "n": 2,
+      "dur_med": 3.026,
+      "dur_min": 3.022,
+      "dur_max": 3.029,
+      "flat_frac": 0.5
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.6,
+      "n": 2,
+      "dur_med": 2.994,
+      "dur_min": 2.989,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.2,
+      "n": 2,
+      "dur_med": 2.951,
+      "dur_min": 2.914,
+      "dur_max": 2.988,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.7,
+      "n": 2,
+      "dur_med": 2.994,
+      "dur_min": 2.988,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.9,
+      "n": 2,
+      "dur_med": 2.998,
+      "dur_min": 2.985,
+      "dur_max": 3.012,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": 0.0,
+      "cmd_v": 4.5,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -2.0,
+      "cmd_v": 3.4,
+      "n": 1,
+      "dur_med": 3.028,
+      "dur_min": 3.028,
+      "dur_max": 3.028,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "L",
+      "galvo_x_v": -1.5,
+      "cmd_v": 4.2,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 4.2,
+      "n": 1,
+      "dur_med": 3.002,
+      "dur_min": 3.002,
+      "dur_max": 3.002,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.9,
+      "n": 1,
+      "dur_med": 8.012,
+      "dur_min": 8.012,
+      "dur_max": 8.012,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.4,
+      "n": 1,
+      "dur_med": 6.56,
+      "dur_min": 6.56,
+      "dur_max": 6.56,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.0,
+      "n": 1,
+      "dur_med": 2.999,
+      "dur_min": 2.999,
+      "dur_max": 2.999,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.3,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 2.8,
+      "n": 1,
+      "dur_med": 2.986,
+      "dur_min": 2.986,
+      "dur_max": 2.986,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.8,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.5,
+      "n": 1,
+      "dur_med": 3.01,
+      "dur_min": 3.01,
+      "dur_max": 3.01,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.5,
+      "n": 1,
+      "dur_med": 2.976,
+      "dur_min": 2.976,
+      "dur_max": 2.976,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 3.2,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.2,
+      "n": 1,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ },
+ {
+  "date": "2026-07-29",
+  "exp": "2",
+  "path": "\\\\sahale.biostr.washington.edu\\data\\Subjects\\AL_0048\\2026-07-29\\2",
+  "expdef": "",
+  "exptype": "timelineManualStart",
+  "has_block": false,
+  "wf": true,
+  "wf_corr": false,
+  "n_frames": 54828,
+  "cam_only": false,
+  "ip_rows": 106,
+  "ip_cols": 17,
+  "dur_s": 1571.0,
+  "lasers": {
+   "638": {
+    "n_bouts": 107,
+    "kind": "continuous / closed-loop",
+    "n_left": 0,
+    "n_right": 107,
+    "groups": [
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.8,
+      "n": 49,
+      "dur_med": 3.0,
+      "dur_min": 2.962,
+      "dur_max": 3.044,
+      "flat_frac": 0.92
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.3,
+      "n": 10,
+      "dur_med": 2.995,
+      "dur_min": 2.886,
+      "dur_max": 3.008,
+      "flat_frac": 0.1
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.1,
+      "n": 10,
+      "dur_med": 3.0,
+      "dur_min": 0.972,
+      "dur_max": 3.027,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.9,
+      "n": 9,
+      "dur_med": 2.996,
+      "dur_min": 2.886,
+      "dur_max": 3.033,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.2,
+      "n": 7,
+      "dur_med": 3.0,
+      "dur_min": 2.914,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.7,
+      "n": 4,
+      "dur_med": 3.001,
+      "dur_min": 3.0,
+      "dur_max": 3.016,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.6,
+      "n": 4,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.5,
+      "n": 3,
+      "dur_med": 3.0,
+      "dur_min": 3.0,
+      "dur_max": 3.004,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.7,
+      "n": 2,
+      "dur_med": 5.142,
+      "dur_min": 3.0,
+      "dur_max": 7.283,
+      "flat_frac": 1.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.4,
+      "n": 2,
+      "dur_med": 2.997,
+      "dur_min": 2.994,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.0,
+      "n": 2,
+      "dur_med": 2.994,
+      "dur_min": 2.989,
+      "dur_max": 3.0,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.5,
+      "n": 2,
+      "dur_med": 2.229,
+      "dur_min": 1.457,
+      "dur_max": 3.002,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 0.4,
+      "n": 2,
+      "dur_med": 1.328,
+      "dur_min": 0.886,
+      "dur_max": 1.77,
+      "flat_frac": 0.0
+     },
+     {
+      "side": "R",
+      "galvo_x_v": 2.0,
+      "cmd_v": 1.6,
+      "n": 1,
+      "dur_med": 3.001,
+      "dur_min": 3.001,
+      "dur_max": 3.001,
+      "flat_frac": 0.0
+     }
+    ]
+   }
+  }
+ }
+]
