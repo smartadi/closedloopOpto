@@ -82,8 +82,11 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 2A | Fig2 | paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf | 5 × 4 | vector | ±1 SD | trace_overlay.m — ±1 SD ribbon added 2026-07-16 (subset lowest+highest amp; faint fill α=0.08 + envelope outlines) |
 | 2B | Fig2 | paper/images/figure2/imp_response.pdf | 5 × 4 | vector | — | dose_response.m |
 | 2C | Fig2 | paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf | 6 × 4 | vector | ±std | done — **single session**; superseded by 2C-i/2C-ii below once those are cut |
-| 2C-i | Fig2 | *(pending — `tfx_lti_across_sessions.png` exists, not yet a panel)* | 6 × 4 | vector | — | **PENDING.** Peak-normalised h(t), ALL sessions on the session gradient, measured solid / fit dashed (mirrors 2I). `imp_tf_xsess.m` (2026-08-05) |
-| 2C-ii | Fig2 | *(pending)* | 4 × 4 | vector | 95% CI | **PENDING.** τ forest with bootstrap CIs — **matched amplitude range primary** (filled), full range open, cross-session mean ± SD band. Between/within SD ratio ≈1 ⇒ one shared time constant. ⚠ Caption must state the 3 sessions are **2 mice** (AL_0041 e1/e2 = same animal) |
+| 2C-i | Fig2 | paper/images/figure2/tf_shape_across_sessions.pdf | 6 × 4 | vector | — | Peak-normalised h(t), all sessions on the session gradient, **measured solid / fit dashed** (mirrors 2I). Normalised on the *measured* trace so the fit is still judged against data. Legend labels the encoding, not the sessions. `utils/imp_tf_paper_fig.m` via `imp_tf_run.m` |
+| TF-A | Fig2 | paper/images/figure2/tf_tau_forest.pdf | 4 × 4 | vector | 95% CI | τ_slow per session + **trial-bootstrap CI**, over the cross-session mean ± SD band. Matched amplitude range primary |
+| TF-B | Fig2 | paper/images/figure2/tf_tau_variability.pdf | 4 × 4 | vector | — | **between-session SD vs mean within-session SD**, with the ratio annotated + per-session dots. Ratio ≈1 ⇒ one shared τ; ≫1 ⇒ real inter-experiment variability (both publishable, different sentences) |
+| TF-C | Fig2 | paper/images/figure2/tf_tau_vs_amp.pdf | 5 × 4 | vector | — | τ from **per-amplitude refits**, one line per session. The panel that would actually break the design if it sloped — a session's controller can't be robust to its own plant moving with the command it sends. Flat = safe |
+| TF-D | Fig2 | paper/images/figure2/tf_model_swap.pdf | 4.5 × 4 | vector | — | **cross-session model-swap R²** matrix: session i's fitted model against session j's measured h(t), **free gain** (gain is re-tuned per session by construction, so this is a claim about *dynamics*). Diagonal ≈ off-diagonal ⇒ designs transfer |
 | 2D | Fig2 | paper/images/figure2/step_response.pdf | 6 × 4 | image 300dpi | — | step_response.m |
 | 2E | Fig2 | paper/images/figure2/onset_variance_slope.pdf | 6 × 4 | vector | ±SEM | OL variance trace + slope lines; gray traces, red stim lines |
 | 2F (supp) | Supp | paper/images/supplementary/imp_motion_devscatter_*.png | 6 × 4 | PNG 300dpi | — | Single-session only (selExp_mot=3); supplementary, not paper panel |
@@ -511,6 +514,40 @@ than from memory. Fig 5's caption lives with its layout above.
 **Figure 1. A closed-loop optogenetic system for controlling cortical population activity in real time.**
 **(A)** Widefield imaging light path. **(B)** Combined optogenetic, electrophysiology and widefield preparation. **(C)** Example spatial SVD component of the widefield signal (AL_0039, 2025-04-19), showing the cortical parcellation from which the control readout is drawn. **(D)** Software interface linking image acquisition, online ΔF/F estimation and laser command. **(E)** Control-system block diagram: the measured kernel-mean ΔF/F is compared against the reference, and a PI controller sets the 638 nm laser command. **(F)** End-to-end loop latency from frame exposure to laser update.
 > Panels A, B, D, E, F are schematics/external images; only C is script-generated. Sizes are still `?` in the layout block — set them before assembly.
+
+### Fig 2 — the LTI / time-constant block (TF-A…TF-D), framing decided 2026-08-10
+
+> **The argument is ROBUSTNESS, not sameness.** The weak claim — "the plant is the same in
+> every session" — is a hostage to fortune: the moment τ moves between sessions a referee has
+> a hole to push on, and τ will move (different animal, expression, window, day). The strong
+> claim, and the one matching how the experiment is actually run, is:
+>
+> **every session gets its own controller anyway, so between-session plant variation is an
+> expected operating condition, not a threat. What must hold is (a) that within a session the
+> plant is low-order LTI over its own drive range, and (b) that the plant family is tight
+> enough that a design transfers.**
+>
+> That is why the block has four panels rather than a single τ number:
+> - **TF-C is the load-bearing one.** If τ slopes with amplitude *inside* a session, the design
+>   genuinely breaks — a controller cannot be robust to its own plant moving with the command
+>   it sends. Flat = safe. This is the panel to look at first.
+> - **TF-A/TF-B state the between-session spread honestly** and, crucially, say whether it is
+>   real: the between/within SD ratio separates true inter-experiment variability from fit noise.
+> - **TF-D shows the spread doesn't matter** — models swap across sessions at free gain, so the
+>   *dynamics* transfer even where the gain doesn't. Gain is re-tuned per session by construction
+>   (that is what `fig:cost_landscape` in Methods documents), so free-gain scoring is the correct
+>   question, not a concession.
+>
+> **Both outcomes are publishable.** Ratio ≈ 1 + high swap R² → "one plant, robust design".
+> Ratio ≫ 1 + high swap R² → "the plant varies, per-session tuning handles it, and here is the
+> range" — which is a *better* Methods story and directly motivates the auto-tuner. Only a low
+> swap R² would be a problem, and then Methods must say per-session identification is required.
+> The console verdicts in `imp_tf_robust_fig.m` are worded to pick the right sentence for you.
+>
+> ⚠ **Layout:** Fig 2 row 1 already overflows (18.1/17). Five new panels do not fit in the
+> current three-row plan — either TF-A…TF-D become their own row (4+4+5+4.5 + 3×0.3 = 18.4, still
+> over; drop TF-C to 4 → 17.4, or move TF-D to supplementary) or the block goes to supplementary
+> with only 2C-i in the main figure. **Decide before assembly.**
 
 ### Figure 2 — draft caption
 **Figure 2. Focal optogenetic inhibition produces a graded, low-order response whose magnitude depends on ongoing cortical state.**

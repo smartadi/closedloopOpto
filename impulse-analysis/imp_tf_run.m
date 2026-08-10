@@ -41,11 +41,19 @@
 %   RUN_NBOOT    bootstrap draws for the tau CIs                        [default 300]
 %   RUN_EXPORT   write the PDFs                                         [default true]
 %
-% OUTPUT
-%   paper/images/figure2/tf_shape_across_sessions.pdf   <- panel 2C-i
-%   paper/images/figure2/tf_tau_forest.pdf              <- panel 2C-ii
+% OUTPUT -- all into paper/images/figure2/
+%   tf_shape_across_sessions.pdf   2C-i   measured vs fit, all sessions (6x4)
+%   tf_tau_forest.pdf              TF-A   tau + bootstrap CI per session   (4x4)
+%   tf_tau_variability.pdf         TF-B   between- vs within-session SD    (4x4)
+%   tf_tau_vs_amp.pdf              TF-C   does tau move with drive?        (5x4)
+%   tf_model_swap.pdf              TF-D   cross-session model-swap R^2     (4.5x4)
 %   TFRUN struct in the workspace (per-session fits + the combined numbers)
 %   a console summary written in the words the caption needs
+%
+% TF-A..D make a ROBUSTNESS argument rather than a sameness argument: each session
+% gets its own controller anyway, so what has to hold is that each plant is LTI over
+% its own operating range (TF-C) and that the plant family is tight enough for a
+% design to transfer (TF-D). See imp_tf_robust_fig.m for the full reasoning.
 % =====================================================================================
 
 if ~exist('allExperiments','var') || isempty(allExperiments)
@@ -119,8 +127,11 @@ else
     Sprim = Sfull;  Smatch = Sfull;  primTag = 'full range (no overlap)';
 end
 
-%% ---- (3) the two paper panels ---------------------------------------------------------
+%% ---- (3) the paper panels --------------------------------------------------------------
+% 2C-i  : shape overlay, measured vs fit, all sessions.
+% TF-A..D : the time-constant / variability / robustness block (see imp_tf_robust_fig).
 figs = imp_tf_paper_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT,'tmax_s',0.5));
+RB   = imp_tf_robust_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT,'amp_norm',true));
 
 %% ---- (4) the numbers the caption needs ------------------------------------------------
 okP  = cellfun(@(s) isfield(s,'ok') && s.ok, Sprim);
@@ -154,7 +165,7 @@ fprintf(['\nCAPTION MUST STATE: AL_0041 e1/e2 are the SAME animal, so the betwee
          'CONNECTED region -- flag it if this panel backs an actuator-TF claim.\n']);
 
 TFRUN = struct('Sprim',{Sprim},'Sfull',{Sfull},'primTag',primTag,'tau1',tau1, ...
-               'sdBetween',sdB,'sdWithin',mW,'figs',figs,'outDir',outDir);
+               'sdBetween',sdB,'sdWithin',mW,'figs',figs,'robust',RB,'outDir',outDir);
 fprintf('\n[TFRUN] panels -> %s\n', outDir);
 
 function v = ternNaN(c, f)
