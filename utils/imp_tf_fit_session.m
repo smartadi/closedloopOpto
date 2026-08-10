@@ -112,6 +112,10 @@ if isempty(hHat)
     return
 end
 T.h = hHat;  T.tPost = t_full(iPost).';
+% MEASURED amplitude-normalised impulse response -- the empirical counterpart of T.h.
+% This is exactly what the sweep was fitted to (amp^2-weighted mean of DF/uA over the
+% amplitudes in range), kept so a figure can plot measured-vs-fit without refitting.
+T.h_meas = h_norm;
 
 % ---- per-amplitude scores -------------------------------------------------------------------
 R2 = nan(nAmp,1); gFree = nan(nAmp,1); rho = nan(nAmp,1); R2free = nan(nAmp,1);
