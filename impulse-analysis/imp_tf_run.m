@@ -40,6 +40,12 @@
 %   RUN_AL0048   include the AL_0048 inhibitory site as a 4th session   [default true]
 %   RUN_NBOOT    bootstrap draws for the tau CIs                        [default 300]
 %   RUN_EXPORT   write the PDFs                                         [default true]
+%   RUN_MATCHED  ALSO fit a matched-amplitude-range set as a SECONDARY  [default false]
+%                diagnostic. Off by default: restricting every session to the
+%                window they all share is set by the NARROWEST session, and it
+%                silently drops any session left with <2 amplitudes in range.
+%                All fits use ALL amplitudes -- h(t) is amplitude-normalised, so
+%                the amplitudes are already on a common scale.
 %
 % OUTPUT -- all into paper/images/figure2/
 %   tf_shape_across_sessions.pdf   2C-i   measured vs fit, all sessions (6x4)
@@ -87,44 +93,92 @@ if RUN_AL0048 && ~any(arrayfun(@(A) contains(A.mn,'AL_0048'), allExperiments))
     end
 end
 nS = numel(allExperiments);
-fprintf('\n[TFRUN] %d session-datasets:\n', nS);
+fprintf('\n[TFRUN] %d session-datasets registered:\n', nS);
 for k = 1:nS
-    fprintf('   %d  %-9s %-12s e%d\n', k, allExperiments(k).mn, allExperiments(k).td, allExperiments(k).en);
+    sTag = '';
+    if isfield(allExperiments,'site') && ~isempty(allExperiments(k).site)
+        sTag = sprintf('  site %s', allExperiments(k).site);
+    end
+    fprintf('   %d  %-9s %-12s e%d%s\n', k, allExperiments(k).mn, allExperiments(k).td, ...
+        allExperiments(k).en, sTag);
+end
+% Say plainly whether the 4th session made it in. "Only 3 sessions" must never be
+% something you have to infer by counting rows.
+if RUN_AL0048
+    if any(arrayfun(@(A) contains(A.mn,'AL_0048'), allExperiments))
+        fprintf('[TFRUN] AL_0048 present. Expected set = 4 session-datasets.\n');
+    else
+        fprintf(2,['[TFRUN] AL_0048 IS MISSING -- this run is 3 sessions, not 4.\n' ...
+                   '        Check the [BLI] output above. Most likely: the hand-drawn ROI for\n' ...
+                   '        this mouse does not exist yet (TASKS: "Draw ONE ROI for AL_0048"),\n' ...
+                   '        or the lab share is unreachable.\n']);
+    end
 end
 
-%% ---- (2) fit every session over the MATCHED amplitude range ---------------------------
-% Why matched: h(t) is amp^2-weighted, and the sessions do not span the same drive range
-% (AL_0033 0.5-4.9 V over 9 amps; AL_0041 e1 0.8-2.7 V over 4). An unrestricted fit would
-% take AL_0033's time constants from its ~4 V responses and AL_0041's from ~2.7 V, so any
-% tau difference could be an amplitude-range artefact rather than a session difference.
-% Full-range fits are computed too, and reported as the secondary row.
+%% ---- (2) fit every session over ALL of its amplitudes ----------------------------------
+% ALL AMPLITUDES, EVERY SESSION (user, 2026-08-10). h(t) is built from amplitude-NORMALISED
+% responses (DF/uA), so every amplitude is already on a common scale and there is nothing to
+% equalise by throwing data away.
+%
+% ⚠ WHY THE MATCHED-RANGE REFIT WAS REMOVED, not just switched off. It restricted every
+% session to the amplitude window they all share, and that window is set by the NARROWEST
+% session. AL_0048 fires at 0.4 / 1.0 / 1.6 V, so adding it collapses the common window to
+% roughly [0.8, 1.6] V -- and `imp_tf_fit_session` returns ok=false for any session left with
+% fewer than 2 amplitudes in range. The refit was therefore SILENTLY DROPPING sessions, which
+% is exactly how a 4-session run reported 3. Adding a session must never remove one.
+%
+% The confound it was defending against (h is amp^2-weighted, so an unrestricted fit takes
+% AL_0033's time constants from its ~4 V responses and AL_0041's from ~2.7 V) is real, but it
+% is now DISPLAYED rather than controlled away: panel TF-C plots tau from per-amplitude refits,
+% so any amplitude dependence of the dynamics is visible on the figure. Showing it beats
+% hiding it behind a restriction that costs data and sessions.
+%
+% Set RUN_MATCHED = true to compute the matched-range fits as a SECONDARY diagnostic. They
+% never become the primary set.
+if ~exist('RUN_MATCHED','var') || isempty(RUN_MATCHED), RUN_MATCHED = false; end
+
 opt = struct('maxPoles',3,'maxZeros',3,'maxDelay',0,'tFit_s',0.5, ...
-             'per_amp_fit',true,'verbose',false,'ampRange',[],'nBoot',RUN_NBOOT);
+             'per_amp_fit',true,'verbose',true,'ampRange',[],'nBoot',RUN_NBOOT);
 
-fprintf('\n[TFRUN] full-range fits ...\n');
-Sfull = cell(nS,1);
-for k = 1:nS, Sfull{k} = imp_tf_fit_session(allExperiments(k), fs, tWin, opt); end
-okF = cellfun(@(s) isfield(s,'ok') && s.ok, Sfull);
-assert(any(okF), '[TFRUN] no session produced a usable fit.');
+fprintf('\n[TFRUN] fitting %d sessions over ALL amplitudes ...\n', nS);
+Sprim = cell(nS,1);
+for k = 1:nS, Sprim{k} = imp_tf_fit_session(allExperiments(k), fs, tWin, opt); end
+Sfull = Sprim;  primTag = 'all amplitudes';
 
-% Common amplitude window across the sessions that fitted.
-lo = max(cellfun(@(s) min(s.ampFit), Sfull(okF)));
-hi = min(cellfun(@(s) max(s.ampFit), Sfull(okF)));
-if lo < hi
-    fprintf('[TFRUN] matched amplitude range = [%.2f %.2f] V -- refitting ...\n', lo, hi);
-    opt.ampRange = [lo hi];
-    Smatch = cell(nS,1);
-    for k = 1:nS, Smatch{k} = imp_tf_fit_session(allExperiments(k), fs, tWin, opt); end
-    okM = cellfun(@(s) isfield(s,'ok') && s.ok, Smatch);
-    if nnz(okM) < 2
-        warning('[TFRUN] matched range left <2 usable sessions -- falling back to full range.');
-        Sprim = Sfull;  primTag = 'full range';
+% ---- session accounting: a dropped session must be LOUD, never inferred from a count ----
+okF = cellfun(@(s) isfield(s,'ok') && s.ok, Sprim);
+fprintf('\n[TFRUN] session accounting: %d registered -> %d fitted, %d DROPPED\n', ...
+    nS, nnz(okF), nnz(~okF));
+for k = 1:nS
+    if okF(k)
+        fprintf('   OK      %-26s  %d amps used, range %.2f-%.2f V\n', Sprim{k}.label, ...
+            Sprim{k}.nAmpUsed, min(Sprim{k}.ampFit), max(Sprim{k}.ampFit));
     else
-        Sprim = Smatch;  primTag = sprintf('matched range %.2f-%.2f V', lo, hi);
+        fprintf(2,'   DROPPED %-26s  <- see the [TF] line above for the reason\n', ...
+            sprintf('%s %s e%d', allExperiments(k).mn, allExperiments(k).td, allExperiments(k).en));
     end
-else
-    warning('[TFRUN] amplitude ranges do not overlap -- using full-range fits.');
-    Sprim = Sfull;  Smatch = Sfull;  primTag = 'full range (no overlap)';
+end
+assert(any(okF), '[TFRUN] no session produced a usable fit.');
+if nnz(~okF) > 0
+    fprintf(2,['[TFRUN] %d session(s) did not fit. Do NOT report the surviving count as the\n' ...
+               '        dataset size without saying why the others dropped.\n'], nnz(~okF));
+end
+
+Smatch = {};
+if RUN_MATCHED
+    lo = max(cellfun(@(s) min(s.ampFit), Sprim(okF)));
+    hi = min(cellfun(@(s) max(s.ampFit), Sprim(okF)));
+    if lo < hi
+        fprintf('\n[TFRUN] SECONDARY diagnostic: matched range [%.2f %.2f] V ...\n', lo, hi);
+        optM = opt;  optM.ampRange = [lo hi];  optM.nBoot = 0;
+        Smatch = cell(nS,1);
+        for k = 1:nS, Smatch{k} = imp_tf_fit_session(allExperiments(k), fs, tWin, optM); end
+        okM = cellfun(@(s) isfield(s,'ok') && s.ok, Smatch);
+        fprintf('[TFRUN] matched-range fits usable in %d/%d sessions (primary set is unaffected).\n', ...
+            nnz(okM), nS);
+    else
+        fprintf(2,'[TFRUN] amplitude ranges do not overlap -- matched diagnostic skipped.\n');
+    end
 end
 
 %% ---- (3) the paper panels --------------------------------------------------------------
@@ -136,9 +190,15 @@ RB   = imp_tf_robust_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT,'amp
 %% ---- (4) the numbers the caption needs ------------------------------------------------
 okP  = cellfun(@(s) isfield(s,'ok') && s.ok, Sprim);
 idx  = find(okP);
-tau1 = cellfun(@(s) s.tau(1), Sprim(okP));
+% pickTau, not s.tau(1): tau is empty whenever the selected model has no stable pole
+% (tau = -1/Re(p) is only taken over poles with Re(p) < 0), so a marginally-stable or
+% unstable fit would crash the summary rather than report itself as NaN.
+tau1 = cellfun(@pickTau, Sprim(okP));
 sdW  = cellfun(@(s) ternNaN(isfield(s,'tauSD') && ~isempty(s.tauSD), @() s.tauSD(1)), Sprim(okP));
-mice = unique(cellfun(@(s) string(s.mn), Sprim(okP)));
+% UniformOutput=false then concatenate: cellfun's uniform mode is fussy about string
+% scalars across releases, and this cannot silently return the wrong shape.
+mnAll = cellfun(@(s) string(s.mn), Sprim(okP), 'UniformOutput', false);
+mice  = unique([mnAll{:}]);
 
 fprintf('\n=========================== [TFRUN] SUMMARY (%s) ===========================\n', primTag);
 fprintf('%-26s %8s %8s %18s %7s %7s\n','session','order','tau1 (s)','95%% CI','R2pool','LOAO');
@@ -148,12 +208,16 @@ for j = 1:numel(idx)
     if isfield(s,'tauCI') && ~isempty(s.tauCI)
         ci = sprintf('[%6.3f %6.3f]', s.tauCI(1), s.tauCI(2));
     end
-    fprintf('%-26s %4dp%dz %8.3f %18s %7.3f %7.3f\n', s.label, s.np, s.nz, s.tau(1), ci, ...
-        pickNum(s,'R2_pool'), mean(s.R2_loao,'omitnan'));
+    fprintf('%-26s %4dp%dz %8.3f %18s %7.3f %7.3f\n', s.label, s.np, s.nz, pickTau(s), ci, ...
+        pickNum(s,'R2_pool'), mean(pickVec(s,'R2_loao'),'omitnan'));
 end
-sdB = std(tau1);  mW = mean(sdW,'omitnan');
+sdB = std(tau1,'omitnan');  mW = mean(sdW,'omitnan');
 fprintf('-------------------------------------------------------------------------------\n');
-fprintf('tau1 across sessions : mean %.3f s,  between-session SD %.3f s\n', mean(tau1), sdB);
+fprintf('tau1 across sessions : mean %.3f s,  between-session SD %.3f s\n', mean(tau1,'omitnan'), sdB);
+if any(~isfinite(tau1))
+    fprintf('  !! %d of %d sessions returned NO STABLE POLE -- excluded from the tau stats above.\n', ...
+        nnz(~isfinite(tau1)), numel(tau1));
+end
 fprintf('mean within-session bootstrap SD  : %.3f s\n', mW);
 if isfinite(mW) && mW > 0
     fprintf('between/within ratio : %.2f   -> %s\n', sdB/mW, verdictRatio(sdB/mW));
@@ -173,6 +237,13 @@ if c, v = f(); else, v = NaN; end
 end
 function v = pickNum(s, fld)
 if isfield(s,fld) && ~isempty(s.(fld)), v = s.(fld); else, v = NaN; end
+end
+function v = pickVec(s, fld)
+if isfield(s,fld) && ~isempty(s.(fld)), v = s.(fld); else, v = NaN; end
+end
+function t = pickTau(s)
+% Slowest time constant, or NaN when the model has no stable pole.
+if isfield(s,'tau') && ~isempty(s.tau), t = s.tau(1); else, t = NaN; end
 end
 function s = verdictRatio(r)
 if r < 1.5

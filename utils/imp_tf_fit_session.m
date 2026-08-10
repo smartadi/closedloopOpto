@@ -53,7 +53,12 @@ def = struct('maxPoles',3,'maxZeros',3,'maxDelay',0,'tFit_s',0.5,'per_amp_fit',t
 fn = fieldnames(def);
 for i = 1:numel(fn), if ~isfield(opts,fn{i}) || isempty(opts.(fn{i})), opts.(fn{i}) = def.(fn{i}); end, end
 
-T = struct('label',sprintf('%s %s e%d', A.mn, A.td, A.en), 'ok',false);
+% Identity fields are carried SEPARATELY from `label`. `label` is a display string
+% (axis ticks, printouts); callers that need the mouse -- e.g. counting how many
+% ANIMALS the sessions come from, which the caption must state -- must not have to
+% parse it back out.
+T = struct('label',sprintf('%s %s e%d', A.mn, A.td, A.en), ...
+           'mn',A.mn, 'td',A.td, 'en',A.en, 'ok',false);
 Ts = 1/fs;
 
 DF   = A.DF_imp;
