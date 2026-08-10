@@ -8,45 +8,47 @@
 
 ## Scientific Claims to Fix (require analysis before editing)
 
-These claims have identified problems and must be revisited before submission. Each has a `\todo{}` marker in `results_edit.tex` pointing to the issue.
+> ⚠ **The live results file is `results.tex`** — the `results_edit.tex` name was retired. Line numbers below
+> predate that rename and are indicative only; grep for the claim text, not the line.
 
-- [ ] **Linearity claim too broad** (`results_edit.tex`, linearity paragraph): The paper tests linearity using peak ΔF/F vs amplitude only. Either (a) show that full trial-averaged waveforms superimpose after amplitude normalization, or (b) keep the "peak response scales approximately linearly" framing — but verify it is defensible as stated. Critical because the controller design assumes LTI dynamics.
+These claims have identified problems and must be revisited before submission.
 
-- [ ] **Step-response internal tension** (`results_edit.tex` L49, `discussion.tex` L13): Text says "remained within a bounded set... consistent with marginally stable oscillatory dynamics" but the LTI claim implies convergence to steady state. Either state that the 3 s window is too short to observe steady state, or narrow the claim to what the step response actually shows (bounded, not converging).
+- [ ] **Linearity claim too broad** (`results.tex`, linearity paragraph): The paper tests linearity using peak ΔF/F vs amplitude only. Wording was softened to "well approximated by a linear relationship" (2026-06-29), but the *range* over which proportionality holds is still unstated. **Now answerable:** `imp_tf_xsess.m` computes `gRatio = gFree/uA`, flat under LTI and falling where the response compresses — the AL_0033 Local dip already turns over above 3.7 V (−1.68 → −1.51 → −1.35). Replace "approximately linear" with a stated amplitude bound once that runs.
 
-- [ ] **Variance-convergence paragraph** (`results_edit.tex` L52): "Batch-mean variance decreasing with trial count" is a CLT consequence for *any* finite-variance process, including drifting ones. What you actually need to show is that the *batch mean itself* converges to a stable value across batch sizes. Verify whether Fig. S1 shows this; rephrase accordingly.
+- [ ] **Step-response internal tension** (`results.tex` step paragraph, `discussion.tex` L13): Text says "remained within a bounded set... consistent with marginally stable oscillatory dynamics" but the LTI claim implies convergence to steady state. Rewritten 2026-06-29 with the integral-term motivation, but it still does **not** explicitly state that the 3 s window is too short to observe steady state. Confirm whether that caveat is wanted; one sentence if so.
 
-- [ ] **"Stimulation onset did not affect variance" claim** (`results_edit.tex` L50): **CLAIM IS WRONG — REVISE.** Variance slope analysis (n=13 OL sessions) shows pre-onset slope = −0.04 ± 0.14 (approx zero, high session variability) but post-onset slope = −0.57 ± 0.24 (ΔF/F)²/s — consistently negative. OL stimulation itself reduces variance during the stim window. Revised claim should be: *"Open-loop stimulation modestly reduced across-trial variance during stimulation (post-onset slope −0.57 ± 0.24 (ΔF/F)²/s, vs. near-zero pre-onset slope −0.04 ± 0.14, n = 13 sessions); closed-loop feedback produced a further and more consistent reduction."* This actually strengthens the paper — even OL reduces variance, CL does so more. Remove the `\todo{}` and rewrite L50 accordingly.
+- [x] **Variance-convergence paragraph** — CLOSED 2026-06-29. Now shows per-trial mean stationarity, not just shrinking variance (`results.tex`).
 
-- [ ] **"Three independent sessions" for linearity** (`results_edit.tex` L36): n=3 is low given that Fig. 3 uses ~13 sessions. Either add remaining sessions or state the explicit selection criterion. Add n+CI on slope estimates.
+- [x] **"Stimulation onset did not affect variance" claim** — CLOSED 2026-06-29. Rewritten with the measured slopes: post-onset −0.57 ± 0.24 (ΔF/F)²/s vs near-zero pre-onset −0.04 ± 0.14 (n = 13 OL sessions); CL reduces variance further and more consistently.
+
+- [ ] **"Three independent sessions" for linearity** (`results.tex`): n=3 is low given that Fig. 3 now uses **15** sessions. n=3 is stated; the **slope ± CI is still missing** and is blocked on `dose_response.m` emitting fit CIs (do not fabricate). ⚠ The 3 impulse sessions come from **2 mice** (AL_0041 e1/e2 are the same animal) — say so.
 
 ---
 
 ## Manuscript corrections (Closedloop_edit)
 
-### results_edit.tex
-- [x] L16: Resolve `\aditya{}` comment about physiological delay — written out as proper sentence
-- [x] L37: "This prompts to the fact" → "This suggests" — already fixed in file
-- [x] L37: "a open loop" → "an open loop" — already fixed in file
-- [x] L37: "supplimentary" → "supplementary" — already fixed in file
-- [x] L37: Resolve `\aditya{add the figure as supplementary}` todo — already fixed in file
-- [x] L54–55: Figure references `fig:figure1D` → `fig:figure2` — already fixed in file
-- [x] L80–81: Figure 3 caption panel ordering — already correct in file
-- [ ] L89: Fill in actual gain values for Kp and Ki (currently [X] placeholders) — defer, need data
+> Closed items retired 2026-08-10 — the full list of what was fixed lives in RESEARCH.md / TASKS.md ✅.
+> Only OPEN items remain below. **`results_edit.tex` is retired → `results.tex`.**
+
+### results.tex
+- [x] 2026-06-29 — All typo/ref/`\aditya{}` items closed; Kp/Ki/Kr placeholders filled (Kr = 0.1, Kp = 0.07, Ki = 0.1); broken cross-refs resolved grep-clean.
+- [ ] Three content `\todo` gaps remain: §pre-stim brain state, §low-freq spectral attribution, §contra→ipsi prediction — all blocked on analysis, see TASKS 🔴.
+- [ ] **Fig 3 preamble says "13 sessions across two mice"** — now **15 sessions across four mice** (AL_0048/AL_0051 added as m14/m15, 2026-07-30). Update wherever the cohort is stated.
 
 ### discussion.tex
-- [x] L3: Duplicate "to" in steady-state sentence — already fixed in file
-- [x] L39: "differes" → "differs" — already fixed in file
-- [x] L67: "the=is controller" → "this controller" — already fixed in file
-- [x] L87: Incomplete sentence — completed: "...so that the predicted tracking error over a future horizon is minimized."
+- [x] 2026-06-29 — All typo/incomplete-sentence items closed.
 
 ### main.tex
-- [x] L85: Removed `\aditya{separately editing}`, uncommented `\input{introduction}`
-- [ ] L63–67: Fill in real author names and department affiliations — waiting on user input
+- [x] 2026-06-29 — `\input{introduction}` uncommented.
+- [ ] L62–67: Fill in real author names and department affiliations — **blocked on AL**.
 
 ### methods_edit.tex
-- [x] L110: `\ref{fig:2}C` label format — already fixed in file
-- [x] L447: `\ref{fig:4}A` label format — already fixed in file
+- [x] 2026-06-29 — Label-format items closed; §gain_opt written with `fig:cost_landscape`.
+- [ ] Add the **disturbance-rejection metric** paragraph — ⚠ **in energy-ratio units** `‖y_actual‖²/‖y_disturbance‖²` (1 = no work, <1 = controller gain), NOT ρ (Nick 2026-07-28). **ON AL APPROVAL.**
+- [ ] Add `\label{sec:disturbance}` so the low-freq `\todo` ref resolves; delete orphan `methods.tex` / `introduction_temp.tex`.
+- [ ] Add Chrimson spatial-spread citation (Nuo Li / Svoboda) — needs the exact paper from AL, not in `refs.bib`.
+- [ ] State the **AL_0048 readout caveat** if that session backs any local-effect or actuator-TF claim: its inhibitory readout sits ~2.6 mm from the illumination, so its impulse response is that of a *connected* region, unlike AL_0033/AL_0041 where site and spot coincide.
+- [ ] Confirm **AL_0034** is introduced at first mention (it appears only in the tuning methods figure; the session cohort names AL_0033/AL_0039/AL_0048/AL_0051).
 
 ---
 
@@ -56,7 +58,7 @@ These claims have identified problems and must be revisited before submission. E
 
 ### Paper story (figure-level) — updated 2026-07-29
 - **Fig 1 — System architecture.** Widefield + opto interface, SVD readout, control-loop schematic.
-- **Fig 2 — System properties.** Impulse response + step response with **their LTI (TF) fits**; state dependence on the **raw trial**; state dependence of the **residual**.
+- **Fig 2 — System properties.** Impulse response + step response with **their LTI (TF) fits**; state dependence on the **raw average trial**; state dependence of the **residual stim only activity**.
 - **Fig 3 — Controller results.** Closed-loop vs open-loop (single-session example + cross-session summary).
 - **Fig 4 — Controller state dependence.** Three blocks, in order: (1) **trial-average state dependence** — pre-stim state (contra-derived Global level) → true trial outcome, OL steep vs CL flat (`ctrl_state_dependence.m`); (2) **error-contribution model** — per-trial RMSE regressed on **initial deviation**, **motion**, **relative δ power** (`cl_mse_factors.m` / `cl_rmse_factor_windows.m`); (3) **residual-based state dependence** — disturbance rejection ρ = ‖A−ref‖/‖G‖ vs motion & δ quartiles (`internal_model_principle.m` `[IMP-STATE-QUARTILE]`).
 - **Fig 5 — Feedforward / preview model.** Single-session results on **s3** (dark-screen session) + **combined stats across s1/s2/s3** (total RMSE, total variance, phase lag).
@@ -79,13 +81,15 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 1F | Fig1 | *(latency image)* | — | — | — | pending |
 | 2A | Fig2 | paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf | 5 × 4 | vector | ±1 SD | trace_overlay.m — ±1 SD ribbon added 2026-07-16 (subset lowest+highest amp; faint fill α=0.08 + envelope outlines) |
 | 2B | Fig2 | paper/images/figure2/imp_response.pdf | 5 × 4 | vector | — | dose_response.m |
-| 2C | Fig2 | paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf | 6 × 4 | vector | ±std | done |
+| 2C | Fig2 | paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf | 6 × 4 | vector | ±std | done — **single session**; superseded by 2C-i/2C-ii below once those are cut |
+| 2C-i | Fig2 | *(pending — `tfx_lti_across_sessions.png` exists, not yet a panel)* | 6 × 4 | vector | — | **PENDING.** Peak-normalised h(t), ALL sessions on the session gradient, measured solid / fit dashed (mirrors 2I). `imp_tf_xsess.m` (2026-08-05) |
+| 2C-ii | Fig2 | *(pending)* | 4 × 4 | vector | 95% CI | **PENDING.** τ forest with bootstrap CIs — **matched amplitude range primary** (filled), full range open, cross-session mean ± SD band. Between/within SD ratio ≈1 ⇒ one shared time constant. ⚠ Caption must state the 3 sessions are **2 mice** (AL_0041 e1/e2 = same animal) |
 | 2D | Fig2 | paper/images/figure2/step_response.pdf | 6 × 4 | image 300dpi | — | step_response.m |
 | 2E | Fig2 | paper/images/figure2/onset_variance_slope.pdf | 6 × 4 | vector | ±SEM | OL variance trace + slope lines; gray traces, red stim lines |
 | 2F (supp) | Supp | paper/images/supplementary/imp_motion_devscatter_*.png | 6 × 4 | PNG 300dpi | — | Single-session only (selExp_mot=3); supplementary, not paper panel |
 | 2F | Fig2 | paper/images/figure2/imp_motion_devscatter_all_sessions.pdf | 4 × 4 | vector | — | motion z-score vs inhib dev, all sessions pooled; impulse-analysis/motion_analysis.m fig_mvp |
-| 2G | Fig2 | paper/images/figure2/prevar_vs_dev_allamps_motexcl_AL_0033_2025-01-29_en1.pdf | 4 × 4 | vector | — | pre-stim var vs inhib dev per amplitude (motion excluded); impulse-analysis/prestim_variance.m fig_pvm |
-| 2H | Fig2 | paper/images/figure2/prevar_heatmap_with_blockfit.pdf | 7 × 4 | vector | — | heatmap (freq×trial sorted by pre-stim var) + trial-rank scatter + delta-power scatter; impulse-analysis/prestim_variance.m fig_pvs |
+| 2G | Fig2 | paper/images/figure2/prevar_vs_dev_allamps_motexcl_AL_0033_2025-01-29_en1.pdf | 4 × 4 | vector | — | ⚠ **CONTESTED — do not assemble yet.** Built on **pre-stim variance**, retracted 2026-07-01 as a signal-power confound. impulse-analysis/prestim_variance.m fig_pvm. User is resolving the confound question separately (2026-08-05) |
+| 2H | Fig2 | paper/images/figure2/prevar_heatmap_with_blockfit.pdf | 7 × 4 | vector | — | ⚠ **CONTESTED — same pre-stim-variance confound as 2G.** heatmap (freq×trial sorted by pre-stim var) + trial-rank + delta-power scatters; impulse-analysis/prestim_variance.m fig_pvs |
 | 3A | Fig3 | paper/images/figure3/panel_A.pdf | 8.9 × 4 | vector | — | utils/analysisPlots_combined.m — single trial OL\|CL |
 | 3B | Fig3 | paper/images/figure3/panel_B.pdf | 8.9 × 4 | vector | ±std | utils/analysisPlots_combined.m — all trials + avg OL\|CL |
 | 3C | Fig3 | paper/images/figure3/panel_C.pdf | 8.9 × 3 | vector | — | utils/analysisPlots_combined.m — avg inputs OL\|CL |
@@ -95,8 +99,10 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3G | Fig3 | paper/images/figure3/all_average_sessions.pdf | 3 × 4 | vector | ±SEM | step_response.m fig_H — per-session faint + bold mean |
 | 3H | Fig3 | paper/images/figure3/all_MSE_sessions.pdf | 7.8 × 4 | image 300dpi | — | variance_mse.m fig_G — cross-session MSE violin; mean dot too large (open task) |
 | 3I | Fig3 | paper/images/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_Fr — OL/CL variance ratio: Pre/Stim/Post; Wilcoxon stars |
-| 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post |
-| 2I (was 3K) | Fig2 | paper/images/figure3/ol_tf_trial_avg.pdf | 6 × 4 | vector | — | tf_fit.m fig_tf_paper — **MOVED to Fig 2 (2026-07-23)** as the step-response LTI fit, beside the impulse TF fit (2C). ONE axis, all 3 sessions on the session gradient, solid = OL trial mean, dashed = TF fit. Orders AIC-picked with np capped at 2 (R² 0.22/0.77/0.89). Export path still under figure3/ — move to figure2/ on next regen |
+| 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre/0–1s/1–3s/Post. ⚠ filename still says "MSE"; metric is RMSE |
+| 3K | Fig3 | paper/images/figure3/pooled_ol_cl_rmse_15sess.pdf | 5 × 4 | vector | — | **NEW 2026-07-30** — per-session median OL vs CL RMSE, **all 15 sessions**, m14/m15 outlined black. `controller-analysis/pooled_new_mice.m`. **CL < OL in 14/15, signrank p = 1.2e-4.** Lean load (`load(path,'data')`) — never holds `d`. This is the cross-session headline; placement in the Fig 3 layout still TBD |
+| 2I (was 3K) | Fig2 | paper/images/figure2/ol_tf_trial_avg.pdf | 6 × 4 | vector | — | tf_fit.m fig_tf_paper — **MOVED to Fig 2 (2026-07-23)** as the step-response LTI fit, beside the impulse TF fit (2C). ONE axis, all 3 sessions on the session gradient, solid = OL trial mean, dashed = TF fit. Orders AIC-picked with np capped at 2 (R² 0.22/0.77/0.89). ✅ Export path moved to `figure2/` (verified 2026-08-10) |
+| N1–N4 | Fig3 supp? | paper/images/newmice/{AL_0048,AL_0051}/ctrl_{trialavg,variance,rmse,input}.pdf | 6×4 / 5.5×4 / 4.2×5.4 / 6×4 | vector | ±std | **NEW 2026-07-30, placement UNDECIDED.** Paper-styled single-session panels for the two new mice (last-100 locked-Kp block). `new_mice_paper_panels.m`. Input panel is in **mW** (`laser_v2mw`); active laser differs by mouse (AL_0048 = 638 nm, AL_0051 = 594 nm). Per-session RMSE is **n.s.** (p=0.48/0.43) — the CL benefit is in the mean trace; significance comes from pooling (3K). No single-trial or avg-input equivalent of 3A/3C (this build has no valid `d.inpVals`) |
 | 5A | Fig5 | *(feedforward control system — illustrator)* | 6 × 4 | — | — | external; physical row 1 |
 | 5B | Fig5 | paper/images/figure5/sine_5B_single_trial_AL_0048_2026-07-21_1.pdf | 11.4 × 3.5 | vector | — | one representative trial, all 4 modes in one panel + reference; **no x-axis** (shares col1 time base) |
 | 5C | Fig5 | paper/images/figure5/sine_5C_trialavg_AL_0048_2026-07-21_1.pdf | 11.4 × 3.5 | vector | ±SEM | trial average, all 4 modes + reference; **no x-axis** (shares col1 time base) |
@@ -115,17 +121,69 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | T-C | Methods fig:cost_landscape | paper/images/tuning/autotune_convergence_both.pdf | 12 × 8 | vector | — | AUTO-TUNE convergence, BOTH mice side-by-side (AL_0033 03-17 + AL_0034 10-25 e1); accepted Kdata/Kval — (Kp,Ki) path + cost staircase (16.6→12.3 / 11.9→4.6). Singles also exported: `autotune_convergence_AL_0033_0317.pdf`, `..._AL_0034_1025e1.pdf` |
 
 > **Fig 5 sine-wave (feedforward) section — AL_0048, right/inhibitory, 1 Hz sine, 4 s.** Source: `bilateral/sine_ff_paper_panels.m` (run after `bilateral/load_bilateral.m`). Design is **4-mode**, not OL-vs-CL binary: `ff_analysis_cond` 2=OL, 1=OL+preview, 3=CL, 0=CL+preview (rig "FF Analysis" button). Colour code (2026-07-23): **OL = red, OL+preview = orange, CL = blue, CL+preview = green**. Input command in each panel is **gray (solid, bold)** — context, not a compared quantity, so it never carries the mode colour (mode colour is reserved for the response).
-> **Single session (2026-07-21 decision)** — `2026-07-14/1` (200 trials; Kp .08, **Ki 0**, Kref .05, amp 2). The second session `2026-07-01/6` (87 trials; Kp .08, **Ki .01**, Kref .075, amp 3) is **excluded from the figure** but stays on record below, because two claims were resting on it.
-> **Paper-ready claims (this session):** (a) **Feedback reduces tracking error** — OL vs CL Wilcoxon **p=0.00077 (n=97)**. (b) **Preview cancels the plant's phase lag** — OL 168→15 ms, CL 101→−26 ms; `previewT_steps=5` = **143 ms @35 Hz ≈ the measured ~160 ms lag**, i.e. the lookahead is matched to the delay. (c) **CL+preview shows by far the largest within-trial error reduction** — RMSE 0–1 s → 1–4 s falls **4.01 → 3.67 (−0.34)**, against −0.08 (OL), +0.08 (CL) and +0.09 (OL+prev) — panel **5E**.
-> **✅ Recomputed in RMSE (2026-07-21, `sine_ff_plots_combined.m`).** Per-mode trial RMSE, mean ± SEM (median), n: **OL 4.10 ± 0.26 (3.82) n=51 · OL+prev 4.04 ± 0.41 (3.55) n=46 · CL 3.27 ± 0.32 (2.80) n=46 · CL+prev 3.42 ± 0.21 (3.30) n=57.** Across-trial variance over 0–4 s (variance units, unaffected by the metric change): **OL 17.93 · OL+prev 23.20 · CL 14.76 · CL+prev 13.96.** p-values reproduced exactly as predicted (OL vs CL p=7.709e-4; OL vs OL+prev p=0.317).
-> **⚠ Claim (c) was overstated and is now corrected.** It previously read "the **only** mode whose error falls within the trial". It is not: **open loop also falls** (−0.08). The computation is unchanged (CL+prev 16.07→13.45 MSE = 4.01→3.67 RMSE), so the old wording was simply never checked against the other three modes. What survives is the *margin* — CL+prev falls ~4× more than any other mode, and it is the only mode where the drop is large relative to its SEM.
-> **⚠ Preview's direction flips under RMSE — do not state a sign.** Mean MSE said preview *raised* OL error (20.2→23.7); mean RMSE says it marginally *lowered* it (4.10→4.04). Both are descriptively unstable because mean-MSE is outlier-dominated (squaring amplifies the ~10 motion trials) while sqrt compresses them. The honest statement is the rank test: **preview has no significant effect on tracking error (p=0.32)**; its real, robust effect is on phase (panel 5H) and on OL variance (17.93→23.20).
-> **⚠ What dropping 2026-07-01/6 costs:** claim (a) was previously the *robust* result precisely because it held across **both** parameter settings (p=0.0046, n=43 there; p=0.00077, n=97 here). As a single-session figure it is now **one Ki=0 session, unreplicated in-figure**. The 07-01 numbers are not wrong — they are just no longer shown. If a referee presses on n=1, the fastest answer is to restore 07-01 as a supplementary panel rather than re-run anything. Claim (c) likewise held in both (14.41→11.88 there).
-> **Claims caveats (read before writing):** (i) **Preview has no significant effect on tracking error** (p=0.32; mean RMSE OL 4.10 vs OL+prev 4.04 — a difference well inside the SEMs, and of *opposite sign* to the old MSE figure, see above). It does raise OL across-trial variance (17.93→23.20). Report preview as **lag-cancellation + settling, not an error reduction**. In 07-01 preview *did* help (28.2→20.6), so the effect is parameter-dependent and **Ki=0 here is the prime suspect**; a matched-parameter rerun is the clean test. (ii) dF/F is **uncorrected blue SVD** (`corr/` holds only temporal comps; `getpixel_dFoF` falls back to blue). (iii) This session's MSE distribution has heavy outliers (trials to ~250–300) — motion exclusion (`motThresh=1.5`) not yet applied; Wilcoxon is rank-based so p-values hold, but means are skewed. (iv) Onsets come from `traj_on` epochs, NOT `findStims` (whose `horizon` fallback puts them ~36 s early — see RESEARCH.md 2026-07-15). Full detail: RESEARCH.md.
+> **Primary session = s3 `2026-07-21/1`** (dark screen), suffix `AL_0048_2026-07-21_1`, `SESSION_TAG='s3'` is the script default. n per mode [62 45 34 57]. Sessions s1 `2026-07-01/6` and s2 `2026-07-14/1` are **not shown as single-session panels** but ARE the other two points in the combined 5I/5J/5K.
+>
+> **Where each claim now lives — the split is deliberate:**
+> - **(a) Feedback reduces tracking error → combined 5I/5J, NOT the single session.** s3's own OL-vs-CL is **n.s. (p=0.36)**; the claim rides on **CL < OL in all 3 sessions** for both RMSE and variance. Cross-session: OL vs CL **p=1.5e-4** (`sine_ff_across_sessions.m`, drowsy-excluded, 16/478 trials dropped at pre-stim var > median+2.5·SD). ⚠ **Friedman across sessions is n.s. (n=3, p=0.060) — underpowered; do not overstate.**
+> - **(b) Preview cancels the plant's phase lag → 5C (illustration) + 5K (quantified).** Replicates cleanly on s3: OL 60°, OL+prev −9°, CL 37°, CL+prev −24°; preview lookahead = 62°. `previewT_steps=5` = **143 ms @35 Hz ≈ the measured ~160 ms lag** — the lookahead is matched to the delay by design.
+> - **(c) Preview does NOT reduce tracking error.** OL vs OL+prev **n.s. (p=0.49** across sessions; p=0.32 on s2). Report preview as **lag cancellation, not error reduction**. The narrative is: **RMSE win = feedback; phase win = preview.**
+>
+> **⚠ Retired claims — do not resurrect (both were s2-only and are false or unsupported on s3):**
+> - *"CL+preview is the only mode whose error falls within the trial"* — **FALSE on s3**, where OL falls most (early→late OL −0.40, OL+p +0.09, CL +0.06, CL+p −0.02). Removed 2026-07-29. The old s2 numbers (4.01→3.67) must not appear in the caption.
+> - *Preview's sign on error* — flipped between mean-MSE and mean-RMSE on s2 (outlier-dominated). Superseded by the rank test in (c).
+>
+> **Caveats (read before writing):** (i) dF/F is **uncorrected blue SVD** (`corr/` holds only temporal comps; `getpixel_dFoF` falls back to blue). (ii) Onsets come from `traj_on` epochs, NOT `findStims` (whose `horizon` fallback puts them ~36 s early — RESEARCH 2026-07-15). (iii) **n = 3 sessions, one mouse (AL_0048), one hemisphere (right/inhibitory)** — Nick has asked for a water-restricted repeat before any stats claim. (iv) s3 pixel MUST be `pixel_R = [407 367]` (galvo sign-flip); see [[project_bilateral_sine_s3]]. Full detail: RESEARCH.md.
 
 > Secondary-analysis "controller tuning" figure (gain grid + auto-tuning). **METHODS-ONLY** (AL 2026-06-29): lives as `fig:cost_landscape` in `methods_edit.tex` §gain_opt (A=grid 03-05, B=grid 10-17 cross-mouse, C=autotune both mice) — NO Results section / no main figure number.
 > **Paper-ready panel set:** **Grid** — T-A cost surface AL_0033 03-05 + T-B AL_0034 10-17 (cross-mouse basin replication). **Auto-tune** — T-C convergence in BOTH mice side-by-side (cost descends monotonically → the model-free tuner works across mice). **Same-mouse link:** AL_0033 grid basin (T-A, ≈0.05,0.1) ≈ where AL_0033 autotune settles (T-C left, 0.068,0.064).
 > **Methods/claims caveats (read before writing):** (a) cost = `mean(||y−ref||₂)` over t=0–3 s (per-session `cwin`; **T-B/10-17 uses [0 4] s** because it ran dur=4), y=`states.csv` (% ΔF/F, online kernel-mean), ref=−5; (b) autotune = greedy zero-order, accept-if-cost-lowered; show trajectories from accepted `Kdata`/`Kval`, NOT `input_params` (which logs rejected probes); (c) only 03-17 (+10-25 e1) are valid convergence demos — 12-19 had a dead online cost (random walk), 10-25 e2 stuck at (0,0); (d) grid↔autotune comparisons are SAME-MOUSE only; (e) the rig autotune cost/annealing was fixed 2026-06-29 (StLab_Rainier) for FUTURE runs — recorded sessions predate it. Full detail: FINDINGS.md + controller-tuning/CLAUDE.md.
+
+---
+
+### 🗂 Figure asset policy — **PDF means locked** (adopted 2026-08-10)
+
+The one rule: **a `.pdf` under `paper/images/figureN/` is a panel that is locked in and linked by an
+Illustrator file. Nothing else may be a PDF there.** Exploratory output, variants, sweeps, per-session
+diagnostics and dead panels are PNG, and they live outside the figure folders. If you are unsure whether
+a panel is locked, it is not — export PNG.
+
+| Location | Contains | Format | Rule |
+|---|---|---|---|
+| `paper/images/figureN/` | **only** the panels listed in "Paper panels in use" | PDF (vector) or 300 dpi PNG for heatmaps | one file per panel, **no session suffix, no `_cb`/`_z`/metric variants, no duplicates** |
+| `paper/images/*.ai` + assembled `FigureN.pdf` | Illustrator assemblies + their exports | — | assemblies live one level ABOVE the panel folders, never inside them |
+| `paper/explore/<topic>/` | everything else — sweeps, diagnostics, rejected panels, per-session variants | **PNG only** | free-for-all; never linked by Illustrator |
+| `paper/_archive/` | superseded assets, path-preserved | as-was | move here, never delete — an Illustrator relink can find them at the mirrored path |
+
+**Why it matters right now:** `paper/` root holds **stale May copies** of `panel_A–E`, `step_response`,
+`imp_response`, `ol_tf_trial_avg`, `all_MSE_sessions`, `tf_data_vs_model_*` and `svd_frame_*` whose live
+versions in `images/figureN/` are from July/August. A relink or a manual grab from the root silently pulls
+a three-month-old panel into the figure. This is the `paper_root` CWD-dependence bug (TASKS) made visible.
+
+**Current violations (audit 2026-08-10, `paper/images/`):**
+
+| Folder | PDFs | Verdict |
+|---|---|---|
+| `figure4/` | **54** | **Graveyard.** 30 are the *old Fig-5 sine panels* (`sine_4A–4F`, `sine_panel_A–F`, both retired sessions) superseded by `figure5/sine_5*`. 18 are the exploratory `factor_*`/`claim*` grid incl. `_z` variants. `wb_*` are unassigned. **Zero of the actual planned 4A–4E exist.** |
+| `figure5/` | 19 | Holds **both** the retired 07-14 AND current 07-21 panels for 5B–5H, plus dropped 5G/5H, plus `Figure4.ai`/`Figure4.pdf`/`Figure5.pdf` assemblies sitting inside a panel folder |
+| `figure2/` | 19 | 8 are in use; the rest are `_cb`, `_cperr`, `_peakdev` metric variants and `prevar_*` alternates |
+| `figure3/` | 12 | Cleanest — 11 in use + one assembly (`Figure3_extra.pdf`) |
+| `predictor_saga/` | 0 (51 PNG) | Correct format, wrong place — this is `explore/` material |
+| `paper/` root | **61 PDF + 179 PNG** | Pre-reorg dumping ground + stale duplicates of live panels |
+
+**Decluttering, in order of payoff:**
+1. **Kill the root duplicates first** — highest risk, lowest effort. Nothing should export to `paper/` root.
+2. **Fix the export-path bug at the source** so it cannot recur: anchor `paper_root` to
+   `fileparts(mfilename('fullpath'))`, not to a CWD-dependent `exist()` probe (TASKS, found 2026-07-17).
+3. **Empty `figure4/`** into `_archive/` — it is 100% dead or exploratory, and its name now collides with
+   the state-dependence figure that will need the folder.
+4. **One session per figure folder.** Drop the `_<mouse>_<date>_<exp>` suffix on locked panels; the session
+   is recorded in this table and in the caption. Suffixes exist to let two sessions coexist — which is
+   exactly the ambiguity that put the wrong session in the Fig 5 caption for three weeks.
+5. **Variants (`_cb`, `_z`, `_cperr`, `_peakdev`) are PNG in `explore/`**, never PDF beside the panel.
+   Exception: the colourblind set, once adopted, *replaces* the panel rather than sitting next to it.
+6. **Make `paperExport` enforce it** — one helper that takes a panel ID, refuses to write a PDF for an ID
+   not in the "Paper panels in use" table, and sends everything else to `explore/` as PNG. The registry
+   then cannot drift from the folder, because the folder is generated from the registry.
 
 ---
 
@@ -310,17 +368,17 @@ section1:
     row3:  3H(7.8×4)
 
 section2:
-  row1:  3I(5×4)  3J(5×4)
-
-supp:  3K(12×4)
+  row1:  3I(5×4)  3J(5×4)  3K(5×4)
 ```
+> **3K = the new 15-session pooled RMSE panel** (`pooled_ol_cl_rmse_15sess.pdf`), NOT the old step-TF fit —
+> that moved to Fig 2 as **2I** on 2026-07-23. Section 2 is now the three cross-session summary panels.
 Fit checks (last computed, gap=0.3):
 - col2 row1 @H=3.5: D(3→3.00) E(3→3.50) + 0.3 = **6.8/7.8** ✓ (+1.0)
 - col2 row2 @H=4.0: F(3→3.43) G(3→3.00) + 0.3 = **6.7/7.8** ✓ (+1.1)
 - col2 row3: H(7.8) = **7.8/7.8** ✓ (exact fit — updated from 8×4)
 - col1 heights: 4+4+3 + 2×0.3 = **11.6 cm** total
 - Row height match: row1 A=4 vs D/E=3.5 (⚠ 0.5 cm gap) · row2 B=4 vs F/G=4 ✓ · row3 C=3 vs H=4 (⚠ 1.0 cm gap)
-- section2 row1: 5+5 + 0.3 = **10.3/17** ✓ (+6.7 — can widen panels)
+- section2 row1: 5+5+5 + 2×0.3 = **15.6/17** ✓ (+1.4) — updated 2026-08-10 for 3K
 
 ---
 
@@ -392,53 +450,54 @@ Fit checks: **pending** — sizes set once panels are re-exported at paperStyle 
 
 #### Fig 5  [total=17  gap=0.3]
 Sine-wave (feedforward) section — panels exported individually, stitched in Illustrator.
-**Single session: `2026-07-14/1`** (200 tr, Ki 0). The second session `2026-07-01/6` is
-excluded from the figure (2026-07-21 decision) — no `_s1`/`_s2` suffixes, one file per panel.
+**Primary session: s3 = `2026-07-21/1`** (dark screen; suffix `AL_0048_2026-07-21_1`).
+Sessions s1 `2026-07-01/6` and s2 `2026-07-14/1` appear **only as points inside 5I/5J/5K**.
 **All four modes live in ONE panel** per trace figure (not 4 separate per-mode panels) —
 mode is encoded by colour, so 5B/5C/5D each carry all of OL / OL+prev / CL / CL+prev.
 ```
 row1:  5A(6×4)[ext]   5E(5.2×4)   5F(5.2×4)
 
 row2:  col1[11.4]:  5B(11.4×3.5) / 5C(11.4×3.5) / 5D(11.4×3.5)
-       col2[5.3]:   5G(5.3×5.4)  / 5H(5.3×5.4)
+       col2[5.3]:   5I(5.3×3.5) / 5J(5.3×3.5) / 5K(5.3×3.5)
 ```
 Panel key: **5A** system diagram · **5B** single trial · **5C** trial average ·
 **5D** trial-average input · **5E** RMSE over time · **5F** across-trial variance ·
-**5G** trial-RMSE distribution · **5H** phase lag.
-Letters run in logical order (A schematic → B–D the trial stack → E–F the summary series →
-G–H the distributions); the *physical* top row is therefore A, E, F.
+**5I** across-session RMSE · **5J** across-session variance · **5K** across-session phase lag.
+Physical top row is A, E, F. **5G/5H (single-session violin + phase) were DROPPED 2026-07-29** —
+the combined panels replaced them; the script still emits them, they are not paper panels.
 
-Fit checks (gap=0.3 cm):
+Fit checks (gap=0.3 cm) — **recomputed 2026-08-10 for the 5I/5J/5K column:**
 - row1: 6 + 5.2 + 5.2 + 2×0.3 = **17.0/17** ✓ (exact)
 - row2: col1(11.4) + col2(5.3) + 0.3 = **17.0/17** ✓ (exact) — col1 ≈ **2/3 of the measure**
 - col1 inner height: 3×3.5 + 2×0.3 = **11.1 cm**
-- col2 inner height: 2×5.4 + 0.3 = **11.1 cm** ✓ (columns flush — this is what sets 5G/5H
-  height at 5.4: solve `2h + 0.3 = 3×3.5 + 0.6`)
-- **Total height: 4 + 0.3 + 11.1 = 15.4 cm** ✓ (well under a 23 cm page — ~7.6 cm spare)
-- Alternative if you want the taller house H=4 in col1: 5B/5C/5D at 11.4×4 → col2 at 5.3×6.15,
-  block 12.6, total **16.9 cm** — still fits. Current 3.5 keeps the trace aspect ~3.3:1.
+- col2 inner height: 3×3.5 + 2×0.3 = **11.1 cm** ✓ (columns flush by construction now —
+  three panels each side, same height, so the old `2h+0.3 = 3×3.5+0.6` solve is obsolete)
+- ⚠ **5I/5J/5K are currently exported at 5.5×4.5** — re-export at **5.3×3.5** to fit col2,
+  or widen col2 to 5.5 (→ row2 = 11.4+5.5+0.3 = 17.2, 0.2 over; shrink col1 to 11.2).
+- **Total height: 4 + 0.3 + 11.1 = 15.4 cm** ✓ (~7.6 cm spare on a 23 cm page)
 - **Shared x-axis in col1:** 5B/5C/5D are the same 4 s time base stacked — only the bottom
   panel (5D, the input) should carry the time axis/scalebar; 5B/5C drop theirs. That is what
   buys the vertical room and makes the stack read as one object.
 
 ##### Fig 5 — draft manuscript caption
-> All values below are final — recomputed in RMSE on 2026-07-21 from
-> `sine_ff_plots_combined.m`. Panel E wording was corrected: CL+prev is *not* the only mode
-> whose error falls (open loop falls too, by ~4× less).
+> ⚠ **Rewritten 2026-08-10 for the s3 + combined composition.** The previous caption was written
+> for the retired s2 session (2026-07-14) and described the dropped panels G/H. Numbers below are
+> s3 + `sine_ff_across_sessions.m`; anything quoted from s2 must be re-derived, not copied.
 
-**Figure 5. Preview cancels the plant's phase lag and feedback reduces tracking error during 1 Hz sinusoidal reference tracking.**
-All panels: mouse AL_0048, right (inhibitory) hemisphere, 1 Hz sinusoidal reference, 4 s trials, one session (2026-07-14; 200 trials; Kp = 0.08, Ki = 0, Kref = 0.05). Four control modes appear throughout — open loop (OL), open loop with preview (OL+prev), closed loop (CL), and closed loop with preview (CL+prev): **OL = red, OL+preview = orange, CL = blue, CL+preview = green**. Preview advances the reference by 5 samples = 143 ms at 35 Hz, matched to the measured ~160 ms plant lag. Shading is ±SEM across trials unless noted.
+**Figure 5. Preview cancels the plant's phase lag while feedback reduces tracking error during 1 Hz sinusoidal reference tracking.**
+Panels A–F: mouse AL_0048, right (inhibitory) hemisphere, 1 Hz sinusoidal reference, 4 s trials, one representative session (2026-07-21, dark screen; n = 62 / 45 / 34 / 57 trials per mode). Panels I–K pool three sessions from the same mouse and hemisphere. Four control modes appear throughout — open loop (OL), open loop with preview (OL+prev), closed loop (CL), and closed loop with preview (CL+prev): **OL = red, OL+preview = orange, CL = blue, CL+preview = green**. The laser command is gray. Preview advances the reference by 5 samples = 143 ms at 35 Hz, matched to the measured ~160 ms plant lag. Shading is ±SEM across trials unless noted.
 
 **(A)** Control-system schematic. The preview path feeds the reference forward by 143 ms; the feedback path closes on the online kernel-mean ΔF/F.
 **(B)** One representative trial per mode, with the sinusoidal reference overlaid (dashed). Time axis shared with C and D.
-**(C)** Trial-averaged response per mode. Time axis shared with B and D.
-**(D)** Trial-averaged laser command per mode, on its own scale in stimulus units. Carries the time axis for B–D.
-**(E)** Tracking error (RMSE) against time within the trial; shading is ±SEM, transformed to RMSE units (and therefore asymmetric). Closed loop with preview shows much the largest within-trial improvement, falling from **4.01 (0–1 s) to 3.67 (1–4 s)**; open loop falls only slightly (−0.08) and the remaining two modes do not fall.
-**(F)** Across-trial variance of the response over time, per mode. Preview raises open-loop variance (17.93 → 23.20 over 0–4 s); both closed-loop modes are lower than either open-loop mode.
-**(G)** Per-trial RMSE by mode (half-violins; asterisk = mean; axis clipped at the 95th percentile, 10/200 trials off-axis, density estimated on the full data). Closing the loop reduces tracking error (Wilcoxon rank-sum, **p = 7.7 × 10⁻⁴**; OL 4.10 ± 0.26, n = 51 vs CL 3.27 ± 0.32, n = 46). Preview has no significant effect on error (p = 0.32).
-**(H)** Phase lag of the response relative to the 1 Hz reference, per mode. Preview cancels the lag: **168 → 15 ms** open loop, **101 → −26 ms** closed loop.
+**(C)** Trial-averaged response per mode. Time axis shared with B and D. The preview modes are visibly in phase with the reference; the non-preview modes lag it.
+**(D)** Trial-averaged laser command per mode, on its own scale. Carries the time axis for B–D.
+**(E)** Tracking error (RMSE) against time within the trial; shading is ±SEM, transformed to RMSE units (and therefore asymmetric). Early→late change per mode: OL −0.40, OL+prev +0.09, CL +0.06, CL+prev −0.02.
+**(F)** Across-trial variance of the response over time, per mode.
+**(I)** Total per-trial RMSE per mode for each of the three sessions (points aligned, bar = mean). **Closed loop is below open loop in all three sessions** (OL vs CL, **p = 1.5 × 10⁻⁴**); preview has no significant effect on error (OL vs OL+prev, p = 0.49). Trials with pre-stimulus variance above median + 2.5 SD were excluded as drowsy (16/478).
+**(J)** Total across-trial variance per mode per session; closed loop is below open loop in all three.
+**(K)** Phase lag of the response relative to the 1 Hz reference, per mode per session. **Preview drives the lag to approximately zero in every session** (s3: OL 60°, OL+prev −9°, CL 37°, CL+prev −24°; preview lookahead = 62°).
 
-ΔF/F is computed from an uncorrected blue SVD. Trial onsets are taken from `traj_on` epochs.
+ΔF/F is computed from an uncorrected blue SVD. Trial onsets are taken from `traj_on` epochs. Within the representative session alone the open- versus closed-loop difference does not reach significance (p = 0.36); the feedback claim rests on the three-session comparison in I and J. The Friedman test across sessions is not significant (n = 3, p = 0.060).
 
 ---
 
@@ -458,14 +517,55 @@ than from memory. Fig 5's caption lives with its layout above.
 All panels: mouse AL_0033 unless noted; inhibition energy is the mean ΔF/F over 0–200 ms after laser onset.
 **(A)** Single-session ΔF/F responses to increasing laser amplitude (2025-01-29). Shading is ±1 SD across trials, shown for the lowest and highest amplitudes to bracket the spread. **(B)** Inhibition energy against laser amplitude for each session, with linear fits; error bars are ±SEM across trials. **(C)** Measured impulse response against the fitted transfer function (±std). **(D)** Step response of the same preparation. **(E)** Across-trial variance around laser onset, with fitted slopes (±SEM). **(F)** Per-trial prediction error against normalised motion (0–1, per session), pooled across sessions; circles = no motion, triangles = motion. **(G)** Pre-stimulus variance against inhibition depth, per amplitude, after motion exclusion. **(H)** Trials sorted by pre-stimulus variance: frequency×trial heatmap with the accompanying trial-rank and delta-power scatters.
 > Panel F's x-axis is **per-session min-max normalised** motion (2026-07-21), not a z-score.
+> ⚠ **The title sentence is contested.** "whose magnitude depends on ongoing cortical state" is contradicted
+> by the 3-session state result (2026-08-03): **motion is null everywhere** (|pooled ρ| ≤ 0.04) and rel-δ →
+> gain is +0.058 (Stouffer p = 0.053). The only surviving power-independent effect is rel-δ → *unpredictability*
+> (L1DEV), ρ ≈ +0.06. Panels **2G/2H rest on the retracted pre-stim-variance confound** (2026-07-01).
+> **Proposed reframe (NOT adopted — user is resolving separately):** the *actuator* is state-invariant and
+> low-order, while the *surrounding network activity* is state-dependent — and that is precisely the
+> disturbance Fig 4 shows the controller rejecting. Plant invariant + disturbance state-dependent +
+> feedback rejects it makes Figs 2 and 4 the same argument at two levels.
+> Also pending: **AL_0048 is now a 4th impulse session** (inhibitory only) and appears in no panel here.
 
 ### Figure 3 — draft caption
 **Figure 3. Closed-loop feedback reduces both trial-to-trial variability and tracking error relative to open loop.**
-All panels: 13 sessions across two mice (AL_0033, AL_0039); reference −5 % ΔF/F; error is RMSE over 0–3 s after laser onset unless noted. Open loop and closed loop are shown in **red and blue** throughout; the laser input command is gray (solid, bold).
-**(A)** A single representative trial, open loop versus closed loop. **(B)** All trials with the trial average (±std). **(C)** Trial-averaged laser command. **(D)** Across-trial variance over time. **(E)** Per-trial RMSE distribution (half-violins). **(F)** Cross-session variance trace (±SEM). **(G)** Per-session trial averages, faint, with the cross-session mean in bold (±SEM). **(H)** Cross-session error distribution; this panel reports **MAE**, not RMSE. **(I)** Open/closed-loop variance ratio split by window (pre, stim, post); asterisks are Wilcoxon. **(J)** Open/closed-loop RMSE ratio split by window (pre, 0–1 s, 1–3 s, post). **(K)** Open-loop trial averages for three step-response sessions with their fitted transfer functions (dashed); model orders were AIC-selected with poles capped at two (R² = 0.22, 0.77, 0.89).
-> Two things to check before submission: panel H is genuinely MAE and must stay labelled so (project decision 2026-07-16), and 3H/3J filenames still say "MSE" although the metric is RMSE.
+Single-session panels (A–E): m4 (AL_0033, 2025-02-26). Cross-session panels (F–K): **15 sessions across four mice** (AL_0033, AL_0039, AL_0048, AL_0051); reference −5 % ΔF/F; error is RMSE over 0–3 s after laser onset unless noted. Open loop and closed loop are shown in **red and blue** throughout; the laser input command is gray (solid, bold).
+**(A)** A single representative trial, open loop versus closed loop. **(B)** All trials with the trial average (±std). **(C)** Trial-averaged laser command. **(D)** Across-trial variance over time. **(E)** Per-trial RMSE distribution (half-violins). **(F)** Cross-session variance trace (±SEM). **(G)** Per-session trial averages, faint, with the cross-session mean in bold (±SEM). **(H)** Cross-session error distribution; this panel reports **MAE**, not RMSE. **(I)** Open/closed-loop variance ratio split by window (pre, stim, post); asterisks are Wilcoxon. **(J)** Open/closed-loop RMSE ratio split by window (pre, 0–1 s, 1–3 s, post). **(K)** Per-session median tracking error, open versus closed loop, for all 15 sessions (the two newly added mice outlined in black). **Closed loop is lower in 14 of 15 sessions (Wilcoxon signed-rank, p = 1.2 × 10⁻⁴).**
+> ⚠ **Cohort mismatch to resolve before assembly:** F–J were computed on the original **13** sessions; only K includes m14/m15. Either regenerate F–J on the 15-session pool (lean path: `load(path,'data')`, see `pooled_new_mice.m`) or state the cohort per panel. Do not write "15 sessions" over panels that are still 13.
+> Two more checks before submission: panel H is genuinely MAE and must stay labelled so (project decision 2026-07-16), and the 3H/3J *filenames* still say "MSE" although the metric is RMSE.
+> Old panel **(K)** — the three-session step-response TF fit — is now **Fig 2 panel 2I**; do not describe it here.
 
 ### Figure 4 — draft caption *(three-block state-dependence reframe, 2026-07-29)*
+
+> 🔴 **THIS CAPTION IS A PREDICTION THAT DID NOT HOLD — do not write from it. Annotated 2026-08-10.**
+> The analyses it describes have since run and returned **null state slopes**. Four things changed:
+>
+> 1. **D/E are null, not graded.** `[IMP-STATE-QUARTILE]` on m4: **all four Spearman r_s null**
+>    (motion OL −0.02 p=0.82 / CL −0.17 p=0.086; rel-δ OL +0.16 p=0.12 / CL −0.13 p=0.18).
+>    `[IMP-XSTATE]` across 7 sessions: **no state slope survives** (motion OL +0.078 p=0.63 /
+>    CL +0.086 p=0.88; rel-δ OL −0.028 p=0.94 / CL +0.118 p=0.30), Friedman over quartiles n.s.
+>    (p=0.098 motion, p=0.69 δ). **What survives is the OFFSET:** OL−CL rejection gain is positive in
+>    *every* quartile (+0.38/+0.37/+0.25/+0.62 motion; +0.51/+0.50/+0.46/+0.28 δ).
+> 2. **The defensible claim is the opposite framing: rejection is state-INVARIANT.** A null with a
+>    consistent OL−CL offset in every bin is a stronger control-theory statement than a slope
+>    difference, and it is the opposite of the retracted var/δ "state-dependence" story.
+>    ⇒ **The title sentence must be rewritten.** [user decision needed]
+> 3. **The metric is retired.** Nick 2026-07-28 requires the **energy ratio**
+>    `‖y_actual‖²/‖y_disturbance‖²` (1 = no work, <1 = controller gain), not ρ = ‖A−ref‖/‖G‖.
+>    Every ρ number below is in old units and must be recomputed before it is quoted. [user decision needed]
+> 4. **Good news not yet in the caption — C now replicates.** `[IMP-XSESS]`: median settled
+>    ρ₁₋₃ **OL 1.306 ± 0.366 vs CL 0.879 ± 0.128**; per-session gain **+0.428, 95% CI [+0.228, +0.671],
+>    signrank p = 0.0156, CL lower in 7/7 sessions.** Note CL sits **below 1** (net rejection) while OL
+>    sits **above 1**. ⚠ Three gates before quoting: (a) **n = 7 sessions but n = 1 MOUSE** (all AL_0033) —
+>    not an animal-level claim; (b) **6 of the 7 carry m4's seeded ROI** ([XROI] 2026-08-05) and need
+>    re-running with per-session masks; (c) **predictor capacity spans 2→321 unaffected pixels**, and
+>    Global is the *denominator* of ρ, so between-session comparisons are capacity-contaminated —
+>    the new **R² ≥ 0.85 gate** (`utils/ctrl_r2_floor.m`) may disqualify some of them.
+>
+> Block 1 (panel A) is still **single-session with a bootstrap CI touching zero** ([−0.501, +0.001]);
+> the cross-session sweep has not run. Panels A–E do not exist as PDFs — they are exploratory PNGs in
+> `paper/images/predictor_saga/`.
+
 **Figure 4. Closed-loop feedback decouples the controlled response from a state-dependent disturbance carried by the contralateral hemisphere.**
 > Draft on the representative session (m4 = AL_0033, 2025-02-26); cross-session stats to fill from the sweep. Open loop red, closed loop blue. Rejection ρ over the 1–3 s steady-state window (0 = full rejection, 1 = disturbance passes).
 >
