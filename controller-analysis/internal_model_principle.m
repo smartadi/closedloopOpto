@@ -444,34 +444,42 @@ sgtitle(figc,sprintf('[IMP] OL vs CL: fixed-response null model & active-control
 cpng=fullfile(fig_dir,sprintf('internal_model_principle_olcl_compare_%s.png',sess_tag));
 exportgraphics(figc,cpng,'Resolution',300); fprintf('[IMP-COMPARE] -> %s\n',cpng);
 
-%% [IMP-REJECT] per-trial disturbance transmission: rho = ||A-ref|| / ||G|| ------
-% Disturbance is time-varying = stim-blind contra prediction, zero-referenced:
-%     D_k(t) = G_k(t)              (what the ipsi WOULD do with no controller)
-% Subdued error on the controlled trial, referenced to the target:
-%     E_k(t) = A_k(t) - ref        (how far the ACTUAL ipsi sits from target)
-% Metric = residual-to-disturbance RMS ratio over the window:
-%     rho_k = ||E_k|| / ||D_k||    over the response window.
-% rho=0 perfect rejection (E sits at ref); rho=1 disturbance passes unattenuated;
-% rho>1 amplified. LOWER = better rejection (this is the raw ratio, not 1-ratio).
+%% [IMP-REJECT] per-trial disturbance rejection -----------------------------------
+% Delegates to imp_reject_core.m -- the SAME kernel the cross-session batch uses.
+% (Until 2026-08-10 this section carried an inline COPY of the rho lambdas, so the
+% two streams could silently drift apart. Do not re-inline them.)
+%
+% Two metrics come back:
+%   ER  = ||A-ref||^2 / ||G-ref||^2   PRIMARY (Nick 2026-07-28). 1 = no work done,
+%         <1 = controller gain. Both terms share the reference, so A==G gives
+%         exactly 1 and the LEVEL is interpretable, not just the OL-vs-CL contrast.
+%   rho = ||A-ref|| / ||G||           LEGACY. Every number logged before 2026-08-10
+%         is in these units. Retained for reproducibility; do not mix the two.
 if isfield(d_s,'ref') && ~isempty(d_s.ref); ref = d_s.ref; else; ref = -5; end
-% Split the response into two physically distinct sub-windows:
-%   w_tr  = 0-1 s : dominated by the laser-evoked initial deviation (common OL/CL)
-%   w_rej = 1-3 s : settled window -> pure disturbance rejection (headline stats)
-w_tr  = pre+1              : pre+round(1*Fs);
-w_rej = pre+round(1*Fs)+1  : pre+round(resp_s*Fs);
-rejW  = @(A,G,w) sqrt(mean((A(:,w)-ref).^2,2)) ./ sqrt(mean(G(:,w).^2,2));   % per-trial ||E||/||D|| on window w
-poolW = @(A,G,w) sqrt(sum((A(:,w)-ref).^2,'all')/sum(G(:,w).^2,'all'));      % pooled ||E||/||D|| on window w
+R = imp_reject_core(Aol, Gol, Acl, Gcl, pre, Fs, resp_s, ref);
 
-rho_ol_tr=rejW(Aol,Gol,w_tr);   rho_cl_tr=rejW(Acl,Gcl,w_tr);      % 0-1 s transient (init-dev)
-rho_ol=rejW(Aol,Gol,w_rej);     rho_cl=rejW(Acl,Gcl,w_rej);        % 1-3 s transmission (headline)
-Dmag_ol=sqrt(mean(Gol(:,w_rej).^2,2));   Dmag_cl=sqrt(mean(Gcl(:,w_rej).^2,2));  % disturbance RMS (1-3s)
-Emag_ol=sqrt(mean((Aol(:,w_rej)-ref).^2,2)); Emag_cl=sqrt(mean((Acl(:,w_rej)-ref).^2,2));
-p_tr  = ranksum(rho_ol_tr,rho_cl_tr);   p_rho = ranksum(rho_ol,rho_cl);
-rhoP_ol=poolW(Aol,Gol,w_rej);  rhoP_cl=poolW(Acl,Gcl,w_rej);
-fprintf('\n[IMP-REJECT] per-trial transmission  rho = ||A-ref||/||G||  (0=full rejection, ref=%.1f)\n',ref);
-fprintf('  0-1 s (transient / init-dev): med OL %.3f  CL %.3f  (rank-sum p=%.3g)\n',median(rho_ol_tr),median(rho_cl_tr),p_tr);
-fprintf('  1-3 s (settled transmission): med OL %.3f  CL %.3f  (rank-sum p=%.3g)  <-- headline (lower=better)\n',median(rho_ol),median(rho_cl),p_rho);
-fprintf('  1-3 s pooled rho           : OL %.3f  CL %.3f\n',rhoP_ol,rhoP_cl);
+w_tr = R.w_tr;  w_rej = R.w_rej;  w_stim = R.w_stim;
+rho_ol_tr = R.rho_ol_tr;  rho_cl_tr = R.rho_cl_tr;      % 0-1 s transient (init-dev)
+rho_ol    = R.rho_ol;     rho_cl    = R.rho_cl;         % 1-3 s transmission (legacy headline)
+Dmag_ol   = R.Dmag_ol;    Dmag_cl   = R.Dmag_cl;        % disturbance RMS (1-3 s)
+Emag_ol   = R.Emag_ol;    Emag_cl   = R.Emag_cl;
+p_tr      = R.p_tr;       p_rho     = R.p_rho;
+rhoP_ol   = R.rhoP_ol;    rhoP_cl   = R.rhoP_cl;
+er_ol     = R.er_ol;      er_cl     = R.er_cl;          % 0-3 s ENERGY RATIO (primary)
+
+fprintf('\n[IMP-REJECT] ENERGY RATIO  ER = ||A-ref||^2/||G-ref||^2  (1 = no work, <1 = gain, ref=%.1f)\n',ref);
+fprintf('  0-3 s stim window  : OL med %.3f [IQR %.3f]  CL med %.3f [IQR %.3f]\n', ...
+    R.er_med_ol,R.er_iqr_ol,R.er_med_cl,R.er_iqr_cl);
+fprintf('    quartiles        : OL [%.3f %.3f %.3f]   CL [%.3f %.3f %.3f]\n', R.er_q_ol, R.er_q_cl);
+fprintf('    trials with ER<1 : OL %.0f%%   CL %.0f%%\n', 100*R.er_frac_ol, 100*R.er_frac_cl);
+fprintf('    vs 1 (signrank)  : OL p=%.3g   CL p=%.3g   |   OL vs CL rank-sum p=%.3g\n', ...
+    R.p_er_ol1, R.p_er_cl1, R.p_er);
+fprintf('    sub-windows  0-1 s: OL %.3f CL %.3f   1-3 s: OL %.3f CL %.3f\n', ...
+    median(R.er_ol_tr),median(R.er_cl_tr),median(R.er_ol_rej),median(R.er_cl_rej));
+fprintf('  [LEGACY] rho = ||A-ref||/||G||  (0=full rejection, lower=better)\n');
+fprintf('    0-1 s: med OL %.3f  CL %.3f  (rank-sum p=%.3g)\n',median(rho_ol_tr),median(rho_cl_tr),p_tr);
+fprintf('    1-3 s: med OL %.3f  CL %.3f  (rank-sum p=%.3g)  <-- old headline\n',median(rho_ol),median(rho_cl),p_rho);
+fprintf('    1-3 s pooled rho : OL %.3f  CL %.3f\n',rhoP_ol,rhoP_cl);
 
 % ---- trial gallery: disturbance D=G (gray), actual A without ref-subtraction
 %      (light dashed), and subdued error E=A-ref (colored, pre-stim lighter). The

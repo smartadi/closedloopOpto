@@ -7,7 +7,13 @@
 
 clc;
 close all;
-clear all;
+% `clear all` was here. Changed 2026-08-10 to `clearvars -except r_lean` so the
+% registry-only knob set by the caller (`r_lean = 1; load_sessions;`) survives to
+% the LEAN block below -- `clear all` wiped it, which silently made the flag a
+% no-op. Still a clean workspace; it just no longer also flushes cached FUNCTIONS.
+% If you need that (edited a .m while a GUI held it), use the targeted form:
+%   clear <fnname>; rehash
+clearvars -except r_lean;
 
 % If launched via run() from controller-analysis/, step up to project root
 % so that relative paths (data/, utils/) resolve correctly.
@@ -104,9 +110,40 @@ mouse.m15.newbuild = true;
 % r_ctrl = 1: load from cache if available
 r_ctrl = 1;
 
+% ---------------------------------------------------------------------------
+% r_lean = 1: REGISTRY ONLY -- build `mouse`/`fields` (mn/td/en/trials/newbuild
+%             + the cache path and whether it exists) and load NO `d`/`data`.
+%
+% Why this exists: each controller cache is 1-3.5 GB because `d` holds the full
+% 2000-component SVD, so loading all 15 is ~40 GB and OOMs partway (fails at m13,
+% RESEARCH 2026-07-30). Every cross-session batch script -- ctrl_roi_build_all.m,
+% imp_reject_across_sessions.m, ctrl_ols_xsess.m -- already lazy-loads each
+% session and frees it again, so they need the REGISTRY, not the data. Before
+% this flag the only way to run them was an ad-hoc hand-edited stand-in copy of
+% this file (RESEARCH 2026-08-02), which is how the registry drifts.
+%
+% Set it BEFORE calling this script:   r_lean = 1; load_sessions;
+% Leave it unset for the normal full load -- default behaviour is unchanged.
+% ---------------------------------------------------------------------------
+if ~exist('r_lean','var') || isempty(r_lean); r_lean = 0; end
+
 fields = fieldnames(mouse);
+if r_lean
+    fprintf('[LEAN] registry-only load -- no d/data held in memory.\n');
+end
 for k = 1:length(fields)
     try
+        if r_lean
+            mn_k = mouse.(fields{k}).mn;
+            td_k = mouse.(fields{k}).td;
+            en_k = mouse.(fields{k}).en;
+            pathCtrl = fullfile('data', sprintf('%sctrl%s%s%d.mat', mn_k, td_k(6:7), td_k(9:10), en_k));
+            mouse.(fields{k}).pathCtrl = pathCtrl;
+            mouse.(fields{k}).hasCache = exist(pathCtrl, 'file') == 2;
+            fprintf('[LEAN] %-5s %-8s %s e%d  cache:%s\n', fields{k}, mn_k, td_k, en_k, ...
+                string(mouse.(fields{k}).hasCache));
+            continue
+        end
         mn_k = mouse.(fields{k}).mn;
         td_k = mouse.(fields{k}).td;
         en_k = mouse.(fields{k}).en;
@@ -171,6 +208,18 @@ end
 
 
 %%
+% LEAN GUARD: everything below aggregates across `mouse.<f>.data` / `.d`, which
+% registry-only mode deliberately does not hold. The cross-session batch scripts
+% (ctrl_roi_build_all / imp_reject_across_sessions / ctrl_ols_xsess) lazy-load
+% each session themselves and never touch these arrays, so stopping here is the
+% whole point -- it is what keeps the 15-session run inside memory.
+if r_lean
+    fprintf(['[LEAN] registry built for %d sessions; skipping the variance aggregation.\n' ...
+             '[LEAN] Ready for: ctrl_roi_build_all.m | imp_reject_across_sessions.m | ctrl_ols_xsess.m\n' ...
+             '[LEAN] For the Fig-3 pooled panels use pooled_new_mice.m (also lean).\n'], numel(fields));
+    return
+end
+
 Mvarnc = [];
 Mvarwc = [];
 for k = 1:length(fields)

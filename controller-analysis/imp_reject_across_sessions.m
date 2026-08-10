@@ -69,6 +69,11 @@ for s = SESS
     Q(k).p_rho = R.p_rho;  Q(k).rhoP_ol = R.rhoP_ol;  Q(k).rhoP_cl = R.rhoP_cl;
     Q(k).Gdip_ol = R.Gdip_ol;  Q(k).Gdip_cl = R.Gdip_cl;  Q(k).R2_te = S.R2_te;
     Q(k).rho_ol = R.rho_ol;  Q(k).rho_cl = R.rho_cl;
+    % ENERGY RATIO (primary, Nick 2026-07-28): 1 = no work, <1 = controller gain.
+    Q(k).er_ol = R.er_ol;  Q(k).er_cl = R.er_cl;
+    Q(k).er_med_ol = R.er_med_ol;  Q(k).er_iqr_ol = R.er_iqr_ol;
+    Q(k).er_med_cl = R.er_med_cl;  Q(k).er_iqr_cl = R.er_iqr_cl;
+    Q(k).p_er = R.p_er;  Q(k).er_frac_ol = R.er_frac_ol;  Q(k).er_frac_cl = R.er_frac_cl;
     pooled_ol=[pooled_ol; R.rho_ol]; pooled_cl=[pooled_cl; R.rho_cl];
     pooled_ol_g=[pooled_ol_g; k*ones(R.n_ol,1)]; pooled_cl_g=[pooled_cl_g; k*ones(R.n_cl,1)];
     fprintf('  %-22s %5d %5d %+7.3f %+7.3f %8.2g %+9.3f %+9.3f\n', ...
@@ -103,6 +108,43 @@ fprintf('  pooled per-trial rho   : OL %+.3f | CL %+.3f  (rank-sum p=%.3g, all t
     median(pooled_ol), median(pooled_cl), p_pool);
 fprintf('  network co-suppression (Global dip, 1-3 s): OL %+.3f +/- %.3f | CL %+.3f +/- %.3f  %%dF/F\n', ...
     mean(Gdip_ol),std(Gdip_ol), mean(Gdip_cl),std(Gdip_cl));
+
+%% [XSESS-ER] ENERGY RATIO -- the reporting metric (Nick 2026-07-28) -------------
+% ER = ||A-ref||^2 / ||G-ref||^2 over the 0-3 s stim window.
+%   1  = controller did no work    (holds identically when A == G)
+%   <1 = controller gain
+% Inference is SESSION-LEVEL (n = sessions), per Nick: median +/- IQR reported
+% separately for OL and CL, Wilcoxon signed-rank on the paired session medians.
+er_med_ol = [Q.er_med_ol].';  er_med_cl = [Q.er_med_cl].';
+er_gain   = er_med_ol - er_med_cl;              % >0 => CL suppresses more energy
+if nS>=2
+    p_er_sess = signrank(er_med_cl, er_med_ol);              % paired OL vs CL
+    p_er_ol1  = signrank(er_med_ol, 1);                      % does OL do work at all?
+    p_er_cl1  = signrank(er_med_cl, 1);                      % does CL do work at all?
+else
+    p_er_sess = NaN;  p_er_ol1 = NaN;  p_er_cl1 = NaN;
+end
+bsE = zeros(nBoot,1);
+for i=1:nBoot, ix=randi(nS,nS,1); bsE(i)=mean(er_gain(ix)); end
+er_gain_ci = prctile(bsE,[2.5 97.5]);
+
+fprintf('\n[XSESS-ER] ENERGY RATIO  ER = ||A-ref||^2/||G-ref||^2  (0-3 s stim window), %d sessions\n', nS);
+fprintf('           1 = no work done, <1 = controller gain.  Inference is session-level (n=%d).\n', nS);
+fprintf('  per-session median ER  : OL %.3f [IQR %.3f] | CL %.3f [IQR %.3f]\n', ...
+    median(er_med_ol), iqr(er_med_ol), median(er_med_cl), iqr(er_med_cl));
+fprintf('  vs 1 (signrank)        : OL p=%.3g | CL p=%.3g\n', p_er_ol1, p_er_cl1);
+fprintf('  OL vs CL paired        : signrank p=%.3g   mean gain %+.3f  95%% CI [%+.3f, %+.3f]\n', ...
+    p_er_sess, mean(er_gain), er_gain_ci(1), er_gain_ci(2));
+fprintf('  CL suppresses more energy in %d/%d sessions;  median trials with ER<1: OL %.0f%% CL %.0f%%\n', ...
+    nnz(er_gain>0), nS, 100*median([Q.er_frac_ol]), 100*median([Q.er_frac_cl]));
+fprintf('  per-session ER (OL -> CL):\n');
+verdictER = {'OL better','CL better'};       % index 1/2 via logical+1 (no local fn:
+for k=1:nS                                   % script local functions must sit at EOF)
+    fprintf('    %-22s  %.3f -> %.3f   (%s)\n', Q(k).sess_tag, Q(k).er_med_ol, Q(k).er_med_cl, ...
+        verdictER{(Q(k).er_med_cl < Q(k).er_med_ol) + 1});
+end
+fprintf('  NOTE: ER and rho are NOT interchangeable -- rho divides by ||G|| (zero-referenced),\n');
+fprintf('        so its LEVEL was never interpretable, only the OL-vs-CL contrast. Quote one or the other.\n');
 
 %% [XSESS-FIG] combined figure --------------------------------------------------
 figX = figure('Color','w','Position',[40 60 1500 440]);
