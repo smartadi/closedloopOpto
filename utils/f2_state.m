@@ -117,11 +117,13 @@ end
 fig = [];
 if opt.plot
     kShow = find([STATES{:,3}]);                                  % Motion + Rel-delta
-    fig = figure('Color','w','Name','[F2-STATE] residual stim effect vs brain state', ...
+    fig = figure('Color','w','Name','[F2-STATE] residual stim effect vs brain state — CLICK a point', ...
                  'Position',[80 80 520*numel(kShow) 440]);
     cols = lines(nS);
+    axList = gobjects(numel(kShow),1);
     for q = 1:numel(kShow)
         k = kShow(q);  ax = subplot(1,numel(kShow),q);  hold(ax,'on');  box(ax,'on');
+        axList(q) = ax;
         for s = 1:nS
             if isempty(DVall{s}) || isempty(STall{s,k}), continue; end
             scatter(ax, STall{s,k}, DVall{s}, 9, cols(s,:), 'filled', 'MarkerFaceAlpha',0.35, ...
@@ -136,8 +138,33 @@ if opt.plot
         legend(ax,'Location','best','FontSize',6,'Box','off');
     end
     sgtitle(sprintf(['LOCAL stim effect (residual, DV = %s) vs brain state — partial on pre-onset prediction ' ...
-                     'error\nGLOBAL control in the titles: if it matches, the effect is not local'], opt.dv), ...
-            'FontWeight','bold','FontSize',10);
+                     'error\nGLOBAL control in the titles: if it matches, the effect is not local' ...
+                     '\nCLICK any point to open that trial'], opt.dv), 'FontWeight','bold','FontSize',10);
+
+    % ---- arm the clickable trial investigator (utils/f2_inspector.m) ---------------------------
+    % A point in this scatter is two reduced numbers; the investigator re-opens the trial behind it
+    % so an outlier can be diagnosed as a real response, a failed prediction, or a state scalar
+    % built from a single motion spike. Sessions with no usable ST are skipped rather than indexed.
+    keep = find(~cellfun(@isempty, DVall(:).'));
+    if ~isempty(keep)
+        SS = struct('label',{},'D',{},'dv',{},'state',{});
+        for s = keep
+            SS(end+1).label = lab{s};        %#ok<AGROW>
+            SS(end).D     = F2(s).D;
+            SS(end).dv    = DVall{s};
+            SS(end).state = STall(s,:);
+        end
+        % Fields assigned one at a time, NOT via struct(...): struct() distributes cell and
+        % struct-array values into a struct ARRAY, so struct('sess',SS) would have produced one
+        % IX per session with a scalar .sess each -- and the click handler would have indexed junk.
+        IX = struct();
+        IX.sess       = SS;
+        IX.axes       = axList;
+        IX.stateIdx   = kShow(:);
+        IX.stateNames = STATES(:,1).';
+        IX.dv         = opt.dv;
+        f2_inspector(fig, IX);
+    end
 end
 
 S = struct('dv',opt.dv, 'rhoLocal',rhoL, 'pLocal',pL, 'rhoLocal_prepost',rho2, ...

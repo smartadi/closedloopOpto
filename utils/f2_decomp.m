@@ -108,6 +108,13 @@ D = struct('label',P.label, 'caveat',P.caveat, 'amps',P.amps, 'nT_amp',P.nT_amp,
            'catch',D_catch, 'ST',ST, 'rel',P.rel, 'Fs',P.Fs, 'preN',preN, ...
            'dcc',{P.dcc}, 'use_motion',use_mot, 'ampOK',ampOK, ...
            'capMed',median(capPct(ampOK),'omitnan'), 'leakMed',median(leakPct(ampOK),'omitnan'));
+% ---- CONTEXT for the clickable trial investigator (f2_inspector) -------------------------------
+% ST carries the per-trial traces but not the timebase they live on, nor the raw motion and ipsi
+% traces the state scalars are REDUCED FROM. Without these the inspector can only redraw the same
+% reduced numbers, and the one thing you open an outlier trial to find out is WHY its motion or
+% delta scalar is what it is. Small (a few vectors per session) and harvested here so the state
+% stage needs nothing from P, which is discarded by then.
+D.onFcell = P.onFcell;   D.motz = P.motz;   D.y_full = P.y_full;   D.nF = P.nF;
 
 if vb
     fprintf('\n[F2-DECOMP] %s\n', P.label);
