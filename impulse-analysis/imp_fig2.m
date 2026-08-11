@@ -54,6 +54,13 @@ if ~exist('F2_SEL','var'),        F2_SEL        = [];    end   % [] = every regi
 if ~exist('F2_USE_MOTION','var'), F2_USE_MOTION = true;  end   % also run the contra+motion variant
 if ~exist('F2_BILATERAL','var'),  F2_BILATERAL  = true;  end   % append AL_0048 (inhibitory site)
 if ~exist('F2_DV','var'),         F2_DV         = 'L1DEVz'; end% primary DV (see f2_state header)
+% PREDICTOR SELECTION RULE. 'r2max' = pick the regulariser on held-out spontaneous R^2 alone; capture
+% is then a pure MEASUREMENT. 'frontier' = maximise capture subject to R^2 >= F2_R2FLOOR (user
+% request, 2026-08-11); capture becomes a FITTED TARGET and must be quoted from the held-out trial
+% half, with f2_frontier's random-direction control beside it. Both are run and printed side by side
+% so the price of the switch is always on the record.
+if ~exist('F2_SELECT','var'),     F2_SELECT     = 'frontier'; end
+if ~exist('F2_R2FLOOR','var'),    F2_R2FLOOR    = 0.85;  end
 if ~exist('F2_PLOT','var'),       F2_PLOT       = true;  end
 % Where the per-session FIT figures are written as 300-dpi PNGs. They are diagnostics, not paper
 % panels, so PNG per the project export rule -- and written to disk because the thing you want to
@@ -98,7 +105,8 @@ for q = 1:numel(F2_SEL)
         A = f2_affected(P, struct('plot',F2_PLOT));
 
         % --- §3 M4 predictor, contra only (PRIMARY) ---------------------------------------------
-        mopt = struct('use_motion',false, 'ridge_fixed',F2_RIDGE);
+        mopt = struct('use_motion',false, 'ridge_fixed',F2_RIDGE, ...
+                      'select_mode',F2_SELECT, 'r2_floor',F2_R2FLOOR);
         M = f2_model(P, A, mopt);
         if isempty(F2_RIDGE)
             F2_RIDGE = M.ridge;        % FREEZE: every later session inherits this verbatim

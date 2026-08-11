@@ -41,7 +41,8 @@ function M = f2_model(P, A, opt)
 if nargin < 3, opt = struct(); end
 def = struct('use_motion',false, 'ridge_grid',[0 1e-4 3e-4 1e-3 3e-3 1e-2 3e-2 0.1 0.3 1 3], ...
              'ridge_fixed',[], 'penNear',2.0, 'penFar',0.2, 'greedy_on',true, 'greedy_tol',0.05, ...
-             'greedy_r2floor',0.98, 'greedy_batch',0.01, 'greedy_nRand',5, 'nShift',5, 'verbose',true);
+             'greedy_r2floor',0.98, 'greedy_batch',0.01, 'greedy_nRand',5, 'nShift',5, 'verbose',true, ...
+             'select_mode','r2max', 'r2_floor',0.85);
 fn = fieldnames(def);
 for i = 1:numel(fn)
     if ~isfield(opt,fn{i}), opt.(fn{i}) = def.(fn{i}); end
@@ -120,24 +121,30 @@ else
 end
 lam = max(1e-6, ridge)*mdG;
 
+%% ---- (c2) SPLIT-HALF evoked dips -- built ONCE, used by BOTH selectors -------------------------
+% Selection sees trial-half A; blindness/capture is REPORTED on half B. Every method below that
+% touches stim data goes through this split, so none of them can be scored on the trials that
+% chose them. Built here rather than inside the greedy block because frontier mode needs it too
+% and greedy may be off.
+hv = find(~cellfun(@isempty, P.evZcA(:).'));
+hv = hv(ismember(hv, okA));
+evS = {};  acS = [];  evV = {};  acV = [];
+if numel(hv) >= 2
+    nH = numel(hv);
+    evS = cell(nH,1);  acS = nan(1,nH);  evV = cell(nH,1);  acV = nan(1,nH);
+    for q = 1:nH
+        a = hv(q);  dc = P.dcc{a};
+        evS{q} = local_dipvec(P.evZcA{a}, dc, P.evMot(:,a), use_mot, nP);
+        evV{q} = local_dipvec(P.evZcB{a}, dc, P.evMot(:,a), use_mot, nP);
+        acS(q) = mean(P.aAcA{a}(dc));
+        acV(q) = mean(P.aAcB{a}(dc));
+    end
+end
+
 %% ---- (d) GREEDY pruning: remove the pixels that still carry stim, without touching weights ----
 S = U;  G = [];
 if opt.greedy_on
-    % Split-half evoked: selection uses one half, blindness is REPORTED on the other. With hundreds
-    % of candidates a greedy search can cancel the dip by chance; blindness that does not transfer
-    % was overfitting the trial average.
-    hv = find(~cellfun(@isempty, P.evZcA(:).'));
-    hv = hv(ismember(hv, okA));
     if numel(hv) >= 2
-        nH = numel(hv);
-        evS = cell(nH,1);  acS = nan(1,nH);  evV = cell(nH,1);  acV = nan(1,nH);
-        for q = 1:nH
-            a = hv(q);  dc = P.dcc{a};
-            evS{q} = local_dipvec(P.evZcA{a}, dc, P.evMot(:,a), use_mot, nP);
-            evV{q} = local_dipvec(P.evZcB{a}, dc, P.evMot(:,a), use_mot, nP);
-            acS(q) = mean(P.aAcA{a}(dc));
-            acV(q) = mean(P.aAcB{a}(dc));
-        end
         GP = struct('Gz',Gz,'cz',cz,'gamma',gamma,'lam',lam,'Zte',Zte,'yte',P.yte,'muY',P.muY, ...
                     'sstot',P.sstot,'evDipSel',{evS},'actDipSel',acS, ...
                     'evDipVal',{evV},'actDipVal',acV,'U',U);
@@ -163,8 +170,33 @@ if opt.greedy_on
     end
 end
 
+%% ---- (d2) FRONTIER mode: maximise capture subject to a spontaneous-R^2 floor -------------------
+% opt.select_mode 'r2max'    (default) weights are the plain weighted-L2 fit; capture is a pure
+%                            MEASUREMENT because nothing in the selection ever saw the dip.
+%                 'frontier' adds a leak penalty and picks the strongest one that still clears
+%                            opt.r2_floor -- i.e. maximise capture s.t. R^2 >= floor (user request,
+%                            2026-08-11). Capture then becomes a FITTED TARGET; f2_frontier's
+%                            trial-split and random-direction controls are what keep it meaningful.
+FR = [];
+if strcmpi(opt.select_mode,'frontier')
+    if numel(evS) < 2
+        warning(['f2_model: frontier mode needs a trial split for honest validation and %s has too ' ...
+                 'few usable amps -- falling back to r2max.'], P.label);
+    else
+        Q = struct('G',Gz, 'c',cz, 'gamma',gamma, 'lamR',lam, 'Zte',Zte, 'yte',P.yte, ...
+                   'muY',P.muY, 'sstot',P.sstot, 'S',S, 'nP',nP, 'dist',[P.selDist(:); 0]);
+        Q.dist = Q.dist(1:nP);
+        Q.evSel = evS;  Q.actSel = acS;  Q.evVal = evV;  Q.actVal = acV;
+        FR = f2_frontier(Q, struct('r2_floor',opt.r2_floor, 'verbose',vb));
+    end
+end
+
 %% ---- (e) final fit + honest metrics -----------------------------------------------------------
-b = fitb(S, lam);
+if ~isempty(FR)
+    b = FR.b;                                   % frontier weights (same candidate set S)
+else
+    b = fitb(S, lam);
+end
 r2_spont = r2of(b);
 leak     = nan(nA,1);  leak(okA) = leakf(b);
 
@@ -194,7 +226,8 @@ for ai = 1:nA
 end
 
 M = struct('b',b, 'S',S, 'nP',nP, 'use_motion',use_mot, 'gamma',gamma, ...
-           'ridge',ridge, 'lam',lam, 'sweep',sw, 'greedy',G, ...
+           'ridge',ridge, 'lam',lam, 'sweep',sw, 'greedy',G, 'frontier',FR, ...
+           'select_mode',lower(opt.select_mode), ...
            'r2_spont',r2_spont, 'r2_shift',r2_shift, 'r2_shift_all',r2s, ...
            'r2_pre',r2_pre, 'r2_post',r2_post, 'leak',leak, 'nAct',nnz(b(1:nG)), ...
            'nCand',numel(U), 'label',P.label, 'caveat',P.caveat);
