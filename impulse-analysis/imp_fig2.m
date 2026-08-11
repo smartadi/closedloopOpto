@@ -55,6 +55,10 @@ if ~exist('F2_USE_MOTION','var'), F2_USE_MOTION = true;  end   % also run the co
 if ~exist('F2_BILATERAL','var'),  F2_BILATERAL  = true;  end   % append AL_0048 (inhibitory site)
 if ~exist('F2_DV','var'),         F2_DV         = 'L1DEVz'; end% primary DV (see f2_state header)
 if ~exist('F2_PLOT','var'),       F2_PLOT       = true;  end
+% Where the per-session FIT figures are written as 300-dpi PNGs. They are diagnostics, not paper
+% panels, so PNG per the project export rule -- and written to disk because the thing you want to
+% do with four of them is put them side by side, which you cannot do with four MATLAB windows.
+if ~exist('F2_FITDIR','var'),     F2_FITDIR     = fullfile(impulseDir,'figs','fig2_fit'); end
 % Reproducibility: the split-half trial permutation (§3 greedy control) and the random-exclusion
 % control are seeded, so the affected set, the pruned set and the controls are identical run to run.
 rng(7,'twister');
@@ -104,6 +108,13 @@ for q = 1:numel(F2_SEL)
 
         % --- §4 decomposition + catch control ---------------------------------------------------
         D = f2_decomp(P, M);
+
+        % --- the FIT figure. Drawn HERE, inside the loop, because the held-out design Zte (~80 MB)
+        % is deliberately not carried on the result structs -- the only place the spontaneous fit
+        % can be plotted is while this session is still in memory.
+        if F2_PLOT
+            f2_fitfig(P, A, M, D, struct('export', F2_FITDIR));
+        end
 
         % --- the motion-augmented VARIANT (robustness, not the headline) -------------------------
         Mm = []; Dm = [];
