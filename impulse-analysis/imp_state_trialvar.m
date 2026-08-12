@@ -274,6 +274,8 @@ for k = 1:nMK
     R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;
     R(k).rhoPow=rhoPow; R(k).pPow=pPow; R(k).rhoPowC=rhoPowC; R(k).pPowC=pPowC;
     R(k).binMed = arrayfun(@(b) median(x(g==b),'omitnan'), 1:STV_NBIN);   % raw value per bin
+    R(k).gbin   = g;    % bin index per trial -- so imp_state_trialvar_fig can bootstrap per-bin CIs
+    R(k).sess   = T.sess(ok);
     R(k).units = MK{k,4};
 end
 
