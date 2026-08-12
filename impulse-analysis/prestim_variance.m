@@ -41,6 +41,11 @@ if strcmp(dev_metric,'cperr')
     end
 end
 
+% Axis label must follow the metric ACTUALLY plotted (the guard above can flip it to peakdev),
+% and 'Peak dev' is now SIGNED: >0 = shallower dip than the amp average, <0 = deeper.
+dev_ylabel = 'Prediction error';
+if strcmp(dev_metric,'peakdev'), dev_ylabel = 'Peak dev (\DeltaF/F %)'; end
+
 preIdx_var = t_win_imp >= -1 & t_win_imp < 0;   % 35 samples, -1 to 0 s
 nVarBins   = 5;
 
@@ -66,7 +71,7 @@ for expIdx = 1:nExp
         if strcmp(dev_metric,'cperr') && isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
             dev_i = imp_e.cp_err{iAmp}(:);
         else
-            dev_i = imp_e.Peak_imp_dev{iAmp}(:);
+            dev_i = imp_e.Peak_imp{iAmp}(:) - mean(imp_e.Peak_imp{iAmp}(:),'omitnan');  % SIGNED
         end
         n_i   = min(size(df_i,1), numel(dev_i));
         if n_i < 3, continue; end
@@ -88,7 +93,7 @@ for expIdx = 1:nExp
         ax1 = subplot(nGridR, nCols_v, sp_top);
         scatter(ax1, preVar_i, dev_i, 12, 'filled', 'MarkerFaceAlpha', 0.5);
         xlabel(ax1, 'Pre-trial var (\DeltaF/F)^2', 'FontSize', 6, 'FontWeight','bold');
-        ylabel(ax1, 'Prediction error', 'FontSize', 6, 'FontWeight','bold');
+        ylabel(ax1, dev_ylabel, 'FontSize', 6, 'FontWeight','bold');
         title(ax1, sprintf('%.2f V  r=%.2f  p=%.3f', imp_e.uAmp{iAmp}, r_v, p_v), ...
             'FontSize', 6, 'FontWeight','bold');
         set(ax1, 'Box','off', 'TickDir','out', 'FontSize', 6, 'FontWeight','bold');
@@ -112,7 +117,7 @@ for expIdx = 1:nExp
         xticks(ax2, 1:nVarBins);
         xticklabels(ax2, {'Q1','Q2','Q3','Q4','Q5'});
         xlabel(ax2, 'Pre-trial var quintile', 'FontSize', 6, 'FontWeight','bold');
-        ylabel(ax2, 'Mean prediction error ± SEM', 'FontSize', 6, 'FontWeight','bold');
+        ylabel(ax2, ['Mean ' dev_ylabel ' ± SEM'], 'FontSize', 6, 'FontWeight','bold');
         title(ax2, sprintf('n=%d', n_i), 'FontSize', 6, 'FontWeight','bold');
         set(ax2, 'Box','off', 'TickDir','out', 'FontSize', 6, 'FontWeight','bold');
     end
@@ -172,7 +177,7 @@ for expIdx = 1:nExp
             cp_err_i  = imp_e.cp_err{iAmp}(1:n_total);
             dev_clean = cp_err_i(keepIdx);
         else
-            dev_clean = abs(pk_clean - mean(pk_clean, 'omitnan'));
+            dev_clean = pk_clean - mean(pk_clean, 'omitnan');   % SIGNED
         end
         mot_clean = imp_e.motTrace{iAmp}(keepIdx, :);
 
@@ -189,7 +194,7 @@ for expIdx = 1:nExp
         ax1 = subplot(nGridR_m, nCols_m, sp_top);
         hS = scatter(ax1, preVar_clean, dev_clean, 12, 'filled', 'MarkerFaceAlpha', 0.5);
         xlabel(ax1, 'Pre-trial var (\DeltaF/F)^2', 'FontSize', 6, 'FontWeight','bold');
-        ylabel(ax1, 'Prediction error', 'FontSize', 6, 'FontWeight','bold');
+        ylabel(ax1, dev_ylabel, 'FontSize', 6, 'FontWeight','bold');
         title(ax1, sprintf('%.2f V  r=%.2f  p=%.3f  (%d/%d)  [click]', ...
             imp_e.uAmp{iAmp}, r_m, p_m, n_kept, n_total), ...
             'FontSize', 6, 'FontWeight','bold');
@@ -225,7 +230,7 @@ for expIdx = 1:nExp
         xticks(ax2, 1:nVarBins);
         xticklabels(ax2, {'Q1','Q2','Q3','Q4','Q5'});
         xlabel(ax2, 'Pre-trial var quintile', 'FontSize', 6, 'FontWeight','bold');
-        ylabel(ax2, 'Mean prediction error ± SEM', 'FontSize', 6, 'FontWeight','bold');
+        ylabel(ax2, ['Mean ' dev_ylabel ' ± SEM'], 'FontSize', 6, 'FontWeight','bold');
         title(ax2, sprintf('n=%d kept', n_kept), 'FontSize', 6, 'FontWeight','bold');
         set(ax2, 'Box','off', 'TickDir','out', 'FontSize', 6, 'FontWeight','bold');
     end
@@ -276,7 +281,7 @@ for ki = 1:nV_pam
 
     df_k   = df_i(keepIdx, :);
     pk_k   = pk_i(keepIdx);
-    dev_k  = abs(pk_k - mean(pk_k, 'omitnan'));   % recomputed on kept trials
+    dev_k  = pk_k - mean(pk_k, 'omitnan');        % SIGNED, recomputed on kept trials
 
     preVar_k = var(df_k(:, preIdx_var), 0, 2);
 
@@ -304,7 +309,7 @@ end
 
 hold(ax_pvm, 'off');
 xlabel(ax_pvm, 'Pre-trial variance (\DeltaF/F)^2', 'FontWeight', 'bold');
-ylabel(ax_pvm, 'Impulse Prediction Error', 'FontWeight', 'bold');
+ylabel(ax_pvm, dev_ylabel, 'FontWeight', 'bold');
 % title(ax_pvm, 'Pre-trial variance vs deviation (motion excluded)');
 lg_pvm = legend(ax_pvm, 'Location', 'eastoutside');
 paperLegend(lg_pvm);
@@ -364,7 +369,7 @@ for iAmp_pvh = 1:nAmp_pvh
 
     df_k   = df_i(keep, :);
     pk_k   = pk_i(keep);
-    dev_k  = abs(pk_k - mean(pk_k, 'omitnan'));
+    dev_k  = pk_k - mean(pk_k, 'omitnan');   % SIGNED
     pvar_k = var(df_k(:, preIdx_var), 0, 2);
 
     % Recompute spectrum from the -1..0 s window of each kept trial
@@ -431,7 +436,7 @@ set(ax_pvhB, 'YDir', 'normal', 'Box', 'off', 'TickDir', 'out', ...
     'XTick', [], 'FontSize', 6, 'FontWeight', 'bold', 'YTickLabel', {});
 title(ax_pvhB, '|Dev| (dF/F)  [click]', 'FontSize', 6, 'FontWeight', 'bold');
 cb_pvhB = colorbar(ax_pvhB, 'Location', 'eastoutside');
-cb_pvhB.Label.String   = '|Peak dev| (\DeltaF/F %)';
+cb_pvhB.Label.String   = 'Peak dev (\DeltaF/F %)';
 cb_pvhB.Label.FontSize = 6;
 cb_pvhB.FontSize       = 6;
 

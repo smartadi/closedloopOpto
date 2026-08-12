@@ -53,7 +53,17 @@ end
 % so motion_analysis can also run standalone.
 if ~exist('expColors','var'), expColors = PS.sess; end   % colorblind-safe when global PAPER_CB=true
 dev_ylabel = 'Prediction error';
-if strcmp(dev_metric,'peakdev'), dev_ylabel = '|Peak dev| (\DeltaF/F %)'; end
+if strcmp(dev_metric,'peakdev'), dev_ylabel = 'Peak dev (\DeltaF/F %)'; end
+% ---- SIGNED deviation (user, 2026-08-12) -------------------------------------------------------
+% Was |Peak_imp - mean(Peak_imp)|. The absolute value threw away the DIRECTION of each trial's
+% departure from its amplitude mean, so a trial that was inhibited more than average and one that
+% was inhibited less were plotted at the same height. Now signed:
+%   dev = Peak_imp - mean(Peak_imp)     > 0  SHALLOWER dip than average (LESS inhibition)
+%                                       < 0  DEEPER    dip than average (MORE inhibition)
+% Computed from Peak_imp here rather than read from imp.Peak_imp_dev, because that field is ABS in
+% load_experiments.m (line 355) but SIGNED in load_bilateral_impulse.m (line 224) and therefore does
+% not mean one thing across sessions. See RESEARCH 2026-08-12.
+devSigned = @(v) v(:) - mean(v(:), 'omitnan');
 
 %% Motion vs Peak_imp deviation â€” one figure per session, subplots per amp
 %
@@ -78,14 +88,16 @@ for expIdx = 1:nExp
         if strcmp(dev_metric,'cperr') && isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iA})
             yAll_m = [yAll_m; imp_e.cp_err{iA}(:)];              %#ok<AGROW>
         else
-            yAll_m = [yAll_m; imp_e.Peak_imp_dev{iA}(:)];        %#ok<AGROW>
+            yAll_m = [yAll_m; devSigned(imp_e.Peak_imp{iA})];     %#ok<AGROW>
         end
     end
     xAll_m = xAll_m(isfinite(xAll_m)); yAll_m = yAll_m(isfinite(yAll_m));
     xPad   = 0.05 * (max(xAll_m) - min(xAll_m));
-    yPad   = 0.05 * max(yAll_m);
+    % SIGNED dev -> the y-axis must span both directions and be centred on 0, or the sign is
+    % invisible. Symmetric limits so "deeper" and "shallower" are read off the same scale.
+    yMax_m = max(abs(yAll_m));  yPad = 0.05 * yMax_m;
     xLim_m = [min(xAll_m) - xPad,  max(xAll_m) + xPad];
-    yLim_m = [0,                    max(yAll_m) + yPad];
+    yLim_m = [-(yMax_m + yPad),    yMax_m + yPad];
 
     nCols_m = min(nAmp_e, 4);
     nRows_m = ceil(nAmp_e / nCols_m);
@@ -101,7 +113,7 @@ for expIdx = 1:nExp
         if strcmp(dev_metric,'cperr') && isfield(imp_e, 'cp_err') && ~isempty(imp_e.cp_err{iAmp})
             dev_i = imp_e.cp_err{iAmp}(:);
         else
-            dev_i = imp_e.Peak_imp_dev{iAmp}(:);
+            dev_i = devSigned(imp_e.Peak_imp{iAmp});              % SIGNED (see header)
         end
         nUse   = min(size(imp_e.motTrace{iAmp}, 1), numel(dev_i));
         if nUse < 2, continue; end
@@ -120,6 +132,7 @@ for expIdx = 1:nExp
             hAll(end+1) = hS;
         end
 
+        yline(ax, 0, 'k:', 'HandleVisibility','off');   % 0 = amp-average dip; sign is the point now
         r = corr(mot_i, dev_i, 'rows','complete');
         title(ax, sprintf('%.2f V   (n=%d,  r=%.2f)', imp_e.uAmp{iAmp}, nUse, r), ...
             'FontSize', 8, 'FontWeight','bold');
@@ -181,7 +194,7 @@ for iAmp = 1:nAmp_mot
     else
         pk_i  = imp_e_mot.Peak_imp{iAmp}(:);
         mn_i  = mean(pk_i, 'omitnan');
-        dev_i = abs(pk_i(1:nUse) - mn_i);
+        dev_i = pk_i(1:nUse) - mn_i;                 % SIGNED (see header)
     end
     allAbsDev_m = [allAbsDev_m; dev_i];   %#ok<AGROW>
     allMot_m    = [allMot_m;    mot_i];   %#ok<AGROW>
@@ -209,7 +222,9 @@ for iAmp = 1:nAmp_mot
     allDF_n   = [allDF_n;   df_i(1:nUse, iCrop_new) / abs(mn_i)];  %#ok<AGROW>
     allMot_n  = [allMot_n;  mot_i];                                  %#ok<AGROW>
     ampIdx_n  = [ampIdx_n;  repmat(iAmp, nUse, 1)];                 %#ok<AGROW>
-    devNorm_n = [devNorm_n; abs(pk_i(1:nUse) - mn_i) / abs(mn_i)];  %#ok<AGROW>
+    % SIGNED numerator, |mn_i| denominator: mn_i is a negative dip, so dividing by its magnitude
+    % scales without flipping the sign that now carries the direction.
+    devNorm_n = [devNorm_n; (pk_i(1:nUse) - mn_i) / abs(mn_i)];     %#ok<AGROW>
 end
 
 % ---- Figure 1: trial rank (sorted by motion) vs |Peak dev| ----
@@ -227,7 +242,7 @@ end
 hl_a0 = xline(ax_ad, 0, 'k-', 'LineWidth', 0.5); hl_a0.HandleVisibility = 'off';
 title(ax_ad, sprintf('r = %.2f  p = %.3f', rA_m, pA_m), ...
     'FontSize', 6, 'FontWeight', 'bold');
-xlabel(ax_ad, '|Peak dev| (\DeltaF/F %)',  'FontSize', 6, 'FontWeight', 'bold');
+xlabel(ax_ad, 'Peak dev (\DeltaF/F %)',  'FontSize', 6, 'FontWeight', 'bold');
 ylabel(ax_ad, sprintf('Trial (sorted by motion, %.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
     'FontSize', 6, 'FontWeight', 'bold');
 lg_ad = legend(ax_ad, 'Location', 'best', 'FontSize', 6);
@@ -274,7 +289,7 @@ for expIdx = 1:nExp
         else
             pk_i  = imp_e_p.Peak_imp{iAmp}(:);
             mn_i  = mean(pk_i, 'omitnan');
-            dev_i = abs(pk_i(1:nUse) - mn_i);
+            dev_i = pk_i(1:nUse) - mn_i;                 % SIGNED (see header)
         end
         allAbsDev_pool = [allAbsDev_pool; dev_i];                   %#ok<AGROW>
         allMot_pool    = [allMot_pool;    mot_i];                    %#ok<AGROW>
@@ -334,8 +349,11 @@ hFit  = plot(ax_mvp, xf, polyval(pFit, xf), '-', 'Color', 'k', ...
     'LineWidth', PS.lw_fit, 'DisplayName', sprintf('Fit (r=%.2f)', rN));
 
 xlim(ax_mvp, [-0.03 1.03]);
-yl_mvp = ylim(ax_mvp);
-ylim(ax_mvp, [max(yl_mvp(1), -2), yl_mvp(2)]);   % trim dead space below the floor
+% SIGNED dev: the old clamp `max(yl(1),-2)` assumed a floor at 0 and would CLIP real negative
+% (deeper-than-average) trials. Use symmetric limits about 0 so both directions are visible.
+yMax_p = max(abs(allAbsDev_s(okFit)));
+ylim(ax_mvp, [-1.05*yMax_p, 1.05*yMax_p]);
+hz_mvp = yline(ax_mvp, 0, 'k:', 'LineWidth', 0.5); hz_mvp.HandleVisibility = 'off';
 xlabel(ax_mvp, sprintf('Normalized motion, 0-1 (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
     'FontSize', 6, 'FontWeight', 'bold');
 ylabel(ax_mvp, dev_ylabel, 'FontSize', 6, 'FontWeight', 'bold');
@@ -373,6 +391,8 @@ scatter(ax_15, mot15( bin15), dev15( bin15), 6, colHi15, 'filled', ...
     'DisplayName', sprintf('z > 1.5  (n=%d)', nHi15));
 xl15 = xline(ax_15, motThr_15, 'k--', 'LineWidth', 0.8);
 xl15.HandleVisibility = 'off';
+hz15 = yline(ax_15, 0, 'k:', 'LineWidth', 0.5); hz15.HandleVisibility = 'off';
+ylim(ax_15, [-1.05 1.05]*max(abs(dev15)));      % symmetric: sign is the point
 hold(ax_15, 'off');
 set(ax_15, 'Box', 'off', 'TickDir', 'out', 'FontSize', 6, 'FontWeight', 'bold');
 xlabel(ax_15, sprintf('Motion z-score (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
