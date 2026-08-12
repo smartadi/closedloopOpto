@@ -77,6 +77,10 @@ SUS_T0 = 0.3             # s, start of the sustained map (display only)
 PLATEAU_FRAC = 0.25     # plateau = last this fraction of the step
 OFF_WIN = 1.0           # s after offset searched for the undershoot
 MIDLINE_PX_DEFAULT = 280.0
+# Neighbourhood: four ROIs one millimetre from the site along the cortical axes (the widefield
+# rig runs 57.8 px/mm). "medial" is toward the midline, so its image direction depends on which
+# hemisphere was stimulated; anterior is up in image coords (PX_PER_MM_Y is negative).
+NEIGH_OFF_PX = 58
 BORDER_PX = 40          # ignore this margin when hunting the site
 SMOOTH_PX = 5           # box smoothing of the dF/F map before argmax
 
@@ -213,6 +217,18 @@ def find_site(dff, mimg, mid_x):
     return int(x), int(y)
 
 
+def neighbour_px(px, mid_x, mimg):
+    """The four cardinal neighbours one NEIGH_OFF_PX step from the site, clipped into the
+    frame. Returned in a fixed order so colours mean the same thing in every panel."""
+    ny, nx = mimg.shape
+    med = 1 if px[0] < mid_x else -1          # image direction that points at the midline
+    d = NEIGH_OFF_PX
+    out = {"anterior": (px[0], px[1] - d), "posterior": (px[0], px[1] + d),
+           "medial": (px[0] + med * d, px[1]), "lateral": (px[0] - med * d, px[1])}
+    return {k: (int(np.clip(x, ROI_RAD, nx - ROI_RAD)), int(np.clip(y, ROI_RAD, ny - ROI_RAD)))
+            for k, (x, y) in out.items()}
+
+
 def site_traces(U, mimg, t2svd, px, t0s, dur):
     """Per-trial %dF/F at the site ROI, each trial on its own pre-onset baseline."""
     ny, nx = mimg.shape
@@ -290,9 +306,14 @@ def main():
             if split > SITE_SPLIT_PX:
                 _, dff_e = site_traces(U, mimg, t2svd, px_e, t0s, dur)
                 Me = metrics(win, dff_e, dur)
+            npx = neighbour_px(px, mid_x, mimg)
+            neigh = {}
+            for lab, q in npx.items():
+                _, dq = site_traces(U, mimg, t2svd, q, t0s, dur)
+                neigh[lab] = dict(px=q, **metrics(win, dq, dur))
             results.append(dict(date=date, exp=exp, laser=laser, corr=corr, gx=gx, gy=gy,
                                 cmd=cmd, dur=dur, n=int(len(t0s)), px=px, px_e=px_e,
-                                split=split, early=Me, mid_x=mid_x, mid_src=mid_src,
+                                split=split, early=Me, neigh=neigh, mid_x=mid_x, mid_src=mid_src,
                                 win=win, dff=dff, map=map_early, map_step=map_step,
                                 mimg=mimg, **M))
             print(f"  {laser}nm gx{gx:+.1f} gy{gy:+.1f} cmd {cmd:.1f}V {dur:.2f}s n={len(t0s):3d} "
@@ -394,7 +415,52 @@ def plot_all(res):
     f2 = OUTDIR / "step_excit_panels.png"
     fig.savefig(f2, dpi=200)
     plt.close(fig)
-    print(f"\nwrote {f1}\n      {f2}")
+    f3 = plot_neighbours(res)
+    print(f"\nwrote {f1}\n      {f2}\n      {f3}")
+
+
+NEIGH_COL = {"site": "crimson", "anterior": "tab:blue", "posterior": "tab:green",
+             "medial": "tab:orange", "lateral": "tab:purple"}
+
+
+def plot_neighbours(res):
+    """Site vs its four 1 mm neighbours, one row per condition: ROI map + overlaid traces."""
+    n = len(res)
+    fig, ax = plt.subplots(n, 2, figsize=(9.0, 2.5 * n), squeeze=False)
+    for i, r in enumerate(res):
+        a = ax[i, 0]
+        c = np.nanpercentile(np.abs(r["map_step"]), 99.5)
+        a.imshow(r["mimg"], cmap="gray")
+        a.imshow(np.where(r["mimg"] > np.percentile(r["mimg"], 40), r["map_step"], np.nan),
+                 cmap="RdBu_r", vmin=-c, vmax=c, alpha=0.7)
+        a.axvline(r["mid_x"], color="w", lw=0.6, ls=":")
+        for lab, q in [("site", r["px"])] + [(k, v["px"]) for k, v in r["neigh"].items()]:
+            a.add_patch(plt.Rectangle((q[0] - ROI_RAD, q[1] - ROI_RAD), 2 * ROI_RAD, 2 * ROI_RAD,
+                                      fill=False, ec=NEIGH_COL[lab], lw=1.4))
+        a.set_xticks([]); a.set_yticks([])
+        a.set_title(f"{r['date']} e{r['exp']} {r['laser']}nm {r['cmd']:.1f}V {r['dur']:.2f}s "
+                    f"n={r['n']}  — whole-step map + ROIs", fontsize=7)
+
+        b = ax[i, 1]
+        b.axvspan(0, r["dur"], color="#ffcc66", alpha=0.35, lw=0)
+        for lab, M in [("site", r)] + list(r["neigh"].items()):
+            b.plot(r["win"], M["mean"], color=NEIGH_COL[lab], lw=1.4,
+                   label=f"{lab} {M['peak']:+.2f}%")
+            b.fill_between(r["win"], M["mean"] - M["sem"], M["mean"] + M["sem"],
+                           color=NEIGH_COL[lab], alpha=0.18, lw=0)
+        b.axhline(0, color="k", lw=0.6)
+        b.set_xlim(r["win"][0], r["win"][-1])
+        b.set_xlabel("time from step onset (s)", fontsize=7)
+        b.set_ylabel("%dF/F", fontsize=7)
+        b.tick_params(labelsize=6)
+        b.legend(fontsize=6, frameon=False, ncol=2)
+        b.set_title(f"site vs neighbours at {NEIGH_OFF_PX} px "
+                    f"({NEIGH_OFF_PX / 57.8:.1f} mm), peak of trial mean", fontsize=7)
+    fig.tight_layout()
+    f = OUTDIR / "step_excit_neighbours.png"
+    fig.savefig(f, dpi=200)
+    plt.close(fig)
+    return f
 
 
 def write_md(res):
@@ -424,9 +490,23 @@ def write_md(res):
                  f"| {r['split']:.0f} px | **{r['peak']:+.2f} %** | {r['t_peak']:.2f} s "
                  f"| {r['plateau']:+.2f} % | {r['off']:+.2f} % | {r['base_sd']:.2f} % | {r['jump']:.2f} "
                  f"| {'**ARTIFACT**' if r['artifact'] else 'ok'} |")
+    L += ["", f"## Site vs its four {NEIGH_OFF_PX / 57.8:.1f} mm neighbours", "",
+          f"Peak of the trial mean at the site and at four ROIs {NEIGH_OFF_PX} px away along the cortical",
+          "axes (medial = toward the midline). `spread` = mean neighbour peak / site peak — how",
+          "much of the driven response is still present a millimetre out.", "",
+          "| date | exp | cmd | site | anterior | posterior | medial | lateral | spread |",
+          "|---|---|---|---|---|---|---|---|---|"]
+    for r in res:
+        g = r["neigh"]
+        sp = np.mean([g[k]["peak"] for k in g]) / r["peak"] if r["peak"] else np.nan
+        L.append(f"| {r['date']} | {r['exp']} | {r['cmd']:.1f} V | **{r['peak']:+.2f} %** "
+                 + "".join(f"| {g[k]['peak']:+.2f} % " for k in
+                           ("anterior", "posterior", "medial", "lateral"))
+                 + f"| {sp:.0%} |")
     L += ["", "Figures (gitignored, regenerate with the script): `step_png/step_excit_conditions.png`",
           "(per-condition early map + whole-step map + trace), `step_png/step_excit_panels.png`",
-          "(one subplot per condition, absolute time — deliberately NOT duration-normalised).", ""]
+          "(one subplot per condition, absolute time — deliberately NOT duration-normalised),",
+          "`step_png/step_excit_neighbours.png` (site + 4 neighbours per condition).", ""]
     (HERE / "STEP_EXCIT.md").write_text("\n".join(L), encoding="utf-8")
     print("wrote bilateral/STEP_EXCIT.md")
 

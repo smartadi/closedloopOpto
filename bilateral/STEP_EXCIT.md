@@ -27,6 +27,21 @@ excluded from the overlay — they measure the laser, not the cortex.
 | 2026-07-21 | 1 | 638 | yes | (-2.0, +3.5) V | 3.4 V | 3.00 s | **31** | (161, 209) | (224, 262) | 82 px | **+8.90 %** | 0.23 s | +4.66 % | -2.66 % | 0.23 % | 0.01 | ok |
 | 2026-07-21 | 1 | 638 | yes | (-2.0, +3.5) V | 4.5 V | 3.00 s | **10** | (161, 211) | (194, 245) | 47 px | **+9.52 %** | 0.23 s | +5.31 % | -2.46 % | 0.20 % | 0.02 | ok |
 
+## Site vs its four 1.0 mm neighbours
+
+Peak of the trial mean at the site and at four ROIs 58 px away along the cortical
+axes (medial = toward the midline). `spread` = mean neighbour peak / site peak — how
+much of the driven response is still present a millimetre out.
+
+| date | exp | cmd | site | anterior | posterior | medial | lateral | spread |
+|---|---|---|---|---|---|---|---|---|
+| 2026-06-11 | 6 | 0.4 V | **+3.58 %** | +1.89 % | +3.23 % | +1.46 % | +2.40 % | 63% |
+| 2026-06-20 | 1 | 3.4 V | **+5.42 %** | +3.60 % | +2.12 % | +1.31 % | +3.08 % | 47% |
+| 2026-06-20 | 1 | 1.7 V | **+3.22 %** | +1.88 % | +1.24 % | +0.76 % | +1.89 % | 45% |
+| 2026-07-21 | 1 | 3.4 V | **+8.90 %** | +4.39 % | +8.65 % | +8.77 % | +3.45 % | 71% |
+| 2026-07-21 | 1 | 4.5 V | **+9.52 %** | +5.12 % | +8.96 % | +7.57 % | +4.38 % | 68% |
+
 Figures (gitignored, regenerate with the script): `step_png/step_excit_conditions.png`
 (per-condition early map + whole-step map + trace), `step_png/step_excit_panels.png`
-(one subplot per condition, absolute time — deliberately NOT duration-normalised).
+(one subplot per condition, absolute time — deliberately NOT duration-normalised),
+`step_png/step_excit_neighbours.png` (site + 4 neighbours per condition).
