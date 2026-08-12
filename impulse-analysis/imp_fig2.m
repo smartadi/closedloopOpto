@@ -70,6 +70,12 @@ if ~exist('F2_USE_AFFECT','var'), F2_USE_AFFECT = true;  end
 if ~exist('F2_NU','var'),         F2_NU         = 0.90;  end
 if ~exist('F2_SVW','var'),        F2_SVW        = false; end   % weight the basis by singular value
 if ~exist('F2_KMAX','var'),       F2_KMAX       = [];    end   % hard cap on the subspace rank k
+% DETECTOR. 'tf' = the confirmed biphasic-TF mask at a hand-set tf_sens (DEFAULT, and the fallback --
+% it stays the reference definition). 'null' = f2_affected_null, a calibrated per-pixel test of the
+% trial-averaged deflection against the measured catch null at FDR q = F2_FDRQ. The two are separate
+% detectors on purpose so they can be compared on the same session; neither overwrites the other.
+if ~exist('F2_DETECTOR','var'),   F2_DETECTOR   = 'tf';  end
+if ~exist('F2_FDRQ','var'),       F2_FDRQ       = 0.05;  end
 if ~exist('F2_PLOT','var'),       F2_PLOT       = true;  end
 % Where the per-session FIT figures are written as 300-dpi PNGs. They are diagnostics, not paper
 % panels, so PNG per the project export rule -- and written to disk because the thing you want to
@@ -111,7 +117,10 @@ for q = 1:numel(F2_SEL)
         P = f2_prep(allExperiments(sel), prepCfg);
 
         % --- §2 stim-affected layout (confirmed detector mask; one figure per session) -----------
-        A = f2_affected(P, struct('plot',F2_PLOT));
+        switch lower(F2_DETECTOR)
+            case 'null', A = f2_affected_null(P, struct('plot',F2_PLOT, 'q',F2_FDRQ));
+            otherwise,   A = f2_affected(P, struct('plot',F2_PLOT));
+        end
 
         % --- §3 M4 predictor, contra only (PRIMARY) ---------------------------------------------
         mopt = struct('use_motion',false, 'ridge_fixed',F2_RIDGE, ...
