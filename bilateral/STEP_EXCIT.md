@@ -34,4 +34,5 @@ excluded from the overlay — they measure the laser, not the cortex.
 | 2026-07-21 | 1 | 638 | yes | (-2.0, +3.5) V | 4.5 V | 3.00 s | **10** | (161, 211) | (194, 245) | 47 px | **+9.52 %** | 0.23 s | +5.31 % | -2.46 % | 0.20 % | 0.02 | ok |
 
 Figures (gitignored, regenerate with the script): `step_png/step_excit_conditions.png`
-(per-condition map + trace), `step_png/step_excit_overlay.png` (all trial means).
+(per-condition early map + whole-step map + trace), `step_png/step_excit_panels.png`
+(one subplot per condition, absolute time — deliberately NOT duration-normalised).
