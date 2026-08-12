@@ -52,6 +52,7 @@ EXPORT   = true;
 % {'pdf','png'} once the panels are signed off -- nothing else changes, so the approved
 % figure and the exported PDF are the same code path.
 FMT      = {'png'};    % {'png'} = review | {'pdf','png'} = final
+if exist('F4_FMT','var') && ~isempty(F4_FMT); FMT = F4_FMT; end   % run_fig4.m override
 W = 6; H = 4;          % project default panel size (cm)
 
 PS = paperStyle(); setPaperDefaults();

@@ -72,6 +72,7 @@ OX.EXPORT    = true;
 % {'pdf','png'} once the panels are signed off -- same code path, so what was approved is
 % exactly what gets exported.
 OX.FMT       = {'png'};        % {'png'} = review | {'pdf','png'} = final
+if exist('OX_FMT','var') && ~isempty(OX_FMT); OX.FMT = OX_FMT; end   % run_fig4.m override
 OX.exemplar  = 'AL_0033_0226_e2';   % the SINGLE SESSION shown as the demo (output + command
                                     % traces). Falls back to the first qualifying session.
 
