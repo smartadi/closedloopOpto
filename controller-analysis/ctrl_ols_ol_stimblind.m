@@ -271,7 +271,13 @@ if useRidge
     % built over the same frames and split as the direct fit above, so R^2 is the same number by
     % the same definition -- only the estimator changed.
     FG    = ctrl_gram_build(Xg_full, frames, itr, ite, ytrace);
-    RPATH = ctrl_ridge_path(FG, Xg_full, frames, rel, bwin, swin);
+    % Catch windows need CONTIGUOUS laser-off stretches, and `frames` may be a decimated subsample
+    % (ctrl_ols_spont caps at 60000 by even spacing), which has no contiguity at all. Rebuild the
+    % un-decimated laser-off mask from the onsets, using the same rule ctrl_ols_spont used, and
+    % hand it over. Only window admissibility uses it; the fit still uses `frames` via the Gram.
+    rp_opts = struct();
+    rp_opts.spontMask = local_spont_mask(S1.ons, S1.trial_dur, S1.settle_s, Fs, nF_m, w_warm);
+    RPATH = ctrl_ridge_path(FG, Xg_full, frames, rel, bwin, swin, rp_opts);
     RPATH.used = true;
     b     = RPATH.b_star;
     R2_te = RPATH.R2te_star;  R2_tr = RPATH.R2tr_star;
@@ -429,4 +435,25 @@ cs = [0; cumsum(Fraw)];  lo = max(ii-w,1);
 base = (cs(ii+1)-cs(lo))./(ii-lo+1);
 y = (Fraw - base)./base*100;  y(1:w) = NaN;
 ok = true;
+end
+
+function m = local_spont_mask(ons, trial_dur, settle_s, Fs, nF_m, w_warm)
+% Un-decimated laser-off mask over 1..nF_m, replicating ctrl_ols_spont's own rule: a frame is
+% spontaneous from (onset + trial_dur + settle_s) until 2 frames before the next onset, plus the
+% stretch before the first onset, minus the rolling-baseline warm-up.
+% Deliberately NOT the isfinite(y_full) filter ctrl_ols_spont also applies -- that one only ever
+% removes warm-up NaNs, which w_warm already covers, and applying it here would need the target
+% trace threaded in for no gain.
+m = false(1, nF_m);
+ons = ons(:).';
+ons = ons(ons >= 1 & ons <= nF_m);
+off0 = round((trial_dur + settle_s)*Fs);
+for j = 1:numel(ons)
+    i0 = max(ons(j) + off0, 1);
+    if j < numel(ons); i1 = ons(j+1) - 2; else; i1 = nF_m; end
+    i1 = min(i1, nF_m);
+    if i1 >= i0; m(i0:i1) = true; end
+end
+if ~isempty(ons) && ons(1) > 2; m(1:(ons(1)-2)) = true; end
+m(1:min(w_warm, nF_m)) = false;
 end

@@ -67,8 +67,25 @@ nL    = numel(lams);
 % A window is admissible only if EVERY sample it needs is spontaneous, so no catch window can
 % straddle a laser epoch. Drawn from the spontaneous set the predictor was fitted on, which is
 % what makes the whole selection stim-blind.
-isSpont = false(1, max(frames)+max(rel)+1);
-isSpont(frames) = true;
+% ⚠ WHY opts.spontMask EXISTS (2026-08-12). `frames` is NOT usable for this on every session.
+% ctrl_ols_spont caps the spontaneous set at maxFrm = 60000 with
+%     frames = frames(round(linspace(1,numel(frames),maxFrm)))
+% -- an evenly spaced DECIMATION. Above the cap that leaves no two consecutive samples anywhere,
+% so no peri-stim-shaped window is ever fully inside `frames` and this function used to abort with
+% "0 admissible catch windows". It failed on exactly the four sessions at the 60000 cap
+% (0212, 0224, 0226, AL_0039_0419) and succeeded on every session below it -- which is why the
+% ridge build silently covered only 9 of 13 sessions and the reason was never recorded.
+% The caller therefore passes the UN-decimated laser-off mask, rebuilt from the stim onsets. The
+% ridge fit itself still uses the decimated `frames` via the Gram; only window admissibility needs
+% contiguity, and contiguity is a property of the recording, not of the subsample.
+if isfield(opts,'spontMask') && ~isempty(opts.spontMask)
+    isSpont = false(1, numel(opts.spontMask)+max(rel)+1);
+    isSpont(1:numel(opts.spontMask)) = logical(opts.spontMask(:).');
+    frames = find(isSpont);
+else
+    isSpont = false(1, max(frames)+max(rel)+1);
+    isSpont(frames) = true;
+end
 lo = 1 - min(rel);  hi = numel(isSpont) - max(rel);
 cand = frames(frames >= lo & frames <= hi);
 ok = false(size(cand));
