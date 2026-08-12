@@ -22,6 +22,12 @@
 CFG.nSV_load = 500;  CFG.Fs = 35;  CFG.pre_s = 1.0;  CFG.resp_s = 3.0;
 nBoot = 2000;  rng(7,'twister');
 SESS = 1:numel(fields);          % candidate sessions; auto-skips those without caches
+% ADMISSION GATE (user, 2026-08-12) -- identical rule in all three cross-session scripts
+% (ctrl_ols_xsess.m, this, imp_state_across_sessions.m). rho and ER are ratios against a
+% Global the predictor produced, so a Global below the floor hands its own prediction error
+% to the residual and manufactures rejection out of model weakness. Gate first, then pool.
+r2_floor = ctrl_r2_floor();      % 0.85 on the DEPLOYED (Stage-2) predictor
+USE_GATE = true;                 % false = diagnostic only, NEVER for a reported number
 PS = paperStyle();  col_ol = PS.col_ol;  col_cl = PS.col_cl;
 
 assert(exist('mouse','var') && exist('fields','var'), '[XSESS] run load_sessions.m first.');
@@ -34,8 +40,11 @@ fig_dir = fullfile(here,'..','paper','images','predictor_saga'); if ~exist(fig_d
 
 %% [XSESS-LOOP] build + score each session through the shared kernel ------------
 Q = struct([]);          % per-session qualifying results
+skipped = struct('fld',{},'msg',{});
 pooled_ol = []; pooled_cl = []; pooled_ol_g = []; pooled_cl_g = [];   % pooled per-trial rho + session id
-fprintf('\n[IMP-XSESS] scanning %d candidate sessions...\n', numel(SESS));
+gate_txt = {'OFF','ON'};   % indexed by logical+1 (script local functions must sit at EOF)
+fprintf('\n[IMP-XSESS] scanning %d candidate sessions  (R^2 gate %s, floor %.2f)...\n', ...
+    numel(SESS), gate_txt{USE_GATE+1}, r2_floor);
 fprintf('  %-22s %5s %5s %7s %7s %8s %9s %9s\n','session','nOL','nCL','medOL','medCL','p(1-3s)','Gdip_OL','Gdip_CL');
 for s = SESS
     % Lazy per-session load: each cached `d` is 1-3.5 GB (it carries the full SVD), so holding
@@ -46,10 +55,12 @@ for s = SESS
         pth_s = fullfile(fileparts(here),'data', sprintf('%sctrl%s%s%d.mat', ...
             mouse.(fld_s).mn, mouse.(fld_s).td(6:7), mouse.(fld_s).td(9:10), mouse.(fld_s).en));
         if ~exist(pth_s,'file')
+            skipped(end+1) = struct('fld',fld_s,'msg','no controller cache'); %#ok<SAGROW>
             fprintf('  %-22s  SKIP (no controller cache)\n', fld_s);  continue;
         end
         tmp_s = load(pth_s);
         if ~isfield(tmp_s,'d')
+            skipped(end+1) = struct('fld',fld_s,'msg','cache has no d'); %#ok<SAGROW>
             fprintf('  %-22s  SKIP (cache has no d)\n', fld_s);  clear tmp_s;  continue;
         end
         mouse.(fld_s).d = tmp_s.d;  mouse.(fld_s).data = tmp_s.data;  clear tmp_s;
@@ -59,7 +70,14 @@ for s = SESS
     S = imp_build_session(mouse, fields, s, dataDir, CFG);
     if freeAfter; mouse.(fld_s) = rmfield(mouse.(fld_s), {'d','data'}); end
     if ~S.ok
+        skipped(end+1) = struct('fld',S.sess_tag,'msg',S.msg); %#ok<SAGROW>
         fprintf('  %-22s  SKIP (%s)\n', S.sess_tag, S.msg);  continue;
+    end
+    if USE_GATE && ~(S.R2_te >= r2_floor)
+        skipped(end+1) = struct('fld',S.sess_tag, ...
+            'msg',sprintf('deployed R^2 %.3f < floor %.2f', S.R2_te, r2_floor)); %#ok<SAGROW>
+        fprintf('  %-22s  SKIP (deployed R^2 %.3f < floor %.2f)\n', S.sess_tag, S.R2_te, r2_floor);
+        continue;
     end
     R = imp_reject_core(S.Aol, S.Gol, S.Acl, S.Gcl, S.pre, S.Fs, CFG.resp_s, S.ref);
     k = numel(Q)+1;
@@ -80,7 +98,10 @@ for s = SESS
         S.sess_tag, R.n_ol, R.n_cl, R.med_ol, R.med_cl, R.p_rho, R.Gdip_ol, R.Gdip_cl);
 end
 nS = numel(Q);
-assert(nS>=1, '[XSESS] no session had usable Stage-1/2 caches -- build the predictors first.');
+assert(nS>=1, ['[XSESS] no session qualified. Either the Stage-1/2 caches are missing ' ...
+    '(build them: ctrl_roi_draw_all -> ctrl_residual_build), or every deployed predictor ' ...
+    'is below the R^2 floor (%.2f). Set USE_GATE=false to see the ungated numbers -- ' ...
+    'DIAGNOSTIC ONLY, they are not reportable.'], r2_floor);
 
 %% [XSESS-STATS] combined inference ---------------------------------------------
 med_ol = [Q.med_ol].';  med_cl = [Q.med_cl].';
@@ -189,9 +210,22 @@ exportgraphics(figX, xpng, 'Resolution',300);
 fprintf('[IMP-XSESS] figure -> %s\n', xpng);
 
 %% [XSESS-SAVE] -----------------------------------------------------------------
+% ER aggregates are saved (not just the per-session Q fields) so the paper-panel script
+% f4_reject_panels.m can READ them instead of re-deriving the same formulas from Q --
+% a second copy of the aggregation is a second thing that can drift.
 XS = struct('CFG',CFG,'nS',nS,'Q',Q, ...
+    'r2_floor',r2_floor,'USE_GATE',USE_GATE,'skipped',skipped, ...
     'med_ol',med_ol,'med_cl',med_cl,'gain',gain,'gain_ci',gain_ci, ...
     'p_sess',p_sess,'p_pool',p_pool,'Gdip_ol',Gdip_ol,'Gdip_cl',Gdip_cl, ...
-    'pooled_ol',pooled_ol,'pooled_cl',pooled_cl);
+    'pooled_ol',pooled_ol,'pooled_cl',pooled_cl, ...
+    'er_med_ol',er_med_ol,'er_med_cl',er_med_cl,'er_gain',er_gain, ...
+    'er_gain_ci',er_gain_ci,'p_er_sess',p_er_sess,'p_er_ol1',p_er_ol1,'p_er_cl1',p_er_cl1);
 save(fullfile(dataDir,'imp_reject_across_sessions.mat'),'XS');
-fprintf('[IMP-XSESS] struct -> data/imp_reject_across_sessions.mat  (%d qualifying sessions)\n', nS);
+fprintf('[IMP-XSESS] struct -> data/imp_reject_across_sessions.mat  (%d qualifying, %d skipped)\n', ...
+    nS, numel(skipped));
+if ~isempty(skipped)
+    fprintf('  skipped:\n');
+    for i = 1:numel(skipped)
+        fprintf('    %-22s %s\n', skipped(i).fld, skipped(i).msg);
+    end
+end

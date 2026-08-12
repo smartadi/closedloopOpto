@@ -20,6 +20,9 @@
 
 %% [CTRL-LTI-CFG] ---------------------------------------------------------------
 selField = 4;
+if exist('CTRL_SELFIELD','var') && ~isempty(CTRL_SELFIELD)   % batch override (ctrl_optimal_xsess.m)
+    selField = CTRL_SELFIELD;                                % same idiom as XB_SESS in imp_xsess_build
+end
 Fs       = 35;
 NXMAX    = 5;             % try state orders 1..NXMAX
 rng(7,'twister');

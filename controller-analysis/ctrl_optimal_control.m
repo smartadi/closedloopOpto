@@ -34,11 +34,15 @@
 
 %% [CTRL-OPT-CFG] ---------------------------------------------------------------
 selField  = 4;
+if exist('CTRL_SELFIELD','var') && ~isempty(CTRL_SELFIELD)   % batch override (ctrl_optimal_xsess.m)
+    selField = CTRL_SELFIELD;                                % same idiom as XB_SESS in imp_xsess_build
+end
 Fs        = 35;
 ref_level = -5;          % d.ref, the controller's setpoint (%dF/F)
 lam       = 1e-4;        % tiny input regularization (conditioning only; ~0 tracking effect)
 Hp        = 35;          % causal MPC prediction horizon (samples, 1 s)
 uMaxMode  = 'CL';        % 'CL' = PI's own usage ceiling (fair same-budget) | 'HW' = hardware max
+if exist('CTRL_UMAXMODE','var') && ~isempty(CTRL_UMAXMODE); uMaxMode = CTRL_UMAXMODE; end
 rng(7,'twister');
 
 here = fileparts(mfilename('fullpath'));
@@ -72,44 +76,24 @@ fprintf('[CTRL-OPT] %s | horizon %d samp (%.1fs) | u_max(%s)=%.3f | PI u: mean=%
     sess_tag, N, dur, uMaxMode, u_max, mean(u_PI), max(u_PI));
 
 %% [CTRL-OPT-PLANT] discrete plant + convolution matrix -------------------------
-md = ss(L.A, L.B, L.C, L.D, L.Ts);  md.InputDelay = L.nk;  md = absorbDelay(md);
-[A,B,C,D] = ssdata(md);
-h = zeros(N,1); h(1) = D;                          % Markov parameters h_0..h_{N-1}
-Ak = eye(size(A));
-for k = 2:N, h(k) = C*Ak*B;  Ak = Ak*A; end
-H = tril(toeplitz(h));                             % y = H*u  (from rest)
-% sanity: convolution matrix must reproduce sim() on the OL step
-u_chk = L.u_OL(pre+1:pre+N);  y_chk = lsim(md, u_chk, tt-tt(1));
-fprintf('[CTRL-OPT] plant check: max|H*u - lsim(u)| = %.3g (should be ~0)\n', max(abs(H*u_chk - y_chk(:))));
+% The plant build, both QPs and the u=0 accounting now live in utils/ctrl_opt_solve.m so that
+% this workbench and the cross-session batch (ctrl_optimal_xsess.m) cannot solve two different
+% problems. The disturbance is still built HERE, because what counts as "the disturbance" is
+% the modelling choice this script exists to make.
+[~, H] = ctrl_plant_markov(L, N);                  % y = H*u (from rest), delay absorbed
 
 %% [CTRL-OPT-DISTURBANCE] what the PI controller was actually fighting ----------
 d = y_PI - H*u_PI;                                 % adaptation + ongoing state + mismatch
 fprintf('[CTRL-OPT] disturbance d: mean=%.2f%%  range [%.2f, %.2f]  (end-start drift %.2f%%)\n', ...
     mean(d), min(d), max(d), d(end)-d(1));
 
-%% [CTRL-OPT-NONCAUSAL] clairvoyant best-possible ------------------------------
-Qq = 2*(H.'*H + lam*eye(N));  Qq = (Qq+Qq.')/2;
-fq = 2*H.'*(d - r);
-qopt = optimoptions('quadprog','Display','off');
-u_nc = quadprog(Qq, fq, [],[],[],[], zeros(N,1), u_max*ones(N,1), max(min(u_PI,u_max),0), qopt);
-y_nc = H*u_nc + d;
-
-%% [CTRL-OPT-CAUSAL] receding-horizon MPC (knows d only up to now) --------------
-u_ca = zeros(N,1);  x = zeros(size(A,1),1);  y_ca = zeros(N,1);
-for k = 1:N
-    p = min(Hp, N-k+1);                            % shrinking horizon at the end
-    % free response from current state + constant-disturbance prediction
-    Psi = zeros(p,1); Ai = eye(size(A));
-    for i = 1:p, Psi(i) = C*Ai*x; Ai = Ai*A; end   % Psi(1)=C*x (y_k), Psi(2)=C*A*x, ...
-    dk = d(k);                                     % last measured disturbance, held constant
-    Hp_mat = tril(toeplitz(h(1:p)));
-    Qk = 2*(Hp_mat.'*Hp_mat + lam*eye(p)); Qk=(Qk+Qk.')/2;
-    fk = 2*Hp_mat.'*(Psi + dk - r(k:k+p-1));
-    uk = quadprog(Qk, fk, [],[],[],[], zeros(p,1), u_max*ones(p,1), [], qopt);
-    u_ca(k) = uk(1);                               % apply first move only
-    y_ca(k) = C*x + D*u_ca(k) + d(k);
-    x = A*x + B*u_ca(k);                           % propagate true plant state
-end
+%% [CTRL-OPT-SOLVE] non-causal ceiling + causal MPC (shared kernel) -------------
+OS = ctrl_opt_solve(L, d, r, u_max, struct('lam',lam,'Hp',Hp, ...
+        'u_init',u_PI, 'u_check',L.u_OL(pre+1:pre+N), 'causal',true));
+u_nc = OS.u_nc;  y_nc = OS.y_nc;  u_ca = OS.u_ca;  y_ca = OS.y_ca;
+fprintf('[CTRL-OPT] plant check: max|H*u - lsim(u)| = %.3g (should be ~0)\n', OS.plant_err);
+fprintf('[CTRL-OPT] non-causal optimum holds u=0 on %.0f%% of the horizon (irreducible regime)\n', ...
+    100*OS.frac_u0);
 
 %% [CTRL-OPT-METRICS] -----------------------------------------------------------
 w_ss = round(1*Fs)+1:N;                            % steady-state window [1,dur]s (project convention)

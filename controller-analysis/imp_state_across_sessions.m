@@ -27,6 +27,13 @@
 CFG.nSV_load = 500;  CFG.Fs = 35;  CFG.pre_s = 1.0;  CFG.resp_s = 3.0;
 nBoot = 2000;  rng(7,'twister');
 SESS  = 1:numel(fields);
+% ADMISSION GATE (user, 2026-08-12) -- identical rule in all three cross-session scripts
+% (ctrl_ols_xsess.m, imp_reject_across_sessions.m, this). A state SLOPE built on an
+% under-floor Global is the worst case of all: everything the predictor misses lands in the
+% residual, so if predictor weakness happens to vary with state the slope measures the model,
+% not the brain. Gate first, then correlate.
+r2_floor = ctrl_r2_floor();      % 0.85 on the DEPLOYED (Stage-2) predictor
+USE_GATE = true;                 % false = diagnostic only, NEVER for a reported number
 PS = paperStyle();  col_ol = PS.col_ol;  col_cl = PS.col_cl;
 
 assert(exist('mouse','var') && exist('fields','var'), '[XSTATE] run load_sessions.m first.');
@@ -42,7 +49,10 @@ nSt = numel(STATES);
 
 %% [XSTATE-LOOP] ----------------------------------------------------------------
 P = struct([]);            % per-session results
-fprintf('\n[IMP-XSTATE] scanning %d candidate sessions...\n', numel(SESS));
+skipped = struct('fld',{},'msg',{});
+gate_txt = {'OFF','ON'};   % indexed by logical+1 (script local functions must sit at EOF)
+fprintf('\n[IMP-XSTATE] scanning %d candidate sessions  (R^2 gate %s, floor %.2f)...\n', ...
+    numel(SESS), gate_txt{USE_GATE+1}, r2_floor);
 for s = SESS
     fld_s = fields{s};  freeAfter = false;
     if ~isfield(mouse.(fld_s),'d') || isempty(mouse.(fld_s).d)
@@ -56,8 +66,9 @@ for s = SESS
         freeAfter = true;
     end
     S = imp_build_session(mouse, fields, s, dataDir, CFG);
+    gateFail = S.ok && USE_GATE && ~(S.R2_te >= r2_floor);   % tested before the core runs
     stateOK = false;
-    if S.ok
+    if S.ok && ~gateFail
         R  = imp_reject_core(S.Aol, S.Gol, S.Acl, S.Gcl, S.pre, S.Fs, CFG.resp_s, S.ref);
         % same t_full/pre/post/nF the trial builder used -> identical trial order
         ST = imp_trial_states(mouse.(fld_s).d, mouse.(fld_s).data, ...
@@ -66,9 +77,17 @@ for s = SESS
     end
     if freeAfter; mouse.(fld_s) = rmfield(mouse.(fld_s), {'d','data'}); end
     if ~S.ok
+        skipped(end+1) = struct('fld',S.sess_tag,'msg',S.msg); %#ok<SAGROW>
         fprintf('  %-22s SKIP (%s)\n', S.sess_tag, S.msg);  continue;
     end
+    if gateFail
+        skipped(end+1) = struct('fld',S.sess_tag, ...
+            'msg',sprintf('deployed R^2 %.3f < floor %.2f', S.R2_te, r2_floor)); %#ok<SAGROW>
+        fprintf('  %-22s SKIP (deployed R^2 %.3f < floor %.2f)\n', S.sess_tag, S.R2_te, r2_floor);
+        continue;
+    end
     if ~stateOK
+        skipped(end+1) = struct('fld',S.sess_tag,'msg','state/rho trial mismatch'); %#ok<SAGROW>
         fprintf('  %-22s SKIP (state/rho trial mismatch OL %d/%d CL %d/%d)\n', ...
             S.sess_tag, ST.n_ol, R.n_ol, ST.n_cl, R.n_cl);  continue;
     end
@@ -99,7 +118,10 @@ for s = SESS
         S.sess_tag, R.n_ol, R.n_cl, P(k).rs_ol(1), P(k).rs_cl(1), P(k).rs_ol(2), P(k).rs_cl(2));
 end
 nS = numel(P);
-assert(nS >= 1, '[XSTATE] no qualifying session -- run imp_xsess_build.m first.');
+assert(nS >= 1, ['[XSTATE] no session qualified. Either the Stage-1/2 caches are missing ' ...
+    '(build them: ctrl_roi_draw_all -> ctrl_residual_build), or every deployed predictor is ' ...
+    'below the R^2 floor (%.2f). Set USE_GATE=false to see the ungated numbers -- ' ...
+    'DIAGNOSTIC ONLY, they are not reportable.'], r2_floor);
 
 %% [XSTATE-STATS] ---------------------------------------------------------------
 fprintf('\n[IMP-XSTATE] state-dependence of rho_{1-3}, %d sessions (session-level inference)\n', nS);
@@ -184,6 +206,14 @@ exportgraphics(figS, spng, 'Resolution',300);
 fprintf('[IMP-XSTATE] figure -> %s\n', spng);
 
 %% [XSTATE-SAVE] ----------------------------------------------------------------
-XS_STATE = struct('CFG',CFG,'nS',nS,'P',P,'XST',XST,'states',{STATES});
+XS_STATE = struct('CFG',CFG,'nS',nS,'P',P,'XST',XST,'states',{STATES}, ...
+    'r2_floor',r2_floor,'USE_GATE',USE_GATE,'skipped',skipped);
 save(fullfile(dataDir,'imp_state_across_sessions.mat'),'XS_STATE');
-fprintf('[IMP-XSTATE] struct -> data/imp_state_across_sessions.mat (%d sessions)\n', nS);
+fprintf('[IMP-XSTATE] struct -> data/imp_state_across_sessions.mat (%d qualifying, %d skipped)\n', ...
+    nS, numel(skipped));
+if ~isempty(skipped)
+    fprintf('  skipped:\n');
+    for i = 1:numel(skipped)
+        fprintf('    %-22s %s\n', skipped(i).fld, skipped(i).msg);
+    end
+end

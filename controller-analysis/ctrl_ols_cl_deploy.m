@@ -27,6 +27,9 @@
 
 %% [CTRL-CL-CFG] -----------------------------------------------------------------
 selField   = 4;          % session index into `fields` (must match the Stage 1/2 runs)
+if exist('CTRL_SELFIELD','var') && ~isempty(CTRL_SELFIELD)   % batch override (ctrl_optimal_xsess.m)
+    selField = CTRL_SELFIELD;                                % same idiom as XB_SESS in imp_xsess_build
+end
 nSV_load   = 500;
 Fs         = 35;
 pre_s      = 1.0;        % per-trial baseline window [-1,0] s (matches Stage 2)
