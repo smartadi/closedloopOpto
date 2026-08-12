@@ -27,7 +27,7 @@ SESS = 1:numel(fields);          % candidate sessions; auto-skips those without 
 % Global the predictor produced, so a Global below the floor hands its own prediction error
 % to the residual and manufactures rejection out of model weakness. Gate first, then pool.
 r2_floor = ctrl_r2_floor();      % 0.85 on the DEPLOYED (Stage-2) predictor
-USE_GATE = true;                 % false = diagnostic only, NEVER for a reported number
+USE_GATE = ctrl_gate_on();       % single project switch (utils/ctrl_gate_on.m); CTRL_GATE overrides
 % EXEMPLAR session for the Fig-4 demo panels. Its trial-averaged traces are stored in XS.EX so
 % f4_reject_panels.m can draw the single-session demo WITHOUT reloading a 1-3.5 GB session --
 % and, more importantly, so the demo is guaranteed to be the same decomposition the population

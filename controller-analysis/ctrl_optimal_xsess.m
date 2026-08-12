@@ -66,7 +66,7 @@ OX.lam       = 1e-4;           % input regularization (conditioning only)
 OX.Hp        = 35;             % causal MPC horizon (samples, 1 s)
 OX.force_s3  = false;          % rebuild Stage-3 (CL deploy) even if cached
 OX.force_s4a = false;          % rebuild Stage-4a (LTI plant) even if cached
-OX.USE_GATE  = true;           % ctrl_r2_floor admission gate -- see header
+OX.USE_GATE  = ctrl_gate_on();  % single project switch (utils/ctrl_gate_on.m); CTRL_GATE overrides
 OX.EXPORT    = true;
 % REVIEW WORKFLOW (user, 2026-08-12): PNG first, approve, THEN vector PDFs. Flip to
 % {'pdf','png'} once the panels are signed off -- same code path, so what was approved is

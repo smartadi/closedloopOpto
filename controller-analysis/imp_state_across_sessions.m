@@ -33,7 +33,7 @@ SESS  = 1:numel(fields);
 % residual, so if predictor weakness happens to vary with state the slope measures the model,
 % not the brain. Gate first, then correlate.
 r2_floor = ctrl_r2_floor();      % 0.85 on the DEPLOYED (Stage-2) predictor
-USE_GATE = true;                 % false = diagnostic only, NEVER for a reported number
+USE_GATE = ctrl_gate_on();       % single project switch (utils/ctrl_gate_on.m); CTRL_GATE overrides
 PS = paperStyle();  col_ol = PS.col_ol;  col_cl = PS.col_cl;
 
 assert(exist('mouse','var') && exist('fields','var'), '[XSTATE] run load_sessions.m first.');

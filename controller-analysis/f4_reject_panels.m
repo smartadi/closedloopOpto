@@ -74,14 +74,23 @@ L = load(xf,'XS');  XS = L.XS;  Q = XS.Q;  nS = XS.nS;
 xinfo = dir(xf);
 fprintf('\n[F4-REJ] source: imp_reject_across_sessions.mat  (%s, %d sessions)\n', xinfo.date, nS);
 
-% The gate is a property of the run, not of this script. An ungated struct must never reach a
-% paper panel -- the whole point of the floor is that a weak Global manufactures rejection.
-if ~isfield(XS,'USE_GATE') || ~XS.USE_GATE
-    error(['[F4-REJ] this struct was built with the R^2 gate OFF (or predates it). ' ...
-        'Ungated numbers are diagnostic only. Re-run imp_reject_across_sessions.m with USE_GATE=true.']);
+% The gate is a property of the run, not of this script. This used to be a hard error, on the
+% reasoning that a weak Global manufactures apparent rejection so ungated numbers must never reach
+% a paper panel. Downgraded 2026-08-12 (user: "make it for all dont reject any") -- refusing to
+% draw was the wrong safeguard, because it also blocked the legitimate all-sessions view. The
+% panels are drawn either way and the ones built from ungated aggregates carry an UNGATED stamp,
+% so the caveat travels with the figure instead of living in a script that would not run.
+GATED = isfield(XS,'USE_GATE') && XS.USE_GATE;
+if GATED
+    fprintf('         R^2 gate ON at floor %.2f;  %d session(s) skipped upstream\n', ...
+        XS.r2_floor, numel(XS.skipped));
+    STAMP = '';
+else
+    fprintf(2, ['         ⚠ R^2 gate OFF -- every session included regardless of its Global fit. ' ...
+        'Panels are stamped UNGATED. Report the per-session R^2 alongside any number taken ' ...
+        'from these, or re-run with CTRL_GATE = true.\n']);
+    STAMP = sprintf('UNGATED (no R^2 floor, n=%d)', nS);
 end
-fprintf('         R^2 gate ON at floor %.2f;  %d session(s) skipped upstream\n', ...
-    XS.r2_floor, numel(XS.skipped));
 assert(nS >= 2, '[F4-REJ] need >=2 qualifying sessions for a paired panel (have %d).', nS);
 
 switch upper(MET)
@@ -145,7 +154,7 @@ else
         title(axE,sprintf('%s, %d trials', upper(demo{m,1}), demo{m,7}), ...
             'FontSize',PS.fs,'FontWeight',PS.fw);
         cleanAxes(axE);
-        deal_export(figE, outDir, sprintf('f4_reject_demo_%s',demo{m,1}), EXPORT, FMT);
+        deal_export(figE, outDir, sprintf('f4_reject_demo_%s',demo{m,1}), EXPORT, FMT, STAMP);
     end
 
     % that session's OWN per-trial statistic -- the single-session claim, before pooling
@@ -170,7 +179,7 @@ else
     ylabel(axF,ylab_s,'FontSize',PS.fs,'FontWeight',PS.fw);
     title(axF,sprintf('p=%.2g', p_demo),'FontSize',PS.fs,'FontWeight',PS.fw);
     cleanAxes(axF);
-    deal_export(figF, outDir, sprintf('f4_reject_demo_stat_%s',tag), EXPORT, FMT);
+    deal_export(figF, outDir, sprintf('f4_reject_demo_stat_%s',tag), EXPORT, FMT, STAMP);
 
     fprintf('\n[F4-REJ-DEMO] %s (single-session demo, deployed R^2 %.3f)\n', E.sess_tag, E.R2_te);
     fprintf('  median %s : OL %.3f | CL %.3f   (%d / %d trials, rank-sum p=%.3g)\n', ...
@@ -194,7 +203,7 @@ xlim(axA,[0.7 2.3]);
 ylabel(axA,ylab_s,'FontSize',PS.fs,'FontWeight',PS.fw);
 title(axA,sprintf('n=%d, p=%.2g', nS, p_sess),'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(axA);
-deal_export(figA, outDir, sprintf('f4_reject_paired_%s',tag), EXPORT, FMT);
+deal_export(figA, outDir, sprintf('f4_reject_paired_%s',tag), EXPORT, FMT, STAMP);
 
 %% [F4-REJ-B] pooled per-trial distributions ------------------------------------
 % DESCRIPTIVE ONLY -- trials within a session are not independent, and one long session would
@@ -218,7 +227,7 @@ xlim(axB,[0.5 2.5]);
 ylabel(axB,ylab_s,'FontSize',PS.fs,'FontWeight',PS.fw);
 title(axB,sprintf('%d / %d trials', numel(V{1}), numel(V{2})),'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(axB);
-deal_export(figB, outDir, sprintf('f4_reject_trials_%s',tag), EXPORT, FMT);
+deal_export(figB, outDir, sprintf('f4_reject_trials_%s',tag), EXPORT, FMT, STAMP);
 
 %% [F4-REJ-C] per-session gain, sorted ------------------------------------------
 % gain = OL - CL, so >0 means CL removed more disturbance energy than OL in that session.
@@ -237,7 +246,7 @@ xlabel(axC,'session','FontSize',PS.fs,'FontWeight',PS.fw);
 ylabel(axC,'gain (OL-CL)','FontSize',PS.fs,'FontWeight',PS.fw);
 title(axC,sprintf('CL better in %d/%d', nnz(gainV>0), nS),'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(axC);
-deal_export(figC, outDir, sprintf('f4_reject_gain_%s',tag), EXPORT, FMT);
+deal_export(figC, outDir, sprintf('f4_reject_gain_%s',tag), EXPORT, FMT, STAMP);
 
 %% [F4-REJ-D] the T1 control: gain vs predictor quality -------------------------
 % If "the controller rejects the disturbance" were really "the predictor missed some of the
@@ -262,7 +271,7 @@ xlabel(axD,'deployed R^2','FontSize',PS.fs,'FontWeight',PS.fw);
 ylabel(axD,'gain (OL-CL)','FontSize',PS.fs,'FontWeight',PS.fw);
 set(axD,'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(axD);
-deal_export(figD, outDir, sprintf('f4_reject_capacity_%s',tag), EXPORT, FMT);
+deal_export(figD, outDir, sprintf('f4_reject_capacity_%s',tag), EXPORT, FMT, STAMP);
 
 %% [F4-REJ-REPORT] numbers for the caption --------------------------------------
 % Everything a caption or a Results sentence needs, in one block, in the units of MET.
@@ -295,7 +304,14 @@ end
 fprintf('[F4-REJ] panels -> %s\n', outDir);
 
 %% ---- local functions (must sit at EOF in a script) ---------------------------
-function deal_export(fig, outDir, base, EXPORT, FMT)
+function deal_export(fig, outDir, base, EXPORT, FMT, STAMP)
+% STAMP is non-empty only when the aggregate was built with the R^2 gate OFF. It is burned into
+% the figure rather than printed to the console so the caveat cannot be separated from the panel.
+if ~isempty(STAMP)
+    annotation(fig,'textbox',[0 0.94 1 0.06],'String',STAMP,'EdgeColor','none', ...
+        'HorizontalAlignment','center','Color',[0.75 0 0],'FontSize',6,'FontWeight','bold', ...
+        'FitBoxToText','off');
+end
 if ~EXPORT; return; end
 for i = 1:numel(FMT)
     paperExport(fig, fullfile(outDir,[base '.' FMT{i}]));

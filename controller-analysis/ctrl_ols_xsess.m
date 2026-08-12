@@ -45,7 +45,7 @@ CFG = struct('nSV_load',500, 'Fs',35, 'pre_s',1.0, 'resp_s',3.0);
 dip_tran_s = 0.5;      % transient window [0,dip_tran_s]s -- matches Stage 2/3
 capt_min_A = 0.20;     % |mean Actual| floor (%dF/F) below which a capture RATIO is meaningless
 r2_floor   = ctrl_r2_floor();   % admission gate on the DEPLOYED predictor (0.85)
-USE_GATE   = true;     % false = report every session regardless (diagnostic only, never for a claim)
+USE_GATE   = ctrl_gate_on();   % single project switch (utils/ctrl_gate_on.m); CTRL_GATE overrides
 nBoot      = 2000;
 rng(7,'twister');
 SESS = 1:numel(fields);          % candidates; sessions without Stage-1/2 caches auto-skip
