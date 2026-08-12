@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-11 — Subspace-blind model BUILT and run ungated: works, but is LESS efficient than the window-mean penalty it replaces
+**Changed/Found:** NEW `utils/f2_subspace.m` (stacked normalised evoked trajectories → thin SVD → `V_k`), `utils/f2_frontier_sub.m` (Woodbury sweep, one Cholesky for the whole frontier, window-free capture `η=⟨α,g⟩/⟨α,α⟩`), `utils/f2_subfig.m` (viewer: spectrum, `k(ν)`, frontier, `V₁…V₄` mapped, pixel weight map, held-out whole-response decomposition). Wired as `select_mode='subspace'` with `F2_NU`/`F2_KMAX`/`F2_SVW`. AL_0033, ungated 442 px, rank sweep:
+
+| k | spontR² | price | capVal | random | gap | decomp | catch |
+|---|---|---|---|---|---|---|---|
+| 3 (ν=.90) | 0.980 | .016 | −6% | +4% | −9 | −11% | **+20% FAIL** |
+| 5 | 0.964 | .032 | +4% | +4% | 0 | −1% | **−45% FAIL** |
+| 11 (ν=.99) | 0.909 | .087 | +48% | +5% | +44 | +55% | +2% |
+| **20** | **0.876** | **.120** | **+68%** | **+5%** | **+62** | **+88%** | **+3%** |
+| 40 | 0.854 | .142 | +69% | +7% | +62 | +92% | +6% |
+| 160 | 0.791 | .205 | +71% | +20% | +51 | +93% | +3% |
+
+Reference — the window-mean penalty it was meant to replace, rank 6, same 442 px: price **0.051**, capVal **+87%**, random +6% (gap +81), decomp +93%, catch +4%.
+**Why:** Three results. (1) **ν=0.90 was a bad default** — k=3 spans 92% of stim energy but the fit evades through the remaining 8%; capture goes NEGATIVE and the catch control FAILS at +20%. (2) **capVal plateaus at k≈20** (+68%) and buys only 3 more points out to k=160 while the price nearly doubles and the random control degrades 5%→20%. k=20 is the knee. (3) **The window-mean penalty is still better**: +87% for a price of 0.051, versus +68% for 0.120. The rank-6 `u_a = e_a/A_a` operator is a *directed* constraint — it targets exactly the reported quantity — whereas an orthonormal basis spans the response without knowing which combination matters, so it needs far more dimensions and each one costs R². Energy-weighting the basis (`sv_weight`) did not close the gap. The subspace version does deliver what it was built for — the rebound is inside `E_a`, and decomp capture reaches +88% — but it is not a free upgrade.
+**Next:** USER DECISION. Either (a) keep the window-mean penalty and add a SECOND rank-n_A term built on the rebound window `rcc`, which keeps the directed form and its efficiency while fixing the rebound gap, or (b) keep the subspace and accept ~2.4× the R² price. My recommendation is (a). Also: I claimed ν would be a benign dimensionless knob, better than `tf_sens` — **that was over-sold**; ν 0.90→0.99 swings capVal −6%→+48%. The defensible knob is k, read off the plateau in the rank sweep, not ν.
+
 ### 2026-08-11 — CORRECTION: the TF detector is NOT a stim-independent guard, so the main argument for keeping it fails
 **Changed/Found:** Earlier today's entry ("Dropping the TF detector…") closed with "dropping it means blindness rests entirely on the split-half + random control, with **no stim-independent guard**". That is wrong and the correction matters. `ols_tf_pipeline.m:643` prints what the detector actually does: `[AFFECT-TF] biphasic (inhib->rebound) TF fit | win 0..X ms (ref Y V) | dip-cap 0..Z ms | tf_sens=…` — it fits a biphasic TF **to the peri-stim evoked response** at a reference amplitude, then thresholds the fit quality at a hand-set `tf_sens`. It consumes stim data, and it has its own window parameters (`tf_win`, `tf_dipCapSec`). It is independent of the *fit*, not of the *stimulus*.
 **Why:** The detector was being credited with providing an exclusion criterion that never sees the stim response — the one epistemic advantage that would justify keeping it despite costing ≤6 points of capture, a per-session hand-tuned knob, and non-monotonic per-amp counts in 3 of 4 sessions. It does not provide that. It applies a *different functional* (biphasic TF shape match) to the *same data* the penalty uses (evoked response magnitude and direction) — a second opinion, not an independent one. Under the proposed subspace model the redundancy is sharper still: `V_k` is an orthonormal basis built from the same evoked trajectories `E_a` that the detector fits and thresholds, so gating on the detector means pre-filtering with a lossy, hand-tuned reduction of the exact signal the penalty then uses in full.

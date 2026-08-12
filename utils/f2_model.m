@@ -42,7 +42,7 @@ if nargin < 3, opt = struct(); end
 def = struct('use_motion',false, 'ridge_grid',[0 1e-4 3e-4 1e-3 3e-3 1e-2 3e-2 0.1 0.3 1 3], ...
              'ridge_fixed',[], 'penNear',2.0, 'penFar',0.2, 'greedy_on',true, 'greedy_tol',0.05, ...
              'greedy_r2floor',0.98, 'greedy_batch',0.01, 'greedy_nRand',5, 'nShift',5, 'verbose',true, ...
-             'select_mode','r2max', 'r2_floor',0.85, 'use_affected',true);
+             'select_mode','r2max', 'r2_floor',0.85, 'use_affected',true, 'nu',0.90, 'kmax',[], 'sv_weight',false);
 fn = fieldnames(def);
 for i = 1:numel(fn)
     if ~isfield(opt,fn{i}), opt.(fn{i}) = def.(fn{i}); end
@@ -69,12 +69,15 @@ pen   = opt.penNear*(1-dn) + opt.penFar*dn;
 gamma = 1./pen(:);
 if use_mot, gamma(nP) = max(gamma); end            % motion: cheapest possible -> effectively unpenalised
 
-% Candidate predictors. Default: only pixels the TF detector cleared at EVERY amplitude -- an
-% exclusion made by an INDEPENDENT criterion, never by the fit. opt.use_affected=false hands the
-% whole grid to the optimiser instead, so the leak penalty alone has to achieve blindness. That is
-% not circular (the penalty is still selected on trial-half A and scored on half B) but it does
-% remove the one guard that does not depend on the stim data at all -- read the R^2 price, not the
-% capture, when comparing the two.
+% Candidate predictors. Default: only pixels the TF detector cleared at EVERY amplitude.
+% opt.use_affected=false hands the whole grid to the optimiser instead, so the penalty alone has to
+% achieve blindness.
+% NOTE (corrected 2026-08-11): the detector is NOT a stim-independent guard. It fits a biphasic TF
+% to the peri-stim evoked response and thresholds the fit at a hand-set tf_sens, so it consumes the
+% same stim data the penalty does -- a different functional (shape match) on the same signal, not an
+% independent criterion. Under select_mode='subspace' it is strictly redundant: V_k is built from
+% the very trajectories the detector thresholds. Measured cost of dropping it: <= 6 points of
+% capture, against a random control that becomes far more decisive (84/40/56/35% -> 6/20/16/12%).
 if opt.use_affected
     U = A.unaff_pooled(:).';                        % candidate predictors: unaffected at EVERY amp
 else
@@ -205,6 +208,28 @@ if strcmpi(opt.select_mode,'frontier')
     end
 end
 
+%% ---- (d3) SUBSPACE mode: blindness to the WHOLE evoked response, not a window mean -------------
+% 'subspace' replaces the single window-averaged dip vector with an orthonormal basis V_k for the
+% stim-evoked trajectory (onset -> end of rebound). It therefore penalises the REBOUND as well as
+% the suppression, and no window enters the fit at all -- which removes the data-driven dip-window
+% width bias logged 2026-08-11. Solved by Woodbury, so the whole sweep costs one factorisation.
+SS = [];
+if strcmpi(opt.select_mode,'subspace')
+    % r2_pre gate: R^2 on stim trials OUTSIDE the response window. This is what certifies Global as
+    % a valid model of network drive on the trials where it is actually subtracted -- spontaneous
+    % R^2 only certifies it on stim-free data. Passed as a handle so the sweep can report it.
+    r2fh = @(y,yh) 1 - sum((y(:)-yh(:)).^2)/max(sum((y(:)-mean(y(:))).^2), eps);
+    preA = find(~cellfun(@isempty, P.Zpre(:).'));
+    r2pre_fn = @(bb) median(arrayfun(@(ai) ...
+        r2fh(P.ypre{ai}, P.muY + (local_augz(P.Zpre{ai}, P.mpre{ai}, use_mot).'*bb)), preA), 'omitnan');
+
+    SS = f2_subspace(P, S, struct('nu',opt.nu, 'kmax',opt.kmax, 'sv_weight',opt.sv_weight, 'verbose',vb));
+    Q  = struct('G',Gz, 'c',cz, 'gamma',gamma, 'lamR',lam, 'Zte',Zte, 'yte',P.yte, ...
+                'muY',P.muY, 'sstot',P.sstot, 'S',S, 'nP',nP);
+    Q.r2pre = r2pre_fn;
+    FR = f2_frontier_sub(Q, SS, struct('r2_floor',opt.r2_floor, 'verbose',vb));
+end
+
 %% ---- (e) final fit + honest metrics -----------------------------------------------------------
 if ~isempty(FR)
     b = FR.b;                                   % frontier weights (same candidate set S)
@@ -250,6 +275,7 @@ M = struct('b',b, 'S',S, 'nP',nP, 'use_motion',use_mot, 'gamma',gamma, ...
 % halves" question can be answered without re-running prep (which reloads the SVD). Wrapped in
 % cells: struct() distributes a bare cell array across elements and would make M a 1xN struct array.
 M.evSel = {evS};  M.evVal = {evV};  M.actSel = acS;  M.actVal = acV;
+M.subspace = SS;   % f2_subspace output (empty unless select_mode='subspace') -- feeds f2_subfig
 
 if vb
     fprintf('   FINAL  %d/%d px | held-out spont R^2 %.4f | pre %.3f / post %.3f | median leak %.0f%% (capture %.0f%%)\n', ...
@@ -265,6 +291,13 @@ end
 end
 
 % -------------------------------------------------------------------------------------------------
+function Zc = local_augz(Zp, mp, use_mot)
+% Append the motion row when the design is augmented, so the pre-stim R^2 uses the same design the
+% weights were fit on. Kept as a helper because the subspace gate evaluates it inside an anon fn.
+Zc = Zp;
+if use_mot, Zc = [Zc; mp(:).']; end
+end
+
 function b = local_fit(Gz, cz, S, gamma, lam, nP)
 % Weighted-L2 spont fit restricted to S:  min ||y - Z_S b||^2 + lam*sum (b_i/gamma_i)^2
 %   -> (G_S + lam*diag(1/gamma^2)) b_S = c_S.

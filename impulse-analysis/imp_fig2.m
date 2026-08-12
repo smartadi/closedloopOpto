@@ -65,6 +65,11 @@ if ~exist('F2_R2FLOOR','var'),    F2_R2FLOOR    = 0.85;  end
 % the leak penalty alone has to buy blindness. Diagnostic: compare the R^2 PRICE against the
 % detector-gated run. Do not quote capture from it without that comparison.
 if ~exist('F2_USE_AFFECT','var'), F2_USE_AFFECT = true;  end
+% select_mode 'subspace': blindness to the WHOLE evoked response via an orthonormal basis V_k,
+% so the rebound is penalised too and no window enters the fit. F2_NU sets k by variance explained.
+if ~exist('F2_NU','var'),         F2_NU         = 0.90;  end
+if ~exist('F2_SVW','var'),        F2_SVW        = false; end   % weight the basis by singular value
+if ~exist('F2_KMAX','var'),       F2_KMAX       = [];    end   % hard cap on the subspace rank k
 if ~exist('F2_PLOT','var'),       F2_PLOT       = true;  end
 % Where the per-session FIT figures are written as 300-dpi PNGs. They are diagnostics, not paper
 % panels, so PNG per the project export rule -- and written to disk because the thing you want to
@@ -111,7 +116,7 @@ for q = 1:numel(F2_SEL)
         % --- §3 M4 predictor, contra only (PRIMARY) ---------------------------------------------
         mopt = struct('use_motion',false, 'ridge_fixed',F2_RIDGE, ...
                       'select_mode',F2_SELECT, 'r2_floor',F2_R2FLOOR, ...
-                      'use_affected',F2_USE_AFFECT);
+                      'use_affected',F2_USE_AFFECT, 'nu',F2_NU, 'sv_weight',F2_SVW, 'kmax',F2_KMAX);
         M = f2_model(P, A, mopt);
         if isempty(F2_RIDGE)
             F2_RIDGE = M.ridge;        % FREEZE: every later session inherits this verbatim
@@ -127,6 +132,11 @@ for q = 1:numel(F2_SEL)
         % can be plotted is while this session is still in memory.
         if F2_PLOT
             f2_fitfig(P, A, M, D, struct('export', F2_FITDIR));
+            % In subspace mode the object worth inspecting per session is the basis, not the mask:
+            % spectrum, V_1..V_k mapped on the brain, the surviving weight map, and the frontier.
+            if ~isempty(M.subspace)
+                f2_subfig(P, M.subspace, M.frontier, M, struct('export', F2_FITDIR));
+            end
         end
 
         % --- the motion-augmented VARIANT (robustness, not the headline) -------------------------
