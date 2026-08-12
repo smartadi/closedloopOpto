@@ -58,6 +58,15 @@ assert(exist('allExperiments','var')==1 && ~isempty(allExperiments), ...
 if ~exist('STV_NBIN','var')      || isempty(STV_NBIN),      STV_NBIN = 4;        end
 if ~exist('STV_STATE_WIN','var') || isempty(STV_STATE_WIN), STV_STATE_WIN = 'pre'; end
 if ~exist('STV_NBOOT','var')     || isempty(STV_NBOOT),     STV_NBOOT = 2000;    end
+% STATE SCALING (user, 2026-08-12). Default RAW: the markers keep their physical units, so an axis
+% reads "motion z-score 2.5" or "pre-trial variance 20 (dF/F)^2" instead of a within-amp z that
+% cannot be related to anything. Cost of raw pooling: between-session and between-amplitude offsets
+% now sit in the pooled statistic, so a session that happens to have both more motion and less
+% variability could create a pooled correlation on its own. That is why the pooled row is reported
+% BESIDE a SESSION-STRATIFIED estimate (weighted mean of within-session rho) and the per-session
+% table -- the stratified number is the one that cannot be produced by between-session structure.
+% Set STV_ZSTATE=true to recover the old within-session x amplitude z-scoring.
+if ~exist('STV_ZSTATE','var')    || isempty(STV_ZSTATE),    STV_ZSTATE = false;  end
 if ~exist('STV_FS','var')        || isempty(STV_FS),        STV_FS = 35;         end
 if ~exist('STV_PLOT','var')      || isempty(STV_PLOT),      STV_PLOT = true;     end
 STV_FIGDIR = fullfile(here,'figs','state_trialvar');
@@ -72,10 +81,10 @@ end
 iState = tAxis >= stWin(1) & tAxis <= stWin(2);
 iPreCtl = iState;                             % the stim-free control uses the same samples
 
-MK = { 'MOT','Motion',            true
-       'PVv','Pre-trial variance',false
-       'DPa','Abs \delta power',  false
-       'DPr','Rel \delta',        true };
+MK = { 'MOT','Motion',            true,  'motion z-score'
+       'PVv','Pre-trial variance',false, '(\DeltaF/F)^2'
+       'DPa','Abs \delta power',  false, '(\DeltaF/F)^2'
+       'DPr','Rel \delta',        true,  'fraction of 0.5-30 Hz' };
 nMK = size(MK,1);
 % Claim: motion DECREASES spread (trend < 0); the other three keep it SAME or HIGHER (trend >= 0).
 claimDir = [-1; +1; +1; +1];
@@ -129,17 +138,23 @@ for e = 1:nExp_s
 end
 fprintf('[STV] %d trials from %d sessions\n', numel(T.dev), numel(unique(T.sess)));
 
-% z-score each state marker WITHIN session x amplitude, so neither session offsets nor the
-% dose-response can create a state-DV relation that is really an amplitude relation.
+% Analysis copy of each marker: RAW by default (interpretable units), or z-scored within
+% session x amplitude if STV_ZSTATE. See the knob's comment for what raw costs and how it is
+% controlled for.
 grp = findgroups(T.sess, T.amp);
 for k = 1:nMK
-    T.([MK{k,1} 'z']) = local_zby(T.(MK{k,1}), grp);
+    if STV_ZSTATE
+        T.([MK{k,1} 'z']) = local_zby(T.(MK{k,1}), grp);
+    else
+        T.([MK{k,1} 'z']) = double(T.(MK{k,1})(:));
+    end
 end
+fprintf('[STV] state scaling: %s\n', local_tern(STV_ZSTATE, 'z-scored within session x amp', 'RAW (physical units)'));
 
 %% ================= (2) the scale tests ===========================================================
 R = struct();
-fprintf('\n%-22s %8s %9s %9s | %9s %9s | %7s %7s %s\n', ...
-        'state','n','rho|dev|','p','SDratio','CI95','BF p','trend','verdict');
+fprintf('\n%-22s %7s %9s %9s %8s %6s | %8s %11s | %7s %6s  %s\n', ...
+        'state','n','rho|dev|','p','strat','agree','SDratio','CI95','BF p','trend','verdict');
 for k = 1:nMK
     st = T.([MK{k,1} 'z']);
     ok = isfinite(st) & isfinite(T.dev);
@@ -148,6 +163,22 @@ for k = 1:nMK
     % --- primary: continuous scale test (Levene score |dev| vs state) -------------------------
     [rho,  p ]  = corr(abs(y),  x, 'type','Spearman');
     [rhoP, pP]  = corr(abs(yp), x, 'type','Spearman');    % stim-free control
+
+    % --- SESSION-STRATIFIED rho: weighted mean of the WITHIN-session correlations ---------------
+    % With RAW states the pooled rho can in principle be manufactured by between-session offsets
+    % (a session with more motion AND less variability would do it). This estimate never compares
+    % one session to another, so if it agrees with the pooled number that explanation is dead.
+    uSs = unique(T.sess).';
+    rs = nan(1,numel(uSs));  ws = zeros(1,numel(uSs));
+    for ii = 1:numel(uSs)
+        mm = (T.sess == uSs(ii)) & ok;
+        if nnz(mm) < 20, continue; end
+        rs(ii) = corr(abs(T.dev(mm)), st(mm), 'type','Spearman');
+        ws(ii) = nnz(mm);
+    end
+    keepS = isfinite(rs) & ws > 0;   rs = rs(keepS);  ws = ws(keepS);
+    rhoStrat = sum(rs.*ws) / max(sum(ws), eps);
+    nSessAgree = nnz(sign(rs) == sign(rhoStrat));
 
     % --- binned SD curve + Brown-Forsythe ------------------------------------------------------
     g   = local_qbin(x, STV_NBIN);
@@ -189,16 +220,52 @@ for k = 1:nMK
         verdict = 'FAIL';
     end
 
-    fprintf('%-22s %8d %9.3f %9.3g | %9.2f %4.2f-%4.2f | %7.4f %7.2f %s\n', ...
-            MK{k,2}, nnz(ok), rho, p, rat, ci(1), ci(2), bf, trend, verdict);
-    fprintf('%-22s %8s %9.3f %9.3g | %9s %9s | %7.4f %7.2f   <- STIM-FREE CONTROL\n', ...
-            '  (pre-onset ctrl)','', rhoP, pP, '', '', bfP, trendP);
+    fprintf('%-22s %7d %9.3f %9.3g %8.3f %4d/%d | %8.2f %5.2f-%5.2f | %7.4f %6.2f  %s\n', ...
+            MK{k,2}, nnz(ok), rho, p, rhoStrat, nSessAgree, numel(rs), ...
+            rat, ci(1), ci(2), bf, trend, verdict);
+    fprintf('%-22s %7s %9.3f %9.3g %8s %6s | %8s %11s | %7.4f %6.2f   <- STIM-FREE CONTROL\n', ...
+            '  (pre-onset ctrl)','', rhoP, pP, '', '', '', '', bfP, trendP);
 
     R(k).tag=MK{k,1}; R(k).name=MK{k,2}; R(k).adm=MK{k,3};
     R(k).rho=rho; R(k).p=p; R(k).rhoP=rhoP; R(k).pP=pP;
     R(k).sdB=sdB; R(k).sdP=sdP; R(k).bf=bf; R(k).bfP=bfP;
     R(k).trend=trend; R(k).trendP=trendP; R(k).ratio=rat; R(k).ci=ci;
     R(k).verdict=verdict; R(k).x=x; R(k).y=y; R(k).n=nnz(ok);
+    R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;
+    R(k).binMed = arrayfun(@(b) median(x(g==b),'omitnan'), 1:STV_NBIN);   % raw value per bin
+    R(k).units = MK{k,4};
+end
+
+%% ================= (2b) MOTION: threshold split, because quantile bins are degenerate ===========
+% RAW motion is threshold-shaped: median -0.196, q75 -0.158, and only ~3% of trials exceed z=1.5.
+% Equal-count quartiles therefore put bins 1-3 inside a 0.10-wide sliver of motion and the "trend"
+% across them is noise -- the real contrast is top-tail vs the rest. This uses the LOCKED project
+% constant motThresh = 1.5 (root CLAUDE.md) so the split is not a free parameter chosen here.
+if ~exist('STV_MOTTHR','var') || isempty(STV_MOTTHR), STV_MOTTHR = 1.5; end
+hiM = T.MOT > STV_MOTTHR;
+MTS = struct('thr',STV_MOTTHR,'nLo',nnz(~hiM),'nHi',nnz(hiM));
+MTS.sdLo   = std(T.dev(~hiM),'omitnan');     MTS.sdHi   = std(T.dev(hiM),'omitnan');
+MTS.sdLoP  = std(T.devPre(~hiM),'omitnan');  MTS.sdHiP  = std(T.devPre(hiM),'omitnan');
+MTS.ratio  = MTS.sdHi/max(MTS.sdLo,eps);     MTS.ratioP = MTS.sdHiP/max(MTS.sdLoP,eps);
+MTS.p  = local_bftest(T.dev,    double(hiM));
+MTS.pP = local_bftest(T.devPre, double(hiM));
+fprintf(['\nMOTION THRESHOLD SPLIT at z > %.1f   (n low %d, n high %d)\n' ...
+         '   impulse response   SD %.3f -> %.3f   ratio %.2f   BF p %.3g\n' ...
+         '   STIM-FREE control  SD %.3f -> %.3f   ratio %.2f   BF p %.3g\n'], ...
+         STV_MOTTHR, MTS.nLo, MTS.nHi, MTS.sdLo, MTS.sdHi, MTS.ratio, MTS.p, ...
+         MTS.sdLoP, MTS.sdHiP, MTS.ratioP, MTS.pP);
+if MTS.ratioP <= MTS.ratio * 1.10
+    fprintf(2,['   ** the STIM-FREE control compresses by the SAME factor (%.2f vs %.2f).\n' ...
+               '      Motion reduces the variability of the ONGOING SIGNAL, and the impulse\n' ...
+               '      response inherits it -- this is NOT a statement about stimulus processing. **\n'], ...
+               MTS.ratioP, MTS.ratio);
+end
+MTS.perSess = nan(numel(unique(T.sess)),1);
+uSm = unique(T.sess).';
+for i = 1:numel(uSm)
+    kk = T.sess == uSm(i);
+    if nnz(kk & hiM) < 8, continue; end
+    MTS.perSess(i) = std(T.dev(kk & hiM),'omitnan') / max(std(T.dev(kk & ~hiM),'omitnan'), eps);
 end
 
 %% ================= (3) per-session replication of the admissible markers ========================
@@ -243,41 +310,52 @@ if STV_PLOT
         plot(ax, bc,  R(k).sdB, '-o','Color',C.stim,'MarkerFaceColor',C.stim,'LineWidth',1.6,'MarkerSize',4);
         plot(ax, bc, -R(k).sdB, '-o','Color',C.stim,'MarkerFaceColor',C.stim,'LineWidth',1.6,'MarkerSize',4);
         yline(ax,0,'k:'); ylim(ax,[-4 4]); xlim(ax, quantile(R(k).x,[0.005 0.995]));
-        xlabel(ax, sprintf('%s (z, within amp)', MK{k,2}));
+        xlabel(ax, sprintf('%s  (%s)', MK{k,2}, MK{k,4}));
         if k==1, ylabel(ax,'signed dev (within-amp SD)'); end
         title(ax, sprintf('%s   n=%d', MK{k,2}, R(k).n), 'FontSize',9, 'Color',gc);
 
         % row 2 -- spread vs state, STIM against the STIM-FREE control
         ax = nexttile(tl, nMK+k); hold(ax,'on'); box(ax,'on'); grid(ax,'on');
-        plot(ax, 1:STV_NBIN, R(k).sdB, '-o','Color',C.stim,'MarkerFaceColor',C.stim, ...
+        % x placed at each bin's MEDIAN RAW VALUE, so the drop can be read against real units
+        % ("SD falls between motion 0.2 and motion 2.5") rather than against a bin index.
+        bm = R(k).binMed;
+        plot(ax, bm, R(k).sdB, '-o','Color',C.stim,'MarkerFaceColor',C.stim, ...
              'LineWidth',1.8,'MarkerSize',5,'DisplayName','impulse response');
-        plot(ax, 1:STV_NBIN, R(k).sdP, '--s','Color',C.ctl,'MarkerFaceColor',C.ctl, ...
+        plot(ax, bm, R(k).sdP, '--s','Color',C.ctl,'MarkerFaceColor',C.ctl, ...
              'LineWidth',1.4,'MarkerSize',4,'DisplayName','pre-onset (stim-free)');
-        xticks(ax,1:STV_NBIN); xlim(ax,[0.7 STV_NBIN+0.3]);
-        xlabel(ax, sprintf('%s bin (low \\rightarrow high)', MK{k,2}));
+        xticks(ax, round(bm,2,'significant'));
+        xlim(ax, [min(bm) - 0.08*range(bm), max(bm) + 0.08*range(bm)]);
+        xlabel(ax, sprintf('%s  (%s), bin median', MK{k,2}, MK{k,4}));
         if k==1, ylabel(ax,'SD of dev'); legend(ax,'Location','best','Box','off','FontSize',7); end
         title(ax, sprintf('BF p = %.4g (ctrl %.4g)\ntrend %+.2f (ctrl %+.2f)', ...
               R(k).bf, R(k).bfP, R(k).trend, R(k).trendP), 'FontSize',8.5, 'Color',gc);
 
         % row 3 -- effect size with bootstrap CI, against the claim's prediction
         ax = nexttile(tl, 2*nMK+k); hold(ax,'on'); box(ax,'on'); grid(ax,'on');
+        % STIM bar beside its STIM-FREE control bar -- the comparison the verdict rests on
         bar(ax, 1, R(k).ratio, 0.5, 'FaceColor', C.stim, 'EdgeColor','none');
         errorbar(ax, 1, R(k).ratio, R(k).ratio-R(k).ci(1), R(k).ci(2)-R(k).ratio, ...
                  'k','LineStyle','none','LineWidth',1.2,'CapSize',10);
+        ratP = R(k).sdP(end)/max(R(k).sdP(1),eps);
+        bar(ax, 2, ratP, 0.5, 'FaceColor', C.ctl, 'EdgeColor','none');
         yline(ax, 1, 'k-','LineWidth',1);
         if claimDir(k) < 0, ptxt = 'claim: < 1'; else, ptxt = 'claim: \geq 1'; end
-        xticks(ax,1); xticklabels(ax,{sprintf('%.2f',R(k).ratio)}); xlim(ax,[0.4 1.6]);
+        xticks(ax,[1 2]); xticklabels(ax,{sprintf('stim %.2f',R(k).ratio), sprintf('ctrl %.2f',ratP)});
+        xlim(ax,[0.4 2.6]);
         if k==1, ylabel(ax,'SD ratio  top / bottom bin'); end
-        title(ax, sprintf('%s\n%s', ptxt, R(k).verdict), 'FontSize',8.5, 'Color',gc);
+        title(ax, sprintf('%s   strat \\rho %+.3f (%d/%d sess agree)\n%s', ...
+              ptxt, R(k).rhoStrat, R(k).nSessAgree, numel(R(k).rhoPerSess), R(k).verdict), ...
+              'FontSize',8.5, 'Color',gc);
     end
 
     sgtitle(f1, sprintf(['TRIAL-TO-TRIAL VARIABILITY of the impulse response vs brain state   ' ...
-        '(%d trials, %d sessions, state window [%.2f %.2f] s)\n' ...
+        '(%d trials, %d sessions, state window [%.2f %.2f] s, states in %s units)\n' ...
         'row 1 funnel (signed dev, \\pmSD envelope)   row 2 spread vs state with the STIM-FREE control   ' ...
         'row 3 effect size vs the claim\n' ...
         'GREY titles = POWER CONFOUNDS (pre-var and absolute \\delta ARE signal power; a spread DV ' ...
         'cannot separate them from an amplitude-of-everything effect)'], ...
-        numel(T.dev), numel(uS), stWin(1), stWin(2)), 'FontWeight','bold','FontSize',10);
+        numel(T.dev), numel(uS), stWin(1), stWin(2), ...
+        local_tern(STV_ZSTATE,'z-scored','RAW')), 'FontWeight','bold','FontSize',10);
 
     exportgraphics(f1, fullfile(STV_FIGDIR,'stv_claim.png'), 'Resolution',300);
 
@@ -299,7 +377,8 @@ if STV_PLOT
     exportgraphics(f2, fullfile(STV_FIGDIR,'stv_persession.png'), 'Resolution',300);
 end
 
-STV = struct('T',T,'R',R,'labels',{labels},'PS_rho',PS_rho,'stWin',stWin,'nbin',STV_NBIN);
+STV = struct('T',T,'R',R,'labels',{labels},'PS_rho',PS_rho,'stWin',stWin,'nbin',STV_NBIN, ...
+             'motSplit',MTS,'zstate',STV_ZSTATE);
 fprintf('\n[STV] figures -> %s\n[STV] struct: STV\n', STV_FIGDIR);
 
 %% ================================= local functions ==============================================
