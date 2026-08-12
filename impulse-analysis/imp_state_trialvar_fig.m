@@ -55,20 +55,24 @@ for k = adm
     % ================= funnel: signed deviation vs state ========================================
     % SIGNED, not |dev| -- the point of the analysis is that the effect is on SPREAD and has no
     % directional component, which is only visible if both signs are on the page.
+    % The envelope is a filled RIBBON, not two lines: at 6 cm two thin curves read as two
+    % unrelated series, while the shaded band reads as the one thing it is -- the spread.
     f = paperFig(6, 4);  ax = axes(f);  hold(ax,'on');
-    scatter(ax, r.x, r.y, 3, PS.grad1, 'filled', ...
-            'MarkerFaceAlpha', 0.25, 'MarkerEdgeColor','none', 'HandleVisibility','off');
-    hEnv = plot(ax, r.binMed,  r.sdB, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, ...
-                'LineWidth', PS.lw_fit, 'MarkerSize', 2.5, 'DisplayName', '\pm1 SD');
-    plot(ax, r.binMed, -r.sdB, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, ...
-         'LineWidth', PS.lw_fit, 'MarkerSize', 2.5, 'HandleVisibility','off');
+    xb = r.binMed(:).';  sb = r.sdB(:).';
+    fill(ax, [xb fliplr(xb)], [sb -fliplr(sb)], C_stim, ...
+         'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
+    scatter(ax, r.x, r.y, 2, [0.62 0.62 0.62], 'filled', ...
+            'MarkerFaceAlpha', 0.30, 'MarkerEdgeColor','none', 'HandleVisibility','off');
+    plot(ax, xb,  sb, '-', 'Color', C_stim, 'LineWidth', PS.lw_fit, 'HandleVisibility','off');
+    plot(ax, xb, -sb, '-', 'Color', C_stim, 'LineWidth', PS.lw_fit, 'HandleVisibility','off');
     hz = yline(ax, 0, 'k:', 'LineWidth', PS.lw_zero);  hz.HandleVisibility = 'off';
-    xlim(ax, quantile(r.x, [0.005 0.995]));
-    ylim(ax, [-4 4]);
+    xlim(ax, [0 1]);  ylim(ax, [-3.2 3.2]);
+    xticks(ax, 0:0.25:1);  yticks(ax, -3:1.5:3);
     set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
     xlabel(ax, sprintf('%s (%s)', r.name, r.units), 'FontSize', PS.fs, 'FontWeight', PS.fw);
-    ylabel(ax, 'Deviation from amp mean (SD)',      'FontSize', PS.fs, 'FontWeight', PS.fw);
-    lg = legend(ax, hEnv, 'Location','northeast');  paperLegend(lg);
+    ylabel(ax, 'Deviation (SD)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    text(ax, 0.97, 0.94, '\pm1 SD', 'Units','normalized', 'HorizontalAlignment','right', ...
+         'Color', C_stim, 'FontSize', PS.fs, 'FontWeight', PS.fw);
     hold(ax,'off');
     paperExport(f, fullfile(outDir, sprintf('stv_%s_funnel%s', tag, STVF_EXT)));
 
@@ -82,28 +86,30 @@ for k = adm
     end
 
     f = paperFig(6, 4);  ax = axes(f);  hold(ax,'on');
-    hS = errorbar(ax, r.binMed, r.sdB, r.sdB-ciLo, ciHi-r.sdB, '-o', ...
-                  'Color', C_stim, 'MarkerFaceColor', C_stim, 'LineWidth', PS.lw_fit, ...
-                  'MarkerSize', 3, 'CapSize', 2, 'DisplayName', 'Impulse response');
+    xb = r.binMed(:).';
+    fill(ax, [xb fliplr(xb)], [ciLo fliplr(ciHi)], C_stim, ...
+         'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
+    hS = plot(ax, xb, r.sdB, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, ...
+              'LineWidth', PS.lw_mean, 'MarkerSize', 2.5, 'DisplayName','Impulse response');
     hAll = hS;
     if STV_PLOTCTRL
-        hC = errorbar(ax, r.binMed, r.sdP, r.sdP-cpLo, cpHi-r.sdP, '--s', ...
-                      'Color', C_ctl, 'MarkerFaceColor', C_ctl, 'LineWidth', PS.lw_fit, ...
-                      'MarkerSize', 2.5, 'CapSize', 2, 'DisplayName', 'No stimulus');
+        fill(ax, [xb fliplr(xb)], [cpLo fliplr(cpHi)], C_ctl, ...
+             'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
+        hC = plot(ax, xb, r.sdP, '--s', 'Color', C_ctl, 'MarkerFaceColor', C_ctl, ...
+                  'LineWidth', PS.lw_fit, 'MarkerSize', 2, 'DisplayName','No stimulus');
         hAll = [hS hC];
     end
-    % Ticks AT the bin medians, so uneven spacing stays visible (the raw motion bins really are
-    % crowded at the low end -- that is information, not a plotting defect). Rotated because at
-    % 6 cm the crowded labels collide otherwise.
-    xticks(ax, r.binMed);
-    xticklabels(ax, compose('%.2f', r.binMed));
-    xtickangle(ax, 30);
-    xlim(ax, [min(r.binMed) - 0.10*range(r.binMed), max(r.binMed) + 0.10*range(r.binMed)]);
+    % Ticks on the 0-1 axis itself, NOT at the bin medians. Bin-median ticks land wherever the
+    % data happen to crowd and collided at 6 cm; the markers already show where the bins are.
+    xticks(ax, 0:0.25:1);
+    xlim(ax, [0 1]);
     set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
     xlabel(ax, sprintf('%s (%s)', r.name, r.units), 'FontSize', PS.fs, 'FontWeight', PS.fw);
     ylabel(ax, 'SD of deviation',                   'FontSize', PS.fs, 'FontWeight', PS.fw);
-    title(ax, sprintf('SD ratio %.2f [%.2f-%.2f]  p=%.1e', r.ratio, r.ci(1), r.ci(2), r.bf), ...
-          'FontSize', PS.fs, 'FontWeight', PS.fw);
+    % Stats as a corner annotation, not a title: a two-line title at 6 pt eats a third of a 4 cm
+    % panel, and these numbers belong to the data, not to the panel's name.
+    text(ax, 0.03, 0.10, sprintf('%.2f [%.2f-%.2f]', r.ratio, r.ci(1), r.ci(2)), ...
+         'Units','normalized', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', C_stim);
     % A one-entry legend labels a panel that has only one thing on it -- drop it and let the
     % y-label do the work. It comes back automatically when the control adds a second series.
     if numel(hAll) > 1, lg = legend(ax, hAll, 'Location','best');  paperLegend(lg); end
@@ -120,16 +126,20 @@ nS   = numel(uS);
 qual = PS.sessQual(numel(adm));
 
 f = paperFig(6, 4);  ax = axes(f);  hold(ax,'on');
+hz = yline(ax, 0, 'k-', 'LineWidth', PS.lw_zero);  hz.HandleVisibility = 'off';
+% Markers only, no connecting line: sessions are not an ordered series, so a line between them
+% implies a trend that does not exist. Offset the two markers so they never sit on top of
+% each other at a session where the two rho happen to coincide.
+off = linspace(-0.10, 0.10, max(numel(adm),2));
 for i = 1:numel(adm)
     k = adm(i);
-    plot(ax, 1:nS, STV.PS_rho(:,k), '-o', 'Color', qual(i,:), 'MarkerFaceColor', qual(i,:), ...
-         'LineWidth', PS.lw_fit, 'MarkerSize', 3, 'DisplayName', R(k).name);
+    plot(ax, (1:nS) + off(i), STV.PS_rho(:,k), 'o', 'Color', qual(i,:), ...
+         'MarkerFaceColor', qual(i,:), 'MarkerSize', 3, 'LineWidth', 0.5, ...
+         'DisplayName', R(k).name);
 end
-hz = yline(ax, 0, 'k-', 'LineWidth', PS.lw_zero);  hz.HandleVisibility = 'off';
 xticks(ax, 1:nS);
 xticklabels(ax, local_shortlab(STV.labels(uS)));
-xtickangle(ax, 30);
-xlim(ax, [0.7 nS+0.3]);  ylim(ax, [-0.35 0.35]);
+xlim(ax, [0.5 nS+0.5]);  ylim(ax, [-0.32 0.32]);  yticks(ax, -0.3:0.15:0.3);
 set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
 ylabel(ax, '\rho( |deviation| , state )', 'FontSize', PS.fs, 'FontWeight', PS.fw);
 lg = legend(ax, 'Location','best');  paperLegend(lg);

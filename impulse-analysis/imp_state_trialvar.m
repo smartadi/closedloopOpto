@@ -67,6 +67,35 @@ if ~exist('STV_NBOOT','var')     || isempty(STV_NBOOT),     STV_NBOOT = 2000;   
 % table -- the stratified number is the one that cannot be produced by between-session structure.
 % Set STV_ZSTATE=true to recover the old within-session x amplitude z-scoring.
 if ~exist('STV_ZSTATE','var')    || isempty(STV_ZSTATE),    STV_ZSTATE = false;  end
+% STATE SCALING, superseding the STV_ZSTATE boolean (user, 2026-08-12: "i said not to use zscore,
+% normalise the state axes instead"). Modes:
+%   'rank' (DEFAULT) -- within-session PERCENTILE: 0 = quietest trial of that session, 1 = most
+%          extreme. Chosen because motion is not a continuous variable -- it is rest punctuated by
+%          bouts, so ANY magnitude axis (raw, z, or min-max) puts ~90% of trials in the leftmost
+%          tenth and the four quantile bins land on top of each other. Measured under 'norm': bin
+%          medians 0.010 / 0.016 / 0.024 / 0.11, i.e. all four inside the left 12% of the axis.
+%          COST, and it is a real one: the axis carries ORDER, not MAGNITUDE. A rank axis spreads
+%          bins 1-3 across half the panel when they differ by ~0.01 in motion z -- physiologically
+%          almost nothing. The magnitude-preserving companion is the MOTION THRESHOLD SPLIT below
+%          (z > 1.5), which is where the effect actually lives; read the two together.
+%   'norm' -- per session, mapped to 0-1 across the 1st-99th percentile and clipped. Same idea as
+%          motion_analysis.m's motN_s but percentile- rather than min/max-anchored (plain min-max
+%          is set by the single largest spike in a session). Keeps magnitude; skew and all.
+%   'raw'  -- physical units, no scaling. Interpretable, but pools between-session offsets.
+%   'z'    -- z-score within session x amplitude (the original; rejected as uninterpretable).
+% Every mode is MONOTONE WITHIN SESSION, so each within-session Spearman -- the stratified rho and
+% the whole per-session table -- is IDENTICAL across modes. Only pooled statistics and bin edges
+% move. That is the point: none of the headline within-session numbers depend on this choice.
+if ~exist('STV_STATESCALE','var') || isempty(STV_STATESCALE)
+    if STV_ZSTATE, STV_STATESCALE = 'z'; else, STV_STATESCALE = 'rank'; end
+end
+switch STV_STATESCALE
+    case 'rank', STATESCALE_DESC = 'within-session PERCENTILE (0-1)';
+    case 'norm', STATESCALE_DESC = 'normalized 0-1 per session (p1-p99, clipped)';
+    case 'raw',  STATESCALE_DESC = 'RAW (physical units)';
+    case 'z',    STATESCALE_DESC = 'z-scored within session x amp';
+    otherwise,   error('[STV] STV_STATESCALE must be ''rank'', ''norm'', ''raw'' or ''z''.');
+end
 if ~exist('STV_FS','var')        || isempty(STV_FS),        STV_FS = 35;         end
 if ~exist('STV_PLOT','var')      || isempty(STV_PLOT),      STV_PLOT = true;     end
 STV_FIGDIR = fullfile(here,'figs','state_trialvar');
@@ -104,6 +133,13 @@ MK = { 'MOT','Motion',            true,  'motion z-score'
        'PVv','Pre-trial variance',false, '(\DeltaF/F)^2'
        'DPa','Abs \delta power',  false, '(\DeltaF/F)^2'
        'DPr','Rel \delta',        true,  'fraction of 0.5-30 Hz' };
+% The unit strings above describe the RAW marker. Under 'norm'/'z' the analysis axis is no longer
+% in those units, and an axis labelled with units it is not in is worse than one with none.
+switch STV_STATESCALE
+    case 'rank', MK(:,4) = {'within-session percentile'};
+    case 'norm', MK(:,4) = {'normalized 0-1'};
+    case 'z',    MK(:,4) = {'z within session \times amp'};
+end
 nMK = size(MK,1);
 % Claim: motion DECREASES spread (trend < 0); the other three keep it SAME or HIGHER (trend >= 0).
 claimDir = [-1; +1; +1; +1];
@@ -160,18 +196,18 @@ for e = 1:nExp_s
 end
 fprintf('[STV] %d trials from %d sessions\n', numel(T.dev), numel(unique(T.sess)));
 
-% Analysis copy of each marker: RAW by default (interpretable units), or z-scored within
-% session x amplitude if STV_ZSTATE. See the knob's comment for what raw costs and how it is
-% controlled for.
+% Analysis copy of each marker. See STV_STATESCALE at the top for what each mode costs.
 grp = findgroups(T.sess, T.amp);
 for k = 1:nMK
-    if STV_ZSTATE
-        T.([MK{k,1} 'z']) = local_zby(T.(MK{k,1}), grp);
-    else
-        T.([MK{k,1} 'z']) = double(T.(MK{k,1})(:));
+    v = double(T.(MK{k,1})(:));
+    switch STV_STATESCALE
+        case 'z',    v = local_zby(v, grp);
+        case 'norm', v = local_normby(v, T.sess);
+        case 'rank', v = local_rankby(v, T.sess);
     end
+    T.([MK{k,1} 'z']) = v;
 end
-fprintf('[STV] state scaling: %s\n', local_tern(STV_ZSTATE, 'z-scored within session x amp', 'RAW (physical units)'));
+fprintf('[STV] state scaling: %s\n', STATESCALE_DESC);
 
 %% ================= (2) the scale tests ===========================================================
 R = struct();
@@ -493,10 +529,39 @@ if STV_PLOT
 end
 
 STV = struct('T',T,'R',R,'labels',{labels},'PS_rho',PS_rho,'stWin',stWin,'nbin',STV_NBIN, ...
-             'motSplit',MTS,'zstate',STV_ZSTATE);
+             'motSplit',MTS,'scale',STV_STATESCALE,'scaleDesc',STATESCALE_DESC);
 fprintf('\n[STV] figures -> %s\n[STV] struct: STV\n', STV_FIGDIR);
 
 %% ================================= local functions ==============================================
+function v = local_rankby(v, s)
+%LOCAL_RANKBY  Within-session percentile in (0,1). Ties share a rank (tiedrank), so a session that
+% sits at rest for most trials does not get its ties spread out into a fake gradient.
+v = double(v(:));
+for u = unique(s(:)).'
+    m = s(:) == u;
+    r = tiedrank(v(m));
+    v(m) = (r - 0.5) ./ numel(r);
+end
+end
+
+function v = local_normby(v, s)
+%LOCAL_NORMBY  Map v to 0-1 WITHIN each session, anchored on the 1st-99th percentile and clipped.
+% Percentiles rather than min/max: a single motion spike sets the max and crushes every other
+% trial into the bottom of the axis. Monotone within session, so within-session rank statistics
+% are untouched; it only makes sessions commensurable for pooling and plotting.
+v = double(v(:));
+for u = unique(s(:)).'
+    m = s(:) == u;
+    q = quantile(v(m), [0.01 0.99]);
+    if ~isfinite(q(1)) || ~isfinite(q(2)) || q(2) <= q(1)
+        lo = min(v(m));  hi = max(v(m));
+        if ~isfinite(hi) || hi <= lo, v(m) = 0; continue; end
+        q = [lo hi];
+    end
+    v(m) = min(max((v(m) - q(1)) ./ (q(2) - q(1)), 0), 1);
+end
+end
+
 function p = local_bftest(y, g)
 %LOCAL_BFTEST  Brown-Forsythe (median-centred Levene, so no normality assumption). NaN if undefined.
 p = NaN;
