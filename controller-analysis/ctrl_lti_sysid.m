@@ -41,7 +41,7 @@ d_s = mouse.(fld).d;  data = mouse.(fld).data;
 mn = mouse.(fld).mn; td = mouse.(fld).td; en = mouse.(fld).en;
 sess_tag = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
 
-S2 = load(fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', sess_tag)));
+S2 = load(fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind%s_%s.mat', ctrl_pred_tag(), sess_tag)));
 rel = S2.rel(:).';  pre = S2.pre;  trel = rel/Fs;  y_OL = S2.Aa(:);     % OL Actual (baseline-sub)
 
 % TRUE input = the sine-carrier AMPLITUDE (early sessions) or the raw value (later sessions).

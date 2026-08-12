@@ -58,7 +58,7 @@ for xb_i = 1:numel(XB.sess)
     fprintf('\n================ [XBUILD %d/%d] %s (%s) ================\n', xb_i, numel(XB.sess), xb_fld, xb_tag);
 
     xb_f1 = fullfile(XB.dataDir, sprintf('ctrl_ols_spont_%s.mat', xb_tag));
-    xb_f2 = fullfile(XB.dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', xb_tag));
+    xb_f2 = fullfile(XB.dataDir, sprintf('ctrl_ols_ol_stimblind%s_%s.mat', ctrl_pred_tag(), xb_tag));
     if exist(xb_f1,'file') && exist(xb_f2,'file') && ~XB.force
         rec.ok = true; rec.msg = 'already built';
         fprintf('[XBUILD] both caches present -- skipping (set XB.force=true to rebuild).\n');

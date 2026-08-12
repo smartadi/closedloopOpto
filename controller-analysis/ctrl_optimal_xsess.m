@@ -103,7 +103,7 @@ for ox_s = OX.sess
     ox_mn = mouse.(ox_f).mn;  ox_td = mouse.(ox_f).td;  ox_en = mouse.(ox_f).en;
     ox_tag = sprintf('%s_%s%s_e%d', ox_mn, ox_td(6:7), ox_td(9:10), ox_en);
 
-    f2 = fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', ox_tag));
+    f2 = fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind%s_%s.mat', ctrl_pred_tag(), ox_tag));
     if ~exist(f2,'file')
         skipped(end+1) = struct('fld',ox_tag,'msg','no Stage-2 cache'); %#ok<SAGROW>
         continue

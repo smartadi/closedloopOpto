@@ -53,7 +53,7 @@ d_s = mouse.(fld).d;  data = mouse.(fld).data;
 mn = mouse.(fld).mn; td = mouse.(fld).td; en = mouse.(fld).en;
 sess_tag = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
 S1 = load(fullfile(dataDir, sprintf('ctrl_ols_spont_%s.mat', sess_tag)));
-S2 = load(fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', sess_tag)));
+S2 = load(fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind%s_%s.mat', ctrl_pred_tag(), sess_tag)));
 gridIdx=S1.gridIdx; px_prim=S1.px_prim; py_prim=S1.py_prim; k_prim=S1.k_prim;
 horizon=S1.horizon; dur=S1.trial_dur;
 b=S2.b; mu=S2.mu; sd=S2.sd; muY=S2.muY; Su=S2.Su;

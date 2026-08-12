@@ -108,7 +108,7 @@ for rb_s = 1:numel(fields)
                            mat2str(round(g.mx(:).',3)), mat2str(round(g.my(:).',3)));
     end
     e.s1 = exist(fullfile(RB.dataDir,sprintf('ctrl_ols_spont_%s.mat',rb_tg)),'file') > 0;
-    e.s2 = exist(fullfile(RB.dataDir,sprintf('ctrl_ols_ol_stimblind_%s.mat',rb_tg)),'file') > 0;
+    e.s2 = exist(fullfile(RB.dataDir,sprintf('ctrl_ols_ol_stimblind%s_%s.mat', ctrl_pred_tag(), rb_tg)),'file') > 0;
     RS(end+1) = e; %#ok<SAGROW>
 end
 % donor-seeded geometry counts as NOT drawn (see ctrl_roi_draw_all.m)
@@ -228,7 +228,7 @@ for rb_k = 1:numel(rb_todo)
             if exist('capt','var') && exist('twin','var')
                 rec.capt_tran = capt(twin);  rec.capt_sus = capt(swin);
             end
-            rb_ok = exist(fullfile(RB.dataDir,sprintf('ctrl_ols_ol_stimblind_%s.mat',rb_tag)),'file') > 0;
+            rb_ok = exist(fullfile(RB.dataDir,sprintf('ctrl_ols_ol_stimblind%s_%s.mat', ctrl_pred_tag(), rb_tag)),'file') > 0;
         catch rb_ME
             rec.msg = sprintf('ERROR: %s', rb_ME.message);
             fprintf(2,'[XRES] %s failed: %s\n', rb_tag, rb_ME.message);

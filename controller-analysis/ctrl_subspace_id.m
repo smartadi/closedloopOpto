@@ -80,7 +80,7 @@ mn = mouse.(fld).mn;  td = mouse.(fld).td;  en = mouse.(fld).en;
 sess_tag = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
 
 s1_file = fullfile(dataDir, sprintf('ctrl_ols_spont_%s.mat', sess_tag));
-s2_file = fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', sess_tag));
+s2_file = fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind%s_%s.mat', ctrl_pred_tag(), sess_tag));
 assert(exist(s1_file,'file')>0, '[CTRL-SID] Stage 1 cache missing: %s', s1_file);
 assert(exist(s2_file,'file')>0, '[CTRL-SID] Stage 2 cache missing: %s', s2_file);
 S1 = load(s1_file);  S2 = load(s2_file);

@@ -18,10 +18,16 @@ mn = mouse.(fld).mn;  td = mouse.(fld).td;  en = mouse.(fld).en;
 sess_tag = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
 S = struct('sess_tag',sess_tag,'ok',false,'msg','','selField',selField,'mn',mn,'td',td,'en',en);
 
+% Stage-2 cache is suffixed by predictor mode (utils/ctrl_pred_tag.m) so 'rank' and 'ridge'
+% never mix: a ridge Global scored against a rank decomposition compares nothing.
+[pred_suffix, pred_mode] = ctrl_pred_tag();
 f1 = fullfile(dataDir, sprintf('ctrl_ols_spont_%s.mat', sess_tag));
-f2 = fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', sess_tag));
-if ~exist(f1,'file') || ~exist(f2,'file'); S.msg = 'missing Stage-1/2 cache'; return; end
+f2 = fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind%s_%s.mat', pred_suffix, sess_tag));
+if ~exist(f1,'file') || ~exist(f2,'file')
+    S.msg = sprintf('missing Stage-1/2 cache (pred mode ''%s'')', pred_mode); return;
+end
 S1 = load(f1);  S2 = load(f2);
+S.pred_mode = pred_mode;
 if isfield(S2,'target_mode') && ~strcmp(S2.target_mode,'canonical')
     S.msg = sprintf('S2 target_mode=''%s'' (need canonical)', S2.target_mode); return;
 end

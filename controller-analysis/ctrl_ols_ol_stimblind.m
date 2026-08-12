@@ -33,10 +33,31 @@ selField    = 4;         % session index into `fields` (must match a Stage 1 run
 if exist('BATCH_selField','var') && ~isempty(BATCH_selField); selField = BATCH_selField; end
 nSV_load    = 500;
 Fs          = 35;
-% STIM-AFFECTED contra px: MANUAL dip-score threshold, IDENTICAL definition to ctrl_affected_gui.m
-% (trial-averaged %dF trace; score = (trough - onset_ref)/pre_SD; affected where score < -aff_dip_thr).
-% Set aff_dip_thr to the slider value you converged on in the GUI. Adaptive/permutation was rejected.
-aff_dip_thr = 1.33;      % DEFAULT; OVERRIDDEN by the GUI-saved threshold (ctrl_aff_thr_<sess>.mat) if present
+% STIM-AFFECTED contra px: decided by utils/ctrl_affected_detect.m -- the SINGLE detector shared
+% with ctrl_affected_gui.m, so the rule you tune in the GUI is the rule that builds the predictor
+% (before 2026-08-10 each script carried its own copy of the formula and they could drift).
+% Default method 'dip': trial-averaged %dF trace, score = (trough - onset_ref)/pre_SD, affected
+% where score < -aff_dip_thr. Adaptive/permutation selection was tried and rejected 2026-07-20.
+aff_dip_thr = 1.33;      % 'dip' mode only. OVERRIDDEN by the GUI-saved threshold if present.
+det_method  = 'least_affected';   % PRIMARY since 2026-08-10. 'dip' = the old absolute cut.
+% WHY THE DEFAULT CHANGED. The absolute cut asks for contra pixels the laser does not reach. In
+% controller sessions the MEDIAN contra pixel dips 1-4 pre-window SDs -- contralateral
+% co-suppression is real and distributed -- so the cut deleted 70-99% of the grid, left 2-26
+% predictor pixels, and only 1 of 13 sessions cleared ctrl_r2_floor(). Worse, the deployed R^2 then
+% measured how strongly that session co-suppressed (Spearman(%flagged, R^2) = -0.819, p=0.0011)
+% rather than anything about the model. RESEARCH 2026-08-10. The rank rule keeps the K LEAST
+% affected pixels instead, with K chosen per session by ctrl_select_k as the smallest count that
+% still clears the floor -- the most stim-blind predictor that is still usable. The bleed that
+% remains is REPORTED (bleed_kept, and the Global `leak` below), not assumed away.
+keep_n      = [];        % [] = choose K automatically via ctrl_select_k (recommended).
+                         % Set a number to pin K by hand (e.g. to reproduce an old cache).
+det_extra   = struct();  % extra detector knobs for non-'dip' methods (cos_thr, thr_lo, tmpl, ...)
+% BATCH override: ctrl_residual_build.m sets BATCH_detect to sweep the detector without editing
+% this file. Fields present in BATCH_detect win over everything above, including the saved thr.
+if exist('BATCH_detect','var') && isstruct(BATCH_detect) && ~isempty(fieldnames(BATCH_detect))
+    det_extra = BATCH_detect;
+    if isfield(det_extra,'method'), det_method = det_extra.method; end
+end
 pre_sd_s    = 6.0;       % baseline-SD window for the score  [-6,0] s
 ref_s       = 1.0;       % onset-reference window  [-1,0] s
 trough_s    = 0.5;       % sliding-window length for the trough (s)
@@ -68,13 +89,45 @@ d_s  = mouse.(fld).d;  data = mouse.(fld).data;
 mn = mouse.(fld).mn; td = mouse.(fld).td; en = mouse.(fld).en;
 sess_tag = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
 
-% dip threshold: prefer the value you tuned + saved in ctrl_affected_gui.m ("Build predictor")
+% Selection committed in ctrl_affected_gui.m ("Build predictor"), if any. Adopted ONLY when it was
+% saved under the method now in force -- a pre-2026-08-10 file holds a dip-score threshold with no
+% `det` field, and silently reading 1.13 as a K (or as a threshold under the rank rule) would build
+% a completely different pixel set from the one that number ever meant.
 thr_file = fullfile(dataDir, sprintf('ctrl_aff_thr_%s.mat', sess_tag));
 if exist(thr_file,'file')
-    Tt = load(thr_file,'aff_dip_thr'); aff_dip_thr = Tt.aff_dip_thr;
-    fprintf('[CTRL-OL] dip threshold = %.2f  (GUI-tuned, from %s)\n', aff_dip_thr, thr_file);
+    Tt = load(thr_file);
+    saved_method = 'dip';                                   % legacy files predate the field
+    if isfield(Tt,'det') && isstruct(Tt.det) && isfield(Tt.det,'method')
+        saved_method = Tt.det.method;
+    end
+    if strcmpi(saved_method, det_method)
+        aff_dip_thr = Tt.aff_dip_thr;
+        if isfield(Tt,'det') && isstruct(Tt.det)
+            fn = setdiff(fieldnames(Tt.det), {'method','thr','wlen'});
+            for q = 1:numel(fn)
+                if ~isfield(det_extra, fn{q}); det_extra.(fn{q}) = Tt.det.(fn{q}); end
+            end
+        end
+        fprintf('[CTRL-OL] adopting GUI-committed selection (method ''%s'') from %s\n', det_method, thr_file);
+    else
+        fprintf(['[CTRL-OL] IGNORING %s: it was committed under method ''%s'', this run uses ''%s''. ' ...
+                 'Re-commit in the GUI if you want a hand-picked selection.\n'], ...
+                thr_file, saved_method, det_method);
+    end
 else
-    fprintf('[CTRL-OL] dip threshold = %.2f  (default; run ctrl_affected_gui.m + Build predictor to set your own)\n', aff_dip_thr);
+    fprintf('[CTRL-OL] no committed selection for %s -- method ''%s'', selection chosen automatically.\n', ...
+        sess_tag, det_method);
+end
+% BATCH_detect (ctrl_residual_build.m) wins over everything above.
+if exist('BATCH_detect','var') && isstruct(BATCH_detect)
+    if isfield(BATCH_detect,'thr') && ~isempty(BATCH_detect.thr)
+        aff_dip_thr = BATCH_detect.thr;
+        fprintf('[CTRL-OL] threshold overridden by BATCH_detect.thr = %.2f\n', aff_dip_thr);
+    end
+    if isfield(BATCH_detect,'keep_n') && ~isempty(BATCH_detect.keep_n)
+        keep_n = BATCH_detect.keep_n;
+        fprintf('[CTRL-OL] K pinned by BATCH_detect.keep_n = %d\n', keep_n);
+    end
 end
 
 s1_file = fullfile(dataDir, sprintf('ctrl_ols_spont_%s.mat', sess_tag));
@@ -156,13 +209,47 @@ mIg   = max(mimg_cp(gridIdx),eps);
 periAvg = zeros(nG,nRelA);
 for j = 1:nTr, periAvg = periAvg + Xg_full(:,onF(j)+relA); end
 periAvg = (periAvg/nTr)./mIg*100;               % trial-avg %dF (NOT baseline-sub) -- matches GUI
-dipScore = local_dip_score(periAvg, iRef, iStim, iPre, wlen);   % negative = dip
-affected = dipScore < -aff_dip_thr;             % DOWNWARD dips only (manual threshold)
-unaff    = ~affected;
-fprintf('[CTRL-OL] affected contra px: %d/%d (dip score < -%.2f) -> %d unaffected\n', ...
-    nnz(affected), nG, aff_dip_thr, nnz(unaff));
+detW            = struct('iPre',iPre,'iRef',iRef,'iStim',iStim);
+det_opts        = det_extra;
+det_opts.method = det_method;
+det_opts.thr    = aff_dip_thr;
+det_opts.wlen   = wlen;
+if ~isempty(keep_n); det_opts.keep_n = keep_n; end
+
+% --- choose K, when the rank rule is in use and K was not pinned --------------------
+% The Gram is built over the SAME spontaneous frames and train/test split as the fit below, so the
+% R^2 the selector optimises is exactly the R^2 the fit will report (verified bit-identical).
+KSEL = struct('used',false,'reachable',true,'K_star',NaN,'R2_star',NaN,'R2_ceiling',NaN);
+[pred_suffix, pred_mode] = ctrl_pred_tag();     % 'rank' (default) | 'ridge' -- see utils/ctrl_pred_tag
+useRidge = strcmpi(pred_mode,'ridge');
+if useRidge
+    % RIDGE MODEL: no pixel is dropped, so there is no K to choose. The detector still RUNS --
+    % its score is the diagnostic that says how much bleed the kept set carries, and it is what
+    % the two models are compared on. It just no longer decides membership.
+    det_opts.method = 'least_affected';
+    det_opts.keep_n = nG;
+    fprintf('[CTRL-OL] predictor mode = RIDGE: whole grid kept, lambda chosen from catch windows.\n');
+end
+if ~useRidge && strcmpi(det_method,'least_affected') && ~isfield(det_opts,'keep_n')
+    score_opts = det_opts;  score_opts.method = 'dip';        % the score is method-independent
+    DET0  = ctrl_affected_detect(periAvg, detW, score_opts);
+    FGRAM = ctrl_gram_build(Xg_full, frames, itr, ite, ytrace);
+    sel_opts = struct();
+    if isfield(det_opts,'max_bleed'); sel_opts.max_bleed = det_opts.max_bleed; end
+    KSEL = ctrl_select_k(FGRAM, DET0.score, sel_opts);
+    KSEL.used = true;
+    det_opts.keep_n = KSEL.K_star;
+    clear FGRAM DET0
+end
+
+DET = ctrl_affected_detect(periAvg, detW, det_opts);
+dipScore = DET.score;                           % negative = dip
+affected = DET.affected;                        % DROP these -- they see the laser
+unaff    = DET.unaff;
+fprintf('[CTRL-OL] affected contra px: %d/%d [%s: %s] -> %d kept | residual bleed: median %+.2f, worst %+.2f\n', ...
+    nnz(affected), nG, DET.method, DET.note, nnz(unaff), DET.bleed_kept, DET.bleed_worst);
 if nnz(unaff) < 20
-    warning('[CTRL-OL] only %d unaffected px -- dip threshold may be too strict.', nnz(unaff));
+    warning('[CTRL-OL] only %d predictor px kept -- selection is too strict to fit %d weights.', nnz(unaff), nnz(unaff));
 end
 
 % decomposition windows (baseline [-1,0]s), used by DEPLOY below
@@ -177,11 +264,57 @@ Xs = Xg_full(Su, frames);
 mu = mean(Xs(:,itr),2);  sd = std(Xs(:,itr),0,2);  sd(sd==0) = 1;   % TRAIN z-score
 Ztr = ((Xs(:,itr)-mu)./sd).';  Zte = ((Xs(:,ite)-mu)./sd).';
 ys = ytrace(frames);  ytr = ys(itr);  yte = ys(ite);  muY = mean(ytr);
-b  = (Ztr.'*Ztr + 1e-6*mean(sum(Ztr.^2))*eye(numel(Su))) \ (Ztr.'*(ytr-muY));
 r2f = @(y,yh) 1 - sum((y(:)-yh(:)).^2)/max(sum((y(:)-mean(y(:))).^2),eps);
-R2_te = r2f(yte, muY+Zte*b);  R2_tr = r2f(ytr, muY+Ztr*b);
-fprintf('[CTRL-OL] Global predictor (dense OLS, %d unaffected px): held-out spont R^2 = %.3f (train %.3f)\n', ...
-    numel(Su), R2_te, R2_tr);
+RPATH = struct('used',false);
+if useRidge
+    % Whole grid, weights shrunk, lambda picked from LASER-OFF catch windows only. The Gram is
+    % built over the same frames and split as the direct fit above, so R^2 is the same number by
+    % the same definition -- only the estimator changed.
+    FG    = ctrl_gram_build(Xg_full, frames, itr, ite, ytrace);
+    RPATH = ctrl_ridge_path(FG, Xg_full, frames, rel, bwin, swin);
+    RPATH.used = true;
+    b     = RPATH.b_star;
+    R2_te = RPATH.R2te_star;  R2_tr = RPATH.R2tr_star;
+    clear FG
+    fprintf(['[CTRL-OL] Global predictor (RIDGE, %d px, lambda* %.3g): held-out spont R^2 = ' ...
+             '%.3f (train %.3f), ||b|| %.1f\n'], numel(Su), RPATH.lambda_star, R2_te, R2_tr, RPATH.nrm_star);
+else
+    b  = (Ztr.'*Ztr + 1e-6*mean(sum(Ztr.^2))*eye(numel(Su))) \ (Ztr.'*(ytr-muY));
+    R2_te = r2f(yte, muY+Zte*b);  R2_tr = r2f(ytr, muY+Ztr*b);
+    fprintf('[CTRL-OL] Global predictor (dense OLS, %d unaffected px): held-out spont R^2 = %.3f (train %.3f)\n', ...
+        numel(Su), R2_te, R2_tr);
+end
+% ADMISSION GATE (ctrl_r2_floor, single source of truth). Not an error: the cache is still written
+% so the session can be inspected, but gate_pass travels with it and the cross-session batch
+% excludes failures. A Global this weak hands its own prediction error to Local.
+r2_floor = ctrl_r2_floor();
+gate_pass = R2_te >= r2_floor;
+if gate_pass
+    fprintf('[CTRL-OL] gate: R^2 %.3f >= floor %.2f -> PASS\n', R2_te, r2_floor);
+elseif KSEL.used && ~KSEL.reachable
+    % Not a tuning failure: the FULL grid on this session already falls short, so no pixel count
+    % can pass. Report it as a session property rather than sending the user back to a slider.
+    warning(['[CTRL-OL] gate FAIL: held-out R^2 %.3f < floor %.2f, and the full-grid CEILING is ' ...
+             'only %.3f -- no pixel set on %s can clear the floor. This is a property of the ' ...
+             'session (predictor capacity), not of the selection.'], ...
+            R2_te, r2_floor, KSEL.R2_ceiling, sess_tag);
+else
+    warning(['[CTRL-OL] gate FAIL: held-out R^2 %.3f < floor %.2f. Inspect the K sweep in ' ...
+             'ctrl_affected_gui.m, or pin a larger keep_n.'], R2_te, r2_floor);
+end
+
+%% [CTRL-OL-VAL] held-out fit snippet, cached so the fit figure needs no session reload -------
+% The held-out prediction had never been stored -- only the R^2 it produces -- so "is this fit
+% any good" could not be answered without re-opening a 1-3.5 GB session. Store the test-block
+% actual/predicted (a contiguous stretch for the trace panel, subsampled for the scatter) and
+% ctrl_fit_figs.m draws every session from the caches alone.
+VAL = struct();
+VAL.yte = yte(:);  VAL.yhat = muY + Zte*b;  VAL.te_frames = reshape(frames(ite),[],1);
+VAL.R2_te = R2_te;
+nSnip = min(numel(VAL.yte), round(60*Fs));                 % first ~60 s of the test block
+VAL.snip = 1:nSnip;
+nSub = min(numel(VAL.yte), 5000);                          % scatter subsample, deterministic
+VAL.sub = unique(round(linspace(1, numel(VAL.yte), nSub)));
 
 % Global over all frames = counterfactual ipsi from unaffected contra ongoing state
 Gall = muY + (((Xg_full(Su,:)-mu)./sd).') * b;             % [T x 1]
@@ -228,11 +361,15 @@ xlabel('time from stim (s)'); ylabel('\DeltaF/F (%)');
 legend({'\pmSEM','Actual','Global (unaffected contra)','Local = residual'},'Box','off','Location','southwest');
 title(sprintf('OL contra\\rightarrowipsi: Local %.0f%% local / Global %.0f%% shared (transient)', capt(twin), leak(twin)));
 
-nexttile(tl,2); hold on;                                  % affected map (native)
-gg = mat2gray(mimg_cp); image(repmat(gg,1,1,3)); axis image ij off;
-scatter(grC(unaff),  grR(unaff),  16, [0.2 0.6 0.9], 'filled', 'MarkerFaceAlpha',0.5);   % unaffected
-scatter(grC(affected),grR(affected),34,[0.9 0.2 0.1], 'filled');                          % affected
-plot(py_prim, px_prim, 'g+', 'MarkerSize',13, 'LineWidth',2.2);
+nexttile(tl,2); hold on;                                  % affected map (SESSION VIEW, see cp_orient)
+if isfield(S1,'Torient'), Tor = S1.Torient; else, Tor = []; end   % [] = native, pre-orientation caches
+gg = mat2gray(cp_orient_img(Tor, mimg_cp)); image(repmat(gg,1,1,3)); axis image ij off;
+[uR,uC] = cp_orient_fwd(Tor, grR(unaff),   grC(unaff));
+[aR,aC] = cp_orient_fwd(Tor, grR(affected),grC(affected));
+[sR,sC] = cp_orient_fwd(Tor, px_prim, py_prim);
+scatter(uC, uR, 16, [0.2 0.6 0.9], 'filled', 'MarkerFaceAlpha',0.5);   % unaffected
+scatter(aC, aR, 34, [0.9 0.2 0.1], 'filled');                          % affected
+plot(sC, sR, 'g+', 'MarkerSize',13, 'LineWidth',2.2);
 title(sprintf('contra grid: %d unaffected (blue) / %d affected (red) + site', nnz(unaff), nnz(affected)));
 
 sgtitle(figD, sprintf('[CTRL-OL] stim-blind (pure unaffected-pixel)  %s  (%d OL trials)', ...
@@ -245,25 +382,35 @@ fprintf('[CTRL-OL-FIG] -> %s\n', fig_png);
 OL = struct();
 OL.sess_tag=sess_tag; OL.selField=selField;
 OL.affected=affected; OL.unaff=unaff; OL.dipScore=dipScore; OL.aff_dip_thr=aff_dip_thr;
+% the exact detector that produced `affected` -- without this the pixel set is not reproducible
+OL.det=DET.opts; OL.det_method=DET.method; OL.det_note=DET.note; OL.det_cosSim=DET.cosSim;
+OL.rank=DET.rank; OL.nKept=DET.nKept;
+% RESIDUAL BLEED -- must be quoted with any Local share built on this cache. `bleed_kept` is how
+% affected the predictor pixels still are; `leak_*` is the consequence, i.e. how much the Global
+% trace itself dips through the stim. Global dipping means Local UNDER-reports the local effect.
+OL.bleed_kept=DET.bleed_kept; OL.bleed_worst=DET.bleed_worst;
+OL.leak_sus=leak(swin); OL.leak_tran_w=leak(twin);
+% how K was chosen (empty-ish struct when K was pinned or the 'dip' rule was used)
+OL.KSEL=KSEL; OL.K_star=KSEL.K_star; OL.R2_ceiling=KSEL.R2_ceiling; OL.K_reachable=KSEL.reachable;
 OL.b=b; OL.mu=mu; OL.sd=sd; OL.muY=muY; OL.Su=Su; OL.target_mode=target_mode;
-OL.R2_te=R2_te; OL.R2_tr=R2_tr;
+OL.R2_te=R2_te; OL.R2_tr=R2_tr; OL.r2_floor=r2_floor; OL.gate_pass=gate_pass;
 OL.onF=onF; OL.rel=rel; OL.pre=pre; OL.Fs=Fs;
 OL.A_tr=A_tr; OL.G_tr=G_tr; OL.L_tr=L_tr; OL.Aa=Aa; OL.Gg=Gg; OL.Lo=Lo;
 OL.capt_tran=capt(twin); OL.leak_tran=leak(twin); OL.capt_sus=capt(swin);
 OL.px_prim=px_prim; OL.py_prim=py_prim; OL.gridIdx=gridIdx; OL.grR=grR; OL.grC=grC;
-ol_file = fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', sess_tag));
+OL.pred_mode=pred_mode; OL.RPATH=RPATH; OL.VAL=VAL;
+if RPATH.used
+    OL.lambda=RPATH.lambda_star; OL.lambda_abs=RPATH.lambda_abs;
+    OL.bnorm=RPATH.nrm_star; OL.catch_def=RPATH.catch_star; OL.catch_falls=RPATH.catch_falls;
+end
+% Suffixed per predictor mode so 'rank' and 'ridge' caches coexist and reverting is one variable
+% (utils/ctrl_pred_tag.m). Nothing the rank model built is ever overwritten by the ridge model.
+ol_file = fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind%s_%s.mat', pred_suffix, sess_tag));
 save(ol_file, '-struct', 'OL', '-v7.3');
 fprintf('[CTRL-OL-SAVE] -> %s\n\n', ol_file);
 
-% ---- dip score (IDENTICAL to ctrl_affected_gui.m dip_score_; keep in sync) ---
-function sc = local_dip_score(A, iRef, iStim, iPre, wlen)
-% A [N x nRel] trial-averaged %dF traces -> [N x 1] dip score (negative = dip).
-ref    = mean(A(:,iRef),2);
-Wm     = movmean(A(:,iStim), wlen, 2);          % sliding-window mean over stim
-trough = min(Wm,[],2);                          % deepest sub-window (catches transient dips)
-sd     = std(A(:,iPre),0,2) + eps;
-sc     = (trough - ref)./sd;
-end
+% (the dip score used to live here as local_dip_score; it is now utils/ctrl_affected_detect.m,
+%  shared with ctrl_affected_gui.m so the tuned rule and the built rule cannot diverge)
 
 % ---- local helper (copied from ctrl_ols_spont.m; keep in sync) --------------
 function [y, ok] = local_svd_rolling_dfk(Uflat, V, mimg, prow, pcol, k, horizon, nY, nX)
