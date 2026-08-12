@@ -44,6 +44,7 @@ zf = @(x)(x - mean(x,'omitnan'))./max(std(x,'omitnan'), eps);
 
 rhoL = nan(nS,nSt);  pL = nan(nS,nSt);  nOK = nan(nS,nSt);      % LOCAL residual (the finding)
 rhoG = nan(nS,nSt);  pG = nan(nS,nSt);                          % GLOBAL component (the control)
+rhoA = nan(nS,nSt);  pA = nan(nS,nSt);                          % ACTUAL, un-decomposed (the baseline)
 rho2 = nan(nS,nSt);                                             % LOCAL, partialling pre AND post
 lab  = cell(nS,1);   cav = false(nS,1);
 DVall = cell(nS,1);  STall = cell(nS,nSt);
@@ -53,7 +54,8 @@ for s = 1:nS
     if isempty(ST) || isempty(ST.LD), continue; end
     dv = ST.(opt.dv);                                            % already z-scored WITHIN amp
     % GLOBAL per-trial dip, z-scored within amp the same way -> a like-for-like control DV.
-    gd = local_globaldip(ST, D.dcc);
+    gd = local_compDV(ST.trG, D.dcc, opt.dv);
+    ad = local_compDV(ST.trA, D.dcc, opt.dv);      % un-decomposed baseline: trial vs trial-average
     ctrl1 = zf(ST.PRE);
     ctrl2 = [zf(ST.PRE), zf(ST.POST)];
     DVall{s} = dv;
@@ -71,6 +73,10 @@ for s = 1:nS
         okg = isfinite(gd) & isfinite(st) & isfinite(ctrl1);
         if nnz(okg) >= 12
             [rhoG(s,k), pG(s,k)] = partialcorr(gd(okg), st(okg), ctrl1(okg), 'type','Spearman','rows','complete');
+        end
+        oka = isfinite(ad) & isfinite(st) & isfinite(ctrl1);
+        if nnz(oka) >= 12
+            [rhoA(s,k), pA(s,k)] = partialcorr(ad(oka), st(oka), ctrl1(oka), 'type','Spearman','rows','complete');
         end
     end
 end
@@ -92,10 +98,14 @@ if vb
     fprintf('\n[F2-STATE] DV = %s (z within amp) | partial on dev_pre | Spearman\n', opt.dv);
     for k = 1:nSt
         fprintf('\n  --- %-12s  [%s] ---\n', STATES{k,1}, STATES{k,4});
-        fprintf('     %-32s %5s %9s %9s %9s %9s\n','session','n','rho LOCAL','p','rho(+post)','rho GLOBAL');
+        % ACTUAL is printed beside LOCAL and GLOBAL because the ORDERING is the real result:
+        %   Local > Actual > Global  -> decomposition ENRICHES the effect (consistent with local)
+        %   Actual ~ Global > Local  -> the effect lives in the network; decomposition dilutes it
+        % Reading Local alone, or against a mismatched control, cannot distinguish these.
+        fprintf('     %-32s %5s %9s %9s %9s %9s %9s\n','session','n','rho ACTUAL','rho LOCAL','p','rho(+post)','rho GLOBAL');
         for s = 1:nS
-            fprintf('     %-32s %5d %9.3f %9.3g %9.3f %9.3f%s\n', lab{s}, nOK(s,k), ...
-                    rhoL(s,k), pL(s,k), rho2(s,k), rhoG(s,k), local_tern(cav(s),'  (caveat)',''));
+            fprintf('     %-32s %5d %9.3f %9.3f %9.3g %9.3f %9.3f%s\n', lab{s}, nOK(s,k), ...
+                    rhoA(s,k), rhoL(s,k), pL(s,k), rho2(s,k), rhoG(s,k), local_tern(cav(s),'  (caveat)',''));
         end
         fprintf('     %-32s %5s %9.3f %9.3g %9s %9.3f\n','POOLED (Stouffer z / p)','', ...
                 pooled.rho_med(k), pooled.p(k), '', median(rhoG(:,k),'omitnan'));
@@ -174,13 +184,30 @@ S.labels = lab;
 end
 
 % -------------------------------------------------------------------------------------------------
-function gd = local_globaldip(ST, dcc)
-% Per-trial GLOBAL dip, z-scored WITHIN amp -- the like-for-like control DV for the Local one.
+function gd = local_compDV(tr, dcc, dv)
+%LOCAL_COMPDV  Control DV on any component's per-trial traces, with the SAME definition as Local.
+% Called on ST.trG (GLOBAL control) and ST.trA (ACTUAL, un-decomposed baseline).
+%
+% *** FIXED 2026-08-12 -- this used to be wrong and it changed a conclusion. ***
+% The old local_globaldip always returned the SIGNED dip mean, while the primary Local DV is
+% L1DEVz, an UNSIGNED deviation from the amplitude mean. Those are different quantities, so
+% "Local rho vs Global rho" was not a comparison at all -- a signed level has no reason to track
+% state the way an unsigned deviation does, which made every Global control look reassuringly
+% small. On AL_0033 the MOTION control read -0.037 (signed) against a Local -0.099, apparently a
+% 3x margin; with the DV matched the Global control is -0.157, i.e. LARGER than Local, and the
+% motion effect is revealed as GLOBAL. See RESEARCH 2026-08-12.
+%
+% The control must mirror whatever opt.dv the Local side used, or it is not a control.
 gd = [];
-for ai = 1:numel(ST.trG)
-    G = ST.trG{ai};  if isempty(G), continue; end
+for ai = 1:numel(tr)
+    G = tr{ai};  if isempty(G), continue; end
     dc = dcc{ai};    if isempty(dc), dc = 1:size(G,1); end
-    v = mean(G(dc,:), 1).';
+    Gd = G(dc,:);  mu = mean(Gd, 2);
+    switch upper(dv)
+        case 'L1DEVZ', v = mean(abs(Gd - mu), 1).';               % unsigned deviation
+        case 'GAINZ',  v = (Gd.'*mu) / max(mu.'*mu, eps);         % template gain
+        otherwise,     v = mean(Gd, 1).';                         % DVz: signed dip
+    end
     gd = [gd; (v - mean(v,'omitnan'))./max(std(v,'omitnan'),eps)];   %#ok<AGROW>
 end
 end
