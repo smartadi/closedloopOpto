@@ -46,6 +46,15 @@
 %
 % Run:  load_sessions.m -> ctrl_residual_build.m -> ctrl_optimal_xsess.m
 %
+% PANEL SET (user, 2026-08-12): ONE session shown as the demo, then combined-session stats.
+%   f4_mpc_traces_<src>      DEMO: disturbance vs PI vs MPC vs ceiling, one session
+%   f4_mpc_command_<src>     DEMO: the commands themselves -- where the ceiling holds u=0,
+%                            nothing can be done, and that is visible rather than asserted
+%   f4_mpc_rmse_<src>        COMBINED: per-session PI -> MPC -> ceiling, paired
+%   f4_mpc_budget_<src>      COMBINED: MPC gain | price of causality | irreducible, per session
+%   f4_mpc_saturation_<src>  COMBINED: ceiling gain vs how much of the horizon is u=0
+% PNG-first: OX.FMT = {'png'} for review, {'pdf','png'} once approved.
+%
 % SECTIONS: [OPTX-CFG] [OPTX-LOOP] [OPTX-STATS] [OPTX-FIG] [OPTX-SAVE]
 
 %% [OPTX-CFG] -------------------------------------------------------------------
@@ -59,7 +68,12 @@ OX.force_s3  = false;          % rebuild Stage-3 (CL deploy) even if cached
 OX.force_s4a = false;          % rebuild Stage-4a (LTI plant) even if cached
 OX.USE_GATE  = true;           % ctrl_r2_floor admission gate -- see header
 OX.EXPORT    = true;
-OX.exemplar  = 'AL_0033_0226_e2';   % session drawn in the trace panel (falls back to the first)
+% REVIEW WORKFLOW (user, 2026-08-12): PNG first, approve, THEN vector PDFs. Flip to
+% {'pdf','png'} once the panels are signed off -- same code path, so what was approved is
+% exactly what gets exported.
+OX.FMT       = {'png'};        % {'png'} = review | {'pdf','png'} = final
+OX.exemplar  = 'AL_0033_0226_e2';   % the SINGLE SESSION shown as the demo (output + command
+                                    % traces). Falls back to the first qualifying session.
 
 Fs = 35;  ref_level = -5;
 r2_floor = ctrl_r2_floor();
@@ -248,9 +262,13 @@ end
 %% [OPTX-FIG] -------------------------------------------------------------------
 src_main = OX.dsrc{end};        % 'global' when both are computed -- the honest one leads
 T = ST.(src_main);
+ix_ex = NaN;                    % row of R the demo session occupies, for its own numbers
+if isfield(EX,'sess_tag')
+    ix_ex = find(strcmp({R.sess_tag}, EX.sess_tag), 1);
+end
 
 % (A) exemplar traces: what the controller was fighting, and what it could have done
-if isfield(EX,'sess_tag')
+if isfield(EX,'sess_tag') && ~isempty(ix_ex) && ~isnan(ix_ex)
     figA = paperFig(W, H_cm); axA = axes(figA); hold(axA,'on');
     E = EX.(src_main);
     plot(axA, EX.tt, EX.r, '--', 'Color',[.45 .45 .45],'LineWidth',PS.lw_ref);
@@ -265,7 +283,29 @@ if isfield(EX,'sess_tag')
     lg.ItemTokenSize = PS.lgd_token;  lg.FontSize = PS.fs;
     title(axA, EX.sess_tag,'FontSize',PS.fs,'FontWeight',PS.fw,'Interpreter','none');
     cleanAxes(axA);
-    deal_export(figA, outDir, sprintf('f4_mpc_traces_%s',src_main), OX.EXPORT);
+    deal_export(figA, outDir, sprintf('f4_mpc_traces_%s',src_main), OX.EXPORT, OX.FMT);
+
+    % (A2) the COMMANDS, same session. This is the panel that makes the MPC argument legible:
+    % where the optimum sits at u=0 the disturbance is already past the reference and no laser
+    % command helps, so that stretch of error is irreducible no matter how good the controller.
+    figA2 = paperFig(W, H_cm); axA2 = axes(figA2); hold(axA2,'on');
+    yline(axA2, EX.u_max, ':', 'Color',[.6 .6 .6],'LineWidth',PS.lw_zero,'HandleVisibility','off');
+    plot(axA2, EX.tt, EX.u_PI, '-', 'Color',PS.col_cl,        'LineWidth',PS.lw_mean);
+    plot(axA2, EX.tt, E.u_ca,  '-', 'Color',[0.85 0.45 0.00], 'LineWidth',PS.lw_fit);
+    plot(axA2, EX.tt, E.u_nc,  ':', 'Color',[0.10 0.30 0.70], 'LineWidth',PS.lw_fit);
+    xlabel(axA2,'time (s)','FontSize',PS.fs,'FontWeight',PS.fw);
+    ylabel(axA2,'laser command','FontSize',PS.fs,'FontWeight',PS.fw);
+    set(axA2,'FontSize',PS.fs,'FontWeight',PS.fw);
+    lg2 = legend(axA2,{'PI','MPC','ceiling'},'Location','best','Box','off');
+    lg2.ItemTokenSize = PS.lgd_token;  lg2.FontSize = PS.fs;
+    title(axA2, sprintf('u=0 on %.0f%%', 100*R(ix_ex).(src_main).frac_u0), ...
+        'FontSize',PS.fs,'FontWeight',PS.fw);
+    cleanAxes(axA2);
+    deal_export(figA2, outDir, sprintf('f4_mpc_command_%s',src_main), OX.EXPORT, OX.FMT);
+
+    fprintf('\n[OPTX-DEMO] %s (single-session demo, %s disturbance)\n', EX.sess_tag, src_main);
+    fprintf('  steady RMSE: PI %.3f | MPC %.3f | ceiling %.3f   (u=0 on %.0f%% of the horizon)\n', ...
+        rmse_s_PI(ix_ex), T.rmse_ca(ix_ex), T.rmse_nc(ix_ex), 100*T.frac_u0(ix_ex));
 end
 
 % (B) per-session paired RMSE: PI -> causal MPC -> ceiling
@@ -284,7 +324,7 @@ xlim(axB,[0.7 3.3]);
 ylabel(axB,'RMSE (%\DeltaF/F)','FontSize',PS.fs,'FontWeight',PS.fw);
 title(axB,sprintf('n=%d, p=%.2g', nS, T.p_real),'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(axB);
-deal_export(figB, outDir, sprintf('f4_mpc_rmse_%s',src_main), OX.EXPORT);
+deal_export(figB, outDir, sprintf('f4_mpc_rmse_%s',src_main), OX.EXPORT, OX.FMT);
 
 % (C) error budget: what MPC recovers | price of causality | irreducible
 figC = paperFig(W, H_cm); axC = axes(figC); hold(axC,'on');
@@ -300,7 +340,7 @@ ylabel(axC,'RMSE budget (%\DeltaF/F)','FontSize',PS.fs,'FontWeight',PS.fw);
 lg = legend(axC,{'MPC gain','causality','irreducible'},'Location','best','Box','off');
 lg.ItemTokenSize = PS.lgd_token;  lg.FontSize = PS.fs;
 cleanAxes(axC);
-deal_export(figC, outDir, sprintf('f4_mpc_budget_%s',src_main), OX.EXPORT);
+deal_export(figC, outDir, sprintf('f4_mpc_budget_%s',src_main), OX.EXPORT, OX.FMT);
 
 % (D) the one-sided-actuation panel: how much of the horizon nothing can be done about
 figD = paperFig(W, H_cm); axD = axes(figD); hold(axD,'on');
@@ -316,7 +356,7 @@ else
     title(axD,sprintf('n=%d', nS),'FontSize',PS.fs,'FontWeight',PS.fw);
 end
 cleanAxes(axD);
-deal_export(figD, outDir, sprintf('f4_mpc_saturation_%s',src_main), OX.EXPORT);
+deal_export(figD, outDir, sprintf('f4_mpc_saturation_%s',src_main), OX.EXPORT, OX.FMT);
 
 %% [OPTX-SAVE] ------------------------------------------------------------------
 OPTX = struct('OX',OX,'nS',nS,'R',R,'ST',ST,'skipped',skipped, ...
@@ -346,8 +386,9 @@ end
 e = sqrt(mean((y(w) - r(w)).^2));
 end
 
-function deal_export(fig, outDir, base, EXPORT)
+function deal_export(fig, outDir, base, EXPORT, FMT)
 if ~EXPORT; return; end
-paperExport(fig, fullfile(outDir,[base '.pdf']));
-paperExport(fig, fullfile(outDir,[base '.png']));
+for i = 1:numel(FMT)
+    paperExport(fig, fullfile(outDir,[base '.' FMT{i}]));
+end
 end

@@ -31,12 +31,27 @@
 % Run:  (after) load_sessions -> ctrl_residual_build -> imp_reject_across_sessions
 %       then:  f4_reject_panels        (no load_sessions needed -- reads the struct)
 %
-% SECTIONS: [F4-REJ-CFG] [F4-REJ-LOAD] [F4-REJ-A] [F4-REJ-B] [F4-REJ-C] [F4-REJ-D] [F4-REJ-REPORT]
+% PANEL SET (user, 2026-08-12): ONE session shown as a demo + its own statistic, then the
+% combined-session statistics. Demo traces ride in the batch struct (XS.EX) so this script
+% stays read-only and the demo is guaranteed to be the same decomposition the population
+% numbers came from.
+%   f4_reject_demo_ol / _cl      single session: Global (disturbance) vs Actual vs ref
+%   f4_reject_demo_stat_<met>    that session's own per-trial OL vs CL
+%   f4_reject_paired_<met>       COMBINED: per-session paired medians  <- the headline
+%   f4_reject_trials_<met>       COMBINED: pooled per-trial (descriptive only)
+%   f4_reject_gain_<met>         COMBINED: per-session gain + bootstrap CI
+%   f4_reject_capacity_<met>     COMBINED: the T1 control (gain vs predictor R^2)
+%
+% SECTIONS: [F4-REJ-CFG] [F4-REJ-LOAD] [F4-REJ-DEMO] [F4-REJ-A] [F4-REJ-B] [F4-REJ-C]
+%           [F4-REJ-D] [F4-REJ-REPORT]
 
 %% [F4-REJ-CFG] -----------------------------------------------------------------
 MET      = 'ER';       % 'ER' (primary) | 'rho' (legacy, reproduction only)
 EXPORT   = true;
-EXPORT_PNG = true;     % PNG preview alongside each vector panel
+% REVIEW WORKFLOW (user, 2026-08-12): PNG first, approve, THEN vector PDFs. Flip to
+% {'pdf','png'} once the panels are signed off -- nothing else changes, so the approved
+% figure and the exported PDF are the same code path.
+FMT      = {'png'};    % {'png'} = review | {'pdf','png'} = final
 W = 6; H = 4;          % project default panel size (cm)
 
 PS = paperStyle(); setPaperDefaults();
@@ -89,6 +104,78 @@ end
 tag = lower(MET);
 mice = unique({Q.mn});
 
+%% [F4-REJ-DEMO] ONE session: what the decomposition looks like, and its own statistic
+% The population panels below say how big the effect is; they do not show what it IS. These
+% three panels are the single session the reader is shown: the contra-predicted Global (the
+% disturbance the controller faced, from a hemisphere that never sees the laser), the measured
+% Actual, and the reference -- once open-loop, once closed-loop, on SHARED y-limits so the two
+% are directly comparable -- plus that session's own per-trial statistic.
+% Traces come from XS.EX, written by the batch from the SAME decomposition the population
+% numbers were computed from, so the demo cannot disagree with the summary.
+if ~isfield(XS,'EX') || ~isfield(XS.EX,'sess_tag')
+    fprintf('[F4-REJ] no exemplar traces in the struct (older run) -- demo panels skipped.\n');
+else
+    E = XS.EX;
+    inWin = E.t >= -1 & E.t <= E.resp_s;
+    tt = E.t(inWin);
+    lo = min([E.Aol_m(inWin) E.Gol_m(inWin) E.Acl_m(inWin) E.Gcl_m(inWin) E.ref]);
+    hi = max([E.Aol_m(inWin) E.Gol_m(inWin) E.Acl_m(inWin) E.Gcl_m(inWin) E.ref]);
+    pad = 0.08*(hi-lo);  ylimD = [lo-pad hi+pad];
+
+    demo = { 'ol', E.Aol_m, E.Aol_e, E.Gol_m, E.Gol_e, col_ol, E.n_ol; ...
+             'cl', E.Acl_m, E.Acl_e, E.Gcl_m, E.Gcl_e, col_cl, E.n_cl };
+    for m = 1:2
+        figE = paperFig(W,H); axE = axes(figE); hold(axE,'on');
+        Am = demo{m,2}(inWin);  Ae = demo{m,3}(inWin);
+        Gm = demo{m,4}(inWin);  Ge = demo{m,5}(inWin);
+        fill(axE,[tt fliplr(tt)],[Gm+Ge fliplr(Gm-Ge)],[.5 .5 .5], ...
+            'FaceAlpha',PS.fa,'EdgeColor','none','HandleVisibility','off');
+        fill(axE,[tt fliplr(tt)],[Am+Ae fliplr(Am-Ae)],demo{m,6}, ...
+            'FaceAlpha',PS.fa,'EdgeColor','none','HandleVisibility','off');
+        yline(axE,E.ref,'--','Color',[.35 .35 .35],'LineWidth',PS.lw_ref,'HandleVisibility','off');
+        xline(axE,0,':','Color',[.6 .6 .6],'LineWidth',PS.lw_zero,'HandleVisibility','off');
+        plot(axE,tt,Gm,'-','Color',[.45 .45 .45],'LineWidth',PS.lw_fit);
+        plot(axE,tt,Am,'-','Color',demo{m,6},   'LineWidth',PS.lw_mean);
+        xlabel(axE,'time (s)','FontSize',PS.fs,'FontWeight',PS.fw);
+        ylabel(axE,'\DeltaF/F (%)','FontSize',PS.fs,'FontWeight',PS.fw);
+        set(axE,'FontSize',PS.fs,'FontWeight',PS.fw);  ylim(axE,ylimD);
+        lgE = legend(axE,{'Global (disturbance)','Actual'},'Location','best','Box','off');
+        lgE.ItemTokenSize = PS.lgd_token;  lgE.FontSize = PS.fs;
+        title(axE,sprintf('%s, %d trials', upper(demo{m,1}), demo{m,7}), ...
+            'FontSize',PS.fs,'FontWeight',PS.fw);
+        cleanAxes(axE);
+        deal_export(figE, outDir, sprintf('f4_reject_demo_%s',demo{m,1}), EXPORT, FMT);
+    end
+
+    % that session's OWN per-trial statistic -- the single-session claim, before pooling
+    % keyed off `tag` rather than an if/else on MET, which the analyzer constant-folds
+    DVSRC  = struct('er', {{E.er_ol, E.er_cl, E.p_er}}, 'rho', {{E.rho_ol, E.rho_cl, E.p_rho}});
+    dsel   = DVSRC.(tag);
+    dv_ol  = dsel{1};  dv_cl = dsel{2};  p_demo = dsel{3};
+    figF = paperFig(W,H); axF = axes(figF); hold(axF,'on');
+    yline(axF,nullY,'--','Color',[.55 .55 .55],'LineWidth',PS.lw_ref,'HandleVisibility','off');
+    DV = {dv_ol(isfinite(dv_ol)), dv_cl(isfinite(dv_cl))};  CVd = [col_ol; col_cl];
+    for m = 1:2
+        v = DV{m};
+        if numel(v) > 4
+            [fk,yk] = ksdensity(v);  fk = fk/max(fk)*0.34;
+            fill(axF,[m-fk, m*ones(size(fk))],[yk, fliplr(yk)],CVd(m,:), ...
+                'FaceAlpha',PS.fa,'EdgeColor','none','HandleVisibility','off');
+        end
+        plot(axF,[m-0.34 m+0.06],median(v)*[1 1],'-','Color',CVd(m,:),'LineWidth',PS.lw_mean);
+    end
+    set(axF,'XTick',[1 2],'XTickLabel',{'OL','CL'},'FontSize',PS.fs,'FontWeight',PS.fw);
+    xlim(axF,[0.5 2.5]);
+    ylabel(axF,ylab_s,'FontSize',PS.fs,'FontWeight',PS.fw);
+    title(axF,sprintf('p=%.2g', p_demo),'FontSize',PS.fs,'FontWeight',PS.fw);
+    cleanAxes(axF);
+    deal_export(figF, outDir, sprintf('f4_reject_demo_stat_%s',tag), EXPORT, FMT);
+
+    fprintf('\n[F4-REJ-DEMO] %s (single-session demo, deployed R^2 %.3f)\n', E.sess_tag, E.R2_te);
+    fprintf('  median %s : OL %.3f | CL %.3f   (%d / %d trials, rank-sum p=%.3g)\n', ...
+        ylab_s, median(DV{1}), median(DV{2}), numel(DV{1}), numel(DV{2}), p_demo);
+end
+
 %% [F4-REJ-A] per-session paired OL -> CL ---------------------------------------
 % The headline. Each session contributes ONE point per condition, so this is the panel the
 % signrank p belongs to; the pooled-trial view (panel B) is descriptive only.
@@ -106,7 +193,7 @@ xlim(axA,[0.7 2.3]);
 ylabel(axA,ylab_s,'FontSize',PS.fs,'FontWeight',PS.fw);
 title(axA,sprintf('n=%d, p=%.2g', nS, p_sess),'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(axA);
-deal_export(figA, outDir, sprintf('f4_reject_paired_%s',tag), EXPORT, EXPORT_PNG);
+deal_export(figA, outDir, sprintf('f4_reject_paired_%s',tag), EXPORT, FMT);
 
 %% [F4-REJ-B] pooled per-trial distributions ------------------------------------
 % DESCRIPTIVE ONLY -- trials within a session are not independent, and one long session would
@@ -130,7 +217,7 @@ xlim(axB,[0.5 2.5]);
 ylabel(axB,ylab_s,'FontSize',PS.fs,'FontWeight',PS.fw);
 title(axB,sprintf('%d / %d trials', numel(V{1}), numel(V{2})),'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(axB);
-deal_export(figB, outDir, sprintf('f4_reject_trials_%s',tag), EXPORT, EXPORT_PNG);
+deal_export(figB, outDir, sprintf('f4_reject_trials_%s',tag), EXPORT, FMT);
 
 %% [F4-REJ-C] per-session gain, sorted ------------------------------------------
 % gain = OL - CL, so >0 means CL removed more disturbance energy than OL in that session.
@@ -149,7 +236,7 @@ xlabel(axC,'session','FontSize',PS.fs,'FontWeight',PS.fw);
 ylabel(axC,'gain (OL-CL)','FontSize',PS.fs,'FontWeight',PS.fw);
 title(axC,sprintf('CL better in %d/%d', nnz(gainV>0), nS),'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(axC);
-deal_export(figC, outDir, sprintf('f4_reject_gain_%s',tag), EXPORT, EXPORT_PNG);
+deal_export(figC, outDir, sprintf('f4_reject_gain_%s',tag), EXPORT, FMT);
 
 %% [F4-REJ-D] the T1 control: gain vs predictor quality -------------------------
 % If "the controller rejects the disturbance" were really "the predictor missed some of the
@@ -174,7 +261,7 @@ xlabel(axD,'deployed R^2','FontSize',PS.fs,'FontWeight',PS.fw);
 ylabel(axD,'gain (OL-CL)','FontSize',PS.fs,'FontWeight',PS.fw);
 set(axD,'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(axD);
-deal_export(figD, outDir, sprintf('f4_reject_capacity_%s',tag), EXPORT, EXPORT_PNG);
+deal_export(figD, outDir, sprintf('f4_reject_capacity_%s',tag), EXPORT, FMT);
 
 %% [F4-REJ-REPORT] numbers for the caption --------------------------------------
 % Everything a caption or a Results sentence needs, in one block, in the units of MET.
@@ -207,10 +294,11 @@ end
 fprintf('[F4-REJ] panels -> %s\n', outDir);
 
 %% ---- local functions (must sit at EOF in a script) ---------------------------
-function deal_export(fig, outDir, base, EXPORT, EXPORT_PNG)
+function deal_export(fig, outDir, base, EXPORT, FMT)
 if ~EXPORT; return; end
-paperExport(fig, fullfile(outDir,[base '.pdf']));
-if EXPORT_PNG; paperExport(fig, fullfile(outDir,[base '.png'])); end
+for i = 1:numel(FMT)
+    paperExport(fig, fullfile(outDir,[base '.' FMT{i}]));
+end
 end
 
 function s = t1_verdict(rs, p)
