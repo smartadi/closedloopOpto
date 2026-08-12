@@ -42,7 +42,7 @@ if nargin < 3, opt = struct(); end
 def = struct('use_motion',false, 'ridge_grid',[0 1e-4 3e-4 1e-3 3e-3 1e-2 3e-2 0.1 0.3 1 3], ...
              'ridge_fixed',[], 'penNear',2.0, 'penFar',0.2, 'greedy_on',true, 'greedy_tol',0.05, ...
              'greedy_r2floor',0.98, 'greedy_batch',0.01, 'greedy_nRand',5, 'nShift',5, 'verbose',true, ...
-             'select_mode','r2max', 'r2_floor',0.85);
+             'select_mode','r2max', 'r2_floor',0.85, 'use_affected',true);
 fn = fieldnames(def);
 for i = 1:numel(fn)
     if ~isfield(opt,fn{i}), opt.(fn{i}) = def.(fn{i}); end
@@ -69,7 +69,21 @@ pen   = opt.penNear*(1-dn) + opt.penFar*dn;
 gamma = 1./pen(:);
 if use_mot, gamma(nP) = max(gamma); end            % motion: cheapest possible -> effectively unpenalised
 
-U = A.unaff_pooled(:).';                            % candidate predictors: unaffected at EVERY amp
+% Candidate predictors. Default: only pixels the TF detector cleared at EVERY amplitude -- an
+% exclusion made by an INDEPENDENT criterion, never by the fit. opt.use_affected=false hands the
+% whole grid to the optimiser instead, so the leak penalty alone has to achieve blindness. That is
+% not circular (the penalty is still selected on trial-half A and scored on half B) but it does
+% remove the one guard that does not depend on the stim data at all -- read the R^2 price, not the
+% capture, when comparing the two.
+if opt.use_affected
+    U = A.unaff_pooled(:).';                        % candidate predictors: unaffected at EVERY amp
+else
+    U = 1:nG;                                       % ALL grid pixels, detector bypassed
+    if vb
+        fprintf(2,'   [NO-DETECTOR] using all %d grid px (%d were flagged stim-affected)\n', ...
+                nG, nG - numel(A.unaff_pooled));
+    end
+end
 if use_mot, U = [U, nP]; end
 assert(numel(U) >= 5, 'f2_model: only %d candidate predictors for %s.', numel(U), P.label);
 

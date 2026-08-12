@@ -61,6 +61,10 @@ if ~exist('F2_DV','var'),         F2_DV         = 'L1DEVz'; end% primary DV (see
 % so the price of the switch is always on the record.
 if ~exist('F2_SELECT','var'),     F2_SELECT     = 'frontier'; end
 if ~exist('F2_R2FLOOR','var'),    F2_R2FLOOR    = 0.85;  end
+% F2_USE_AFFECT=false bypasses the TF detector and hands the FULL contra grid to the optimiser, so
+% the leak penalty alone has to buy blindness. Diagnostic: compare the R^2 PRICE against the
+% detector-gated run. Do not quote capture from it without that comparison.
+if ~exist('F2_USE_AFFECT','var'), F2_USE_AFFECT = true;  end
 if ~exist('F2_PLOT','var'),       F2_PLOT       = true;  end
 % Where the per-session FIT figures are written as 300-dpi PNGs. They are diagnostics, not paper
 % panels, so PNG per the project export rule -- and written to disk because the thing you want to
@@ -106,7 +110,8 @@ for q = 1:numel(F2_SEL)
 
         % --- §3 M4 predictor, contra only (PRIMARY) ---------------------------------------------
         mopt = struct('use_motion',false, 'ridge_fixed',F2_RIDGE, ...
-                      'select_mode',F2_SELECT, 'r2_floor',F2_R2FLOOR);
+                      'select_mode',F2_SELECT, 'r2_floor',F2_R2FLOOR, ...
+                      'use_affected',F2_USE_AFFECT);
         M = f2_model(P, A, mopt);
         if isempty(F2_RIDGE)
             F2_RIDGE = M.ridge;        % FREEZE: every later session inherits this verbatim
