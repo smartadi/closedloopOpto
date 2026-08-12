@@ -13,7 +13,12 @@ close all;
 % no-op. Still a clean workspace; it just no longer also flushes cached FUNCTIONS.
 % If you need that (edited a .m while a GUI held it), use the targeted form:
 %   clear <fnname>; rehash
-clearvars -except r_lean;
+%
+% RUN_* added 2026-08-12: a launcher that RUNS this script (run_fig4.m) shares this
+% workspace, so anything it set is destroyed here -- its own config included, and the
+% failure lands several steps later as "Unrecognized function or variable". Launcher
+% state is namespaced RUN_* and preserved; nothing else in the project uses that prefix.
+clearvars -except r_lean RUN_*;
 
 % If launched via run() from controller-analysis/, step up to project root
 % so that relative paths (data/, utils/) resolve correctly.
