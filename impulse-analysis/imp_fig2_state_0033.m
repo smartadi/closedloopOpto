@@ -1,17 +1,32 @@
 %% imp_fig2_state_0033.m -- state-dependence of the local residual, AL_0033 e1 ONLY.
 %
-% WHY ONE SESSION (user, 2026-08-12). Judged from the per-amp fit plots: AL_0033 2025-01-29 e1 is
-% the only session whose prediction is valid enough to carry a residual claim. The other three are
-% excluded for reasons already on the record:
-%   AL_0041 e1  -- CATCH CONTROL FAILS: at lambda_R=0.3 the decomposition produces a residual dip of
-%                  -0.076 dF/F with NO stim present, 11-22% of that session's real dips, same sign.
-%   AL_0041 e2  -- rel-delta runs the WRONG WAY (rho=-0.03) and its amps are few and low-trial
-%                  (n=19-26 at two of them).
-%   AL_0048 e1  -- readout sits ~2.6 mm from the illuminated spot, so it measures a CONNECTED region,
-%                  not illuminated tissue. The best-scaled contra spatial mean ALONE already accounts
-%                  for ~100% of its dip at 0.40 and 1.60 V -> its "local residual" is close to empty.
-% CONSEQUENCE, stated plainly: with n=1 there is no pooling, no Stouffer, and no replication. Every
-% number below is a single-session result and must be reported as one. See RESEARCH 2026-08-11/12.
+% WHY ONE SESSION (user, 2026-08-12, from the per-amp fit plots). Every exclusion below is decided
+% by a MODEL-QUALITY criterion that is computed BEFORE any state test and never looks at a state
+% result. Numbers are the pipeline's own, under F2_SELECT='r2max' (RESEARCH 2026-08-12):
+%
+%   AL_0041 e1  -- CATCH CONTROL FAILS. The decomposition produces a Local dip on NO-STIM windows
+%                  equal to -21% of its stim Local dip (n=55 true-0V), past the 15% threshold. The
+%                  pipeline itself marks its capture/leak VOID. Only 1 of 4 amps responded.
+%                  HARD exclusion -- this one is not a judgement call.
+%   AL_0041 e2  -- capture 37% / leak 63%, only 3 of 6 amps responded, catch -14% (inside the 15%
+%                  threshold, but only just). The predictor absorbs most of the stim effect, so the
+%                  residual is largely not the local effect. WEAK MODEL, not a disqualification.
+%   AL_0048 e1  -- capture 29% / leak 71%. Plus the readout sits ~2.6 mm from the illuminated spot,
+%                  so it measures a CONNECTED region, not illuminated tissue: the best-scaled contra
+%                  spatial mean ALONE accounts for ~100% of its dip at 0.40 and 1.60 V.
+%   AL_0033 e1  -- capture 91%, leak 9%, catch -2%, 6 of 9 amps responded, 748 trials. KEPT.
+%
+% *** RETRACTED EXCLUSION REASON (2026-08-12). *** An earlier version of this header also cited
+% "AL_0041 e2 -- rel-delta runs the WRONG WAY (rho=-0.03)". That is CIRCULAR: dropping a session
+% because its outcome disagrees with the hypothesis guarantees the surviving sessions agree with it,
+% and would be indefensible to a referee. e2 is excluded on capture/leak alone, which is measured
+% without reference to any state marker. Do not reinstate the sign-based reason.
+%
+% CONSEQUENCE, stated plainly: with n=1 there is no pooling, no Stouffer, and no replication -- and
+% AL_0033 is ALSO the highest-powered session (748 trials vs 208/260/300, 9 amps vs 4/6/3). So
+% "the only session where the effect is measurable" cannot be distinguished from "the only session
+% where the effect is real". Every number below is a single-session result from a single mouse and
+% must be reported as one. See RESEARCH 2026-08-11/12.
 %
 % WHAT IT RUNS
 %   f2_state      LEVEL of the residual vs state   (partial Spearman, dev_pre controlled)
