@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-11 — ⚠ The TF detector's per-amp counts are NON-MONOTONIC in amplitude in 3 of 4 sessions
+**Changed/Found:** Affected-pixel counts in order of increasing amplitude — AL_0033 `0 0 2 48 13 35 177 249 275` (48→13), AL_0041 e1 `30 21 74 15` (74→15, peak mid-range), AL_0041 e2 `0 0 0 73 4 198` (73→4), AL_0048 `0 68 121` (monotonic, and the only session at `tf_sens` 1.00). A stronger stim cannot drive fewer contra pixels, so every drop is detector noise, not physiology. AL_0041 e1 is the worst: its count *peaks* at the third of four amplitudes.
+**Why:** This is independent evidence for what the ungated run showed empirically (previous entry: removing the detector entirely changes per-amp capture by ≤6 points). A binary per-pixel-per-amp threshold at a hand-tuned `tf_sens` is noise-dominated at the per-amp level, and the three sessions with the highest `tf_sens` are exactly the three that misbehave. Monotonicity is a free, physics-based validity check the detector currently fails and that nothing in the pipeline tests.
+**Next:** Fold in as a detector self-test if the detector is retained (assert counts are non-decreasing in amplitude, warn otherwise). Argues against investing in a better binary detector and for the continuous-prior route.
+
 ### 2026-08-11 — Dropping the TF detector entirely leaves capture UNCHANGED and makes the random control far more decisive
 **Changed/Found:** New knob `opt.use_affected` (`f2_model.m`) / `F2_USE_AFFECT` (`imp_fig2.m`): bypass Stage 2 and hand the FULL contra grid to the optimiser, so the leak penalty alone must buy blindness. Frontier mode, all 4 sessions, gated → ungated:
 
