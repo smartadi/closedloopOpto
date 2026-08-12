@@ -460,37 +460,42 @@ Sine-wave (feedforward) section — panels exported individually, stitched in Il
 Sessions s1 `2026-07-01/6` and s3 `2026-07-21/1` appear **only as points inside 5I/5J/5K**.
 **All four modes live in ONE panel** per trace figure (not 4 separate per-mode panels) —
 mode is encoded by colour, so 5B/5C/5D each carry all of OL / OL+prev / CL / CL+prev.
+**Layout re-derived 2026-08-12 from the assembled `Figure5.pdf` itself** (the previous block
+described a two-column plan that was never built). Three rows, not two:
 ```
-row1:  5A(6×4)[ext]   5E(5.2×4)   5F(5.2×4)
+row1:  5A(6×4)[ext]      5E(5.2×4)         5F(5.2×4)
 
-row2:  col1[11.4]:  5B(11.4×3.5) / 5C(11.4×3.5) / 5D(11.4×3.5)
-       col2[5.3]:   5I(5.3×3.5) / 5J(5.3×3.5) / 5K(5.3×3.5)
+row2:  col1[12.5]:  5B(12.5×3.5) / 5C(12.5×3.5) / 5D(12.5×3.5)
+       col2[4.2]:   5G(4.2×5.4) / 5H(4.2×5.4)          ← H to be DELETED, slot reused
+
+row3:  5I(5.5×4.5)   5J(5.5×4.5)   5K(5.5×4.5)
 ```
 Panel key: **5A** system diagram · **5B** single trial · **5C** trial average ·
 **5D** trial-average input · **5E** RMSE over time · **5F** across-trial variance ·
-**5I** across-session RMSE · **5J** across-session variance · **5K** across-session phase lag.
-Physical top row is A, E, F. **5H (single-session phase bar) stays DROPPED** — it duplicates 5K
-in every session; the script still emits it, it is not a paper panel, and the assembled artwork
-should lose it.
+**5G** per-trial RMSE distribution · **5I/5J/5K** across-session RMSE / variance / phase lag.
 
-⚠ **This layout block is stale as of 2026-08-12 and does not match the assembled artwork.**
-Two things changed: **5G is restored** (4.2 × 5.4) and has no slot above, and the actual
-`Figure5.pdf` is arranged as **row1 A|E|F · row2 col1 = B/C/D stacked, col2 = G (+H, to be
-deleted) · row3 = I|J|K across the full measure**, i.e. I/J/K are a third row, not a second
-column. Re-solve the fit against whichever of the two arrangements is kept before the next
-export; the numbers below describe the *old* two-column plan.
+⚠ **PANEL LETTERS E AND F ARE SWAPPED IN THE ARTWORK.** In `Figure5.pdf` the panel lettered
+**E is the variance trace** and **F is the RMSE trace**; in this registry and in the script
+filenames, `5E` = RMSE and `5F` = variance. Fix one or the other **before any letter is cited
+in the manuscript** — recommendation: relabel the artwork, since the filenames and every log
+entry use the registry's convention.
 
-Fit checks (gap=0.3 cm) — **recomputed 2026-08-10 for the 5I/5J/5K column:**
+⚠ **5H (single-session phase bar) stays DROPPED** — it duplicates 5K in every session. Deleting
+it frees a **4.2 × 5.4** slot in col2, which is the natural home for the proposed error-power
+decomposition panel (same size, same column).
+
+Fit checks (gap=0.3 cm) — **re-solved 2026-08-12 against the exported sizes:**
 - row1: 6 + 5.2 + 5.2 + 2×0.3 = **17.0/17** ✓ (exact)
-- row2: col1(11.4) + col2(5.3) + 0.3 = **17.0/17** ✓ (exact) — col1 ≈ **2/3 of the measure**
-- col1 inner height: 3×3.5 + 2×0.3 = **11.1 cm**
-- col2 inner height: 3×3.5 + 2×0.3 = **11.1 cm** ✓ (columns flush by construction now —
-  three panels each side, same height, so the old `2h+0.3 = 3×3.5+0.6` solve is obsolete)
-- ⚠ **5I/5J/5K are currently exported at 5.5×4.5** — re-export at **5.3×3.5** to fit col2,
-  or widen col2 to 5.5 (→ row2 = 11.4+5.5+0.3 = 17.2, 0.2 over; shrink col1 to 11.2).
-- **Total height: 4 + 0.3 + 11.1 = 15.4 cm** ✓ (~7.6 cm spare on a 23 cm page)
+- row2: col1(12.5) + col2(4.2) + 0.3 = **17.0/17** ✓ (exact) — matches the fit comment at the
+  head of `sine_ff_plots_combined.m`, which has been right all along; the old "11.4 + 5.3"
+  in this block was a plan that was never exported.
+- col1 inner height: 3×3.5 + 2×0.3 = **11.1 cm**; col2 inner height: 2×5.4 + 0.3 = **11.1 cm**
+  ✓ flush by construction.
+- row3: 3×5.5 + 2×0.3 = **17.1/17** ✗ **0.1 over.** Either drop the row-3 gap to **0.25**
+  (3×5.5 + 2×0.25 = 17.0 ✓, no re-export) or re-cut 5I/5J/5K to **5.47 × 4.5**. Prefer the gap.
+- **Total height: 4 + 0.3 + 11.1 + 0.3 + 4.5 = 20.2 cm** ✓ (~2.8 cm spare on a 23 cm page)
 - **Shared x-axis in col1:** 5B/5C/5D are the same 4 s time base stacked — only the bottom
-  panel (5D, the input) should carry the time axis/scalebar; 5B/5C drop theirs. That is what
+  panel (5D, the input) carries the time axis/scalebar; 5B/5C drop theirs. That is what
   buys the vertical room and makes the stack read as one object.
 
 ##### Fig 5 — draft manuscript caption
