@@ -180,6 +180,17 @@ for k = 1:nMK
     rhoStrat = sum(rs.*ws) / max(sum(ws), eps);
     nSessAgree = nnz(sign(rs) == sign(rhoStrat));
 
+    % --- POWER-PARTIALLED rho: what survives once signal amplitude is removed ------------------
+    % log(pre-trial variance) is the gain axis. Absolute delta partials to ~0 here because it IS
+    % power; anything that survives is carrying information beyond loudness.
+    lgP = log(max(T.PVv(ok), eps));
+    if strcmp(MK{k,1},'PVv')       % partialling pre-var on itself is degenerate, not a result
+        rhoPow = NaN; pPow = NaN; rhoPowC = NaN; pPowC = NaN;
+    else
+        [rhoPow,  pPow ] = partialcorr(abs(y),  x, lgP, 'type','Spearman');
+        [rhoPowC, pPowC] = partialcorr(abs(yp), x, lgP, 'type','Spearman');
+    end
+
     % --- binned SD curve + Brown-Forsythe ------------------------------------------------------
     g   = local_qbin(x, STV_NBIN);
     sdB = arrayfun(@(b) std(y(g==b), 'omitnan'),  1:STV_NBIN);
@@ -225,6 +236,13 @@ for k = 1:nMK
             rat, ci(1), ci(2), bf, trend, verdict);
     fprintf('%-22s %7s %9.3f %9.3g %8s %6s | %8s %11s | %7.4f %6.2f   <- STIM-FREE CONTROL\n', ...
             '  (pre-onset ctrl)','', rhoP, pP, '', '', '', '', bfP, trendP);
+    if isfinite(rhoPow)
+        fprintf('%-22s %7s %9.3f %9.3g %8s %6s | %8s %11s | %7s %6s   <- POWER-PARTIALLED (ctrl %+.3f)\n', ...
+                '  (| log PreVar)','', rhoPow, pPow, '', '', '', '', '', '', rhoPowC);
+    else
+        fprintf('%-22s %7s %9s %9s %8s %6s | %8s %11s | %7s %6s   <- POWER-PARTIALLED n/a (marker IS the covariate)\n', ...
+                '  (| log PreVar)','', '--','--','', '', '', '', '', '');
+    end
 
     R(k).tag=MK{k,1}; R(k).name=MK{k,2}; R(k).adm=MK{k,3};
     R(k).rho=rho; R(k).p=p; R(k).rhoP=rhoP; R(k).pP=pP;
@@ -232,6 +250,7 @@ for k = 1:nMK
     R(k).trend=trend; R(k).trendP=trendP; R(k).ratio=rat; R(k).ci=ci;
     R(k).verdict=verdict; R(k).x=x; R(k).y=y; R(k).n=nnz(ok);
     R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;
+    R(k).rhoPow=rhoPow; R(k).pPow=pPow; R(k).rhoPowC=rhoPowC; R(k).pPowC=pPowC;
     R(k).binMed = arrayfun(@(b) median(x(g==b),'omitnan'), 1:STV_NBIN);   % raw value per bin
     R(k).units = MK{k,4};
 end
@@ -296,26 +315,34 @@ end
 %% ================= (4) figures ===================================================================
 if STV_PLOT
     C.stim=[0.80 0.15 0.15]; C.ctl=[0.55 0.55 0.55];
-    f1 = figure('Color','w','Position',[40 40 380*nMK 700], ...
+    % PLOT ONLY THE ADMISSIBLE MARKERS (user, 2026-08-12). Pre-trial variance and absolute delta
+    % are still computed and printed above -- they belong in the record -- but they are not drawn,
+    % because a panel of a quantity that IS signal power plotted against a spread invites exactly
+    % the reading the confound forbids. Set STV_PLOTCONF=true to draw all four.
+    if ~exist('STV_PLOTCONF','var') || isempty(STV_PLOTCONF), STV_PLOTCONF = false; end
+    if STV_PLOTCONF, kShow = 1:nMK; else, kShow = find([MK{:,3}]); end
+    nC = numel(kShow);
+    f1 = figure('Color','w','Position',[40 40 460*nC 720], ...
                 'Name','[STV] trial variability vs brain state');
-    tl = tiledlayout(f1, 3, nMK, 'Padding','compact','TileSpacing','compact');
+    tl = tiledlayout(f1, 3, nC, 'Padding','compact','TileSpacing','compact');
 
-    for k = 1:nMK
+    for ci = 1:nC
+        k  = kShow(ci);
         gc = local_tern(MK{k,3}, [0 0 0], [0.55 0.55 0.55]);
 
         % row 1 -- the funnel: SIGNED dev vs state, with the binned +/-SD envelope
-        ax = nexttile(tl, k); hold(ax,'on'); box(ax,'on');
+        ax = nexttile(tl, ci); hold(ax,'on'); box(ax,'on');
         scatter(ax, R(k).x, R(k).y, 5, [0.55 0.65 0.85], 'filled', 'MarkerFaceAlpha',0.30);
         bc = local_bincentres(R(k).x, STV_NBIN);
         plot(ax, bc,  R(k).sdB, '-o','Color',C.stim,'MarkerFaceColor',C.stim,'LineWidth',1.6,'MarkerSize',4);
         plot(ax, bc, -R(k).sdB, '-o','Color',C.stim,'MarkerFaceColor',C.stim,'LineWidth',1.6,'MarkerSize',4);
         yline(ax,0,'k:'); ylim(ax,[-4 4]); xlim(ax, quantile(R(k).x,[0.005 0.995]));
         xlabel(ax, sprintf('%s  (%s)', MK{k,2}, MK{k,4}));
-        if k==1, ylabel(ax,'signed dev (within-amp SD)'); end
+        if ci==1, ylabel(ax,'signed dev (within-amp SD)'); end
         title(ax, sprintf('%s   n=%d', MK{k,2}, R(k).n), 'FontSize',9, 'Color',gc);
 
         % row 2 -- spread vs state, STIM against the STIM-FREE control
-        ax = nexttile(tl, nMK+k); hold(ax,'on'); box(ax,'on'); grid(ax,'on');
+        ax = nexttile(tl, nC+ci); hold(ax,'on'); box(ax,'on'); grid(ax,'on');
         % x placed at each bin's MEDIAN RAW VALUE, so the drop can be read against real units
         % ("SD falls between motion 0.2 and motion 2.5") rather than against a bin index.
         bm = R(k).binMed;
@@ -326,12 +353,12 @@ if STV_PLOT
         xticks(ax, round(bm,2,'significant'));
         xlim(ax, [min(bm) - 0.08*range(bm), max(bm) + 0.08*range(bm)]);
         xlabel(ax, sprintf('%s  (%s), bin median', MK{k,2}, MK{k,4}));
-        if k==1, ylabel(ax,'SD of dev'); legend(ax,'Location','best','Box','off','FontSize',7); end
+        if ci==1, ylabel(ax,'SD of dev'); legend(ax,'Location','best','Box','off','FontSize',7); end
         title(ax, sprintf('BF p = %.4g (ctrl %.4g)\ntrend %+.2f (ctrl %+.2f)', ...
               R(k).bf, R(k).bfP, R(k).trend, R(k).trendP), 'FontSize',8.5, 'Color',gc);
 
         % row 3 -- effect size with bootstrap CI, against the claim's prediction
-        ax = nexttile(tl, 2*nMK+k); hold(ax,'on'); box(ax,'on'); grid(ax,'on');
+        ax = nexttile(tl, 2*nC+ci); hold(ax,'on'); box(ax,'on'); grid(ax,'on');
         % STIM bar beside its STIM-FREE control bar -- the comparison the verdict rests on
         bar(ax, 1, R(k).ratio, 0.5, 'FaceColor', C.stim, 'EdgeColor','none');
         errorbar(ax, 1, R(k).ratio, R(k).ratio-R(k).ci(1), R(k).ci(2)-R(k).ratio, ...
@@ -342,20 +369,18 @@ if STV_PLOT
         if claimDir(k) < 0, ptxt = 'claim: < 1'; else, ptxt = 'claim: \geq 1'; end
         xticks(ax,[1 2]); xticklabels(ax,{sprintf('stim %.2f',R(k).ratio), sprintf('ctrl %.2f',ratP)});
         xlim(ax,[0.4 2.6]);
-        if k==1, ylabel(ax,'SD ratio  top / bottom bin'); end
-        title(ax, sprintf('%s   strat \\rho %+.3f (%d/%d sess agree)\n%s', ...
-              ptxt, R(k).rhoStrat, R(k).nSessAgree, numel(R(k).rhoPerSess), R(k).verdict), ...
-              'FontSize',8.5, 'Color',gc);
+        if ci==1, ylabel(ax,'SD ratio  top / bottom bin'); end
+        title(ax, sprintf(['%s   strat \\rho %+.3f (%d/%d sess)   ' ...
+              '\\rho|power %+.3f (ctrl %+.3f)\n%s'], ...
+              ptxt, R(k).rhoStrat, R(k).nSessAgree, numel(R(k).rhoPerSess), ...
+              R(k).rhoPow, R(k).rhoPowC, R(k).verdict), 'FontSize',8.5, 'Color',gc);
     end
 
-    sgtitle(f1, sprintf(['TRIAL-TO-TRIAL VARIABILITY of the impulse response vs brain state   ' ...
-        '(%d trials, %d sessions, state window [%.2f %.2f] s, states in %s units)\n' ...
-        'row 1 funnel (signed dev, \\pmSD envelope)   row 2 spread vs state with the STIM-FREE control   ' ...
-        'row 3 effect size vs the claim\n' ...
-        'GREY titles = POWER CONFOUNDS (pre-var and absolute \\delta ARE signal power; a spread DV ' ...
-        'cannot separate them from an amplitude-of-everything effect)'], ...
-        numel(T.dev), numel(uS), stWin(1), stWin(2), ...
-        local_tern(STV_ZSTATE,'z-scored','RAW')), 'FontWeight','bold','FontSize',10);
+    sgtitle(f1, sprintf(['Trial-to-trial VARIABILITY of the impulse response vs brain state   ' ...
+        '(%d trials, %d sessions, state window [%.2f %.2f] s)\n' ...
+        'RED = impulse response      GREY = SAME window, NO STIMULUS (the control)\n' ...
+        'If grey tracks red, the state changes the ONGOING signal, not stimulus processing.'], ...
+        numel(T.dev), numel(uS), stWin(1), stWin(2)), 'FontWeight','bold','FontSize',10);
 
     exportgraphics(f1, fullfile(STV_FIGDIR,'stv_claim.png'), 'Resolution',300);
 
