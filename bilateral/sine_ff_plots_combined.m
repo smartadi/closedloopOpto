@@ -22,17 +22,24 @@
 % ERROR METRIC = RMSE (sqrt of mean squared error), matching the Fig 3 decision.
 
 %% ---- Knobs -------------------------------------------------------------
+% Set SESSION_TAG in the base workspace BEFORE running to override the default
+% (filenames are session-suffixed, so s2 and s3 panels coexist on disk).
+if ~exist('SESSION_TAG','var') || isempty(SESSION_TAG)
 SESSION_TAG = 's3';        % Fig 5 PRIMARY (2026-07-29): s3 = AL_0048 2026-07-21/1 (198 sine tr, dark screen, pixel_R=[407 367]; preview REPLICATES, OL-vs-CL ns p=0.36 -> feedback claim carried by combined 5I/5J). s1 = 2026-07-01/6 (87 tr); s2 = 2026-07-14/1 (200 tr, former primary)
+end
 SIDE        = 'right';
 PRE         = 2;           % s before onset
 POST        = 2;           % s after trajectory end
 EX_TRIAL    = 6;           % which trial (within mode) for the single-trial panel
 INP_SCALE   = 2;           % scale on the 638 command (mW) so it reads on the dF/F axis
 RMSE_CLIP_P = 95;          % 5G y-limit percentile (s2 has heavy motion outliers)
-EXPORT      = true;        % paper panels -> vector PDF
-EXPORT_PNG  = true;        % also mirror each panel as a 300-dpi PNG (figure4/png/)
-PREVIEW_DIR = '';          % non-empty -> also drop 200-dpi PNG previews there
-                           % (quick visual check; PDFs remain the deliverable)
+% EXPORT / EXPORT_PNG / PREVIEW_DIR are also preset-overridable: when the panels
+% are placed in the Illustrator master, Windows LOCKS the PDFs and every
+% paperExport throws "Permission denied". Preset EXPORT=false + a PREVIEW_DIR to
+% iterate on layout without closing Illustrator, then re-run with EXPORT=true.
+if ~exist('EXPORT','var')      || isempty(EXPORT);      EXPORT      = true;  end
+if ~exist('EXPORT_PNG','var')  || isempty(EXPORT_PNG);  EXPORT_PNG  = true;  end
+if ~exist('PREVIEW_DIR','var'); PREVIEW_DIR = ''; end
 % -------------------------------------------------------------------------
 prev = @(f, nm) preview_png(f, PREVIEW_DIR, nm);
 
@@ -228,10 +235,13 @@ end
 xlim(ax_rm, [0 dur]); hold(ax_rm,'off');
 % No in-panel legend: at 5.2 cm it lands on top of the traces. The mode colour key
 % is carried by the 5B/5C column titles in the assembled figure.
-text(ax_rm, -0.13, 0.5, 'RMSE (% dF/F)', 'Units','normalized', 'Rotation',90, ...
+text(ax_rm, -0.13, 0.5, 'RMSE', 'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'FontSize',PS.fs, 'FontWeight',PS.fw, 'Color','k', 'Clipping','off');
-paperAxes(ax_rm, 'XLength',1, 'YLength',2, 'XLabel','1 s', 'YLabel','2');
+% Y bar shortened 2 -> 1 and given its UNIT (2026-08-12, user): a bare "2" next
+% to a rotated "RMSE (% dF/F)" was redundant AND uninformative; the bar now
+% carries the unit and the rotated text carries only the quantity name.
+paperAxes(ax_rm, 'XLength',1, 'YLength',1, 'XLabel','1 s', 'YLabel','1% \DeltaF/F');
 % Early-vs-late split behind claim (c): which modes improve within the trial?
 iE = Tref <= 1;  iL = Tref > 1;
 fprintf('\n[5E] RMSE early (0-1 s) -> late (1-%g s), per mode:\n', dur);
@@ -257,59 +267,125 @@ xline(ax_var, dur, 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
 xlim(ax_var, [-PRE dur+POST]);
 addStimPatch(ax_var, x1, x2);
 uistack(findobj(ax_var,'Type','line'), 'top'); hold(ax_var,'off');
-paperAxes(ax_var, 'XLength',1, 'YLength',10, 'XLabel','1 s', 'YLabel','10');
+% NO y arm (2026-08-12, user): variance units are (% dF/F)^2 and a bare "10"
+% scale bar told the reader nothing. The panel is read for the SHAPE and the
+% between-mode ordering, not off an absolute value, so the y scale is dropped
+% entirely and only the rotated quantity name is kept.
+paperAxes(ax_var, 'XLength',1, 'YLength',0, 'XLabel','1 s');
 text(ax_var, -0.12, 0.5, 'Variance across trials', 'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', 'Color','k', 'Clipping','off');
 if EXPORT; paperExport(fig_D, fullfile(outDir, sprintf('sine_5F_variance_%s.pdf', sfx)));
     if EXPORT_PNG; paperExport(fig_D, fullfile(pngDir, sprintf('sine_5F_variance_%s.png', sfx))); end; end
 prev(fig_D, '5F');
 
-%% 5G: trial RMSE half-violin (col2 row1) ---------------------------------
-fig_E = paperFig(4.2, 5.4);
-lm2e = 0.13; rm2e = 0.05; bm2e = 0.15; tm2e = 0.10;
-ax_mse = axes(fig_E, 'Position', [lm2e, bm2e, 1-lm2e-rm2e, 1-bm2e-tm2e]); hold(ax_mse,'on');
-hw = 0.34;
-% Robust y-limit: the RMSE tail is dominated by a few motion trials, which
-% otherwise compress every violin to a sliver. Axis is CLIPPED (density is still
-% estimated on the full data); state this in the caption.
+%% 5G: trial RMSE distribution (col2 row1) --------------------------------
+% REBUILT 2026-08-12 (user: "the tails are getting cut off"). The old panel
+% clipped y at p95, pushing ~5% of trials -- precisely the motion/drowsy trials a
+% referee will ask about -- off the page. Per-trial RMSE is strongly right-skewed
+% (skew 2.3-3.0, max/median ~4x), so the fix is a LOG y axis, not a clip: every
+% trial is now on-axis and the bulk still resolves. Density is estimated in log
+% space, which is where this distribution is ~symmetric.
+% Three layers per mode: half-violin (shape) + every trial as a dot (n and tail
+% honesty) + median with IQR bar (the robust summary; mean is not shown because
+% it is dragged by the tail).
 allRmse = cell2mat(rmseV(:));
-rmseTop = prctile(allRmse, RMSE_CLIP_P);
-nClip   = sum(allRmse > rmseTop);
+yLo = 0.85*min(allRmse); yHi = 1.15*max(allRmse);
+fig_E = paperFig(4.2, 5.4);
+lm2e = 0.20; rm2e = 0.05; bm2e = 0.15; tm2e = 0.10;
+ax_mse = axes(fig_E, 'Position', [lm2e, bm2e, 1-lm2e-rm2e, 1-bm2e-tm2e]); hold(ax_mse,'on');
+set(ax_mse, 'YScale','log');
+hw = 0.34;
+rng(0,'twister');   % fixed seed: the dot jitter must be identical on every re-export
 for m = 1:nMode
     if nTr(m) < 2; continue; end
-    [fk, yk] = ksdensity(rmseV{m}); fk = fk/max(fk)*hw;
-    fill(ax_mse, [m-fk, m*ones(size(fk))], [yk, fliplr(yk)], MODE_COLS(m,:), ...
+    L = log10(rmseV{m});
+    [fk, yk] = ksdensity(L, 'Support', [log10(yLo) log10(yHi)], 'BoundaryCorrection','reflection');
+    fk = fk/max(fk)*hw;
+    fill(ax_mse, [m-fk, m*ones(size(fk))], 10.^[yk, fliplr(yk)], MODE_COLS(m,:), ...
         'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
-    plot(ax_mse, m+0.12, mean(rmseV{m}), '*', 'Color', MODE_COLS(m,:), ...
-        'MarkerSize', 4, 'LineWidth', 0.75, 'HandleVisibility','off');
+    % every trial, jittered to the right of its violin -- nothing is hidden
+    jit = (rand(size(rmseV{m}))-0.5)*0.16;
+    plot(ax_mse, m+0.14+jit, rmseV{m}, 'o', 'MarkerSize', 1.2, ...
+        'MarkerFaceColor', MODE_COLS(m,:), 'MarkerEdgeColor','none', 'HandleVisibility','off');
+    % median + IQR (robust; the mean sits inside the tail and misleads here)
+    q = prctile(rmseV{m}, [25 50 75]);
+    plot(ax_mse, [m+0.28 m+0.28], q([1 3]), '-', 'Color', MODE_COLS(m,:), ...
+        'LineWidth', 1.0, 'HandleVisibility','off');
+    plot(ax_mse, m+0.28+[-0.07 0.07], q(2)*[1 1], '-', 'Color', MODE_COLS(m,:), ...
+        'LineWidth', 1.5, 'HandleVisibility','off');
 end
-xlim(ax_mse, [0.4 nMode+0.6]); ylim(ax_mse, [0 rmseTop]);
-hold(ax_mse,'off');
-fprintf('[5G] RMSE axis clipped at p%d = %.2f (%d/%d trials above, off-axis)\n', ...
-    RMSE_CLIP_P, rmseTop, nClip, numel(allRmse));
-% Wilcoxon rank-sum on the paper contrasts. RMSE is a monotone transform of MSE,
-% so these p-values are IDENTICAL to the ones computed on MSE.
-try
-    pOLCL = ranksum(rmseV{1}, rmseV{3});
-    pOLpv = ranksum(rmseV{1}, rmseV{2});
-    fprintf('[5G] OL vs CL p=%.4g  |  OL vs OL+prev p=%.4g\n', pOLCL, pOLpv);
-catch ME_rs
-    fprintf('[5G] ranksum unavailable: %s\n', ME_rs.message);
-end
-text(ax_mse, -0.12, 0.5, 'Trial RMSE (% dF/F)', 'Units','normalized', 'Rotation',90, ...
-    'HorizontalAlignment','center', 'VerticalAlignment','middle', 'Color','k', 'Clipping','off');
-% Mode labels under each violin — without these the four are only distinguishable
+xlim(ax_mse, [0.4 nMode+0.7]); ylim(ax_mse, [yLo yHi]);
+% Log axis: a fixed-length corner scale bar is meaningless (a decade is not a
+% constant number of % dF/F), so this one panel keeps real y ticks.
+cleanAxes(ax_mse);
+set(ax_mse, 'YColor','k', 'YTick', [1 2 5 10 20], 'YTickLabel', {'1','2','5','10','20'}, ...
+    'YMinorTick','off', 'TickDir','out', 'FontSize',PS.fs, 'FontWeight',PS.fw);
+ax_mse.YAxis.MinorTickValues = [];
+text(ax_mse, -0.20, 0.5, 'Trial RMSE (% \DeltaF/F)', 'Units','normalized', 'Rotation',90, ...
+    'HorizontalAlignment','center', 'VerticalAlignment','middle', 'Color','k', ...
+    'FontSize',PS.fs, 'FontWeight',PS.fw, 'Clipping','off');
+% Mode labels under each violin -- without these the four are only distinguishable
 % by colour, which does not survive greyscale printing.
 for m = 1:nMode
-    text(ax_mse, m, -0.02*rmseTop, MODE_SHORT{m}, 'HorizontalAlignment','center', ...
+    text(ax_mse, m, yLo, MODE_SHORT{m}, 'HorizontalAlignment','center', ...
         'VerticalAlignment','top', 'FontSize',PS.fs, 'FontWeight',PS.fw, 'Clipping','off');
 end
-% Y scale bar: paperAxes(ax) alone strips every tick, leaving the RMSE axis with
-% no readable scale. X arm is unlabelled (the x axis is categorical).
-paperAxes(ax_mse, 'XLength',0.5, 'YLength',2, 'XLabel','', 'YLabel','2');
+% Wilcoxon rank-sum on the paper contrasts. RMSE is a monotone transform of MSE,
+% so these p-values are IDENTICAL to the ones computed on MSE (and to the ones
+% computed on log RMSE -- the axis change cannot move a rank test).
+pPairs = {[1 3],'OL vs CL'; [1 2],'OL vs OL+p'; [3 4],'CL vs CL+p'; [1 4],'OL vs CL+p'};
+pv = nan(1,size(pPairs,1));
+for k = 1:size(pPairs,1)
+    try
+        pv(k) = ranksum(rmseV{pPairs{k,1}(1)}, rmseV{pPairs{k,1}(2)});
+    catch ME_rs
+        fprintf('[5G] ranksum unavailable: %s\n', ME_rs.message); break
+    end
+    fprintf('[5G] %-12s p=%.4g  (medians %.2f vs %.2f)\n', pPairs{k,2}, pv(k), ...
+        median(rmseV{pPairs{k,1}(1)}), median(rmseV{pPairs{k,1}(2)}));
+end
+% Significance brackets, drawn only where p<0.05 -- stacked above the data.
+sigK = find(pv < 0.05);
+yTop = max(allRmse);
+for ii = 1:numel(sigK)
+    k = sigK(ii); a = pPairs{k,1}(1); b = pPairs{k,1}(2);
+    yb = yTop * 1.10^(ii);
+    plot(ax_mse, [a b], yb*[1 1], 'k-', 'LineWidth', 0.5, 'HandleVisibility','off');
+    st = repmat('*', 1, 1 + (pv(k)<0.01) + (pv(k)<0.001));
+    text(ax_mse, (a+b)/2, yb*1.02, st, 'HorizontalAlignment','center', ...
+        'VerticalAlignment','bottom', 'FontSize',PS.fs, 'FontWeight',PS.fw, 'Clipping','off');
+end
+ylim(ax_mse, [yLo max(yHi, yTop*1.10^(numel(sigK)+1.6))]);
+hold(ax_mse,'off');
+fprintf('[5G] log y axis spans %.2f-%.2f %%dF/F: 0 trials clipped (was %d above p%d)\n', ...
+    min(allRmse), max(allRmse), sum(allRmse > prctile(allRmse, RMSE_CLIP_P)), RMSE_CLIP_P);
 if EXPORT; paperExport(fig_E, fullfile(outDir, sprintf('sine_5G_rmse_violin_%s.pdf', sfx)));
     if EXPORT_PNG; paperExport(fig_E, fullfile(pngDir, sprintf('sine_5G_rmse_violin_%s.png', sfx))); end; end
 prev(fig_E, '5G');
+
+%% 5G-alt: ECDF of trial RMSE (candidate replacement for the violin) -------
+% Same data, zero clipping, and the between-mode comparison is read directly as
+% horizontal displacement: a curve to the LEFT is uniformly better. This is the
+% honest way to show "feedback wins at every quantile, preview does not".
+fig_Ec = paperFig(4.2, 5.4);
+ax_ec = axes(fig_Ec, 'Position', [0.20, 0.16, 0.75, 0.80]); hold(ax_ec,'on');
+set(ax_ec, 'XScale','log');
+for m = 1:nMode
+    if nTr(m) < 1; continue; end
+    x = sort(rmseV{m}(:)); y = (1:numel(x))'/numel(x);
+    stairs(ax_ec, [x; x(end)], [y; 1], 'Color', MODE_COLS(m,:), 'LineWidth', PS.lw_mean);
+end
+xlim(ax_ec, [yLo yHi]); ylim(ax_ec, [0 1]);
+cleanAxes(ax_ec);
+set(ax_ec, 'XColor','k', 'YColor','k', 'XTick',[1 2 5 10 20], ...
+    'XTickLabel', {'1','2','5','10','20'}, 'YTick', [0 0.5 1], ...
+    'TickDir','out', 'FontSize',PS.fs, 'FontWeight',PS.fw);
+xlabel(ax_ec, 'Trial RMSE (% \DeltaF/F)', 'FontSize',PS.fs, 'FontWeight',PS.fw);
+ylabel(ax_ec, 'Cumulative fraction of trials', 'FontSize',PS.fs, 'FontWeight',PS.fw);
+hold(ax_ec,'off');
+if EXPORT; paperExport(fig_Ec, fullfile(outDir, sprintf('sine_5G_rmse_ecdf_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_Ec, fullfile(pngDir, sprintf('sine_5G_rmse_ecdf_%s.png', sfx))); end; end
+prev(fig_Ec, '5Galt');
 
 %% 5H: PHASE LAG by mode (col2 row2) --------------------------------------
 % 1 Hz fundamental fit of mean response vs mean reference. Dashed grey line =

@@ -28,8 +28,10 @@ end
 p = inputParser;
 p.addParameter('Corner',     'bl',    @(s) ischar(s)||isstring(s));
 p.addParameter('Frac',       0.15,    @(v) isnumeric(v)&&isscalar(v)&&v>0&&v<0.5);
-p.addParameter('XLength',    [],      @(v) isempty(v)||(isnumeric(v)&&isscalar(v)&&v>0));
-p.addParameter('YLength',    [],      @(v) isempty(v)||(isnumeric(v)&&isscalar(v)&&v>0));
+% Length 0 = SUPPRESS that arm entirely (categorical x, or a panel whose y
+% scale carries no meaning the reader can use). [] = fall back to Frac.
+p.addParameter('XLength',    [],      @(v) isempty(v)||(isnumeric(v)&&isscalar(v)&&v>=0));
+p.addParameter('YLength',    [],      @(v) isempty(v)||(isnumeric(v)&&isscalar(v)&&v>=0));
 p.addParameter('LineWidth',  1.5,     @(v) isnumeric(v)&&isscalar(v)&&v>0);
 p.addParameter('Color',      [0 0 0], @(v) isnumeric(v)&&numel(v)==3);
 p.addParameter('XLabel',     '',      @(s) ischar(s)||isstring(s));
@@ -99,8 +101,13 @@ end
 % --- draw both lines from the same corner point ---
 lw = S.LineWidth;
 c  = S.Color;
-line(ax, [x0, xEnd], [y0, y0],   'Color',c, 'LineWidth',lw, 'Clipping','off', 'HandleVisibility','off');
-line(ax, [x0, x0],   [y0, yEnd], 'Color',c, 'LineWidth',lw, 'Clipping','off', 'HandleVisibility','off');
+% A zero-length arm is skipped, not drawn as a dot.
+if xLen > 0
+    line(ax, [x0, xEnd], [y0, y0],   'Color',c, 'LineWidth',lw, 'Clipping','off', 'HandleVisibility','off');
+end
+if yLen > 0
+    line(ax, [x0, x0],   [y0, yEnd], 'Color',c, 'LineWidth',lw, 'Clipping','off', 'HandleVisibility','off');
+end
 
 % --- labels (only placed if non-empty) ---
 % Labels start at the corner point: x label is left/right-aligned at the
@@ -108,11 +115,11 @@ line(ax, [x0, x0],   [y0, yEnd], 'Color',c, 'LineWidth',lw, 'Clipping','off', 'H
 baseTxt = {'FontName',S.FontName, 'FontSize',S.FontSize, ...
            'FontWeight',S.FontWeight, 'Color',c, 'Clipping','off'};
 
-if strlength(string(S.XLabel)) > 0
+if strlength(string(S.XLabel)) > 0 && xLen > 0
     text(ax, xLabXY(1), xLabXY(2), string(S.XLabel), baseTxt{:}, ...
         'HorizontalAlignment', xHAlign, 'VerticalAlignment', 'middle');
 end
-if strlength(string(S.YLabel)) > 0
+if strlength(string(S.YLabel)) > 0 && yLen > 0
     text(ax, yLabXY(1), yLabXY(2), string(S.YLabel), baseTxt{:}, ...
         'HorizontalAlignment', yHAlign, 'VerticalAlignment', 'middle', 'Rotation', 90);
 end
