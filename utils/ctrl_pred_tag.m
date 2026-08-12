@@ -8,6 +8,15 @@ function [suffix, mode] = ctrl_pred_tag()
 %     'ridge'  keep the WHOLE grid, shrink the weights, lambda chosen stim-blind from catch
 %              windows (utils/ctrl_ridge_path.m). Caches:
 %                 ctrl_ols_ol_stimblind_ridge_<tag>.mat
+%     'deflate' ridge PLUS one linear equality constraint: the weights are forced orthogonal to
+%              the measured contralateral stim-response direction, so the predictor cannot
+%              transmit the stimulus (utils/ctrl_deflate.m). Caches:
+%                 ctrl_ols_ol_stimblind_deflate_<tag>.mat
+%              WHY: across 13 sessions the Global leak is predicted by ONE scalar -- the
+%              alignment b'*dip of the weights with the per-pixel co-suppression pattern
+%              (Spearman -0.91 with leak%, 0.89 with the Global trough), while ||b|| manages
+%              only 0.51. Shrinkage was an indirect handle on the right quantity; this is the
+%              direct one. RESEARCH 2026-08-12.
 %
 %   The two write to DIFFERENT files on purpose, so both models coexist on disk and switching
 %   back is one variable rather than a rebuild. Nothing the 'rank' model produced is ever
@@ -25,9 +34,11 @@ catch
     % not set in base -> default. (Also the path taken inside functions/parfor.)
 end
 switch mode
-    case 'rank',  suffix = '';
-    case 'ridge', suffix = '_ridge';
+    case 'rank',    suffix = '';
+    case 'ridge',   suffix = '_ridge';
+    case 'deflate', suffix = '_deflate';
     otherwise
-        error('ctrl_pred_tag: CTRL_PRED must be ''rank'' or ''ridge'' (got ''%s'').', mode);
+        error(['ctrl_pred_tag: CTRL_PRED must be ''rank'', ''ridge'' or ''deflate'' ' ...
+               '(got ''%s'').'], mode);
 end
 end

@@ -221,14 +221,20 @@ if ~isempty(keep_n); det_opts.keep_n = keep_n; end
 % R^2 the selector optimises is exactly the R^2 the fit will report (verified bit-identical).
 KSEL = struct('used',false,'reachable',true,'K_star',NaN,'R2_star',NaN,'R2_ceiling',NaN);
 [pred_suffix, pred_mode] = ctrl_pred_tag();     % 'rank' (default) | 'ridge' -- see utils/ctrl_pred_tag
-useRidge = strcmpi(pred_mode,'ridge');
+useDeflate = strcmpi(pred_mode,'deflate');
+useRidge   = strcmpi(pred_mode,'ridge') || useDeflate;   % deflate = ridge + one linear constraint
 if useRidge
     % RIDGE MODEL: no pixel is dropped, so there is no K to choose. The detector still RUNS --
     % its score is the diagnostic that says how much bleed the kept set carries, and it is what
     % the two models are compared on. It just no longer decides membership.
     det_opts.method = 'least_affected';
     det_opts.keep_n = nG;
-    fprintf('[CTRL-OL] predictor mode = RIDGE: whole grid kept, lambda chosen from catch windows.\n');
+    if useDeflate
+        fprintf(['[CTRL-OL] predictor mode = DEFLATE: whole grid, ridge lambda from catch windows, ' ...
+                 'then weights constrained orthogonal to the contra stim direction.\n']);
+    else
+        fprintf('[CTRL-OL] predictor mode = RIDGE: whole grid kept, lambda chosen from catch windows.\n');
+    end
 end
 if ~useRidge && strcmpi(det_method,'least_affected') && ~isfield(det_opts,'keep_n')
     score_opts = det_opts;  score_opts.method = 'dip';        % the score is method-independent
@@ -281,6 +287,37 @@ if useRidge
     RPATH.used = true;
     b     = RPATH.b_star;
     R2_te = RPATH.R2te_star;  R2_tr = RPATH.R2tr_star;
+
+    if useDeflate
+        % The leak is driven by ONE scalar: d'b, the alignment of the weights with the contra
+        % co-suppression pattern (Spearman -0.91 with leak% across 13 sessions). d is built in the
+        % SAME z-scored coordinates and with the SAME per-trial baselining as a real trial, so d'b
+        % IS Global's stim-window deflection -- constraining it to zero removes the leak at source
+        % rather than shrinking every direction and hoping.
+        %
+        % CIRCULARITY GUARD. d can only be measured with the laser on, so a constraint fitted and
+        % scored on the same trials could flatten Global by memorising those trials. d is therefore
+        % estimated TWICE: on odd trials only (-> the honest leak is then read off the even trials,
+        % which the constraint never saw) and on all trials (-> the deployed model). Both travel in
+        % the cache so the split can be reported.
+        df_odd = 1:2:nTr;   df_even = 2:2:nTr;
+        d_odd  = local_stim_dir(Xg_full, onF(df_odd), rel, bwin, swin, FG.mu, FG.sd);
+        d_all  = local_stim_dir(Xg_full, onF,         rel, bwin, swin, FG.mu, FG.sd);
+        DEFV   = ctrl_deflate(FG, RPATH.lambda_abs, d_odd, struct('verbose',false));
+        DEF    = ctrl_deflate(FG, RPATH.lambda_abs, d_all);
+        % held-out check: the even-trial stim direction, scored against the odd-trial constraint
+        d_even = local_stim_dir(Xg_full, onF(df_even), rel, bwin, swin, FG.mu, FG.sd);
+        DEF.holdout_proj_free = d_even.' * DEF.b_free;   % leak driver, unconstrained
+        DEF.holdout_proj      = d_even.' * DEFV.b;       % leak driver, constraint fitted on ODD only
+        DEF.holdout_ratio     = DEF.holdout_proj / max(abs(DEF.holdout_proj_free), eps);
+        DEF.nTr_odd = numel(df_odd);  DEF.nTr_even = numel(df_even);
+        fprintf(['[CTRL-OL] HELD-OUT leak driver (even trials, constraint from odd only): ' ...
+                 '%.3g -> %.3g  (%.0f%% removed)\n'], DEF.holdout_proj_free, DEF.holdout_proj, ...
+                 100*(1 - abs(DEF.holdout_ratio)));
+        b     = DEF.b;
+        R2_te = DEF.R2te;  R2_tr = DEF.R2tr;
+        RPATH.DEF = DEF;
+    end
     clear FG
     fprintf(['[CTRL-OL] Global predictor (RIDGE, %d px, lambda* %.3g): held-out spont R^2 = ' ...
              '%.3f (train %.3f), ||b|| %.1f\n'], numel(Su), RPATH.lambda_star, R2_te, R2_tr, RPATH.nrm_star);
@@ -456,4 +493,19 @@ for j = 1:numel(ons)
 end
 if ~isempty(ons) && ons(1) > 2; m(1:(ons(1)-2)) = true; end
 m(1:min(w_warm, nF_m)) = false;
+end
+
+function d = local_stim_dir(Xg, onF, rel, bwin, swin, mu, sd)
+% Contra stim-response direction, in the SAME z-scored coordinates as the regressors and with the
+% SAME per-trial baselining a real trial gets. Built this way, d'*b is exactly the Global trace's
+% mean deflection over the stim window -- so constraining d'*b = 0 removes the leak by definition
+% rather than by proxy. Averaged over the trials handed in, so the caller controls odd/even/all.
+nG  = size(Xg,1);
+acc = zeros(nG,1);
+for k = 1:numel(onF)
+    W   = (Xg(:, onF(k)+rel) - mu) ./ sd;      % [nG x nRel], train z-score
+    W   = W - mean(W(:,bwin), 2);              % per-trial pre-stim baseline
+    acc = acc + mean(W(:,swin), 2);            % mean over the stim window
+end
+d = acc / max(numel(onF), 1);
 end
