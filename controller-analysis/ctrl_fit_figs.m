@@ -109,7 +109,38 @@ for ff_i = 1:numel(ff_files)
     ax2 = nexttile(tl,2); hold(ax2,'on');
     ff_b = zeros(numel(S2.gridIdx),1);  ff_b(S2.Su) = S2.b;
     ff_lim = max(abs(ff_b));  if ff_lim == 0 || ~isfinite(ff_lim); ff_lim = 1; end
+
+    % BRAIN UNDERLAY, so the orientation can be checked by eye instead of trusted.
+    % Stage 1 cached ipsi_mask/contra_mask in mimg's NATIVE [nY x nX], and the ROI file stores
+    % the drawn outline with bx = native ROW and by = native COLUMN (cp_roi_masks.m: "(bx,by) is
+    % numerically already native (row,col)"). This axes is (x = column, y = row), so the masks go
+    % in as-is via image() while the outline/midline need their pair swapped.
+    % Drawn as TRUECOLOR RGB, not indexed: one axes has one colormap, and that one is the
+    % diverging weight scale. An indexed background would hijack it.
+    ff_hemi = local_hemi(dataDir, S2.sess_tag);
+    if ~isempty(ff_hemi)
+        ff_bg = ones([size(ff_hemi.ipsi) 3]);
+        ff_bg = local_paint(ff_bg, ff_hemi.contra, [0.87 0.90 0.95]);   % model INPUT half
+        ff_bg = local_paint(ff_bg, ff_hemi.ipsi,   [0.96 0.93 0.88]);   % half holding the site
+        image(ax2, ff_bg);
+        if ~isempty(ff_hemi.bx)
+            plot(ax2, ff_hemi.by, ff_hemi.bx, '-', 'Color',[0.55 0.55 0.55], 'LineWidth',0.8);
+            plot(ax2, ff_hemi.my, ff_hemi.mx, '--','Color',[0.20 0.60 0.70], 'LineWidth',1.2);
+        end
+        ff_bb = local_bbox(ff_hemi.ipsi | ff_hemi.contra, 15);
+        xlim(ax2, ff_bb(3:4));  ylim(ax2, ff_bb(1:2));
+    end
     scatter(ax2, S2.grC, S2.grR, 26, ff_b, 'filled');
+    if ~isempty(ff_hemi)   % labels AFTER the scatter, or the weights bury them
+        [ff_cR,ff_cC] = local_centroid(ff_hemi.contra);
+        [ff_iR,ff_iC] = local_centroid(ff_hemi.ipsi);
+        text(ax2, ff_cC, ff_cR, 'contra', 'Color',[0.15 0.25 0.50], 'FontSize',9, ...
+            'FontWeight','bold','HorizontalAlignment','center', ...
+            'BackgroundColor',[1 1 1 ], 'Margin',1);
+        text(ax2, ff_iC, ff_iR, 'ipsi',   'Color',[0.55 0.32 0.10], 'FontSize',9, ...
+            'FontWeight','bold','HorizontalAlignment','center', ...
+            'BackgroundColor',[1 1 1], 'Margin',1);
+    end
     % px_prim is the ROW and py_prim the COLUMN (ctrl_ols_ol_stimblind.m passes them in that
     % order to cp_orient_fwd(Tor,row,col)), so the site goes at x = py_prim, y = px_prim --
     % the same (col,row) convention as the scatter above. Swapping them mislocates the site,
@@ -162,6 +193,38 @@ save(fullfile(dataDir, sprintf('ctrl_fit_figs%s.mat', pred_suffix)), 'FF');
 fprintf('[FITFIG] figures -> %s\n', outDir);
 
 %% ---- local functions (must sit at EOF in a script) ---------------------------
+function H = local_hemi(dataDir, tag)
+% Hemisphere masks + drawn outline for the brain underlay. Returns [] rather than erroring:
+% a missing Stage-1 or ROI cache should cost the underlay, not the figure.
+H = [];
+f1 = fullfile(dataDir, sprintf('ctrl_ols_spont_%s.mat', tag));
+if ~exist(f1,'file'); return; end
+S1 = load(f1, 'ipsi_mask','contra_mask');
+if ~isfield(S1,'ipsi_mask') || ~isfield(S1,'contra_mask'); return; end
+H = struct('ipsi',S1.ipsi_mask, 'contra',S1.contra_mask, 'bx',[],'by',[],'mx',[],'my',[]);
+f2 = fullfile(dataDir, sprintf('cp_roi2_ctrl_%s.mat', tag));
+if exist(f2,'file')
+    R = load(f2, 'bx','by','mx','my');
+    H.bx = R.bx;  H.by = R.by;  H.mx = R.mx;  H.my = R.my;   % bx/mx = ROW, by/my = COLUMN
+end
+end
+
+function bg = local_paint(bg, mask, rgb)
+for c = 1:3
+    ch = bg(:,:,c);  ch(mask) = rgb(c);  bg(:,:,c) = ch;
+end
+end
+
+function [r,c] = local_centroid(mask)
+[rr,cc] = find(mask);
+r = mean(rr);  c = mean(cc);
+end
+
+function bb = local_bbox(mask, pad)
+[rr,cc] = find(mask);
+bb = [max(1,min(rr)-pad), max(rr)+pad, max(1,min(cc)-pad), max(cc)+pad];
+end
+
 function C = local_diverging()
 % Blue-white-red, built inline so no toolbox colormap is assumed.
 n = 128;
