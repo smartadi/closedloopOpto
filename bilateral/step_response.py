@@ -356,28 +356,36 @@ def plot_all(res):
     fig.savefig(f1, dpi=200)
     plt.close(fig)
 
-    clean = [r for r in res if not r["artifact"]]      # overlay compares real responses only
-    fig, ax = plt.subplots(1, 2, figsize=(9, 3.4))
-    cols = plt.cm.viridis(np.linspace(0, 0.9, len(clean)))
-    for r, c in zip(clean, cols):
-        lab = (f"{r['date'][5:]} e{r['exp']} {r['cmd']:.1f}V {r['dur']:.1f}s n={r['n']}"
-               + ("" if r["corr"] else "*"))
-        ax[0].plot(r["win"], r["mean"], color=c, lw=1.4, label=lab)
-        ax[0].fill_between(r["win"], r["mean"] - r["sem"], r["mean"] + r["sem"],
-                           color=c, alpha=0.2, lw=0)
-        ax[1].plot(r["win"] / r["dur"], r["mean"], color=c, lw=1.4)
-    ax[0].set_xlabel("time from step onset (s)"); ax[0].set_ylabel("%dF/F at the activation site")
-    ax[0].set_title("trial mean +/- SEM (absolute time)", fontsize=9)
-    ax[1].set_xlabel("time / step duration"); ax[1].set_title("step-duration normalised", fontsize=9)
-    for a in ax:
+    # every condition as its own panel, absolute time, own y-scale. No duration normalisation:
+    # the 1 s and 3 s steps are different experiments and rescaling time hides that.
+    ncol = 4
+    nrow = int(np.ceil(len(res) / ncol))
+    fig, ax = plt.subplots(nrow, ncol, figsize=(3.1 * ncol, 2.4 * nrow), squeeze=False)
+    for i, r in enumerate(res):
+        a = ax[i // ncol, i % ncol]
+        a.axvspan(0, r["dur"], color="#ffcc66", alpha=0.35, lw=0)
+        a.plot(r["win"], r["dff"].T, color="0.75", lw=0.3, alpha=0.5)
+        a.plot(r["win"], r["mean"], color="crimson", lw=1.6)
+        a.fill_between(r["win"], r["mean"] - r["sem"], r["mean"] + r["sem"],
+                       color="crimson", alpha=0.3, lw=0)
+        if r["early"] is not None:
+            a.plot(r["win"], r["early"]["mean"], color="tab:blue", lw=1.2, ls="--")
         a.axhline(0, color="k", lw=0.6)
-        a.axvline(0, color="k", lw=0.6, ls=":")
-    ax[1].axvline(1, color="k", lw=0.6, ls=":")
-    ax[0].legend(fontsize=6, frameon=False)
-    fig.suptitle(f"AL_0048 excitatory (left) long-duration steps  — * = blue only, uncorrected; "
-                 f"{len(res) - len(clean)} light-artifact condition(s) excluded", fontsize=9)
+        a.set_xlim(r["win"][0], r["win"][-1])
+        a.tick_params(labelsize=6)
+        a.set_xlabel("time from onset (s)", fontsize=7)
+        a.set_ylabel("%dF/F", fontsize=7)
+        a.set_title(f"{r['date'][5:]} e{r['exp']} {r['laser']}nm  {r['cmd']:.1f}V  {r['dur']:.2f}s"
+                    f"  n={r['n']}" + ("" if r["corr"] else "  [blue only]")
+                    + ("\n** LIGHT ARTIFACT **" if r["artifact"] else
+                       f"\npeak {r['peak']:+.2f}%  plat {r['plateau']:+.2f}%  off {r['off']:+.2f}%"),
+                    fontsize=7, color="red" if r["artifact"] else "black")
+    for j in range(len(res), nrow * ncol):
+        ax[j // ncol, j % ncol].axis("off")
+    fig.suptitle("AL_0048 excitatory (left) long-duration steps — trial mean +/- SEM at the "
+                 "activation site (blue dashed = early locus where it differs)", fontsize=9)
     fig.tight_layout()
-    f2 = OUTDIR / "step_excit_overlay.png"
+    f2 = OUTDIR / "step_excit_panels.png"
     fig.savefig(f2, dpi=200)
     plt.close(fig)
     print(f"\nwrote {f1}\n      {f2}")
@@ -411,7 +419,8 @@ def write_md(res):
                  f"| {r['plateau']:+.2f} % | {r['off']:+.2f} % | {r['base_sd']:.2f} % | {r['jump']:.2f} "
                  f"| {'**ARTIFACT**' if r['artifact'] else 'ok'} |")
     L += ["", "Figures (gitignored, regenerate with the script): `step_png/step_excit_conditions.png`",
-          "(per-condition map + trace), `step_png/step_excit_overlay.png` (all trial means).", ""]
+          "(per-condition early map + whole-step map + trace), `step_png/step_excit_panels.png`",
+          "(one subplot per condition, absolute time — deliberately NOT duration-normalised).", ""]
     (HERE / "STEP_EXCIT.md").write_text("\n".join(L), encoding="utf-8")
     print("wrote bilateral/STEP_EXCIT.md")
 
