@@ -106,7 +106,11 @@ for ra_i = 1:numel(RA)
     if ~RA(ra_i).hasROI;                      w{end+1} = 'no ROI drawn'; end %#ok<SAGROW>
     if ~RA(ra_i).hasS1;                       w{end+1} = 'no Stage-1 fit'; end %#ok<SAGROW>
     if RA(ra_i).shared;                       w{end+1} = 'SHARED geometry (another day''s FOV)'; end %#ok<SAGROW>
-    if RA(ra_i).ang > RA_ANG_TOL;             w{end+1} = sprintf('midline %.0f deg off the row axis -- splits A/P, not L/R', RA(ra_i).ang); end %#ok<SAGROW>
+    % NOT a failure on its own -- see [ROIAUD-LASER]. cp_roi_masks' split is orientation-agnostic,
+    % so a rotated midline is only suspicious, and it IS legitimate when the session's imaging
+    % frame is itself rotated (AL_0033_0212_e2's laser map is visibly rotated ~90 deg relative to
+    % every other session). Flag it for a look; let the laser-vs-midline test decide.
+    if RA(ra_i).ang > RA_ANG_TOL;             w{end+1} = sprintf('midline %.0f deg off the row axis -- rotated frame? inspect', RA(ra_i).ang); end %#ok<SAGROW>
     if RA(ra_i).siteIn == 0;                  w{end+1} = 'site is NOT inside ipsi_mask'; end %#ok<SAGROW>
     if RA(ra_i).gridIn < 1 && ~isnan(RA(ra_i).gridIn)
                                               w{end+1} = sprintf('%.1f%% of the grid is outside contra_mask', 100*(1-RA(ra_i).gridIn)); end %#ok<SAGROW>
@@ -114,7 +118,9 @@ for ra_i = 1:numel(RA)
     if ~isnan(ra_b) && max(ra_b, 1/max(ra_b,eps)) > RA_BAL_TOL
                                               w{end+1} = sprintf('lopsided masks (ipsi/contra = %.2f)', ra_b); end %#ok<SAGROW>
     RA(ra_i).why = w;
-    if isempty(w); RA(ra_i).verdict = 'OK'; else; RA(ra_i).verdict = 'REDRAW'; end
+    % Geometry-only issues start as CHECK; [ROIAUD-LASER] promotes to REDRAW on hard evidence.
+    if isempty(w); RA(ra_i).verdict = 'OK'; else; RA(ra_i).verdict = 'CHECK'; end
+    if ~RA(ra_i).hasROI || ~RA(ra_i).hasS1 || RA(ra_i).shared; RA(ra_i).verdict = 'REDRAW'; end
 end
 
 %% [ROIAUD-SHEET] contact sheet: every session's anatomy in one picture -----------
@@ -153,13 +159,92 @@ if RA_SHEET
     end
 end
 
+%% [ROIAUD-LASER] does the dfk pixel actually sit on the laser spot? --------------
+% The geometry checks above all take px_prim/py_prim as ground truth for which side is ipsi. That
+% is only worth anything if the dfk pixel is really where the laser lands. The independent
+% evidence is the trial-averaged peri-stim inhibition map cached by cp_find_stim_site.
+%
+% ⚠ DO NOT compare against the cache's `rowcol` field -- it is a copy of (px_prim,py_prim), so
+% that distance is identically 0 for every session and verifies nothing. The data-derived
+% quantities are `centroid` (centre of mass of the deep region) and the map's own trough.
+% The centroid is the more robust of the two: the raw argmin lands on vessels and frame edges.
+RA_D_TOL   = 15;    % px between dfk pixel and laser centroid before it is worth a look
+RA_MID_TOL = 40;    % px from the laser centroid to the midline below which the split is meaningless
+for ra_i = 1:numel(RA)
+    RA(ra_i).d_cen = NaN;  RA(ra_i).d_tro = NaN;  RA(ra_i).depth = NaN;  RA(ra_i).laserIpsi = NaN;
+    ra_lf = fullfile(ra_dataDir, sprintf('cp_stim_site_ctrl_%s.mat', RA(ra_i).tag));
+    if ~exist(ra_lf,'file') || ~RA(ra_i).hasS1; continue; end
+    L = load(ra_lf,'map','brain','centroid','depth');
+    S = RA(ra_i).S;
+    ra_m = L.map;  ra_m(~L.brain) = NaN;
+    [~,ra_ix] = min(ra_m(:));  [ra_tr,ra_tc] = ind2sub(size(ra_m), ra_ix);
+    RA(ra_i).d_cen = hypot(L.centroid(1)-S.px_prim, L.centroid(2)-S.py_prim);
+    RA(ra_i).d_tro = hypot(ra_tr-S.px_prim, ra_tc-S.py_prim);
+    RA(ra_i).depth = L.depth;
+    RA(ra_i).laserIpsi = double(S.ipsi_mask(round(L.centroid(1)), round(L.centroid(2))));
+    RA(ra_i).L = L;  RA(ra_i).trough = [ra_tr ra_tc];
+    % THE PRIMARY CHECK, and the only frame-independent one. cp_roi_masks bisects by the signed
+    % cross product of the midline direction, so the split is correct in ANY image orientation --
+    % which is why the angle test above cannot be trusted on its own: a session whose imaging
+    % frame is rotated has a legitimately rotated midline. What can never be legitimate is a
+    % midline drawn THROUGH the stimulated spot, because then the hemisphere assignment of the
+    % laser territory is decided by noise. Measured as perpendicular distance from the laser
+    % centroid to the midline: 74-134 px on every healthy session, 2 px on AL_0033_0212_e2.
+    ra_dr = RA(ra_i).G.mx(2)-RA(ra_i).G.mx(1);  ra_dc = RA(ra_i).G.my(2)-RA(ra_i).G.my(1);
+    ra_nn = hypot(ra_dr, ra_dc);
+    RA(ra_i).lasMid = abs(ra_dr*(L.centroid(2)-RA(ra_i).G.my(1)) - ...
+                          ra_dc*(L.centroid(1)-RA(ra_i).G.mx(1))) / max(ra_nn,eps);
+    if RA(ra_i).lasMid < RA_MID_TOL
+        RA(ra_i).why{end+1} = sprintf('midline passes %.0f px from the LASER SPOT -- it bisects the stimulated territory', ...
+            RA(ra_i).lasMid);
+        RA(ra_i).verdict = 'REDRAW';
+    end
+    if RA(ra_i).laserIpsi == 0
+        RA(ra_i).why{end+1} = 'laser centroid falls OUTSIDE ipsi_mask';
+        RA(ra_i).verdict = 'REDRAW';
+    elseif RA(ra_i).d_cen > RA_D_TOL
+        RA(ra_i).why{end+1} = sprintf('dfk pixel %.0f px off the laser centroid (depth %.2f)', ...
+            RA(ra_i).d_cen, L.depth);
+        if strcmp(RA(ra_i).verdict,'OK'); RA(ra_i).verdict = 'CHECK'; end
+    end
+end
+
+if RA_SHEET
+    ra_n2 = nnz(arrayfun(@(a) ~isempty(a.L), RA));
+    figL = figure('Color','w','Position',[30 40 1750 340*ceil(ra_n2/5)]);
+    tlL = tiledlayout(figL, ceil(ra_n2/5), 5, 'TileSpacing','compact','Padding','compact');
+    ra_k = 0;
+    for ra_i = 1:numel(RA)
+        A = RA(ra_i);  if isempty(A.L); continue; end
+        ra_k = ra_k + 1;  ax = nexttile(tlL, ra_k); hold(ax,'on');
+        ra_m = A.L.map;  ra_m(~A.L.brain) = NaN;
+        imagesc(ax, ra_m, 'AlphaData', ~isnan(ra_m));
+        colormap(ax, flipud(hot));  clim(ax, [min(ra_m(:)) 0]);
+        ra_bb = local_bb(A.L.brain, 10);  xlim(ax, ra_bb(3:4));  ylim(ax, ra_bb(1:2));
+        plot(ax, A.G.my, A.G.mx, '--','Color',[0.1 0.7 0.9],'LineWidth',1.4);
+        plot(ax, A.S.py_prim, A.S.px_prim, 'kp','MarkerSize',13,'MarkerFaceColor',[1 1 0.2]);
+        plot(ax, A.L.centroid(2), A.L.centroid(1), 'g+','MarkerSize',11,'LineWidth',1.8);
+        plot(ax, A.trough(2), A.trough(1), 'cx','MarkerSize',9,'LineWidth',1.4);
+        set(ax,'YDir','reverse'); axis(ax,'image'); set(ax,'XTick',[],'YTick',[]);
+        if A.d_cen > RA_D_TOL || A.laserIpsi == 0; ra_c = [0.80 0 0]; else; ra_c = [0 0.45 0]; end
+        title(ax, sprintf('%s\nd=%.0f px, depth %.2f', strrep(A.tag,'_','\_'), A.d_cen, A.depth), ...
+            'Color',ra_c,'FontSize',8);
+    end
+    title(tlL, ['[ROIAUD] laser effect map.  star = dfk pixel,  green + = laser centroid,  ' ...
+                'cyan x = map trough,  cyan dashed = midline']);
+    if RA_EXPORT
+        exportgraphics(figL, fullfile(ra_outDir,'ctrl_roi_audit_laser.png'), 'Resolution',300);
+    end
+end
+
 %% [ROIAUD-REPORT] ---------------------------------------------------------------
-fprintf('\n  %-20s %-8s %6s %6s %7s %7s  %s\n', ...
-    'session','verdict','ang','siteIn','gridIn','bal','why');
+fprintf('\n  %-20s %-8s %5s %6s %6s %7s %6s  %s\n', ...
+    'session','verdict','ang','bal','d_cen','las>mid','depth','why');
 for ra_i = 1:numel(RA)
     A = RA(ra_i);
-    fprintf('  %-20s %-8s %5.0f%s %6.0f %6.0f%% %7.2f  %s\n', A.tag, A.verdict, A.ang, char(176), ...
-        A.siteIn, 100*A.gridIn, A.bal, strjoin(A.why,'; '));
+    ra_lm = NaN; if isfield(A,'lasMid') && ~isempty(A.lasMid); ra_lm = A.lasMid; end
+    fprintf('  %-20s %-8s %4.0f%s %6.2f %6.1f %7.0f %6.2f  %s\n', A.tag, A.verdict, ...
+        A.ang, char(176), A.bal, A.d_cen, ra_lm, A.depth, strjoin(A.why,'; '));
 end
 ra_bad = find(~strcmp({RA.verdict},'OK'));
 fprintf('\n[ROIAUD] %d/%d sessions need attention\n', numel(ra_bad), numel(RA));
