@@ -48,6 +48,11 @@ FLAT_SD = 0.05          # within-bout command SD below which the step is "consta
 MIN_DUR_S = 0.5         # "long duration" cut
 MIN_N = 5               # minimum trials to average
 DUR_BIN_S = 0.5         # duration binning for the condition key
+# Sessions analysed. The two June 594 nm sessions (2026-06-05 e2, 2026-06-07 e1) are OUT:
+# their "responses" are photostim light in the camera, not cortex (RESEARCH 2026-08-11 — square
+# command-shaped deflections of 20-214 % dF/F, first-frame jump 0.46-0.80, no trial scatter).
+# Set to None to sweep every catalogued experiment again (that is how they were caught).
+SESSION_KEEP = {("2026-06-11", "6"), ("2026-06-20", "1"), ("2026-07-21", "1")}
 
 # ---------------------------- extraction knobs ----------------------------
 N_COMPS = 50            # SVD components (same as grid/impulse dose-response)
@@ -249,7 +254,8 @@ def main():
     cat = json.loads((HERE / "al0048_catalog.json").read_text())
     todo = defaultdict(list)                       # (date, exp) -> [(laser, key, bouts)]
     for r in cat:
-        if not r["wf"]:
+        if not r["wf"] or (SESSION_KEEP is not None
+                           and (r["date"], r["exp"]) not in SESSION_KEEP):
             continue
         for laser in r["lasers"]:
             for k, v in conditions(r["path"], laser).items():
@@ -358,7 +364,7 @@ def plot_all(res):
 
     # every condition as its own panel, absolute time, own y-scale. No duration normalisation:
     # the 1 s and 3 s steps are different experiments and rescaling time hides that.
-    ncol = 4
+    ncol = 3 if len(res) <= 6 else 4
     nrow = int(np.ceil(len(res) / ncol))
     fig, ax = plt.subplots(nrow, ncol, figsize=(3.1 * ncol, 2.4 * nrow), squeeze=False)
     for i, r in enumerate(res):
