@@ -79,7 +79,18 @@ switch lower(STV_STATE_WIN)
     otherwise,   stWin = [-1.0, -1/fs];      % strictly pre-onset
 end
 iState = tAxis >= stWin(1) & tAxis <= stWin(2);
-iPreCtl = iState;                             % the stim-free control uses the same samples
+
+% ---- THE STIM-FREE CONTROL WINDOW (rebuilt 2026-08-12, user) -----------------------------------
+% Peak_imp under peak_mode=3 is the MEAN over 0-220 ms, i.e. an L-sample window mean. A control for
+% it must be the SAME STATISTIC over the SAME NUMBER OF SAMPLES. The first version of this script
+% averaged the whole ~34-sample pre window, which is quieter by construction and therefore not a
+% control at all -- it understated the ongoing contribution and made the comparison meaningless.
+% It is also placed at -1.0 s, OUTSIDE the -0.5..0 s baseline that dfImp has already had removed;
+% a sham window inside that baseline is partially constrained toward zero (measured: var 8.0 inside
+% vs 17.3 outside, i.e. the constrained version halves the ongoing variance it is meant to estimate).
+iOn   = find(tAxis >= 0, 1);
+Lresp = numel(iOn+2 : iOn + round(0.22*fs));            % response-window length (7 samples)
+iSham = find(tAxis >= -1.0, 1) + (0:Lresp-1);           % matched length, outside the baseline
 
 MK = { 'MOT','Motion',            true,  'motion z-score'
        'PVv','Pre-trial variance',false, '(\DeltaF/F)^2'
@@ -92,7 +103,8 @@ claimDir = [-1; +1; +1; +1];
 rng(7,'twister');
 
 %% ================= (1) build the per-trial table, all sessions ==================================
-T = struct('sess',[], 'amp',[], 'dev',[], 'devPre',[], 'MOT',[], 'PVv',[], 'DPa',[], 'DPr',[]);
+T = struct('sess',[], 'amp',[], 'dev',[], 'devPre',[], 'devRaw',[], 'shmRaw',[], ...
+           'MOT',[], 'PVv',[], 'DPa',[], 'DPr',[]);
 nExp_s = numel(allExperiments);
 labels = cell(nExp_s,1);
 fprintf('\n[STV] state window %s = [%.2f %.2f] s | %d bins | %d bootstrap\n', ...
@@ -114,8 +126,8 @@ for e = 1:nExp_s
         sd = std(d,'omitnan');   if ~isfinite(sd) || sd == 0, continue; end
         dev = d / sd;
 
-        % --- stim-free control: same construction on the PRE-onset window mean -------------------
-        pre  = mean(df(:, iPreCtl), 2, 'omitnan');
+        % --- stim-free control: MATCHED SHAM PEAK (same statistic, same length, no stimulus) -----
+        pre  = mean(df(:, iSham), 2, 'omitnan');
         dpc  = pre - mean(pre,'omitnan');
         sdp  = std(dpc,'omitnan');   if ~isfinite(sdp) || sdp == 0, sdp = eps; end
         devPre = dpc / sdp;
@@ -130,6 +142,8 @@ for e = 1:nExp_s
         T.amp    = [T.amp;    repmat(a,n,1)];
         T.dev    = [T.dev;    dev];
         T.devPre = [T.devPre; devPre];
+        T.devRaw = [T.devRaw; d];       % RAW dF/F, for the variance decomposition below
+        T.shmRaw = [T.shmRaw; dpc];     % scaling to SD=1 would destroy the magnitude comparison
         T.MOT    = [T.MOT;    mot];
         T.PVv    = [T.PVv;    pvv];
         T.DPa    = [T.DPa;    dpa];
@@ -279,6 +293,44 @@ if MTS.ratioP <= MTS.ratio * 1.10
                '      response inherits it -- this is NOT a statement about stimulus processing. **\n'], ...
                MTS.ratioP, MTS.ratio);
 end
+% ---- IS THE RESPONSE ITSELF MORE REPRODUCIBLE, OR IS THE MEASUREMENT JUST QUIETER? -------------
+% (user, 2026-08-12: "the claim is that motion makes the response more predictable ... if it does
+%  for the non-stim case is of no consequence".) Correct, and the earlier framing of the control as
+%  a SPECIFICITY test was wrong. But there IS a question the control must answer: dev is measured on
+%  the actual trace, so var(dev) = response variability + ongoing activity sitting in the window. If
+%  motion only shrank the second term the response would not be more reproducible -- the measurement
+%  would merely be cleaner. Those are different claims and they look identical in var(dev) alone.
+%  Resolved by REGRESSION, not subtraction: obs and sham are correlated (r = +0.39, the ongoing
+%  signal is slow), so var(obs) - var(sham) assumes an independence that does not hold. Fit
+%  obs ~ b*sham on the LOW-motion trials, apply that b to both groups, and compare the RESIDUAL
+%  variance -- what is left of the response once the part predictable from a stim-free window is
+%  removed. All in RAW dF/F, because the SD-normalised copies are 1 by construction.
+bSham = T.shmRaw(~hiM) \ T.devRaw(~hiM);
+resid = T.devRaw - bSham * T.shmRaw;
+MTS.bSham = bSham;
+MTS.vObs  = [var(T.devRaw(~hiM)) var(T.devRaw(hiM))];
+MTS.vShm  = [var(T.shmRaw(~hiM)) var(T.shmRaw(hiM))];
+MTS.vRes  = [var(resid(~hiM))    var(resid(hiM))];
+fprintf(['\n   VARIANCE DECOMPOSITION (raw dF/F, sham peak at %.2f s, b = %.3f)\n' ...
+         '   %-14s %10s %10s %10s\n'], tAxis(iSham(1)), bSham, 'group','var(obs)','var(sham)','var(resid)');
+fprintf('   %-14s %10.3f %10.3f %10.3f\n', 'low motion',  MTS.vObs(1), MTS.vShm(1), MTS.vRes(1));
+fprintf('   %-14s %10.3f %10.3f %10.3f\n', 'HIGH motion', MTS.vObs(2), MTS.vShm(2), MTS.vRes(2));
+fprintf('   %-14s %10.2f %10.2f %10.2f\n', 'ratio hi/lo', MTS.vObs(2)/MTS.vObs(1), ...
+        MTS.vShm(2)/MTS.vShm(1), MTS.vRes(2)/MTS.vRes(1));
+MTS.ratioRes = MTS.vRes(2)/MTS.vRes(1);
+if MTS.ratioRes < MTS.vShm(2)/MTS.vShm(1)
+    fprintf(['   -> the RESIDUAL falls MORE than the ongoing signal does, so the response is\n' ...
+             '      genuinely more reproducible in motion -- not merely less contaminated.\n']);
+end
+MTS.resPerSess = nan(numel(unique(T.sess)),1);
+for i = 1:numel(unique(T.sess))
+    uu = unique(T.sess); kk = T.sess == uu(i);
+    if nnz(kk & hiM) < 8, continue; end
+    MTS.resPerSess(i) = var(resid(kk & hiM)) / max(var(resid(kk & ~hiM)), eps);
+end
+fprintf('   per session residual ratio: %s\n', ...
+        strjoin(compose('%.2f', MTS.resPerSess(isfinite(MTS.resPerSess))).', '  '));
+
 MTS.perSess = nan(numel(unique(T.sess)),1);
 uSm = unique(T.sess).';
 for i = 1:numel(uSm)
