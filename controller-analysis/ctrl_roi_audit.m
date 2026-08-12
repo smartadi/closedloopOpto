@@ -88,6 +88,16 @@ for ra_i = 1:numel(ra_tags)
         ra_lin = sub2ind(size(S.contra_mask), round(S.grR), round(S.grC));
         A.gridIn = mean(S.contra_mask(ra_lin));
         A.S = S;
+        % IS THE FRAME ITSELF TRANSPOSED? A mouse brain is left/right symmetric about a vertical
+        % midline, so the mask overlaps its own mirror far better in the correct orientation than
+        % in the transposed one -- the test cp_orient runs. It was never run for AL_0033_0212_e2
+        % or AL_0033_0224_e2: both predate cp_orient and carry no Torient, so the legacy path
+        % assumed native. 0224 happens to be native; 0212 is not (0.59 native vs 0.89 transposed,
+        % and its brain mask only matches other AL_0033 days after transposing, Jaccard 0.92).
+        % With a square 560x560 frame a swapped nY/nX is completely silent.
+        ra_brain = S.ipsi_mask | S.contra_mask;
+        A.symN = local_sym(ra_brain);
+        A.symT = local_sym(ra_brain.');
     end
     if isempty(RA); RA = A; else; RA(end+1) = A; end %#ok<SAGROW>
 end
@@ -134,24 +144,47 @@ if RA_SHEET
     for ra_i = 1:ra_n
         ax = nexttile(tlA, ra_i); hold(ax,'on');
         A = RA(ra_i);
+        % DISPLAY-ONLY orientation repair. A session whose frame is transposed is drawn in the
+        % corrected orientation so the sheet is comparable across sessions. This changes NOTHING
+        % on disk and repairs no analysis -- the masks, the fit and the R^2 are all still built in
+        % the stored frame. It is here so the anatomy can be compared by eye, and the title says
+        % so. The real fix is a cp_orient Stage-1 rebuild plus a redraw.
+        ra_tp = isfield(A,'symT') && ~isempty(A.symT) && A.symT > A.symN;
+        if ra_tp
+            % under a transpose, (x=col,y=row) becomes (x=row,y=col): swap every plotted pair
+            xy = @(r,c) deal(r,c);      % plot(x=r, y=c)
+        else
+            xy = @(r,c) deal(c,r);      % plot(x=c, y=r)
+        end
         if A.hasS1
-            bg = ones([size(A.S.ipsi_mask) 3]);
-            bg = local_paint(bg, A.S.contra_mask, [0.87 0.90 0.95]);   % predictor INPUT half
-            bg = local_paint(bg, A.S.ipsi_mask,   [0.96 0.93 0.88]);   % half holding the site
+            im = A.S.ipsi_mask;  cm = A.S.contra_mask;
+            if ra_tp; im = im.'; cm = cm.'; end
+            bg = ones([size(im) 3]);
+            bg = local_paint(bg, cm, [0.87 0.90 0.95]);   % predictor INPUT half
+            bg = local_paint(bg, im, [0.96 0.93 0.88]);   % half holding the site
             image(ax, bg);
-            plot(ax, A.S.grC, A.S.grR, '.', 'Color',[0.45 0.55 0.75], 'MarkerSize',3);
-            plot(ax, A.S.py_prim, A.S.px_prim, 'kp','MarkerSize',12,'MarkerFaceColor',[1 1 0.2]);
-            ra_bb = local_bb(A.S.ipsi_mask | A.S.contra_mask, 15);
+            [gx,gy] = xy(A.S.grR, A.S.grC);
+            plot(ax, gx, gy, '.', 'Color',[0.45 0.55 0.75], 'MarkerSize',3);
+            [sx,sy] = xy(A.S.px_prim, A.S.py_prim);
+            plot(ax, sx, sy, 'kp','MarkerSize',12,'MarkerFaceColor',[1 1 0.2]);
+            ra_bb = local_bb(im | cm, 15);
             xlim(ax, ra_bb(3:4));  ylim(ax, ra_bb(1:2));
         end
         if A.hasROI
-            plot(ax, A.G.by, A.G.bx, '-', 'Color',[0.5 0.5 0.5], 'LineWidth',0.8);
-            plot(ax, A.G.my, A.G.mx, '--','Color',[0.85 0.10 0.10], 'LineWidth',1.8);
+            [bxp,byp] = xy(A.G.bx, A.G.by);
+            [mxp,myp] = xy(A.G.mx, A.G.my);
+            plot(ax, bxp, byp, '-', 'Color',[0.5 0.5 0.5], 'LineWidth',0.8);
+            plot(ax, mxp, myp, '--','Color',[0.85 0.10 0.10], 'LineWidth',1.8);
         end
         set(ax,'YDir','reverse'); axis(ax,'image'); set(ax,'XTick',[],'YTick',[]);
-        if strcmp(A.verdict,'OK'); ra_col = [0 0.45 0]; else; ra_col = [0.80 0 0]; end
-        title(ax, sprintf('%s\n%s  (%.0f\\circ)', strrep(A.tag,'_','\_'), A.verdict, A.ang), ...
-            'Color', ra_col, 'FontSize',8);
+        % NO VERDICT IN THIS TITLE. This sheet is drawn before [ROIAUD-LASER] has run, so the
+        % verdict is not final here and printing it produced a sheet saying CHECK next to a table
+        % saying REDRAW. The report table is the authority; this sheet shows the geometry only.
+        ra_bad = ~isempty(A.why);
+        if ra_bad; ra_col = [0.80 0 0]; else; ra_col = [0 0.45 0]; end
+        ra_ttl = sprintf('%s\nmidline %.0f\\circ', strrep(A.tag,'_','\_'), A.ang);
+        if ra_tp; ra_ttl = [ra_ttl '  [shown transposed]']; end
+        title(ax, ra_ttl, 'Color', ra_col, 'FontSize',8);
     end
     title(tlA, sprintf('[ROIAUD] red dashed = midline. It must run TOP-TO-BOTTOM (%d\\circ tol).', RA_ANG_TOL));
     if RA_EXPORT
@@ -184,15 +217,6 @@ for ra_i = 1:numel(RA)
     RA(ra_i).laserIpsi = double(S.ipsi_mask(round(L.centroid(1)), round(L.centroid(2))));
     RA(ra_i).L = L;  RA(ra_i).trough = [ra_tr ra_tc];
 
-    % IS THE FRAME ITSELF TRANSPOSED? (2026-08-12) A mouse brain is left/right symmetric about a
-    % vertical midline, so the mask should overlap its own mirror far better in the correct
-    % orientation than in the transposed one -- this is the test cp_orient runs. It was never run
-    % for AL_0033_0212_e2 or AL_0033_0224_e2: both predate cp_orient and carry no Torient, so the
-    % legacy path just assumed native. 0224 happens to be native; 0212 is not (sym 0.59 native vs
-    % 0.89 transposed, and its brain mask matches other AL_0033 days at Jaccard 0.92 only after
-    % transposing). With a square 560x560 frame a swapped nY/nX is completely silent.
-    RA(ra_i).symN = local_sym(L.brain);
-    RA(ra_i).symT = local_sym(L.brain.');
     if RA(ra_i).symT > RA(ra_i).symN
         RA(ra_i).why{end+1} = sprintf('FRAME IS TRANSPOSED (sym %.2f native vs %.2f transposed) -- no Torient resolved', ...
             RA(ra_i).symN, RA(ra_i).symT);
@@ -237,18 +261,27 @@ if RA_SHEET
     for ra_i = 1:numel(RA)
         A = RA(ra_i);  if isempty(A.L); continue; end
         ra_k = ra_k + 1;  ax = nexttile(tlL, ra_k); hold(ax,'on');
+        ra_tp = A.symT > A.symN;              % display-only repair, as on the geometry sheet
+        if ra_tp; xy = @(r,c) deal(r,c); else; xy = @(r,c) deal(c,r); end
         ra_m = A.L.map;  ra_m(~A.L.brain) = NaN;
+        ra_br = A.L.brain;
+        if ra_tp; ra_m = ra_m.'; ra_br = ra_br.'; end
         imagesc(ax, ra_m, 'AlphaData', ~isnan(ra_m));
         colormap(ax, flipud(hot));  clim(ax, [min(ra_m(:)) 0]);
-        ra_bb = local_bb(A.L.brain, 10);  xlim(ax, ra_bb(3:4));  ylim(ax, ra_bb(1:2));
-        plot(ax, A.G.my, A.G.mx, '--','Color',[0.1 0.7 0.9],'LineWidth',1.4);
-        plot(ax, A.S.py_prim, A.S.px_prim, 'kp','MarkerSize',13,'MarkerFaceColor',[1 1 0.2]);
-        plot(ax, A.L.centroid(2), A.L.centroid(1), 'g+','MarkerSize',11,'LineWidth',1.8);
-        plot(ax, A.trough(2), A.trough(1), 'cx','MarkerSize',9,'LineWidth',1.4);
+        ra_bb = local_bb(ra_br, 10);  xlim(ax, ra_bb(3:4));  ylim(ax, ra_bb(1:2));
+        [mxp,myp] = xy(A.G.mx, A.G.my);
+        plot(ax, mxp, myp, '--','Color',[0.1 0.7 0.9],'LineWidth',1.4);
+        [sx,sy] = xy(A.S.px_prim, A.S.py_prim);
+        plot(ax, sx, sy, 'kp','MarkerSize',13,'MarkerFaceColor',[1 1 0.2]);
+        [cx,cy] = xy(A.L.centroid(1), A.L.centroid(2));
+        plot(ax, cx, cy, 'g+','MarkerSize',11,'LineWidth',1.8);
+        [tx,ty] = xy(A.trough(1), A.trough(2));
+        plot(ax, tx, ty, 'cx','MarkerSize',9,'LineWidth',1.4);
         set(ax,'YDir','reverse'); axis(ax,'image'); set(ax,'XTick',[],'YTick',[]);
         if A.d_cen > RA_D_TOL || A.laserIpsi == 0; ra_c = [0.80 0 0]; else; ra_c = [0 0.45 0]; end
-        title(ax, sprintf('%s\nd=%.0f px, depth %.2f', strrep(A.tag,'_','\_'), A.d_cen, A.depth), ...
-            'Color',ra_c,'FontSize',8);
+        ra_ttl = sprintf('%s\nd=%.0f px, depth %.2f', strrep(A.tag,'_','\_'), A.d_cen, A.depth);
+        if ra_tp; ra_ttl = [ra_ttl '  [shown transposed]']; end
+        title(ax, ra_ttl, 'Color',ra_c,'FontSize',8);
     end
     title(tlL, ['[ROIAUD] laser effect map.  star = dfk pixel,  green + = laser centroid,  ' ...
                 'cyan x = map trough,  cyan dashed = midline']);
