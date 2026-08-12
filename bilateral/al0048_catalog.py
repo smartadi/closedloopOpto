@@ -191,7 +191,7 @@ L.append("Every experiment folder under `\\\\sahale…\\Subjects\\AL_0048\\`, au
 L.append("**raw 2 kHz Timeline** (`lightCommand594/638`, `galvoX/Y`) rather than from `input_params.csv`.")
 L.append("That is deliberate: the Signals runs (`opto_bilateralImpulse638`, `opto_brainGrid638`,")
 L.append("`opto_Impulse638`) ship no `input_params.csv` at all, and the ones that do use four different")
-L.append("column layouts across rig builds — the Timeline is the only source common to all 47 experiments.")
+L.append(f"column layouts across rig builds — the Timeline is the only source common to all {len(cat)} experiments.")
 L.append("")
 L.append("**Side convention (locked):** `galvoX < 0` → **LEFT = excitatory**; `galvoX > 0` → **RIGHT = inhibitory**.")
 L.append("Verified against the 2026-07-15 impulse polarity (left +dF/F monotonic in amplitude, right −dF/F).")

@@ -4,7 +4,7 @@ Every experiment folder under `\\sahale…\Subjects\AL_0048\`, auto-generated fr
 **raw 2 kHz Timeline** (`lightCommand594/638`, `galvoX/Y`) rather than from `input_params.csv`.
 That is deliberate: the Signals runs (`opto_bilateralImpulse638`, `opto_brainGrid638`,
 `opto_Impulse638`) ship no `input_params.csv` at all, and the ones that do use four different
-column layouts across rig builds — the Timeline is the only source common to all 47 experiments.
+column layouts across rig builds — the Timeline is the only source common to all 50 experiments.
 
 **Side convention (locked):** `galvoX < 0` → **LEFT = excitatory**; `galvoX > 0` → **RIGHT = inhibitory**.
 Verified against the 2026-07-15 impulse polarity (left +dF/F monotonic in amplitude, right −dF/F).
