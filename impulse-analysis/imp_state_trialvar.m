@@ -74,11 +74,11 @@ if ~exist(STV_FIGDIR,'dir'), mkdir(STV_FIGDIR); end
 
 fs   = STV_FS;
 tAxis = -3 : 1/fs : 3;                       % dfImp column timebase (matches load_experiments tWin=3)
+% NOTE: the state window's LOWER edge is set below, after the sham window, so the two are DISJOINT.
 switch lower(STV_STATE_WIN)
-    case 'peri', stWin = [-1.0,  0.5];
-    otherwise,   stWin = [-1.0, -1/fs];      % strictly pre-onset
+    case 'peri', stWin = [nan,  0.5];
+    otherwise,   stWin = [nan, -1/fs];       % strictly pre-onset
 end
-iState = tAxis >= stWin(1) & tAxis <= stWin(2);
 
 % ---- THE STIM-FREE CONTROL WINDOW (rebuilt 2026-08-12, user) -----------------------------------
 % Peak_imp under peak_mode=3 is the MEAN over 0-220 ms, i.e. an L-sample window mean. A control for
@@ -88,9 +88,17 @@ iState = tAxis >= stWin(1) & tAxis <= stWin(2);
 % It is also placed at -1.0 s, OUTSIDE the -0.5..0 s baseline that dfImp has already had removed;
 % a sham window inside that baseline is partially constrained toward zero (measured: var 8.0 inside
 % vs 17.3 outside, i.e. the constrained version halves the ongoing variance it is meant to estimate).
+% DISJOINTNESS (2026-08-12, user asked what the windows were and the overlap surfaced): the sham must
+% NOT sit inside the state window. It did -- 7 of the 34 state samples WERE the sham -- which makes the
+% control for the power markers partly circular: the sham peak's deviation is built from the very
+% samples whose variance is the predictor. The state window therefore now STARTS one sample after the
+% sham ends. Costs 7 of 34 state samples; buys a control that is not self-referential.
 iOn   = find(tAxis >= 0, 1);
 Lresp = numel(iOn+2 : iOn + round(0.22*fs));            % response-window length (7 samples)
 iSham = find(tAxis >= -1.0, 1) + (0:Lresp-1);           % matched length, outside the baseline
+stWin(1) = tAxis(iSham(end)) + 1/fs;                    % state window begins where the sham ends
+iState   = tAxis >= stWin(1) & tAxis <= stWin(2);
+assert(~any(ismember(find(iState), iSham)), '[STV] state and sham windows overlap');
 
 MK = { 'MOT','Motion',            true,  'motion z-score'
        'PVv','Pre-trial variance',false, '(\DeltaF/F)^2'
