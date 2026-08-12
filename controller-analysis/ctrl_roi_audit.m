@@ -183,6 +183,26 @@ for ra_i = 1:numel(RA)
     RA(ra_i).depth = L.depth;
     RA(ra_i).laserIpsi = double(S.ipsi_mask(round(L.centroid(1)), round(L.centroid(2))));
     RA(ra_i).L = L;  RA(ra_i).trough = [ra_tr ra_tc];
+
+    % IS THE FRAME ITSELF TRANSPOSED? (2026-08-12) A mouse brain is left/right symmetric about a
+    % vertical midline, so the mask should overlap its own mirror far better in the correct
+    % orientation than in the transposed one -- this is the test cp_orient runs. It was never run
+    % for AL_0033_0212_e2 or AL_0033_0224_e2: both predate cp_orient and carry no Torient, so the
+    % legacy path just assumed native. 0224 happens to be native; 0212 is not (sym 0.59 native vs
+    % 0.89 transposed, and its brain mask matches other AL_0033 days at Jaccard 0.92 only after
+    % transposing). With a square 560x560 frame a swapped nY/nX is completely silent.
+    RA(ra_i).symN = local_sym(L.brain);
+    RA(ra_i).symT = local_sym(L.brain.');
+    if RA(ra_i).symT > RA(ra_i).symN
+        RA(ra_i).why{end+1} = sprintf('FRAME IS TRANSPOSED (sym %.2f native vs %.2f transposed) -- no Torient resolved', ...
+            RA(ra_i).symN, RA(ra_i).symT);
+        RA(ra_i).verdict = 'REDRAW';
+    end
+    % absolute laser strength, for spotting a session where the stim simply did not work
+    if L.depth > -0.5
+        RA(ra_i).why{end+1} = sprintf('laser effect only %.2f %%dF/F deep -- weakest in the set', L.depth);
+        if strcmp(RA(ra_i).verdict,'OK'); RA(ra_i).verdict = 'CHECK'; end
+    end
     % THE PRIMARY CHECK, and the only frame-independent one. cp_roi_masks bisects by the signed
     % cross product of the midline direction, so the split is correct in ANY image orientation --
     % which is why the angle test above cannot be trusted on its own: a session whose imaging
@@ -257,6 +277,16 @@ save(fullfile(ra_dataDir,'ctrl_roi_audit.mat'), 'RA');
 if RA_EXPORT; fprintf('[ROIAUD] sheet -> %s\n', ra_outDir); end
 
 %% ---- local functions (must sit at EOF in a script) ---------------------------
+function s = local_sym(B)
+% Left/right mirror overlap of a brain mask, after centring it on the frame's own midline.
+% High in the correct orientation, low in the transposed one -- the cp_orient test.
+[~,cc] = find(B);
+if isempty(cc); s = NaN; return; end
+sh = round(size(B,2)/2) - round(mean(cc));
+Bs = circshift(B, [0 sh]);
+s  = nnz(Bs & fliplr(Bs)) / max(nnz(Bs | fliplr(Bs)),1);
+end
+
 function bg = local_paint(bg, mask, rgb)
 for c = 1:3
     ch = bg(:,:,c);  ch(mask) = rgb(c);  bg(:,:,c) = ch;
