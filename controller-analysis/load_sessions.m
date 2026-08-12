@@ -18,7 +18,7 @@ close all;
 % workspace, so anything it set is destroyed here -- its own config included, and the
 % failure lands several steps later as "Unrecognized function or variable". Launcher
 % state is namespaced RUN_* and preserved; nothing else in the project uses that prefix.
-clearvars -except r_lean RUN_*;
+clearvars -except r_lean RUN_* XD_* RB_*;
 
 % If launched via run() from controller-analysis/, step up to project root
 % so that relative paths (data/, utils/) resolve correctly.
