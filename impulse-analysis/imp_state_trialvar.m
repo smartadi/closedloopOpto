@@ -381,6 +381,12 @@ if STV_PLOT
     % the reading the confound forbids. Set STV_PLOTCONF=true to draw all four.
     if ~exist('STV_PLOTCONF','var') || isempty(STV_PLOTCONF), STV_PLOTCONF = false; end
     if STV_PLOTCONF, kShow = 1:nMK; else, kShow = find([MK{:,3}]); end
+    % DRAW THE STIM-FREE CONTROL? (user, 2026-08-12: "i dont need control on this analysis just yet").
+    % PLOTTING knob only -- the control is still computed and still printed in the table above, so
+    % nothing is lost from the record and no verdict silently changes. Turning it back on is one
+    % variable. Do NOT ship a paper panel with this false: the motion claim rests on the response
+    % tightening MORE than the ongoing signal does, which is unreadable without the grey trace.
+    if ~exist('STV_PLOTCTRL','var') || isempty(STV_PLOTCTRL), STV_PLOTCTRL = true; end
     nC = numel(kShow);
     f1 = figure('Color','w','Position',[40 40 460*nC 720], ...
                 'Name','[STV] trial variability vs brain state');
@@ -408,14 +414,24 @@ if STV_PLOT
         bm = R(k).binMed;
         plot(ax, bm, R(k).sdB, '-o','Color',C.stim,'MarkerFaceColor',C.stim, ...
              'LineWidth',1.8,'MarkerSize',5,'DisplayName','impulse response');
-        plot(ax, bm, R(k).sdP, '--s','Color',C.ctl,'MarkerFaceColor',C.ctl, ...
-             'LineWidth',1.4,'MarkerSize',4,'DisplayName','pre-onset (stim-free)');
+        if STV_PLOTCTRL
+            plot(ax, bm, R(k).sdP, '--s','Color',C.ctl,'MarkerFaceColor',C.ctl, ...
+                 'LineWidth',1.4,'MarkerSize',4,'DisplayName','pre-onset (stim-free)');
+        end
         xticks(ax, round(bm,2,'significant'));
         xlim(ax, [min(bm) - 0.08*range(bm), max(bm) + 0.08*range(bm)]);
         xlabel(ax, sprintf('%s  (%s), bin median', MK{k,2}, MK{k,4}));
-        if ci==1, ylabel(ax,'SD of dev'); legend(ax,'Location','best','Box','off','FontSize',7); end
-        title(ax, sprintf('BF p = %.4g (ctrl %.4g)\ntrend %+.2f (ctrl %+.2f)', ...
-              R(k).bf, R(k).bfP, R(k).trend, R(k).trendP), 'FontSize',8.5, 'Color',gc);
+        if ci==1
+            ylabel(ax,'SD of dev');
+            if STV_PLOTCTRL, legend(ax,'Location','best','Box','off','FontSize',7); end
+        end
+        if STV_PLOTCTRL
+            title(ax, sprintf('BF p = %.4g (ctrl %.4g)\ntrend %+.2f (ctrl %+.2f)', ...
+                  R(k).bf, R(k).bfP, R(k).trend, R(k).trendP), 'FontSize',8.5, 'Color',gc);
+        else
+            title(ax, sprintf('BF p = %.4g\ntrend %+.2f', R(k).bf, R(k).trend), ...
+                  'FontSize',8.5, 'Color',gc);
+        end
 
         % row 3 -- effect size with bootstrap CI, against the claim's prediction
         ax = nexttile(tl, 2*nC+ci); hold(ax,'on'); box(ax,'on'); grid(ax,'on');
@@ -424,22 +440,34 @@ if STV_PLOT
         errorbar(ax, 1, R(k).ratio, R(k).ratio-R(k).ci(1), R(k).ci(2)-R(k).ratio, ...
                  'k','LineStyle','none','LineWidth',1.2,'CapSize',10);
         ratP = R(k).sdP(end)/max(R(k).sdP(1),eps);
-        bar(ax, 2, ratP, 0.5, 'FaceColor', C.ctl, 'EdgeColor','none');
-        yline(ax, 1, 'k-','LineWidth',1);
         if claimDir(k) < 0, ptxt = 'claim: < 1'; else, ptxt = 'claim: \geq 1'; end
-        xticks(ax,[1 2]); xticklabels(ax,{sprintf('stim %.2f',R(k).ratio), sprintf('ctrl %.2f',ratP)});
-        xlim(ax,[0.4 2.6]);
+        if STV_PLOTCTRL
+            bar(ax, 2, ratP, 0.5, 'FaceColor', C.ctl, 'EdgeColor','none');
+            xticks(ax,[1 2]); xlim(ax,[0.4 2.6]);
+            xticklabels(ax,{sprintf('stim %.2f',R(k).ratio), sprintf('ctrl %.2f',ratP)});
+            ttl = sprintf(['%s   strat \\rho %+.3f (%d/%d sess)   ' ...
+                  '\\rho|power %+.3f (ctrl %+.3f)\n%s'], ...
+                  ptxt, R(k).rhoStrat, R(k).nSessAgree, numel(R(k).rhoPerSess), ...
+                  R(k).rhoPow, R(k).rhoPowC, R(k).verdict);
+        else
+            xticks(ax,1); xlim(ax,[0.4 1.6]);
+            xticklabels(ax,{sprintf('%.2f',R(k).ratio)});
+            ttl = sprintf('%s   strat \\rho %+.3f (%d/%d sess)   \\rho|power %+.3f', ...
+                  ptxt, R(k).rhoStrat, R(k).nSessAgree, numel(R(k).rhoPerSess), R(k).rhoPow);
+        end
+        yline(ax, 1, 'k-','LineWidth',1);
         if ci==1, ylabel(ax,'SD ratio  top / bottom bin'); end
-        title(ax, sprintf(['%s   strat \\rho %+.3f (%d/%d sess)   ' ...
-              '\\rho|power %+.3f (ctrl %+.3f)\n%s'], ...
-              ptxt, R(k).rhoStrat, R(k).nSessAgree, numel(R(k).rhoPerSess), ...
-              R(k).rhoPow, R(k).rhoPowC, R(k).verdict), 'FontSize',8.5, 'Color',gc);
+        title(ax, ttl, 'FontSize',8.5, 'Color',gc);
     end
 
+    if STV_PLOTCTRL
+        sgSub = ['RED = impulse response      GREY = SAME window, NO STIMULUS (the control)\n' ...
+                 'If grey tracks red, the state changes the ONGOING signal, not stimulus processing.'];
+    else
+        sgSub = 'Spread of the per-trial deviation from the amplitude mean.';
+    end
     sgtitle(f1, sprintf(['Trial-to-trial VARIABILITY of the impulse response vs brain state   ' ...
-        '(%d trials, %d sessions, state window [%.2f %.2f] s)\n' ...
-        'RED = impulse response      GREY = SAME window, NO STIMULUS (the control)\n' ...
-        'If grey tracks red, the state changes the ONGOING signal, not stimulus processing.'], ...
+        '(%d trials, %d sessions, state window [%.2f %.2f] s)\n' sgSub], ...
         numel(T.dev), numel(uS), stWin(1), stWin(2)), 'FontWeight','bold','FontSize',10);
 
     exportgraphics(f1, fullfile(STV_FIGDIR,'stv_claim.png'), 'Resolution',300);
