@@ -25,7 +25,7 @@
 % Set SESSION_TAG in the base workspace BEFORE running to override the default
 % (filenames are session-suffixed, so s2 and s3 panels coexist on disk).
 if ~exist('SESSION_TAG','var') || isempty(SESSION_TAG)
-SESSION_TAG = 's3';        % Fig 5 PRIMARY (2026-07-29): s3 = AL_0048 2026-07-21/1 (198 sine tr, dark screen, pixel_R=[407 367]; preview REPLICATES, OL-vs-CL ns p=0.36 -> feedback claim carried by combined 5I/5J). s1 = 2026-07-01/6 (87 tr); s2 = 2026-07-14/1 (200 tr, former primary)
+SESSION_TAG = 's2';        % Fig 5 PRIMARY (2026-08-12, reverted from s3): s2 = AL_0048 2026-07-14/1 (200 sine tr; within-session OL-vs-CL p=7.7e-4, which is what lets 5G stay in the figure). s3 = 2026-07-21/1 (198 tr, dark screen, but every pairwise p >= 0.30 -> 5G renders bracket-free); s1 = 2026-07-01/6 (87 tr)
 end
 SIDE        = 'right';
 PRE         = 2;           % s before onset
@@ -40,6 +40,9 @@ RMSE_CLIP_P = 95;          % 5G y-limit percentile (s2 has heavy motion outliers
 if ~exist('EXPORT','var')      || isempty(EXPORT);      EXPORT      = true;  end
 if ~exist('EXPORT_PNG','var')  || isempty(EXPORT_PNG);  EXPORT_PNG  = true;  end
 if ~exist('PREVIEW_DIR','var'); PREVIEW_DIR = ''; end
+EXPORT_ECDF = false;       % 5G-alt (ECDF) — built and previewed, but NOT a paper
+                           % panel (user picked the log violin, 2026-08-12).
+                           % Flip to true to put the PDF back in figure5/.
 % -------------------------------------------------------------------------
 prev = @(f, nm) preview_png(f, PREVIEW_DIR, nm);
 
@@ -383,7 +386,7 @@ set(ax_ec, 'XColor','k', 'YColor','k', 'XTick',[1 2 5 10 20], ...
 xlabel(ax_ec, 'Trial RMSE (% \DeltaF/F)', 'FontSize',PS.fs, 'FontWeight',PS.fw);
 ylabel(ax_ec, 'Cumulative fraction of trials', 'FontSize',PS.fs, 'FontWeight',PS.fw);
 hold(ax_ec,'off');
-if EXPORT; paperExport(fig_Ec, fullfile(outDir, sprintf('sine_5G_rmse_ecdf_%s.pdf', sfx)));
+if EXPORT && EXPORT_ECDF; paperExport(fig_Ec, fullfile(outDir, sprintf('sine_5G_rmse_ecdf_%s.pdf', sfx)));
     if EXPORT_PNG; paperExport(fig_Ec, fullfile(pngDir, sprintf('sine_5G_rmse_ecdf_%s.png', sfx))); end; end
 prev(fig_Ec, '5Galt');
 
