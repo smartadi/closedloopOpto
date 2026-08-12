@@ -67,6 +67,27 @@ for q = 1:numel(useA)
 end
 Puu = U*U.';                                        % rank-|useA| penalty operator, on S only
 
+%% ---- does the stim direction TRANSFER between trial halves? -------------------------------------
+% The penalty removes the direction e_a estimated on half A. That is only worth anything if half B
+% points the same way; if it does not, the penalty silenced half-A noise and capVal will collapse.
+% Reported as BOTH:
+%   cosine   raw vector alignment -- what the penalty actually acts on, but inflated by the
+%            common-mode (every contra pixel dips together, so any two dips share a large offset)
+%   Pearson  the same with the common-mode removed -- alignment of the SPATIAL PATTERN, which is
+%            the part that can distinguish stim-carrying structure from a global shift
+R.transfer = struct('cos',[], 'r',[], 'amps',useA);
+if isfield(Q,'evVal') && ~isempty(Q.evVal)
+    tc = nan(1,numel(useA));  tr = nan(1,numel(useA));
+    for q = 1:numel(useA)
+        a  = useA(q);
+        ea = Q.evSel{a}(S);  ea = ea(:);
+        eb = Q.evVal{a}(S);  eb = eb(:);
+        tc(q) = (ea.'*eb) / max(norm(ea)*norm(eb), eps);
+        tr(q) = corr(ea, eb);
+    end
+    R.transfer.cos = tc;  R.transfer.r = tr;
+end
+
 Gs   = Q.G(S,S) + Q.lamR*diag(1./max(Q.gamma(S),eps).^2);
 cs   = Q.c(S);
 % Dimensionless grid: scale so frac=1 makes the leak penalty comparable in size to the data term.
@@ -83,6 +104,15 @@ if vb
     fprintf('\n[F2-FRONTIER] maximise capture s.t. held-out spont R^2 >= %.2f | %d candidate px | amps %s\n', ...
             opt.r2_floor, numel(S), mat2str(useA));
     fprintf('   %-10s %10s %12s %12s   %s\n','leakPen','spontR2','capture% SEL','capture% VAL','<- quote VAL');
+end
+if vb && ~isempty(R.transfer.cos)
+    fprintf('   DIRECTION TRANSFER halfA->halfB, per amp:  cos %s | pattern r %s\n', ...
+            mat2str(round(R.transfer.cos,2)), mat2str(round(R.transfer.r,2)));
+    if median(R.transfer.r,'omitnan') < 0.2
+        fprintf(2,['   ** the SPATIAL PATTERN of the evoked dip does not reproduce across trial halves\n' ...
+                   '      (median r %.2f): there is no stable direction to silence here. **\n'], ...
+                   median(R.transfer.r,'omitnan'));
+    end
 end
 for k = 1:nG_
     b = zeros(nP,1);
