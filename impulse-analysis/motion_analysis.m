@@ -28,6 +28,27 @@ tLabels_m      = {'Low motion', 'Mid motion', 'High motion'};
 % Output filenames are tagged with the stream so the two never overwrite.
 if ~exist('dev_metric','var'), dev_metric = 'cperr'; end   % 'peakdev' | 'cperr'
 dev_tag = dev_metric;
+% ---- SILENT-FALLBACK GUARD (added 2026-08-12) --------------------------------------------------
+% imp.cp_err is populated by contra_prediction.m and is ABSENT in a plain load_experiments run.
+% The per-amp plotting guards below are `isfield(imp_e,'cp_err') && ...`, so with dev_metric='cperr'
+% and no such field every plot silently falls back to Peak_imp_dev -- while dev_tag stays 'cperr'
+% and dev_ylabel stays 'Prediction error'. The result is a figure labelled and FILENAMED as a
+% prediction error that actually shows peak deviation, which reached paper panel 2F. Detect it here
+% and downgrade the tag/label to what is really being plotted, loudly.
+if strcmp(dev_metric,'cperr')
+    haveCP = false;
+    for iChk = 1:numel(allExperiments)
+        if isfield(allExperiments(iChk).imp,'cp_err') && ~isempty(allExperiments(iChk).imp.cp_err)
+            haveCP = true; break
+        end
+    end
+    if ~haveCP
+        warning('motion_analysis:cperrMissing', ...
+          ['dev_metric=''cperr'' but imp.cp_err is absent (run contra_prediction.m first).\n' ...
+           '         FALLING BACK to peakdev -- tag and axis label corrected so the export is not mislabelled.']);
+        dev_metric = 'peakdev';  dev_tag = 'peakdev';
+    end
+end
 % expColors normally comes from dose_response.m (runs earlier in run_all); guard
 % so motion_analysis can also run standalone.
 if ~exist('expColors','var'), expColors = PS.sess; end   % colorblind-safe when global PAPER_CB=true

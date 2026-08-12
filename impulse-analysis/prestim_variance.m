@@ -20,6 +20,26 @@ end
 %   error (contra-pred route). Output filenames tagged so streams don't overwrite.
 if ~exist('dev_metric','var'), dev_metric = 'cperr'; end   % 'peakdev' | 'cperr'
 dev_tag = dev_metric;
+% ---- SILENT-FALLBACK GUARD (added 2026-08-12) --------------------------------------------------
+% Same defect as motion_analysis.m: imp.cp_err is created by contra_prediction.m and is ABSENT in a
+% plain load_experiments run, so the per-amp `isfield(imp_e,'cp_err')` guards below fall through to
+% Peak_imp_dev while dev_tag still says 'cperr'. Three exports of this script (_cperr, _peakdev and
+% the untagged original) are byte-identical in size for exactly that reason. Correct the tag loudly
+% rather than shipping a file whose name asserts a metric it does not contain.
+if strcmp(dev_metric,'cperr')
+    haveCP = false;
+    for iChk = 1:numel(allExperiments)
+        if isfield(allExperiments(iChk).imp,'cp_err') && ~isempty(allExperiments(iChk).imp.cp_err)
+            haveCP = true; break
+        end
+    end
+    if ~haveCP
+        warning('prestim_variance:cperrMissing', ...
+          ['dev_metric=''cperr'' but imp.cp_err is absent (run contra_prediction.m first).\n' ...
+           '         FALLING BACK to peakdev -- filename tag corrected to match what is plotted.']);
+        dev_metric = 'peakdev';  dev_tag = 'peakdev';
+    end
+end
 
 preIdx_var = t_win_imp >= -1 & t_win_imp < 0;   % 35 samples, -1 to 0 s
 nVarBins   = 5;
