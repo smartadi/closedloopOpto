@@ -54,6 +54,7 @@ if nargin < 7 || isempty(opts), opts = struct(); end
 if ~isfield(opts,'lambdas'), opts.lambdas = logspace(-8,1,28); end
 if ~isfield(opts,'nCatch'),  opts.nCatch  = 200;   end
 if ~isfield(opts,'tol'),     opts.tol     = 0.10;  end
+if ~isfield(opts,'tol_r2'),  opts.tol_r2  = 0.02;  end
 if ~isfield(opts,'seed'),    opts.seed    = 7;     end
 if ~isfield(opts,'verbose'), opts.verbose = true;  end
 
@@ -113,16 +114,27 @@ end
 %% ---- pick lambda: smallest lambda whose catch swing has stopped falling -------
 cmin = min(catchdef);  cmax = max(catchdef);
 P = struct();
-P.catch_falls = (cmax - cmin) > opts.tol*max(cmax, eps);   % did it fall at all?
-target = cmin + opts.tol*(cmax - cmin);
-ix = find(catchdef <= target, 1, 'first');
-if isempty(ix) || ~P.catch_falls
-    % Premise failed: shrinkage does not buy blindness on this session. Return the largest lambda
-    % that still holds held-out R^2 within 2% of its own maximum, and let the caller flag it.
-    [r2max, ~] = max(R2te);
-    ixs = find(R2te >= r2max - 0.02*abs(r2max));
-    ix = ixs(end);
-end
+% ⚠ CORRECTED 2026-08-12 -- the first version of this rule was WRONG and the error is instructive.
+% It took "smallest lambda whose catch swing is within tol of the swept MINIMUM". But the catch
+% swing is the deflection of an operator whose weights are being shrunk toward zero: it decreases
+% MONOTONICALLY to 0 as lambda grows, because a null operator deflects by nothing. Its minimum is
+% therefore always at the top of the grid, and the rule selected the largest lambda available --
+% 5 of 9 sessions railed at lambda = 10 with ||b|| ~ 0.1 and R^2 collapsing to 0.43-0.69. A
+% criterion that is minimised by the trivial model cannot select a model.
+%
+% The rule now trades the two against each other, which is what the impulse-side result actually
+% says ("a 4% loss of prediction amplitude buys a 13x reduction in leak"): take the LARGEST
+% lambda -- the most shrinkage, so the least leak -- that still holds held-out R^2 within
+% `tol_r2` of its own maximum. Prediction quality is the constraint; blindness is what is bought
+% with the slack. The catch swing is then REPORTED at that lambda rather than optimised, and
+% catch_falls stays as the diagnostic saying whether shrinkage bought anything at all.
+r2max = max(R2te);
+ok_r2 = find(R2te >= r2max - opts.tol_r2);
+ix = ok_r2(end);                       % largest admissible lambda
+P.catch_falls = (cmax - cmin) > opts.tol*max(abs(cmax), eps);   % did the swing move at all?
+P.r2_max = r2max;  P.r2_cost = r2max - R2te(ix);
+% A pick sitting on either end of the grid means the grid, not the data, chose it.
+P.at_edge = (ix == 1) || (ix == nL);
 
 P.lambdas = lams;  P.R2te = R2te;  P.R2tr = R2tr;  P.nrm = nrm;  P.catchdef = catchdef;
 P.scale = scale;  P.nCatch = nC;  P.ix = ix;
@@ -138,10 +150,15 @@ if opts.verbose
              'catch swing %.4f -> %.4f (%.1fx), ||b|| %.1f -> %.1f\n'], ...
         P.R2te_at0, P.R2te_star, 100*(P.R2te_at0-P.R2te_star)/max(abs(P.R2te_at0),eps), ...
         P.catch_at0, P.catch_star, P.catch_at0/max(P.catch_star,eps), P.nrm_at0, P.nrm_star);
+    fprintf('                  R^2 cost vs its own max: %.3f (tol %.3f)\n', P.r2_cost, opts.tol_r2);
     if ~P.catch_falls
-        fprintf(2, ['[ctrl_ridge_path] ⚠ the catch swing does NOT fall with lambda on this ' ...
-                    'session -- shrinkage buys no blindness here. lambda picked on R^2 instead; ' ...
-                    'do not claim stim-blindness for this session.\n']);
+        fprintf(2, ['[ctrl_ridge_path] ⚠ the catch swing does NOT move with lambda on this ' ...
+                    'session -- shrinkage buys no measurable blindness here. Do not claim ' ...
+                    'stim-blindness for this session.\n']);
+    end
+    if P.at_edge
+        fprintf(2, ['[ctrl_ridge_path] ⚠ lambda* sits at the EDGE of the swept grid -- the grid ' ...
+                    'chose it, not the data. Widen opts.lambdas before using this session.\n']);
     end
 end
 end

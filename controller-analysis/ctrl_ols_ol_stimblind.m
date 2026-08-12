@@ -402,6 +402,7 @@ OL.pred_mode=pred_mode; OL.RPATH=RPATH; OL.VAL=VAL;
 if RPATH.used
     OL.lambda=RPATH.lambda_star; OL.lambda_abs=RPATH.lambda_abs;
     OL.bnorm=RPATH.nrm_star; OL.catch_def=RPATH.catch_star; OL.catch_falls=RPATH.catch_falls;
+    OL.lambda_at_edge=RPATH.at_edge; OL.r2_cost=RPATH.r2_cost;
 end
 % Suffixed per predictor mode so 'rank' and 'ridge' caches coexist and reverting is one variable
 % (utils/ctrl_pred_tag.m). Nothing the rank model built is ever overwritten by the ridge model.

@@ -48,14 +48,21 @@ for ff_i = 1:numel(ff_files)
     S2 = load(fullfile(dataDir, ff_files(ff_i).name));
     ff_tag = erase(erase(erase(ff_files(ff_i).name,'ctrl_ols_ol_stimblind'),[pred_suffix '_']),'.mat');
     if startsWith(ff_tag,'_'); ff_tag = ff_tag(2:end); end
-    if ~isfield(S2,'VAL')
-        fprintf('  %-24s SKIP (cache predates the VAL snippet -- rebuild this session)\n', ff_tag);
-        continue
+    % NO SESSION IS SILENTLY DROPPED. A cache built before the VAL snippet existed still carries
+    % b, so the KERNEL is always drawable -- only the prediction trace is missing, and the panel
+    % says so rather than the session vanishing from the set. Excluded sessions are exactly the
+    % ones worth looking at, so they are drawn and labelled, never skipped.
+    Fs = S2.Fs;  haveVal = isfield(S2,'VAL');
+    if haveVal
+        V = S2.VAL;
+        ff_n  = min(numel(V.yte), round(FF_SNIP_S*Fs));
+        ff_t  = (0:ff_n-1)/Fs;
+        ff_rho = corr(V.yte(:), V.yhat(:));
+        ff_r2  = V.R2_te;
+    else
+        ff_rho = NaN;  ff_r2 = NaN;
+        if isfield(S2,'R2_te'); ff_r2 = S2.R2_te; end
     end
-    V = S2.VAL;  Fs = S2.Fs;
-    ff_n  = min(numel(V.yte), round(FF_SNIP_S*Fs));
-    ff_t  = (0:ff_n-1)/Fs;
-    ff_rho = corr(V.yte(:), V.yhat(:));
     ff_lam = NaN;
     if isfield(S2,'bnorm'); ff_nrm = S2.bnorm; else; ff_nrm = norm(S2.b); end
     if isfield(S2,'lambda'); ff_lam = S2.lambda; end
@@ -65,12 +72,20 @@ for ff_i = 1:numel(ff_files)
 
     % --- (left) held-out prediction ------------------------------------------------
     ax1 = nexttile(tl,1); hold(ax1,'on');
-    plot(ax1, ff_t, V.yte(1:ff_n),  '-', 'Color',[0.15 0.15 0.15], 'LineWidth',1.4);
-    plot(ax1, ff_t, V.yhat(1:ff_n), '-', 'Color',[0.85 0.35 0.05], 'LineWidth',1.1);
-    xlabel(ax1,'time in held-out block (s)'); ylabel(ax1,'ipsi \DeltaF/F (%)');
-    legend(ax1,{'actual','predicted from contra'},'Box','off','Location','best','FontSize',8);
-    xlim(ax1,[0 ff_t(end)]);
-    title(ax1, sprintf('held-out R^2 = %.3f   (\\rho = %.3f)', V.R2_te, ff_rho));
+    if haveVal
+        plot(ax1, ff_t, V.yte(1:ff_n),  '-', 'Color',[0.15 0.15 0.15], 'LineWidth',1.4);
+        plot(ax1, ff_t, V.yhat(1:ff_n), '-', 'Color',[0.85 0.35 0.05], 'LineWidth',1.1);
+        xlabel(ax1,'time in held-out block (s)'); ylabel(ax1,'ipsi \DeltaF/F (%)');
+        legend(ax1,{'actual','predicted from contra'},'Box','off','Location','best','FontSize',8);
+        xlim(ax1,[0 ff_t(end)]);
+        title(ax1, sprintf('held-out R^2 = %.3f   (\\rho = %.3f)', ff_r2, ff_rho));
+    else
+        text(ax1, 0.5, 0.5, {'no held-out snippet in this cache', ...
+            '(built before OL.VAL existed -- rebuild to draw it)'}, ...
+            'HorizontalAlignment','center','FontSize',9,'Color',[0.4 0.4 0.4]);
+        axis(ax1,'off');
+        title(ax1, sprintf('held-out R^2 = %.3f (from cache)', ff_r2));
+    end
 
     % --- (right) the kernel: fitted weights on the contra grid ---------------------
     % Su indexes into the grid, so weights are scattered at their own grid coordinates. A
@@ -90,7 +105,10 @@ for ff_i = 1:numel(ff_files)
 
     ff_hdr = sprintf('[FITFIG] %s   mode=%s', strrep(ff_tag,'_','\_'), pred_mode);
     if isfinite(ff_lam); ff_hdr = sprintf('%s  \\lambda=%.3g', ff_hdr, ff_lam); end
-    if V.R2_te < r2_floor; ff_hdr = sprintf('%s   [BELOW FLOOR %.2f]', ff_hdr, r2_floor); end
+    if isfield(S2,'lambda_at_edge') && S2.lambda_at_edge
+        ff_hdr = sprintf('%s   [lambda AT GRID EDGE]', ff_hdr);
+    end
+    if ff_r2 < r2_floor; ff_hdr = sprintf('%s   [BELOW FLOOR %.2f]', ff_hdr, r2_floor); end
     sgtitle(figF, ff_hdr);
     if FF_EXPORT
         for ff_k = 1:numel(FF_FMT)
@@ -100,15 +118,15 @@ for ff_i = 1:numel(ff_files)
     end
 
     ff_j = numel(FF)+1;
-    FF(ff_j).sess_tag = ff_tag;  FF(ff_j).R2_te = V.R2_te;  FF(ff_j).rho = ff_rho;
+    FF(ff_j).sess_tag = ff_tag;  FF(ff_j).R2_te = ff_r2;  FF(ff_j).rho = ff_rho;
     FF(ff_j).nPx = numel(S2.Su); FF(ff_j).bnorm = ff_nrm;   FF(ff_j).lambda = ff_lam;
     if isfield(S2,'leak_sus');   FF(ff_j).leak = S2.leak_sus; else; FF(ff_j).leak = NaN; end
     if isfield(S2,'catch_falls');FF(ff_j).catch_falls = S2.catch_falls; else; FF(ff_j).catch_falls = NaN; end
-    fprintf('  %-24s %7.3f %7.3f %6d %8.1f %9.3g\n', ff_tag, V.R2_te, ff_rho, numel(S2.Su), ff_nrm, ff_lam);
+    fprintf('  %-24s %7.3f %7.3f %6d %8.1f %9.3g\n', ff_tag, ff_r2, ff_rho, numel(S2.Su), ff_nrm, ff_lam);
 end
 
 %% [FITFIG-REPORT] --------------------------------------------------------------
-assert(~isempty(FF), '[FITFIG] no cache carried a VAL snippet -- rebuild Stage 2.');
+assert(~isempty(FF), '[FITFIG] no Stage-2 cache could be drawn.');
 fprintf('\n[FITFIG] mode ''%s'': %d/%d sessions clear the R^2 floor (%.2f)\n', ...
     pred_mode, nnz([FF.R2_te] >= r2_floor), numel(FF), r2_floor);
 fprintf('  held-out R^2 : median %.3f, range %.3f-%.3f\n', ...

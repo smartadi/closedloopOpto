@@ -308,6 +308,25 @@ if any(strcmp({RB.log.status},'lowR2'))
 end
 fprintf('  Next: ctrl_ols_xsess.m (combined model statistics), then internal_model_principle.m\n');
 
+% PERSIST THE LOG. It used to live only in the workspace and the console, so clearing either
+% destroyed the only record of WHY a session produced no cache -- and "why is this session
+% missing" is exactly the question asked afterwards. Written both as a struct and as plain text
+% so it can be read without MATLAB.
+rb_logfile = fullfile(RB.dataDir, sprintf('ctrl_residual_build_log%s.mat', ctrl_pred_tag()));
+XRESLOG = RB.log;  save(rb_logfile, 'XRESLOG');
+rb_txt = fullfile(RB.dataDir, sprintf('ctrl_residual_build_log%s.txt', ctrl_pred_tag()));
+rb_fid = fopen(rb_txt,'w');
+if rb_fid > 0
+    fprintf(rb_fid, '%-22s %-7s %-5s %-6s %-6s %-6s %s\n','tag','status','K','nKept','R2','leak%','msg');
+    for rb_i = 1:numel(RB.log)
+        L = RB.log(rb_i);
+        fprintf(rb_fid, '%-22s %-7s %-5d %-6d %-6.3f %-6.0f %s\n', ...
+            L.tag, L.status, L.K, L.nUnaff, L.R2, L.leak, L.msg);
+    end
+    fclose(rb_fid);
+    fprintf('  log -> %s\n', rb_txt);
+end
+
 %% ---- local functions -------------------------------------------------------------
 function s = tern_xres(c, a, b)
 if c, s = a; else, s = b; end
