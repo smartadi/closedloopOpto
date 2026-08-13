@@ -98,7 +98,8 @@ n = numel(Y);
 fprintf('\n[cl_mse_factors] %d valid CL trials pooled.\n', n);
 
 % Z-score all variables for comparable coefficients
-Y_z  = (Y  - mean(Y))  / std(Y);
+Y_z  = Y;   % RAW RMSE, never z-scored (2026-08-13 project rule). Every use below is inside an
+            % R^2, which is scale-invariant, so no number in this script changes.
 X_z  = zscore([X1, X2, X3]);   % [n x 3]
 
 %% ── Stage 1: Collinearity ───────────────────────────────────────────────────

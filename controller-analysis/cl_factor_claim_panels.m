@@ -10,7 +10,7 @@
 % Claim 3 -- "initial deviation doesn't affect control":
 %   window contrast -- init-dev drives the EARLY transient but not the settled LATE.
 %
-% Stats: per-session slope of z-scored RMSE on factor, Wilcoxon signed-rank
+% Stats: per-session slope of RAW RMSE (%dF/F) on factor, Wilcoxon signed-rank
 % (unit = session). Claim 2 additionally confirmed with a linear MIXED-EFFECTS
 % model (trial-level, random effects for session and animal).
 %
@@ -27,7 +27,10 @@ earlyC = c0 : c0+round(1*Fs);
 lateC  = c0+round(1*Fs)+1 : c0+round(3*Fs);
 sa=c0_l-round(2*Fs); sb=c0_l+round(3*Fs);
 bp=@(seg,lo,hi) local_bp(seg,Fs,lo,hi);
-zwin=@(y1,y2) deal((y1-mean([y1;y2]))/std([y1;y2]), (y2-mean([y1;y2]))/std([y1;y2]));
+% RAW RMSE, never z-scored (2026-08-13, project rule): RMSE is positive and its across-session
+% spread is real signal. This was a pooled within-session z-score; now an identity, kept so every
+% call site keeps its signature.
+zwin=@(y1,y2) deal(y1, y2);
 slp=@(x,y) local_slp(x,y);
 
 % accumulators: HI = claim2 (2-4 Hz), LO = null control (1-2 Hz)
@@ -95,7 +98,7 @@ mk_ol_cl(HI, outdir,'claim2_delta_hi24_late','Relative 2-4 Hz quartile (low \rig
 mk_ol_cl(LO, outdir,'claim2_delta_lo12_late','Relative 1-2 Hz quartile (low \rightarrow high)', sig_star(pLoInt), PS, nBins, true);
 mk_earlylate(c3, outdir,'claim3_initdev_early_late', PS, nBins);
 
-fprintf('\n[cl_factor_claim_panels] exported claim2_delta_hi24_late, claim2_delta_lo12_late, claim3_initdev_early_late (+_z,.pdf)\n');
+fprintf('\n[cl_factor_claim_panels] exported claim2_delta_hi24_late, claim2_delta_lo12_late, claim3_initdev_early_late (.png/.pdf, raw RMSE only)\n');
 
 %% ---- helpers ----
 function A=accum(A,xo,xc,yo,yc,nBins,zwin,slp)
@@ -109,9 +112,8 @@ function A=accum(A,xo,xc,yo,yc,nBins,zwin,slp)
     end
 end
 function mk_ol_cl(A,outdir,base,xlab,star,PS,nBins,~)
-    for mi=1:2
-        if mi==1; bO=A.rmO;bC=A.rmC; ylab='RMSE 1-3 s (%\DeltaF/F)'; suf='';
-        else;     bO=A.zmO;bC=A.zmC; ylab='RMSE 1-3 s (z)';         suf='_z'; end
+    for mi=1                       % '_z' variant dropped 2026-08-13 -- RMSE is not z-scored
+        bO=A.rmO; bC=A.rmC; ylab='RMSE 1-3 s (%\DeltaF/F)'; suf='';
         mO=cellfun(@mean,bO);eO=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),bO);
         mC=cellfun(@mean,bC);eC=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),bC);
         fig=paperFig(6,4);ax=gca;hold(ax,'on');xq=1:nBins;w=0.35;
@@ -129,9 +131,8 @@ function mk_ol_cl(A,outdir,base,xlab,star,PS,nBins,~)
 end
 function mk_earlylate(c3,outdir,base,PS,nBins)
     col_e=[0.45 0.75 0.50]; col_l=[0.10 0.45 0.20];
-    for mi=1:2
-        if mi==1; bE=c3.reE;bL=c3.reL; ylab='RMSE (%\DeltaF/F)'; suf='';
-        else;     bE=c3.zeE;bL=c3.zeL; ylab='RMSE (z)';         suf='_z'; end
+    for mi=1                       % '_z' variant dropped 2026-08-13 -- RMSE is not z-scored
+        bE=c3.reE; bL=c3.reL; ylab='RMSE (%\DeltaF/F)'; suf='';
         mE=cellfun(@mean,bE);eE=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),bE);
         mL=cellfun(@mean,bL);eL=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),bL);
         fig=paperFig(6,4);ax=gca;hold(ax,'on');xq=1:nBins;w=0.35;

@@ -47,7 +47,6 @@ F(3).get=@(dk,ref,dur) delta_meas(dk,c0_l,Fs,bandpow);
 for fi = 1:numel(F)
     slopeOL=nan(numel(fields),1); slopeCL=nan(numel(fields),1);
     rbinOL=cell(1,nBins); rbinCL=cell(1,nBins);   % RAW RMSE per quartile
-    zbinOL=cell(1,nBins); zbinCL=cell(1,nBins);   % z-scored RMSE per quartile
 
     for k = 1:numel(fields)
         s = mouse.(fields{k});
@@ -65,19 +64,18 @@ for fi = 1:numel(F)
         xnc=xnc(g1); ync=ync(g1); xcl=xcl(g2); ycl=ycl(g2);
         if numel(ync)<10 || numel(ycl)<10; continue; end
 
-        % STAT: per-session slope on z-scored RMSE (within-session, pooled OL+CL)
-        % -- kept z-scored so the interaction test matches the manuscript method.
-        mu=mean([ync;ycl]); sg=std([ync;ycl]);
-        znc=(ync-mu)/sg; zcl=(ycl-mu)/sg;
-        bo=polyfit(xnc,znc,1); slopeOL(k)=bo(1);
-        bc=polyfit(xcl,zcl,1); slopeCL(k)=bc(1);
+        % STAT: per-session slope on RAW RMSE (%dF/F). Was z-scored within session (pooled OL+CL)
+        % until 2026-08-13 -- removed on the project rule that RMSE is a positive quantity whose
+        % across-session spread is real signal and must not be normalized away. OL and CL are in
+        % the same units, so the interaction test is unaffected by the missing rescale.
+        bo=polyfit(xnc,ync,1); slopeOL(k)=bo(1);
+        bc=polyfit(xcl,ycl,1); slopeCL(k)=bc(1);
 
-        % VISUAL: RAW RMSE (%dF/F) per quartile (z-score confused NL)
+        % VISUAL: RAW RMSE (%dF/F) per quartile
         edges=quantile([xnc;xcl],linspace(0,1,nBins+1)); edges(1)=-inf; edges(end)=inf;
         bnc=discretize(xnc,edges); bcl=discretize(xcl,edges);
         for b=1:nBins
             rbinOL{b}=[rbinOL{b}; ync(bnc==b)]; rbinCL{b}=[rbinCL{b}; ycl(bcl==b)];
-            zbinOL{b}=[zbinOL{b}; znc(bnc==b)]; zbinCL{b}=[zbinCL{b}; zcl(bcl==b)];
         end
     end
 
@@ -88,10 +86,11 @@ for fi = 1:numel(F)
         F(fi).key, sum(v), median(slopeOL(v)), median(slopeCL(v)), p_diff, star);
 
     [~,base]=fileparts(F(fi).file);
-    % two y-axis versions: raw RMSE (%dF/F) and within-session z-scored
-    MODE(1)=struct('bO',{rbinOL},'bC',{rbinCL},'ylab','RMSE (%\DeltaF/F)','suf','');
-    MODE(2)=struct('bO',{zbinOL},'bC',{zbinCL},'ylab','RMSE (z)','suf','_z');
-    for mi=1:2
+    % ONE y-axis version: raw RMSE (%dF/F). The '_z' within-session z-scored variant was dropped
+    % 2026-08-13 -- it plotted the same panel in normalized units, which is the thing the project
+    % rule forbids, and keeping both invited the wrong one into the figure.
+    MODE=struct('bO',{rbinOL},'bC',{rbinCL},'ylab','RMSE (%\DeltaF/F)','suf','');
+    for mi=1:numel(MODE)
         mO=cellfun(@mean,MODE(mi).bO); eO=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),MODE(mi).bO);
         mC=cellfun(@mean,MODE(mi).bC); eC=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),MODE(mi).bC);
 
@@ -119,7 +118,7 @@ for fi = 1:numel(F)
         paperExport(fig, fullfile(paper_root,'images','figure4',[base MODE(mi).suf '.pdf']));
         close(fig);
     end
-    fprintf('  exported %s(.png/.pdf) + %s_z(.png/.pdf)\n', base, base);
+    fprintf('  exported %s(.png/.pdf)   [raw RMSE only -- _z variant dropped 2026-08-13]\n', base);
 end
 
 %% ---- helpers ----

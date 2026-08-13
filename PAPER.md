@@ -439,13 +439,24 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > none of it in either window. So the error feedback cannot remove is not transient leftovers — it
 > is a different quantity, tied to ongoing 2–4 Hz activity.
 >
+> **RMSE IS NEVER Z-SCORED** anywhere in Part 1 (rule set 2026-08-13). It is a positive quantity in
+> %ΔF/F and the spread *across* sessions is real — some sessions simply track worse — so dividing
+> each session by its own SD discards exactly the variability these panels are about. All slopes
+> below are raw %ΔF/F per unit factor. (Unique R² is scale-invariant, so P1-a is numerically the
+> same either way; the paired-slope panels are not, and they changed.)
+>
 > | Panel | File (`paper/images/figure4/`) | Content | Source | Stat |
 > |---|---|---|---|---|
 > | P1-a | `f4p1_error_decomp.png` | **The decomposition itself** — unique R² per factor × window, 95% bootstrap CI | `cl_factor_decomp_panel.m` | init-dev 0.381→0.029 (13×), rel 2–4 Hz 0.089→0.122; R²_full 0.41/0.13; 613 trials / 11 sessions |
-> | P1-b | `factor_slope_initdev.png` | Init-dev: Early-vs-Late paired slope (within CL) — "transient only" | `cl_factor_slope_panels.m` | Early +0.297 / Late +0.089, signrank **p=6.1e-5 \*\*\***, n=15 |
-> | P1-c | `factor_slope_motion.png` | Motion: OL-vs-CL paired slope — decoupling | `cl_factor_slope_panels.m` | OL +0.686 / CL −0.016, **p=0.0020 \*\***, n=11 |
-> | P1-d | `factor_slope_delta24.png` | Relative 2–4 Hz: OL-vs-CL paired slope — the hard-to-control band | `cl_factor_slope_panels.m` | OL −0.511 / CL +0.813, **p=0.0125 \***, n=15 |
-> | P1-e | `factor_slope_delta12.png` | Relative 1–2 Hz: same test — **specificity null control** | `cl_factor_slope_panels.m` | OL −0.319 / CL +0.068, p=0.76 n.s., n=15 |
+> | P1-b | `factor_slope_initdev.png` | Init-dev: Early-vs-Late paired slope (within CL) — "transient only" | `cl_factor_slope_panels.m` | Early +0.275 / Late +0.042, signrank **p=6.1e-5 \*\*\***, n=15 |
+> | P1-c | `factor_slope_motion.png` | Motion: OL-vs-CL paired slope — decoupling | `cl_factor_slope_panels.m` | OL +0.652 / CL −0.016, **p=0.0020 \*\***, n=11 |
+> | P1-d | `factor_slope_delta24.png` | Relative 2–4 Hz: OL-vs-CL paired slope — the hard-to-control band | `cl_factor_slope_panels.m` | OL −0.474 / CL +0.847, **p=0.0067 \*\***, n=15 |
+> | P1-e | `factor_slope_delta12.png` | Relative 1–2 Hz: same test — **specificity null control** | `cl_factor_slope_panels.m` | OL −0.408 / CL +0.061, p=0.76 n.s., n=15 |
+>
+> **Cross-session confirmation for P1-d** (`cl_factor_claim_panels.m`): mixed-effects
+> `rmse ~ rel24 + (1+rel24|session) + (1|animal)`, **852 trials / 15 sessions / 4 animals** —
+> standardized rel24 fixed effect **+0.127 [0.052, 0.202], t=3.33, p=0.00092**. Survives session
+> (random slope) *and* animal clustering. Quote this, not the per-session signed-rank.
 >
 > **Pools.** P1-a scores all three factors on the same trials (the motion-complete sessions:
 > 613 trials / 11 sessions) — one panel, one pool. Dropping motion recovers all 15 sessions
@@ -454,17 +465,29 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > P1-b/d/e use all 15 sessions; P1-c is motion-limited to 11 by definition.
 >
 > **Two collapse numbers, both real, do not mix them.** Init-dev's *unique R²* collapses 13×
-> (0.381→0.029); its *slope* collapses ~3× (+0.297→+0.089, and the late slope is still ≠0 at
-> p=0.003). Variance ownership falls much faster than the slope because late RMSE is far less
-> variable. Quote the R² collapse for "what the error is made of" and the slope collapse for
-> "how strongly it acts".
+> (0.381→0.029); its *slope* collapses ~7× (+0.275→+0.042, and the late slope is still ≠0 at
+> p=0.002). Variance ownership falls faster than the slope because late RMSE is less variable.
+> Quote the R² collapse for "what the error is made of" and the slope collapse for "how strongly
+> it acts".
 >
-> **NOT in this figure:** `delta_burst_gallery.png` — the discrete delta-burst hunt (2026-07-22)
-> returned a clean **null** (burst vs no-burst 1.74 vs 1.59, ranksum p=0.56; every timing variant
-> n.s.). It was the exploration that *led* to the 2–4 Hz sub-band split, and it is flagged for the
-> spirals analysis; it is not a Part-1 panel. Superseded quartile-bar family (`factor_olcl_*`,
-> `claim2_*`, `claim3_*`, `cl_mse_exemplars`, `cl_rmse_factor_windows` 6-tile grid) → supplementary
-> or archive; the paired-slope + decomposition set replaces them.
+> **Also in the figure (quartile-bar family, retained 2026-08-13 — user).** `factor_olcl_initdev`
+> · `factor_olcl_motion` · `factor_olcl_delta` · `claim2_delta_hi24_late` ·
+> `claim2_delta_lo12_late` · `claim3_initdev_early_late`. These show the same tests as quartile
+> bars in raw %ΔF/F and are kept for the story they tell together with the slope panels. Caveat
+> carried from 2026-07-22: `factor_olcl_delta` is the **full-window** version and has a messy
+> OL slope (−1.205) — the late-window `factor_slope_delta24` is the canonical delta result.
+>
+> **Part-1 supplementary panels** (2026-08-13 — user): `delta_burst_gallery.png`
+> (`cl_delta_burst_explore.m`) — 252/852 CL trials (30%) carry ≥1 short 0.4–1.5 s delta burst,
+> shown against the 1–4 Hz component. ⚠ Burst *count* does **not** predict RMSE (1.74 vs 1.59,
+> ranksum p=0.56; every timing variant n.s.); the panel is the qualitative picture of the activity,
+> and the quantitative claim is the continuous 2–4 Hz measure in P1-d. And `cl_mse_exemplars.png`
+> (`cl_mse_exemplars.m`) — three exemplar trials per error type (initial deviation / motion /
+> pre-trial variability), i.e. what each factor *looks like* on a single trial.
+>
+> **Archived, not deleted:** the `_z` (within-session z-scored RMSE) variant of every quartile
+> panel → `paper/images/figure4/_archive_zscored/`. They are the same panels in the units the
+> 2026-08-13 rule forbids; the generating code paths are removed so they cannot be rebuilt as-is.
 
 <details><summary>Prior state-dependence candidate audit (2026-07-21, superseded by the residual reframe)</summary>
 

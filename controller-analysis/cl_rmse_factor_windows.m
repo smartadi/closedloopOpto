@@ -133,7 +133,8 @@ Pr    = nan(3,3);     % factor × outcome   (partial/unique R²)
 PrCI  = nan(3,3,2);   % + bootstrap CI
 Rfull = nan(1,3);
 for o = 1:3
-    y = zscore(outs{o});
+    y = outs{o};   % RAW RMSE, never z-scored (2026-08-13, user). R^2 is scale-invariant, so the
+                   % partial R^2 table is unchanged -- but the code no longer normalizes RMSE.
     rf = fitR2(Zabs, y); Rfull(o) = rf;
     for j = 1:3
         oth = setdiff(1:3,j);
@@ -163,7 +164,7 @@ Drob = nan(3,2);   % definition × window(early,late)
 for d = 1:3
     Xd = zscore([X1, X2, delvar{d}]);
     for o = 1:2
-        y = zscore(outs{o}); rf = fitR2(Xd,y);
+        y = outs{o}; rf = fitR2(Xd,y);
         Drob(d,o) = rf - fitR2(Xd(:,[1 2]), y);
     end
 end

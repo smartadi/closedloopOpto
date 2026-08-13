@@ -7,7 +7,7 @@
 %   baselines, so between-session structure makes the 1-2 Hz NULL panel rise
 %   about as much as the 2-4 Hz panel even though the session-level stats
 %   separate them cleanly. This panel plots the exact quantity the test uses --
-%   each session's slope of (within-session z-scored) RMSE on the factor, OL and
+%   each session's slope of RAW RMSE (%dF/F, never z-scored) on the factor, OL and
 %   CL joined by a line -- so the picture matches the statistic. A dropping line
 %   = feedback flattens that factor's effect (decoupling); a flat pair = no
 %   decoupling; a rising line = CL steeper.
@@ -41,7 +41,14 @@ lateC  = c0+round(1*Fs)+1 : c0+round(3*Fs);      % settled 1-3 s
 sa=c0_l-round(2*Fs); sb=c0_l+round(3*Fs);        % -2 s -> stim end
 bp = @(seg,lo,hi) local_bp(seg,Fs,lo,hi);
 slp= @(x,y) local_slp(x,y);
-zpool = @(a,b) deal((a-mean([a;b]))/std([a;b]), (b-mean([a;b]))/std([a;b]));
+% RMSE IS NEVER Z-SCORED (2026-08-13, user). It is a positive quantity in %dF/F, and the spread
+% ACROSS sessions is real signal -- some sessions simply track worse than others -- so dividing
+% each session by its own SD throws away exactly the variability the figure is about. This used to
+% pool OL+CL and z-score by the combined SD; that left the within-session OL/CL ratio intact but
+% rescaled every session onto a common yardstick, which is the normalization being removed.
+% Slopes are now raw: %dF/F of RMSE per unit of the factor. OL and CL stay comparable because they
+% are in the same units to begin with.
+zpool = @(a,b) deal(a, b);   %#ok<NASGU>  identity -- kept so pair_slope's signature is unchanged
 
 % per-session slope accumulators for each factor
 S.initdev_wl = nan(nSess,2);   % [EARLY LATE] within CL  (the panel)
@@ -69,8 +76,11 @@ for k=1:nSess
     % (a) EARLY-vs-LATE within CL -- the "transient only" claim (the panel)
     if numel(xc)>=10
         gz=isfinite(xc)&isfinite(yEc)&isfinite(yLc); xcg=xc(gz);
-        zE=(yEc(gz)-mean(yEc(gz)))/std(yEc(gz)); zL=(yLc(gz)-mean(yLc(gz)))/std(yLc(gz));
-        S.initdev_wl(k,:)=[slp(xcg,zE) slp(xcg,zL)];
+        % RAW RMSE in both windows (see the zpool note above). Early and Late are already in the
+        % same units, and init-dev is also %dF/F, so these two slopes are dimensionless and
+        % directly comparable -- z-scoring each window separately was erasing the fact that the
+        % transient window carries much more error than the settled one.
+        S.initdev_wl(k,:)=[slp(xcg,yEc(gz)) slp(xcg,yLc(gz))];
     end
     % (b) OL-vs-CL full window -- positive control (printed, not plotted)
     S.initdev_lp(k,:)=pair_slope(xo,xc,yFo,yFc,zpool,slp);
@@ -100,7 +110,7 @@ P(2)=struct('key','motion', 'data',S.motion, 'xl','Motion',         'lab',{{'OL'
 P(3)=struct('key','delta24','data',S.delta24,'xl','Relative 2-4 Hz','lab',{{'OL','CL'}},'cA',PS.col_ol,'cB',PS.col_cl,'ttl','hard-to-control band');
 P(4)=struct('key','delta12','data',S.delta12,'xl','Relative 1-2 Hz','lab',{{'OL','CL'}},'cA',PS.col_ol,'cB',PS.col_cl,'ttl','null control');
 
-fprintf('\n=== per-session paired slope (z-RMSE vs factor) ===\n');
+fprintf('\n=== per-session paired slope (RAW RMSE %%dF/F vs factor; no z-scoring) ===\n');
 for i=1:numel(P)
     D=P(i).data; v=isfinite(D(:,1))&isfinite(D(:,2));
     sA=D(v,1); sB=D(v,2); p=signrank(sA,sB);
@@ -154,7 +164,7 @@ function mk_slope(sA,sB,outdir,base,star,xl,~,legend_on,lab,cA,cB)
         'MarkerEdgeColor','k','MarkerSize',4,'LineWidth',0.8,'CapSize',3,'HandleVisibility','off');
     set(ax,'XTick',[x1 x2],'XTickLabel',lab,'Box','off','TickDir','out', ...
         'FontSize',6,'FontWeight','bold'); xlim(ax,[0.5 2.5]);
-    ylabel(ax,'Slope: z-RMSE vs factor','FontSize',6,'FontWeight','bold');
+    ylabel(ax,'Slope: RMSE vs factor','FontSize',6,'FontWeight','bold');
     xlabel(ax,xl,'FontSize',6,'FontWeight','bold');
     yl=ylim(ax); text(ax,1.5,yl(2),star,'HorizontalAlignment','center','VerticalAlignment','top', ...
         'FontSize',8,'FontWeight','bold'); ylim(ax,[yl(1) yl(2)+0.12*range(yl)]);

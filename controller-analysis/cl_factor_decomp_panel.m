@@ -19,6 +19,12 @@
 % (partial/unique R^2), so shared variance is charged to nobody and the bars do not double-count.
 % They therefore sum to LESS than the full model R^2, which is printed on the panel.
 %
+% RMSE IS NOT Z-SCORED (2026-08-13, user): it is a positive quantity in %dF/F and the spread across
+% sessions is real. R^2 is invariant to any linear rescaling of the outcome, so this panel's bars
+% are numerically identical either way -- the change is that the code no longer LOOKS like it
+% normalizes away session variability, and the slope panels (which are NOT scale-invariant) are
+% now consistent with it.
+%
 % THE POOL. All three factors are scored on the SAME trials -- the sessions that carry motion
 % (motion is the only factor with a coverage gap). One panel, one pool. The script then prints the
 % all-session two-factor check: dropping motion buys back 4 sessions and moves nothing, which is
@@ -100,7 +106,7 @@ nF = 3; nW = 2; n = size(Z,1);
 
 Pr = nan(nF,nW); PrCI = nan(nF,nW,2); Rfull = nan(1,nW);
 for o = 1:nW
-    y = zscore(Yw{o});  rf = fitR2(Z,y);  Rfull(o) = rf;
+    y = Yw{o};  rf = fitR2(Z,y);  Rfull(o) = rf;   % RAW RMSE, never z-scored (2026-08-13, user)
     for j = 1:nF, Pr(j,o) = rf - fitR2(Z(:,setdiff(1:nF,j)), y); end
     bp = nan(FD_BOOT,nF);
     for b = 1:FD_BOOT
@@ -158,7 +164,7 @@ fprintf('\n[F4P1-ROBUST] two-factor model, motion gate OFF: %d trials / %d sessi
     nnz(okAll), numel(unique(SESS(okAll))));
 fprintf('  %-12s %10s %12s %12s\n','window','full R^2','init-dev','rel 2-4 Hz');
 for o = 1:nW
-    y = zscore(Y2{o}); rf = fitR2(Z2,y);
+    y = Y2{o}; rf = fitR2(Z2,y);
     fprintf('  %-12s %10.3f %12.3f %12.3f\n', win_lbl{o}, rf, rf-fitR2(Z2(:,2),y), rf-fitR2(Z2(:,1),y));
 end
 fprintf('  (gated equivalents: %.3f / %.3f full, %.3f / %.3f init-dev, %.3f / %.3f delta)\n', ...
