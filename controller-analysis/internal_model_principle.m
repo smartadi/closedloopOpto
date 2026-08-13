@@ -496,7 +496,7 @@ for rr=1:2
     A=rowspec{rr,1}; G=rowspec{rr,2}; idx=rowspec{rr,3}; rhov=rowspec{rr,4}; col=rowspec{rr,5}; nm=rowspec{rr,6};
     for cc=1:ncols
         ax=nexttile(tlr,(rr-1)*ncols+cc); k=idx(cc);
-        h = plot_reject_panel(ax, tt, G(k,:), A(k,:), ref, col, resp_s);
+        h = imp_reject_panel_plot(ax, tt, G(k,:), A(k,:), ref, col, resp_s);
         title(ax,sprintf('%s trial %d   ||E||/||D||=%.2f',nm,k,rhov(k)),'FontWeight','normal');
         if cc==1; ylabel(ax,'%\DeltaF/F'); end
         if rr==2; xlabel(ax,'time from stim (s)'); end
@@ -695,41 +695,16 @@ k = CK.tidx(i);  tt = CK.tt;
 if ~isempty(CK.hMark) && ishandle(CK.hMark), delete(CK.hMark); end
 CK.hMark = plot(CK.axS, CK.x(i), CK.y(i), 'ko','MarkerSize',12,'LineWidth',1.7); guidata(f,CK);
 ax = CK.axI; delete(allchild(ax)); hold(ax,'off');   % clear ALL children incl. hidden-handle (pre-stim) lines
-h = plot_reject_panel(ax, tt, G(k,:), A(k,:), CK.ref, col, CK.resp_s, true);   % raw-A pre-stim only
+h = imp_reject_panel_plot(ax, tt, G(k,:), A(k,:), CK.ref, col, CK.resp_s, true);   % raw-A pre-stim only
 xlabel(ax,'time from stim (s)'); ylabel(ax,'%\DeltaF/F');
 w = CK.w_rej; Dm = sqrt(mean(G(k,w).^2)); Em = sqrt(mean((A(k,w)-CK.ref).^2)); rho = Em/Dm;
 title(ax,sprintf('%s trial %d:  ||E||/||D||=%.2f   ||G||=%.2f   ||E||=%.2f',nm,k,rho,Dm,Em),'FontWeight','normal');
 legend(ax,[h.D h.A h.E],'Location','northwest','Box','off');
 end
 
-function h = plot_reject_panel(ax, tt, Dk, Ak, ref, col, resp_s, aPreOnly)
-% One rejection trial panel, shared by the gallery and the click reveal:
-%   D = G        disturbance / stim-blind contra prediction         (gray, solid)
-%   A (no ref)   raw actual ipsi, NOT ref-subtracted                (light dashed)
-%                -> pre-stim A ~ G ~ 0, i.e. the reference is effectively zero
-%                   before the laser; post-stim A shows the true suppression.
-%   E = A - ref  subdued error (the metric numerator); pre-stim drawn lighter to
-%                mark the ref-zero baseline, post-stim in full condition colour.
-% aPreOnly (default false): draw the raw-A dashed trace pre-stim only (t<0).
-if nargin<8 || isempty(aPreOnly), aPreOnly=false; end
-hold(ax,'on');
-Ek = Ak - ref;  ipre = tt<0;  ipost = ~ipre;
-lcol = col + 0.55*([1 1 1]-col);                            % lighter tint of the condition colour
-if aPreOnly, aY = Ak(ipre); else, aY = Ak; end             % A samples that will be shown
-yl = [min([Dk aY Ek])-1, max([Dk aY Ek])+1];
-patch(ax,[1 resp_s resp_s 1],[yl(1) yl(1) yl(2) yl(2)],[.92 .92 .92],'EdgeColor','none','HandleVisibility','off');
-yline(ax,0,':','Color',[.6 .6 .6],'HandleVisibility','off');
-xline(ax,0,':','Color',[.6 .6 .6],'HandleVisibility','off');
-h.D = plot(ax,tt,Dk,'-','Color',[.45 .45 .45],'LineWidth',1.2,'DisplayName','disturbance D = contra pred');
-if aPreOnly
-    h.A = plot(ax,tt(ipre),Ak(ipre),'--','Color',lcol,'LineWidth',1.1,'DisplayName','actual A (no ref, pre-stim)');
-else
-    h.A = plot(ax,tt,Ak,'--','Color',lcol,'LineWidth',1.1,'DisplayName','actual A (no ref)');
-end
-plot(ax,tt(ipre),Ek(ipre),'-','Color',lcol,'LineWidth',1.2,'HandleVisibility','off');   % pre-stim error (ref-zero baseline)
-h.E = plot(ax,tt(ipost),Ek(ipost),'-','Color',col,'LineWidth',1.6,'DisplayName','subdued error E = A - ref');
-xlim(ax,[tt(1) tt(end)]); ylim(ax,yl); box(ax,'off'); set(ax,'TickDir','out');
-end
+% plot_reject_panel MOVED 2026-08-13 -> utils/imp_reject_panel_plot.m, so the batch version
+% (imp_reject_gallery_all.m) draws the identical panel instead of keeping a second copy.
+% Same rule as the rho lambdas above: edit it there, never re-inline it here.
 
 
 
