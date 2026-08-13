@@ -47,6 +47,7 @@ F(3).get=@(dk,ref,dur) delta_meas(dk,c0_l,Fs,bandpow);
 for fi = 1:numel(F)
     slopeOL=nan(numel(fields),1); slopeCL=nan(numel(fields),1);
     rbinOL=cell(1,nBins); rbinCL=cell(1,nBins);   % RAW RMSE per quartile
+    psO=[]; psC=[]; psMu=[];                      % per-session bin means + session level
 
     for k = 1:numel(fields)
         s = mouse.(fields{k});
@@ -74,9 +75,13 @@ for fi = 1:numel(F)
         % VISUAL: RAW RMSE (%dF/F) per quartile
         edges=quantile([xnc;xcl],linspace(0,1,nBins+1)); edges(1)=-inf; edges(end)=inf;
         bnc=discretize(xnc,edges); bcl=discretize(xcl,edges);
+        rowO=nan(1,nBins); rowC=nan(1,nBins);
         for b=1:nBins
             rbinOL{b}=[rbinOL{b}; ync(bnc==b)]; rbinCL{b}=[rbinCL{b}; ycl(bcl==b)];
+            if any(bnc==b); rowO(b)=mean(ync(bnc==b)); end
+            if any(bcl==b); rowC(b)=mean(ycl(bcl==b)); end
         end
+        psO(end+1,:)=rowO; psC(end+1,:)=rowC; psMu(end+1,1)=mean([ync;ycl]); %#ok<AGROW>
     end
 
     v=isfinite(slopeOL)&isfinite(slopeCL);
@@ -93,13 +98,18 @@ for fi = 1:numel(F)
     % difference, cleaner neuroscience version). Points encode position, not length from zero,
     % which is what makes cropping the y-axis to the data range legitimate -- a cropped BAR
     % misstates every ratio on the panel. See that file's header.
-    sem = @(x) std(x)/sqrt(max(numel(x),1));
+    % WITHIN-SESSION normalization (2026-08-13): subtract each session's own level (its OL+CL
+    % trials together, so the OL-CL gap survives), add the grand mean back so the axis stays in
+    % %dF/F, and take SEM across SESSIONS -- the unit the signed-rank test uses. Pooling raw
+    % trials let session difficulty leak into the quartile means by a different amount per factor.
+    grand = mean(vertcat(rbinOL{:},rbinCL{:}));
+    cO = psO - psMu + grand;   cC = psC - psMu + grand;
+    sm = @(C) std(C,0,1,'omitnan') ./ sqrt(max(sum(isfinite(C),1),1));
     o = struct('lab',{{'Open loop','Closed loop'}}, 'col',[PS.col_ol; PS.col_cl], ...
         'xlab',F(fi).xlab, 'ylab','RMSE (%\DeltaF/F)', 'star',star, ...
         'legend',strcmp(F(fi).key,LEGEND_ON), ...
         'file',fullfile(paper_root,'images','figure4',base), 'pdf',true, 'xticks',{{}});
-    cl_quartile_line(cellfun(@mean,rbinOL), cellfun(sem,rbinOL), ...
-                     cellfun(@mean,rbinCL), cellfun(sem,rbinCL), o);
+    cl_quartile_line(mean(cO,1,'omitnan'), sm(cO), mean(cC,1,'omitnan'), sm(cC), o);
     fprintf('  exported %s(.png/.pdf)   [point-and-line, cropped y-axis]\n', base);
 end
 

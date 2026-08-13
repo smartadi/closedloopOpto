@@ -33,10 +33,23 @@ bp=@(seg,lo,hi) local_bp(seg,Fs,lo,hi);
 zwin=@(y1,y2) deal(y1, y2);
 slp=@(x,y) local_slp(x,y);
 
+% WITHIN-SESSION NORMALIZATION (2026-08-13). Pooling raw trial RMSE across sessions lets each
+% session's overall difficulty leak into the quartile means, and it leaks by a DIFFERENT amount per
+% band -- measured: it hides 25% of the real 2-4 Hz rise while manufacturing 52% of the apparent
+% 1-2 Hz rise, which is what made the effect panel and its null control converge to look alike.
+% Each session's own mean (over its OL+CL trials together, so the OL-CL gap and the quartile trend
+% both survive) is subtracted and the grand mean added back, so the axis stays in %dF/F.
+% Error bars become SEM across SESSIONS -- the unit the signed-rank test uses. Trial-SEM was ~3x
+% too small because trials within a session are not independent.
+CLM_WITHIN = true;    % false = old pooled-trial panels
+
 % accumulators: HI = claim2 (2-4 Hz), LO = null control (1-2 Hz)
 HI.rmO=cell(1,nBins);HI.rmC=cell(1,nBins);HI.zmO=cell(1,nBins);HI.zmC=cell(1,nBins);HI.sOL=[];HI.sCL=[];
 LO.rmO=cell(1,nBins);LO.rmC=cell(1,nBins);LO.zmO=cell(1,nBins);LO.zmC=cell(1,nBins);LO.sOL=[];LO.sCL=[];
 c3.reE=cell(1,nBins);c3.reL=cell(1,nBins);c3.zeE=cell(1,nBins);c3.zeL=cell(1,nBins);c3.sE=[];c3.sL=[];
+% per-session bin means + session level, for the within-session panels
+HI.pO=[];HI.pC=[];HI.mu=[];  LO.pO=[];LO.pC=[];LO.mu=[];
+c3.pE=[];c3.pL=[];c3.mu=[];
 % flat table for mixed-effects (CL trials)
 LME.y=[]; LME.x=[]; LME.sess=[]; LME.animal={};
 
@@ -62,13 +75,16 @@ for k=1:numel(fields)
 
     % Claim 3: init-dev (CL), early vs late
     idC=abs(dk.wcDfk(:,c0)-ref);
-    zEc=(rEc-mean(rEc))/std(rEc); zLcc=(rLc-mean(rLc))/std(rLc);
-    c3.sE(end+1)=slp(idC,zEc); c3.sL(end+1)=slp(idC,zLcc);
+    % RAW RMSE (the 2026-08-13 rule) -- these two were still z-scored per window until then,
+    % which is why they printed +0.297/+0.089 while the slope panels printed +0.275/+0.042.
+    c3.sE(end+1)=slp(idC,rEc); c3.sL(end+1)=slp(idC,rLc);
     e3=quantile(idC,linspace(0,1,nBins+1)); e3(1)=-inf; e3(end)=inf; b3=discretize(idC,e3);
+    rowE=nan(1,nBins); rowL=nan(1,nBins);
     for b=1:nBins
         c3.reE{b}=[c3.reE{b};rEc(b3==b)]; c3.reL{b}=[c3.reL{b};rLc(b3==b)];
-        c3.zeE{b}=[c3.zeE{b};zEc(b3==b)]; c3.zeL{b}=[c3.zeL{b};zLcc(b3==b)];
+        if any(b3==b); rowE(b)=mean(rEc(b3==b)); rowL(b)=mean(rLc(b3==b)); end
     end
+    c3.pE(end+1,:)=rowE; c3.pL(end+1,:)=rowL; c3.mu(end+1,1)=mean([rEc;rLc]);
 end
 
 % ---- signed-rank stats ----
@@ -81,22 +97,25 @@ fprintf('CLAIM 3  init-dev CL: EARLY %+.3f (p=%.4g) LATE %+.3f (p=%.4g)\n',media
 
 % ---- mixed-effects confirmation of claim 2 ----
 try
-    zx=(LME.x-mean(LME.x))/std(LME.x); zy=(LME.y-mean(LME.y))/std(LME.y);
+    % Predictor standardized so the coefficient reads "per SD of rel 2-4 Hz"; the OUTCOME stays
+    % RAW RMSE in %dF/F (2026-08-13 rule). Session level is handled by (1|session), not by
+    % rescaling y. p and t are unchanged by this -- only the units of the estimate.
+    zx=(LME.x-mean(LME.x))/std(LME.x); zy=LME.y;
     tb=table(zy,zx,categorical(LME.sess),categorical(LME.animal),'VariableNames',{'rmse','rel24','session','animal'});
     lme=fitlme(tb,'rmse ~ rel24 + (1 + rel24 | session) + (1 | animal)');
     ci=coefCI(lme); ir=strcmp(lme.CoefficientNames,'rel24');
     fprintf('\nMIXED-EFFECTS (rmse ~ rel24 + (1+rel24|session) + (1|animal)), n=%d trials, %d sessions, %d animals:\n', ...
         height(tb), numel(unique(LME.sess)), numel(unique(LME.animal)));
-    fprintf('  rel24 fixed effect (standardized) = %+.3f  [%.3f, %.3f]  t=%.2f  p=%.4g\n', ...
+    fprintf('  rel24 fixed effect = %+.3f %%dF/F per SD  [%.3f, %.3f]  t=%.2f  p=%.4g\n', ...
         lme.Coefficients.Estimate(ir), ci(ir,1), ci(ir,2), lme.Coefficients.tStat(ir), lme.Coefficients.pValue(ir));
 catch ME
     fprintf('\nMIXED-EFFECTS skipped: %s\n', ME.message);
 end
 
 % ---- panels ----
-mk_ol_cl(HI, outdir,'claim2_delta_hi24_late','Relative 2-4 Hz quartile (low \rightarrow high)', sig_star(pHiInt), PS, nBins, true);
-mk_ol_cl(LO, outdir,'claim2_delta_lo12_late','Relative 1-2 Hz quartile (low \rightarrow high)', sig_star(pLoInt), PS, nBins, true);
-mk_earlylate(c3, outdir,'claim3_initdev_early_late', PS, nBins);
+mk_ol_cl(HI, outdir,'claim2_delta_hi24_late','Relative 2-4 Hz quartile (low \rightarrow high)', sig_star(pHiInt), PS, nBins, CLM_WITHIN);
+mk_ol_cl(LO, outdir,'claim2_delta_lo12_late','Relative 1-2 Hz quartile (low \rightarrow high)', sig_star(pLoInt), PS, nBins, CLM_WITHIN);
+mk_earlylate(c3, outdir,'claim3_initdev_early_late', PS, nBins, CLM_WITHIN);
 
 fprintf('\n[cl_factor_claim_panels] exported claim2_delta_hi24_late, claim2_delta_lo12_late, claim3_initdev_early_late (.png/.pdf, raw RMSE only)\n');
 
@@ -106,30 +125,56 @@ function A=accum(A,xo,xc,yo,yc,nBins,zwin,slp)
     A.sOL(end+1)=slp(xo,zo); A.sCL(end+1)=slp(xc,zc);
     e=quantile([xo;xc],linspace(0,1,nBins+1)); e(1)=-inf; e(end)=inf;
     bo=discretize(xo,e); bc=discretize(xc,e);
+    rowO=nan(1,nBins); rowC=nan(1,nBins);
     for b=1:nBins
         A.rmO{b}=[A.rmO{b};yo(bo==b)]; A.rmC{b}=[A.rmC{b};yc(bc==b)];
-        A.zmO{b}=[A.zmO{b};zo(bo==b)]; A.zmC{b}=[A.zmC{b};zc(bc==b)];
+        if any(bo==b); rowO(b)=mean(yo(bo==b)); end
+        if any(bc==b); rowC(b)=mean(yc(bc==b)); end
     end
+    % per-session bin means + this session's overall level (OL and CL together, so subtracting it
+    % removes the session's difficulty without touching the OL-CL gap)
+    A.pO(end+1,:)=rowO; A.pC(end+1,:)=rowC; A.mu(end+1,1)=mean([yo;yc]);
+end
+function [m,e] = within_sess(P, mu, grand)
+%WITHIN_SESS  session-centred bin means, grand mean restored; SEM across SESSIONS.
+    C = P - mu + grand;
+    m = mean(C,1,'omitnan');
+    n = sum(isfinite(C),1);
+    e = std(C,0,1,'omitnan') ./ sqrt(max(n,1));
 end
 % Grouped bars replaced by utils/cl_quartile_line.m on 2026-08-13 (user: magnify the difference,
 % cleaner neuroscience version). The mark type had to change before the axis could be cropped --
 % see the header of that file for why a cropped BAR is not an option.
-function mk_ol_cl(A,outdir,base,xlab,star,PS,nBins,~)
+function mk_ol_cl(A,outdir,base,xlab,star,PS,nBins,within)
     sem = @(x) std(x)/sqrt(max(numel(x),1));
+    if within
+        grand = mean(vertcat(A.rmO{:},A.rmC{:}));
+        [mO,eO] = within_sess(A.pO, A.mu, grand);
+        [mC,eC] = within_sess(A.pC, A.mu, grand);
+    else
+        mO=cellfun(@mean,A.rmO); eO=cellfun(sem,A.rmO);
+        mC=cellfun(@mean,A.rmC); eC=cellfun(sem,A.rmC);
+    end
     o = struct('lab',{{'Open loop','Closed loop'}}, 'col',[PS.col_ol; PS.col_cl], ...
         'xlab',xlab, 'ylab','RMSE 1-3 s (%\DeltaF/F)', 'star',star, 'legend',true, ...
         'file',fullfile(outdir,base), 'pdf',true, 'xticks',{{}});
-    cl_quartile_line(cellfun(@mean,A.rmO), cellfun(sem,A.rmO), ...
-                     cellfun(@mean,A.rmC), cellfun(sem,A.rmC), o);
+    cl_quartile_line(mO,eO,mC,eC,o);
 end
-function mk_earlylate(c3,outdir,base,PS,nBins) %#ok<INUSD>
+function mk_earlylate(c3,outdir,base,PS,nBins,within) %#ok<INUSD>
     sem = @(x) std(x)/sqrt(max(numel(x),1));
+    if within
+        grand = mean(vertcat(c3.reE{:},c3.reL{:}));
+        [mE,eE] = within_sess(c3.pE, c3.mu, grand);
+        [mL,eL] = within_sess(c3.pL, c3.mu, grand);
+    else
+        mE=cellfun(@mean,c3.reE); eE=cellfun(sem,c3.reE);
+        mL=cellfun(@mean,c3.reL); eL=cellfun(sem,c3.reL);
+    end
     o = struct('lab',{{'0-1 s (transient)','1-3 s (settled)'}}, ...
         'col',[0.45 0.75 0.50; 0.10 0.45 0.20], ...
         'xlab','Initial deviation quartile (low \rightarrow high)', 'ylab','RMSE (%\DeltaF/F)', ...
         'star','', 'legend',true, 'file',fullfile(outdir,base), 'pdf',true, 'xticks',{{}});
-    cl_quartile_line(cellfun(@mean,c3.reE), cellfun(sem,c3.reE), ...
-                     cellfun(@mean,c3.reL), cellfun(sem,c3.reL), o);
+    cl_quartile_line(mE,eE,mL,eL,o);
 end
 function s=sig_star(p)
     if p<1e-3; s='***'; elseif p<1e-2; s='**'; elseif p<0.05; s='*'; else; s='n.s.'; end

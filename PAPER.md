@@ -470,13 +470,19 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > Quote the R² collapse for "what the error is made of" and the slope collapse for "how strongly
 > it acts".
 >
-> 🔴 **NEVER place `claim2_delta_lo12_late` beside `claim2_delta_hi24_late`.** In the pooled
-> quartile form the 1–2 Hz *null control* rises just as much as the 2–4 Hz effect (CL 2.00→2.34 vs
-> 1.93→2.26) — between-session baseline structure, magnified by the cropped axis. Side by side the
-> two panels argue *against* the dissociation the paper claims. The 1–2 Hz null must appear as
-> `factor_slope_delta12`, the per-session form where the picture matches the statistic
-> (p=0.76 n.s. vs p=0.0067 \*\*). `claim2_delta_hi24_late` is fine on its own as the magnitude
-> companion to the 2–4 Hz result.
+> ✅ **RESOLVED 2026-08-13 — the quartile panels are now within-session normalized.** In the old
+> pooled-trial form the 1–2 Hz *null control* rose as much as the 2–4 Hz effect (CL 2.00→2.34 vs
+> 1.93→2.26), so effect and control looked alike and could not be shown together. Cause: each
+> session's overall difficulty leaked into the quartile means, and it leaked by a **different
+> amount per band** — session-mean δ predicts session-mean RMSE about equally for both
+> (r_s=+0.66 for 2–4 Hz, +0.61 for 1–2 Hz), which *hid* 25% of the real 2–4 Hz rise while
+> *manufacturing* 52% of the apparent 1–2 Hz rise. Two errors in opposite directions, compressing
+> the two panels toward each other. Fix: subtract each session's own mean (over its OL+CL trials
+> together, so the OL−CL gap survives), add the grand mean back so the axis stays in %ΔF/F, and
+> take **SEM across sessions** — the unit the signed-rank test uses; trial-SEM was ~3× too small
+> because trials within a session are not independent. After the fix the 2–4 Hz CL series rises
+> 1.88→2.21 and the 1–2 Hz CL series is **flat** (2.04, 2.09, 2.08, 2.07). The two panels may now
+> sit side by side, and doing so is the clearest statement of the dissociation in the figure.
 >
 > **Also in the figure (quartile family, retained 2026-08-13 — user; redrawn point-and-line).** `factor_olcl_initdev`
 > · `factor_olcl_motion` · `factor_olcl_delta` · `claim2_delta_hi24_late` ·
