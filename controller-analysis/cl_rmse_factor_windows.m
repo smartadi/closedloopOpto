@@ -260,8 +260,11 @@ lg=legend(ax,hb,{'0-1 s','1-3 s'},'FontSize',5,'Box','off','Location','northeast
 title(ax,'Delta effect vs magnitude control','FontSize',6,'FontWeight','bold');
 hold(ax,'off');
 
-title(tl, sprintf(['CL error factors by window  (n=%d trials, 9 sessions)   ' ...
-    'delta = RELATIVE power 2-4 Hz / 0.4-10 Hz, -2 s to stim end'], n),'FontSize',7,'FontWeight','bold');
+% Session count was hardcoded '9' until 2026-08-13 -- it had been true when written and silently
+% went stale as sessions were added/removed. Compute it, so the title cannot lie again.
+title(tl, sprintf(['CL error factors by window  (n=%d trials, %d sessions)   ' ...
+    'delta = RELATIVE power 2-4 Hz / 0.4-10 Hz, -2 s to stim end'], n, numel(unique(SESS))), ...
+    'FontSize',7,'FontWeight','bold');
 
 paperExport(fig, fullfile(paper_root,'images','figure4','cl_rmse_factor_windows.png'));
 fprintf('\n[cl_rmse_factor_windows] Exported cl_rmse_factor_windows.png\n');

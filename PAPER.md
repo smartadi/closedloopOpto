@@ -426,6 +426,44 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > `imp_build_session` + `imp_reject_core` + `imp_state_across_sessions.m` (mirrors
 > `imp_reject_across_sessions.m`); block-1 slopes via the `ctrl_state_dependence` bootstrap across sessions.
 
+##### Fig 4 **Part 1 — error decomposition** · LOCKED 2026-08-13
+> ⚠ **Naming.** "Part 1" (the term used in RESEARCH and in conversation) is **Block 2 / panel 4B**
+> in the block numbering above. It is the *what is the residual CL error made of* strand, not the
+> trial-average state-dependence strand. Both names refer to the same five panels below.
+>
+> **The claim.** The composition of the closed-loop error **turns over between windows**. In the
+> transient (0–1 s) the error is essentially where the trial started; by the settled window (1–3 s)
+> initial deviation is gone and relative 2–4 Hz power is nearly all of what remains. Motion owns
+> none of it in either window. So the error feedback cannot remove is not transient leftovers — it
+> is a different quantity, tied to ongoing 2–4 Hz activity.
+>
+> | Panel | File (`paper/images/figure4/`) | Content | Source | Stat |
+> |---|---|---|---|---|
+> | P1-a | `f4p1_error_decomp.png` | **The decomposition itself** — unique R² per factor × window, 95% bootstrap CI | `cl_factor_decomp_panel.m` | init-dev 0.381→0.029 (13×), rel 2–4 Hz 0.089→0.122; R²_full 0.41/0.13; 613 trials / 11 sessions |
+> | P1-b | `factor_slope_initdev.png` | Init-dev: Early-vs-Late paired slope (within CL) — "transient only" | `cl_factor_slope_panels.m` | Early +0.297 / Late +0.089, signrank **p=6.1e-5 \*\*\***, n=15 |
+> | P1-c | `factor_slope_motion.png` | Motion: OL-vs-CL paired slope — decoupling | `cl_factor_slope_panels.m` | OL +0.686 / CL −0.016, **p=0.0020 \*\***, n=11 |
+> | P1-d | `factor_slope_delta24.png` | Relative 2–4 Hz: OL-vs-CL paired slope — the hard-to-control band | `cl_factor_slope_panels.m` | OL −0.511 / CL +0.813, **p=0.0125 \***, n=15 |
+> | P1-e | `factor_slope_delta12.png` | Relative 1–2 Hz: same test — **specificity null control** | `cl_factor_slope_panels.m` | OL −0.319 / CL +0.068, p=0.76 n.s., n=15 |
+>
+> **Pools.** P1-a scores all three factors on the same trials (the motion-complete sessions:
+> 613 trials / 11 sessions) — one panel, one pool. Dropping motion recovers all 15 sessions
+> (852 trials) and moves nothing (full R² 0.407→0.389 early, 0.132→0.123 late), which is what
+> licenses reading the motion bar as *motion does not matter* rather than *motion was not measured*.
+> P1-b/d/e use all 15 sessions; P1-c is motion-limited to 11 by definition.
+>
+> **Two collapse numbers, both real, do not mix them.** Init-dev's *unique R²* collapses 13×
+> (0.381→0.029); its *slope* collapses ~3× (+0.297→+0.089, and the late slope is still ≠0 at
+> p=0.003). Variance ownership falls much faster than the slope because late RMSE is far less
+> variable. Quote the R² collapse for "what the error is made of" and the slope collapse for
+> "how strongly it acts".
+>
+> **NOT in this figure:** `delta_burst_gallery.png` — the discrete delta-burst hunt (2026-07-22)
+> returned a clean **null** (burst vs no-burst 1.74 vs 1.59, ranksum p=0.56; every timing variant
+> n.s.). It was the exploration that *led* to the 2–4 Hz sub-band split, and it is flagged for the
+> spirals analysis; it is not a Part-1 panel. Superseded quartile-bar family (`factor_olcl_*`,
+> `claim2_*`, `claim3_*`, `cl_mse_exemplars`, `cl_rmse_factor_windows` 6-tile grid) → supplementary
+> or archive; the paired-slope + decomposition set replaces them.
+
 <details><summary>Prior state-dependence candidate audit (2026-07-21, superseded by the residual reframe)</summary>
 
 > ⚠ **CANDIDATE LIST AUDITED 2026-07-21 — most of the original candidates are unusable.** The old
