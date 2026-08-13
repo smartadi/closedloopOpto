@@ -152,6 +152,44 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 
 ---
 
+### 🔍 Figure 2 reconciliation (2026-08-12) — registry vs disk vs current science
+
+The Fig-2 story (line 61) has three blocks. Their panel coverage is **very uneven**, and the
+state-dependence block has three overlapping generations of panels for one claim.
+
+| Block | Story promise | Registered panels | Verdict |
+|---|---|---|---|
+| **1. Response + LTI** | impulse + step, with TF fits | 2A, 2B, 2C, 2C-i, TF-A…TF-D, 2D, 2E, 2I | **Complete and over-supplied** — 9 panels for one block. 2C is marked "superseded by 2C-i/2C-ii", but **2C-ii is referenced and never defined**; either register it or drop the reference. TF-A…TF-D are a 4-panel τ suite that no layout has room for; pick 1–2. |
+| **2. State dep. of the raw average trial** | pre-stim state → trial-to-trial variability | 2F, 2G, 2H, **2J, 2K** | **Three generations, one claim.** See below. |
+| **3. State dep. of the residual (stim-only) activity** | Actual = Global + Local, Local's state dependence | **NONE** | **Empty.** Every residual panel in this registry belongs to **Fig 4** (4C + supp). The Fig-2 residual model (`utils/f2_model.m`) is still **UNAPPROVED** (2026-08-12) — no detector locked, ridge untouched. Either a Fig-2 residual panel gets built or line 61's third clause is a promise the figure does not keep. |
+
+**Block 2 — the three generations, and which one survives:**
+
+| Gen | Panels | Metric | Status |
+|---|---|---|---|
+| 1 (2026-06) | **2F** motion scatter | signed Peak dev vs motion, pooled, with a *fit line* | **Superseded by 2J.** The fit line tests a LOCATION effect, and we established (2026-08-11) that the signed deviation has essentially no directional component — the effect is entirely in the SPREAD. So 2F's r is measuring the thing that is not happening. Keep at most as a raw-data view; do not quote its r. |
+| 2 (2026-05/06) | **2G** prevar scatter, **2H** prevar heatmap | pre-stim variance vs deviation | **Retracted 2026-07-01** as a signal-power confound (PreVar ≈ var(y); abs δ partials to −0.000 on power). Already flagged CONTESTED in the table. 2K is the power-corrected successor. |
+| 3 (2026-08-12) | **2J** motion quartiles, **2K** rel-δ quartiles | SD of deviation per state quartile, bootstrap CI | **Current.** Correct test (scale, not location), stim-free control available, session-stratified ρ, 4 sessions. |
+
+**Recommended Block-2 cut: 2J + 2K only** — one positive (motion tightens the response) and one honest
+negative (rel δ does not, beyond what it does to ongoing signal). That is the whole defensible claim.
+2F/2G/2H then move to supplementary or `_archive`, and 2G/2H stop being CONTESTED-but-still-listed.
+
+**Asset hygiene in `paper/images/figure2/` (audit 2026-08-12):** 27 PDFs, **16 registered → 11 orphans**,
+plus ~55 PNGs that the asset policy says belong in `paper/explore/` (a folder that **does not exist yet**).
+Orphans: `Figure2_extra.pdf` (an assembly inside a panel folder), `imp_response_cb`, `step_response_cb`,
+`imp_motion_devscatter_all_sessions_{cperr,cperr_cb,peakdev}`, `prevar_vs_dev_allamps_*` (3 variants),
+`prevar_vs_predictionerror_blocks`.
+
+> ⚠ **The `_cperr` tag is false.** `prevar_vs_dev_allamps_motexcl_AL_0033_2025-01-29_en1.pdf` and its
+> `_cperr` twin are both **exactly 23807 bytes** — identical content under two names. `cp_err` is never
+> produced anywhere in the repo, so `motion_analysis.m` / `prestim_variance.m` silently fall back to
+> `Peak_imp_dev` while labelling the axis "Prediction error" and tagging the file `_cperr`. Any figure
+> or caption built on a `_cperr` asset is mislabelled. Either wire `contra_prediction.m` so `imp.cp_err`
+> exists, or delete the option and the assets.
+
+---
+
 ### 🗂 Figure asset policy — **PDF means locked** (adopted 2026-08-10)
 
 The one rule: **a `.pdf` under `paper/images/figureN/` is a panel that is locked in and linked by an
