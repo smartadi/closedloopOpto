@@ -188,6 +188,35 @@ Orphans: `Figure2_extra.pdf` (an assembly inside a panel folder), `imp_response_
 > or caption built on a `_cperr` asset is mislabelled. Either wire `contra_prediction.m` so `imp.cp_err`
 > exists, or delete the option and the assets.
 
+**Panel size audit (2026-08-12) — every Fig-2 PDF is SMALLER than its declared size.** MediaBox read
+from all 16 registered files; declared = the `paperFig(w,h)` canvas, actual = the PDF page:
+
+| Panel | Declared | Actual (cm) | | Panel | Declared | Actual (cm) |
+|---|---|---|---|---|---|---|
+| 2A | 5 × 4 | 4.34 × 3.60 | | 2E | 6 × 4 | 5.57 × 3.88 |
+| 2B | 5 × 4 | 4.55 × 3.35 | | 2F | 4 × 4 | 4.02 × 3.92 |
+| 2C | 6 × 4 | 5.43 × 3.85 | | 2G | 4 × 4 | 3.74 × 3.92 |
+| 2C-i | 6 × 4 | 5.64 × 3.92 | | 2H | 7 × 4 | 6.84 × 4.02 |
+| TF-A | 4 × 4 | 3.88 × 3.85 | | 2I | 6 × 4 | 5.15 × 3.60 |
+| TF-B | 4 × 4 | 3.77 × 3.92 | | 2J | 6 × 4 | 5.47 × 3.81 |
+| TF-C | 5 × 4 | 4.62 × 4.09 | | 2K | 6 × 4 | 5.47 × 3.77 |
+| TF-D | 4.5 × 4 | 4.27 × 3.25 | | | | |
+
+**Cause, verified:** `exportgraphics(...,'ContentType','vector')` crops to the content bounding box, not
+the figure canvas. Test on a fresh `paperFig(6,4)`: default → **5.54 × 3.88**, `'Padding','figure'` →
+**6.03 × 3.99**. The crop amount depends on tick-label and axis-label length, so it differs per panel.
+
+**What it costs:** (a) this table's Size column does not describe the files — it describes the canvas;
+(b) the seven nominally-6 cm panels span **5.15–5.86 cm**, so they cannot be aligned or column-matched by
+width; (c) **anyone who rescales a panel to hit its declared size silently changes the font size** — 2I
+scaled 5.15 → 6 cm turns 6 pt into 6.99 pt, against a project standard of 6 pt bold throughout. Placing
+at 100% keeps fonts correct and is the only safe handling of the current files.
+
+**Fix (not applied — needs a decision):** add `'Padding','figure'` to `paperExport`'s vector branch
+(supported in R2025b). That makes every PDF exactly its declared size and the font problem disappears.
+But it re-exports **every locked panel in the paper**, and the content shifts inside the page, so
+Illustrator placements must be re-checked rather than blind-relinked.
+
 ---
 
 ### 🗂 Figure asset policy — **PDF means locked** (adopted 2026-08-10)
