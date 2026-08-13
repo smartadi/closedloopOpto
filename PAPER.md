@@ -428,6 +428,42 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > `imp_build_session` + `imp_reject_core` + `imp_state_across_sessions.m` (mirrors
 > `imp_reject_across_sessions.m`); block-1 slopes via the `ctrl_state_dependence` bootstrap across sessions.
 
+##### Fig 4 **Part 2 — disturbance rejection, resolved in frequency** · SUPPLEMENTARY pending approval (2026-08-13)
+> **Framing (settled 2026-08-13, user).** The disturbance is taken to be interactions arriving from
+> other cortical regions, which for this purpose is **external** to the controlled site — so the
+> Internal Model Principle applies in its ordinary form and the "not an exosystem" objection does
+> not need pre-empting in the text.
+>
+> **The argument.** The loop is PI — an integrator *is* an internal model of a constant — driving
+> the opto actuator, holding a fixed reference. It contains no oscillatory mode, so it holds no
+> model of any delta-band component. Francis–Wonham then predicts near-perfect rejection of DC and
+> none in the delta band; Bode's integral adds that the low-frequency suppression must be **paid
+> for** by amplification somewhere. Part 1 already showed the payment (CL error rises with 2–4 Hz
+> power while OL error falls); Part 2 measures it.
+>
+> | Panel | File (`figure4/supp/`) | Content | Result |
+> |---|---|---|---|
+> | P2-a | `f4supp_sensitivity.png` | **S(f) = T_CL/T_OL**, the empirical sensitivity — what feedback changed | 1–2 Hz **0.936** (n.s. p=0.11) → 2–4 Hz **1.089** (p=0.021, 10/13) → 4–10 Hz **1.131** (p=0.0024, 11/13). Crossover ≈ 2 Hz |
+> | P2-b | `f4supp_dc_offset.png` | Steady-state offset from ref (2–3 s), OL vs CL — the integrator's own claim | OL **+1.38** → CL **+0.38** %ΔF/F, p=0.008, smaller in **12/13** |
+> | sheet | `f4supp_sensitivity_sheet.png` | Six-panel review sheet incl. all three controls | — |
+>
+> **Controls (all pass; sheet panels d, e, c).** [SENS-NULL] the same estimator on the matched
+> pre-stim window, laser off in both conditions, is **flat at 1** (1.016 / 1.026 / 0.995) — the
+> ratio-of-ratios is not an estimator artifact. [SENS-DIST] OL and CL disturbance spectra overlie,
+> so the disturbance cancels in the ratio. [SENS-LEAK] the stim-locked (leak) component is only
+> **1–3% of disturbance power above 1 Hz** — the Global's leak is slow, so the ≥1 Hz restriction
+> removes it; no deflate bound needed.
+>
+> **Band.** 1–10 Hz. Below 1 Hz a 3 s window holds under 3 cycles and is out of scope by decision.
+> ⚠ Above ~8 Hz disturbance power has fallen ~3 decades and both T curves shoot up, so the 4–10 Hz
+> row partly rides on a noise-dominated top end — **quote 2–4 Hz as the claim**, treat 4–10 Hz as
+> supporting.
+>
+> **Not built yet:** predicted-vs-measured S(f), i.e. 1/(1+C(f)P(f)) from the Fig-2 plant TF and
+> the real Kp/Ki overlaid on the measured curve. This is the panel that would close Fig 2 → Fig 4
+> with nothing fitted in between. Blocked: per-session gains are not in the session structs, they
+> live in the controller-tuning rig config.
+
 ##### Fig 4 **Part 1 — error decomposition** · LOCKED 2026-08-13
 > ⚠ **Naming.** "Part 1" (the term used in RESEARCH and in conversation) is **Block 2 / panel 4B**
 > in the block numbering above. It is the *what is the residual CL error made of* strand, not the
