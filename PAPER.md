@@ -84,15 +84,16 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 2C | Fig2 | paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf | 6 × 4 | vector | ±std | done — **single session**; superseded by 2C-i/2C-ii below once those are cut |
 | 2C-i | Fig2 | paper/images/figure2/tf_shape_across_sessions.pdf | 6 × 4 | vector | — | Peak-normalised h(t), all sessions on the session gradient, **measured solid / fit dashed** (mirrors 2I). Normalised on the *measured* trace so the fit is still judged against data. Legend labels the encoding, not the sessions. `utils/imp_tf_paper_fig.m` via `imp_tf_run.m` |
 | TF-A | Fig2 | paper/images/figure2/tf_tau_forest.pdf | 4 × 4 | vector | 95% CI | τ_slow per session + **trial-bootstrap CI**, over the cross-session mean ± SD band. Matched amplitude range primary |
-| TF-B | Fig2 | paper/images/figure2/tf_tau_variability.pdf | 4 × 4 | vector | — | **between-session SD vs mean within-session SD**, with the ratio annotated + per-session dots. Ratio ≈1 ⇒ one shared τ; ≫1 ⇒ real inter-experiment variability (both publishable, different sentences) |
-| TF-C | Fig2 | paper/images/figure2/tf_tau_vs_amp.pdf | 5 × 4 | vector | — | τ from **per-amplitude refits**, one line per session. The panel that would actually break the design if it sloped — a session's controller can't be robust to its own plant moving with the command it sends. Flat = safe |
+| TF-B | ~~Fig2~~ | paper/images/figure2/tf_tau_variability.pdf | 4 × 4 | vector | — | **RETIRED 2026-08-12** (user). Not drawn by default (`imp_tf_robust_fig` panels = {'A','D'}). Was: **between-session SD vs mean within-session SD**, with the ratio annotated + per-session dots. Ratio ≈1 ⇒ one shared τ; ≫1 ⇒ real inter-experiment variability (both publishable, different sentences) |
+| TF-C | ~~Fig2~~ | paper/images/figure2/tf_tau_vs_amp.pdf | 5 × 4 | vector | — | **RETIRED 2026-08-12** (user). Was: τ from **per-amplitude refits**, one line per session. The panel that would actually break the design if it sloped — a session's controller can't be robust to its own plant moving with the command it sends. Flat = safe |
 | TF-D | Fig2 | paper/images/figure2/tf_model_swap.pdf | 4.5 × 4 | vector | — | **cross-session model-swap R²** matrix: session i's fitted model against session j's measured h(t), **free gain** (gain is re-tuned per session by construction, so this is a claim about *dynamics*). Diagonal ≈ off-diagonal ⇒ designs transfer |
-| 2D | Fig2 | paper/images/figure2/step_response.pdf | 6 × 4 | image 300dpi | — | step_response.m |
+| 2D | ~~Fig2~~ | paper/images/figure2/step_response.pdf | 6 × 4 | image 300dpi | — | **RETIRED 2026-08-12** (user): "step response not needed". The raw OL step traces are replaced by the **TF fit to the OL trial-average across all 15 controller sessions** — see 2I. Rationale: the impulse and step responses are not the same measurement, so a raw step panel beside the impulse panels invites a comparison the data does not support; the defensible shared claim is that a low-order LTI model fits BOTH |
 | 2E | Fig2 | paper/images/figure2/onset_variance_slope.pdf | 6 × 4 | vector | ±SEM | OL variance trace + slope lines; gray traces, red stim lines |
 | 2F (supp) | Supp | paper/images/supplementary/imp_motion_devscatter_*.png | 6 × 4 | PNG 300dpi | — | Single-session only (selExp_mot=3); supplementary, not paper panel |
 | 2F | Fig2 | paper/images/figure2/imp_motion_devscatter_all_sessions.pdf | 4 × 4 | vector | — | motion z-score vs inhib dev, all sessions pooled; impulse-analysis/motion_analysis.m fig_mvp |
-| 2G | Fig2 | paper/images/figure2/prevar_vs_dev_allamps_motexcl_AL_0033_2025-01-29_en1.pdf | 4 × 4 | vector | — | ⚠ **CONTESTED — do not assemble yet.** Built on **pre-stim variance**, retracted 2026-07-01 as a signal-power confound. impulse-analysis/prestim_variance.m fig_pvm. User is resolving the confound question separately (2026-08-05) |
-| 2H | Fig2 | paper/images/figure2/prevar_heatmap_with_blockfit.pdf | 7 × 4 | vector | — | ⚠ **CONTESTED — same pre-stim-variance confound as 2G.** heatmap (freq×trial sorted by pre-stim var) + trial-rank + delta-power scatters; impulse-analysis/prestim_variance.m fig_pvs |
+| 2G | Fig2 | paper/images/figure2/imp_state_reldelta_scatter.pdf | 6 × 4 | vector | — | **REBUILT 2026-08-12** (user: "2G doesnt make sense unless we add all sessions… it should be rel delta not pre-stim var"). \|deviation\| vs **relative-δ percentile**, **all 4 impulse sessions** on one axis, one colour per session (`PS.sessColor`), per-session fit lines, shuffled draw order. This is where 2K's "3 of 4 sessions agree" becomes visible instead of asserted. `impulse-analysis/imp_state_trialvar_fig.m` with `STVF_PAPER=true`. **Not yet run — server down 2026-08-12** |
+| ~~2G-old~~ | ~~Fig2~~ | paper/images/figure2/prevar_vs_dev_allamps_motexcl_AL_0033_2025-01-29_en1.pdf | 4 × 4 | vector | — | ⚠ **RETIRED 2026-08-12 — superseded by the 2G rebuild above.** Built on **pre-stim variance**, retracted 2026-07-01 as a signal-power confound. impulse-analysis/prestim_variance.m fig_pvm. User is resolving the confound question separately (2026-08-05) |
+| 2H | ~~Fig2~~ | paper/images/figure2/prevar_heatmap_with_blockfit.pdf | 7 × 4 | vector | — | **RETIRED 2026-08-12** (user: "retire 2H"). Was: ⚠ **CONTESTED — same pre-stim-variance confound as 2G.** heatmap (freq×trial sorted by pre-stim var) + trial-rank + delta-power scatters; impulse-analysis/prestim_variance.m fig_pvs |
 | 2J | Fig2 | paper/images/figure2/imp_state_var_motion.pdf | 6 × 4 | vector | 95% CI band | **NEW 2026-08-12.** SD of the per-trial deviation from the amplitude mean, by **motion quartile**, 1767 trials / 4 sessions pooled. Q4/Q1 = 0.71 [0.60–0.84], stratified ρ = −0.120, 4/4 sessions same sign. `impulse-analysis/imp_state_trialvar_fig.m` with `STVF_PAPER=true`. x is a **within-session percentile**, not a magnitude — motion is rest-plus-bouts and every magnitude axis crushes all four bins into the left tenth. The magnitude statement is the threshold split (z>1.5, ratio 0.43); pair them in the caption. Currently drawn with `STV_PLOTCTRL=false` (no stim-free control on the axes) — **turn the control back on before this is final**, the claim is that the response tightens MORE than the ongoing signal does |
 | 2K | Fig2 | paper/images/figure2/imp_state_var_reldelta.pdf | 6 × 4 | vector | 95% CI band | **NEW 2026-08-12.** Same axes/scale as 2J, by **relative-δ quartile**. Q4/Q1 = 1.19 [1.04–1.37], stratified ρ = +0.089, 3/4 sessions. ⚠ **Does NOT beat its stim-free control** (1.18 vs 1.32 under matched sham) and did not replicate on Ye/Zhiwen `AB_0004` (ρ=−0.25, opposite sign, RESEARCH 2026-07-02). Include only as the *negative* half of the pair — motion changes response variability, δ does not beyond what it does to ongoing signal |
 | 3A | Fig3 | paper/images/figure3/panel_A.pdf | 8.9 × 4 | vector | — | utils/analysisPlots_combined.m — single trial OL\|CL |
@@ -187,6 +188,36 @@ Orphans: `Figure2_extra.pdf` (an assembly inside a panel folder), `imp_response_
 > `Peak_imp_dev` while labelling the axis "Prediction error" and tagging the file `_cperr`. Any figure
 > or caption built on a `_cperr` asset is mislabelled. Either wire `contra_prediction.m` so `imp.cp_err`
 > exists, or delete the option and the assets.
+
+### ✂ Fig 2 — agreed cut and running order (2026-08-12, user)
+
+| # | Panel | What it shows | State |
+|---|---|---|---|
+| 1 | 2A | single-session impulse traces | rerun for 4 sessions |
+| 2 | 2B | dose-response | rerun for 4 sessions |
+| 3 | 2C-i | h(t) across sessions, measured vs LTI fit | **colour + legend fixed**, rerun |
+| 4 | TF-A | τ forest, **now slow AND fast pole**, log axis, s1…sN | **rebuilt**, rerun |
+| 5 | TF-D | cross-session model swap, s1…sN ticks | **relabelled**, rerun |
+| 6 | 2I | **TF fit to OL trial-average, all 15 controller sessions** | **to build** |
+| 7 | 2E | OL onset variance, **same 15 sessions as 2I** | **to rebuild** |
+| 8 | 2F | motion vs deviation scatter, interleaved draw order | **fixed**, rerun |
+| 9 | 2J | SD of deviation by motion quartile | rerun (text removed) |
+| 10 | 2G | \|dev\| vs rel-δ, per session | **new**, to run |
+| 11 | 2K | SD of deviation by rel-δ quartile | rerun (text removed) |
+
+**Retired in this pass:** TF-B, TF-C, 2D, 2H, old 2G. **Still empty:** the residual/stim-only block —
+see the reconciliation table above; nothing in this cut addresses it.
+
+**Ordering logic:** 1–5 are "what the system does and that a linear model captures it" on the impulse
+side; 6–7 carry the same claim onto the controller's own OL data, which is what licenses using an LTI
+design later; 8–11 are state dependence, positive first (motion) then the negative (rel δ), with the
+per-session scatter sitting between its own two summary panels so a reader meets the raw data before
+the second quartile curve.
+
+**Colour convention, now enforced in `paperStyle`:** session *k* is the same shade in every Fig-2 panel,
+because `PS.sessColor(k)` indexes a ramp anchored at `PS.NSESS = 4`. The old `PS.sessGrad(n)` resampled
+per panel, so session 1 in a 3-session panel was not session 1's colour in a 4-session panel. Session
+identity is a **figure-level key** — declare it once in the caption, not in a legend inside every panel.
 
 **Panel size audit (2026-08-12) — every Fig-2 PDF is SMALLER than its declared size.** MediaBox read
 from all 16 registered files; declared = the `paperFig(w,h)` canvas, actual = the PDF page:

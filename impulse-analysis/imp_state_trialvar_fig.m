@@ -136,12 +136,13 @@ for i = 1:numel(adm)
     set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
     xlabel(ax, sprintf('%s quartile', r.name), 'FontSize', PS.fs, 'FontWeight', PS.fw);
     ylabel(ax, 'SD of deviation', 'FontSize', PS.fs, 'FontWeight', PS.fw);
-    % Stats as a corner annotation, not a title: a two-line title at 6 pt eats a third of a 4 cm
-    % panel, and these numbers belong to the data, not to the panel's name.
-    text(ax, 0.03, 0.11, sprintf('Q4/Q1 %.2f [%.2f-%.2f]', r.ratio, r.ci(1), r.ci(2)), ...
-         'Units','normalized', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', C_stim);
-    text(ax, 0.03, 0.03, sprintf('\\rho %+.3f, n=%d', r.rhoStrat, r.n), ...
-         'Units','normalized', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', [0.35 0.35 0.35]);
+    % NO in-panel stats text (user, 2026-08-12: "i dont like the text we put there"). The
+    % numbers are printed to the console by imp_state_trialvar and belong in the caption --
+    % Q4/Q1 with CI and the stratified rho are sentences, not annotations, and at 6 pt inside
+    % a 4 cm axis they were competing with the data for the reader's first glance. Printed
+    % here so the caption can be written straight off the run.
+    fprintf('[STVF] %-12s caption numbers: Q4/Q1 %.2f [%.2f-%.2f], BF p %.2g, strat rho %+.3f, n=%d\n', ...
+            r.name, r.ratio, r.ci(1), r.ci(2), r.bf, r.rhoStrat, r.n);
     % A one-entry legend labels a panel that has only one thing on it -- drop it and let the
     % y-label do the work. It comes back automatically when the control adds a second series.
     if numel(hAll) > 1, lg = legend(ax, hAll, 'Location','best');  paperLegend(lg); end
@@ -158,6 +159,48 @@ for i = 1:numel(adm)
             paperExport(f, fullfile(pdfDir, [paperNames.(r.tag) '.pdf']));
         end
     end
+end
+
+%% ---- 2G REBUILD: per-session |dev| vs rel-delta, all sessions on one axis ----------------------
+% Replaces the old 2G (single-session pre-stim-variance scatter, retracted 2026-07-01 as a signal-
+% power confound). Two changes, both from the user 2026-08-12: ALL sessions, not just AL_0033, and
+% RELATIVE delta on x rather than pre-stim variance -- rel delta is the power-corrected marker, the
+% only version of the delta claim that is not arithmetically guaranteed by signal amplitude.
+% Why a scatter beside 2K's quartile curve: 2K asserts "3 of 4 sessions agree" and this is where a
+% reader can see it. Per-session fits make a session that runs the other way visible instead of
+% averaged away. |dev| on y because the claim is about SPREAD -- see the Levene note in the driver.
+kD = find(strcmpi({R.tag}, 'DPr'), 1);
+if ~isempty(kD)
+    xs = STV.T.DPrz(:);  ys = abs(STV.T.dev(:));  ss = STV.T.sess(:);
+    vv = isfinite(xs) & isfinite(ys);
+    f = paperFig(6, 4);  ax = axes(f);  hold(ax,'on');
+    % Shuffled draw order with per-point colour, so no session paints over the others -- the
+    % same defect that was fixed in 2F on the same day.
+    rng(3,'twister');  sh = randperm(nnz(vv));  iv = find(vv);  iv = iv(sh);
+    scatter(ax, xs(iv), ys(iv), 3, PS.sess(ss(iv),:), 'filled', ...
+            'MarkerFaceAlpha', 0.35, 'MarkerEdgeColor','none', 'HandleVisibility','off');
+    uu = unique(ss(vv));  hL = gobjects(numel(uu),1);
+    for i = 1:numel(uu)
+        m = vv & ss == uu(i);
+        p = polyfit(xs(m), ys(m), 1);
+        xf = linspace(min(xs(m)), max(xs(m)), 50);
+        hL(i) = plot(ax, xf, polyval(p, xf), '-', 'Color', PS.sessColor(uu(i)), ...
+                     'LineWidth', PS.lw_mean, 'DisplayName', sprintf('s%d', uu(i)));
+    end
+    xlim(ax, [0 1]);  ylim(ax, [0 3]);  xticks(ax, 0:0.25:1);
+    set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    xlabel(ax, 'Rel \delta (within-session percentile)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    ylabel(ax, '|Deviation| (SD)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    lg = legend(ax, hL, 'Location','northwest', 'NumColumns', 2);  paperLegend(lg);
+    hold(ax,'off');
+    paperExport(f, fullfile(outDir, ['stv_reldelta_scatter' STVF_EXT]));
+    if STVF_PAPER
+        pdfDir = fullfile(paperRoot, 'images', 'figure2');
+        if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
+        paperExport(f, fullfile(pdfDir, 'imp_state_reldelta_scatter.pdf'));
+    end
+    fprintf('[STVF] rel-delta per-session slopes: %s\n', ...
+            strjoin(compose('s%d %+.3f', uu, R(kD).rhoPerSess(:)).', '  '));
 end
 
 %% ---- per-session replication ------------------------------------------------------------------

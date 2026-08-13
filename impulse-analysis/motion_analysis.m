@@ -310,7 +310,10 @@ motBin_s       = motBin_pool(shufIdx);
 
 % Session is encoded by COLOUR (sequential gradient PS.sessGrad -> ordered and
 % colourblind-safe); a single pooled trend line carries the motion->error trend.
-gradC = PS.sessGrad(nExp);
+% Session colour indexed by SESSION NUMBER (PS.sessColor), so session k is the same shade
+% here as in 2C-i and the TF panels. PS.sessGrad(nExp) re-sampled the ramp to whatever nExp
+% this run had, which recoloured sessions 1-3 the moment AL_0048 was added as the 4th.
+gradC = PS.sess;
 
 % Per-session min-max normalise motion to [0,1] (replaces the z-score: motion
 % energy is a positive quantity, so a 0-1 scale is more intuitive; doing it
@@ -327,14 +330,19 @@ fig_mvp = paperFig(4, 4);
 ax_mvp  = axes(fig_mvp);
 hold(ax_mvp, 'on');
 
-% one scatter call per session -> gradient colour distinguishes sessions
+% ONE scatter call for all points, drawn in the SHUFFLED order, with per-point colour
+% (user, 2026-08-12: "make sure that s4 dots are not necessarily on the top hiding all the
+% other dots, lets randomize some"). The rows were already shuffled above, but the drawing
+% loop then grouped them BY SESSION and painted session 1 first and session 4 last, so the
+% whole of the newest session sat on top of the other three and the shuffle bought nothing.
+% Interleaving the points is the only way the overlap reads honestly.
+vS  = isfinite(motN_s) & isfinite(allAbsDev_s) & allExp_s >= 1 & allExp_s <= nExp;
+scatter(ax_mvp, motN_s(vS), allAbsDev_s(vS), 8, gradC(allExp_s(vS),:), ...
+    'o', 'filled', 'MarkerFaceAlpha', 0.5, ...
+    'MarkerEdgeColor', 'none', 'HandleVisibility', 'off');
 hLeg_p = gobjects(nExp, 1);
 for expIdx = 1:nExp
-    mk = allExp_s == expIdx;
-    if ~any(mk), continue; end
-    scatter(ax_mvp, motN_s(mk), allAbsDev_s(mk), 8, gradC(expIdx,:), ...
-        'o', 'filled', 'MarkerFaceAlpha', 0.5, ...
-        'MarkerEdgeColor', 'none', 'HandleVisibility', 'off');
+    if ~any(allExp_s == expIdx), continue; end
     hLeg_p(expIdx) = plot(ax_mvp, nan, nan, 'o', 'MarkerFaceColor', gradC(expIdx,:), ...
         'MarkerEdgeColor', 'none', 'MarkerSize', 4, ...
         'DisplayName', sprintf('Session %d', expIdx));
