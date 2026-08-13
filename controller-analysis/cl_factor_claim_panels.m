@@ -111,40 +111,25 @@ function A=accum(A,xo,xc,yo,yc,nBins,zwin,slp)
         A.zmO{b}=[A.zmO{b};zo(bo==b)]; A.zmC{b}=[A.zmC{b};zc(bc==b)];
     end
 end
+% Grouped bars replaced by utils/cl_quartile_line.m on 2026-08-13 (user: magnify the difference,
+% cleaner neuroscience version). The mark type had to change before the axis could be cropped --
+% see the header of that file for why a cropped BAR is not an option.
 function mk_ol_cl(A,outdir,base,xlab,star,PS,nBins,~)
-    for mi=1                       % '_z' variant dropped 2026-08-13 -- RMSE is not z-scored
-        bO=A.rmO; bC=A.rmC; ylab='RMSE 1-3 s (%\DeltaF/F)'; suf='';
-        mO=cellfun(@mean,bO);eO=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),bO);
-        mC=cellfun(@mean,bC);eC=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),bC);
-        fig=paperFig(6,4);ax=gca;hold(ax,'on');xq=1:nBins;w=0.35;
-        bar(ax,xq-w/2,mO,w,'FaceColor',PS.col_ol,'EdgeColor','none','DisplayName','Open loop');
-        bar(ax,xq+w/2,mC,w,'FaceColor',PS.col_cl,'EdgeColor','none','DisplayName','Closed loop');
-        errorbar(ax,xq-w/2,mO,eO,'k','LineStyle','none','LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
-        errorbar(ax,xq+w/2,mC,eC,'k','LineStyle','none','LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
-        set(ax,'XTick',1:nBins,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
-        xlabel(ax,xlab,'FontSize',6,'FontWeight','bold'); ylabel(ax,ylab,'FontSize',6,'FontWeight','bold');
-        yl=ylim(ax); text(ax,mean([1 nBins]),yl(2),star,'HorizontalAlignment','center','VerticalAlignment','top','FontSize',8,'FontWeight','bold');
-        ylim(ax,[yl(1) yl(2)+0.10*range(yl)]);
-        lg=legend(ax,'Location','northwest'); paperLegend(lg);
-        paperExport(fig,fullfile(outdir,[base suf '.png'])); paperExport(fig,fullfile(outdir,[base suf '.pdf'])); close(fig);
-    end
+    sem = @(x) std(x)/sqrt(max(numel(x),1));
+    o = struct('lab',{{'Open loop','Closed loop'}}, 'col',[PS.col_ol; PS.col_cl], ...
+        'xlab',xlab, 'ylab','RMSE 1-3 s (%\DeltaF/F)', 'star',star, 'legend',true, ...
+        'file',fullfile(outdir,base), 'pdf',true, 'xticks',{{}});
+    cl_quartile_line(cellfun(@mean,A.rmO), cellfun(sem,A.rmO), ...
+                     cellfun(@mean,A.rmC), cellfun(sem,A.rmC), o);
 end
-function mk_earlylate(c3,outdir,base,PS,nBins)
-    col_e=[0.45 0.75 0.50]; col_l=[0.10 0.45 0.20];
-    for mi=1                       % '_z' variant dropped 2026-08-13 -- RMSE is not z-scored
-        bE=c3.reE; bL=c3.reL; ylab='RMSE (%\DeltaF/F)'; suf='';
-        mE=cellfun(@mean,bE);eE=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),bE);
-        mL=cellfun(@mean,bL);eL=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),bL);
-        fig=paperFig(6,4);ax=gca;hold(ax,'on');xq=1:nBins;w=0.35;
-        bar(ax,xq-w/2,mE,w,'FaceColor',col_e,'EdgeColor','none','DisplayName','0-1 s (transient)');
-        bar(ax,xq+w/2,mL,w,'FaceColor',col_l,'EdgeColor','none','DisplayName','1-3 s (settled)');
-        errorbar(ax,xq-w/2,mE,eE,'k','LineStyle','none','LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
-        errorbar(ax,xq+w/2,mL,eL,'k','LineStyle','none','LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
-        set(ax,'XTick',1:nBins,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
-        xlabel(ax,'Initial deviation quartile (low \rightarrow high)','FontSize',6,'FontWeight','bold'); ylabel(ax,ylab,'FontSize',6,'FontWeight','bold');
-        lg=legend(ax,'Location','northwest'); paperLegend(lg);
-        paperExport(fig,fullfile(outdir,[base suf '.png'])); paperExport(fig,fullfile(outdir,[base suf '.pdf'])); close(fig);
-    end
+function mk_earlylate(c3,outdir,base,PS,nBins) %#ok<INUSD>
+    sem = @(x) std(x)/sqrt(max(numel(x),1));
+    o = struct('lab',{{'0-1 s (transient)','1-3 s (settled)'}}, ...
+        'col',[0.45 0.75 0.50; 0.10 0.45 0.20], ...
+        'xlab','Initial deviation quartile (low \rightarrow high)', 'ylab','RMSE (%\DeltaF/F)', ...
+        'star','', 'legend',true, 'file',fullfile(outdir,base), 'pdf',true, 'xticks',{{}});
+    cl_quartile_line(cellfun(@mean,c3.reE), cellfun(sem,c3.reE), ...
+                     cellfun(@mean,c3.reL), cellfun(sem,c3.reL), o);
 end
 function s=sig_star(p)
     if p<1e-3; s='***'; elseif p<1e-2; s='**'; elseif p<0.05; s='*'; else; s='n.s.'; end

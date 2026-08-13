@@ -89,36 +89,18 @@ for fi = 1:numel(F)
     % ONE y-axis version: raw RMSE (%dF/F). The '_z' within-session z-scored variant was dropped
     % 2026-08-13 -- it plotted the same panel in normalized units, which is the thing the project
     % rule forbids, and keeping both invited the wrong one into the figure.
-    MODE=struct('bO',{rbinOL},'bC',{rbinCL},'ylab','RMSE (%\DeltaF/F)','suf','');
-    for mi=1:numel(MODE)
-        mO=cellfun(@mean,MODE(mi).bO); eO=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),MODE(mi).bO);
-        mC=cellfun(@mean,MODE(mi).bC); eC=cellfun(@(x)std(x)/sqrt(max(numel(x),1)),MODE(mi).bC);
-
-        fig=paperFig(6,4); ax=gca; hold(ax,'on'); xq=1:nBins; w=0.35;
-        bar(ax,xq-w/2,mO,w,'FaceColor',PS.col_ol,'EdgeColor','none','DisplayName','Open loop');
-        bar(ax,xq+w/2,mC,w,'FaceColor',PS.col_cl,'EdgeColor','none','DisplayName','Closed loop');
-        errorbar(ax,xq-w/2,mO,eO,'k','LineStyle','none','LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
-        errorbar(ax,xq+w/2,mC,eC,'k','LineStyle','none','LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
-        set(ax,'XTick',1:nBins,'XTickLabel',{'Q1','Q2','Q3','Q4'}, ...
-            'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
-        xlabel(ax,F(fi).xlab,'FontSize',6,'FontWeight','bold');
-        ylabel(ax,MODE(mi).ylab,'FontSize',6,'FontWeight','bold');
-
-        % single interaction star, top-centre (no title -- claim goes in caption)
-        yl=ylim(ax); ys=yl(2);
-        text(ax,mean([1 nBins]),ys,star,'HorizontalAlignment','center', ...
-            'VerticalAlignment','top','FontSize',8,'FontWeight','bold');
-        ylim(ax,[yl(1) ys+0.10*range(yl)]);
-
-        if strcmp(F(fi).key,LEGEND_ON)
-            lg=legend(ax,'Location','northwest'); paperLegend(lg);
-        end
-
-        paperExport(fig, fullfile(paper_root,'images','figure4',[base MODE(mi).suf '.png']));
-        paperExport(fig, fullfile(paper_root,'images','figure4',[base MODE(mi).suf '.pdf']));
-        close(fig);
-    end
-    fprintf('  exported %s(.png/.pdf)   [raw RMSE only -- _z variant dropped 2026-08-13]\n', base);
+    % Grouped bars replaced by utils/cl_quartile_line.m on 2026-08-13 (user: magnify the
+    % difference, cleaner neuroscience version). Points encode position, not length from zero,
+    % which is what makes cropping the y-axis to the data range legitimate -- a cropped BAR
+    % misstates every ratio on the panel. See that file's header.
+    sem = @(x) std(x)/sqrt(max(numel(x),1));
+    o = struct('lab',{{'Open loop','Closed loop'}}, 'col',[PS.col_ol; PS.col_cl], ...
+        'xlab',F(fi).xlab, 'ylab','RMSE (%\DeltaF/F)', 'star',star, ...
+        'legend',strcmp(F(fi).key,LEGEND_ON), ...
+        'file',fullfile(paper_root,'images','figure4',base), 'pdf',true, 'xticks',{{}});
+    cl_quartile_line(cellfun(@mean,rbinOL), cellfun(sem,rbinOL), ...
+                     cellfun(@mean,rbinCL), cellfun(sem,rbinCL), o);
+    fprintf('  exported %s(.png/.pdf)   [point-and-line, cropped y-axis]\n', base);
 end
 
 %% ---- helpers ----

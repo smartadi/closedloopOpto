@@ -470,7 +470,15 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > Quote the R² collapse for "what the error is made of" and the slope collapse for "how strongly
 > it acts".
 >
-> **Also in the figure (quartile-bar family, retained 2026-08-13 — user).** `factor_olcl_initdev`
+> 🔴 **NEVER place `claim2_delta_lo12_late` beside `claim2_delta_hi24_late`.** In the pooled
+> quartile form the 1–2 Hz *null control* rises just as much as the 2–4 Hz effect (CL 2.00→2.34 vs
+> 1.93→2.26) — between-session baseline structure, magnified by the cropped axis. Side by side the
+> two panels argue *against* the dissociation the paper claims. The 1–2 Hz null must appear as
+> `factor_slope_delta12`, the per-session form where the picture matches the statistic
+> (p=0.76 n.s. vs p=0.0067 \*\*). `claim2_delta_hi24_late` is fine on its own as the magnitude
+> companion to the 2–4 Hz result.
+>
+> **Also in the figure (quartile family, retained 2026-08-13 — user; redrawn point-and-line).** `factor_olcl_initdev`
 > · `factor_olcl_motion` · `factor_olcl_delta` · `claim2_delta_hi24_late` ·
 > `claim2_delta_lo12_late` · `claim3_initdev_early_late`. These show the same tests as quartile
 > bars in raw %ΔF/F and are kept for the story they tell together with the slope panels. Caveat
