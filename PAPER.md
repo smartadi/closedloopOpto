@@ -159,7 +159,7 @@ state-dependence block has three overlapping generations of panels for one claim
 
 | Block | Story promise | Registered panels | Verdict |
 |---|---|---|---|
-| **1. Response + LTI** | impulse + step, with TF fits | 2A, 2B, 2C, 2C-i, TF-A…TF-D, 2D, 2E, 2I | **Complete and over-supplied** — 9 panels for one block. 2C is marked "superseded by 2C-i/2C-ii", but **2C-ii is referenced and never defined**; either register it or drop the reference. TF-A…TF-D are a 4-panel τ suite that no layout has room for; pick 1–2. |
+| **1. Response + LTI** | impulse + step, with TF fits | 2A, 2B, 2C, 2C-i, TF-A…TF-D, 2D, 2E, 2I | **Complete and over-supplied** — **11** panels for one block. 2C is marked "superseded by 2C-i/2C-ii", but **2C-ii is referenced and never defined**; either register it or drop the reference. TF-A…TF-D are a 4-panel τ suite that no layout has room for; pick 1–2. |
 | **2. State dep. of the raw average trial** | pre-stim state → trial-to-trial variability | 2F, 2G, 2H, **2J, 2K** | **Three generations, one claim.** See below. |
 | **3. State dep. of the residual (stim-only) activity** | Actual = Global + Local, Local's state dependence | **NONE** | **Empty.** Every residual panel in this registry belongs to **Fig 4** (4C + supp). The Fig-2 residual model (`utils/f2_model.m`) is still **UNAPPROVED** (2026-08-12) — no detector locked, ridge untouched. Either a Fig-2 residual panel gets built or line 61's third clause is a promise the figure does not keep. |
 
