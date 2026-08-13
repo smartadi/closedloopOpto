@@ -220,8 +220,8 @@ if ~isempty(keep_n); det_opts.keep_n = keep_n; end
 % The Gram is built over the SAME spontaneous frames and train/test split as the fit below, so the
 % R^2 the selector optimises is exactly the R^2 the fit will report (verified bit-identical).
 KSEL = struct('used',false,'reachable',true,'K_star',NaN,'R2_star',NaN,'R2_ceiling',NaN);
-[pred_suffix, pred_mode] = ctrl_pred_tag();     % 'rank' (default) | 'ridge' -- see utils/ctrl_pred_tag
-useDeflate = strcmpi(pred_mode,'deflate');
+[pred_suffix, pred_mode] = ctrl_pred_tag();     % 'ridge' = PROJECT MODEL; 'rank'/'deflate' retired
+useDeflate = strcmpi(pred_mode,'deflate');      % retired 2026-08-13 -- kept only for the bracket
 useRidge   = strcmpi(pred_mode,'ridge') || useDeflate;   % deflate = ridge + one linear constraint
 if useRidge
     % RIDGE MODEL: no pixel is dropped, so there is no K to choose. The detector still RUNS --

@@ -1,5 +1,9 @@
 %% ctrl_deflate_check.m   [DEFCHK]  -- is the deflated model's flat Global EARNED or ASSUMED?
 %
+% RETIRED 2026-08-13 ("keep ridge only"). The project reports RIDGE. This script is kept as the
+% record of WHY deflate was not adopted -- panel (a) is the answer -- and it still runs off the
+% deflate caches already on disk. Do not build anything new on it.
+%
 % The 'deflate' predictor constrains the weights orthogonal to the contra stim direction, so its
 % Global is flat over the stim window and Local reads 100%. Those two numbers are the CONSTRAINT,
 % not a measurement, and quoting them as a result would be circular. This script draws the numbers

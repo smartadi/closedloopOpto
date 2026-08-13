@@ -23,10 +23,10 @@
 % -------------------------------------------------------------------------------------------------
 
 %% ===================== CONFIG -- the only part you edit =====================
-RUN_PRED    = 'ridge';   % WHICH MODEL. 'ridge' = whole grid + stim-blind shrinkage (new).
-                         % 'rank'  = the old pixel-selection model. THIS IS THE REVERT SWITCH:
-                         % the two write to different caches, so flipping it back restores the
-                         % previous results untouched. See utils/ctrl_pred_tag.m.
+RUN_PRED    = 'ridge';   % THE PROJECT MODEL (locked 2026-08-13, "keep ridge only"): whole grid +
+                         % stim-blind shrinkage. 'rank' and 'deflate' are RETIRED but still
+                         % reachable -- each mode writes its own caches, so flipping this back
+                         % restores that mode's results untouched. See utils/ctrl_pred_tag.m.
 RUN_REBUILD = true;      % step 2. false once this mode's Stage-2 caches are current (the slow one)
 RUN_FITFIG  = true;      % step 3: per-session held-out prediction + kernel figures
 RUN_REJECT  = true;      % steps 4+5: rejection statistics and their panels

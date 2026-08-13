@@ -1,5 +1,9 @@
 %% ctrl_reject_models.m   [REJMOD]  -- does the rejection result depend on the disturbance model?
 %
+% RETIRED AS A PIPELINE STEP 2026-08-13 ("keep ridge only"), kept as the ROBUSTNESS EXHIBIT: it is
+% the evidence that choosing ridge does not choose the answer. Reported numbers come from ridge;
+% this script's job is to show the CL/OL contrast survives the other model. Read-only, off caches.
+%
 % THE QUESTION. Disturbance rejection is scored as ER = ||A-ref||^2 / ||G-ref||^2, so the
 % DENOMINATOR is the disturbance and G is whatever the contra predictor says the site would have
 % done with no laser. Two predictors give two different G, and therefore two different
