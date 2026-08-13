@@ -485,9 +485,19 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > (`cl_mse_exemplars.m`) — three exemplar trials per error type (initial deviation / motion /
 > pre-trial variability), i.e. what each factor *looks like* on a single trial.
 >
-> **Archived, not deleted:** the `_z` (within-session z-scored RMSE) variant of every quartile
-> panel → `paper/images/figure4/_archive_zscored/`. They are the same panels in the units the
-> 2026-08-13 rule forbids; the generating code paths are removed so they cannot be rebuilt as-is.
+> **Archived, not deleted** → `paper/images/figure4/_archive_zscored/`: the `_z` (within-session
+> z-scored RMSE) variant of every quartile panel — same panels in the units the 2026-08-13 rule
+> forbids — plus `claim2_delta_rel_late.{png,pdf}`, the July **1–4 Hz** delta panel superseded by
+> the hi24/lo12 pair. All generating code paths are removed, so none can be rebuilt as-is. Every
+> other Part-1 image in `figure4/` is dated 2026-08-13 and reproduces from current code.
+>
+> **Recommended layout (2026-08-13).** Fig 4 is 17 cm wide, so a row holds three 5.4 cm panels.
+> Part 1 = **one row of three**: `f4p1_error_decomp` (the claim) → `factor_slope_motion` (feedback
+> decouples: line drops) → `factor_slope_delta24` (feedback fails: line rises). The middle and
+> right panels are the same plot with opposite outcomes, which is the strongest visual argument in
+> the set — they should share a y-axis so the contrast is immediate (currently −0.5…2 vs −2…2.5).
+> `factor_slope_delta12` (specificity null) and `factor_slope_initdev` (already summarized by the
+> tall early bar in panel 1) go to supplementary and are cited in text.
 
 <details><summary>Prior state-dependence candidate audit (2026-07-21, superseded by the residual reframe)</summary>
 
