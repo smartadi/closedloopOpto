@@ -30,6 +30,17 @@ assert(exist('STV','var')==1 && isstruct(STV), ...
 PS = paperStyle();
 if ~exist('STVF_EXT','var')   || isempty(STVF_EXT),   STVF_EXT = '.png';  end
 if ~exist('STVF_NBOOT','var') || isempty(STVF_NBOOT), STVF_NBOOT = 2000;  end
+% WHICH PANELS (user, 2026-08-12: "we will keep the two quartile plots"):
+%   'quartile' (DEFAULT) -- only the two SD-per-quartile panels, the ones going into the figure
+%   'all'                -- adds the funnels and the per-session panel as exploratory PNGs
+if ~exist('STVF_PANELS','var') || isempty(STVF_PANELS), STVF_PANELS = 'quartile'; end
+% PAPER BUILD. When true the two quartile panels are ALSO written as vector PDFs into
+% paper/images/figure2/ under locked names. PAPER.md's asset policy is that a PDF in a figureN
+% folder means the panel is locked and Illustrator-linked -- so this stays OFF by default and is
+% turned on deliberately, and the panels are registered in PAPER.md in the same commit.
+if ~exist('STVF_PAPER','var') || isempty(STVF_PAPER), STVF_PAPER = false; end
+paperRoot = fullfile(fileparts(here), 'paper');
+paperNames = struct('MOT','imp_state_var_motion', 'DPr','imp_state_var_reldelta');
 % Inherit the control switch from the main script so the two never disagree about what is
 % being shown. Default true, matching imp_state_trialvar.m.
 if ~exist('STV_PLOTCTRL','var') || isempty(STV_PLOTCTRL), STV_PLOTCTRL = true; end
@@ -47,12 +58,31 @@ rng(11,'twister');
 fprintf('\n[STVF] paper panels -> %s   (control %s)\n', outDir, ...
         local_tern(STV_PLOTCTRL,'ON','OFF'));
 
-%% ---- one funnel + one SD panel per admissible marker ------------------------------------------
-for k = adm
+%% ---- pass 1: bootstrap the per-bin CIs for every marker ----------------------------------------
+% Done up front so the quartile panels can share one y-axis. Two panels of the SAME quantity on
+% different y-scales invite a reader to compare their slopes, which is exactly the comparison the
+% differing scales make invalid.
+CI = struct('lo',{},'hi',{},'ploLo',{},'ploHi',{});
+for i = 1:numel(adm)
+    k = adm(i);
+    [CI(i).lo, CI(i).hi] = local_binci(R(k).y, R(k).gbin, nB, STVF_NBOOT);
+    if STV_PLOTCTRL
+        [CI(i).ploLo, CI(i).ploHi] = local_binci(STV.T.devPre, R(k).gbin, nB, STVF_NBOOT);
+    end
+end
+yAll = [ [CI.lo] [CI.hi] R(adm).sdB ];
+if STV_PLOTCTRL, yAll = [yAll [CI.ploLo] [CI.ploHi] R(adm).sdP]; end
+yAll = yAll(isfinite(yAll));
+yLimSD = [floor(min(yAll)*20)/20, ceil(max(yAll)*20)/20];     % common y-axis, rounded to 0.05
+
+%% ---- pass 2: draw ------------------------------------------------------------------------------
+for i = 1:numel(adm)
+    k   = adm(i);
     r   = R(k);
     tag = lower(r.tag);
 
     % ================= funnel: signed deviation vs state ========================================
+    if strcmpi(STVF_PANELS, 'all')
     % SIGNED, not |dev| -- the point of the analysis is that the effect is on SPREAD and has no
     % directional component, which is only visible if both signs are on the page.
     % The envelope is a filled RIBBON, not two lines: at 6 cm two thin curves read as two
@@ -75,15 +105,13 @@ for k = adm
          'Color', C_stim, 'FontSize', PS.fs, 'FontWeight', PS.fw);
     hold(ax,'off');
     paperExport(f, fullfile(outDir, sprintf('stv_%s_funnel%s', tag, STVF_EXT)));
+    end   % STVF_PANELS == 'all'
 
-    % ================= the result: SD per state bin, bootstrap CI ================================
+    % ================= the result: SD per quartile, bootstrap CI =================================
     % Per-bin CI by resampling WITHIN each bin -- the exploratory figure carries a CI only on the
     % top/bottom ratio, which cannot show whether an individual bin is resolved.
-    [ciLo, ciHi] = local_binci(r.y,  r.gbin, nB, STVF_NBOOT);
-    if STV_PLOTCTRL
-        yp = STV.T.devPre;                                   % same trials, same order as r.y
-        [cpLo, cpHi] = local_binci(yp, r.gbin, nB, STVF_NBOOT);
-    end
+    ciLo = CI(i).lo;  ciHi = CI(i).hi;
+    if STV_PLOTCTRL, cpLo = CI(i).ploLo;  cpHi = CI(i).ploHi; end
 
     f = paperFig(6, 4);  ax = axes(f);  hold(ax,'on');
     xb = r.binMed(:).';
@@ -99,22 +127,37 @@ for k = adm
                   'LineWidth', PS.lw_fit, 'MarkerSize', 2, 'DisplayName','No stimulus');
         hAll = [hS hC];
     end
-    % Ticks on the 0-1 axis itself, NOT at the bin medians. Bin-median ticks land wherever the
-    % data happen to crowd and collided at 6 cm; the markers already show where the bins are.
-    xticks(ax, 0:0.25:1);
-    xlim(ax, [0 1]);
+    % Quartile ticks. The markers sit at the bin MEDIANS, which on a percentile axis land at
+    % Q1..Q4 centres by construction -- so label the quartiles rather than 0/0.25/0.5/0.75/1,
+    % which would invite reading the x position as a magnitude it does not carry.
+    xticks(ax, 0.125:0.25:0.875);
+    xticklabels(ax, {'Q1','Q2','Q3','Q4'});
+    xlim(ax, [0 1]);  ylim(ax, yLimSD);
     set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
-    xlabel(ax, sprintf('%s (%s)', r.name, r.units), 'FontSize', PS.fs, 'FontWeight', PS.fw);
-    ylabel(ax, 'SD of deviation',                   'FontSize', PS.fs, 'FontWeight', PS.fw);
+    xlabel(ax, sprintf('%s quartile', r.name), 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    ylabel(ax, 'SD of deviation', 'FontSize', PS.fs, 'FontWeight', PS.fw);
     % Stats as a corner annotation, not a title: a two-line title at 6 pt eats a third of a 4 cm
     % panel, and these numbers belong to the data, not to the panel's name.
-    text(ax, 0.03, 0.10, sprintf('%.2f [%.2f-%.2f]', r.ratio, r.ci(1), r.ci(2)), ...
+    text(ax, 0.03, 0.11, sprintf('Q4/Q1 %.2f [%.2f-%.2f]', r.ratio, r.ci(1), r.ci(2)), ...
          'Units','normalized', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', C_stim);
+    text(ax, 0.03, 0.03, sprintf('\\rho %+.3f, n=%d', r.rhoStrat, r.n), ...
+         'Units','normalized', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', [0.35 0.35 0.35]);
     % A one-entry legend labels a panel that has only one thing on it -- drop it and let the
     % y-label do the work. It comes back automatically when the control adds a second series.
     if numel(hAll) > 1, lg = legend(ax, hAll, 'Location','best');  paperLegend(lg); end
     hold(ax,'off');
     paperExport(f, fullfile(outDir, sprintf('stv_%s_sd%s', tag, STVF_EXT)));
+
+    % ---- paper build: the same axes as a locked vector PDF -------------------------------------
+    if STVF_PAPER
+        if ~isfield(paperNames, r.tag)
+            warning('[STVF] no locked filename for marker %s -- PDF skipped.', r.tag);
+        else
+            pdfDir = fullfile(paperRoot, 'images', 'figure2');
+            if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
+            paperExport(f, fullfile(pdfDir, [paperNames.(r.tag) '.pdf']));
+        end
+    end
 end
 
 %% ---- per-session replication ------------------------------------------------------------------
@@ -124,6 +167,7 @@ end
 uS   = unique(STV.T.sess);
 nS   = numel(uS);
 qual = PS.sessQual(numel(adm));
+if strcmpi(STVF_PANELS, 'all')
 
 f = paperFig(6, 4);  ax = axes(f);  hold(ax,'on');
 hz = yline(ax, 0, 'k-', 'LineWidth', PS.lw_zero);  hz.HandleVisibility = 'off';
@@ -145,9 +189,10 @@ ylabel(ax, '\rho( |deviation| , state )', 'FontSize', PS.fs, 'FontWeight', PS.fw
 lg = legend(ax, 'Location','best');  paperLegend(lg);
 hold(ax,'off');
 paperExport(f, fullfile(outDir, ['stv_persession' STVF_EXT]));
+end   % STVF_PANELS == 'all'
 
 %% ---- motion threshold split + variance decomposition (control panels) --------------------------
-if STV_PLOTCTRL
+if STV_PLOTCTRL && strcmpi(STVF_PANELS, 'all')
     M = STV.motSplit;
 
     % ---- SD below vs above the threshold, response beside the stim-free window -----------------
@@ -189,10 +234,13 @@ if STV_PLOTCTRL
     ylabel(ax, 'Variance ratio, high/low motion', 'FontSize', PS.fs, 'FontWeight', PS.fw);
     hold(ax,'off');
     paperExport(f, fullfile(outDir, ['stv_vardecomp' STVF_EXT]));
-else
+elseif ~STV_PLOTCTRL
     fprintf(['[STVF] STV_PLOTCTRL=false -- skipped stv_motsplit and stv_vardecomp.\n' ...
              '       Both exist to compare the response against the stim-free window;\n' ...
              '       without it they are bars with nothing to be measured against.\n']);
+end
+if strcmpi(STVF_PANELS, 'quartile')
+    fprintf('[STVF] STVF_PANELS=''quartile'' -- funnels and per-session panel skipped (use ''all'').\n');
 end
 
 fprintf('[STVF] done.\n');
