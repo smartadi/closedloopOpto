@@ -39,17 +39,46 @@ function T = imp_tf_fit_session(A, fs, tWin, opts)
 % INPUTS
 %   A     one element of allExperiments (needs .DF_imp, .uAmp, .mn, .td, .en; .imp.dfImp for nBoot)
 %   fs    frame rate (Hz)                    tWin  half-width of the DF_imp window (s)
-%   opts  .maxPoles (3) .maxZeros (3) .maxDelay (0) .tFit_s (0.5) .per_amp_fit (true)
+%   opts  .maxPoles (5) .maxZeros (4) .maxDelay (3) .tFit_s (0.5) .per_amp_fit (true)
 %         .verbose (true) .ampRange ([] = all) .nBoot (0 = off)
+%         .select ('aic') .minR2h (0.98)
+%
+% MODEL-CLASS BOUNDS AND WHY THEY WERE WIDENED (2026-08-10). The sweep used to be
+% 3 poles / 3 zeros / NO input delay, and some sessions came back with a visibly poor
+% reproduction of their own h(t). Two of those three bounds were doing real damage:
+%   - maxDelay = 0 forced the ENTIRE onset lag (opsin kinetics + indicator rise +
+%     whatever conduction there is) to be expressed as relative degree, which a
+%     3-pole model pays for with poles it then cannot spend on the decay. An explicit
+%     InputDelay is the physically honest place for a transport lag and costs one
+%     integer parameter instead of a pole.
+%   - maxPoles = 3 is only "low-order" by assertion. 5 is still low-order for a
+%     control-theory claim, and AIC will not spend the extra poles unless the data
+%     pays for them -- every session that was already fine keeps its old order.
+% What is NOT relaxed: nz < np (strictly proper, so h(0) = 0, which onset-referencing
+% depends on) and tf_ok's stability/stiffness screen. Those are correctness, not fit.
+%
+% SELECTION (opts.select). 'aic' is the default and still picks by AIC -- but AIC here
+% is computed on ONE smoothed ~18-sample trace, where its complexity penalty is weak
+% and its noise model is wrong, so it can settle on an order that plainly does not
+% reproduce the curve. So there is an ESCALATION: if the AIC winner's R2_h (its unit
+% response against the MEASURED h) is below opts.minR2h, the model is re-picked as the
+% most PARSIMONIOUS candidate within 0.002 R2_h of the best available, and the swap is
+% printed. 'r2h' applies that rule unconditionally. Either way T.selRule records which
+% ran, so a reported order is never anonymous about how it was chosen.
 %
 % OUTPUT T: label, order (np/nz/nd), sys, poles, tau (s), dcgain, h (unit-sample response),
 %   uA, R2 (LTI-constrained), gFree, gRatio (=gFree/uA), rho, R2free, R2_loao, R2_pool,
-%   linSlope/linR2 (proportionality fit through the origin), tau_amp [nAmp x maxPoles],
+%   R2_h (fit of the selected model to the measured h -- the number panel 2C-i shows),
+%   selRule, linSlope/linR2 (proportionality fit through the origin), tau_amp [nAmp x maxPoles],
 %   ampFit (amplitudes used for h), tauBoot [nBoot x maxPoles], tauCI [maxPoles x 2], tauSD, ok.
 
 if nargin < 4, opts = struct(); end
-def = struct('maxPoles',3,'maxZeros',3,'maxDelay',0,'tFit_s',0.5,'per_amp_fit',true, ...
-             'verbose',true,'ampRange',[],'nBoot',0);
+% tauMax: longest time constant a bootstrap resample may return before it is treated as
+% non-identifiable and dropped from the CI. NaN = auto = the length of the fitted window,
+% which is the principled bound (a tau longer than the data window is not measurable from
+% that window). See the rejection block near the bootstrap for why this exists.
+def = struct('maxPoles',5,'maxZeros',4,'maxDelay',3,'tFit_s',0.5,'per_amp_fit',true, ...
+             'verbose',true,'ampRange',[],'nBoot',0,'select','aic','minR2h',0.98,'tauMax',NaN);
 fn = fieldnames(def);
 for i = 1:numel(fn), if ~isfield(opts,fn{i}) || isempty(opts.(fn{i})), opts.(fn{i}) = def.(fn{i}); end, end
 
@@ -102,8 +131,25 @@ if isempty(best)
     return
 end
 
+% ---- score EVERY surviving candidate against the measured h(t), then select ------------------
+% R2_h is the number the shape panel is actually showing, so selection should be able to see it.
+% Simulation is safe here because local_sweep already screened with tf_ok.
+for r = 1:numel(res)
+    hh = local_unit_response(res(r).sys, nPre, nPost, Ts);
+    if isempty(hh), res(r).R2h = NaN; else, res(r).R2h = local_r2(h_norm, hh); end
+    res(r).nPar = res(r).np + res(r).nz + 1;
+end
+% Re-take the AIC winner FROM THE SCORED array: local_sweep's copy predates the R2h
+% field, and an absent field would make the escalation below fire unconditionally.
+[~, iA] = min([res.AIC]);
+[best, T.selRule] = local_select(res(iA), res, opts);
+if isempty(best)
+    if opts.verbose, fprintf('  [TF] %s: no candidate could be simulated\n', T.label); end
+    return
+end
+
 T.sys    = best.sys;   T.np = best.np;  T.nz = best.nz;  T.nd = best.nd;
-T.AIC    = best.AIC;   T.res = res;
+T.AIC    = best.AIC;   T.res = res;     T.R2_h = best.R2h;
 T.poles  = pole(best.sys);
 T.tau    = sort(-1./real(T.poles(real(T.poles) < 0)), 'descend');   % time constants, slowest first
 T.dcgain = dcgain(best.sys);
@@ -213,12 +259,34 @@ if opts.nBoot > 0
         if opts.verbose, fprintf('  [TF] %s: no per-trial dfImp -- bootstrap skipped\n', T.label); end
     else
         T.tauBoot = local_boot_tau(A.imp.dfImp, uA, validAmp, iPost, nPre, Ts, best, opts);
-        nOK = sum(all(isfinite(T.tauBoot(:,1)),2));
+        % ---- DISCARD NON-IDENTIFIABLE RESAMPLES (2026-08-12) -------------------------------
+        % A resample whose slowest pole lands marginally stable (real part -> 0-) returns
+        % tau -> Inf. Measured on the 4-session set: 25% of resamples above 1000 s in
+        % AL_0041 e1, 17% in AL_0048, 3% in AL_0041 e2 (AL_0033 clean at 0%). Kept in, they
+        % made tauCI upper bounds of 1e9-1e12 s and a tauSD of 1.4e14 s -- and because the
+        % between/within RATIO divides by that SD, the summary printed "ratio 0.00 ->
+        % consistent with ONE shared time constant" no matter what the data said. That
+        % conclusion was an artefact of the blow-up, not a result.
+        % The bound is not a cosmetic outlier cut: the fit sees a window of tPost seconds, so
+        % a time constant longer than that window is not IDENTIFIABLE from these data at all.
+        % Rejections are counted and reported rather than silently dropped.
+        tauMax = opts.tauMax;
+        if isempty(tauMax) || ~isfinite(tauMax), tauMax = numel(iPost) * Ts; end
+        T.tauMax  = tauMax;
+        badB      = any(T.tauBoot > tauMax, 2) | ~isfinite(T.tauBoot(:,1));
+        T.tauBootReject = mean(badB);
+        T.tauBoot(badB, :) = NaN;
+        nOK = sum(isfinite(T.tauBoot(:,1)));
         if nOK >= 20
             T.tauCI = [prctile(T.tauBoot, 2.5, 1).' , prctile(T.tauBoot, 97.5, 1).'];
             T.tauSD = std(T.tauBoot, 0, 1, 'omitnan').';
+            if opts.verbose && T.tauBootReject > 0.02
+                fprintf(['  [TF] %s: %.0f%% of bootstrap refits gave tau > %.2f s (window length)\n' ...
+                         '       -- not identifiable, dropped from the CI. Report this fraction.\n'], ...
+                    T.label, 100*T.tauBootReject, tauMax);
+            end
         elseif opts.verbose
-            fprintf('  [TF] %s: only %d/%d bootstrap refits succeeded -- CI not reported\n', ...
+            fprintf('  [TF] %s: only %d/%d bootstrap refits usable -- CI not reported\n', ...
                 nOK, opts.nBoot, T.label);
         end
     end
@@ -232,8 +300,76 @@ if opts.verbose
     end
     rngStr = 'all amps';
     if ~isempty(opts.ampRange), rngStr = sprintf('%.1f-%.1f V', opts.ampRange(1), opts.ampRange(2)); end
-    fprintf('  [TF] %-24s  %dp%dz%dd | %s | tau %s s | pooled R2 %.3f | slope %.3f%s\n', ...
-        T.label, T.np, T.nz, T.nd, rngStr, mat2str(round(T.tau(:).',4)), T.R2_pool, T.linSlope, ciStr);
+    fprintf('  [TF] %-24s  %dp%dz%dd | %s | tau %s s | R2h %.3f | pooled R2 %.3f | slope %.3f%s\n', ...
+        T.label, T.np, T.nz, T.nd, rngStr, mat2str(round(T.tau(:).',4)), T.R2_h, T.R2_pool, ...
+        T.linSlope, ciStr);
+    if ~strcmp(T.selRule,'AIC')
+        fprintf('       order re-picked: %s\n', T.selRule);
+    end
+    % A low pooled R2 with a high rho is a SIZE failure (saturation), not a model-order
+    % failure -- widening the sweep cannot fix it, and saying so here stops the next
+    % round of "relax the constraints" being aimed at the wrong thing.
+    if isfinite(T.R2_pool) && T.R2_pool < 0.7
+        fprintf(2,'       low pooled R2 (%.3f) with shape rho %.3f and gain slope %.3f -> %s\n', ...
+            T.R2_pool, median(T.rho,'omitnan'), T.linSlope, ...
+            i_diagnose(median(T.rho,'omitnan'), T.linSlope, T.R2_h));
+    end
+end
+end
+
+% =================================================================================================
+function s = i_diagnose(rhoMed, slope, r2h)
+% Name the failure so the next fix is aimed at the right thing.
+if isfinite(r2h) && r2h < 0.9
+    s = 'the MODEL misses the measured h(t) -- raise maxPoles/maxDelay';
+elseif isfinite(rhoMed) && rhoMed > 0.85 && isfinite(slope) && abs(slope-1) > 0.25
+    s = 'SHAPE is right, SIZE is not -- amplitude compression, not a model-order problem';
+elseif isfinite(rhoMed) && rhoMed < 0.7
+    s = 'per-amplitude SHAPE disagrees with h -- weak-amp SNR or genuine amp-dependent dynamics';
+else
+    s = 'mixed shape/size error -- read gRatio and rho per amplitude before touching the sweep';
+end
+end
+
+% =================================================================================================
+function r2 = local_r2(yMeas, yHat)
+% R^2 of a model waveform against the measured one, over the samples finite in BOTH.
+% No free scale: the model was fitted to this trace, so a gain error is a fit failure.
+r2 = NaN;
+m  = min(numel(yMeas), numel(yHat));
+a  = yMeas(1:m);  b = yHat(1:m);
+v  = isfinite(a) & isfinite(b);
+if nnz(v) < 5, return; end
+av = a(v);  bv = b(v);
+r2 = 1 - sum((av-bv).^2)/max(sum((av-mean(av)).^2), eps);
+end
+
+% -------------------------------------------------------------------------------------------------
+function [pick, rule] = local_select(bestAIC, res, opts)
+% Choose the reported model. See the SELECTION note in the header for why AIC alone is
+% not trusted here. `parsimonious within 0.002 of the best R2_h` is the escalation target,
+% NOT `max R2_h` -- taking the outright maximum would buy an invisible amount of curve at
+% the cost of poles the LTI claim then has to defend.
+r2 = [res.R2h];
+ok = isfinite(r2);
+if ~any(ok), pick = []; rule = 'none simulable'; return; end
+
+pick = bestAIC;  rule = 'AIC';
+if isfield(bestAIC,'R2h') && isfinite(bestAIC.R2h) && ...
+        ~strcmpi(opts.select,'r2h') && bestAIC.R2h >= opts.minR2h
+    return                                  % AIC winner already reproduces the curve
+end
+cand   = find(ok & r2 >= max(r2(ok)) - 0.002);
+nPar   = [res(cand).nPar];
+[~, j] = min(nPar);                          % fewest parameters among the near-best fits
+pick   = res(cand(j));
+if strcmpi(opts.select,'r2h')
+    rule = 'R2h (parsimonious)';
+elseif isfield(bestAIC,'R2h') && isfinite(bestAIC.R2h)
+    rule = sprintf('AIC->R2h (AIC gave %dp%dz%dd, R2h %.3f < %.2f)', ...
+        bestAIC.np, bestAIC.nz, bestAIC.nd, bestAIC.R2h, opts.minR2h);
+else
+    rule = 'AIC->R2h (AIC winner not simulable)';
 end
 end
 
@@ -271,7 +407,10 @@ end
 function [best, res] = local_sweep(h, nPre, Ts, opts)
 % tfest sweep over (nd, np, nz) with nz < np (strictly proper -> h(0)=0, which onset-referencing
 % depends on). AIC picks the winner. Unsafe fits are screened by tf_ok BEFORE anything simulates.
-best = [];  res = struct('np',{},'nz',{},'nd',{},'AIC',{},'sys',{});
+% nd > 0 is an explicit InputDelay in SAMPLES: the onset lag is a transport delay, and letting
+% the model say so is cheaper (one integer) than making relative degree absorb it with poles.
+% R2h/nPar are declared here so the array carries them even when the sweep returns empty.
+best = [];  res = struct('np',{},'nz',{},'nd',{},'AIC',{},'sys',{},'R2h',{},'nPar',{});
 nT = numel(h);
 u  = [zeros(nPre,1); 1; zeros(nT-1,1)];
 y  = [zeros(nPre,1); h(:)];

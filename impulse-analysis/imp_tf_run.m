@@ -46,6 +46,17 @@
 %                silently drops any session left with <2 amplitudes in range.
 %                All fits use ALL amplitudes -- h(t) is amplitude-normalised, so
 %                the amplitudes are already on a common scale.
+%   RUN_MAXPOLES model-order ceiling for the tfest sweep               [default 5]
+%   RUN_MAXDELAY input-delay ceiling, in SAMPLES                       [default 3]
+%   RUN_SELECT   'aic' (with R2h escalation) or 'r2h'                  [default 'aic']
+%   RUN_MINR2H   R2h below which the AIC order is re-picked            [default 0.98]
+%
+% MODEL CLASS WIDENED 2026-08-10 (user: some sessions fitted poorly). Was 3 poles /
+% 3 zeros / NO input delay; now 5 / 4 / 3 samples, and selection escalates off AIC when
+% the AIC winner does not reproduce the measured h(t). See imp_tf_fit_session's header
+% for why maxDelay = 0 was the constraint doing the most damage. Sessions that already
+% fitted well keep their old order -- AIC does not spend poles the data does not pay for.
+% Set RUN_MAXPOLES = 3 / RUN_MAXDELAY = 0 to reproduce any pre-2026-08-10 number.
 %
 % OUTPUT -- all into paper/images/figure2/
 %   tf_shape_across_sessions.pdf   2C-i   measured vs fit, all sessions (6x4)
@@ -74,7 +85,15 @@ if ~exist('tWin','var') || isempty(tWin), tWin = 3.0; end
 here = fileparts(mfilename('fullpath'));
 root = fileparts(here);
 addpath(fullfile(root,'utils'));
-outDir = fullfile(root,'paper','images','figure2');
+% Output folder. Overridable via RUN_OUTDIR so a check run can write somewhere harmless:
+% the paper folder's PDFs are LOCKED whenever Illustrator has the assembly open, and a
+% mid-loop "permission denied" leaves half the panel set rebuilt and half stale, which is
+% worse than not running at all.
+if ~exist('RUN_OUTDIR','var') || isempty(RUN_OUTDIR)
+    outDir = fullfile(root,'paper','images','figure2');
+else
+    outDir = RUN_OUTDIR;
+end
 rng(3,'twister');                     % reproducible trial bootstrap
 
 %% ---- (1) session set -----------------------------------------------------------------
@@ -135,12 +154,24 @@ end
 %
 % Set RUN_MATCHED = true to compute the matched-range fits as a SECONDARY diagnostic. They
 % never become the primary set.
-if ~exist('RUN_MATCHED','var') || isempty(RUN_MATCHED), RUN_MATCHED = false; end
+if ~exist('RUN_MATCHED','var')  || isempty(RUN_MATCHED),  RUN_MATCHED  = false; end
+if ~exist('RUN_MAXPOLES','var') || isempty(RUN_MAXPOLES), RUN_MAXPOLES = 5;     end
+if ~exist('RUN_MAXDELAY','var') || isempty(RUN_MAXDELAY), RUN_MAXDELAY = 3;     end
+if ~exist('RUN_SELECT','var')   || isempty(RUN_SELECT),   RUN_SELECT   = 'aic'; end
+if ~exist('RUN_MINR2H','var')   || isempty(RUN_MINR2H),   RUN_MINR2H   = 0.98;  end
 
-opt = struct('maxPoles',3,'maxZeros',3,'maxDelay',0,'tFit_s',0.5, ...
-             'per_amp_fit',true,'verbose',true,'ampRange',[],'nBoot',RUN_NBOOT);
+% RUN_TFIT: length of the fitted post-onset window, seconds. Exposed as a knob 2026-08-12
+% because tau_slow comes out at 0.30-0.54 s, so a 0.5 s window is barely ONE time constant
+% long and the slow pole is correspondingly weakly identified -- 42-50% of bootstrap
+% resamples in 3 of 4 sessions returned a tau longer than the window itself.
+if ~exist('RUN_TFIT','var') || isempty(RUN_TFIT), RUN_TFIT = 0.5; end
+opt = struct('maxPoles',RUN_MAXPOLES,'maxZeros',max(RUN_MAXPOLES-1,1),'maxDelay',RUN_MAXDELAY, ...
+             'tFit_s',RUN_TFIT,'per_amp_fit',true,'verbose',true,'ampRange',[], ...
+             'nBoot',RUN_NBOOT,'select',RUN_SELECT,'minR2h',RUN_MINR2H);
 
 fprintf('\n[TFRUN] fitting %d sessions over ALL amplitudes ...\n', nS);
+fprintf('[TFRUN] sweep: up to %d poles / %d zeros / %d samples input delay, select=%s (minR2h %.2f)\n', ...
+    opt.maxPoles, opt.maxZeros, opt.maxDelay, opt.select, opt.minR2h);
 Sprim = cell(nS,1);
 for k = 1:nS, Sprim{k} = imp_tf_fit_session(allExperiments(k), fs, tWin, opt); end
 Sfull = Sprim;  primTag = 'all amplitudes';
@@ -181,11 +212,30 @@ if RUN_MATCHED
     end
 end
 
+%% ---- (2b) PERSIST THE FITS ---------------------------------------------------------------
+% Fitting is the expensive half of this script (order sweep + 300-draw trial bootstrap per
+% session, on top of load_experiments reading SVDs off the share); drawing is instant. Saving
+% here means every later formatting pass runs `imp_tf_figs` instead of this, which is what
+% makes iterating on the figure practical at all. RESEARCH 2026-08-10: a long run's fits were
+% lost to a cleared workspace and could not be redrawn.
+if ~exist(fullfile(here,'data'),'dir'), mkdir(fullfile(here,'data')); end
+fitFile = fullfile(here,'data','imp_tf_fits.mat');
+savedOn = now;                                                            %#ok<TNOW1>
+sweepOpt = opt;
+save(fitFile, 'Sprim', 'savedOn', 'sweepOpt', '-v7.3');
+fprintf('\n[TFRUN] fits saved -> %s\n', fitFile);
+fprintf('[TFRUN] redraw WITHOUT refitting:  imp_tf_figs\n');
+
 %% ---- (3) the paper panels --------------------------------------------------------------
 % 2C-i  : shape overlay, measured vs fit, all sessions.
-% TF-A..D : the time-constant / variability / robustness block (see imp_tf_robust_fig).
+% TF-A / TF-D : timescale forest + model-swap grid (TF-B/TF-C computed, not drawn).
+% TF-E  : every time constant, log axis.
+% Panel SET is chosen here to match imp_tf_figs' default, so the two scripts cannot
+% disagree about which PDFs are current.
 figs = imp_tf_paper_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT,'tmax_s',0.5));
-RB   = imp_tf_robust_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT,'amp_norm',true));
+RB   = imp_tf_robust_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT, ...
+                         'amp_norm',true,'panels',{{'A','D'}}));
+PF   = imp_tf_poles_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT));
 
 %% ---- (4) the numbers the caption needs ------------------------------------------------
 okP  = cellfun(@(s) isfield(s,'ok') && s.ok, Sprim);
@@ -200,16 +250,48 @@ sdW  = cellfun(@(s) ternNaN(isfield(s,'tauSD') && ~isempty(s.tauSD), @() s.tauSD
 mnAll = cellfun(@(s) string(s.mn), Sprim(okP), 'UniformOutput', false);
 mice  = unique([mnAll{:}]);
 
+% THREE R^2 COLUMNS, because "the fit is poor" was ambiguous and cost a round of
+% guessing at which constraint to relax:
+%   R2h    the selected model against the MEASURED h(t). This is the fit shown in
+%          panel 2C-i and the ONLY one a wider sweep can improve.
+%   R2pool LTI-CONSTRAINED across every amplitude (gain forced to uA). Low R2pool with
+%          high R2h and high rho is amplitude COMPRESSION, not a model-order problem --
+%          more poles cannot fix it and should not be thrown at it.
+%   rho    median scale-free shape agreement per amplitude.
 fprintf('\n=========================== [TFRUN] SUMMARY (%s) ===========================\n', primTag);
-fprintf('%-26s %8s %8s %18s %7s %7s\n','session','order','tau1 (s)','95%% CI','R2pool','LOAO');
+fprintf('%-20s %9s %8s %16s %6s %6s %6s %6s %6s\n', ...
+    'session','order','tau1 (s)','95% CI','R2h','R2pool','rho','slope','LOAO');
 for j = 1:numel(idx)
     s = Sprim{idx(j)};
-    ci = '        --        ';
+    ci = '       --       ';
     if isfield(s,'tauCI') && ~isempty(s.tauCI)
-        ci = sprintf('[%6.3f %6.3f]', s.tauCI(1), s.tauCI(2));
+        ci = sprintf('[%5.3f %5.3f]', s.tauCI(1), s.tauCI(2));
     end
-    fprintf('%-26s %4dp%dz %8.3f %18s %7.3f %7.3f\n', s.label, s.np, s.nz, pickTau(s), ci, ...
-        pickNum(s,'R2_pool'), mean(pickVec(s,'R2_loao'),'omitnan'));
+    fprintf('%-20s %4dp%dz%dd %8.3f %16s %6.3f %6.3f %6.3f %6.3f %6.3f\n', ...
+        imp_sess_label(s), s.np, s.nz, s.nd, pickTau(s), ci, ...
+        pickNum(s,'R2_h'), pickNum(s,'R2_pool'), median(pickVec(s,'rho'),'omitnan'), ...
+        pickNum(s,'linSlope'), mean(pickVec(s,'R2_loao'),'omitnan'));
+end
+% Say which selections were escalated -- a reported order must never be anonymous
+% about how it was chosen.
+esc = idx(cellfun(@(s) isfield(s,'selRule') && ~strcmp(s.selRule,'AIC'), Sprim(okP)));
+if ~isempty(esc)
+    fprintf('  order re-picked off AIC in %d session(s):\n', numel(esc));
+    for j = 1:numel(esc)
+        fprintf('    %-20s %s\n', imp_sess_label(Sprim{esc(j)}), Sprim{esc(j)}.selRule);
+    end
+end
+% Point the next action at the right knob instead of at "relax something".
+r2h  = cellfun(@(s) pickNum(s,'R2_h'),    Sprim(okP));
+r2p  = cellfun(@(s) pickNum(s,'R2_pool'), Sprim(okP));
+if any(r2h < 0.95)
+    fprintf(2,['  %d session(s) with R2h < 0.95: the MODEL CLASS is the binding constraint.\n' ...
+               '        Raise RUN_MAXPOLES / RUN_MAXDELAY, or set RUN_SELECT = ''r2h''.\n'], nnz(r2h < 0.95));
+end
+if any(r2p < 0.7 & r2h >= 0.95)
+    fprintf(2,['  %d session(s) fit h(t) well but score low pooled R2: that is AMPLITUDE\n' ...
+               '        COMPRESSION (gain), not model order. Widening the sweep will not help --\n' ...
+               '        read gRatio/linSlope and say so in the text.\n'], nnz(r2p < 0.7 & r2h >= 0.95));
 end
 sdB = std(tau1,'omitnan');  mW = mean(sdW,'omitnan');
 fprintf('-------------------------------------------------------------------------------\n');
@@ -229,7 +311,8 @@ fprintf(['\nCAPTION MUST STATE: AL_0041 e1/e2 are the SAME animal, so the betwee
          'CONNECTED region -- flag it if this panel backs an actuator-TF claim.\n']);
 
 TFRUN = struct('Sprim',{Sprim},'Sfull',{Sfull},'primTag',primTag,'tau1',tau1, ...
-               'sdBetween',sdB,'sdWithin',mW,'figs',figs,'robust',RB,'outDir',outDir);
+               'sdBetween',sdB,'sdWithin',mW,'figs',figs,'robust',RB,'outDir',outDir, ...
+               'R2h',r2h,'R2pool',r2p,'sweep',opt,'poles',PF,'fitFile',fitFile);
 fprintf('\n[TFRUN] panels -> %s\n', outDir);
 
 function v = ternNaN(c, f)
