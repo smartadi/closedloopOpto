@@ -78,7 +78,8 @@ if nargin < 4, opts = struct(); end
 % which is the principled bound (a tau longer than the data window is not measurable from
 % that window). See the rejection block near the bootstrap for why this exists.
 def = struct('maxPoles',5,'maxZeros',4,'maxDelay',3,'tFit_s',0.5,'per_amp_fit',true, ...
-             'verbose',true,'ampRange',[],'nBoot',0,'select','aic','minR2h',0.98,'tauMax',NaN);
+             'verbose',true,'ampRange',[],'nBoot',0,'select','aic','minR2h',0.98,'tauMax',NaN, ...
+             'forceOrder',[]);
 fn = fieldnames(def);
 for i = 1:numel(fn), if ~isfield(opts,fn{i}) || isempty(opts.(fn{i})), opts.(fn{i}) = def.(fn{i}); end, end
 
@@ -417,9 +418,22 @@ y  = [zeros(nPre,1); h(:)];
 d  = iddata(y, u, Ts);  d.Tstart = -nPre*Ts;
 tfOpt = tfestOptions('EnforceStability', false, 'Display', 'off');
 ri = 0;
-for nd = 0:opts.maxDelay
-    for np = 1:opts.maxPoles
-        for nz = 0:min(np-1, opts.maxZeros)
+% opts.forceOrder = [np nz nd] collapses the sweep to a SINGLE fit at that order.
+% Added 2026-08-14 for the fit-window scoping test: the sweep is ~100 tfest calls per
+% session and its cost scales with window length, so re-sweeping at 1.0/1.5 s to ask a
+% question about the WINDOW made the test 100x more expensive than the question needed
+% (two runs exceeded 30 min and had to be killed). Holding the order fixed also makes the
+% comparison cleaner -- otherwise a change in tau could be the order moving, not the window.
+if ~isempty(opts.forceOrder)
+    fo = opts.forceOrder;
+    ndList = fo(3);  npList = fo(1);  nzList = fo(2);
+else
+    ndList = 0:opts.maxDelay;  npList = 1:opts.maxPoles;  nzList = [];
+end
+for nd = ndList
+    for np = npList
+        if isempty(opts.forceOrder), nzList = 0:min(np-1, opts.maxZeros); end
+        for nz = nzList
             try
                 s = tfest(d, np, nz, tfOpt, 'InputDelay', nd*Ts);
             catch
