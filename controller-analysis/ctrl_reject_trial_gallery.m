@@ -80,7 +80,9 @@ for s = RG_SESS(:).'
         % gallery -- and in 'auto' it should fall through to the caches rather than give up.
         try
             B = imp_build_session(mouse, fields, s, rg_data, CFG);
-            if ~B.ok; fprintf('  %-22s (%s)\n', B.sess_tag, B.msg); B = []; end
+            if ~B.ok; fprintf('  %-22s (%s)\n', B.sess_tag, B.msg); B = [];
+            else;     B.absolute = true;   % imp_build_session rebuilds A/G in absolute %dF/F,
+            end                            % so the ref line and true ER are available
         catch ME
             fprintf('  %-22s SVD unavailable (%s)\n', fields{s}, ME.message);  B = [];
         end
