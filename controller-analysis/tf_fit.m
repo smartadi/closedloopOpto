@@ -59,9 +59,10 @@ hFitTF    = gobjects(nSess_ol,1);
 % OL_TF_SHOWN: how many sessions the PAPER panel draws, picked by R2 (user, 2026-08-17: the
 % 15-session overlay "looks absurd", "just keep three best fit sessions"). This is selection
 % on the outcome, so the panel is an EXAMPLE, not a population estimate -- every session is
-% still fitted, the all-15 distribution is still printed, and the panel labels itself
-% "best N of 15" so the selection travels with the figure instead of living in a caption
-% someone can drop. Set to Inf to draw all of them.
+% still fitted and the all-15 distribution is still printed. The on-panel "best N of 15" line
+% was REMOVED on user instruction (too verbose) and is now printed to the console as
+% "[OL-TF] CAPTION MUST STATE: ..." -- so the selection now depends on the caption carrying it.
+% Set to Inf to draw all of them.
 if ~exist('OL_TF_SHOWN','var') || isempty(OL_TF_SHOWN), OL_TF_SHOWN = 3; end
 % Stim-window shading drawn ONCE (all sessions share the locked dur=3 s window)
 patch(ax_p, [0 dur dur 0], [-8 -8 5 5], [0.85 0.85 0.85], ...
@@ -344,8 +345,13 @@ hDataDummy = plot(ax_p, nan, nan, '-',  'Color',[0.3 0.3 0.3], 'LineWidth',1.2, 
     'DisplayName','OL mean');
 hFitDummy  = plot(ax_p, nan, nan, '--', 'Color',[0.3 0.3 0.3], 'LineWidth',1.0, ...
     'DisplayName','LTI fit');
-lgd_tf = legend(ax_p, [hDataDummy hFitDummy], 'Location','southeast');
+lgd_tf = legend(ax_p, [hDataDummy hFitDummy], 'Location','southwest');
 paperLegend(lgd_tf);
+% ItemTokenSize overrides the project default [6 6] HERE ONLY. This legend's whole job is to
+% distinguish solid from dashed, and MATLAB scales its dash period with LineWidth: at 1.0 pt in
+% a 6 pt token the fit swatch draws one dash and reads as a short solid line, i.e. the legend
+% fails at the one thing it is for. 16 pt fits ~3 dashes, so the encoding is legible.
+lgd_tf.ItemTokenSize = [16 6];
 % Corner line reports the MEDIAN and the COUNT above threshold, not the range. The range is
 % misleading here: two sessions return large negative R2 (the fit is worse than a flat line),
 % so "R^2 -4.98-0.98" reads as a broken panel when the actual result is that most sessions
@@ -368,9 +374,10 @@ else
     ttlP = sprintf('%d sessions · R^2 median %.2f · %d/%d \\geq 0.5', ...
         numel(R2_all_ol), median(R2_all_ol,'omitnan'), nGood, numel(R2_all_ol));
 end
-text(ax_p, -0.9, 4.6, ttlP, ...
-     'FontSize',PS.fs, 'FontWeight',PS.fw, 'Color',[0.25 0.25 0.25], ...
-     'HorizontalAlignment','left', 'VerticalAlignment','top');
+% The corner line is OFF the panel (user, 2026-08-17: too verbose). It is still built above and
+% printed below as CAPTION TEXT, because the panel shows an outcome-selected subset -- that fact
+% now has to reach the reader through the caption, which is the one place it can be lost.
+fprintf('[OL-TF] CAPTION MUST STATE: %s\n', ttlP);
 fprintf('[OL-TF] paper panel shows sessions %s (R2 %s) of %d fitted\n', ...
     mat2str(sort(keepS)), mat2str(round(R2_all_ol(sort(keepS)),3)), sum(isfinite(R2_all_ol)));
 badS = find(R2_all_ol < 0.5);
@@ -384,6 +391,25 @@ if ~isempty(badS)
     fprintf(2,'        are not "slightly worse" sessions and must not be averaged over.\n');
 end
 paperAxes(ax_p, 'XLength',1, 'YLength',3, 'XLabel','1 s', 'YLabel','3% dF/F');
+
+% Legend goes OUTSIDE, under the bottom-left corner. Inside 'southwest' puts it straight
+% across the traces: the deepest session bottoms out near the axis floor, so the lower-left
+% quadrant is not empty space here -- it is the result. Laid out horizontally so two entries
+% cost one shallow strip rather than a tall block. The scale bars live inside the axes, so
+% nothing collides. Must run AFTER paperAxes, which moves the axes.
+drawnow;
+lgd_tf.Orientation = 'horizontal';
+lgd_tf.Units       = 'normalized';
+lgdPos = lgd_tf.Position;
+axPos  = get(ax_p, 'Position');
+% The axes must GIVE UP the strip first. Just moving the legend below axPos(2) runs it off the
+% bottom of the figure (the default axes already sits at 0.11), where it lands on the "1 s"
+% scale label. Raising the axes floor by the legend height buys clean space instead.
+dy = lgdPos(4) + 0.03;
+set(ax_p, 'Position', [axPos(1), axPos(2)+dy, axPos(3), axPos(4)-dy]);
+% Indented past the x scale bar: flush left, the legend's solid swatch butts up against the
+% "1 s" bar on the same baseline and the two read as one continuous line.
+lgd_tf.Position = [axPos(1) + 0.11*axPos(3), axPos(2) + 0.01, lgdPos(3), lgdPos(4)];
 
 % Resolve output dir whether run from brain_paper/ root or controller-analysis/
 if exist(fullfile('paper','images','figure2'), 'dir')
