@@ -120,7 +120,7 @@ for i = 1:numel(adm)
     ciLo = CI(i).lo;  ciHi = CI(i).hi;
     if STV_PLOTCTRL, cpLo = CI(i).ploLo;  cpHi = CI(i).ploHi; end
 
-    f = paperFig(6, 4);  ax = axes(f);  hold(ax,'on');
+    f = paperFig(PS.f2w, PS.f2h);  ax = axes(f);  hold(ax,'on');   % 2J / 2K -- Fig-2 grid
     xb = r.binMed(:).';
     fill(ax, [xb fliplr(xb)], [ciLo fliplr(ciHi)], C_stim, ...
          'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
@@ -180,7 +180,7 @@ kD = find(strcmpi({R.tag}, 'DPr'), 1);
 if ~isempty(kD)
     xs = STV.T.DPrz(:);  ys = abs(STV.T.dev(:));  ss = STV.T.sess(:);
     vv = isfinite(xs) & isfinite(ys);
-    f = paperFig(6, 4);  ax = axes(f);  hold(ax,'on');
+    f = paperFig(PS.f2w, PS.f2h);  ax = axes(f);  hold(ax,'on');   % 2G -- Fig-2 grid
     % Shuffled draw order with per-point colour, so no session paints over the others -- the
     % same defect that was fixed in 2F on the same day.
     rng(3,'twister');  sh = randperm(nnz(vv));  iv = find(vv);  iv = iv(sh);

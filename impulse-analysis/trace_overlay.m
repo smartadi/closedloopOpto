@@ -12,7 +12,7 @@ en3   = allExperiments(3).en;
 
 PS = paperStyle();
 setPaperDefaults();
-figS = paperFig(5, 4);
+figS = paperFig(PS.f2w, PS.f2h);   % 2A -- Fig-2 grid (see paperStyle f2w/f2h)
 hold on;
 
 % Model-fit window drawn LATER (after ylim is known) so it can span the full

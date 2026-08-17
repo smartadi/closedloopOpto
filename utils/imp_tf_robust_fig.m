@@ -115,7 +115,7 @@ figA = gobjects(0); figB = gobjects(0); figC = gobjects(0); figD = gobjects(0);
 %% ---- TF-A : tau forest -------------------------------------------------------------
 if wantP('A')
 % Widened 4 -> 5 cm: a log axis carrying two decades of tau needs the room.
-figA = paperFig(5, 4);  axA = axes(figA); hold(axA,'on');
+figA = paperFig(PS.f2w, PS.f2h);  axA = axes(figA); hold(axA,'on');   % TF-A -- Fig-2 grid
 % Each session gets ONE row and keeps ONE colour; the two poles are separated by MARKER
 % (filled circle = slow, open square = fast), not by hue. Encoding pole type in colour
 % would have cost the session identity that every other Fig-2 panel carries.
@@ -234,7 +234,7 @@ for i = 1:n
     end
 end
 if wantP('D')
-figD = paperFig(4.5, 4);  axD = axes(figD);
+figD = paperFig(PS.f2w, PS.f2h);  axD = axes(figD);   % TF-D -- Fig-2 grid
 % Sequential navy ramp instead of flipud(gray): still monotonic in lightness (so it
 % survives a greyscale print and the cell-text contrast rule below still works), but
 % mid-range R^2 values are far easier to place against the colourbar in colour.

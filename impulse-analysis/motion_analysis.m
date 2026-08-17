@@ -326,7 +326,7 @@ for e = unique(allExp_s).'
     else,        motN_s(m) = 0;  end
 end
 
-fig_mvp = paperFig(4, 4);
+fig_mvp = paperFig(PS.f2w, PS.f2h);   % 2F -- Fig-2 grid (see paperStyle f2w/f2h)
 ax_mvp  = axes(fig_mvp);
 hold(ax_mvp, 'on');
 

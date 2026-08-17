@@ -153,7 +153,7 @@ fprintf('  Mean   %+.4f      %+.4f       %+.4f\n', mean(slope_pre_sl), mean(slop
 fprintf('  SEM    %+.4f      %+.4f       %+.4f\n', std(slope_pre_sl)/sqrt(nV_ov), std(slope_stim_sl)/sqrt(nV_ov), std(slope_post_sl)/sqrt(nV_ov));
 
 % ---- Paper figure: variance trace with fitted slope lines ------------------
-fig_ov = paperFig(6, 4);
+fig_ov = paperFig(PS.f2w, PS.f2h);   % 2E -- Fig-2 grid (see paperStyle f2w/f2h)
 ax_ov  = axes(fig_ov, 'Units','normalized', 'Position',[0.18 0.05 0.79 0.88]);
 hold(ax_ov, 'on');
 

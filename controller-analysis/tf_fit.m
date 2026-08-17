@@ -47,7 +47,7 @@ PS = paperStyle();
 setPaperDefaults();
 colOL = PS.col_ol;
 colCL = PS.col_cl;
-fig_tf_paper = paperFig(6, 4);
+fig_tf_paper = paperFig(PS.f2w, PS.f2h);   % 2I -- Fig-2 grid (see paperStyle f2w/f2h)
 ax_p = axes(fig_tf_paper); hold(ax_p, 'on');
 % Controller sessions are a DIFFERENT session set from the impulse ones, so they get their own
 % ramp sampled to this set's size -- PS.sessColor is reserved for impulse session identity and

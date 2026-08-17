@@ -190,6 +190,42 @@ Orphans: `Figure2_extra.pdf` (an assembly inside a panel folder), `imp_response_
 > or caption built on a `_cperr` asset is mislabelled. Either wire `contra_prediction.m` so `imp.cp_err`
 > exists, or delete the option and the assets.
 
+### ▦ Fig 2 — physical layout, 4 rows × 4 panels (2026-08-17, user)
+
+Rows 1–2 are the fits, each split **75% impulse data / 25% step input**; row 3 is state dependence
+of the trial average; row 4 is the residual analysis.
+
+| Row | col 1 | col 2 | col 3 | col 4 |
+|---|---|---|---|---|
+| **1** — fits, measured response | 2A traces | 2B dose–response | 2C-i h(t) measured vs fit | **2I** OL average + LTI fit |
+| **2** — fits, model across sessions | TF-A τ per session | TF-D model swap | *open* | **2E** onset variance |
+| **3** — state dep. of trial average | 2F | 2J | 2G | 2K |
+| **4** — residual analysis | *empty* | *empty* | *empty* | *empty* |
+
+**The 75/25 split resolves to a plain 4-column grid.** 75% of the width over 3 panels is within a
+hair of 25% over 1, so all four columns are the same width and the step-input column lines up with
+column 4 of rows 3–4. One grid to build against, not two — the split is expressed by the gutter
+between columns 3 and 4, not by different panel sizes.
+
+**Panel size is now a constant, not a per-script literal.** `paperStyle()` carries
+`PS.pageW = 18.0` (matches Fig 3, whose paired panels are 8.9 cm), `PS.f2gap = 0.4`, and derives
+`PS.f2w = 4.20`, `PS.f2h = 3.6`. Every Fig-2 script calls `paperFig(PS.f2w, PS.f2h)`; changing the
+page width is one edit. Scripts wired 2026-08-17: `trace_overlay.m`, `dose_response.m`,
+`utils/imp_tf_paper_fig.m`, `utils/imp_tf_robust_fig.m` (A and D), `imp_state_trialvar_fig.m`
+(2J/2K/2G only — the exploratory panels stay 6×4), `impulse-analysis/motion_analysis.m`,
+`controller-analysis/variance_mse.m`, `controller-analysis/tf_fit.m`.
+
+⚠ **Type does not shrink with the panel.** 6 pt is absolute, so at 4.2 cm it takes ~43% more of the
+panel width than it did at 6 cm. Re-exporting is not sufficient — each panel needs its labels,
+ticks and legend re-checked at the new size. 2I is checked and holds. Not yet checked: 2J, 2K, 2G,
+TF-D, 2E.
+
+**Two holes in this layout, both real:**
+1. **Row 4 has no panels at all.** The residual/stim-only block has never had a figure; `f2_model.m`
+   is unapproved. Either build it or the figure is 3 rows.
+2. **Row 2 column 3 is open.** TF-P is the obvious filler but it overlaps TF-A and the standing
+   decision is to ship only one of the two. The alternative is 2 wider panels in row 2's impulse block.
+
 ### ✂ Fig 2 — agreed cut and running order (2026-08-12, user)
 
 | # | Panel | What it shows | State |

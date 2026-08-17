@@ -6,8 +6,8 @@
 %% Combined plot for all experiments
 close all;
 
-PW_c = 5; PH_c = 4;
 PS = paperStyle();
+PW_c = PS.f2w; PH_c = PS.f2h;      % 2B -- Fig-2 grid (see paperStyle f2w/f2h)
 % Session colour indexed by SESSION NUMBER (see paperStyle.m): PS.sessGrad(n) resampled the
 % ramp to however many sessions this run had, so session 1 changed shade between a 3-session
 % and a 4-session run and 2B stopped matching 2C-i and the TF panels.

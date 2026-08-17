@@ -63,7 +63,7 @@ assert(n >= 1, '[TFPAPER] no usable session fits.');
 grad = @(k) PS.sessColor(k);
 
 %% ---- 2C-i : measured vs fitted h(t), peak-normalised ------------------------------
-fig1 = paperFig(6, 4);
+fig1 = paperFig(PS.f2w, PS.f2h);   % 2C-i -- Fig-2 grid (see paperStyle f2w/f2h)
 ax1  = axes(fig1); hold(ax1,'on');
 hLine = gobjects(n,1);
 for k = 1:n

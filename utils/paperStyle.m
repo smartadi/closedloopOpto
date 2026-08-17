@@ -93,6 +93,23 @@ end
 % --- legend ---
 PS.lgd_token = [6 6];   % ItemTokenSize for all legends
 
+% --- Figure 2 grid (2026-08-17) ------------------------------------------------------------
+% Fig 2 is laid out as FOUR ROWS OF FOUR PANELS on a full-width page. Rows 1-2 are the fits,
+% split 75% impulse / 25% step input; row 3 is state dependence of the trial average; row 4 is
+% the residual analysis. The 75/25 split with four columns lands on 3 impulse panels + 1 step
+% panel, and 75% of the width over 3 panels is almost exactly 25% over 1 -- so all four columns
+% come out the same width and the step column aligns with column 4 of rows 3-4. One grid, not
+% two. Every Fig-2 script should size its figure with paperFig(PS.f2w, PS.f2h) rather than
+% carrying its own PW/PH, so a change of page width is one edit here.
+PS.pageW = 18.0;                                     % full text width (cm). Matches Fig 3,
+                                                     % whose paired panels are 8.9 cm each.
+PS.f2gap = 0.4;                                      % gutter between panels (cm)
+PS.f2w   = (PS.pageW - 3*PS.f2gap) / 4;              % 4.20 cm
+PS.f2h   = 3.6;                                      % row height (cm)
+% NOTE: type is 6 pt ABSOLUTE, so shrinking a panel from 6 cm to 4.2 cm makes the type occupy
+% ~43% more of the panel width. Panels that were already tight at 6 cm (2J, 2K, 2G, 2I, TF-D)
+% need their labels/legends checked after the resize, not just re-exported.
+
 % --- axes defaults (for setPaperDefaults) ---
 PS.ax_box     = 'off';
 PS.ax_tickdir = 'out';
