@@ -348,13 +348,15 @@ for expIdx = 1:nExp
         'DisplayName', sprintf('Session %d', expIdx));
 end
 
-% pooled linear trend line (fit on the plotted 0-1 axis so it matches the data)
+% NO trend line on this panel (user, 2026-08-17: "i dont need a linear fit shown its not the
+% result"). Correct, and worth stating: a line through a SIGNED deviation is a test of the
+% MEAN, and the mean deviation is flat by construction (dev is taken about the amplitude
+% mean) -- r = 0.003, p = 0.89. Drawing it invited the reader to look for a slope that cannot
+% exist and distracted from what the panel does show, which is the funnel NARROWING with
+% motion. The scale claim lives in 2J. r is still computed and printed for the record.
 okFit = ~isnan(motN_s) & ~isnan(allAbsDev_s);
-pFit  = polyfit(motN_s(okFit), allAbsDev_s(okFit), 1);
 [rN, pN] = corr(motN_s(okFit), allAbsDev_s(okFit), 'rows', 'complete');
-xf    = linspace(0, 1, 100);
-hFit  = plot(ax_mvp, xf, polyval(pFit, xf), '-', 'Color', 'k', ...
-    'LineWidth', PS.lw_fit, 'DisplayName', sprintf('Fit (r=%.2f)', rN));
+fprintf('[motion] 2F pooled signed-dev trend (NOT drawn): r=%.3f p=%.3f\n', rN, pN);
 
 xlim(ax_mvp, [-0.03 1.03]);
 % SIGNED dev: the old clamp `max(yl(1),-2)` assumed a floor at 0 and would CLIP real negative
@@ -365,7 +367,7 @@ hz_mvp = yline(ax_mvp, 0, 'k:', 'LineWidth', 0.5); hz_mvp.HandleVisibility = 'of
 xlabel(ax_mvp, sprintf('Normalized motion, 0-1 (%.1f to %.1f s)', motWin_ana(1), motWin_ana(2)), ...
     'FontSize', 6, 'FontWeight', 'bold');
 ylabel(ax_mvp, dev_ylabel, 'FontSize', 6, 'FontWeight', 'bold');
-lg_mvp = legend(ax_mvp, [hLeg_p; hFit], 'Location', 'northeast');
+lg_mvp = legend(ax_mvp, hLeg_p(isgraphics(hLeg_p)), 'Location', 'northeast');
 paperLegend(lg_mvp);
 hold(ax_mvp, 'off');
 paperExport(fig_mvp, ...

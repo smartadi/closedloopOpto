@@ -18,6 +18,10 @@ h1 = yline(0,'--k');
 ax_c = gca;
 
 nExp = numel(allExperiments);
+% DR_LABEL controls how verbose the direct labels are: 'slope' = "s1  -0.34" (default),
+% 'id' = "s1" only, with the slopes left to the caption.
+if ~exist('DR_LABEL','var') || isempty(DR_LABEL), DR_LABEL = 'slope'; end
+labX = nan(nExp,1); labY = nan(nExp,1); labT = cell(nExp,1);
 hLegend = gobjects(nExp,1);              % one legend entry per experiment
 legTxt  = cell(nExp,1);
 
@@ -62,10 +66,14 @@ for expIdx = 1:nExp
     SS_tot = sum((meanVals(:) - mean(meanVals)).^2);
     R2_e   = 1 - SS_res / max(SS_tot, eps);
     fprintf('  Session %d: slope=%.4f dF%%/V,  R2=%.3f\n', expIdx, p(1), R2_e);
-    text(ax_c, 0.5, 0.05 + 0.12*(expIdx-1), ...
-        sprintf('S%d: m=%.3f, R2=%.2f', expIdx, p(1), R2_e), ...
-        'Units','normalized', 'FontSize',PS.fs, 'Color',c, ...
-        'FontWeight','bold', 'HorizontalAlignment','right', 'VerticalAlignment','bottom');
+    % Label position + text are collected, not drawn, so they can be placed AFTER the loop
+    % once every line's end point is known (see the direct-labelling block below).
+    labX(expIdx) = xf(end);          %#ok<SAGROW>
+    labY(expIdx) = polyval(p, xf(end));  %#ok<SAGROW>
+    labT{expIdx} = sprintf('s%d', expIdx);  %#ok<SAGROW>
+    if strcmpi(DR_LABEL,'slope')
+        labT{expIdx} = sprintf('s%d  %.2f', expIdx, p(1));
+    end
 end
 
 % Beautify
@@ -78,16 +86,43 @@ uistack(h1, 'bottom')
 xticks([])
 
 try
-    paperAxes(gca,'XLength',2,'YLength',0.01,'XLabel','0.5 mW','YLabel',' ');
+    % x scale bar halved 0.5 -> 0.25 mW (user, 2026-08-17). XLength is in DATA units (V);
+    % the label is the mW equivalent, so both must move together or the bar lies.
+    paperAxes(gca,'XLength',1,'YLength',0.01,'XLabel','0.25 mW','YLabel',' ');
 catch
     xlabel('Input(V)', 'FontWeight','bold');
     ylabel('dF/F %', 'FontWeight','bold');
 end
 
-% Legend (clean neuro style)
-lgd = legend(ax, hLegend, legTxt, 'Color','none');
-paperLegend(lgd);
-lgd.AutoUpdate = 'off';
+% ---- DIRECT LABELS replace the legend AND the stacked text block ---------------------------
+% (user, 2026-08-17: "has colored text and legend i dont think we need both ... a lot of
+% spacing in betwen and is overlapping the traces ... suggest way to merge".)
+% The two carried the same information twice: the legend mapped colour -> "Session k" in one
+% corner, the text block mapped colour -> slope/R2 in another, and the reader had to join them
+% through the colour. Putting "s1  -0.34" at the END OF ITS OWN LINE merges them into one
+% mark: identity and slope arrive together, at the object they describe, with no colour
+% look-up and no legend box competing with the traces. R2 is dropped from the panel (it is a
+% goodness-of-fit number, not the result) and still prints to the console for the caption.
+% Vertical nudging only if two lines end within a hair of each other.
+[~, ordL] = sort(labY);
+minGap = 0.055 * diff(ylim(ax));
+for ii = 2:numel(ordL)
+    a = ordL(ii-1); b = ordL(ii);
+    if labY(b) - labY(a) < minGap, labY(b) = labY(a) + minGap; end
+end
+% All labels share ONE x at the right margin rather than sitting at each line's own end.
+% Sessions stop at different amplitudes, so per-line placement dropped labels into the middle
+% of the plot on top of other sessions' points -- exactly the overlap this block exists to
+% remove. A common right-hand column costs a small disconnect for the shorter lines and buys
+% a clean reading order top-to-bottom.
+xr    = diff(xlim(ax));
+labXc = max(labX) + 0.03*xr;
+for expIdx = 1:nExp
+    text(ax, labXc, labY(expIdx), labT{expIdx}, ...
+        'Color', expColors(expIdx,:), 'FontSize', PS.fs, 'FontWeight', PS.fw, ...
+        'HorizontalAlignment','left', 'VerticalAlignment','middle', 'Clipping','off');
+end
+xlim(ax, [min(xlim(ax)), labXc + 0.22*xr]);   % room for the labels outside the data
 text(ax, -0.12, 0.5, 'Inhibition Energy', ...
     'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...

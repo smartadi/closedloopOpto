@@ -7,16 +7,29 @@
 % Main figure (nSess x 2): col 1 = OL traces + TF fit, col 2 = CL mean vs OL-TF pred.
 % Separate interactive figure: trial R^2 vs trial MSE (OL + CL), click -> plotSingleTrial.
 
-ol_sess_idx = [4 9 11];   % matches custom_idx in OL step response plot
+% SESSION SET. Historically [4 9 11] -- the three sessions the raw OL step-response panel (2D)
+% used. 2D is retired (user, 2026-08-12: the impulse and step responses are different
+% measurements, so a raw step panel beside the impulse panels invites a comparison the data
+% does not support). What replaces it is THIS panel run over EVERY controller session: the
+% claim becomes "a low-order LTI model fits the OL trial average in all N sessions", which is
+% what licenses an LTI design later. Set OL_TF_SESS to override.
+if ~exist('OL_TF_SESS','var') || isempty(OL_TF_SESS)
+    ol_sess_idx = 1:numel(fields);
+else
+    ol_sess_idx = OL_TF_SESS;
+end
 Fs_ol  = 35;   Ts_ol = 1/Fs_ol;
 Fs_in  = 2000;
 nPre_ol  = 5;             % zero-prepend length (> model order for clean initialisation)
 tfOpt_ol = tfestOptions('EnforceStability', false, 'Display', 'off');
 
 nSess_ol  = numel(ol_sess_idx);
-ol_colors = [0.2 0.4 0.8;
-             0.8 0.2 0.2;
-             0.2 0.7 0.3];
+PS_tf     = paperStyle();
+% One row PER SESSION. This was a hardcoded 3x3 (blue/red/green) from when the panel was
+% locked to sessions [4 9 11]; with the set opened to all controller sessions, `col_s =
+% ol_colors(si,:)` threw an index error on session 4 and the loop died there -- silently, as
+% far as the paper panel was concerned, because sessions 1-3 had already been drawn.
+ol_colors = PS_tf.sessGrad(nSess_ol);
 
 % Accumulation arrays for interactive validation figure
 ud_nc_tf   = struct('field',{}, 'stim_idx',{}, 'lbl',{}, 'mse',{});
@@ -36,8 +49,12 @@ colOL = PS.col_ol;
 colCL = PS.col_cl;
 fig_tf_paper = paperFig(6, 4);
 ax_p = axes(fig_tf_paper); hold(ax_p, 'on');
-gradC_tf = PS.sessGrad(nSess_ol);      % session gradient (matches Fig 2B/2F)
+% Controller sessions are a DIFFERENT session set from the impulse ones, so they get their own
+% ramp sampled to this set's size -- PS.sessColor is reserved for impulse session identity and
+% reusing it here would imply s1 in 2C-i is s1 here, which it is not (Fig-2 colour policy).
+gradC_tf = PS.sessGrad(nSess_ol);
 hLegTF   = gobjects(nSess_ol, 1);      % one legend handle per session
+R2_all_ol = nan(1,nSess_ol);  ordNP_ol = nan(1,nSess_ol);  ordNZ_ol = nan(1,nSess_ol);
 % Stim-window shading drawn ONCE (all sessions share the locked dur=3 s window)
 patch(ax_p, [0 dur dur 0], [-8 -8 5 5], [0.85 0.85 0.85], ...
     'FaceAlpha',0.4, 'EdgeColor','none', 'HandleVisibility','off');
@@ -158,7 +175,7 @@ for si = 1:nSess_ol
         col_s, 'FaceAlpha', 0.2, 'EdgeColor', 'none', 'HandleVisibility', 'off');
     plot(ax_ol, t_ol, y_mean_ol, 'Color', col_s, 'LineWidth', 2, 'DisplayName', 'OL mean');
     plot(ax_ol, t_ol, yp_ol, 'k--', 'LineWidth', 1.5, ...
-        'DisplayName', sprintf('TF 2p1z  R^2=%.2f', R2_ol));
+        'DisplayName', sprintf('TF fit  R^2=%.2f', R2_ol));
     u_sc = max(abs(y_mean_ol)) / max(abs(u_mean_ol) + eps);
     plot(ax_ol, t_ol, u_mean_ol*u_sc, 'Color', [0.6 0.6 0.6], ...
         'LineWidth', 1, 'LineStyle', ':', 'DisplayName', 'Input (scaled)');
@@ -297,11 +314,13 @@ for si = 1:nSess_ol
     plot(ax_p, t_pred_ext, yp_ext, '--', 'Color', colP, 'LineWidth', 1.0, ...
         'HandleVisibility', 'off');
 
-    % R² + selected order, stacked top-left in the session colour
-    text(ax_p, -0.9, 4.6 - 1.05*(si-1), ...
-        sprintf('S%d: R^2=%.2f (%dp%dz)', si, R2_ol, bestNP_ol, bestNZ_ol), ...
-        'FontSize',5, 'FontWeight','bold', 'Color',colP, ...
-        'HorizontalAlignment','left', 'VerticalAlignment','top');
+    % Per-session R2 is COLLECTED, not drawn. The model order is dropped entirely (user,
+    % 2026-08-17: "dont show the TF design (2p1z) its not required") -- the panel's claim is
+    % that a low-order model fits, not which one AIC happened to pick, and with N sessions a
+    % stacked per-session text block would bury the traces. Order still prints to console.
+    R2_all_ol(si)  = R2_ol;        %#ok<SAGROW>
+    ordNP_ol(si)   = bestNP_ol;    %#ok<SAGROW>
+    ordNZ_ol(si)   = bestNZ_ol;    %#ok<SAGROW>
 end
 
 % ---- Decorate the merged TF paper panel once (after all sessions overlaid) ----
@@ -310,10 +329,34 @@ xline(ax_p, dur, 'Color',[0.5 0.5 0.5], 'LineWidth',0.5, 'HandleVisibility','off
 yline(ax_p, 0,   'Color',[0.7 0.7 0.7], 'LineWidth',0.5, 'HandleVisibility','off');
 set(ax_p, 'XLim',[-1 dur+1], 'YLim',[-8 5], 'Clipping','off');
 uistack(findobj(ax_p,'Type','patch'), 'bottom');
-hFitDummy = plot(ax_p, nan, nan, '--', 'Color',[0.3 0.3 0.3], 'LineWidth',1.0, ...
-    'DisplayName','TF fit');
-lgd_tf = legend(ax_p, [hLegTF; hFitDummy], 'Location','southeast');
+% Legend names the ENCODING only (solid = data, dashed = fit). With N sessions a row per
+% session is unreadable at 6 pt and repeats a colour key that is a figure-level convention.
+% The population R2 goes in one corner line -- that IS the panel's claim.
+hDataDummy = plot(ax_p, nan, nan, '-',  'Color',[0.3 0.3 0.3], 'LineWidth',1.2, ...
+    'DisplayName','OL mean');
+hFitDummy  = plot(ax_p, nan, nan, '--', 'Color',[0.3 0.3 0.3], 'LineWidth',1.0, ...
+    'DisplayName','LTI fit');
+lgd_tf = legend(ax_p, [hDataDummy hFitDummy], 'Location','southeast');
 paperLegend(lgd_tf);
+% Corner line reports the MEDIAN and the COUNT above threshold, not the range. The range is
+% misleading here: two sessions return large negative R2 (the fit is worse than a flat line),
+% so "R^2 -4.98-0.98" reads as a broken panel when the actual result is that most sessions
+% fit well and a minority fail outright. Naming the failures is the honest summary.
+nGood = sum(R2_all_ol >= 0.5);
+text(ax_p, -0.9, 4.6, sprintf('%d sessions · R^2 median %.2f · %d/%d \\geq 0.5', ...
+     numel(R2_all_ol), median(R2_all_ol,'omitnan'), nGood, numel(R2_all_ol)), ...
+     'FontSize',PS.fs, 'FontWeight',PS.fw, 'Color',[0.25 0.25 0.25], ...
+     'HorizontalAlignment','left', 'VerticalAlignment','top');
+badS = find(R2_all_ol < 0.5);
+fprintf('\n[OL-TF] %d sessions | R2 median %.3f | >=0.5 in %d, >=0.7 in %d\n', ...
+    numel(R2_all_ol), median(R2_all_ol,'omitnan'), nGood, sum(R2_all_ol>=0.7));
+fprintf('[OL-TF] orders np %s nz %s\n', mat2str(ordNP_ol), mat2str(ordNZ_ol));
+if ~isempty(badS)
+    fprintf(2,'[OL-TF] BELOW 0.5 in %d session(s): ', numel(badS));
+    fprintf(2,'s%d (R2=%.2f)  ', [badS; R2_all_ol(badS)]);
+    fprintf(2,'\n        A negative R2 means the LTI fit is worse than a flat line -- these\n');
+    fprintf(2,'        are not "slightly worse" sessions and must not be averaged over.\n');
+end
 paperAxes(ax_p, 'XLength',1, 'YLength',3, 'XLabel','1 s', 'YLabel','3% dF/F');
 
 % Resolve output dir whether run from brain_paper/ root or controller-analysis/
