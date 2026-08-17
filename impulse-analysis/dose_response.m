@@ -8,7 +8,10 @@ close all;
 
 PW_c = 5; PH_c = 4;
 PS = paperStyle();
-expColors = PS.sessGrad(numel(allExperiments));   % sequential session gradient (CB-safe)
+% Session colour indexed by SESSION NUMBER (see paperStyle.m): PS.sessGrad(n) resampled the
+% ramp to however many sessions this run had, so session 1 changed shade between a 3-session
+% and a 4-session run and 2B stopped matching 2C-i and the TF panels.
+expColors = PS.sess;
 setPaperDefaults();
 fig = paperFig(PW_c, PH_c); hold on
 h1 = yline(0,'--k');

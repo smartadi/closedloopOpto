@@ -39,7 +39,14 @@ if ~exist('STVF_PANELS','var') || isempty(STVF_PANELS), STVF_PANELS = 'quartile'
 % folder means the panel is locked and Illustrator-linked -- so this stays OFF by default and is
 % turned on deliberately, and the panels are registered in PAPER.md in the same commit.
 if ~exist('STVF_PAPER','var') || isempty(STVF_PAPER), STVF_PAPER = false; end
-paperRoot = fullfile(fileparts(here), 'paper');
+% Overridable so a build can be staged somewhere writable: the real paper/images/figure2
+% PDFs are LOCKED whenever Illustrator or Acrobat has them open, and a half-written panel
+% set is worse than none.
+if exist('STVF_PAPERROOT','var') == 1 && ~isempty(STVF_PAPERROOT)
+    paperRoot = STVF_PAPERROOT;
+else
+    paperRoot = fullfile(fileparts(here), 'paper');
+end
 paperNames = struct('MOT','imp_state_var_motion', 'DPr','imp_state_var_reldelta');
 % Inherit the control switch from the main script so the two never disagree about what is
 % being shown. Default true, matching imp_state_trialvar.m.
