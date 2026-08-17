@@ -55,6 +55,14 @@ ax_p = axes(fig_tf_paper); hold(ax_p, 'on');
 gradC_tf = PS.sessGrad(nSess_ol);
 hLegTF   = gobjects(nSess_ol, 1);      % one legend handle per session
 R2_all_ol = nan(1,nSess_ol);  ordNP_ol = nan(1,nSess_ol);  ordNZ_ol = nan(1,nSess_ol);
+hFitTF    = gobjects(nSess_ol,1);
+% OL_TF_SHOWN: how many sessions the PAPER panel draws, picked by R2 (user, 2026-08-17: the
+% 15-session overlay "looks absurd", "just keep three best fit sessions"). This is selection
+% on the outcome, so the panel is an EXAMPLE, not a population estimate -- every session is
+% still fitted, the all-15 distribution is still printed, and the panel labels itself
+% "best N of 15" so the selection travels with the figure instead of living in a caption
+% someone can drop. Set to Inf to draw all of them.
+if ~exist('OL_TF_SHOWN','var') || isempty(OL_TF_SHOWN), OL_TF_SHOWN = 3; end
 % Stim-window shading drawn ONCE (all sessions share the locked dur=3 s window)
 patch(ax_p, [0 dur dur 0], [-8 -8 5 5], [0.85 0.85 0.85], ...
     'FaceAlpha',0.4, 'EdgeColor','none', 'HandleVisibility','off');
@@ -311,7 +319,7 @@ for si = 1:nSess_ol
     colP = gradC_tf(si, :);
     hLegTF(si) = plot(ax_p, t_w_full, y_w_full, 'Color', colP, 'LineWidth', 1.2, ...
         'DisplayName', sprintf('Session %d', si));
-    plot(ax_p, t_pred_ext, yp_ext, '--', 'Color', colP, 'LineWidth', 1.0, ...
+    hFitTF(si) = plot(ax_p, t_pred_ext, yp_ext, '--', 'Color', colP, 'LineWidth', 1.0, ...
         'HandleVisibility', 'off');
 
     % Per-session R2 is COLLECTED, not drawn. The model order is dropped entirely (user,
@@ -343,10 +351,28 @@ paperLegend(lgd_tf);
 % so "R^2 -4.98-0.98" reads as a broken panel when the actual result is that most sessions
 % fit well and a minority fail outright. Naming the failures is the honest summary.
 nGood = sum(R2_all_ol >= 0.5);
-text(ax_p, -0.9, 4.6, sprintf('%d sessions · R^2 median %.2f · %d/%d \\geq 0.5', ...
-     numel(R2_all_ol), median(R2_all_ol,'omitnan'), nGood, numel(R2_all_ol)), ...
+% ---- keep only the best-fitting OL_TF_SHOWN sessions on the paper panel ------------------
+[~, ordR2] = sort(R2_all_ol, 'descend', 'MissingPlacement','last');
+nShow  = min(OL_TF_SHOWN, sum(isfinite(R2_all_ol)));
+keepS  = ordR2(1:nShow);
+hideS  = setdiff(1:nSess_ol, keepS);
+for si = hideS
+    if isgraphics(hLegTF(si)), set(hLegTF(si), 'Visible','off'); end
+    if isgraphics(hFitTF(si)), set(hFitTF(si), 'Visible','off'); end
+end
+if nShow < sum(isfinite(R2_all_ol))
+    ttlP = sprintf('best %d of %d · shown R^2 %.2f-%.2f · all %d median %.2f', ...
+        nShow, sum(isfinite(R2_all_ol)), min(R2_all_ol(keepS)), max(R2_all_ol(keepS)), ...
+        sum(isfinite(R2_all_ol)), median(R2_all_ol,'omitnan'));
+else
+    ttlP = sprintf('%d sessions · R^2 median %.2f · %d/%d \\geq 0.5', ...
+        numel(R2_all_ol), median(R2_all_ol,'omitnan'), nGood, numel(R2_all_ol));
+end
+text(ax_p, -0.9, 4.6, ttlP, ...
      'FontSize',PS.fs, 'FontWeight',PS.fw, 'Color',[0.25 0.25 0.25], ...
      'HorizontalAlignment','left', 'VerticalAlignment','top');
+fprintf('[OL-TF] paper panel shows sessions %s (R2 %s) of %d fitted\n', ...
+    mat2str(sort(keepS)), mat2str(round(R2_all_ol(sort(keepS)),3)), sum(isfinite(R2_all_ol)));
 badS = find(R2_all_ol < 0.5);
 fprintf('\n[OL-TF] %d sessions | R2 median %.3f | >=0.5 in %d, >=0.7 in %d\n', ...
     numel(R2_all_ol), median(R2_all_ol,'omitnan'), nGood, sum(R2_all_ol>=0.7));
