@@ -10,6 +10,19 @@ CONTROLLER trials"** block in `TASKS.md` for the full step list. Groundwork: sca
 **FIRST check (blocker):** full-frame widefield SVD availability for the 13 controller sessions
 (the predictor needs contra PIXELS via `redoSVD`, not just the ipsi-kernel `states.csv`).
 
+## ⭐ State-dependence / stim-blind sweep — TWO PHASES (2026-08-10)
+Run order: `load_sessions.m` → **`ctrl_roi_draw_all.m`** → **`ctrl_residual_build.m`** → `ctrl_ols_xsess.m`.
+- **PHASE A `ctrl_roi_draw_all.m`** `[XDRAW]` — draw EVERY session's outline + midline (the draw window
+  now shows that session's laser-effect contours + site marker, via `cp_site_overlay`), then the
+  unattended Stage-1 fit. Ends on a hard gate: names any session still lacking an ROI/Stage-1 cache.
+- **PHASE B `ctrl_residual_build.m`** `[XRES]` — affected-pixel detection + residual, ONE session at a
+  time, with next/retry/skip/quit. Refuses to start until Phase A is complete (`RB.require_all`).
+- **The detector is `utils/ctrl_affected_detect.m`** — the ONE place the affected/unaffected call is
+  made; `ctrl_affected_gui.m` and `ctrl_ols_ol_stimblind.m` both call it. Iterate on the algorithm
+  THERE, not in either script. Methods: `'dip'` (default, the locked rule) and `'dip_or_shape'`.
+  `RB.detect` / `BATCH_detect` override its opts without editing any file.
+- `ctrl_roi_build_all.m` is RETIRED (deleted 2026-08-10) — it interleaved drawing with tuning.
+
 ## Primary script
 `plottingScript.m` (root, ~3557 lines) — monolithic script, still in active use; run section-by-section in MATLAB.
 

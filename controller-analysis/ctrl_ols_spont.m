@@ -54,6 +54,11 @@ ridge_lam  = 0.2;      % L2 (ridge mode) / elastic-net L2 fraction (lasso mode: 
 l1_frac    = 0.1;      % L1 penalty fraction (lasso mode only): HIGHER = sparser (fewer active px)
 debias     = true;     % lasso: refit plain OLS on selected pixels (removes L1 shrinkage)
 redefine_roi = false;  % true = redraw the brain outline + midline for this session
+% BATCH override: ctrl_roi_build_all.m sets BATCH_redefine_roi to force a fresh draw for THIS
+% session without editing the knob (and without leaving it edited for the next interactive run).
+if exist('BATCH_redefine_roi','var') && ~isempty(BATCH_redefine_roi)
+    redefine_roi = BATCH_redefine_roi;
+end
 rng(7,'twister');      % reproducibility (matches ols_tf_pipeline)
 
 assert(exist('mouse','var') && exist('fields','var'), ...
@@ -135,8 +140,42 @@ else
     fprintf('[CTRL-OLS] computed laser site [row %d col %d] (depth %.3f) from %d OL trials -> cached\n', ...
         stim_rc, st.depth, numel(onF_ol));
 end
-px_prim = stim_rc(1);   % ROW of the laser spot
-py_prim = stim_rc(2);   % COL of the laser spot
+laser_rc = stim_rc;     % keep the LASER spot -- it is what the effect-map overlay marks
+
+% --- READOUT site: which pixel did the controller actually regulate? --------------
+% The laser spot and the readout are different questions and were conflated until 2026-08-10.
+% `data.dFk` is computed online at `d.params.pixel`, except the load/save path flips x<->y, so the
+% transpose may be the right reading (user). Rather than guess, ctrl_readout_site scores every
+% candidate against data.dFk on correlation AND amplitude and takes the best plausible one --
+% per session, because the answer differs by session: on AL_0039 the readout sits ~50-72 px from
+% the laser spot (params wins), on AL_0033/AL_0051 the two essentially coincide. RESEARCH 2026-08-10.
+% Cached so Stage 2/3 and every downstream script inherit ONE readout site.
+ro_file = fullfile(dataDir, sprintf('ctrl_readout_site_%s.mat', sess_tag));
+if exist(ro_file,'file') && ~redefine_roi
+    RO = load(ro_file);
+    fprintf('[CTRL-OLS] loaded cached readout site [row %d col %d] (%s, r=%.3f)\n', ...
+        RO.rc, RO.name, RO.r);
+else
+    ro_cand = struct('name',{},'rc',{});
+    if isfield(d_s.params,'pixel') && numel(d_s.params.pixel) >= 2
+        pp = double(d_s.params.pixel);
+        ro_cand(end+1) = struct('name','params',   'rc',[pp(2) pp(1)]); %#ok<SAGROW>
+        ro_cand(end+1) = struct('name','params_T', 'rc',[pp(1) pp(2)]); %#ok<SAGROW>
+    end
+    ro_cand(end+1) = struct('name','laser', 'rc', laser_rc);
+    RO = ctrl_readout_site(Uflat, V_cp, mimg_cp, data.dFk(:), ro_cand, ...
+                           k_prim, horizon, nY_cp, nX_cp, max(1,round(horizon)-1));
+    save(ro_file,'-struct','RO');
+    fprintf('[CTRL-OLS] readout site = %s [row %d col %d] -> cached\n', RO.name, RO.rc);
+end
+px_prim = RO.rc(1);   % ROW of the READOUT pixel
+py_prim = RO.rc(2);   % COL of the READOUT pixel
+d_readout_laser = hypot(px_prim-laser_rc(1), py_prim-laser_rc(2));
+if d_readout_laser > 30
+    fprintf(['[CTRL-OLS] NOTE: readout is %.0f px from the laser spot [row %d col %d]. Not an ' ...
+             'error -- on this session the photostimulated spot and the controlled readout are ' ...
+             'genuinely different places. Carry it into Methods.\n'], d_readout_laser, laser_rc);
+end
 
 % --- Actual = SVD raw-kernel fluorescence + rolling baseline at the laser spot -----
 % CRITICAL PIPELINE FACT (RESEARCH 2026-07-18): the paper's `data.dFk` is getpixel_dFoF
@@ -155,12 +194,16 @@ nF_m   = min(numel(y_full), size(V_cp,2));
 dfk_rec = data.dFk(:);
 vv = (w_warm+1):min(numel(y_full), numel(dfk_rec));
 r_match = corr(y_full(vv), dfk_rec(vv), 'rows','complete');
-fprintf('[CTRL-OLS] Actual = SVD raw-kernel + %.0f s rolling baseline @ laser spot [row %d col %d]\n', ...
+fprintf('[CTRL-OLS] Actual = SVD raw-kernel + %.0f s rolling baseline @ readout [row %d col %d]\n', ...
     horizon/Fs, px_prim, py_prim);
 fprintf('[CTRL-OLS] corr(Actual, paper data.dFk) = %.3f  (warm-up %d frames NaN)\n', r_match, w_warm);
 if r_match < 0.7
-    warning(['[CTRL-OLS] corr(Actual, data.dFk)=%.3f is low (expected ~0.9). Suspect a site/' ...
-             'kernel/horizon or orientation mismatch -- do NOT trust Global/Local until resolved.'], r_match);
+    % NB this is a quality flag on the SVD RECONSTRUCTION, not on the decomposition: Stage 2
+    % regresses onto data.dFk itself, and the candidates all sit in the same hemisphere, so the
+    % masks and grid are unaffected. It bites only the scripts that use y_full. RESEARCH 2026-08-10.
+    warning(['[CTRL-OLS] corr(Actual, data.dFk)=%.3f is low (expected ~0.9) even at the best ' ...
+             'readout candidate -- this session reconstructs poorly from the SVD. Stage 2 is ' ...
+             'unaffected (it targets data.dFk); y_full-based analyses are.'], r_match);
 end
 
 %% [CTRL-OLS-MASK] contra (predictor) / ipsi (target) midline masks -------------
@@ -170,12 +213,33 @@ roi_file = fullfile(dataDir, sprintf('cp_roi2_ctrl_%s.mat', sess_tag));
 if ~exist(roi_file,'file') && ~redefine_roi
     fprintf('[CTRL-OLS] no cached ROI for %s -- the draw GUI will open ONCE.\n', sess_tag);
 end
-% plot=false: cp_roi_masks' built-in verification draws imagesc(mimg') (TRANSPOSED codebase
-% view -> midline looks horizontal). Masks are stored NATIVE and are correct (proven by the OL
-% dip + homotopic contra check). We render our own NATIVE overlay (midline vertical) in the VAL
-% figure instead, so nothing shown here is transposed.
+% ONE display view for the whole session (cp_orient): the draw GUI, the VAL kernel map, the
+% Stage-2 affected map and the detector GUI all render through it, and clicks invert through it,
+% so the frame you draw in is the frame you check in. Resolved from the image itself (mirror
+% symmetry decides transpose; the site is put on the right); the anterior-up flip is confirmed by
+% eye once, only when the ROI is being (re)drawn, and cached.
+orient_file = fullfile(dataDir, sprintf('cp_orient_ctrl_%s.mat', sess_tag));
+Torient = cp_orient(mimg_cp, px_prim, py_prim, struct('cache_file',orient_file, ...
+                    'redefine',redefine_roi, 'confirm',redefine_roi));
+% SANITY LAYER WHILE DRAWING (2026-08-10): the draw window now carries the data-derived laser
+% effect (cp_find_stim_site's trial-averaged inhibition map) plus the site and params.pixel
+% markers. The midline you click is what assigns contra vs ipsi, so the spot has to be visible
+% at click time -- drawing on a bare mean image is how a midline ends up on the wrong side of
+% the laser and the "contra predictor" quietly contains the stimulated hemisphere.
+% Green + = the LASER spot (what the effect contours are of); magenta x = the READOUT pixel the
+% controller regulated. On most sessions they coincide; on AL_0039 they are ~60 px apart, and
+% seeing both while drawing is the point.
+roi_overlay = [];
+if isfield(st,'map')
+    roi_overlay = @(ax) cp_site_overlay(ax, Torient, st.map, laser_rc, [px_prim py_prim], ...
+        struct('site_label','laser spot','extra_label','readout (dFk)'));
+end
+% plot=false: cp_roi_masks' built-in verification still draws the legacy transposed frame; we
+% render our own overlay through Torient in the VAL figure below instead.
 M_cp = cp_roi_masks(mimg_cp, roi_file, px_prim, py_prim, ...
-                    struct('redefine', redefine_roi, 'thr_pctile', 20, 'plot', false));
+                    struct('redefine', redefine_roi, 'thr_pctile', 20, 'plot', false, ...
+                           'T', Torient, 'draw_overlay', roi_overlay, ...
+                           'name_extra', sess_tag, 'fig_pos', [40 60 760 720]));
 contra_mask = logical(M_cp.contra);  ipsi_mask = logical(M_cp.ipsi);
 % midline endpoints back in NATIVE (row,col) for drawing (cp_roi_masks stores them transposed:
 % mx=x=col-of-A=native row, my=y=row-of-A=native col). So native (row,col) = (mx, my).
@@ -359,22 +423,29 @@ lims = [min([yte;yhat_te]) max([yte;yhat_te])];
 plot(lims, lims, 'k--', 'LineWidth',0.8);
 axis tight; xlabel('predicted'); ylabel('actual'); title(sprintf('\\rho = %.3f', rho_te));
 
-nexttile(tl,4); hold on;                                          % NATIVE kernel map (midline vertical)
-% Brain as an RGB image (NOT colormapped) so the weights own the axes colormap (diverging).
-gg = mat2gray(mimg_cp);  rgb = repmat(gg,1,1,3);
+nexttile(tl,4); hold on;                                          % kernel map in the SESSION VIEW
+% Everything here goes through Torient -- image, hemisphere tints, midline, grid, site, mirror --
+% so a marker cannot drift off the feature it marks. Brain as an RGB image (NOT colormapped) so
+% the weights own the axes colormap (diverging).
+gg = mat2gray(cp_orient_img(Torient, mimg_cp));  rgb = repmat(gg,1,1,3);
+ipsiD = cp_orient_img(Torient, ipsi_mask);  contraD = cp_orient_img(Torient, contra_mask);
 aT = 0.16;                                                        % faint hemisphere tints, clean read
-rgb(:,:,3) = rgb(:,:,3) + aT*double(ipsi_mask)  .*(1-rgb(:,:,3)); % ipsi   (right) -> bluish
-rgb(:,:,1) = rgb(:,:,1) + aT*double(contra_mask).*(1-rgb(:,:,1)); % contra (left)  -> reddish
+rgb(:,:,3) = rgb(:,:,3) + aT*double(ipsiD)  .*(1-rgb(:,:,3));     % ipsi   (target)    -> bluish
+rgb(:,:,1) = rgb(:,:,1) + aT*double(contraD).*(1-rgb(:,:,1));     % contra (predictor) -> reddish
 image(rgb); axis image ij off;
-plot(mid_col, mid_row, 'w--', 'LineWidth',1.1);                   % midline (vertical in native)
+[midR_d, midC_d] = cp_orient_fwd(Torient, mid_row, mid_col);
+plot(midC_d, midR_d, 'w--', 'LineWidth',1.1);                     % hand-drawn midline
 act = find(abs(b) > 0);                                           % SPARSE: active contra px only
 wn  = b(act)/max(abs(b(act))+eps);
 [~,ord] = sort(abs(wn));                                          % strong weights drawn on top
-scatter(grC(act(ord)), grR(act(ord)), 40*abs(wn(ord))+8, wn(ord), 'filled', 'MarkerEdgeColor',[.25 .25 .25]);
+[gR_d, gC_d] = cp_orient_fwd(Torient, grR(act(ord)), grC(act(ord)));
+scatter(gC_d, gR_d, 40*abs(wn(ord))+8, wn(ord), 'filled', 'MarkerEdgeColor',[.25 .25 .25]);
 clim([-1 1]); colormap(gca, local_bwr()); cb = colorbar; cb.Label.String = 'weight';
-plot(py_prim, px_prim, 'g+', 'MarkerSize',13, 'LineWidth',2.2);   % laser site (ipsi, right)
+[sR_d, sC_d] = cp_orient_fwd(Torient, px_prim, py_prim);
+plot(sC_d, sR_d, 'g+', 'MarkerSize',13, 'LineWidth',2.2);         % laser site (ipsi)
 mid_c = mean(mid_col);  mir_col = round(2*mid_c - py_prim);       % homotopic mirror across midline
-plot(mir_col, px_prim, 'o', 'Color',[0 0.7 0], 'MarkerSize',11, 'LineWidth',1.6);  % expected contra hot-spot
+[hR_d, hC_d] = cp_orient_fwd(Torient, px_prim, mir_col);
+plot(hC_d, hR_d, 'o', 'Color',[0 0.7 0], 'MarkerSize',11, 'LineWidth',1.6);  % expected contra hot-spot
 title(sprintf('Sparse contra weights (%d/%d active) + ipsi;  o = homotopic', numel(act), nG));
 
 nexttile(tl,5); hold on;                                          % laser-off coverage
@@ -408,6 +479,11 @@ OLS.b          = b;          OLS.muY = muY;
 OLS.mu_p       = mu_p;       OLS.sd_p = sd_p;
 OLS.gridIdx    = gridIdx;    OLS.grR = grR;  OLS.grC = grC;  OLS.nG = nG;
 OLS.px_prim    = px_prim;    OLS.py_prim = py_prim;  OLS.k_prim = k_prim;
+% readout vs laser -- two different pixels on some sessions; both travel with the cache so a
+% downstream script can never silently assume they are the same place
+OLS.readout_rc = [px_prim py_prim];  OLS.laser_rc = laser_rc;
+OLS.readout_name = RO.name;  OLS.readout_r = RO.r;  OLS.readout_scale = RO.scale;
+OLS.readout_cands = RO.cands;  OLS.d_readout_laser = d_readout_laser;
 OLS.horizon    = horizon;    OLS.w_warm = w_warm;    OLS.r_match = r_match;   % Actual = SVD raw-kernel + rolling baseline
 OLS.baseline   = 'svd_raw_kernel_rolling(mode0-match)';
 OLS.frames     = frames;     OLS.itr = itr;  OLS.ite = ite;
@@ -416,6 +492,7 @@ OLS.fit_mode   = lower(fit_mode);  OLS.nActive = nActive;
 OLS.R2_tr      = R2_tr;      OLS.R2_te = R2_te;  OLS.rho_te = rho_te;
 OLS.used_corr  = used_corr;  OLS.nSV_load = nSV_load;  OLS.Fs = Fs;
 OLS.contra_mask = contra_mask;  OLS.ipsi_mask = ipsi_mask;
+OLS.Torient = Torient;          % the session display view -- Stage 2/3 and the GUIs render through it
 OLS.nF_m       = nF_m;
 ols_file = fullfile(dataDir, sprintf('ctrl_ols_spont_%s.mat', sess_tag));
 save(ols_file, '-struct', 'OLS', '-v7.3');
