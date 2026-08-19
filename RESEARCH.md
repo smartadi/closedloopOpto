@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-19 — Dose-spread mask: brainMask has 31 components, only 1 is brain
+**Changed/Found:** `presentation/make_ampmap_gif.py` — added a subtractive mask cleanup (`--mask-open` 3, largest connected component, `--mask-erode` 2, disable with `--keep-blobs`). `load_experiments.m` builds `brainMask` as a bare intensity cut (`mimg > 0.1*max(mimg)`), which for AL_0033 2025-01-29 e1 yields **31 connected components**: the brain is 231 425 px and the other 30 (1947, 810, 170, ...) are bright non-brain junk outside the window that was rendering as islands in the animation. Cleanup removes 3.5% of the mask pixels. Deliberately SUBTRACTIVE ONLY — `imp.resp_map` is defined solely on the original mask, so an excluded region cannot be filled in without inventing data.
+**Why:** User: the brain mask in the laser-level GIF was bad, with blobs from outside the brain region.
+**Next:** A large white notch remains at the bottom-centre of the field. It is NOT an outside blob — it is where `mimg < 0.1*max`, i.e. excluded by the original threshold, so no `resp_map` values exist there. Widening it would mean re-deriving the mask AND recomputing the maps (allExperiments stores neither U nor V, so that needs another 281 s `load_experiments.m` run), and ΔF/F in those dim pixels is unreliable anyway since the normalisation divides by a small `mimg`.
+
 ### 2026-08-19 — Dose-spread animation rebuilt: single image, cross-dissolve, no chrome
 **Changed/Found:** `presentation/make_ampmap_gif.py` rewritten from a building 3x3 tile grid to ONE panel that cross-dissolves between amplitudes. The dissolve blends the DATA (`(1-a)*map_k + a*map_k+1`) rather than alpha-stacking two images — stacking double-darkens through the crossover and looks muddy. Title, subtitle, colorbar and peak marker all removed; the only text is the amplitude, which fades out and back in through each crossover so two labels never overlap. Last map dissolves back into the first for a seamless loop (`--no-loop-back` to stop on the strongest). Also emits an mp4 with `--mp4`.
 **Why:** User: no text but the laser amplitude, and images replacing each other one after another rather than a tile.

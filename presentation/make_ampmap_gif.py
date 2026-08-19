@@ -57,6 +57,13 @@ def main():
     ap.add_argument("--label-color", default=None,
                     help="default: the deck ink colour")
     ap.add_argument("--mark", action="store_true", help="mark the peak pixel")
+    ap.add_argument("--mask-open", type=int, default=3,
+                    help="opening radius (px) before picking the brain blob")
+    ap.add_argument("--mask-erode", type=int, default=2,
+                    help="erode the cleaned mask, to pull off the ragged rim")
+    ap.add_argument("--keep-blobs", action="store_true",
+                    help="skip the cleanup and use load_experiments' raw "
+                         "intensity mask as-is")
     ap.add_argument("--no-loop-back", dest="loop_back", action="store_false",
                     help="stop on the strongest amplitude instead of dissolving "
                          "back to the weakest")
@@ -79,6 +86,28 @@ def main():
     bmask = M["brainMask"].astype(bool)
     mouse, date = str(M["mouse"][0]), str(M["date_str"][0])
     pr, pc = int(M["pr_pk"].ravel()[0]) - 1, int(M["pc_pk"].ravel()[0]) - 1  # MATLAB 1-based
+
+    # `brainMask` from load_experiments.m is a bare intensity cut
+    # (mimg > 0.1*max) and picks up bright non-brain junk outside the window:
+    # 31 connected components here, of which the brain is 98.7% of the pixels.
+    # Cleanup is SUBTRACTIVE only -- resp_map is defined solely on the original
+    # mask, so a hole cannot be filled in without inventing data.
+    if not args.keep_blobs:
+        from scipy import ndimage
+        raw = bmask.sum()
+        m = bmask
+        if args.mask_open > 0:
+            k = args.mask_open
+            m = ndimage.binary_opening(m, np.ones((k, k)))
+        lbl, nl = ndimage.label(m)
+        if nl > 1:
+            sizes = ndimage.sum(np.ones_like(lbl), lbl, index=range(1, nl + 1))
+            m = lbl == (1 + int(np.argmax(sizes)))
+        if args.mask_erode > 0:
+            m = ndimage.binary_erosion(m, iterations=args.mask_erode)
+        print(f"  mask: {nl} component(s) -> brain only, "
+              f"{raw} -> {m.sum()} px ({100*(1-m.sum()/raw):.1f}% removed)")
+        bmask = m
 
     # crop to the brain, then downsample: the maps are 560^2 and most of that
     # is background the panel never shows
