@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-"""run_impulse.py — dual-opsin bilateral impulse dose-response (AL_0048 2026-07-10 block 5).
+"""run_impulse.py — dual-opsin bilateral impulse dose-response (AL_0048; session via registry).
+
+Session is chosen in impulse_config.SESSION (registry: 2026-07-10, 2026-07-15). The amp-0
+(sham) catch condition is recovered from the Block<->Timeline clock map (impulse_config.
+RECOVER_SHAM) and reported as the per-side dose-response origin.
 
 Sub-area of the dual-opsin (bilateral) analysis: runs the impulse-analysis logic (0-200 ms
 energy, dose-response, median +/- 95th-pct bounds) on the two-spot single-frame impulse
@@ -50,11 +54,11 @@ def main():
         energy_by_side[sd] = core.energy_per_trial(tr, window, cfg)
         peak_by_side[sd] = core.peak_of_mean_dose(tr, window, cfg, sign)
 
-    # print the dose-response table (both metrics)
+    # print the dose-response table (both metrics); amp 0.0 = recovered sham catch condition
     print("\n  dose-response  [peak of mean trace (95% CI) | 0-200 ms energy median [pct]]:")
     for sd in ["left", "right"]:
         print(f"  {plots.SIDE_TITLE[sd]}:")
-        for a in cfg.AMPS:
+        for a in sorted(peak_by_side[sd].keys()):
             pt, lo, hi = peak_by_side[sd][a]
             en = energy_by_side[sd][a]
             print(f"    amp {a}: peak {pt:+.4f} [{lo:+.4f}, {hi:+.4f}]  |  "

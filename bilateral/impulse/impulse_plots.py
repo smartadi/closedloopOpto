@@ -34,8 +34,9 @@ def plot_traces(window, traces_by_side, cfg, label=""):
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.2), sharex=True)
     for ax, side in zip(axes, ["left", "right"]):
         tr = traces_by_side[side]
-        cols = _amp_colors(cfg.AMPS)
-        for a, c in zip(cfg.AMPS, cols):
+        amps = sorted(tr.keys())               # includes recovered amp 0.0 (sham) if present
+        cols = _amp_colors(amps)
+        for a, c in zip(amps, cols):
             m, sem = tr[a]["mean"], tr[a]["sem"]
             ax.plot(window, m, color=c, lw=1.5, label=f"{a} ({tr[a]['n']})")
             ax.fill_between(window, m - sem, m + sem, color=c, alpha=0.2, lw=0)
@@ -54,12 +55,13 @@ def plot_dose_response(metric_by_side, cfg, ylabel, fname, label=""):
     fig, axes = plt.subplots(1, 2, figsize=(9, 4), sharex=True)
     for ax, side in zip(axes, ["left", "right"]):
         en = metric_by_side[side]
-        amps = np.array(cfg.AMPS)
-        med = np.array([np.nanmedian(en[a]) for a in cfg.AMPS])
-        lo = np.array([np.nanpercentile(en[a], 2.5) for a in cfg.AMPS])
-        hi = np.array([np.nanpercentile(en[a], 97.5) for a in cfg.AMPS])
-        mean = np.array([np.nanmean(en[a]) for a in cfg.AMPS])
-        sem = np.array([np.nanstd(en[a]) / np.sqrt(len(en[a])) for a in cfg.AMPS])
+        al = sorted(en.keys())                 # includes recovered amp 0.0 (sham) if present
+        amps = np.array(al)
+        med = np.array([np.nanmedian(en[a]) for a in al])
+        lo = np.array([np.nanpercentile(en[a], 2.5) for a in al])
+        hi = np.array([np.nanpercentile(en[a], 97.5) for a in al])
+        mean = np.array([np.nanmean(en[a]) for a in al])
+        sem = np.array([np.nanstd(en[a]) / np.sqrt(len(en[a])) for a in al])
         c = SIDE_COLOR[side]
         ax.fill_between(amps, lo, hi, color=c, alpha=0.15, lw=0, label="2.5-97.5 pct")
         ax.plot(amps, med, "o-", color=c, lw=1.5, label="median")
@@ -79,10 +81,11 @@ def plot_peak_dose(peak_dose_by_side, cfg, label=""):
     fig, axes = plt.subplots(1, 2, figsize=(9, 4), sharex=True)
     for ax, side in zip(axes, ["left", "right"]):
         pd = peak_dose_by_side[side]
-        amps = np.array(cfg.AMPS)
-        pt = np.array([pd[a][0] for a in cfg.AMPS])
-        lo = np.array([pd[a][1] for a in cfg.AMPS])
-        hi = np.array([pd[a][2] for a in cfg.AMPS])
+        al = sorted(pd.keys())                 # includes recovered amp 0.0 (sham) if present
+        amps = np.array(al)
+        pt = np.array([pd[a][0] for a in al])
+        lo = np.array([pd[a][1] for a in al])
+        hi = np.array([pd[a][2] for a in al])
         c = SIDE_COLOR[side]
         ax.fill_between(amps, lo, hi, color=c, alpha=0.18, lw=0, label="bootstrap 95% CI")
         ax.plot(amps, pt, "o-", color=c, lw=1.5, label="peak of mean trace")

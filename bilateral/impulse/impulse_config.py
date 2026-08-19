@@ -1,17 +1,19 @@
 """impulse_config.py — dual-opsin bilateral impulse dose-response (opto_bilateralImpulse638).
 
 Sub-area of the dual-opsin (bilateral) analysis, running the impulse-analysis logic on the
-AL_0048 two-spot single-frame impulse experiment. One session so far:
+AL_0048 two-spot single-frame impulse experiment (opto_bilateralImpulse638). Sessions are held
+in the `SESSIONS` registry below and selected via `SESSION`; both use the same mirrored
+one-spot-per-hemisphere design (galvoX = -2.5 left/EXCITATORY, +2.5 right/INHIBITORY, galvoY=-3):
 
-  AL_0048 2026-07-10 — exp 3 = continuous widefield SVD + Timeline (spans the whole ~97-min
-  session); the impulse dose-response is Signals **block 5** (block 4 = 2-trial false start).
-  Block 5: 643 trials, 6 amps [0, 0.5, 1.0, 1.5, 2.0, 2.5] (0 = sham, no laser onset), two
-  mirrored spots galvoX = -2.5 (left / EXCITATORY) and +2.5 (right / INHIBITORY) at galvoY=-3.
-  Planned 1200 (100/amp), stopped ~half -> 532 firing onsets (~50 reps/amp/side).
+  2026-07-10 — exp 3 = continuous widefield SVD + Timeline; impulse = Signals block 5 (block 4 =
+    false start), 6 amps [0,0.5,1.0,1.5,2.0,2.5]; stopped ~half -> 532 firing (~50 reps/amp/side);
+    a grid run (block 6) follows in the same Timeline (>90 s gap).
+  2026-07-15 — exp 1 = widefield+Timeline; impulse = Signals block 2, 4 amps [0,0.5,1.5,2.5];
+    completed 800 trials -> 600 firing (100 reps/amp/side) + 200 sham; no grid after.
 
-The exp-3 Timeline holds impulse (blocks 4,5) then grid (block 6) onsets separated by a >90 s
-gap; `impulse_core` derives all 638 onsets and keeps the impulse segment, then assigns amplitude
-positionally from block 5's firing trials (validated 1:1, 100% galvoX-sign match).
+`impulse_core` derives the 638 onsets, keeps the pre-grid impulse segment, assigns amplitude
+positionally from the block's firing trials (validated 1:1, galvoX-sign match), and (when
+RECOVER_SHAM) recovers the amp-0 catch trials via the Block<->Timeline clock map.
 
 Image registration (BREGMA_PX / PX_PER_MM) and galvo volts->mm calibration are shared with the
 grid module and read from there. See impulse/README.md for the handoff.
@@ -24,13 +26,38 @@ GRID_DIR = Path(__file__).resolve().parent.parent / "grid"
 sys.path.insert(0, str(GRID_DIR))
 import config as gridcfg   # noqa: E402  (verified BREGMA_PX / PX_PER_MM / ROI_RAD / N_COMPS)
 
-# ============================== SESSION ==============================
+# ============================== SESSION REGISTRY ==============================
+# One entry per bilateral two-spot impulse session (opto_bilateralImpulse638). Both use the
+# SAME mirrored one-spot-per-hemisphere design (galvoX = -2.5 left/excit, +2.5 right/inhib);
+# they differ only in block layout and which firing amps were run. Shared knobs (SITE_*,
+# windows, registration) stay module-level below. Select the session via `SESSION`.
+#   WF_EXP        — exp holding the continuous widefield SVD + Timeline (638 traces)
+#   IMPULSE_BLOCK — Signals block (exp) with the impulse dose-response
+#   CALIB_BLOCK   — any block this session has hardwareInfo.json (galvo calib is session-const)
+#   AMPS          — FIRING amps present (sham 0 excluded: it produces no laser onset)
+#   FOCUS_AMP     — strongest amp used to localize the data-derived focal pixel
+#   HAS_GRID_AFTER— True if a >gap grid run follows the impulse in the same Timeline
+SESSIONS = {
+    "2026-07-10": dict(
+        WF_EXP="3", IMPULSE_BLOCK="5", CALIB_BLOCK="6",
+        AMPS=[0.5, 1.0, 1.5, 2.0, 2.5], FOCUS_AMP=2.5, HAS_GRID_AFTER=True,
+        note="first run, stopped ~half (~50 reps/amp/side); block 4 = false start; "
+             "grid block 6 follows in the same exp-3 Timeline (>90 s gap)."),
+    "2026-07-15": dict(
+        WF_EXP="1", IMPULSE_BLOCK="2", CALIB_BLOCK="2",
+        AMPS=[0.5, 1.5, 2.5], FOCUS_AMP=2.5, HAS_GRID_AFTER=False,
+        note="completed run: 800 trials (100/cond x 8) -> 600 firing + 200 sham; "
+             "no false-start, no grid after (single onset segment)."),
+}
+SESSION = "2026-07-15"       # <-- select session here (default: latest complete run)
+
+# ============================== SESSION (resolved from registry) ==============================
 SUBJECT = "AL_0048"
-DATE = "2026-07-10"
-WF_EXP = "3"                 # continuous widefield SVD + Timeline (analysis reads this)
-IMPULSE_BLOCK = "5"          # Signals block with the impulse dose-response (4 = false start)
-CALIB_BLOCK = "6"            # any block this session has hardwareInfo.json (galvo calib is
-                             #   session-constant); block 5 also has one — 6 already cached.
+DATE = SESSION
+_S = SESSIONS[SESSION]
+WF_EXP = _S["WF_EXP"]        # continuous widefield SVD + Timeline (analysis reads this)
+IMPULSE_BLOCK = _S["IMPULSE_BLOCK"]
+CALIB_BLOCK = _S["CALIB_BLOCK"]
 
 SERVER = "//sahale.biostr.washington.edu/data/Subjects"
 EXPDIR = Path(SERVER) / SUBJECT / DATE / WF_EXP
@@ -41,11 +68,16 @@ FS_DAQ = 2000.0             # Timeline DAQ rate (Hz)
 N_COMPS = gridcfg.N_COMPS   # SVD components
 LASER_THR = 0.3             # V threshold for onset detection
 DEBOUNCE_S = 0.06
-SEGMENT_GAP_S = 50          # inter-block gap (s); impulse = the segment BEFORE the grid
+SEGMENT_GAP_S = 50          # inter-block gap (s); impulse = the segment BEFORE any grid run
 
-# firing amplitudes present in block 5 (sham 0 excluded: it produces no laser onset)
-AMPS = [0.5, 1.0, 1.5, 2.0, 2.5]
-FOCUS_AMP = 2.5             # strongest amp used to localize the data-derived focal pixel
+# firing amplitudes present (sham 0 excluded: it produces no laser onset — recovered separately)
+AMPS = _S["AMPS"]
+FOCUS_AMP = _S["FOCUS_AMP"]
+
+# recover the amp-0 (sham) catch trials via the Block<->Timeline clock map (they fire no laser
+# so they are absent from the detected onsets); include them as a per-side zero-amp condition.
+RECOVER_SHAM = True
+DOSE_AMPS = ([0.0] + list(AMPS)) if RECOVER_SHAM else list(AMPS)
 
 # two mirrored spots (galvo mm-from-bregma); side = sign(galvoX)
 SITE_LEFT = (-2.5, -3.0)    # excitatory opsin -> positive dF/F
