@@ -9,11 +9,17 @@ function M = cp_roi_masks(mimg, roi_file, prim_row, prim_col, opts)
 % CONTRA (the PREDICTOR). No hand-drawn hemisphere polygon, no "everything-else"
 % complement.
 %
-% ORIENTATION: the image is shown TRANSPOSED (imagesc(mimg.')) to match the rest of
-% the codebase. All clicks and all geometry are done in that transposed frame, then
-% the masks are transposed back to mimg's native [nY x nX] so find(mask(:)) indexes
-% U/V exactly (U flattened column-major over [nY, nX]). The split is orientation-
-% robust (signed cross product of the midline direction).
+% ORIENTATION (reworked 2026-08-05): pass opts.T -- the session view resolved by
+% cp_orient -- and the draw happens in THAT view, the same one every downstream
+% figure renders and every click inverts through. Without opts.T the legacy
+% hardcoded transpose (imagesc(mimg.')) is used, so existing callers are unchanged.
+% Either way the stored geometry is NATIVE (row,col): this function's internal frame
+% already had x = native row and y = native col, so (bx,by) meant native (row,col)
+% before this change too -- only the picture being clicked on is different, and ROI
+% files written either side of the change are interchangeable. Masks come back in
+% mimg's native [nY x nX] so find(mask(:)) indexes U/V exactly (U flattened
+% column-major over [nY, nX]). The hemisphere split is orientation-robust (signed
+% cross product of the midline direction).
 %
 % INPUT
 %   mimg      [nY x nX]  mean image
@@ -21,19 +27,43 @@ function M = cp_roi_masks(mimg, roi_file, prim_row, prim_col, opts)
 %   prim_row  scalar     primary pixel ROW    (= d.params.pixel(2) = px_prim)
 %   prim_col  scalar     primary pixel COLUMN (= d.params.pixel(1) = py_prim)
 %   opts (optional): .redefine(false) .thr_pctile(20) .plot(true)
+%                    .T([]) session display view from cp_orient; [] = legacy transpose
+%                    .draw_overlay([]) function handle @(ax) called on the DRAW axes before
+%                        the first click. Use it to put the laser-effect map and the site
+%                        markers under your cursor (cp_site_overlay) -- the midline decides
+%                        which hemisphere is contra, so the spot must be visible while it is
+%                        being clicked. Drawn once; it persists through both steps.
+%                    .fig_pos([]) [x y w h] pixels for the draw window, so a caller can park
+%                        it beside its own sanity figure.
+%                    .name_extra('') appended to the draw window title bar (session tag)
 %
-% OUTPUT  M: .brain .contra .ipsi (logical [nY x nX]); .bx/.by (outline, transposed
-%            frame), .mx/.my (midline pts, transposed frame); .prim_row .prim_col
+% OUTPUT  M: .brain .contra .ipsi (logical [nY x nX]); .bx/.by (outline) and
+%            .mx/.my (midline pts) in NATIVE (row,col); .prim_row .prim_col
 
 if nargin < 5 || isempty(opts), opts = struct(); end
 if ~isfield(opts,'redefine'),   opts.redefine   = false; end
 if ~isfield(opts,'thr_pctile'), opts.thr_pctile = 20;    end
 if ~isfield(opts,'plot'),       opts.plot       = true;  end
+if ~isfield(opts,'T'),          opts.T          = [];    end   % session display view (cp_orient)
+if ~isfield(opts,'draw_overlay'), opts.draw_overlay = []; end  % @(ax) sanity layer on the draw axes
+if ~isfield(opts,'fig_pos'),    opts.fig_pos    = [];    end
+if ~isfield(opts,'name_extra'), opts.name_extra = '';    end
 [nY, nX] = size(mimg);
 A = mimg.';                        % transposed display frame: size [nX x nY]
 % Primary pixel in the transposed frame: x = column = prim_row, y = row = prim_col.
 prim_xA = prim_row;
 prim_yA = prim_col;
+
+% opts.T = the session's resolved display view (cp_orient). When supplied, the DRAW happens in
+% that view instead of the hardcoded transpose, and the clicks are converted back before storage.
+%
+% WHY THE STORAGE FORMAT DOES NOT CHANGE. This function's internal frame has x = native ROW and
+% y = native COL, so (bx,by) is numerically already native (row,col) -- the "transposed frame" is
+% only how those two numbers were being PLOTTED. Converting a click from any view straight to
+% native therefore produces exactly the numbers the mask code below already expects, and ROI files
+% written before and after this change mean the same thing. Only the picture the human clicked on
+% is different. (The opts.plot verification overlay still renders in the legacy transposed frame;
+% callers that pass a T draw their own oriented overlay and set plot=false.)
 
 % --- draw or load the geometry (full-brain outline + 2 midline points) ------------
 if opts.redefine && exist(roi_file,'file')
@@ -41,10 +71,23 @@ if opts.redefine && exist(roi_file,'file')
     fprintf('[cp_roi_masks] deleted existing ROI (redefine): %s\n', roi_file);
 end
 if ~exist(roi_file,'file')
-    figd = figure('Color','k','Name','cp_roi_masks: draw brain outline + midline');
-    imagesc(A); colormap(figd, gray);
-    clim([prctile(A(:),1), prctile(A(:),99)]);
+    Dimg = cp_orient_img(opts.T, mimg);          % [] -> unchanged; legacy path draws A below
+    if isempty(opts.T), Dimg = A; end
+    figd = figure('Color','k','Name', ...
+        strtrim(sprintf('cp_roi_masks: draw brain outline + midline  %s', opts.name_extra)));
+    if ~isempty(opts.fig_pos), set(figd,'Position',opts.fig_pos); end
+    imagesc(Dimg); colormap(figd, gray);
+    clim([prctile(Dimg(:),1), prctile(Dimg(:),99)]);
     axis image off; hold on;
+    % Sanity layer (laser-effect contours + site markers) goes on BEFORE the first click so the
+    % outline and, critically, the midline are drawn with the laser spot in view.
+    if ~isempty(opts.draw_overlay)
+        try
+            opts.draw_overlay(gca);
+        catch ovME
+            fprintf(2, '[cp_roi_masks] draw_overlay failed (%s) -- drawing without it.\n', ovME.message);
+        end
+    end
     title({'STEP 1 -- click around the FULL-BRAIN outline', '(many points, then Enter)'}, ...
         'Color','w','FontSize',11,'FontWeight','bold');
     try
@@ -59,6 +102,7 @@ if ~exist(roi_file,'file')
     if numel(bx) < 3, close(figd); error('cp_roi_masks: need >=3 outline points.'); end
     bx = [bx; bx(1)];  by = [by; by(1)];
     plot(bx, by, 'y-', 'LineWidth', 1.5);
+    dbx = bx;  dby = by;                          % keep the DISPLAY-frame copy for the overlay
     title('STEP 2 -- click 2 MIDLINE points, then Enter', ...
         'Color','c','FontSize',11,'FontWeight','bold');
     try
@@ -72,8 +116,16 @@ if ~exist(roi_file,'file')
     end
     if numel(mx) < 2, close(figd); error('cp_roi_masks: need 2 midline points.'); end
     plot(mx, my, 'c--', 'LineWidth', 1.5);  drawnow; pause(0.4);  close(figd);
-    save(roi_file, 'bx','by','mx','my');
-    fprintf('[cp_roi_masks] saved ROI geometry: %s\n', roi_file);
+    % Display frame -> native (row,col). A MATLAB ginput returns (x,y) = (display col, display
+    % row), so the row argument comes second. With no T this is the identity the legacy code
+    % already relied on (x = native row, y = native col).
+    if ~isempty(opts.T)
+        [bx, by] = cp_orient_inv(opts.T, dby, dbx);
+        [mx, my] = cp_orient_inv(opts.T, my,  mx);
+    end
+    frame = 'native_rc';  view_used = opts.T;
+    save(roi_file, 'bx','by','mx','my','frame','view_used');
+    fprintf('[cp_roi_masks] saved ROI geometry (native row/col): %s\n', roi_file);
 else
     t  = load(roi_file, 'bx','by','mx','my');
     bx = t.bx;  by = t.by;  mx = t.mx;  my = t.my;
