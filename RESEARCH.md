@@ -17,7 +17,7 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 ## Change Log
 
 ### 2026-08-19 — Checkpoint-commit the alpha WIP backlog; set up review worktree
-**Changed/Found:** Committed the full uncommitted backlog on `alpha` (~20 modified + ~30 new files) in 5 logical commits grouped by sub-area (bilateral, impulse-analysis, controller-analysis, utils, docs/agent-config); pushed to `origin/alpha`. Then added a git worktree at `../brain_paper_review` on `alpha` so a code review can run against a frozen copy in parallel.
+**Changed/Found:** Committed the full uncommitted backlog on `alpha` (~20 modified + ~30 new files) in 5 logical commits grouped by sub-area (bilateral, impulse-analysis, controller-analysis, utils, docs/agent-config); pushed to `origin/alpha`. Then added a git worktree at `../brain_paper_review` on a new branch `alpha-review-fixes` (branched from `alpha`'s tip — git forbids checking out `alpha` itself in two worktrees) so a code review can run against a frozen copy in parallel and any fixes land off `alpha`.
 **Why:** User wants a code review isolated from ongoing work. A defined, pushed baseline is a prerequisite for a meaningful review diff; a worktree lets review + active editing proceed without touching each other's working tree.
 **Next:** Run `/code-review` (scope: alpha vs main or WIP subset) in the worktree; quarantine any review-driven fixes on a `alpha-review-fixes` branch before merging back to `alpha`.
 
