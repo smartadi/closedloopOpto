@@ -1,10 +1,14 @@
 """
 make_ampmap_gif.py — animate the laser dose / spatial-spread supplementary panel.
 
-One response map per laser amplitude (trial-averaged ΔF/F, baseline −500→0 ms
-vs peak 0→+200 ms), revealed one at a time in ascending power, so the audience
-watches the inhibition deepen and spread. The final frame is the supplementary
-figure itself.
+ONE image at a time, cross-dissolving into the next as the laser amplitude
+climbs, so the inhibition is seen to deepen and spread in place rather than as
+a wall of thumbnails. The only text on screen is the amplitude. The last map
+dissolves back into the first, so the loop has no seam.
+
+The dissolve blends the DATA (a weighted mean of the two maps), not two
+alpha-stacked images — alpha stacking double-darkens through the crossover and
+looks muddy.
 
 Maps come straight from `presentation/assets/ampmaps_*.mat`
 (export_ampmaps.m -> the same `imp.resp_map` that impulse-analysis/
@@ -12,7 +16,7 @@ spatial_spread.m plots), so the animation cannot drift from the paper.
 
 Run:
   .venv/Scripts/python.exe presentation/make_ampmap_gif.py
-  .venv/Scripts/python.exe presentation/make_ampmap_gif.py --cmap magma_r --cols 3
+  .venv/Scripts/python.exe presentation/make_ampmap_gif.py --cmap magma --mark
 """
 import argparse
 import glob
@@ -42,17 +46,20 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mat", default=None, help="ampmaps_*.mat (default: newest)")
     ap.add_argument("--cmap", default="jet",
-                    help="'jet' matches the supplementary figure; 'magma_r' or "
-                         "'viridis_r' read better on a projector")
-    ap.add_argument("--cols", type=int, default=3)
-    ap.add_argument("--px", type=int, default=980, help="output width in pixels")
+                    help="'jet' matches the supplementary figure")
+    ap.add_argument("--px", type=int, default=620, help="output width in pixels")
     ap.add_argument("--fps", type=int, default=20)
-    ap.add_argument("--fade", type=int, default=9, help="frames per panel fade-in")
-    ap.add_argument("--hold", type=int, default=7, help="frames between panels")
-    ap.add_argument("--end-hold", type=int, default=55,
-                    help="frames on the completed figure before looping")
+    ap.add_argument("--hold", type=int, default=11, help="frames held on each map")
+    ap.add_argument("--fade", type=int, default=15, help="frames of cross-dissolve")
     ap.add_argument("--ds", type=int, default=2, help="spatial downsample factor")
     ap.add_argument("--bg", default="white", choices=sorted(BG_HEX))
+    ap.add_argument("--label-size", type=float, default=30.0)
+    ap.add_argument("--label-color", default=None,
+                    help="default: the deck ink colour")
+    ap.add_argument("--mark", action="store_true", help="mark the peak pixel")
+    ap.add_argument("--no-loop-back", dest="loop_back", action="store_false",
+                    help="stop on the strongest amplitude instead of dissolving "
+                         "back to the weakest")
     ap.add_argument("--mp4", action="store_true", help="also write an mp4")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
@@ -88,64 +95,50 @@ def main():
     # display orientation is TRANSPOSED (brain vertical) and the peak marker
     # swaps coordinates with it — see impulse-analysis/CLAUDE.md
     disp = [maps[:, :, k].T for k in range(nA)]
-    clim = (float(np.nanmin(maps)), 0.0)
-    norm = Normalize(*clim)
+    norm = Normalize(float(np.nanmin(maps)), 0.0)
     cmap = plt.get_cmap(args.cmap).copy()
     cmap.set_bad(alpha=0.0)
 
-    bg, ink = BG_HEX[args.bg], INK[args.bg]
-    ncol = max(args.cols, 1)
-    nrow = int(np.ceil(nA / ncol))
+    bg = BG_HEX[args.bg]
+    ink = args.label_color or INK[args.bg]
     ph, pw = disp[0].shape
-    aspect = ph / pw
     fig_w = args.px / 100.0
-    fig_h = fig_w * (nrow * aspect / ncol) * 1.10 + 1.35
+    fig_h = fig_w * (ph / pw) + 0.62               # room for the amplitude label
     fig = plt.figure(figsize=(fig_w, fig_h), dpi=100)
     fig.patch.set_facecolor(bg)
 
-    top, bot = 0.885, 0.105
-    gap = 0.012
-    cw = (0.96 - (ncol - 1) * gap) / ncol
-    ch = (top - bot - (nrow - 1) * gap) / nrow
-    ims, labs = [], []
-    for k in range(nA):
-        r, c = divmod(k, ncol)
-        ax = fig.add_axes([0.02 + c * (cw + gap),
-                           top - ch - r * (ch + gap), cw, ch])
-        ax.set_xticks([]); ax.set_yticks([]); ax.set_facecolor(bg)
-        for s in ax.spines.values():
-            s.set_visible(False)
-        im = ax.imshow(disp[k], cmap=cmap, norm=norm, interpolation="bilinear",
-                       alpha=0.0)
-        ax.plot(pr_c, pc_c, "+", color="#ffffff", ms=9, mew=1.8, alpha=0.0)
-        ax.set_aspect("equal")
-        labs.append(ax.text(0.5, 1.012, f"{amps[k]:.2f} mW", transform=ax.transAxes,
-                            ha="center", va="bottom", fontsize=12,
-                            fontweight="bold", color=ink, alpha=0.0))
-        ims.append((im, ax.lines[0]))
+    ax = fig.add_axes([0.01, 0.62 / fig_h, 0.98, 1 - 0.70 / fig_h])
+    ax.set_xticks([]); ax.set_yticks([]); ax.set_facecolor(bg)
+    for s in ax.spines.values():
+        s.set_visible(False)
+    im = ax.imshow(disp[0], cmap=cmap, norm=norm, interpolation="bilinear")
+    ax.set_aspect("equal")
+    if args.mark:
+        ax.plot(pr_c, pc_c, "+", color="#ffffff", ms=11, mew=2.0)
 
-    fig.text(0.5, 0.955, "Inhibition deepens and spreads with laser power",
-             ha="center", va="center", fontsize=17, fontweight="bold", color=ink)
-    sub = fig.text(0.5, 0.915, f"{mouse} · {date} · mean ΔF/F, 0–200 ms after onset",
-                   ha="center", va="center", fontsize=11, color=ink, alpha=0.65)
+    lab = fig.text(0.5, 0.30 / fig_h, f"{amps[0]:.2f} mW", ha="center",
+                   va="center", fontsize=args.label_size, fontweight="bold",
+                   color=ink)
 
-    cax = fig.add_axes([0.34, 0.048, 0.32, 0.021])
-    cb = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax,
-                      orientation="horizontal")
-    cb.set_label("ΔF/F (%)", fontsize=11, color=ink, labelpad=2)
-    cb.ax.tick_params(colors=ink, labelsize=10, length=3)
-    cb.outline.set_visible(False)
+    # ---- schedule: hold on map k, then dissolve k -> k+1 --------------------
+    steps = []                                    # (map_a, map_b, blend, label)
+    order = list(range(nA)) + ([0] if args.loop_back else [])
+    for j in range(len(order)):
+        k = order[j]
+        steps += [(k, k, 0.0, k)] * args.hold
+        if j + 1 < len(order):
+            nxt = order[j + 1]
+            for f in range(args.fade):
+                a = (f + 1) / (args.fade + 1)
+                steps.append((k, nxt, a, k if a < 0.5 else nxt))
 
-    # ---- frame schedule: each panel fades in, then the figure holds ---------
     frames = []
-    per = args.fade + args.hold
-    total = nA * per + args.end_hold
-    for f in range(total):
-        for k in range(nA):
-            a = float(np.clip((f - k * per) / max(args.fade, 1), 0.0, 1.0))
-            ims[k][0].set_alpha(a)
-            ims[k][1].set_alpha(a)
-            labs[k].set_alpha(a)
+    for (ka, kb, a, klab) in steps:
+        im.set_data(disp[ka] if a == 0.0 else (1 - a) * disp[ka] + a * disp[kb])
+        # the label fades out and back in through the crossover rather than
+        # two labels overlapping
+        lab.set_alpha(1.0 if a == 0.0 else abs(2 * a - 1) ** 0.7)
+        lab.set_text(f"{amps[klab]:.2f} mW")
         fig.canvas.draw()
         frames.append(Image.frombytes(
             "RGBA", fig.canvas.get_width_height(),
@@ -153,20 +146,21 @@ def main():
 
     stem = f"ampmaps_{mouse}_{date}"
     out = args.out or os.path.join(MEDIA, f"{stem}.gif")
-    save_gif(frames, out, fps=args.fps)
+    save_gif(frames, out, fps=args.fps, n_pal_samples=nA * 2)
     print(f"wrote {out}  ({len(frames)} frames, {frames[0].size[0]}x"
           f"{frames[0].size[1]}, {os.path.getsize(out)/1e6:.1f} MB, "
-          f"{nA} amplitudes {amps[0]:.2f}–{amps[-1]:.2f} mW)")
+          f"{nA} amplitudes {amps[0]:.2f}–{amps[-1]:.2f} mW, "
+          f"{len(frames)/args.fps:.1f} s)")
 
     if args.mp4:
         import imageio_ffmpeg
         mp4 = out.replace(".gif", ".mp4")
         w, h = frames[0].size
-        wr = imageio_ffmpeg.write_frames(mp4, (w - w % 2, h - h % 2),
-                                         fps=args.fps, quality=8)
+        w -= w % 2; h -= h % 2
+        wr = imageio_ffmpeg.write_frames(mp4, (w, h), fps=args.fps, quality=8)
         wr.send(None)
         for fr in frames:
-            wr.send(np.asarray(fr)[:h - h % 2, :w - w % 2].tobytes())
+            wr.send(np.asarray(fr)[:h, :w].tobytes())
         wr.close()
         print(f"wrote {mp4} ({os.path.getsize(mp4)/1e6:.1f} MB)")
 

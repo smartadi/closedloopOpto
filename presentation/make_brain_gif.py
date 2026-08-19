@@ -77,6 +77,10 @@ def main():
     ap.add_argument("--no-badge", dest="badge", action="store_false",
                     help="keep the laser spot but drop the corner badge")
     ap.add_argument("--light-color", default="#39c6ff", help="laser spot hue")
+    ap.add_argument("--badge-color", default="#ff8c00",
+                    help="LASER ON badge colour (independent of the spot)")
+    ap.add_argument("--badge-scale", type=float, default=1.0,
+                    help="multiplier on the badge text size")
     ap.add_argument("--tsmooth", type=int, default=3,
                     help="moving-average window over data frames; removes the "
                          "per-frame shot noise that reads as flicker (0/1 = off)")
@@ -201,9 +205,10 @@ def main():
                       outline=tuple(int(255 * v) for v in light_rgb),
                       width=max(2, args.px // 230))
         if args.light and args.badge and uu > 0.02:
-            f = _font(max(11, args.px // 26))
-            pad, dot = args.px * 0.045, args.px * 0.016
-            col = tuple(int(255 * v) for v in light_rgb)
+            f = _font(max(14, int(args.px / 15 * args.badge_scale)))
+            pad, dot = args.px * 0.045, args.px * 0.021
+            col = tuple(int(255 * v)
+                        for v in matplotlib.colors.to_rgb(args.badge_color))
             d.ellipse([pad, pad, pad + 2 * dot, pad + 2 * dot], fill=col)
             d.text((pad + 2.9 * dot, pad + dot), "LASER ON", font=f, fill=col,
                    anchor="lm")

@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-19 — Dose-spread animation rebuilt: single image, cross-dissolve, no chrome
+**Changed/Found:** `presentation/make_ampmap_gif.py` rewritten from a building 3x3 tile grid to ONE panel that cross-dissolves between amplitudes. The dissolve blends the DATA (`(1-a)*map_k + a*map_k+1`) rather than alpha-stacking two images — stacking double-darkens through the crossover and looks muddy. Title, subtitle, colorbar and peak marker all removed; the only text is the amplitude, which fades out and back in through each crossover so two labels never overlap. Last map dissolves back into the first for a seamless loop (`--no-loop-back` to stop on the strongest). Also emits an mp4 with `--mp4`.
+**Why:** User: no text but the laser amplitude, and images replacing each other one after another rather than a tile.
+**Next:** GIF is 10.0 MB at 540 px (cross-dissolve frames are all unique, so nothing collapses); the mp4 of the same animation is 2.0 MB and looks better — prefer it if the deck can hold video.
+
+### 2026-08-19 — LASER ON badge: larger, orange, colour split from the spot
+**Changed/Found:** `presentation/make_brain_gif.py` — badge font `px/26` -> `px/15` with a new `--badge-scale`, dot 0.016 -> 0.021 of frame width, and a new `--badge-color` (default `#ff8c00`) so the badge no longer inherits `--light-color`. The laser spot itself stays cyan.
+**Why:** User asked for larger, orange "LASER ON" text.
+**Next:** Badge orange vs cyan spot is deliberate but not physically motivated — the AL_0033 impulse sessions use `lightCommand` (AL_0041 uses `lightCommand638`, i.e. red light), so `--light-color '#ff8c00'` would arguably be more faithful if the two should match.
+
 ### 2026-08-19 — Rendered media moved to talk/; renderers write there by default
 **Changed/Found:** All rendered mp4/gif moved out of `presentation/` into `talk/` (which already held the deck: `neuroai_seattle_2026.pptx`, `build_deck.py`, `img/`, `render/`). `make_video.py`, `make_video_talk.py`, `make_video_combined.py`, `make_ff_video.py`, `make_brain_gif.py`, `make_ampmap_gif.py` now resolve outputs against a new `MEDIA = <root>/talk` constant instead of `presentation/`. Added `talk/.gitignore` (`*.mp4`, `*.gif`, `*.png`) mirroring the rule already in `presentation/.gitignore`; the tracked `.pptx`/`.py` in `talk/` are unaffected. Probe PNGs still land in `presentation/` (scratch, already ignored).
 **Why:** User asked for all media content in one folder so the deck has a single place to pull from.
