@@ -1,0 +1,5 @@
+# Rendered talk media — regenerable from presentation/*.py (+ the MATLAB
+# exporters that build presentation/assets/). Too large to track.
+*.mp4
+*.gif
+*.png

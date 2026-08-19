@@ -21,6 +21,7 @@ Run:
 """
 import argparse
 import os
+import sys
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -28,8 +29,14 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 from PIL import Image, ImageDraw, ImageFont
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gif_utils import save_gif, tsmooth
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "presentation", "assets")
+# rendered media all lands in talk/ so the deck has one place to pull from
+MEDIA = os.path.join(ROOT, "talk")
+os.makedirs(MEDIA, exist_ok=True)
 
 BG_HEX = {"white": "#ffffff", "bone": "#f5f2ec", "lavender": "#f0eaf8",
           "dark": "#15191f"}
@@ -70,6 +77,9 @@ def main():
     ap.add_argument("--no-badge", dest="badge", action="store_false",
                     help="keep the laser spot but drop the corner badge")
     ap.add_argument("--light-color", default="#39c6ff", help="laser spot hue")
+    ap.add_argument("--tsmooth", type=int, default=3,
+                    help="moving-average window over data frames; removes the "
+                         "per-frame shot noise that reads as flicker (0/1 = off)")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
@@ -104,9 +114,13 @@ def main():
     soft = np.clip(ndimage.gaussian_filter(core.astype(float), 2.0), 0.0, 1.0)
     soft = np.clip((soft - 0.12) / 0.88, 0.0, 1.0)
 
+    # smooth in SVD space: 200 components instead of 19 600 pixels, and the
+    # projection is linear so it is identical to smoothing the frames
+    VS = tsmooth(np.asarray(VWIN, float), args.tsmooth, axis=2)
+
     def activity(trial, tau):
-        v0 = VWIN[trial][:, :PRE].mean(axis=1)
-        return 100.0 * (Uf @ (VWIN[trial][:, tau] - v0)).reshape(n, n) / mimg_safe
+        v0 = VS[trial][:, :PRE].mean(axis=1)
+        return 100.0 * (Uf @ (VS[trial][:, tau] - v0)).reshape(n, n) / mimg_safe
 
     # ---- pick a trial: requested condition, strong drive, no motion blow-ups -
     stim = (t >= 0) & (t <= DUR)
@@ -194,11 +208,13 @@ def main():
             d.text((pad + 2.9 * dot, pad + dot), "LASER ON", font=f, fill=col,
                    anchor="lm")
 
-    out = args.out or os.path.join(ROOT, "presentation",
+    out = args.out or os.path.join(MEDIA,
                                    f"brain_wf_{args.session}.gif")
-    frames[0].save(out, save_all=True, append_images=frames[1:], loop=0,
-                   duration=int(1000 / args.fps), disposal=2, optimize=True,
-                   transparency=0 if transparent else None)
+    al = None
+    if transparent:
+        al = Image.fromarray((soft * 255).astype(np.uint8), "L").resize(
+            (args.px, args.px), Image.LANCZOS)
+    save_gif(frames, out, fps=args.fps, alpha=al)
     print(f"wrote {out}  ({len(frames)} frames, {args.px}px, "
           f"{os.path.getsize(out)/1e6:.1f} MB, trial {trial} {LOOP[trial]}, "
           f"{sum(1 for v in lit if v > 0.02)} lit frames)")

@@ -29,6 +29,9 @@ matplotlib.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "presentation", "assets")
+# rendered media all lands in talk/ so the deck has one place to pull from
+MEDIA = os.path.join(ROOT, "talk")
+os.makedirs(MEDIA, exist_ok=True)
 
 # ---- palette (light purple theme) -------------------------------------------
 BG = "#f0eaf8"; PANEL2 = "#f9f6fd"; EDGE = "#ccc3df"; GRID = "#e9e3f3"
@@ -342,7 +345,7 @@ def main():
 
     print(f"[render] mode={args.mode} trials={len(play)} frames={total} "
           f"({total/args.fps:.1f}s)  {'1080p' if args.hd else '900p'}")
-    outname = os.path.join(ROOT, "presentation",
+    outname = os.path.join(MEDIA,
                            f"controller_demo_{sess}_{args.mode}{'_hd' if args.hd else ''}.mp4")
     writer = manim.FFMpegWriter(fps=args.fps, bitrate=7000, metadata=dict(title="Closed-loop controller demo"))
     with writer.saving(fig, outname, dpi=dpi):

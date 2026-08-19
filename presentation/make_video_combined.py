@@ -71,6 +71,9 @@ matplotlib.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "presentation", "assets")
+# rendered media all lands in talk/ so the deck has one place to pull from
+MEDIA = os.path.join(ROOT, "talk")
+os.makedirs(MEDIA, exist_ok=True)
 
 # ---- palette --------------------------------------------------------------
 # Condition colours are LOCKED to the paper (open loop red, closed loop blue)
@@ -1118,7 +1121,7 @@ def main():
         return
 
     print(f"[render] {total} frames ({total/args.fps:.1f}s)  {'1080p' if args.hd else '900p'}")
-    outname = os.path.join(ROOT, "presentation",
+    outname = os.path.join(MEDIA,
                            f"controller_combined_{args.session}"
                            f"{'_hd' if args.hd else ''}.mp4")
     writer = manim.FFMpegWriter(fps=args.fps, bitrate=7000,

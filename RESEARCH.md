@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-19 — Rendered media moved to talk/; renderers write there by default
+**Changed/Found:** All rendered mp4/gif moved out of `presentation/` into `talk/` (which already held the deck: `neuroai_seattle_2026.pptx`, `build_deck.py`, `img/`, `render/`). `make_video.py`, `make_video_talk.py`, `make_video_combined.py`, `make_ff_video.py`, `make_brain_gif.py`, `make_ampmap_gif.py` now resolve outputs against a new `MEDIA = <root>/talk` constant instead of `presentation/`. Added `talk/.gitignore` (`*.mp4`, `*.gif`, `*.png`) mirroring the rule already in `presentation/.gitignore`; the tracked `.pptx`/`.py` in `talk/` are unaffected. Probe PNGs still land in `presentation/` (scratch, already ignored).
+**Why:** User asked for all media content in one folder so the deck has a single place to pull from.
+**Next:** `presentation/session_previews/` (12 MB of per-session preview mp4s) and the empty `clips/` were left where they are — they are working files for choosing trials, not deck assets.
+
+### 2026-08-19 — GIF jitter was a palette artefact, not the data
+**Changed/Found:** New `presentation/gif_utils.py` with `save_gif()` and `tsmooth()`. PIL quantises every GIF frame independently by default, so a smooth widefield gradient lands on a slightly different 256-colour palette each frame and shimmers. `save_gif()` builds ONE palette from a strip of 16 evenly-spaced frames, quantises every frame against it with `dither=NONE` (per-frame dither patterns are themselves a source of shimmer), and uses `disposal=1`. `make_brain_gif.py` also gained `--tsmooth` (default 3): a moving average applied to the SVD temporal components before projection — 200 components instead of 19 600 pixels, and identical to smoothing the frames since the projection is linear. Side effect: the GIF shrank 12.9 MB -> 9.7 MB, because a shared palette compresses far better.
+**Why:** User reported the slowed-down GIF looked jittery.
+**Next:** `--tsmooth 3` at 35 Hz is an 86 ms window — fine for display, but do not measure onset latency off this GIF.
+
+### 2026-08-19 — Laser dose-spread animation from the supplementary maps
+**Changed/Found:** New `presentation/export_ampmaps.m` + `presentation/make_ampmap_gif.py`. The exporter pulls `imp.resp_map` per amplitude out of `allExperiments` (selected by mouse/date/en, not by index, since the position in the experiments list shifts) and saves `assets/ampmaps_AL_0033_2025-01-29_en1.mat` — the same maps `impulse-analysis/spatial_spread.m` plots, so the animation cannot drift from the paper. 9 amplitudes, 0.18–1.80 mW, map range −4.34..+1.32 %ΔF/F. The Python side reveals the panels one at a time in ascending power, ending on the supplementary figure, and holds. Ran `load_experiments.m` to populate the workspace: 281 s, 4 sessions.
+**Why:** User wanted the supplementary dose/spread panel animated for the talk.
+**Next:** Colour map defaults to `jet` to match the supplementary figure; `--cmap magma_r` was tried and reads oddly (deepest inhibition becomes the BRIGHTEST patch while 0 is black). If the panel is restyled for the talk, pick a map where more inhibition is darker.
+
 ### 2026-08-19 — Brain GIF playback halved: `--step` default 2 -> 1
 **Changed/Found:** `presentation/make_brain_gif.py` — `--step` now defaults to 1, so all 176 data frames of the -1..+4 s window are kept and the loop runs 8.8 s at 20 fps (was 88 frames / 4.4 s). Chose this over dropping to 10 fps, which halves the speed identically but makes the motion visibly steppy. Cost: the GIF grew 6.4 MB -> 12.9 MB.
 **Why:** User asked for the GIF at half speed.
