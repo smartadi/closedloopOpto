@@ -27,6 +27,28 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ## 🔴 Blocking submission
 
+### ⏰ NeuroAI Seattle talk — 15 min, Allen Institute, 20–21 Aug 2026
+> Full plan: `TALK_neuroai_2026.md`. Framing decided 2026-08-14 (user): closed-loop
+> control story with a multi-area pivot in the last third. **Governing rule: no new
+> analysis is run for this talk** — locked panels + the `presentation/` videos only.
+- [x] 2026-08-18 — **DECK BUILT**: `talk/neuroai_seattle_2026.pptx` (13 slides, 84 MB, both
+  videos embedded, full speaker notes). Re-runnable via `python talk/build_deck.py`;
+  visual QA via `python talk/render.py`. No theme yet (user deferred).
+- [ ] **Title slide: authors + affiliations** (placeholder is on the slide in red).
+- [ ] **Slide 9 receding-horizon schematic** — the thesis slide is currently text-only.
+- [ ] **[downgraded 2026-08-18] Talk-scale panel re-export** — add a talk mode to `utils/paperStyle.m` (~14–16 pt,
+  ~20 cm) and re-export 2A / 2B / 2C-i / 3K / 5I / 5J. **Much less urgent than assumed**: at
+  400 dpi displayed ~4 in wide the 6 pt type scales to ~12 pt equivalent and the QA
+  renders are legible — the residual concern is LINE WEIGHT, not type size.
+- [ ] Trim `presentation/ff_demo_0721_hd.mp4` (1:03) to ~30 s for slide 6.
+- [ ] Build the 3 backup slides: actuator-gain objection (`2026-07-28.2`), hemodynamics
+  (7 of 13 sessions hemo-corrected), why-PI-not-MPC.
+- [ ] Speaker notes + two timing runs (budget 12 min talk + 3 min Q; current plan 12.5).
+- [ ] AV check: present from own laptop, embedded 1080p H.264, .mp4s loose as fallback.
+- [ ] Ask **Tim Kim** (organizer) about the latent-space widefield collaboration in
+  person — see 🟢 "Prepare widefield dataset for Tim Kim". Ask **Svoboda** for the
+  Chrimson spatial-spread citation (`methods_edit.tex` L292 `\todo`).
+
 ### Manuscript text
 > NOTE: primary results file is now `results.tex` (the old `results_edit.tex` name is retired). Most manuscript-text 🔴 items verified done 2026-06-29 → see ✅ Recently done.
 - [ ] Step-response paragraph (`results.tex` L59): rewritten + integral-term motivation present, but does NOT explicitly state the 3 s window is too short to observe steady state. Confirm whether that caveat is still wanted; add one sentence if so.
@@ -249,7 +271,7 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 - [ ] Optional: insert fixed 2 ms pause in processing code to verify ~14 ms minimum latency shifts
 - [ ] Follow up with Zilu on ARIMA/forecasting models
 - [ ] Prepare widefield dataset for Tim Kim latent-space model; arrange joint meeting
-- [ ] **Make a video of the real-time controller setup** (Rainier rig) — a demo/supplementary clip showing the closed-loop controller running live. Likely easier to reconstruct on THIS PC from data we already have (replay the controller code against a recorded session) than to film the rig; check whether the online loop can be re-driven offline to render a real-time-looking animation.
+- [x] 2026-08-14 — **Make a video of the real-time controller setup** — **ALREADY DONE**, found while planning the NeuroAI talk. `presentation/` renders exactly the reconstruct-from-recorded-data approach this item proposed: real session SVD → true widefield ΔF/F movie over a masked anatomy underlay, replayed through a white-theme replica of the Rainier live GUI with CL/OL performance accumulating in parallel. Outputs (all 1080p H.264): `controller_demo_m13_full_hd.mp4` (0:39, step, AL_0039), `controller_talk_m13_hd.mp4` (1:05), `controller_demo_m5_full_hd.mp4` (0:24, pulse, AL_0033), `ff_demo_0721_hd.mp4` (1:03, feedforward/preview), plus 7 `session_previews/`. Rebuild via `build_demo_data.py` → `make_video.py`. **Supplementary-video candidate for the paper as well** — see `presentation/README.md`.
 
 
 ---

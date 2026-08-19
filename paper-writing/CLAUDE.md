@@ -1,16 +1,40 @@
 # Paper Writing — Session Context
 
-## Editing environment
-- **Local:** `C:\Users\aditya\Documents\projects\Closedloop_edit\`
-- **Sync:** copy updated PDFs/PNGs from `paper/` → `Closedloop_edit/images/` → push to Overleaf
+## Editing environment — local-first, Overleaf is downstream
+- **Repo:** `C:\Users\aditya\Documents\projects\Closedloop_edit\` (own git repo, NOT part of `brain_paper`)
+- **Chain:** local repo → GitHub `smartadi/Closedloop` → Overleaf pulls via GitHub sync
+- **Editor:** VS Code + LaTeX Workshop. `.vscode/settings.json` is committed-ignored, so it is local only.
+- **Build locally:** MiKTeX is installed; `latexmk -pdf main.tex` compiles (31 pp). Never edit on Overleaf while a draft is open locally — it forces a merge.
 - **Shared with Nick** on Overleaf
+
+### Branch protocol (the review gate)
+| Branch | Meaning |
+|---|---|
+| `main` | Mirrors what is on Overleaf. Only fast-forward merges from `draft`. |
+| `draft` | Where Claude (and in-progress user edits) commit. Never pushed. |
+
+Claude commits prose changes to `draft` only. Aditya reviews `git diff main..draft`
+in VS Code, then merges to `main` and pushes; Overleaf pull is the last step.
+**Never push `draft`, and never commit to `main` directly.**
+
+### What must NOT reach Overleaf
+- Build artifacts → already handled by `.gitignore` (note: `.gitignore` itself IS pushed).
+- Local-only helper files (`sync_figs.ps1`, `notes/`, local PDFs) → listed in
+  `.git/info/exclude`, which is machine-local and never travels. Put new local
+  helpers there, not in `.gitignore`.
+- Uncited figures → `.\sync_figs.ps1` reports them; only cited figures belong in `images/`.
+
+### Figures
+`.\sync_figs.ps1` (dry run) / `-Apply` copies **only figures cited by `\includegraphics`**
+from `brain_paper/paper/` into `images/`, and flags cited-but-missing + tracked-but-uncited.
 
 ## File map (Closedloop_edit/)
 | File | Role |
 |---|---|
-| `results_edit.tex` | Primary editing target |
+| `results.tex` | Primary editing target (there is no `results_edit.tex` — renamed) |
 | `discussion.tex` | Discussion |
-| `methods_edit.tex` | Methods (edit this, not `methods.tex`) |
+| `methods_edit.tex` | Methods — the live one; `main.tex` inputs this |
+| `methods.tex` | **DEAD** — not inputted. Two `\todo` refs in `results.tex` point at labels that live only here (`fig:lowfreq_examples`, `sec:disturbance`), hence 2 undefined refs at build. Harmless until those sections are written. |
 | `main.tex` | Top-level; `\input{introduction}` now active |
 | `introduction.tex` | Introduction |
 

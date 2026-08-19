@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"\\n COMMIT REMINDER: if you changed any scripts this session, stage and commit before closing.\\n  git status  |  git add <files>  |  git commit\""
+          }
+        ]
+      }
+    ]
+  }
+}
