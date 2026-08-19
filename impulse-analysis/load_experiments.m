@@ -398,3 +398,40 @@ end  % End of experiment loop
 
 % Shared time vector used by prestim_variance, spectral_heatmap, etc.
 t_win_imp = -tWin : 1/fs : tWin;
+
+%% [LE-BILATERAL] append AL_0048 (dual-opsin, site R) as session 4 --------------------------------
+% User 2026-08-10: AL_0048 is part of the impulse session set, so loading the set should produce it.
+% It is DELEGATED to load_bilateral_impulse rather than duplicated here -- that script owns the galvo
+% calibration, the site resolution, the bregma registration and the ant_rc convention, and a second
+% copy of any of those is how the two loaders would quietly stop agreeing.
+%
+% Appended LAST, so indices 1-3 are unchanged and every locked default that refers to a session by
+% number (selExp = 3 = AL_0033, the primary) still points where it always did.
+%
+% ⚠ TWO CONSEQUENCES OF LOADING IT BY DEFAULT, both real:
+%   1. Scripts that sweep `1:numel(allExperiments)` (imp_tf_xsess's TFX_SEL, imp_run_all's RA_SEL,
+%      dose_response, ...) now silently include AL_0048. That is the point of the change, but it
+%      means the session set is no longer 3 unless a caller says so.
+%   2. AL_0048 is NOT a fourth replicate of the same measurement. On the inhibitory side the readout
+%      sits ~2.6 mm from the ILLUMINATED spot (the calibrated spot has no usable dose-response), so
+%      SITE_MODE='response' puts it on the anterior focus: this session measures the response of a
+%      CONNECTED region, not of illuminated tissue. Any TF or local-effect claim including it must
+%      say so. See load_bilateral_impulse.m's header and RESEARCH 2026-08-02.
+% Set LE_BILATERAL = false before running to get the 3 original sessions only.
+if ~exist('LE_BILATERAL','var') || isempty(LE_BILATERAL), LE_BILATERAL = true; end
+if LE_BILATERAL && ~any(arrayfun(@(A) strcmp(A.mn,'AL_0048'), allExperiments))
+    fprintf('\n[LE] appending AL_0048 (dual-opsin, inhibitory site) -> load_bilateral_impulse\n');
+    try
+        load_bilateral_impulse
+    catch LE_err
+        % Do NOT fail the whole load: the 3 original sessions are complete and usable, and most
+        % callers only need them. But do NOT fail quietly either -- a caller that expected 4 sessions
+        % and silently got 3 would produce a cross-session result over the wrong set.
+        fprintf(2, ['[LE] ** AL_0048 NOT appended: %s **\n' ...
+                    '     allExperiments holds %d session(s). Anything cross-session below is over\n' ...
+                    '     those only. Re-run load_bilateral_impulse on its own to see the full error.\n'], ...
+                LE_err.message, numel(allExperiments));
+    end
+end
+fprintf('[LE] allExperiments: %d session(s) -> %s\n', numel(allExperiments), ...
+        strjoin(arrayfun(@(A) sprintf('%s %s e%d', A.mn, A.td, A.en), allExperiments, 'UniformOutput',false), ' | '));

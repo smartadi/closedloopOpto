@@ -53,8 +53,12 @@
 % and `run_facemap.py`. Once that exists, motion is available here exactly as in the other
 % sessions; until then mv_z is NaN and a warning says so.
 %
-% RUN: after load_experiments.m (which builds `allExperiments` for the 3 original sessions);
-% this APPENDS entries 4 (L) and 5 (R).
+% RUN: `load_experiments.m` now CALLS THIS ITSELF at its [LE-BILATERAL] block (2026-08-10), so the
+% normal path is simply to run load_experiments and get 4 sessions. Running this script directly
+% still works and is the way to see a full error if the append fails (load_experiments catches and
+% warns rather than dying, so the 3 original sessions stay usable).
+% It APPENDS one entry per registered site, after the 3 original sessions: with the default
+% BLI.SITES = {'R'} that is entry 4 (R); with {'L','R'} it would be 4 (L) and 5 (R).
 % ---------------------------------------------------------------------------------
 
 %% [BLI-CFG] --------------------------------------------------------------------
@@ -243,7 +247,11 @@ for sI = sIlist
     % SMALLER row -> anterior is UP in the native view. ols_tf_pipeline's pick_orient uses this to
     % break the up/down tie; without it the legacy "site below centroid" rule flips this session
     % upside down (its inhibitory readout is 2.6 mm ANTERIOR of the spot, unlike AL_0033/AL_0041).
-    allExperiments(e).ant_rc = [-sign(BLI.px_per_mm(2)) 0];
+    % SIGN (fixed 2026-08-10): the vector is the native row/col STEP produced by +1 mm anterior,
+    % i.e. [px_per_mm(2) 0] -> unit [sign(px_per_mm(2)) 0] = [-1 0]. The earlier `-sign(...)` = [+1 0]
+    % pointed POSTERIOR, so pick_orient's tiebreaker chose the view with posterior UP and the whole
+    % AL_0048 display (session viewer, TF affected map, §10T3 selector) came out inverted.
+    allExperiments(e).ant_rc = [sign(BLI.px_per_mm(2)) 0];
     allExperiments(e).imp = imp;
     allExperiments(e).uAmp = uA(:);
     allExperiments(e).DF_imp = DF_imp_b;
@@ -265,11 +273,24 @@ for sI = sIlist
         e, sides{sI}, mat2str(cellfun(@numel, imp.Peak_imp)'));
 end
 nNew = numel(sIlist);
-fprintf(['[BLI] DONE. AL_0048 registered as %d entr%s (%s), indices %s.\n' ...
-         '      Next: ONE ROI draw for this mouse -- run the pipeline with selExp = %d; cp_roi_masks\n' ...
-         '      opens once (ipsi = the hemisphere holding the primary pixel, so one file serves any site).\n'], ...
+idx1 = numel(allExperiments) - nNew + 1;
+fprintf('[BLI] DONE. AL_0048 registered as %d entr%s (%s), indices %s.\n', ...
     nNew, ternstr_bli(nNew==1,'y','ies'), strjoin(sides(sIlist),'+'), ...
-    mat2str(numel(allExperiments)-nNew+1 : numel(allExperiments)), numel(allExperiments)-nNew+1);
+    mat2str(idx1 : numel(allExperiments)));
+% Report the ROI state as it IS, not as it was on the first run. This line used to print "Next: ONE
+% ROI draw" unconditionally, which reads as an outstanding action item on every subsequent load and
+% trains you to ignore it -- the one time it matters (a genuinely missing ROI) then looks identical.
+for sI = sIlist
+    tagR = sprintf('%s_%s%s_e%d_%s', BLI.mn, BLI.td(6:7), BLI.td(9:10), BLI.en, sides{sI});
+    roiR = fullfile(BLI.dataDir, sprintf('cp_roi2_%s.mat', tagR));
+    if exist(roiR,'file')
+        fprintf('      ROI %s: CACHED (%s) -- no draw needed.\n', sides{sI}, tagR);
+    else
+        fprintf(2,['      ROI %s: MISSING -- the first pipeline run with selExp = %d opens the\n' ...
+                   '      cp_roi_masks draw GUI once (ipsi = the hemisphere holding the primary pixel,\n' ...
+                   '      so one file serves any site).\n'], sides{sI}, idx1 + find(sIlist==sI,1) - 1);
+    end
+end
 
 function s = ternstr_bli(c,a,b)
 if c, s = a; else, s = b; end

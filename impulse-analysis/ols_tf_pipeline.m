@@ -89,6 +89,28 @@ if exist('OLS_OVERRIDE','var') && isstruct(OLS_OVERRIDE)
     end
 end
 
+% HEADS-UP for batch runs, printed BEFORE the ~minutes of setup rather than discovered after it.
+% §18 [ALLSESS] sits AFTER the §10T3 selector, and that selector BLOCKS on uiwait (~line 755) until
+% "CONFIRM selection & build model" is pressed. So RUN_ALLSESS=true ALONE does not get you to the
+% cross-session batch: an unconfirmed selector ends the run with no ALLSESS and no error, which is
+% what `imp_state_xsess`'s "no ALLSESS in the workspace" is really reporting. Say so up front.
+if RUN_ALLSESS
+    predMode = 'tf';                                          % §10T2's default, unless the driver overrides it
+    if exist('OLS_OVERRIDE','var') && isstruct(OLS_OVERRIDE) && isfield(OLS_OVERRIDE,'affect_mode')
+        predMode = OLS_OVERRIDE.affect_mode;
+    end
+    if strcmpi(predMode,'tf')
+        fprintf(2, ['[ALLSESS] RUN_ALLSESS=true with affect_mode=''tf'': this run WILL BLOCK at the ' ...
+            '§10T3 selector.\n' ...
+            '          -> press "CONFIRM selection & build model" to continue on to §17d/§17c/§18, OR\n' ...
+            '          -> set OLS_OVERRIDE.affect_mode=''matched'' to run headless. §18''s engine keys off\n' ...
+            '             the energy-based bledA map (never affected_tf), so the CROSS-SESSION numbers are\n' ...
+            '             identical either way -- only this run''s single-session §17d/§17c gating changes.\n']);
+    else
+        fprintf('[ALLSESS] RUN_ALLSESS=true, affect_mode=''%s'' -> headless; the §10T3 CONFIRM gate is skipped.\n', predMode);
+    end
+end
+
 % Reproducibility: seed the RNG so the 0V bootstrap nulls (§10 affect, §14 bleedchar, validation) are
 % IDENTICAL run-to-run. This removes the borderline-pixel flip-flop (pixels near the z-threshold flipping
 % in/out every run) that made stim-affected detection inconsistent -- the score is deterministic, only the
@@ -480,6 +502,15 @@ tf_sweep = true;                     % AIC-sweep the order per pixel (<= tf_maxP
 tf_maxP  = 3;  tf_maxZ = 2;          % sweep ceiling. 3 poles = onset-rise + inhibition + rebound as 3 modes
                                      % (2p couples dip & rebound timescales -> can't fit a strong slow rebound; see 4.3 V).
 tf_sens  = 1;                        % SENSITIVITY: divides the pre-stim (+ optional VAF) threshold. >1 -> MORE affected. Live slider.
+                                     % NOTE: this is only the STARTING value -- if a confirmed sens has been
+                                     % saved for this session it is restored below (see tf_reuseSens).
+tf_reuseSens = true;                 % REUSE the last CONFIRMED tf_sens for this session instead of re-selecting
+                                     % every run (consistency: the affected set feeding §17d/§17c/§18 stays FIXED
+                                     % across runs). Restored only if the TF-fit cache key still matches.
+                                     % Set false (or delete data/tf_sens_<sess>.mat) to choose a new one.
+if exist('OLS_OVERRIDE','var') && isstruct(OLS_OVERRIDE) && isfield(OLS_OVERRIDE,'tf_reuseSens')
+    tf_reuseSens = OLS_OVERRIDE.tf_reuseSens;   % batch-driver hook (declared after §1's hook, so applied here)
+end
 tf_nBoot = 60;                       % 0V-null VAF draws per amp (for the VAF display + optional gate)
 tf_vafFloor = 15;                    % floor under the per-amp 0V-null VAF (display only)
 % VAF-vs-0V-null is NO LONGER a detection gate: with the flexible stmcb+sweep fit, a fit to 0V noise scores
@@ -487,8 +518,47 @@ tf_vafFloor = 15;                    % floor under the per-amp 0V-null VAF (disp
 % OPTIONAL absolute shape-quality floor only.
 tf_useVAF = false;                   % if true, ALSO require VAFtf > tf_vafMin (absolute, NOT the null). Default OFF.
 tf_vafMin = 40;                      % absolute VAF floor (%) when tf_useVAF -- rejects garbage-shaped fits, not noise
-tf_reqReb = false;                   % require a rebound lobe? false -> pure-inhibition (e.g. bleed) pixels ALSO count (higher recall)
+tf_reqReb = false;                   % KEEP FALSE. Rebound is NOT a detection criterion: a small genuine
+                                     % effect may have no rebound at all (user 2026-08-05). Retained only
+                                     % as a reported diagnostic. Recovery (tf_recFracMax) is the shape test.
 tf_rebMin = 0.05;                    % if tf_reqReb: min reboundRatio (rebound height / dip depth)
+% ---- SHAPE GATE (2026-08-05) -- what makes a fit an IMPULSE response rather than a ramp ------------
+% THE BUG THIS FIXES: DIPgate is min() of the fitted response over [0, tf_dipCapSec] -- a pure DEPTH
+% statistic with no information about whether the response ever comes back. A monotonically descending
+% fit reaches its minimum at the LAST sample of the cap window, so it not only passes the old gate, it
+% scores DEEPER than a genuine dip-and-recover with the same early slope -> ramps were preferentially
+% selected (g241 @ 3.7 V, AL_0041 e2). Two shape tests, both computed on the SAME capN window the gate
+% uses (the old reboundRatio was computed over the longer fit window nT -- a real inconsistency):
+%   TROUGH TIME  the trough must occur INSIDE a plausible band, not pinned to the window edge. Session
+%                landmarks put the real trough at 114-143 ms (§15), so a ramp -- trough at capN = 400 ms
+%                -- fails on this alone. This is the cheapest, highest-yield test.
+%   RECOVERY     recFrac = y(capN)/dip = how much of the dip is STILL present at the end of the window.
+%                ramp ~1 (or >1); dip-and-recover ~0; overshoot < 0. Requiring recFrac <= max ACCEPTS a
+%                response that merely returns to baseline (no rebound needed) and rejects one that does
+%                not. Consistent with the session's own median recovery ~314 ms (see dip_win_s note).
+tf_useShape   = true;                % apply the trough-band + recovery tests (set false for the old depth-only rule)
+tf_recMaxFac  = 2.0;                 % RECOVERY test: the pixel's evoked must return to its baseline band within
+                                     % this multiple of the IPSI recovery time. >1 because a contra pixel is driven
+                                     % THROUGH the network and may legitimately recover later than ipsi -- the same
+                                     % asymmetry the trough band encodes. (Superseded tf_recFracMax as the gate.)
+tf_recFracMax = 0.30;                % DIAGNOSTIC ONLY since 2026-08-05: fraction of the FITTED dip still remaining
+                                     % at capN. No longer gates -- it rejected pixels whose DATA had visibly
+                                     % recovered but whose sluggish fixed-order fit had not (g406 @ 2.7 V).
+% ---- LEARNED gate window (2026-08-05): take it from the IPSI response, not a constant ---------------
+% The gate window is now the ipsi INHIBITION LOBE for THIS amplitude: onset -> ipsi recovery, i.e.
+% numel(inhCols{ai}), computed per amp per session at §10. Why this landmark and not a scaled trough:
+% rebCols{ai} starts at rc+1, so capping at recovery makes the gate window EXACTLY the inhibition lobe
+% and DISJOINT from the rebound lobe by construction -- the property dip_win_s=0.300 was hand-tuned to
+% approximate, now obtained exactly, per amp, per session, with no constant to maintain. It also removes
+% a real inconsistency: dip_win_s calls itself the single source of truth for the dip window while
+% tf_dipCapSec was a second, hard-coded one used only by the detector.
+% Trough band scales off the ipsi trough ASYMMETRICALLY: a contra pixel driven through the network
+% should trough with ipsi or LATER, never meaningfully earlier, so a symmetric band would spend its
+% lower half on physically implausible latencies. Session-adaptive matters for AL_0048, whose readout
+% sits 2.6 mm from the illumination and has no reason to share AL_0033's latency.
+tf_capFromIpsi = true;               % false -> fall back to the fixed tf_dipCapSec / tf_troughMs below
+tf_troughFac   = [0.6 2.5];          % admissible trough band as a multiple of the ipsi trough time
+tf_troughMs    = [60 250];           % FALLBACK trough band (ms), used only where the ipsi landmark is missing
 tf_smoothN = 3;                      % pre-fit smoothing (movmean samples, ~85 ms) -- tames the noise the fit amplifies; 1 = off
 % BASELINE significance gate (PRIMARY): the inhibition trough must be DEEPER than the pixel's own baseline
 % fluctuation -- measured over a long window BEFORE stim AND (optionally) the settled activity AFTER the
@@ -633,28 +703,137 @@ end
 muMap = nan(nG,Wb,nA);
 for a = 1:nA, if nT_amp(a)>0, muMap(:,:,a) = mean(blkA{a},3); end, end
 
+% ---- DATA-SIDE shape landmarks: trough + RECOVERY measured on the trial-averaged EVOKED --------------
+% Shape is judged on the DATA, not on the fitted response, using the SAME recovery definition ipsi uses
+% (§10, ~line 383): first return after the trough to within max(2*baselineSD, recTolFac*|trough|).
+% TWO REASONS (2026-08-05, after g406 @ 2.7 V AL_0041 e2 was rejected with the trace visibly recovered):
+%  (1) FIT SLUGGISHNESS -- the fixed-order TF lags the sharp real dip (TASKS #183). Judging recovery on
+%      the fit rejects pixels whose DATA plainly returns: g406's fit was still 57% down at the window
+%      edge while its evoked had recovered. The detector must answer a question about the RECORDING.
+%  (2) CONSISTENCY -- ipsi's own trough/recovery landmarks are measured on its trial-averaged evoked,
+%      so measuring contra the same way keeps ONE definition of "recovers" in the project.
+% Recovery is searched over the WHOLE fit window, not up to capN: a contra pixel is driven THROUGH the
+% network, so it may legitimately recover LATER than ipsi (the same asymmetry the trough band encodes).
+% Requiring it to be back exactly when ipsi is back was the error in the previous revision.
+% The FITTED values (DIPgate/RECfrac below) are retained and printed alongside -- their divergence from
+% these is itself the #183 diagnostic.
+TRdatMs = nan(nG,nA);  RECdatMs = nan(nG,nA);  DIPdat = nan(nG,nA);  hasRec = false(nG,nA);
+for a = 1:nA
+    if nT_amp(a)==0, continue; end
+    wa = winA{a};  Y = muMap(:,wa,a);  Y = Y - Y(:,1);            % onset-referenced evoked, same window as the fit
+    nw = size(Y,2);
+    [dv, it] = min(Y, [], 2);
+    DIPdat(:,a) = dv;  TRdatMs(:,a) = (it-1)/Fs*1000;
+    tolg = max(2*preStd(:,a), recTolFac*abs(dv));                 % SAME band form as the ipsi landmark
+    for g = 1:nG
+        k = it(g) - 1 + find(Y(g,it(g):nw) >= -tolg(g), 1, 'first');
+        if ~isempty(k), RECdatMs(g,a) = (k-1)/Fs*1000;  hasRec(g,a) = true; end
+    end
+end
+
 % GATED dip = deepest point of the FITTED response within the early cap window [0, tf_dipCapSec]. A deeper
 % trough later in the window is natural drift, not the stim dip, so it must not gate. Derived FRESH from the
 % cached fitted impulse responses YItf (like preThr) -> tf_dipCapSec is a LIVE knob, no refit on change.
-capN    = max(1, min(nWin, round(tf_dipCapSec*Fs)+1));            % samples 1..capN = t in [0, tf_dipCapSec]
-DIPgate = squeeze(min(YItf(:,1:capN,:), [], 2));                 % [nG x nA] early-window fitted dip
-if nA==1, DIPgate = DIPgate(:); end                              % squeeze guard for single-amp sessions
+% PER-AMP gate window, learned from the ipsi inhibition lobe (see tf_capFromIpsi above).
+capNa = nan(nA,1);  trBandA = nan(nA,2);  capFallback = false(nA,1);
+DIPgate = nan(nG,nA);  TRcapMs = nan(nG,nA);  RECfrac = nan(nG,nA);
+for ai = 1:nA
+    if tf_capFromIpsi && ~isempty(inhCols{ai}) && isfinite(troughMs(ai)) && troughMs(ai) > 0
+        capNa(ai)     = min(nWin, numel(inhCols{ai}));            % onset -> ipsi recovery, THIS amp
+        trBandA(ai,:) = troughMs(ai) * tf_troughFac;              % band scaled off the ipsi trough
+    else
+        capNa(ai)     = min(nWin, round(tf_dipCapSec*Fs)+1);      % fallback: the old fixed window
+        trBandA(ai,:) = tf_troughMs;
+        capFallback(ai) = true;
+    end
+    cN  = max(1, capNa(ai));
+    Yc  = YItf(:,1:cN,ai);
+    [dv, it] = min(Yc, [], 2);                                    % depth AND its position (position = the shape info)
+    DIPgate(:,ai) = dv;
+    TRcapMs(:,ai) = (it-1)/Fs*1000;                               % trough TIME within the gate window (ms)
+    RECfrac(:,ai) = Yc(:,cN) ./ min(dv, -eps);                    % dip remaining at capN: ~1 ramp, ~0 recovered, <0 overshoot
+end
+if any(capFallback)
+    % Not silent: a fallback means that amp's ipsi never recovered, which is itself worth knowing --
+    % and it reverts to the hard-coded window, so the gate is no longer the learned one for that amp.
+    warning(['[AFFECT-TF] amp(s) %s have no usable ipsi recovery landmark -> gate window fell back to the ' ...
+             'FIXED %.0f ms / trough band [%g %g] ms. Those amps are not gated on the learned window.'], ...
+             mat2str(find(capFallback).'), 1000*tf_dipCapSec, tf_troughMs(1), tf_troughMs(2));
+end
+fprintf('  gate window (learned from ipsi inhibition lobe): ');
+fprintf('%.0f ms ', 1000*(capNa-1)/Fs);  fprintf('| trough bands: ');
+fprintf('[%.0f-%.0f] ', trBandA.');  fprintf('\n');
 
 % ---- PROVISIONAL affected mask (re-thresholded live in §10T3) ----
 % PRIMARY: the FITTED EARLY-window dip (DIPgate = deepest fit point in [0, tf_dipCapSec], as drawn in the
 % inspector) must beat the baseline fluctuation floor (both scaled by tf_sens). The fit is zeroed at onset so
 % DIPgate IS the denoised stim drop; preThr is already the fluctuation about the MEAN pre-stim activity (base
 % is per-trial DC-removed) -> directly comparable, no raw-onset-sample term. VAF-vs-null is NOT a gate.
+% ---- RESTORE the last CONFIRMED sensitivity (run-to-run consistency) -------------------------------
+% The per-pixel TF fit MAPS are cached (tf_cacheFile), but the HUMAN DECISION made at the §10T3 selector
+% -- tf_sens -- was not. So every run re-thresholded at the default and asked for a fresh CONFIRM, and any
+% drift in that slider silently changed the affected set, and therefore §17d/§17c/§18, between runs. The
+% confirmed value is now saved on CONFIRM and restored here, keyed by the SAME tf_cacheKey as the fit maps:
+% if the fit params change, the saved sens is DISCARDED rather than silently reapplied to different maps.
+tf_sensFile = fullfile(dataDir, sprintf('tf_sens_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+% Key covers the fit params AND the gate rule: a saved sens chosen under the old depth-only gate is not a
+% valid selection under the shape gate, so changing tf_useShape/troughMs/recFracMax must invalidate it.
+tf_sensKey = struct('fit',tf_cacheKey,'useShape',tf_useShape,'trBandA',trBandA,'capNa',capNa(:).', ...
+                    'capFromIpsi',tf_capFromIpsi,'troughFac',tf_troughFac, ...
+                    'recMaxFac',tf_recMaxFac,'recMs',recMs(:).','recTolFac',recTolFac, ...
+                    'recFracMax',tf_recFracMax,'dipCapSec',tf_dipCapSec, ...
+                    'useVAF',tf_useVAF,'vafMin',tf_vafMin,'reqReb',tf_reqReb,'rebMin',tf_rebMin);
+tf_sensRestored = false;  tfSaved = [];
+if tf_reuseSens && exist(tf_sensFile,'file')
+    tfSaved = load(tf_sensFile);
+    if isfield(tfSaved,'key') && isequaln(tfSaved.key, tf_sensKey)
+        tf_sens = tfSaved.tf_sens;  tf_sensRestored = true;
+        fprintf('  [sens] RESTORED confirmed tf_sens=%.2f (saved %s) -> selector will NOT block this run\n', ...
+                tf_sens, tfSaved.saved_on);
+    else
+        fprintf('  [sens] saved tf_sens found but the TF-fit params or the GATE RULE changed -> discarded; a fresh CONFIRM is required\n');
+        tfSaved = [];
+    end
+end
+
 g_dip = (DIPgate < 0);
 g_pre = (-DIPgate > preThr./max(tf_sens,eps));
 g_vaf = true(nG,nA);  if tf_useVAF, g_vaf = (VAFtf > tf_vafMin); end
-affected_tf = g_dip & g_pre & g_vaf;
-if tf_reqReb, affected_tf = affected_tf & (REBtf > tf_rebMin); end
-fprintf('  gate pass (of %d px-amp): dip<0 %d | baseline %d | %s -> AFFECTED %d @ tf_sens=%.2f\n', ...
+g_tr  = true(nG,nA);  g_rec = true(nG,nA);
+if tf_useShape                                                   % SHAPE: impulse-like, not a ramp
+    g_tr  = (TRdatMs >= trBandA(:,1).') & (TRdatMs <= trBandA(:,2).');   % DATA trough inside this amp's ipsi-derived band
+    g_rec = hasRec & (RECdatMs <= tf_recMaxFac * recMs(:).');            % DATA returns to baseline, within tf_recMaxFac x ipsi recovery
+end
+affected_tf = g_dip & g_pre & g_vaf & g_tr & g_rec;
+if tf_reqReb, affected_tf = affected_tf & (REBtf > tf_rebMin); end        % OFF by design: see tf_reqReb note
+fprintf('  gate pass (of %d px-amp): dip<0 %d | baseline %d | %s | DATA trough[%.0f-%.0f ms] %d | DATA recovers<=%.1fx ipsi %d -> AFFECTED %d @ tf_sens=%.2f\n', ...
         nG*nA, nnz(g_dip), nnz(g_pre), ...
-        ternstr(tf_useVAF, sprintf('VAF>%.0f %d', tf_vafMin, nnz(g_vaf)), 'VAF off'), nnz(affected_tf), tf_sens);
+        ternstr(tf_useVAF, sprintf('VAF>%.0f %d', tf_vafMin, nnz(g_vaf)), 'VAF off'), ...
+        min(trBandA(:,1)), max(trBandA(:,2)), nnz(g_tr), tf_recMaxFac, nnz(g_rec), nnz(affected_tf), tf_sens);
+% fit-vs-data divergence = the TASKS #183 sluggish-fit diagnostic, surfaced rather than left implicit
+fitRecOK = RECfrac <= tf_recFracMax;
+fprintf('  [fit-vs-data] the RETIRED fitted-recovery rule would reject %d px-amp that the DATA rule accepts (sluggish fits)\n', ...
+        nnz(g_dip & g_pre & g_vaf & g_tr & g_rec & ~fitRecOK));
+if tf_useShape
+    fprintf('  shape gate rejected %d px-amp that the old depth-only rule would have ACCEPTED (ramps + edge-troughs)\n', ...
+            nnz((g_dip & g_pre & g_vaf) & ~(g_tr & g_rec)));
+end
 fprintf('  per-amp affected: '); fprintf('%d ',sum(affected_tf,1));
 fprintf('(vs §10 matched: '); fprintf('%d ',sum(affected,1)); fprintf(')\n');
+
+% Cross-check: with the cache key matched the maps are identical, so re-thresholding at the restored sens
+% MUST reproduce the saved mask bit-for-bit. If it does not, something outside the key changed the maps and
+% this run is NOT the selection you confirmed -- say so loudly rather than proceeding on a different set.
+if tf_sensRestored && isstruct(tfSaved) && isfield(tfSaved,'affected_tf')
+    if isequal(tfSaved.affected_tf, affected_tf)
+        fprintf('  [sens] mask reproduces the saved CONFIRMED selection exactly (%d px-amp)\n', nnz(affected_tf));
+    else
+        warning(['[AFFECT-TF] restored tf_sens=%.2f reproduces a DIFFERENT mask than the one saved with it ' ...
+                 '(%d vs %d px-amp) despite a matching cache key -- the fit maps changed outside the key. ' ...
+                 'Do NOT trust this run''s §17d/§17c/§18 until that is explained.'], ...
+                 tf_sens, nnz(affected_tf), nnz(tfSaved.affected_tf));
+    end
+end
 
 % NOTE: the commit `affected := affected_tf` + the AFFECT_TF struct are DEFERRED to §10T3 below -- they run
 % only AFTER the user confirms tf_sens on the interactive selector, so §17b/§17d build on the CONFIRMED set.
@@ -676,7 +855,18 @@ fprintf('(vs §10 matched: '); fprintf('%d ',sum(affected,1)); fprintf(')\n');
 % (least stim-contaminated). Penalty p_i = 1/gamma_i; weighted lasso solved by column-rescaling b=gamma.*a
 % then uniform cd_lasso (see select_wlasso). Computed here from pre-selector data so the button can refit at
 % the current sensitivity; mirrors §17's spont operators + §17b's per-amp z-evoked (a few s of recompute).
-select_l1frac  = 0.15;    % L1 strength (fraction of max|rescaled Z'y|); higher = sparser (fixed; user: no sparsity UI)
+select_l1frac  = 0;       % *** NO SPARSITY (user 2026-08-05) *** L1 strength as a fraction of max|rescaled Z'y|.
+                          % 0 = OFF -> select_wlasso solves the weighted-ridge problem in closed form, keeps EVERY
+                          % unaffected predictor, and maximises held-out SPONTANEOUS R^2 (which is the only thing
+                          % R^2 is measured on here -- the stim windows are scored by leak/capture, not R^2).
+                          % >0 restores sparsity (0.15 was the value through 2026-08-04).
+select_ridge   = 0;       % Weighted-L2 strength as a fraction of mean(diag(Gz)), applied THROUGH the same 1/gamma
+                          % distance weights. READ THIS BEFORE LEAVING IT AT 0: the far-from-ipsi prior was carried
+                          % ENTIRELY by the L1 weights, so with select_l1frac=0 and select_ridge=0 there is NO
+                          % distance prior left -- the fit is plain OLS on every unaffected pixel, near-ipsi ones
+                          % included. That maximises R^2 but lets near-ipsi predictors absorb stim signal, which
+                          % shows up as HIGHER LEAK / smaller Local. Raise this to dial the prior back in without
+                          % reintroducing sparsity (ridge never zeros a weight).
 select_penNear = 2.0;     % L1 weight AT the ipsi site (expensive -> near-ipsi predictors dropped)
 select_penFar  = 0.2;     % L1 weight at the FARTHEST px (cheap -> far predictors retained)
 selDist  = hypot(dspGc(:)-dspSc, dspGr(:)-dspSr);                       % each contra px -> ipsi stim site (display px)
@@ -684,7 +874,8 @@ selDn    = (selDist-min(selDist))/max(max(selDist)-min(selDist),eps);   % normal
 selPen   = select_penNear*(1-selDn) + select_penFar*selDn;             % per-px L1 weight: HIGH near ipsi, LOW far
 selGamma = 1./selPen;                                                  % lasso column-rescale gains (LARGE far, small near)
 selYsp = double(y_full(frames));  selYtr=selYsp(itr);  selMuY=mean(selYtr);   % spont operators (z-space; = §17)
-selGz  = Ztr.'*Ztr;  selcz = Ztr.'*(selYtr-selMuY);  sellamR = 1e-6*mean(diag(selGz));
+selGz  = Ztr.'*Ztr;  selcz = Ztr.'*(selYtr-selMuY);
+sellamR = max(1e-6, select_ridge)*mean(diag(selGz));   % 1e-6 = numerical floor; select_ridge = the real weighted-L2
 selDipCols = (preN+1):min(Wb, preN+round(dip_win_s*Fs));
 selEvZ=cell(nA,1); selAA=cell(nA,1); selDc=cell(nA,1); selRc=cell(nA,1); selSc=cell(nA,1);   % per-amp z-evoked + windows
 for ai = 1:nA
@@ -736,7 +927,10 @@ DBT = struct('axT',axT,'hAff',hAff,'hUn',hUn,'hSensTxt',hSensTxt,'sens',tf_sens,
     'mAmpP',mAmpP,'muMap',muMap,'rel',rel,'recMsA',recMsA,'setMsA',setMsA,'preN',preN,'Wb',Wb, ...
     'winA',{winA},'np',tf_np,'nz',tf_nz,'nd',tf_nd,'nPreZ',nPreZ,'Ts',Ts,'reqReb',tf_reqReb,'rebMin',tf_rebMin, ...
     'sweep',tf_sweep,'maxP',tf_maxP,'maxZ',tf_maxZ,'smoothN',tf_smoothN, ...
-    'affected_tf',affected_tf,'VAF',VAFtf,'DIP',DIPtf,'DIPgate',DIPgate,'capN',capN,'dipCapSec',tf_dipCapSec, ...
+    'affected_tf',affected_tf,'VAF',VAFtf,'DIP',DIPtf,'DIPgate',DIPgate,'capNa',capNa,'dipCapSec',tf_dipCapSec, ...
+    'useShape',tf_useShape,'trBandA',trBandA,'recFracMax',tf_recFracMax,'TRcapMs',TRcapMs,'RECfrac',RECfrac, ...
+    'capFallback',capFallback,'TRdatMs',TRdatMs,'RECdatMs',RECdatMs,'hasRec',hasRec, ...
+    'recMaxFac',tf_recMaxFac,'recMsA2',recMs(:),'recTolFac',recTolFac,'preStd',preStd, ...
     'TR',TRtf,'REB',REBtf,'DEL',DELtf,'vafGate',vafGate, ...
     'preThr',preThr,'DIPraw',DIPrawtf,'useVAF',tf_useVAF,'vafMin',tf_vafMin, ...
     'selGz',selGz,'selcz',selcz,'sellamR',sellamR,'selMuY',selMuY,'selGamma',selGamma,'selL1frac',select_l1frac, ...
@@ -752,11 +946,23 @@ fprintf('                   then "CONFIRM selection & build model". The script W
 
 % ---- GATE: block until the user CONFIRMS, then commit `affected` and let the model build downstream ----
 if strcmpi(affect_mode,'tf')
-    if isgraphics(figT), uiwait(figT); end                       % block until CONFIRM (or the window is closed)
-    if isgraphics(figT)
-        DBT = guidata(figT);  affected_tf = DBT.affected_tf;  tf_sens = DBT.sens;   % the CONFIRMED selection
+    if tf_sensRestored
+        % Selection already made (and saved) on an earlier run -> do not ask again, do not block.
+        % The selector figure stays open as a read-only view; dragging it now has no effect on this run.
+        fprintf('  [sens] REUSING the confirmed selection -> CONFIRM gate SKIPPED (selector is inspection-only).\n');
+        fprintf('         To pick a new one: set tf_reuseSens=false, or delete\n         %s\n', tf_sensFile);
     else
-        warning('[AFFECT-TF] selector closed without CONFIRM -> using the last provisional selection (tf_sens=%.2f).', tf_sens);
+        if isgraphics(figT), uiwait(figT); end                   % block until CONFIRM (or the window is closed)
+        if isgraphics(figT)
+            DBT = guidata(figT);  affected_tf = DBT.affected_tf;  tf_sens = DBT.sens;   % the CONFIRMED selection
+        else
+            warning('[AFFECT-TF] selector closed without CONFIRM -> using the last provisional selection (tf_sens=%.2f).', tf_sens);
+        end
+        % Persist the human decision so every later run rebuilds the SAME affected set. Saved with the fit-map
+        % cache key, so it self-invalidates if the TF fit is recomputed with different params.
+        key = tf_sensKey;  saved_on = char(datetime('now','Format','yyyy-MM-dd HH:mm'));
+        save(tf_sensFile,'tf_sens','affected_tf','key','saved_on');
+        fprintf('  [sens] SAVED confirmed tf_sens=%.2f -> %s\n', tf_sens, tf_sensFile);
     end
     affected = affected_tf;
     fprintf('  [CONFIRMED] tf_sens=%.2f -> affected := affected_tf (', tf_sens); fprintf('%d ',sum(affected_tf,1)); fprintf('cells) -> feeds §17b\n');
@@ -892,6 +1098,8 @@ dipCols = (preN+1):min(Wb, preN+round(dip_win_s*Fs));       % reporting dip wind
 ttc = rel/Fs;                                               % peri-onset time axis (s) for trace figures
 y_sp = double(y_full(frames));  ytr = y_sp(itr);  yte = y_sp(ite);  muY = mean(ytr);  ytrc = ytr - muY;
 Gz = Ztr.'*Ztr;  cz = Ztr.'*ytrc;  lamR = 1e-6*mean(diag(Gz));  sstot = max(sum((yte-mean(yte)).^2),eps);
+lamSel = max(1e-6, select_ridge)*mean(diag(Gz));   % SELECT's own regulariser: kept separate from lamR so
+                                                   % raising the distance prior does not perturb other fits
 
 % (greedy predictor removed 2026-07-14; NATIVE KKT predictor removed 2026-07-18 — SELECT §17d is the sole model)
 
@@ -912,13 +1120,25 @@ gDip(posT) = (tms_on(posT).^2).*exp(-tms_on(posT)/71.5);  if any(gDip>0), gDip=g
 gReb(posT) = (tms_on(posT).^2).*exp(-tms_on(posT)/285);   if any(gReb>0), gReb=gReb/max(gReb); end    % peak 571 ms
 % ---- cache per-amp evoked + fit operators ONCE (all independent of nblind) ----
 evZc=cell(nA,1); aAc=cell(nA,1); dcc=cell(nA,1); rcc=cell(nA,1); scc=cell(nA,1); Sc=cell(nA,1); dGc=cell(nA,1); b0c=cell(nA,1);
+% SPLIT-HALF evoked, for §17e's trial-split blindness control. Built here because Zp (the per-trial
+% block) already exists in this loop -- computing it again later would mean a second SVD reconstruction.
+% Halves are a SEEDED permutation (rng(7) at §1), so the split is identical run-to-run.
+evZcA=cell(nA,1); aAcA=cell(nA,1); evZcB=cell(nA,1); aAcB=cell(nA,1);
 for ai = 1:nA
     onF=onFcell{ai}; nT=numel(onF); if nT==0, continue; end
     dc=inhCols{ai}; if isempty(dc), dc=dipCols; end;  rc=rebCols{ai};
     idx=onF(:).'+rel(:);
     Zp=(double(Uflat(gridIdx,:))*double(V_cp(:,idx(:)))-mu_p)./sd_p; Zp=reshape(Zp,nG,Wb,nT);
     evZ=mean(Zp,3); evZ=evZ-mean(evZ(:,1:preN),2);
-    aA=mean(reshape(double(y_full(idx(:))),Wb,nT),2); aA=aA-mean(aA(1:preN));
+    yTr=reshape(double(y_full(idx(:))),Wb,nT);
+    aA=mean(yTr,2); aA=aA-mean(aA(1:preN));
+    if nT >= 4                                            % split-half evoked (A = select, B = validate)
+        pp=randperm(nT); hA=pp(1:floor(nT/2)); hB=pp(floor(nT/2)+1:end);
+        eA=mean(Zp(:,:,hA),3); evZcA{ai}=eA-mean(eA(:,1:preN),2);
+        eB=mean(Zp(:,:,hB),3); evZcB{ai}=eB-mean(eB(:,1:preN),2);
+        yA=mean(yTr(:,hA),2); aAcA{ai}=yA-mean(yA(1:preN));
+        yB=mean(yTr(:,hB),2); aAcB{ai}=yB-mean(yB(1:preN));
+    end
     if ~isempty(rc), se=rc(end); else, se=dc(end); end
     active=~affected(:,ai); if nnz(active)<5, active=true(nG,1); end;  S=find(active);
     evZc{ai}=evZ; aAc{ai}=aA; dcc{ai}=dc; rcc{ai}=rc; scc{ai}=(preN+1):max(se,dc(end));
@@ -940,6 +1160,128 @@ for ai = 1:nA
     frPost=frPost(frPost>=1 & frPost<=size(V_cp,2));
     Zpre{ai} =((double(Uflat(gridIdx,:))*double(V_cp(:,frPre)))-mu_p)./sd_p;   ypre{ai} =y_full(frPre);
     Zpost{ai}=((double(Uflat(gridIdx,:))*double(V_cp(:,frPost)))-mu_p)./sd_p;  ypost{ai}=y_full(frPost);
+end
+
+%% (17c0) [RIDGE-SWEEP] sweep the far-from-ipsi prior, then PICK the operating point
+% Runs BEFORE §17e/§17d so the chosen `select_ridge` actually reaches the fit. (The first version of this
+% sat after §17d and was therefore diagnostic-only: it printed a table while §17d had already run at
+% select_ridge=0 -- i.e. dense OLS with NO distance prior, which is the configuration that lost the
+% residual capture. Figures moved to §17f; only the compute + pick live here.)
+%
+% WHY A PRIOR AND NOT A CONSTRAINT. "Predictors should be far from the stim site" is a claim about where
+% bleed and direct effects live, formed WITHOUT reference to the dip -- so it does NOT guarantee blindness
+% and leak stays an honest measurement. That is the difference from §17b NATIVE's KKT equality (retired)
+% and from an evoked-subspace projection: those make capture true by construction.
+% Reference: [CP-CLEANRES] (S13, RRR lineage) held the residual at ~73% of the actual dip.
+ridge_grid   = [0 1e-4 3e-4 1e-3 3e-3 1e-2 3e-2 0.1 0.3 1 3];   % fractions of mean(diag(Gz))
+ridge_pick   = 'auto';   % 'auto' = minimise leak subject to R^2 >= ridge_r2min | 'off' = keep select_ridge as set
+ridge_r2min  = 0.92;     % ABSOLUTE held-out SPONTANEOUS R^2 floor the pick must respect (user 2026-08-05)
+% BATCH-DRIVER HOOK. These are declared after §1's OLS_OVERRIDE block, so apply the override here.
+% CRITICAL for cross-session work: leaving ridge_pick='auto' makes EVERY session tune its own prior,
+% which is per-dataset parameter selection and is NOT one strategy applied to all sessions. A driver
+% pooling state-dependence across sessions must pass ridge_pick='off' + a FROZEN select_ridge.
+for f_ = {'ridge_grid','ridge_pick','ridge_r2min','select_ridge'}
+    if exist('OLS_OVERRIDE','var') && isstruct(OLS_OVERRIDE) && isfield(OLS_OVERRIDE,f_{1})
+        eval([f_{1} ' = OLS_OVERRIDE.(f_{1});']);   %#ok<EVLDIR>
+    end
+end
+nRG   = numel(ridge_grid);
+sw_r2 = nan(nRG,nA);  sw_leak = nan(nRG,nA);  sw_wdist = nan(nRG,nA);  sw_wmax = nan(nRG,nA);
+haveDist = exist('selDist','var') && numel(selDist)==nG;        % weight-centroid diagnostic (display px)
+mdG = mean(diag(Gz));
+fprintf('\n[RIDGE-SWEEP] far-from-ipsi weighted-L2 prior: held-out spont R^2 vs leak (dense, no sparsity)\n');
+fprintf('   %-12s %10s %10s %10s   %s\n','select_ridge','spontR2','leak%','capture%','mean |w| dist from ipsi (px)');
+for ri = 1:nRG
+    lamS = max(1e-6, ridge_grid(ri))*mdG;
+    for ai = 1:nA
+        if isempty(evZc{ai}), continue; end
+        S = Sc{ai};  g = selGamma(S);
+        b = zeros(nG,1);
+        b(S) = (Gz(S,S) + lamS*diag(1./max(g,eps).^2)) \ cz(S);
+        yg = (b.'*evZc{ai}).';  yg = yg - mean(yg(1:preN));
+        Adip = mean(aAc{ai}(dcc{ai}));  Gdip = mean(yg(dcc{ai}));
+        sw_leak(ri,ai) = 100*Gdip/Adip;                          % Global as % of Actual = LEAK
+        sw_r2(ri,ai)   = 1 - sum((yte - (muY + Zte*b)).^2)/sstot;% held-out SPONTANEOUS R^2 (the only R^2 here)
+        aw = abs(b);  sw_wmax(ri,ai) = max(aw);
+        if haveDist && sum(aw) > 0, sw_wdist(ri,ai) = sum(aw.*selDist(:))/sum(aw); end
+    end
+    fprintf('   %-12.4g %10.4f %10.1f %10.1f   %s\n', ridge_grid(ri), median(sw_r2(ri,:),'omitnan'), ...
+        median(sw_leak(ri,:),'omitnan'), 100-median(sw_leak(ri,:),'omitnan'), ...
+        ternstr(haveDist, sprintf('%.1f', median(sw_wdist(ri,:),'omitnan')), 'n/a'));
+end
+r2med = median(sw_r2,2,'omitnan');  lkmed = median(sw_leak,2,'omitnan');
+
+% ---- PICK: strongest prior (lowest leak) whose held-out spontaneous R^2 still clears the floor -------
+if strcmpi(ridge_pick,'auto')
+    ok = find(r2med >= ridge_r2min);
+    if isempty(ok)
+        [bestR2, iBest] = max(r2med);
+        warning(['[RIDGE-SWEEP] NO grid point reaches spont R^2 >= %.3f (best %.4f at ridge %.4g). ' ...
+                 'Picking the best-R^2 point and leaving the prior weak -- raise the grid resolution or ' ...
+                 'lower ridge_r2min before reading anything into the leak.'], ridge_r2min, bestR2, ridge_grid(iBest));
+    else
+        [~,k] = min(lkmed(ok));  iBest = ok(k);
+    end
+    select_ridge = ridge_grid(iBest);
+    lamSel = max(1e-6, select_ridge)*mdG;                        % <-- what §17e/§17d actually use
+    sellamR = max(1e-6, select_ridge)*mean(diag(selGz));         % keep the §10T3 refit button consistent
+    fprintf(2,'   [PICK] select_ridge = %.4g  ->  spont R^2 %.4f (floor %.2f), leak %.0f%%, capture %.0f%%\n', ...
+            select_ridge, r2med(iBest), ridge_r2min, lkmed(iBest), 100-lkmed(iBest));
+    fprintf('   This value now feeds §17e/§17d/§17c and everything downstream of them.\n');
+else
+    [~,iBest] = min(abs(ridge_grid - select_ridge));
+    fprintf('   [PICK] ridge_pick=off -> keeping select_ridge = %.4g (spont R^2 %.4f, leak %.0f%%)\n', ...
+            select_ridge, r2med(iBest), lkmed(iBest));
+end
+iCur = iBest;
+if all(lkmed > 50)
+    fprintf(2,['   ** NO ridge value gets leak below 50%%: the far-from-ipsi prior alone cannot separate the\n' ...
+               '      stim-predictive direction from the spont-predictive one. That is an IDENTIFIABILITY\n' ...
+               '      result (cf. [CP-KRECON]: coupling is distributed, not focal), not a tuning failure. **\n']);
+end
+RIDGESWEEP = struct('grid',ridge_grid,'r2',sw_r2,'leak',sw_leak,'wdist',sw_wdist,'wmax',sw_wmax, ...
+                    'r2med',r2med,'leakmed',lkmed,'current',select_ridge,'iCur',iCur, ...
+                    'r2min',ridge_r2min,'pick',ridge_pick,'mn',mn,'td',td,'en',en);
+
+%% (17e) [GREEDY-BLIND] optional POOLED pixel-pruning layer feeding §17d
+% Removes stim-carrying pixels from the predictor set WITHOUT constraining the weights (contrast §17b
+% NATIVE's KKT equality, retired 2026-07-18 because it always succeeds and so says nothing). Starts from
+% the INTERSECTION of the detector's unaffected sets across amplitudes -- pooled, so ONE predictor set
+% serves every amp and per-amp leak stays comparable. Engine + both controls: utils/imp_greedy_blind.m.
+% Set greedy_on=false to feed §17d the raw detector set (the 2026-08-05 dense-SELECT behaviour).
+greedy_on      = true;
+greedy_tolL    = 0.10;   % target mean |leak| (fraction of the actual dip predicted by the survivors)
+greedy_r2floor = 0.90;   % FAIL if held-out spont R^2 drops below this fraction of the full-set R^2
+greedy_batch   = 0.01;   % fraction of the live set dropped per step (RFE-style, keeps the search fast)
+greedy_nRand   = 5;      % random-exclusion control repeats
+for f_ = {'greedy_on','greedy_tolL','greedy_r2floor','greedy_batch','greedy_nRand'}   % batch-driver hook
+    if exist('OLS_OVERRIDE','var') && isstruct(OLS_OVERRIDE) && isfield(OLS_OVERRIDE,f_{1})
+        eval([f_{1} ' = OLS_OVERRIDE.(f_{1});']);   %#ok<EVLDIR>
+    end
+end
+S_greedy = [];  GREEDY = [];
+if greedy_on
+    Upool = Sc{1};                                       % pooled candidates = unaffected at EVERY amp
+    for ai = 2:nA, if ~isempty(Sc{ai}), Upool = intersect(Upool, Sc{ai}); end, end
+    okA = find(~cellfun(@isempty, evZcA(:).'));          % amps with a usable trial split
+    mkD = @(EV,AA) deal(cellfun(@(e,d) mean(e(:,d),2), EV(okA), dcc(okA), 'uni',0), ...
+                        cellfun(@(a,d) mean(a(d)),     AA(okA), dcc(okA)));
+    [evDipSel, actDipSel] = mkD(evZcA, aAcA);            % SELECT half
+    [evDipVal, actDipVal] = mkD(evZcB, aAcB);            % VALIDATION half (never seen by the search)
+    GP = struct('Gz',Gz,'cz',cz,'gamma',selGamma,'lam',lamSel,'Zte',Zte,'yte',yte,'muY',muY, ...
+                'sstot',sstot,'evDipSel',{evDipSel},'actDipSel',actDipSel, ...
+                'evDipVal',{evDipVal},'actDipVal',actDipVal,'U',Upool);
+    GREEDY = imp_greedy_blind(GP, struct('tol',greedy_tolL,'r2_floor',greedy_r2floor, ...
+                'batch_frac',greedy_batch,'nRand',greedy_nRand,'verbose',true));
+    if strcmp(GREEDY.status,'CONVERGED')
+        S_greedy = GREEDY.S;
+    else
+        % A failed search must NOT quietly hand §17d a mutilated predictor set: fall back to the full
+        % detector set and say so, so the run is a dense-SELECT run rather than a half-pruned unknown.
+        warning(['[GREEDY-BLIND] status=%s -> NOT applying the pruned set. §17d runs on the full detector ' ...
+                 'set (dense SELECT). A failure here is a RESULT: at this R^2 floor the stim-predictive ' ...
+                 'and spont-predictive directions are not separable.'], GREEDY.status);
+    end
 end
 
 %% (17d) [STIMBLIND-SELECT] *** PRIMARY *** SPARSE, DISTANCE-WEIGHTED spont OLS on unaffected px (FAR from ipsi)
@@ -964,8 +1306,9 @@ fprintf('   %-6s %4s | %5s | %14s | %8s %8s %8s | %8s %8s\n','amp','nTr','nAct',
 for ai = 1:nA
     if isempty(evZc{ai}), continue; end
     S=Sc{ai};
+    if ~isempty(S_greedy), S = S_greedy; end     % §17e pruned POOLED set (same for every amp) when it converged
     aA=aAc{ai};  dc=dcc{ai};  rc=rcc{ai};  stimCols=scc{ai};
-    bfull = select_wlasso(Gz, cz, S, selGamma, select_l1frac, lamR);   % SPARSE + far-from-ipsi weighted lasso
+    bfull = select_wlasso(Gz, cz, S, selGamma, select_l1frac, lamSel); % far-from-ipsi weighted fit (DENSE by default)
     act = bfull~=0;  nUse_s(ai)=nnz(act);  useMaskS(:,ai)=act;  bUseS{ai}=bfull;
     yg=(bfull.'*evZc{ai}).';  yg=yg-mean(yg(1:preN));      % Global = sparse distal prediction of the ipsi evoked
     rL=aA-yg;                                              % Local  = residual (carries the dip if predictors are stim-blind)
@@ -1027,6 +1370,16 @@ STIMBLIND_SELECT = struct('amps',amps,'ActualDip',As_dip,'GlobalDip',Gs_dip,'Loc
                    'dipCols',dipCols,'rel',rel,'Fs',Fs,'preN',preN, ...
                    'l1frac',select_l1frac,'penNear',select_penNear,'penFar',select_penFar,'selGamma',selGamma, ...
                    'medDipCapPct',capDipS,'medDipLeakPct',leakDipS,'medRebCapPct',capRebS,'mn',mn,'td',td,'en',en);
+
+
+%% (17f) [RIDGE-SWEEP-FIG] figures for the sweep computed in §17c0 (compute lives there so the PICK can
+% reach §17d; this section only draws). Kept separate so re-plotting never re-fits.
+if exist('RIDGESWEEP','var') && isstruct(RIDGESWEEP)
+    ridge_grid = RIDGESWEEP.grid;  nRG = numel(ridge_grid);
+    sw_wdist = RIDGESWEEP.wdist;   haveDist = any(isfinite(sw_wdist(:)));
+    r2med = RIDGESWEEP.r2med;  lkmed = RIDGESWEEP.leakmed;  iCur = RIDGESWEEP.iCur;
+    ridge_sweep_figure(RIDGESWEEP, mn, td, en);
+end
 
 
 %% ==================================================================
@@ -1233,7 +1586,8 @@ SDc = struct('axPanels',axP, ...
              'stateZ',{{STc{1,2},STc{2,2},STc{3,2},STc{4,2}}}, 'stateName',{{STc{1,1},STc{2,1},STc{3,1},STc{4,1}}}, ...
              'DVz',DVz, 'ampIdx',AMPi, 'trialIdx',TRi, ...
              'trAll',{trAll}, 'ygAll',{ygAll}, 'rlAll',{rlAll}, 'inhCols',{inhCols}, ...
-             'tt',rel(:)/Fs, 'dipCols',dipCols, 'amps',amps);
+             'tt',rel(:)/Fs, 'dipCols',dipCols, 'amps',amps, ...
+             'motz',motz_full, 'onF',{onFcell}, 'rel',rel(:), 'preN',preN);   % motion panel in the click view
 guidata(figST2, SDc);  set(figST2,'WindowButtonDownFcn',@statedep_click);
 fprintf('[STATEDEP] scatter is clickable -> click a point to see that trial''s actual/pred/residual traces.\n');
 
@@ -1384,7 +1738,8 @@ if RUN_ALLSESS
                  'USE_DATA_SITE',USE_DATA_SITE,'dataDir',dataDir, ...
                  'bleed_preSec',bleed_preSec,'bleed_postSec',bleed_postSec, ...
                  'maxBaseTrl',maxBaseTrl,'dip_win_s',dip_win_s, ...
-                 'select_l1frac',select_l1frac,'select_penNear',select_penNear,'select_penFar',select_penFar);
+                 'select_l1frac',select_l1frac,'select_penNear',select_penNear,'select_penFar',select_penFar, ...
+                 'select_ridge',select_ridge);
     ALLSESS = cell(numel(allSelExp),1);
     fprintf('\n[ALLSESS-STIMBLIND] combined PRIMARY stim-blind across %d sessions %s:\n', ...
             numel(allSelExp), mat2str(allSelExp));
@@ -1484,105 +1839,6 @@ else
     fprintf('\n[OLS] viewer off; site-pixel weights recorded: R^2=%.3f, %d/%d px active (%s).\n', cv, nAct, nG, fit_mode);
 end
 
-%% (8b) [KERNELMAP] Zhiwen-style static panel: a few ipsi regions -> their prominent CONTRA weights
-% Ye/Zhiwen 2023 figure style: pick a handful of ipsi-side target regions and, for EACH, show the
-% sparse contra-grid weights that predict it (spont-trained %s OLS = the SAME first model as the §8
-% viewer, just static + multi-region instead of interactive single-pixel). Reveals what distributed
-% contra structure predicts each ipsi region: active (non-zero, debiased Lasso) px are drawn big &
-% color-coded by signed weight; the ~zero px are faint grey so the sparse kernel pops. The green
-% pentagram marks the ipsi target of each panel; the first panel is always the laser site.
-ipM = logical(D.ipsi);  [ir, ic] = find(ipM);                     % ipsi-mask pixel coords
-% spatially-spread ipsi targets: laser site first, then a 3x3 lattice over the ipsi mask snapped in
-rq = round(prctile(ir,[22 50 78]));  cq = round(prctile(ic,[25 50 75]));
-cand = zeros(numel(rq)*numel(cq),2);  q = 0;
-for a = 1:numel(rq)
-    for bcol = 1:numel(cq)
-        [~,mi] = min((ir-rq(a)).^2 + (ic-cq(bcol)).^2);
-        q = q+1;  cand(q,:) = [ir(mi) ic(mi)];
-    end
-end
-targ = unique([px_prim py_prim; cand], 'rows', 'stable');         % site first, then spread (deduped)
-nTk = min(6, size(targ,1));  targ = targ(1:nTk,:);
-ncK = 3;  nrK = ceil(nTk/ncK);  sMk = linspace(0,1,128)';
-figK = figure('Color','w','Name','[KERNELMAP] ipsi regions -> prominent contra weights','Position',[55 55 1320 780]);
-for t = 1:nTk
-    [bpx, cvk, ~, ~, nAk] = ols_refit(D, targ(t,1), targ(t,2));   % sparse contra weights for this ipsi px
-    ax = subplot(nrK,ncK,t); hold(ax,'on');
-    image(ax, repmat(dspImg,[1 1 3]));  axis(ax,'image','off');  set(ax,'YDir','reverse');
-    colormap(ax, [[sMk sMk ones(128,1)];[ones(128,1) 1-sMk 1-sMk]]);   % blue -> white -> red
-    act = bpx~=0;  wsc = max(abs(bpx)) + eps;
-    scatter(ax, dspGc(~act), dspGr(~act), 5, [.62 .62 .62],'filled','MarkerFaceAlpha',0.30);  % ~zero px
-    sz = 24 + 130*(abs(bpx)/wsc);
-    scatter(ax, dspGc(act), dspGr(act), sz(act), bpx(act),'filled','MarkerEdgeColor',[.15 .15 .15],'LineWidth',0.3);
-    clim(ax, [-wsc wsc]);
-    [tr,tc] = orient_fwd(Torient, targ(t,1), targ(t,2));          % this panel's ipsi target -> display
-    plot(ax, tc, tr, 'p','MarkerSize',15,'MarkerFaceColor',[0 1 0],'MarkerEdgeColor','k','LineWidth',0.8);
-    ttl = 'ipsi region';  if t==1, ttl = 'laser SITE'; end
-    title(ax, sprintf('%s [r%d c%d]  R^2=%.2f, %d px', ttl, targ(t,1), targ(t,2), cvk, nAk), 'FontSize',8,'FontWeight','bold');
-end
-sgtitle(figK, sprintf('KERNELMAP  %s %s e%d  —  sparse CONTRA weight map predicting each ipsi region (%s, l1=%.2f)   [green pentagram = ipsi target; marker size = |weight|]', ...
-    mn,td,en,D.fit_mode,l1_frac), 'FontWeight','bold','FontSize',9);
-fprintf('\n[KERNELMAP] %d ipsi regions -> per-region sparse contra weight maps (site + %d spread targets).\n', nTk, nTk-1);
-
-%% (8c) [KERNELPAPER] paper-level SMOOTH ipsi-region -> contra sparse-kernel panels (5 evenly-spaced targets)
-% Publication version of §8b: pick 5 ipsi targets spaced EVENLY along the ipsi hemisphere's principal axis,
-% and for EACH fit the spont-trained sparse contra kernel (the SAME ols_refit Lasso, fit on non-stim data).
-% Instead of §8b's discrete dots, each kernel is rendered as a SMOOTH continuous weight field: the sparse
-% grid weights are scatter-interpolated onto the full display grid and Gaussian-smoothed WITHIN the contra
-% hemisphere (normalized/edge-safe convolution -> no bleed across the midline or the hull), then overlaid on
-% the anatomical background with a diverging blue-white-red map. A COMMON symmetric colour scale across all
-% five panels keeps the weights quantitatively comparable. Green pentagram = that panel's ipsi target; black
-% + = laser site. Set KP_export=true to write the vector PDF paper panel.
-KP_sigma  = 6;        % Gaussian smoothing sigma (display px) for the kernel field
-KP_alpha  = 0.85;     % overlay opacity of the kernel field over the anatomical background
-KP_export = false;    % true -> exportgraphics vector PDF (this is a paper panel)
-
-ipM = logical(D.ipsi);  [ir,ic] = find(ipM);                         % ipsi-mask pixel coords
-P = [ir ic];  Pc = P - mean(P,1);                                    % centre, then principal axis via SVD
-[~,~,Vsvd] = svd(Pc,0);  proj = Pc*Vsvd(:,1);                        % 1-D coordinate along the ipsi main axis
-qs = linspace(prctile(proj,8), prctile(proj,92), 5);                 % 5 EVENLY-spaced positions along it
-targK = zeros(numel(qs),2);
-for i = 1:numel(qs), [~,mi] = min(abs(proj-qs(i)));  targK(i,:) = P(mi,:); end
-targK = unique(targK,'rows','stable');  nTp = size(targK,1);         % (dedupe in case the mask is small)
-
-[Hd,Wd] = size(dspImg);  [Xq,Yq] = meshgrid(1:Wd, 1:Hd);            % display-space query grid
-oCon = logical(Torient.imgOp(double(contra_mask)) > 0.5);            % contra hemisphere in display space
-sMk = linspace(0,1,128)';  cmapBWR = [[sMk sMk ones(128,1)];[ones(128,1) 1-sMk 1-sMk]];   % blue->white->red
-
-Kfld = cell(nTp,1);  Kr2 = nan(nTp,1);  Kna = nan(nTp,1);  wscG = 0;
-for t = 1:nTp                                                        % pass 1: fit + smooth all kernels, common scale
-    [bpx, cvk, ~, ~, nAk] = ols_refit(D, targK(t,1), targK(t,2));    % spont sparse contra weights for this ipsi px
-    Kfld{t} = kfield(dspGc, dspGr, bpx, Xq, Yq, oCon, KP_sigma);
-    Kr2(t) = cvk;  Kna(t) = nAk;  wscG = max(wscG, max(abs(bpx))+eps);
-end
-
-figKP = figure('Color','w','Name','[KERNELPAPER] ipsi region -> smooth contra sparse kernel', ...
-    'Units','centimeters','Position',[2 2 min(28, nTp*3.4+1.4) 4.6]);
-tl = tiledlayout(figKP, 1, nTp, 'TileSpacing','compact','Padding','compact');
-[sr,sc] = orient_fwd(Torient, px_prim, py_prim);                     % laser site in display space
-axK = gobjects(nTp,1);
-for t = 1:nTp
-    ax = nexttile(tl);  axK(t) = ax;  hold(ax,'on');
-    image(ax, repmat(dspImg,[1 1 3]));                              % anatomical background (truecolor)
-    hF = imagesc(ax, Kfld{t});  set(hF,'AlphaData', KP_alpha*double(isfinite(Kfld{t})));   % smooth kernel field
-    colormap(ax, cmapBWR);  set(ax,'CLim',[-wscG wscG]);
-    [tr,tc] = orient_fwd(Torient, targK(t,1), targK(t,2));
-    plot(ax, tc, tr, 'p','MarkerSize',9,'MarkerFaceColor',[0 1 0],'MarkerEdgeColor','k','LineWidth',0.5);
-    plot(ax, sc, sr, '+','Color','k','MarkerSize',7,'LineWidth',1.0);   % laser site (all panels)
-    axis(ax,'image','off');  set(ax,'YDir','reverse');
-    title(ax, sprintf('R^2 %.2f | %d px', Kr2(t), Kna(t)), 'FontSize',6,'FontWeight','bold');
-end
-cb = colorbar(axK(end));  cb.Layout.Tile = 'east';  cb.FontSize = 6;
-cb.Label.String = 'contra weight (a.u.)';  cb.Label.FontSize = 6;
-title(tl, sprintf('%s %s e%d  —  spont contra sparse kernel per ipsi region (%s, l1=%.2f)', mn,td,en,D.fit_mode,l1_frac), ...
-    'FontSize',7,'FontWeight','bold');
-fprintf('\n[KERNELPAPER] %d evenly-spaced ipsi targets -> smoothed spont contra sparse kernels (common scale |w|<=%.3g).\n', nTp, wscG);
-if KP_export
-    kpFile = fullfile(dataDir, sprintf('kernelpaper_%s_%s_e%d.pdf', mn, td, en));
-    exportgraphics(figKP, kpFile, 'ContentType','vector');
-    fprintf('  [KERNELPAPER] exported paper panel -> %s\n', kpFile);
-end
-
 %% ==================================================================
 %% LOCAL FUNCTIONS (shared)
 %% ==================================================================
@@ -1622,22 +1878,6 @@ cv = sseExplainedCal(yte(:).', yhat_te(:).');
 nActive = nnz(betaz);
 end
 
-function F = kfield(gc, gr, w, Xq, Yq, mask, sig)
-% §8c [KERNELPAPER] smooth a SPARSE per-grid-pixel kernel into a continuous display-space field.
-% Scatter-interpolate the weights at the grid pixels (gc,gr) onto the full (Xq,Yq) display grid, then
-% Gaussian-smooth with a NORMALIZED (edge-safe) convolution restricted to `mask` -- num/den over the same
-% kernel, so the field does not decay at the hemisphere border and never bleeds across the midline.
-% Base-MATLAB only (scatteredInterpolant + conv2): no Image Processing Toolbox dependency.
-Fi = scatteredInterpolant(gc(:), gr(:), double(w(:)), 'natural', 'none');   % 'none' -> NaN outside the hull
-V  = Fi(Xq, Yq);
-m  = mask & isfinite(V);                                   % valid support = contra hemisphere ∩ grid hull
-V(~m) = 0;
-hs = max(1, ceil(3*sig));  [gx,gy] = meshgrid(-hs:hs, -hs:hs);
-K = exp(-(gx.^2 + gy.^2)/(2*sig^2));  K = K/sum(K(:));
-F = conv2(V, K, 'same') ./ max(conv2(double(m), K, 'same'), eps);   % normalized convolution
-F(~mask) = NaN;                                            % keep the field inside the contra hemisphere only
-end
-
 function b = cd_lasso(G, c, dg, lam1, lam2)
 % Coordinate-descent ELASTIC NET:
 %   min_b  1/2||y - Z b||^2 + lam1*||b||_1 + (lam2/2)*||b||_2^2
@@ -1662,6 +1902,38 @@ for it = 1:400
 end
 end
 
+function ridge_sweep_figure(RS, mn, td, en)
+% §17f figure for the §17c0 sweep. Pure drawing -- never re-fits, so re-plotting is free.
+grid_ = RS.grid;  nRG = numel(grid_);  r2med = RS.r2med;  lkmed = RS.leakmed;  iCur = RS.iCur;
+haveDist = any(isfinite(RS.wdist(:)));
+f = figure('Color','w','Name','[RIDGE-SWEEP] spont R^2 vs leak','Position',[80 80 1180 420]);
+axA = subplot(1,3,1,'Parent',f); hold(axA,'on'); box(axA,'on');          % THE trade-off curve
+plot(axA, lkmed, r2med, '-o','Color',[.1 .4 .85],'LineWidth',1.6,'MarkerFaceColor',[.1 .4 .85]);
+plot(axA, lkmed(iCur), r2med(iCur), 'p','MarkerSize',15,'MarkerFaceColor',[.9 .3 .1],'MarkerEdgeColor','k');
+yline(axA, RS.r2min, 'k--','LineWidth',1.1);                             % the R^2 floor the pick respected
+text(axA, min(lkmed), RS.r2min, sprintf('  R^2 floor %.2f',RS.r2min),'FontSize',7,'VerticalAlignment','bottom');
+for ri = 1:nRG, text(axA, lkmed(ri), r2med(ri), sprintf('  %.4g',grid_(ri)),'FontSize',6); end
+xlabel(axA,'leak: Global dip as % of Actual'); ylabel(axA,'held-out SPONTANEOUS R^2');
+title(axA,'the actual trade-off (star = PICKED)','FontSize',9,'FontWeight','bold');
+axB = subplot(1,3,2,'Parent',f); hold(axB,'on'); box(axB,'on');
+yyaxis(axB,'left');  plot(axB, 1:nRG, r2med, '-o','LineWidth',1.5); ylabel(axB,'spont R^2');
+yyaxis(axB,'right'); plot(axB, 1:nRG, 100-lkmed,'-s','LineWidth',1.5); ylabel(axB,'residual capture (%)');
+xline(axB, iCur, 'k:','LineWidth',1.2);
+set(axB,'XTick',1:nRG,'XTickLabel',compose('%.4g',grid_),'XTickLabelRotation',45);
+xlabel(axB,'select\_ridge'); title(axB,'both objectives vs the knob','FontSize',9,'FontWeight','bold');
+axC = subplot(1,3,3,'Parent',f); hold(axC,'on'); box(axC,'on');
+if haveDist
+    plot(axC, 1:nRG, median(RS.wdist,2,'omitnan'), '-o','Color',[.2 .6 .2],'LineWidth',1.5);
+    ylabel(axC,'mean |w| distance from ipsi (px)');
+    title(axC,'is the prior actually moving weight away?','FontSize',9,'FontWeight','bold');
+    set(axC,'XTick',1:nRG,'XTickLabel',compose('%.4g',grid_),'XTickLabelRotation',45); xlabel(axC,'select\_ridge');
+else
+    text(axC,0.5,0.5,'selDist unavailable','HorizontalAlignment','center'); axis(axC,'off');
+end
+sgtitle(f, sprintf(['RIDGE-SWEEP  %s %s e%d  --  dense weighted-L2 far-from-ipsi prior.  ' ...
+    'R^2 is HELD-OUT SPONTANEOUS; leak is measured on the stim windows.'], mn, td, en),'FontWeight','bold','FontSize',9);
+end
+
 function b = select_wlasso(G, c, S, gamma, l1frac, lamR)
 % SELECT model: SPARSE, DISTANCE-WEIGHTED spont contra->ipsi fit restricted to predictor set S:
 %   min_b ||y - Z_S b||^2 + lam1 * sum_i (1/gamma_i)|b_i| + lam2||b||^2
@@ -1674,8 +1946,18 @@ g   = gamma(S);
 Gs  = (g*g.') .* G(S,S);                     % Z~'Z~  with Z~ = Z_S diag(g)
 cs  = g .* c(S);                             % Z~'(y - mean)
 dgs = diag(Gs);
-lam1 = l1frac * max(abs(cs));                % L1 scaled to the rescaled target
-a = cd_lasso(Gs, cs, dgs, lam1, lamR);       % uniform lasso (+ tiny ridge lamR)
+if l1frac <= 0
+    % NO-SPARSITY path (default since 2026-08-05). lam1 = 0 makes the objective purely quadratic, so
+    % solve it in closed form rather than running coordinate descent to the same answer. Note what the
+    % gamma rescaling becomes here: b_i = gamma_i a_i, and a ridge lamR||a||^2 equals lamR*sum(b_i/gamma_i)^2
+    % -- so the far-from-ipsi prior SURVIVES as a WEIGHTED L2 whose strength is set entirely by lamR. At the
+    % default lamR (1e-6, a numerical stabiliser) that prior is negligible and this is plain OLS over the
+    % whole unaffected set; pass a real ridge (select_ridge) to make it bite without zeroing any weight.
+    a = (Gs + lamR*eye(numel(S))) \ cs;
+else
+    lam1 = l1frac * max(abs(cs));            % L1 scaled to the rescaled target
+    a = cd_lasso(Gs, cs, dgs, lam1, lamR);   % uniform lasso (+ tiny ridge lamR)
+end
 b(S) = g .* a;                               % undo the rescale
 end
 
@@ -1786,6 +2068,10 @@ s = get(hSlider,'Value');  DB.sens = s;  tot = 0;
 for ai = 1:numel(DB.amps)
     aff = (-DB.DIPgate(:,ai) > DB.preThr(:,ai)/max(s,eps));   % PRIMARY: FITTED early-window dip vs baseline floor
     if DB.useVAF, aff = aff & (DB.VAF(:,ai) > DB.vafMin); end                     % optional absolute VAF floor
+    if DB.useShape                                                                % SHAPE, measured on the DATA
+        aff = aff & (DB.TRdatMs(:,ai) >= DB.trBandA(ai,1)) & (DB.TRdatMs(:,ai) <= DB.trBandA(ai,2));
+        aff = aff & DB.hasRec(:,ai) & (DB.RECdatMs(:,ai) <= DB.recMaxFac*DB.recMsA2(ai));
+    end
     if DB.reqReb, aff = aff & (DB.REB(:,ai) > DB.rebMin); end
     DB.affected_tf(:,ai) = aff;  tot = tot + nnz(aff);
     set(DB.hUn(ai),  'XData', DB.dspGc(~aff), 'YData', DB.dspGr(~aff));
@@ -1821,13 +2107,28 @@ if DB.sweep, [sys, vaf, ch] = proto_fitTF(r, DB.Ts, DB.maxP, DB.maxZ, DB.nd, DB.
 else,        [sys, vaf, ch] = proto_fitTF_fix(r, DB.Ts, DB.np, DB.nz, DB.nd, DB.nPreZ, []); end
 yhat = proto_sim(sys, numel(wa), DB.Ts, DB.nPreZ);                      % fitted impulse response
 sflr = -DB.preThr(p,ai)/max(DB.sens,eps);                              % baseline depth floor (negative), fit-onset frame
-capN = max(1, min(numel(yhat), round(DB.dipCapSec*Fs)+1));            % dip-cap: gate searches only [0, dipCapSec]
+capN = max(1, min(numel(yhat), DB.capNa(ai)));                        % dip-cap: THIS amp's ipsi-learned inhibition lobe
 [dipCap, iCap] = min(yhat(1:capN));                                    % GATED early-window fitted dip + its index
 vafOK = ~DB.useVAF || vaf > DB.vafMin;  dipOK = dipCap < 0;  preOK = dipCap < sflr;  rebOK = ~DB.reqReb || ch.reboundRatio > DB.rebMin;
-if dipOK && preOK && vafOK && rebOK, why = 'AFFECTED';
+% FIT-side shape values -- DIAGNOSTIC ONLY (they no longer gate). Shown next to the DATA values so a
+% sluggish fit is visible as a divergence rather than silently deciding anything (TASKS #183).
+trCapMs = (iCap-1)/Fs*1000;                                            % FIT trough time inside the gate window
+recFrac = yhat(capN) / min(dipCap, -eps);                              % FIT dip remaining at capN: ~1 ramp, ~0 recovered
+% SHAPE is judged on the DATA (see §10T). Recompute this pixel's evoked landmarks the same way.
+rd = r(:);  [dvD, itD] = min(rd);  trDatMs = (itD-1)/Fs*1000;
+tolD = max(2*DB.preStd(p,ai), DB.recTolFac*abs(dvD));
+kD   = itD - 1 + find(rd(itD:end) >= -tolD, 1, 'first');
+if isempty(kD), recDatMs = NaN; hasRecD = false; else, recDatMs = (kD-1)/Fs*1000; hasRecD = true; end
+recLim = DB.recMaxFac*DB.recMsA2(ai);
+trOK  = ~DB.useShape || (trDatMs >= DB.trBandA(ai,1) && trDatMs <= DB.trBandA(ai,2));
+recOK = ~DB.useShape || (hasRecD && recDatMs <= recLim);
+if dipOK && preOK && vafOK && rebOK && trOK && recOK, why = 'AFFECTED';
 elseif ~preOK,              why = 'not (dip within baseline floor)';   % PRIMARY gate
 elseif ~dipOK,              why = 'not (no dip)';
 elseif ~vafOK,              why = 'not (VAF<min)';
+elseif ~trOK,               why = sprintf('not (DATA trough %.0f ms outside [%.0f %.0f] -> ramp/edge-trough)', trDatMs, DB.trBandA(ai,1), DB.trBandA(ai,2));
+elseif ~recOK && ~hasRecD,  why = sprintf('not (DATA never returns to its baseline band within the %.0f ms fit window)', 1000*numel(rd)/Fs);
+elseif ~recOK,              why = sprintf('not (DATA recovers at %.0f ms > limit %.0f ms = %.1fx ipsi)', recDatMs, recLim, DB.recMaxFac);
 else,                       why = 'not (no rebound)'; end
 xfull = DB.rel(:)/Fs;  xw = DB.rel(wa);  xw = xw(:)/Fs;  rRefA = DB.mAmpP(:,ai);   % context + ipsi ref (force column)
 w0 = DB.rel(wa(1))/Fs;  w1 = DB.rel(wa(end))/Fs;                        % fit window span (s)
@@ -1847,8 +2148,10 @@ xline(ax,0,'k-','LineWidth',0.6);  yline(ax,0,':','Color',[.6 .6 .6]);
 xlim(ax,[xfull(1) xfull(end)]);  ylim(ax,yl+0.08*diff(yl)*[-1 1]);
 legend(ax,{'fit window','trial mean','evoked (fit data)','TF fit','ipsi ref','baseline floor'},'Location','best','FontSize',8);
 xlabel(ax,'t re onset (s)');  ylabel(ax,'\DeltaF/F % (pre-stim ref)');
-title(ax, sprintf('g%d @ %.1fV | VAF=%.0f%%(0Vnull %.0f) rebR=%.2f | gate dip(\\leq%.0fms)=%.2f vs floor %.2f | full trough %.2f@%.0fms -> %s', ...
-    p, DB.amps(ai), vaf, vg, ch.reboundRatio, 1000*DB.dipCapSec, dipCap, sflr, ch.dip, ch.troughMs, why), 'FontSize',9);
+title(ax, sprintf(['g%d @ %.1fV | VAF=%.0f%%(0Vnull %.0f) rebR=%.2f (diagnostic only) | gate dip(\\leq%.0fms, ipsi lobe%s)=%.2f vs floor %.2f\n' ...
+    'SHAPE(DATA): trough %.0f ms (band [%.0f %.0f]) | recovers %.0f ms (limit %.0f = %.1fx ipsi)   [fit: trough %.0f ms, recFrac %.2f -- diagnostic] -> %s'], ...
+    p, DB.amps(ai), vaf, vg, ch.reboundRatio, 1000*(capN-1)/Fs, ternstr(DB.capFallback(ai),' FALLBACK',''), dipCap, sflr, ...
+    trDatMs, DB.trBandA(ai,1), DB.trBandA(ai,2), recDatMs, recLim, DB.recMaxFac, trCapMs, recFrac, why), 'FontSize',9);
 end
 
 function [sys, vaf, ch, ord] = proto_fitTF(r, Ts, maxP, maxZ, maxD, nPreZ, opt) %#ok<INUSD>
@@ -2006,7 +2309,11 @@ end
 
 function statedep_click(fig, ~)
 % [STATEDEP] click a scatter point in any of the 4 state panels -> that trial's actual/predicted ipsi
-% (vs the amp-average) on top, and its residual (vs amp-average residual) below, with the dip window.
+% (vs the amp-average) on top, its residual (vs amp-average residual) in the middle, and the trial's
+% MOTION trace at the bottom (2026-08-05). Motion is on the panel because it is the state most likely to
+% explain an outlier mechanically -- a running bout mid-window shows up here immediately, where the
+% single pre-onset motion SCALAR on the scatter axis cannot show it. Panel is omitted if the session has
+% no motion trace (AL_0048 before its Facemap output existed), rather than drawn empty.
 SD = guidata(fig);  ax = get(fig,'CurrentAxes');
 pidx = find(SD.axPanels==ax,1);  if isempty(pidx), return; end
 cp = get(ax,'CurrentPoint');  xc = cp(1,1);  yc = cp(1,2);
@@ -2017,8 +2324,10 @@ d = ((x-xc)/max(diff(xl),eps)).^2 + ((y-yc)/max(diff(yl),eps)).^2;  d(~m) = inf;
 ai = SD.ampIdx(k);  tj = SD.trialIdx(k);
 A = SD.trAll{ai};  YG = SD.ygAll{ai};  RL = SD.rlAll{ai};  tt = SD.tt;
 dc = SD.dipCols;  ic = SD.inhCols{ai};  if ~isempty(ic), dc = ic; end
-figure('Color','w','Name',sprintf('STATEDEP trial — %.2f V, trial %d',SD.amps(ai),tj),'Position',[220 180 660 540]);
-axa = subplot(2,1,1);  hold(axa,'on');  box(axa,'on');
+hasMot = isfield(SD,'motz') && ~isempty(SD.motz) && isfield(SD,'onF') && ~isempty(SD.onF{ai});
+nRowP  = 2 + double(hasMot);
+figure('Color','w','Name',sprintf('STATEDEP trial — %.2f V, trial %d',SD.amps(ai),tj),'Position',[220 140 660 240*nRowP]);
+axa = subplot(nRowP,1,1);  hold(axa,'on');  box(axa,'on');
 plot(axa,tt,mean(A,2), '-','Color',[.6 .6 .6],'LineWidth',1.2,'DisplayName','amp-avg actual');
 plot(axa,tt,mean(YG,2),'-','Color',[.95 .62 .62],'LineWidth',1.2,'DisplayName','amp-avg pred');
 plot(axa,tt,A(:,tj),  'k-','LineWidth',1.9,'DisplayName','actual (this trial)');
@@ -2026,12 +2335,39 @@ plot(axa,tt,YG(:,tj), '-','Color',[.85 .2 .2],'LineWidth',1.5,'DisplayName','sti
 xline(axa,0,'k:'); yline(axa,0,'k:'); xlim(axa,[-.5 1]);  legend(axa,'Location','best','FontSize',7);
 ylabel(axa,'ipsi \DeltaF/F %');
 title(axa,sprintf('%s = %+.2f (z)   |   %.2f V, trial %d',regexprep(SD.stateName{pidx},'\\',''),SD.stateZ{pidx}(k),SD.amps(ai),tj),'FontWeight','bold');
-axb = subplot(2,1,2);  hold(axb,'on');  box(axb,'on');
+axb = subplot(nRowP,1,2);  hold(axb,'on');  box(axb,'on');
 plot(axb,tt,mean(RL,2),'-','Color',[.6 .75 1],'LineWidth',1.2,'DisplayName','amp-avg residual');
 plot(axb,tt,RL(:,tj), '-','Color',[.1 .4 .85],'LineWidth',1.9,'DisplayName','residual (this trial)');
 xline(axb,tt(dc(1)),'m:'); xline(axb,tt(dc(end)),'m:');
 xline(axb,0,'k:'); yline(axb,0,'k:'); xlim(axb,[-.5 1]);  legend(axb,'Location','best','FontSize',7);
-xlabel(axb,'t re onset (s)');  ylabel(axb,'residual \DeltaF/F %');
+ylabel(axb,'residual \DeltaF/F %');
+if ~hasMot, xlabel(axb,'t re onset (s)'); end
+
+% --- MOTION for this trial, on the SAME peri-onset window as the traces above --------------------
+if hasMot
+    onF = SD.onF{ai};  nMz = numel(SD.motz);
+    IDX = onF(:).' + SD.rel;                                   % [Wb x nT] frame indices, all trials
+    okA = IDX >= 1 & IDX <= nMz;
+    M = nan(size(IDX));  M(okA) = SD.motz(IDX(okA));           % out-of-range stays NaN, never clipped
+    mavg = mean(M,2,'omitnan');  mtr = M(:,tj);
+    axc = subplot(nRowP,1,3);  hold(axc,'on');  box(axc,'on');
+    plot(axc,tt,mavg,'-','Color',[.65 .65 .65],'LineWidth',1.2,'DisplayName','amp-avg motion');
+    plot(axc,tt,mtr, '-','Color',[.85 .45 .1],'LineWidth',1.9,'DisplayName','motion (this trial)');
+    % shade the strictly pre-onset window the motion STATE scalar is measured over, so a within-window
+    % running bout is visually separable from a genuinely high pre-stim baseline.
+    yl2 = ylim(axc);
+    patch(axc,[tt(1) tt(max(SD.preN,1)) tt(max(SD.preN,1)) tt(1)],[yl2(1) yl2(1) yl2(2) yl2(2)], ...
+          [.92 .92 .82],'EdgeColor','none','FaceAlpha',0.55,'HandleVisibility','off');
+    uistack(findobj(axc,'Type','patch'),'bottom');
+    xline(axc,tt(dc(1)),'m:'); xline(axc,tt(dc(end)),'m:');
+    xline(axc,0,'k:'); yline(axc,0,'k:'); xlim(axc,[-.5 1]);
+    legend(axc,'Location','best','FontSize',7);
+    xlabel(axc,'t re onset (s)');  ylabel(axc,'motion (z)');
+    if isfinite(SD.stateZ{1}(k))
+        title(axc,sprintf('motion state for this trial = %+.2f (z)   [shaded = pre-onset window it is measured over]', ...
+              SD.stateZ{1}(k)),'FontSize',8,'FontWeight','normal');
+    end
+end
 end
 
 function S = local_stimblind_session(sel, cfg, allExperiments)
@@ -2198,7 +2534,9 @@ end
 % Distance is taken in ARRAY coords: the display orientation is an isometry, so the metric is unchanged.
 dipCols=(preN+1):min(Wb, preN+round(cfg.dip_win_s*Fs));
 ytr=y_sp(itr); yte=y_sp(ite); sstot=max(sum((yte-mean(yte)).^2),eps);
-Gz=Gc; lamR=1e-6*mean(diag(Gz)); ytrc=ytr-muYc; cz=Ztr.'*ytrc;          % shared spont OLS operators (z-space)
+Gz=Gc; ytrc=ytr-muYc; cz=Ztr.'*ytrc;                                     % shared spont OLS operators (z-space)
+selRidge_ = 0; if isfield(cfg,'select_ridge'), selRidge_ = cfg.select_ridge; end
+lamSel = max(1e-6, selRidge_)*mean(diag(Gz));                            % SELECT's weighted-L2 (mirrors §17d)
 selD  = hypot(grC(:)-py_prim, grR(:)-px_prim);                          % each contra px -> ipsi stim site
 selDn = (selD-min(selD))/max(max(selD)-min(selD),eps);                  % normalize distance to [0,1]
 gammaS = 1./(cfg.select_penNear*(1-selDn) + cfg.select_penFar*selDn);   % lasso column gains (LARGE far, small near)
@@ -2211,7 +2549,7 @@ for ai=1:nA
     Sset=find(active);
     idx=onF(:).'+rel(:);
     ya=mean(reshape(double(y_full(idx(:))),Wb,nT),2); ya=ya-mean(ya(1:preN));
-    bfull = select_wlasso(Gz, cz, Sset, gammaS, cfg.select_l1frac, lamR);   % SPARSE + far-from-ipsi weighted lasso
+    bfull = select_wlasso(Gz, cz, Sset, gammaS, cfg.select_l1frac, lamSel); % far-from-ipsi weighted fit (DENSE by default)
     nActA(ai)=nnz(bfull);  bCleanA{ai}=bfull;
     yg=(bfull.'*EVcell{ai}).'; yg=yg-mean(yg(1:preN));                   % Global = sparse distal prediction
     rL=ya-yg;                                                            % Local  = residual (carries the dip)
