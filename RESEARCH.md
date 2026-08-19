@@ -16,6 +16,26 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-19 — Brain GIF playback halved: `--step` default 2 -> 1
+**Changed/Found:** `presentation/make_brain_gif.py` — `--step` now defaults to 1, so all 176 data frames of the -1..+4 s window are kept and the loop runs 8.8 s at 20 fps (was 88 frames / 4.4 s). Chose this over dropping to 10 fps, which halves the speed identically but makes the motion visibly steppy. Cost: the GIF grew 6.4 MB -> 12.9 MB.
+**Why:** User asked for the GIF at half speed.
+**Next:** If 12.9 MB is too heavy to email inside a deck, `--px 400` gives 10.4 MB and `--step 2 --fps 10` gives the same 8.8 s at 6.4 MB with choppier motion.
+
+### 2026-08-19 — Brain GIF: open-loop stimulation window + command-driven laser graphic
+**Changed/Found:** `presentation/make_brain_gif.py` — default trial is now OPEN LOOP (`--cond`, default `OL`) over −1 s to +4 s, i.e. the full stimulation window rather than a short clip. Added a laser graphic at the controlled site: a radial spot plus a ring, and a corner "LASER ON" badge, all gated and modulated by the trial's REAL command trace `U[trial]` — so the light cannot show as on when the command is zero. Two failed attempts first: additive compositing washed out against the bright anatomy (fixed by compositing *towards* the laser colour instead), and normalising the command by the session maximum left this trial's spot at 27% brightness and nearly invisible (fixed by normalising within the trial and lifting "on" to a 0.45 floor). Activity clim relaxed 90th → 94th percentile, since the post-stimulation rebound saturated most of the field.
+**Why:** User wanted the GIF to show a long open-loop stimulation with a light-on graphic indicating that stimulation is happening.
+**Next:** The "on" floor means spot brightness is not proportional to absolute laser power across trials — it tracks the shape within a trial only. Fine for a schematic; do not read intensity off it.
+
+### 2026-08-19 — Combined talk video (constant + moving reference) + clean brain GIF
+**Changed/Found:** New `presentation/make_video_combined.py` — derived from `make_video_talk.py`, adds a fourth act ("A MOVING TARGET", AL_0048 2026-07-21 sine) that reuses the SAME panel geometry so the two chapters read as one video. Only two of the four sine conditions are carried over (`FF_SEQ = [2, 0]` = open loop and closed loop + preview); `LoopDiagram` gained a feedforward branch (green, ref → preview block → summed into the laser command) shown only for CL+preview, plus a `moving` flag that relabels the reference input "sine". `enter_ff()` performs a one-time swap of the shared panels (axis limits, stim window 0–4 s, brain U/mimg/mask/ROI/colourbar, legends built from explicit handles). New `presentation/make_brain_gif.py` — chrome-free looping widefield GIF for slide schematics.
+**Why:** User asked for one combined video with the FF states column restricted to CL+preview and OL, keeping the control-architecture schematic; and, separately, a clean brain GIF for a PPT schematic.
+**Next:** The combined cut drops the FF video's camera / pupil / face-motion panels (they need a different layout) — `make_ff_video.py` remains the place to see those. Also `make_ff_video.py` and `make_video.py` are still on the lavender deck while the two talk cuts are on bone.
+
+### 2026-08-19 — Brain GIF: anatomy needs median filtering and clim retuning
+**Changed/Found:** `presentation/make_brain_gif.py` — first render was unusable: the raw mean image is peppered with dust specks that read as noise at slide size, and the 96th-percentile clim plus a 0.72·clim alpha ramp left the activity nearly invisible. Fixed by median-filtering the anatomy layer only (the ΔF/F normalisation still uses the unfiltered `mimg`), compressing the grayscale into a mid band (0.30 + 0.58·g) to kill blown highlights, eroding the mask 2 px before feathering, and steepening the overlay alpha to 0.45·clim. Same tuning problem appeared in reverse in the combined video's sine act: a 93rd-percentile clim clipped the whole field to a flat blue slab and the 99th washed it out — settled on the 96th.
+**Why:** The GIF is going into a PowerPoint schematic, where it is small and sits next to clean vector art.
+**Next:** GIF is 5.2 MB at 460 px / 70 frames; if PPT size matters, `--px 360 --step 3` roughly halves it.
+
 ### 2026-08-19 — Checkpoint-commit the alpha WIP backlog; set up review worktree
 **Changed/Found:** Committed the full uncommitted backlog on `alpha` (~20 modified + ~30 new files) in 5 logical commits grouped by sub-area (bilateral, impulse-analysis, controller-analysis, utils, docs/agent-config); pushed to `origin/alpha`. Then added a git worktree at `../brain_paper_review` on a new branch `alpha-review-fixes` (branched from `alpha`'s tip — git forbids checking out `alpha` itself in two worktrees) so a code review can run against a frozen copy in parallel and any fixes land off `alpha`.
 **Why:** User wants a code review isolated from ongoing work. A defined, pushed baseline is a prerequisite for a meaningful review diff; a worktree lets review + active editing proceed without touching each other's working tree.
