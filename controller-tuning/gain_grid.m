@@ -15,7 +15,16 @@ PS = paperStyle();
 %% ---- knobs --------------------------------------------------------------
 if ~exist('SEL','var'); SEL = 2; end           % grid session index into G (2 = AL_0033 03-03, 13-node 2D grid); honors a pre-set SEL for batch runs
 out_dir  = fullfile('paper','images','tuning');
+if exist('GG_OUTDIR','var') && ~isempty(GG_OUTDIR); out_dir = GG_OUTDIR; end   % talk re-export
 if ~isfolder(out_dir); mkdir(out_dir); end
+% GG_MARKPT = [Kp Ki]: mark THIS point instead of the grid's own minimum (2026-08-19,
+% user). Used to drop the ONLINE AUTO-TUNE's converged gains onto the exhaustive cost
+% surface -- the two methods are independent, so where the search lands relative to the
+% swept basin is the claim, and two stars on one axis would muddle it. The point is not
+% a grid node, so it is drawn ON its location (nothing underneath to hide) rather than
+% offset the way starOffset treats a node.
+if ~exist('GG_MARKPT','var'); GG_MARKPT = []; end
+if ~exist('GG_MARKLBL','var'); GG_MARKLBL = 'auto-tune'; end
 g = G(SEL);
 tag = sprintf('%s_%s%se%d', g.mn, g.td(6:7), g.td(9:10), g.en);
 
@@ -42,8 +51,24 @@ if nKp > 1 && nKi > 1
         warning('gain_grid:surfInterp', 'surface interp failed (%s) - showing scatter only.', ME.message);
     end
     scatter(ax, Kp, Ki, 14, J, 'filled', 'MarkerEdgeColor','k', 'LineWidth',0.3);
-    plot(ax, Kp(im), Ki(im), 'p', 'MarkerSize',9, ...
-        'MarkerFaceColor','w', 'MarkerEdgeColor','k', 'LineWidth',0.6);
+    if isempty(GG_MARKPT)
+        % STAR SET OFF THE NODE, NOT ON IT (2026-08-19, user). Drawn on top of the winning
+        % node the white star hid the one datum the panel exists to report -- the colour of
+        % the minimum. Offset by a fixed fraction of the axis span with a hairline leader.
+        starOffset(ax, Kp(im), Ki(im), PS);
+    else
+        plot(ax, GG_MARKPT(1), GG_MARKPT(2), 'p', 'MarkerSize', 13, ...
+            'MarkerFaceColor','w', 'MarkerEdgeColor','k', 'LineWidth', 0.9);
+        if ~isempty(GG_MARKLBL)
+            % Offset in DATA units, not leading spaces -- a 13 pt star is wider than any
+            % space run, and the label sat on top of it.
+            text(ax, GG_MARKPT(1) + 0.04*diff(xlim(ax)), GG_MARKPT(2), GG_MARKLBL, ...
+                'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color','k', ...
+                'HorizontalAlignment','left', 'VerticalAlignment','middle');
+        end
+        fprintf('gain_grid: marking (%.4g, %.4g) [%s] instead of the grid minimum\n', ...
+                GG_MARKPT(1), GG_MARKPT(2), GG_MARKLBL);
+    end
     xlabel(ax, 'K_p'); ylabel(ax, 'K_i');
     colormap(ax, parula);
     cb = colorbar(ax); cb.Label.String = 'cost  J'; cb.FontSize = PS.fs;
@@ -55,8 +80,7 @@ else
     errorbar(ax, xv, Js, Se, '-o', 'Color', PS.col_cl, ...
         'LineWidth', PS.lw_mean, 'MarkerFaceColor', PS.col_cl, 'MarkerSize', 3);
     [~,imc] = min(Js);
-    plot(ax, xv(imc), Js(imc), 'p', 'MarkerSize',9, ...
-        'MarkerFaceColor','w', 'MarkerEdgeColor','k', 'LineWidth',0.6);
+    starOffset(ax, xv(imc), Js(imc), PS);
     xlabel(ax, xl); ylabel(ax, 'cost  J');
 end
 title(ax, sprintf('J(K_p,K_i)  %s', strrep(tag,'_','\_')), 'FontSize', PS.fs, 'FontWeight', PS.fw);

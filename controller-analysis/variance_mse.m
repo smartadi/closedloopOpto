@@ -22,8 +22,8 @@ lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
 ax_var = axes(fig_F, 'Position', [lm2, bm2, 1-lm2-rm2, 1-bm2-tm2]);
 
 hold(ax_var, 'on');
-plot(ax_var, tp, Mean_var_nc, 'r',               'LineWidth', 1.5);
-plot(ax_var, tp, Mean_var_wc, 'Color',[0,0.5,0], 'LineWidth', 1.5);
+plot(ax_var, tp, Mean_var_nc, 'Color',PS.col_ol, 'LineWidth', 1.5);
+plot(ax_var, tp, Mean_var_wc, 'Color',PS.col_cl, 'LineWidth', 1.5);
 xline(ax_var, 0,   'LineWidth', 0.75, 'HandleVisibility','off');
 xline(ax_var, dur, 'LineWidth', 0.75, 'HandleVisibility','off');
 ylim(ax_var, [-2 12]);
@@ -238,13 +238,13 @@ for k = 1:length(fields)
     fA = fA / max(fA) * halfWidth;
     fill(ax_mse, [k - fA, k*ones(size(fA))], [yA, fliplr(yA)], ...
          colA, 'FaceAlpha', alphaFill, 'EdgeColor','none');
-    plot(ax_mse, k - 0.1, mean(er_ncDfk), 'r*', 'LineWidth', 0.5, 'MarkerSize',3);
+    plot(ax_mse, k - 0.1, mean(er_ncDfk), '*', 'Color',colA, 'LineWidth', 0.5, 'MarkerSize',3);
 
     [fB, yB] = ksdensity(er_wcDfk);
     fB = fB / max(fB) * halfWidth;
     fill(ax_mse, [k + fB, k*ones(size(fB))], [yB, fliplr(yB)], ...
          colB, 'FaceAlpha', alphaFill, 'EdgeColor','none');
-    plot(ax_mse, k + 0.1, mean(er_wcDfk), 'g*', 'LineWidth', 0.5, 'MarkerSize',3);
+    plot(ax_mse, k + 0.1, mean(er_wcDfk), '*', 'Color',colB, 'LineWidth', 0.5, 'MarkerSize',3);
 end
 hold(ax_mse, 'off');
 
@@ -326,17 +326,17 @@ patch(ax_G2a,[1 3 3 1], yp_g2,[0.88 0.88 0.88],'FaceAlpha',0.5,'EdgeColor','none
 
 % Faint per-session traces
 for s = 1:nS_g2
-    plot(ax_G2a,t_g2_av,nc_tr_g2(s,:),'Color',[1 0 0 0.12],'LineWidth',0.4,'HandleVisibility','off');
-    plot(ax_G2a,t_g2_av,wc_tr_g2(s,:),'Color',[0 0.5 0 0.12],'LineWidth',0.4,'HandleVisibility','off');
+    plot(ax_G2a,t_g2_av,nc_tr_g2(s,:),'Color',[PS.col_ol 0.12],'LineWidth',0.4,'HandleVisibility','off');
+    plot(ax_G2a,t_g2_av,wc_tr_g2(s,:),'Color',[PS.col_cl 0.12],'LineWidth',0.4,'HandleVisibility','off');
 end
 
 % Cross-session mean +/- SEM
 fill(ax_G2a,[t_g2_av,fliplr(t_g2_av)],[mu_nc_g2+sem_nc_g2,fliplr(mu_nc_g2-sem_nc_g2)],...
-    [1 0 0],'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
-plot(ax_G2a,t_g2_av,mu_nc_g2,'r','LineWidth',1.5,'DisplayName','OL mean');
+    PS.col_ol,'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
+plot(ax_G2a,t_g2_av,mu_nc_g2,'Color',PS.col_ol,'LineWidth',1.5,'DisplayName','OL mean');
 fill(ax_G2a,[t_g2_av,fliplr(t_g2_av)],[mu_wc_g2+sem_wc_g2,fliplr(mu_wc_g2-sem_wc_g2)],...
-    [0 0.5 0],'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
-plot(ax_G2a,t_g2_av,mu_wc_g2,'Color',[0 0.5 0],'LineWidth',1.5,'DisplayName','CL mean');
+    PS.col_cl,'FaceAlpha',0.2,'EdgeColor','none','HandleVisibility','off');
+plot(ax_G2a,t_g2_av,mu_wc_g2,'Color',PS.col_cl,'LineWidth',1.5,'DisplayName','CL mean');
 
 yline(ax_G2a,ref_g2,'k--','LineWidth',0.75,'HandleVisibility','off');   % reference
 xline(ax_G2a,1,'Color',[0.5 0.5 0.5],'LineStyle',':','LineWidth',0.75,'HandleVisibility','off');
@@ -361,8 +361,8 @@ for k = 1:length(fields)
     ax_s = subplot(nR_g2, nC_g2, ki_g2);
     hold(ax_s,'on');
     dk = mouse.(fields{k}).data;
-    scatter(ax_s, dk.nc, dk.er_ncDfk_w, 8, [1 0 0],   'filled','MarkerFaceAlpha',0.5);
-    scatter(ax_s, dk.wc, dk.er_wcDfk_w, 8, [0 0.5 0], 'filled','MarkerFaceAlpha',0.5);
+    scatter(ax_s, dk.nc, dk.er_ncDfk_w, 8, PS.col_ol, 'filled','MarkerFaceAlpha',0.5);
+    scatter(ax_s, dk.wc, dk.er_wcDfk_w, 8, PS.col_cl, 'filled','MarkerFaceAlpha',0.5);
     hold(ax_s,'off');
     cleanAxes(ax_s);
     title(ax_s, sprintf('S%d', k),'FontSize',6,'FontWeight','bold');
