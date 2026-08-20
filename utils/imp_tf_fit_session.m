@@ -79,7 +79,7 @@ if nargin < 4, opts = struct(); end
 % that window). See the rejection block near the bootstrap for why this exists.
 def = struct('maxPoles',5,'maxZeros',4,'maxDelay',3,'tFit_s',0.5,'per_amp_fit',true, ...
              'verbose',true,'ampRange',[],'nBoot',0,'select','aic','minR2h',0.98,'tauMax',NaN, ...
-             'forceOrder',[]);
+             'forceOrder',[],'preShow_s',0.15);
 fn = fieldnames(def);
 for i = 1:numel(fn), if ~isfield(opts,fn{i}) || isempty(opts.(fn{i})), opts.(fn{i}) = def.(fn{i}); end, end
 
@@ -169,6 +169,19 @@ T.h = hHat;  T.tPost = t_full(iPost).';
 % amplitudes in range), kept so a figure can plot measured-vs-fit without refitting.
 T.h_meas = h_norm;
 
+% ---- pre-onset lead-in, for display only -----------------------------------------------------
+% The fit sees t >= 0 only, so nothing here enters the model. It exists because a panel that
+% starts AT the onset gives the reader no baseline to judge the dip against -- the trace appears
+% to begin already falling (user, 2026-08-19). Same amplitude weighting as h_meas so the two
+% segments are on one scale and can be concatenated without a seam.
+iPreShow = find(t_full >= -opts.preShow_s & t_full < 0);
+T.tPre   = t_full(iPreShow).';
+if isempty(iPreShow)
+    T.h_measPre = [];
+else
+    T.h_measPre = sum((DF(validAmp, iPreShow) ./ uA(validAmp)) .* w_amp, 1, 'omitnan').';
+end
+
 % ---- per-amplitude scores -------------------------------------------------------------------
 R2 = nan(nAmp,1); gFree = nan(nAmp,1); rho = nan(nAmp,1); R2free = nan(nAmp,1);
 yPool = []; ypPool = [];
@@ -216,6 +229,13 @@ end
 % built from the OTHER amplitudes does not extrapolate to it -- amplitude-dependent dynamics.
 validIdx = find(validAmp);
 R2_loao  = nan(nAmp,1);
+% The held-out PREDICTION itself, not just its score (2026-08-19). Without this the only
+% cross-validation evidence in the struct is a single R2 number per amplitude, so nothing can
+% be plotted -- and a CV figure that shows the measured trace against what a model that never
+% saw it predicts is far more convincing than the number. Rows are amplitudes, columns the
+% post-onset samples; NaN where the fold could not be run.
+T.loao_pred = nan(nAmp, numel(iPost));
+T.loao_meas = DF(:, iPost);
 for k = 1:numel(validIdx)
     aOut = validIdx(k);  trainIdx = validIdx(validIdx ~= aOut);
     if numel(trainIdx) < 2, continue; end
@@ -230,6 +250,8 @@ for k = 1:numel(validIdx)
     y = DF(aOut, iPost).';  v = isfinite(y) & isfinite(hLo);
     if nnz(v) < 5, continue; end
     R2_loao(aOut) = 1 - sum((y(v) - uA(aOut)*hLo(v)).^2)/max(sum((y(v)-mean(y(v))).^2), eps);
+    np_ = min(numel(hLo), size(T.loao_pred,2));
+    T.loao_pred(aOut, 1:np_) = uA(aOut) * hLo(1:np_).';   % scaled to THIS amplitude's drive
 end
 T.R2_loao = R2_loao;
 

@@ -20,6 +20,14 @@ hold on;
 % Update these values if tFit_s or preWin_A change in tf_fit.m.
 tShade = [-0.2, 0.5];
 
+% TALK VARIANT (2026-08-19, user: "i specifically want the first imp response figure to be
+% drawn without the model fit window shown"). The fit window is a Methods detail -- in a talk
+% it invites a question about the fit before the audience has been told there is a fit. Both
+% knobs default to the paper behaviour, so nothing changes unless they are set in the base
+% workspace before running.
+if ~exist('TO_FITWIN','var'), TO_FITWIN = true; end   % false = no shaded window, no label
+if ~exist('TO_OUTDIR','var'), TO_OUTDIR = '';   end   % non-empty = export here, not figure2/
+
 % Pass 1: +/-1 SD across trials, shown ONLY for the lowest and highest drawn
 % amplitude (subset -> keeps all 5 mean traces legible). Faint fill only, no
 % outline. Drawn first so the mean traces sit on top.
@@ -54,21 +62,38 @@ paperAxes(gca,'XLength',0.25,'YLength',1,'XLabel','250 ms','YLabel','1% dF/F');
 % full height and send it to the back (behind traces and SD fills).
 yl_s = ylim(gca);  ylim(yl_s);
 span = yl_s(2) - yl_s(1);
-hModelWin = patch([tShade(1) tShade(2) tShade(2) tShade(1)], ...
-    [yl_s(1) yl_s(1) yl_s(2) yl_s(2)], [0.8 0.8 0.8], ...
-    'FaceAlpha', 0.5, 'EdgeColor', 'none', 'HandleVisibility', 'off');
-uistack(hModelWin, 'bottom');
+if TO_FITWIN
+    hModelWin = patch([tShade(1) tShade(2) tShade(2) tShade(1)], ...
+        [yl_s(1) yl_s(1) yl_s(2) yl_s(2)], [0.8 0.8 0.8], ...
+        'FaceAlpha', 0.5, 'EdgeColor', 'none', 'HandleVisibility', 'off');
+    uistack(hModelWin, 'bottom');
+end
 
 % Stimulation onset marker + labels, moved up near the top
 stim_y = yl_s(1) + 0.82*span;
 plot(0, stim_y, 'ro','MarkerSize',5,'MarkerFaceColor','red','HandleVisibility','off');
 text(0.05, stim_y + 0.03*span, 'Stim', 'Color','r','FontSize',PS.fs,'FontWeight','bold', ...
     'HorizontalAlignment','left','VerticalAlignment','bottom','Clipping','off');
-text(mean(tShade), yl_s(2), 'Model Fit Window', ...
-    'FontSize', 3.5, 'Color', [0.45 0.45 0.45], 'FontWeight', 'bold', ...
-    'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'Clipping', 'off');
+if TO_FITWIN
+    text(mean(tShade), yl_s(2), 'Model Fit Window', ...
+        'FontSize', 3.5, 'Color', [0.45 0.45 0.45], 'FontWeight', 'bold', ...
+        'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'Clipping', 'off');
+end
 
-paperExport(figS, fullfile(paperRoot, 'images', 'figure2', sprintf('imp_single_%s_%s_en%d.pdf',mn3,td3,en3)));
+% TALK LEGEND (2026-08-19, user: "needs the legend shifted farther to bottom right to not
+% overlap the traces, maybe make the text smaller"). The amplitude key is 5 rows deep, and at
+% paper size 'southeast' still lands it on the rebound. Pushed into the bottom-right corner
+% and shrunk -- on a slide the amplitudes are read off the ramp, not the numbers.
+if ~TO_FITWIN
+    lgd.FontSize = max(3.5, PS.fs * 0.75);
+    lgd.Units = 'normalized';
+    pos = lgd.Position;
+    lgd.Position = [1 - pos(3) - 0.005, 0.005, pos(3), pos(4)];
+end
+
+outDirS = fullfile(paperRoot, 'images', 'figure2');
+if ~isempty(TO_OUTDIR), outDirS = TO_OUTDIR; end
+paperExport(figS, fullfile(outDirS, sprintf('imp_single_%s_%s_en%d.pdf',mn3,td3,en3)));
 
 
 %%

@@ -39,6 +39,10 @@ here = fileparts(mfilename('fullpath'));
 root = fileparts(here);
 addpath(fullfile(root,'utils'));
 outDir   = fullfile(root,'paper','images','figure2');
+% FIG_OUTDIR / FIG_TALK: redraw the panels somewhere else, in talk styling, without
+% refitting (added 2026-08-19). Defaults reproduce the paper panels exactly.
+if exist('FIG_OUTDIR','var') && ~isempty(FIG_OUTDIR), outDir = FIG_OUTDIR; end
+if ~exist('FIG_TALK','var') || isempty(FIG_TALK), FIG_TALK = false; end
 cacheFil = fullfile(here,'data','imp_tf_fits.mat');
 
 if ~exist('FIG_PANELS','var') || isempty(FIG_PANELS)
@@ -98,7 +102,8 @@ end
 FIGS = struct();
 if want('shape')
     FIGS.shape = imp_tf_paper_fig(Sfit, outDir, ...
-        struct('tag','','export',FIG_EXPORT,'tmax_s',0.5));
+        struct('tag','','export',FIG_EXPORT,'tmax_s',0.5, ...
+               'preshow',FIG_TALK, 'tmin_s',0.15, 'lgd_len', 6 + 14*FIG_TALK));
 end
 rbPanels = {};
 if want('tau'), rbPanels{end+1} = 'A'; end

@@ -38,9 +38,15 @@ function figs = imp_tf_paper_fig(S, outDir, opts)
 % Size follows PAPER.md: 6x4 cm, 6 pt bold.
 
 if nargin < 3, opts = struct(); end
-if ~isfield(opts,'tag'),    opts.tag    = '';   end
-if ~isfield(opts,'tmax_s'), opts.tmax_s = 0.5;  end
-if ~isfield(opts,'export'), opts.export = true; end
+if ~isfield(opts,'tag'),     opts.tag     = '';   end
+if ~isfield(opts,'tmax_s'),  opts.tmax_s  = 0.5;  end
+if ~isfield(opts,'export'),  opts.export  = true; end
+% Display knobs added 2026-08-19 for the talk deck. Defaults reproduce the paper panel
+% exactly (no lead-in, project legend token), so PAPER.md's 2C-i is unaffected unless asked.
+if ~isfield(opts,'preshow'), opts.preshow = false; end   % draw pre-onset lead-in + stim mark
+if ~isfield(opts,'tmin_s'),  opts.tmin_s  = 0.15; end    % seconds of lead-in to show
+if ~isfield(opts,'lgd_len'), opts.lgd_len = 6;    end    % legend token length (pt)
+if ~isfield(opts,'cvtag'),   opts.cvtag   = false; end   % footer naming the validation used
 
 PS = paperStyle();
 ok = cellfun(@(s) isstruct(s) && isfield(s,'ok') && s.ok && ~isempty(s.h), S);
@@ -76,6 +82,13 @@ for k = 1:n
     sc = max(abs(hm(isfinite(hm))));
     if isempty(sc) || sc == 0, continue; end
     c = grad(k);
+    % Pre-onset lead-in, drawn in the same hue and joined to the post trace so the dip is
+    % read against a visible baseline instead of starting mid-fall. Display only -- the fit
+    % is post-onset, which is why no dashed counterpart is drawn here.
+    if opts.preshow && isfield(S{k},'h_measPre') && ~isempty(S{k}.h_measPre)
+        plot(ax1, [S{k}.tPre(:); t(1)], [S{k}.h_measPre(:); hm(1)]/sc, '-', ...
+             'Color', c, 'LineWidth', PS.lw_mean, 'HandleVisibility','off');
+    end
     hLine(k) = plot(ax1, t, hm/sc, '-',  'Color', c, 'LineWidth', PS.lw_mean);
     % Fit drawn in the SAME hue, dashed and thinner: hue = session, dash = model.
     % Keeping the fit on the session's own colour is what lets the eye check the pair
@@ -83,7 +96,23 @@ for k = 1:n
     plot(ax1, t, hf/sc, '--', 'Color', c, 'LineWidth', PS.lw_fit);
 end
 yline(ax1, 0, '-', 'Color', [.6 .6 .6], 'LineWidth', PS.lw_zero);
-xlim(ax1, [0 opts.tmax_s]);
+if opts.preshow, xlim(ax1, [-opts.tmin_s opts.tmax_s]); else, xlim(ax1, [0 opts.tmax_s]); end
+
+% STIM ONSET MARKER. A panel whose x-axis starts before zero needs to say WHERE the stimulus
+% landed, or the lead-in reads as part of the response. Drawn as a light rule plus a filled
+% marker at the top -- the same red dot used on the single-session trace panel, so the two
+% panels teach the reader one symbol rather than two.
+if opts.preshow
+    xline(ax1, 0, '-', 'Color', [.75 .75 .75], 'LineWidth', PS.lw_zero, ...
+          'HandleVisibility','off');
+    yl_t = ylim(ax1);
+    plot(ax1, 0, yl_t(2) - 0.06*diff(yl_t), 'v', 'MarkerSize', 4, ...
+         'MarkerFaceColor', [0.85 0 0], 'MarkerEdgeColor','none', 'HandleVisibility','off');
+    text(ax1, 0.035*opts.tmax_s, yl_t(2) - 0.06*diff(yl_t), 'stim', ...
+         'Color', [0.85 0 0], 'FontSize', PS.fs, 'FontWeight', PS.fw, ...
+         'HorizontalAlignment','left', 'VerticalAlignment','middle');
+    ylim(ax1, yl_t);
+end
 xlabel(ax1, 'time from onset (s)');
 ylabel(ax1, 'normalised \DeltaF/F');
 set(ax1, 'FontSize', PS.fs, 'FontWeight', PS.fw, 'TickDir','out', 'Box','off');
@@ -94,9 +123,46 @@ set(ax1, 'FontSize', PS.fs, 'FontWeight', PS.fw, 'TickDir','out', 'Box','off');
 % at 6 pt. Repeating it here also cost four legend rows out of a 6x4 cm axis.
 hM  = plot(ax1, NaN, NaN, '-',  'Color', [0 0 0], 'LineWidth', PS.lw_mean);
 hF  = plot(ax1, NaN, NaN, '--', 'Color', [0 0 0], 'LineWidth', PS.lw_fit);
-lg  = legend(ax1, [hM hF], {'measured','LTI fit'}, 'Location','southeast', 'Box','off');
-lg.ItemTokenSize = PS.lgd_token;  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
+% Corner: southeast is right for the paper panel, but a LONG token there runs the two
+% samples straight through the dip and the rising limb. Above the traces (northeast) is the
+% only genuinely empty quadrant once the lead-in is drawn -- nothing exceeds ~0.6 normalised.
+lgLoc = 'southeast';  if opts.preshow, lgLoc = 'northeast'; end
+lg  = legend(ax1, [hM hF], {'measured','LTI fit'}, 'Location',lgLoc, 'Box','off');
+% LONGER TOKEN THAN THE PROJECT DEFAULT, on purpose (user, 2026-08-19: "i want the legend
+% trace to be longer so that the dash is visible as a dash and not a line"). At the standard
+% [6 6] the dashed sample is barely one dash long, so the key that distinguishes measured
+% from fit is the one thing on the panel you cannot read. Everything else keeps PS.lgd_token.
+lg.ItemTokenSize = [opts.lgd_len PS.lgd_token(2)];
+lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
 lg.Interpreter = 'none';
+
+% ---- VALIDATION TAG (opts.cvtag) -------------------------------------------------------
+% READ THIS BEFORE CALLING THE PANEL CROSS-VALIDATED. The dashed curve is S{k}.h, the unit
+% response of the model fitted on ALL amplitudes of that session -- it is an IN-SAMPLE fit,
+% not a held-out prediction. The cross-validated quantity in the same struct is R2_loao:
+% refit without one amplitude, then predict that amplitude (leave-one-amplitude-out, see
+% imp_tf_fit_session.m). They are different numbers and only the second generalises.
+% So the tag states BOTH rather than putting the word "cross-validated" on a curve that is
+% not one: the shape is in-sample, and the held-out R2 is quoted beside it.
+if opts.cvtag
+    lo = [];
+    for k = 1:n
+        if isfield(S{k},'R2_loao')
+            v = S{k}.R2_loao(:);  lo = [lo; v(isfinite(v))];   %#ok<AGROW>
+        end
+    end
+    if isempty(lo)
+        txt = 'fit: in-sample (no LOAO available)';
+    else
+        txt = sprintf('fit: in-sample  |  leave-one-amplitude-out R^2 = %.2f (median, %d folds)', ...
+                      median(lo), numel(lo));
+    end
+    text(ax1, 0.5, -0.235, txt, 'Units','normalized', ...
+         'HorizontalAlignment','center', 'VerticalAlignment','top', ...
+         'FontSize', max(4.5, PS.fs*0.85), 'FontWeight', PS.fw, 'Color', [0.25 0.25 0.25], ...
+         'Clipping','off');
+    fprintf('[TFFIG] %s\n', txt);
+end
 
 %% ---- export ------------------------------------------------------------------------
 if opts.export

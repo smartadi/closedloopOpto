@@ -1,4 +1,4 @@
-% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
+﻿% impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
 % Run from brain_paper/ root directory (or impulse-analysis/ -- path auto-detected).
 % Requires: load_experiments.m has been run first (allExperiments, selExp, t_win).
 
@@ -19,8 +19,32 @@ ax_c = gca;
 
 nExp = numel(allExperiments);
 % DR_LABEL controls how verbose the direct labels are: 'slope' = "s1  -0.34" (default),
-% 'id' = "s1" only, with the slopes left to the caption.
+% 'id' = "s1" only, with the slopes left to the caption, 'none' = no labels at all.
+% 'none' added 2026-08-19 for the talk deck (user: "i want the inhibition energy plot to not
+% have legends") -- on a slide the per-session slopes are read out loud, not squinted at.
 if ~exist('DR_LABEL','var') || isempty(DR_LABEL), DR_LABEL = 'slope'; end
+if ~exist('DR_OUTDIR','var'), DR_OUTDIR = ''; end   % non-empty = export here, not figure2/
+% DR_YAXIS = true -> draw a REAL y axis with ticks and units instead of the corner-axes look
+% (user, 2026-08-19: "put axis on y and put units"). The default keeps the paper panel.
+if ~exist('DR_YAXIS','var') || isempty(DR_YAXIS), DR_YAXIS = false; end
+
+% ---- mouse labels, for DR_LABEL='mouse' -----------------------------------------------------
+% NOTE sessions are NOT mice: the impulse set is AL_0041 e1, AL_0041 e2, AL_0033 e1, AL_0048 e1,
+% so a bare "Mouse 1..4" would claim four animals where there are three. Number the UNIQUE mouse
+% names and suffix a/b when one animal contributes more than one session.
+mnAll = arrayfun(@(e) string(allExperiments(e).mn), 1:nExp);
+[uMn, ~, mIdx] = unique(mnAll, 'stable');
+mouseTxt = cell(nExp,1);
+for e = 1:nExp
+    sib = find(mIdx == mIdx(e));
+    if numel(sib) > 1
+        mouseTxt{e} = sprintf('Mouse %d%c', mIdx(e), char('a' + find(sib == e) - 1));
+    else
+        mouseTxt{e} = sprintf('Mouse %d', mIdx(e));
+    end
+end
+fprintf('[DR] %d sessions from %d mice: %s\n', nExp, numel(uMn), strjoin(mouseTxt', ', '));
+
 labX = nan(nExp,1); labY = nan(nExp,1); labT = cell(nExp,1);
 hLegend = gobjects(nExp,1);              % one legend entry per experiment
 legTxt  = cell(nExp,1);
@@ -73,6 +97,8 @@ for expIdx = 1:nExp
     labT{expIdx} = sprintf('s%d', expIdx);  %#ok<SAGROW>
     if strcmpi(DR_LABEL,'slope')
         labT{expIdx} = sprintf('s%d  %.2f', expIdx, p(1));
+    elseif strcmpi(DR_LABEL,'mouse')
+        labT{expIdx} = mouseTxt{expIdx};
     end
 end
 
@@ -85,13 +111,44 @@ ylim([-5 3])
 uistack(h1, 'bottom')
 xticks([])
 
-try
-    % x scale bar halved 0.5 -> 0.25 mW (user, 2026-08-17). XLength is in DATA units (V);
-    % the label is the mW equivalent, so both must move together or the bar lies.
+if DR_YAXIS
+    % Real y axis: the quantity is an energy in %dF/F averaged over 0-200 ms, and a corner
+    % scale bar of 0.01 was effectively no axis at all -- the reader could not tell whether
+    % the deepest point was -1% or -10%. x keeps its scale bar (amplitude is shown in mW by
+    % the bar label, and per-session x offsets make tick values misleading).
+    %
+    % paperAxes = cleanAxes + shortCornerAxes_plot, and BOTH strip the real axes, so the
+    % y axis has to be rebuilt AFTER the call, not configured before it (the first attempt
+    % set the ticks first and they were silently wiped).
+    % ORDER MATTERS TWICE HERE.
+    % (1) ylim must be set BEFORE paperAxes: shortCornerAxes_plot positions the x scale bar
+    %     from the ylim it sees, so tightening the limits afterwards strands the bar far
+    %     below the data with a band of white between them.
+    % (2) the y axis must be restored AFTER paperAxes: it is cleanAxes +
+    %     shortCornerAxes_plot and both strip the real axes.
+    % Tighten to the data -- the paper panel's fixed ylim([-5 3]) keeps several exports on
+    % one scale, but with a real axis drawn it left ~60% of the height empty and squashed a
+    % 2.5 %dF/F effect into a third of the panel.
+    yb = [-3 1];
+    ylim(ax, yb);
     paperAxes(gca,'XLength',1,'YLength',0.01,'XLabel','0.25 mW','YLabel',' ');
-catch
-    xlabel('Input(V)', 'FontWeight','bold');
-    ylabel('dF/F %', 'FontWeight','bold');
+    ax.YAxis.Visible   = 'on';
+    ax.YAxis.Color     = 'k';
+    ax.YAxis.LineWidth = 1.0;
+    ylim(ax, yb);
+    ax.YTick      = yb(1):1:yb(2);
+    ax.YTickLabel = compose('%d', (yb(1):1:yb(2))');
+    ax.TickDir = 'out';  ax.Box = 'off';
+    ax.FontSize = PS.fs; ax.FontWeight = PS.fw;
+else
+    try
+        % x scale bar halved 0.5 -> 0.25 mW (user, 2026-08-17). XLength is in DATA units (V);
+        % the label is the mW equivalent, so both must move together or the bar lies.
+        paperAxes(gca,'XLength',1,'YLength',0.01,'XLabel','0.25 mW','YLabel',' ');
+    catch
+        xlabel('Input(V)', 'FontWeight','bold');
+        ylabel('dF/F %', 'FontWeight','bold');
+    end
 end
 
 % ---- DIRECT LABELS replace the legend AND the stacked text block ---------------------------
@@ -115,19 +172,28 @@ end
 % of the plot on top of other sessions' points -- exactly the overlap this block exists to
 % remove. A common right-hand column costs a small disconnect for the shorter lines and buys
 % a clean reading order top-to-bottom.
-xr    = diff(xlim(ax));
-labXc = max(labX) + 0.03*xr;
-for expIdx = 1:nExp
-    text(ax, labXc, labY(expIdx), labT{expIdx}, ...
-        'Color', expColors(expIdx,:), 'FontSize', PS.fs, 'FontWeight', PS.fw, ...
-        'HorizontalAlignment','left', 'VerticalAlignment','middle', 'Clipping','off');
+if ~strcmpi(DR_LABEL, 'none')
+    xr    = diff(xlim(ax));
+    labXc = max(labX) + 0.03*xr;
+    for expIdx = 1:nExp
+        text(ax, labXc, labY(expIdx), labT{expIdx}, ...
+            'Color', expColors(expIdx,:), 'FontSize', PS.fs, 'FontWeight', PS.fw, ...
+            'HorizontalAlignment','left', 'VerticalAlignment','middle', 'Clipping','off');
+    end
+    xlim(ax, [min(xlim(ax)), labXc + 0.22*xr]);   % room for the labels outside the data
 end
-xlim(ax, [min(xlim(ax)), labXc + 0.22*xr]);   % room for the labels outside the data
-text(ax, -0.12, 0.5, 'Inhibition Energy', ...
+ylabTxt = 'Inhibition Energy';
+if DR_YAXIS
+    % name the units on the axis label, since there is now an axis to put them on
+    ylabTxt = 'Inhibition energy (% \DeltaF/F, 0-200 ms)';
+end
+text(ax, -0.155, 0.5, ylabTxt, ...
     'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'FontSize',PS.fs, 'FontWeight',PS.fw, 'Color','k', 'Clipping','off');
-paperExport(fig, fullfile(paperRoot, 'images', 'figure2', sprintf('imp_response%s.pdf', PS.cbtag)));
+outDirC = fullfile(paperRoot, 'images', 'figure2');
+if ~isempty(DR_OUTDIR), outDirC = DR_OUTDIR; end
+paperExport(fig, fullfile(outDirC, sprintf('imp_response%s.pdf', PS.cbtag)));
 
 %% Combined plot - median +/- IQR (supplementary)
 figM = paperFig(PW_c, PH_c); hold on
