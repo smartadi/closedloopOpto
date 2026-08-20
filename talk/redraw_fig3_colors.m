@@ -2,7 +2,10 @@
 %
 % Produces:
 %   all_variance_sessions.pdf      3F  session-averaged across-trial VARIANCE trace   (recoloured)
-%   all_average_sessions.pdf       3G  session-averaged error (MAE) trace             (recoloured)
+%   all_average_sessions.pdf       3G  session-averaged error trace, MAE or RMSE      (recoloured)
+%                                      -> written as all_average_sessions_rmse.pdf when
+%                                         F3_METRIC = 'rmse' (the default), so the MAE panel
+%                                         the paper text refers to is never overwritten
 %   all_MSE_sessions.pdf           3H  per-session trial-RMSE violins                 (recoloured)
 %   variance_ratio_4windows.pdf    NEW OL/CL variance ratio on the SAME four windows
 %                                      the RMSE ratio panel (3J) uses
@@ -38,6 +41,10 @@ cd('C:\Users\aditya\Documents\projects\brain_paper');
 addpath(genpath(fullfile(pwd,'utils')));
 addpath(fullfile(pwd,'controller-analysis'));
 
+% load_sessions does `clearvars`, so a caller's `F3_METRIC = 'mae'; redraw_fig3_colors` would
+% be silently wiped and the default used instead. Stash it somewhere the clear cannot reach.
+if exist('F3_METRIC','var') && ~isempty(F3_METRIC), setenv('F3_METRIC_STASH', F3_METRIC); end
+
 r_lean = 1;
 load_sessions;
 
@@ -45,6 +52,22 @@ root = 'C:\Users\aditya\Documents\projects\brain_paper';
 PS = paperStyle(); setPaperDefaults();
 outDir = fullfile(root,'paper','images','figure3');
 if ~isfolder(outDir); mkdir(outDir); end
+
+% F3_METRIC  'rmse' (default) or 'mae', for the 3G session-averaged error trace.
+%
+% MAE here is abs(mean(e over trials)) -- errors of opposite sign on different trials CANCEL,
+% so the panel measures BIAS only. RMSE is sqrt(mean(e^2 over trials)) and cancels nothing:
+% RMSE^2 = bias^2 + across-trial variance. Both curves therefore rise when the RMSE version is
+% used, and 3G stops being independent of the variance panel 3F -- it now contains it. That is
+% not a reason to avoid it (the user asked for RMSE, and RMSE is the project's error metric
+% everywhere else since 2026-07-16), but say so if the two panels are shown together.
+%
+% The paper's Fig 3 panel is deliberately MAE and labelled MAE (root CLAUDE.md), so the RMSE
+% version goes to its own filename rather than overwriting it.
+F3_METRIC = getenv('F3_METRIC_STASH');
+if isempty(F3_METRIC), F3_METRIC = 'rmse'; end
+setenv('F3_METRIC_STASH','');          % one-shot: do not leak into the next run
+useRMSE = strcmpi(F3_METRIC,'rmse');
 
 dur   = 3;
 REF   = -5;
@@ -71,14 +94,26 @@ for k = 1:nS
     Mvarnc = [Mvarnc; vnc];       Mvarwc = [Mvarwc; vwc];        %#ok<AGROW>
 
     enc = D.ncDfk(:, 36:141) - REF;  ewc = D.wcDfk(:, 36:141) - REF;
-    Error_nc = [Error_nc; abs(mean(enc,1))];                     %#ok<AGROW>
-    Error_wc = [Error_wc; abs(mean(ewc,1))];                     %#ok<AGROW>
+    % across-TRIAL error at each sample: RMS (keeps trial-to-trial spread) or
+    % abs-of-mean (cancels it). See the F3_METRIC note at the top.
+    if useRMSE
+        Error_nc = [Error_nc; sqrt(mean(enc.^2,1))];             %#ok<AGROW>
+        Error_wc = [Error_wc; sqrt(mean(ewc.^2,1))];             %#ok<AGROW>
+    else
+        Error_nc = [Error_nc; abs(mean(enc,1))];                 %#ok<AGROW>
+        Error_wc = [Error_wc; abs(mean(ewc,1))];                 %#ok<AGROW>
+    end
 
     % full-window error against the step reference (pre/post cancel by construction)
     ref_nc = [pnc(:,1:105), REF*ones(size(pnc,1),105), pnc(:,211:end)];
     ref_wc = [pwc(:,1:105), REF*ones(size(pwc,1),105), pwc(:,211:end)];
-    ENC{k} = abs(mean(pnc - ref_nc, 1));
-    EWC{k} = abs(mean(pwc - ref_wc, 1));
+    if useRMSE
+        ENC{k} = sqrt(mean((pnc - ref_nc).^2, 1));
+        EWC{k} = sqrt(mean((pwc - ref_wc).^2, 1));
+    else
+        ENC{k} = abs(mean(pnc - ref_nc, 1));
+        EWC{k} = abs(mean(pwc - ref_wc, 1));
+    end
 
     ERnc{k} = D.er_ncDfk(:);  ERwc{k} = D.er_wcDfk(:);
     fprintf('  %-8s %s e%d  nc=%3d wc=%3d\n', mn, td, en, size(pnc,1), size(pwc,1));
@@ -110,7 +145,7 @@ text(ax_var, -0.12, 0.5, {'Average of Session'; 'Variance across trials'}, ...
     'VerticalAlignment','middle', 'FontSize',6, 'FontWeight','bold', 'Color','k', 'Clipping','off');
 paperExport(fig_F, fullfile(outDir, 'all_variance_sessions.pdf'));
 
-%% ---- 3G: all-session trial average (MAE) --------------------------------
+%% ---- 3G: all-session trial average (MAE or RMSE) ------------------------
 fig_H = paperFig(3, 4);
 lm_h = 0.18; rm_h = 0.05; bm_h = 0.12; tm_h = 0.08;
 ax_H = axes(fig_H, 'Position', [lm_h, bm_h, 1-lm_h-rm_h, 1-bm_h-tm_h]);
@@ -122,12 +157,27 @@ end
 plot(ax_H, t_h, mean(Error_nc,1), 'Color', PS.col_ol, 'LineWidth', PS.lw_mean);
 plot(ax_H, t_h, mean(Error_wc,1), 'Color', PS.col_cl, 'LineWidth', PS.lw_mean);
 addStimPatch(ax_H, 0, dur);
-xlim(ax_H, [-0.5 dur+0.5]); ylim(ax_H, [-0.25 6]);
+% RMSE folds in the across-trial spread, so it runs well above the MAE curve -- take the
+% limit from the data instead of the MAE-era hardcoded 6, or the traces clip
+yTop = max([6, 1.08*max([Error_nc(:); Error_wc(:)])]);
+xlim(ax_H, [-0.5 dur+0.5]); ylim(ax_H, [-0.25 yTop]);
 hold(ax_H,'off');
 lgd_H = legend(ax_H, {'Open-Loop','Closed-Loop'}, 'Location','northeast');
 paperLegend(lgd_H);
-paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','MAE dF/F');
-paperExport(fig_H, fullfile(outDir, 'all_average_sessions.pdf'));
+if useRMSE
+    yLab = 'RMSE dF/F';  fnH = 'all_average_sessions_rmse.pdf';
+else
+    yLab = 'MAE dF/F';   fnH = 'all_average_sessions.pdf';
+end
+paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel',yLab);
+paperExport(fig_H, fullfile(outDir, fnH));
+
+% report both the chosen metric and what the other one would have given, so the swap is
+% auditable from the log rather than only from the picture
+iStim = t_h >= 0 & t_h <= dur;
+fprintf('[F3G] %s | stim-window mean  OL %.3f  CL %.3f  (%.0f%% lower)\n', upper(F3_METRIC), ...
+        mean(mean(Error_nc(:,iStim),1)), mean(mean(Error_wc(:,iStim),1)), ...
+        100*(1 - mean(mean(Error_wc(:,iStim),1))/mean(mean(Error_nc(:,iStim),1))));
 
 %% ---- 3H: cross-session trial-RMSE violin --------------------------------
 fig_G = paperFig(7.8, 4);
