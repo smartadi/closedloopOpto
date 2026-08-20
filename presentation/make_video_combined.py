@@ -189,17 +189,37 @@ class LoopDiagram:
         # the reference is fed straight to the laser in parallel with the
         # feedback correction, so the controller need not wait for an error
         FFY, INJ = 0.902, 0.4425
-        self.ff_box = plt.Rectangle((0.255, FFY - 0.065), 0.160, 0.130,
+        # widened from 0.160 to 0.200 (leftwards, the right edge has to stay on the
+        # injection wire) so the "r(t + 143 ms)" label fits inside it
+        self.ff_box = plt.Rectangle((0.215, FFY - 0.065), 0.200, 0.130,
                                     facecolor="#ffffff", edgecolor=FF_C, lw=1.4,
                                     zorder=3, visible=False)
         ax.add_patch(self.ff_box)
-        self.ff_lab = ax.text(0.335, FFY, "feedforward" + chr(10) + "(preview)",
+        # Name the operation, not the block: preview IS a time shift of the reference,
+        # and "feedforward" alone left the audience with no idea what was being fed
+        # forward (user, 2026-08-19).
+        self.ff_lab = ax.text(0.315, FFY, "preview" + chr(10) + "r(t + 143 ms)",
                               ha="center", va="center", fontsize=7.0, color=TXT,
+                              fontweight="bold", zorder=4, visible=False)
+
+        # ---- glyph on the preview branch: the reference, and the same reference
+        # advanced by one plant lag. Drawn where the branch leaves the reference line so
+        # it reads as "this is what the preview path does to r(t)". One cycle of a 1 Hz
+        # sine over the glyph width, so a 143 ms lead is 0.143 of the drawn cycle.
+        LEAD = 0.143                                   # s, = 5 samples at 35 Hz
+        gx = np.linspace(0, 1, 120)
+        GX0, GW, GYC, GA = 0.016, 0.104, FFY, 0.048
+        self.pv_r, = ax.plot(GX0 + GW * gx, GYC + GA * np.sin(2 * np.pi * gx),
+                             color=REFC, lw=1.1, ls=":", zorder=4, visible=False)
+        self.pv_a, = ax.plot(GX0 + GW * gx, GYC + GA * np.sin(2 * np.pi * (gx + LEAD)),
+                             color=FF_C, lw=1.7, zorder=5, visible=False)
+        self.pv_txt = ax.text(GX0 + GW / 2, GYC - GA - 0.028, "+143 ms",
+                              ha="center", va="top", fontsize=6.4, color=FF_C,
                               fontweight="bold", zorder=4, visible=False)
         self.ff = [
             ax.plot([0.130, 0.130], [0.66, FFY], color=FF_C, lw=1.5, zorder=2,
                     visible=False)[0],
-            ax.plot([0.130, 0.255], [FFY, FFY], color=FF_C, lw=1.5, zorder=2,
+            ax.plot([0.130, 0.215], [FFY, FFY], color=FF_C, lw=1.5, zorder=2,
                     visible=False)[0],
             ax.plot([0.415, INJ], [FFY, FFY], color=FF_C, lw=1.5, zorder=2,
                     visible=False)[0],
@@ -241,10 +261,14 @@ class LoopDiagram:
     def draw(self, closed, phase, active=True, ff=False, tag=None, col=None,
              moving=None):
         col = col or (CL_C if closed else OL_C)
-        for a in self.ff + [self.ff_box, self.ff_lab, self.ff_plus]:
+        for a in self.ff + [self.ff_box, self.ff_lab, self.ff_plus,
+                            self.pv_r, self.pv_a, self.pv_txt]:
             a.set_visible(ff)
         if moving is not None:
             self.ref_lab.set_text("ref\nsine" if moving else "ref\n−5%")
+            # with the preview glyph occupying the top-left the plain "ref" label would
+            # collide with it, so it drops to the reference line itself
+            self.ref_lab.set_position((0.015, 0.63 if not ff else 0.545))
         for r in self.boxes.values():
             r.set_edgecolor(ACCENT if active else DEAD)
         self.sum_c.set_edgecolor(ACCENT if active else DEAD)
@@ -275,6 +299,9 @@ def main():
     ap.add_argument("--ffkey", default="0721", help="moving-reference bundle key")
     ap.add_argument("--hd", action="store_true")
     ap.add_argument("--fps", type=int, default=30)
+    ap.add_argument("--outro", action="store_true",
+                    help="append the closing cross-session statistics slide "
+                         "(off by default since 2026-08-19)")
     ap.add_argument("--probe", type=float, default=None,
                     help="render ONE frame at fraction [0..1] to a PNG and exit")
     ap.add_argument("--theme", default="bone", choices=sorted(THEMES),
@@ -429,21 +456,36 @@ def main():
     # ---- frame schedule: intro | OL act | CL act | moving target | verdict ---
     # HERO = true real time: one output frame per real frame of the window
     HERO = int(round(args.fps * (t.max() - t.min())))
-    INTRO, OUTRO, FAST, NHERO = 108, 200, 8, 3
+    # OUTRO (the closing cross-session statistics slide) is OFF by default as of
+    # 2026-08-19 (user): in the talk the speaker walks through those numbers on their
+    # own slide, so ending the video on a static stats panel just repeats them and
+    # steals the beat the sine section needs. Re-enable with --outro.
+    # INTRO 108 -> 34: the intro is now ONLY the title card (24 frames solid + a 10-frame
+    # fade). Everything that used to follow it was a setup walk-through (imaging, opsin,
+    # target band) narrated over a static loop diagram -- the user asked for the title card
+    # to hand straight over to the OPEN LOOP card, and the setup is spoken live anyway.
+    # NHERO 3 -> 5 and the montage subsampled to MONT_MAX per condition: more trials at true
+    # 1x, fewer flickering past, same total runtime (user, 2026-08-19).
+    INTRO, FAST, NHERO = 34, 8, 5
+    MONT_MAX = 16            # montage trials shown per condition (subsampled across the set)
+    OUTRO = 200 if args.outro else 0
     ol_idx = [i for i in range(Ntr) if LOOP[i] == "OL"]
     cl_idx = [i for i in range(Ntr) if LOOP[i] == "CL"]
 
-    def pick_heroes(idx, qs):
-        """trials spanning the RMSE distribution — representative, not cherry-picked"""
-        out = []
-        for q in qs:
-            target = np.quantile(rmse[idx], q)
-            cand = [i for i in idx if i not in out]
-            out.append(int(cand[int(np.argmin(np.abs(rmse[cand] - target)))]))
-        return out
+    def pick_heroes(idx, n):
+        """the n LOWEST-RMSE trials of this condition, best first.
 
-    heroes_ol = pick_heroes(ol_idx, [0.25, 0.50, 0.80])
-    heroes_cl = pick_heroes(cl_idx, [0.20, 0.50, 0.75])
+        Was a spread across the RMSE distribution (quantiles 0.25/0.50/0.80) on the
+        argument that it is representative rather than cherry-picked. Changed
+        2026-08-19 (user): the hero passes are the ones played in real time while the
+        speaker talks over them, so they have to be the clearest example of what each
+        mode does. The montage behind them still shows every remaining trial, so the
+        spread is still on screen -- it is just not what the slow pass is spent on.
+        """
+        return [int(i) for i in sorted(idx, key=lambda j: rmse[j])[:n]]
+
+    heroes_ol = pick_heroes(ol_idx, NHERO)
+    heroes_cl = pick_heroes(cl_idx, NHERO)
     hero_cl = heroes_cl[0]                      # best CL trial, used for the finale
     print(f"  real-time trials: OL {heroes_ol} | CL {heroes_cl}  ({HERO} frames each)")
 
@@ -453,6 +495,12 @@ def main():
 
     def add_act(name, heroes, rest):
         """hero (real time) → montage chunk → hero → chunk → hero → chunk"""
+        # Subsample the montage rather than speeding it up further: at FAST=8 a trial is
+        # already only ~0.27 s, and shaving that to buy hero time turns the montage into a
+        # flicker. Dropping evenly across the set keeps the spread readable.
+        if len(rest) > MONT_MAX:
+            keep = np.unique(np.linspace(0, len(rest) - 1, MONT_MAX).round().astype(int))
+            rest = [rest[i] for i in keep]
         chunks = np.array_split(np.array(rest), NHERO) if len(rest) else [np.array([])] * NHERO
         for hi, h in enumerate(heroes):
             for j, tau in enumerate(np.linspace(0, NWIN - 1, HERO).round().astype(int)):
@@ -468,15 +516,24 @@ def main():
     # chapter 2: one real-time trial per condition (the median-error one, so it
     # is representative), then a fast montage of that condition's other trials
     HERO_FF = int(round(args.fps * (F_t.max() - F_t.min())))
-    FAST_FF, FF_MONT = 4, 22
+    # More air on the moving-reference act (2026-08-19, user: "give more time to sine
+    # wave case on both those modes as i need to explain what they are"). The hero trial
+    # now plays FF_REPS times per condition and the montage is longer and slower. Both
+    # conditions get the extra time, and the hero passes stay TRUE REAL TIME -- the
+    # alternative, stretching one pass, would make the "REAL TIME" label a lie.
+    FF_REPS = 2
+    FAST_FF, FF_MONT = 5, 30
     ff_hero = {}
     for c in FF_SEQ:
         idx = ff_idx[c]
         e = np.nanmean((F_dF[idx][:, F_stim] - F_REF[idx][:, F_stim]) ** 2, axis=1)
-        ff_hero[c] = int(idx[int(np.argmin(np.abs(e - np.median(e))))])
-        for j, tau in enumerate(np.linspace(0, F_NWIN - 1, HERO_FF).round().astype(int)):
-            sched.append(dict(ph="ff", tr=ff_hero[c], tau=int(tau), hero=True,
-                              mode=int(c), j=j, nj=HERO_FF))
+        # BEST tracking trial, not the median one (user, 2026-08-19) -- same reasoning as
+        # pick_heroes above: this is the pass the audience actually watches in real time.
+        ff_hero[c] = int(idx[int(np.nanargmin(e))])
+        for _rep in range(FF_REPS):
+            for j, tau in enumerate(np.linspace(0, F_NWIN - 1, HERO_FF).round().astype(int)):
+                sched.append(dict(ph="ff", tr=ff_hero[c], tau=int(tau), hero=True,
+                                  mode=int(c), j=j, nj=HERO_FF))
         rest = [i for i in idx if i != ff_hero[c]]
         if rest:
             keep = np.unique(np.linspace(0, len(rest) - 1,
@@ -489,7 +546,9 @@ def main():
     for k in range(OUTRO):
         sched.append(dict(ph="outro", k=k))
     total = len(sched)
-    act_start = {p: next(i for i, s in enumerate(sched) if s["ph"] == p)
+    # `next(..., None)` rather than a bare next(): with OUTRO = 0 there is no outro
+    # phase in the schedule and the comprehension would raise StopIteration.
+    act_start = {p: next((i for i, s in enumerate(sched) if s["ph"] == p), None)
                  for p in ("intro", "ol", "cl", "ff", "outro")}
 
     # ---- figure / layout ----------------------------------------------------
@@ -504,9 +563,11 @@ def main():
     axLoop  = fig.add_subplot(gs[6:42, 25:52])       # control-loop schematic
     axDF    = fig.add_subplot(gs[54:80, 0:52])       # ΔF/F vs target band
     axU     = fig.add_subplot(gs[86:100, 0:52])      # laser command
-    axAvg   = fig.add_subplot(gs[4:50, 59:100])      # trial-averaged response
-    axVar   = fig.add_subplot(gs[58:100, 59:100])    # across-trial variance
-    for ax in (axBrain, axDF, axU, axAvg, axVar):
+    # The across-trial VARIANCE panel that used to sit at gs[58:100, 59:100] was removed
+    # 2026-08-19 (user: "remove the variability plot panel, its too much to look at").
+    # axAvg takes the whole right column instead.
+    axAvg   = fig.add_subplot(gs[6:92, 59:100])      # trial-averaged response
+    for ax in (axBrain, axDF, axU, axAvg):
         style_ax(ax)
 
     # ---- title bar ----
@@ -586,6 +647,7 @@ def main():
     axAvg.set_title("", color=TXT, fontsize=9.5, fontweight="bold", loc="left", pad=5)
     axAvg.set_xlim(t.min(), t.max()); axAvg.set_ylim(-11, 5)
     axAvg.set_ylabel("%ΔF/F", color=MUTE, fontsize=8.5)
+    axAvg.set_xlabel("time from stimulation onset (s)", color=MUTE, fontsize=8.5)
     const_art += [
         axAvg.axvspan(0, DUR, color=STIMF, alpha=0.45, lw=0),
         axAvg.axhspan(REF - BANDW, REF + BANDW, color=BAND, alpha=0.7, lw=0, zorder=1),
@@ -596,20 +658,6 @@ def main():
     avg_leg = axAvg.legend(loc="lower right", fontsize=9, frameon=True,
                            facecolor="#ffffff", edgecolor=EDGE, labelcolor=TXT)
     avg_leg.set_visible(False)
-
-    # ---- across-trial variance ----
-    axVar.set_title("", color=TXT, fontsize=9.5, fontweight="bold", loc="left", pad=5)
-    axVar.set_xlim(t.min(), t.max())
-    vmax = 1.2 * max(np.var(Y[ol_m], axis=0).max(), np.var(Y[cl_m], axis=0).max())
-    axVar.set_ylim(0, vmax)
-    axVar.set_xlabel("time from stimulation onset (s)", color=MUTE, fontsize=8.5)
-    axVar.set_ylabel("variance across trials  (%ΔF/F)²", color=MUTE, fontsize=8.5)
-    const_art += [axVar.axvspan(0, DUR, color=STIMF, alpha=0.45, lw=0)]
-    ol_var, = axVar.plot([], [], color=OL_C, lw=3.0, zorder=7, label="open loop")
-    cl_var, = axVar.plot([], [], color=CL_C, lw=3.0, zorder=8, label="closed loop")
-    var_leg = axVar.legend(loc="upper right", fontsize=9, frameon=True,
-                           facecolor="#ffffff", edgecolor=EDGE, labelcolor=TXT)
-    var_leg.set_visible(False)
 
     # running evidence counter (appears once closed-loop trials accumulate)
     score = fig.text(0.976, 0.895, "", color=CL_C, fontsize=11, fontweight="bold",
@@ -626,16 +674,13 @@ def main():
                axDF.axhline(0, color="#b4bccb", ls=":", lw=1.0),
                axAvg.axvspan(0, F_DUR, color=STIMF, alpha=0.45, lw=0),
                axAvg.axhline(0, color="#b4bccb", ls=":", lw=1.0),
-               axU.axvspan(0, F_DUR, color=STIMF, alpha=0.55, lw=0),
-               axVar.axvspan(0, F_DUR, color=STIMF, alpha=0.45, lw=0)):
+               axU.axvspan(0, F_DUR, color=STIMF, alpha=0.55, lw=0)):
         _a.set_visible(False); ff_art.append(_a)
     ff_avg_ref, = axAvg.plot([], [], color=REFC, ls="--", lw=1.8, zorder=7,
                              label="sine reference", visible=False)
     ff_avg = {c: axAvg.plot([], [], color=FF_COL[c], lw=3.2, zorder=8,
                             label=FF_NAME[c], visible=False)[0] for c in FF_SEQ}
-    ff_var = {c: axVar.plot([], [], color=FF_COL[c], lw=2.6, zorder=7,
-                            label=FF_NAME[c], visible=False)[0] for c in FF_SEQ}
-    ff_art += [ff_avg_ref] + list(ff_avg.values()) + list(ff_var.values())
+    ff_art += [ff_avg_ref] + list(ff_avg.values())
     ff_seen_done = []
     ff_state = {"in": False}
 
@@ -646,19 +691,26 @@ def main():
         ff_state["in"] = True
         for a in const_art:
             a.set_visible(False)
-        for a in (ol_mean, cl_mean, ol_var, cl_var):
+        # df_line / df_head are the CHAPTER-1 live trace. They are not in const_art, so
+        # without this they survive the switch and leave a stale blue (closed-loop
+        # coloured) curve sitting under the sine trace (user, 2026-08-19).
+        for a in (ol_mean, cl_mean, df_line, df_head):
             a.set_visible(False)
-        avg_leg.set_visible(False); var_leg.set_visible(False)
+        avg_leg.set_visible(False)
         for a in ff_art:
             a.set_visible(True)
-        for ax in (axDF, axU, axAvg, axVar):
+        for ax in (axDF, axU, axAvg):
             ax.set_xlim(F_t.min(), F_t.max())
+        # Live trace clipped to a fixed +/-10 %dF/F (user, 2026-08-19). The percentile
+        # rule it replaces rescaled the axis to whatever the sine block happened to reach,
+        # so the same excursion looked different between the two chapters; a fixed window
+        # also keeps the reference sine at a constant on-screen amplitude.
+        axDF.set_ylim(-10, 10)
+        axDF.set_yticks([-10, -5, 0, 5, 10])   # keeps the tick labels off the y-axis title
         lo = float(np.nanpercentile(F_bs, 0.5)); hi = float(np.nanpercentile(F_bs, 99.5))
         pad = 0.18 * (hi - lo)
-        axDF.set_ylim(lo - pad, hi + pad); axAvg.set_ylim(lo - pad, hi + pad)
+        axAvg.set_ylim(lo - pad, hi + pad)
         axU.set_ylim(0, float(np.nanpercentile(F_INP, 99.5)) * 1.15 + 1e-6)
-        axVar.set_ylim(0, 1.15 * max(float(np.nanmax(np.nanvar(F_dF[ff_idx[c]], axis=0)))
-                                     for c in FF_SEQ))
         anat_im.set_data(F_anat)
         axim.set_data(F_act_rgba(ff_hero[FF_SEQ[0]], 0))
         roi_sq.set_data([F_roi[0]], [F_roi[1]])
@@ -674,9 +726,6 @@ def main():
         axAvg.legend(handles=[ff_avg_ref] + [ff_avg[c] for c in FF_SEQ],
                      loc="lower right", fontsize=8.5, frameon=True,
                      facecolor="#ffffff", edgecolor=EDGE, labelcolor=TXT)
-        axVar.legend(handles=[ff_var[c] for c in FF_SEQ], loc="upper right",
-                     fontsize=8.5, frameon=True, facecolor="#ffffff",
-                     edgecolor=EDGE, labelcolor=TXT)
 
     # ======================= closing SLIDE: the paper figure ==================
     # The verdict is a standalone, paper-styled slide over the whole dataset —
@@ -876,6 +925,12 @@ def main():
         [(0.00, "A third trial. Same command, another outcome."),
          (0.35, "The error simply persists for the full three seconds."),
          (0.65, "This scatter across trials is what feedback should remove.")],
+        [(0.00, "A fourth. The command is still identical."),
+         (0.35, "Where it lands is set entirely by the state it started in."),
+         (0.65, "That dependence is the thing we are trying to break.")],
+        [(0.00, "One more, to make the point stick."),
+         (0.35, "Open loop can be accurate on average and wrong on every single trial."),
+         (0.65, "Averaging hides it; the individual trials do not.")],
     ]
     CL_HERO_BEATS = [
         [(0.00, "CLOSED LOOP, in real time: the measured ΔF/F is fed back and compared to the target."),
@@ -887,6 +942,12 @@ def main():
         [(0.00, "A third trial — and it lands in the same place as the last two."),
          (0.35, "The command differs, because the disturbance differed."),
          (0.65, "Same outcome from different starting points: that is disturbance rejection.")],
+        [(0.00, "A fourth trial, again from its own starting state."),
+         (0.35, "The correction is bespoke; the outcome is not."),
+         (0.65, "That is the trade feedback makes: a variable command for a repeatable result.")],
+        [(0.00, "One last real-time trial."),
+         (0.35, "Nothing here was tuned per trial — the same gains ran on all of them."),
+         (0.65, "The scatter that open loop could not remove is simply gone.")],
     ]
 
     FF_BEATS = {
@@ -895,9 +956,9 @@ def main():
             (0.50, "It has roughly the right shape, but nothing corrects its phase or size."),
             (0.76, "So the response slides away from the reference and stays there.")],
         0: [(0.00, "CLOSED LOOP WITH PREVIEW: this reference is known ahead of time."),
-            (0.22, "A feedforward branch sends it straight to the laser — the green path."),
-            (0.50, "Feedback then cleans up whatever that feedforward command got wrong."),
-            (0.76, "Acting before the error appears is what buys back the 47 ms lag.")],
+            (0.22, "So the green path feeds it forward SHIFTED — the target 143 ms from now."),
+            (0.50, "Feedback then cleans up whatever that preview command got wrong."),
+            (0.76, "Aiming where the target will be is what cancels the plant's lag.")],
     }
     FF_MONT_TXT = {
         2: "Every open-loop trial replays the same command — and tracks the sine differently.",
@@ -919,8 +980,8 @@ def main():
         seen = list(dict.fromkeys(x["tr"] for x in shown))
 
         # ---------- act cards ----------
-        if ph == "intro" and s["k"] < 40:
-            a = 1.0 if s["k"] < 28 else 1.0 - (s["k"] - 28) / 12
+        if ph == "intro":
+            a = 1.0 if s["k"] < 24 else max(0.0, 1.0 - (s["k"] - 24) / 10)
             show_card("Targeted closed-loop optogenetic\ncontrol of cortical dynamics", "", a)
         elif ph in ("ol", "cl") and fnum - act_start[ph] < 26:
             k = fnum - act_start[ph]
@@ -942,8 +1003,8 @@ def main():
         # ---------- act label + narration ----------
         if ph == "intro":
             frac = s["k"] / max(INTRO - 1, 1)
-            act_label.set_text("THE SETUP"); act_label.set_color(MUTE)
-            narr.set_text(beat(INTRO_BEATS, frac)); narr.set_color(TXT)
+            act_label.set_text(""); act_label.set_color(MUTE)
+            narr.set_text(""); narr.set_color(TXT)
             loop.draw(closed=True, phase=frac * 2.0, active=frac > 0.5)
             axim.set_data(act_rgba(heroes_ol[0], int(frac * PRE)))
             laser_pip.set_text("")
@@ -953,7 +1014,7 @@ def main():
         if ph == "outro":
             # hand over completely to the paper-style summary slide: every
             # single-trial element is hidden, nothing returns to the template
-            for _ax in (axBrain, axCB, axLoop, axDF, axU, axAvg, axVar):
+            for _ax in (axBrain, axCB, axLoop, axDF, axU, axAvg):
                 _ax.set_visible(False)
             for _tx in (narr, narr_tag, score, act_label):
                 _tx.set_visible(False)
@@ -1003,12 +1064,8 @@ def main():
                 sel = [i for i in seenf if F_ffc[i] == cc]
                 if sel:
                     ff_avg[cc].set_data(F_t, smooth(np.nanmean(F_bs[sel], 0), 7))
-                if len(sel) >= 2:
-                    ff_var[cc].set_data(F_t, smooth(np.nanvar(F_dF[sel], axis=0), 7))
             axAvg.set_title("TRACKING A MOVING TARGET  —  trial average by condition",
                             color=TXT, fontsize=9.5, fontweight="bold", loc="left", pad=5)
-            axVar.set_title("TRIAL-TO-TRIAL VARIABILITY  —  by condition", color=TXT,
-                            fontsize=9.5, fontweight="bold", loc="left", pad=5)
 
             if s.get("hero"):
                 narr.set_text(beat(FF_BEATS[c], s["j"] / max(s["nj"] - 1, 1)))
@@ -1016,14 +1073,12 @@ def main():
             else:
                 narr.set_text(FF_MONT_TXT[c]); narr.set_color(MUTE)
 
-            have = {cc: [i for i in seenf if F_ffc[i] == cc] for cc in FF_SEQ}
-            if all(len(have[cc]) >= 3 for cc in FF_SEQ):
-                e_ol, e_ff = ff_mse(have[2]), ff_mse(have[0])
-                score.set_text(f"tracking MSE   open loop {e_ol:.1f}   ·   "
-                               f"+preview {e_ff:.1f}   ({100 * (1 - e_ff / e_ol):.0f}% lower)")
-                score.set_color(FF_C)
-            else:
-                score.set_text("")
+            # No running statistic on the moving-target act (user, 2026-08-19: the mode
+            # should just say which mode it is). The tracking-MSE counter that used to
+            # live here invited the audience to read numbers off a video while the
+            # speaker is still explaining what the two modes are; the quantitative
+            # comparison belongs on the Fig-5 slide, not on top of the animation.
+            score.set_text("")
             return
 
         # ---------- trial playback ----------
@@ -1082,23 +1137,14 @@ def main():
             ol_mean.set_data(t, smooth(np.mean(Y[so], 0), 7))
         if sc:
             cl_mean.set_data(t, smooth(np.mean(Y[sc], 0), 7))
-        if len(so) >= 2:
-            ol_var.set_data(t, smooth(np.var(Y[so], axis=0), 7))
-        if len(sc) >= 2:
-            cl_var.set_data(t, smooth(np.var(Y[sc], axis=0), 7))
-        avg_leg.set_visible(bool(sc)); var_leg.set_visible(len(sc) >= 2)
+        avg_leg.set_visible(bool(sc))
 
         if sc:
             axAvg.set_title("TRIAL AVERAGE  —  closed loop sits on target, "
                             "open loop falls short", color=TXT, fontsize=9.5,
                             fontweight="bold", loc="left", pad=5)
-            axVar.set_title("TRIAL-TO-TRIAL VARIABILITY  —  feedback rejects the "
-                            "disturbance", color=TXT, fontsize=9.5,
-                            fontweight="bold", loc="left", pad=5)
         else:
             axAvg.set_title("TRIAL AVERAGE  —  where does the response actually land?",
-                            color=TXT, fontsize=9.5, fontweight="bold", loc="left", pad=5)
-            axVar.set_title("TRIAL-TO-TRIAL VARIABILITY  —  how repeatable is it?",
                             color=TXT, fontsize=9.5, fontweight="bold", loc="left", pad=5)
 
         # running evidence counter, once there is enough closed-loop data

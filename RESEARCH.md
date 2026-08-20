@@ -16,6 +16,361 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-20 — CV R² panel split into `talk/plot_cv_r2.m`; paired drop = 0.05
+**Changed/Found:** Panel-2 drawing moved out of `talk/make_lti_cv_fig.m` into a new function `talk/plot_cv_r2.m`, which takes the fold stats (or loads `talk/tf_cv_stats.mat` with no arguments) — so the panel can now be restyled in seconds instead of re-running `imp_tf_run` behind a ~20 min cold load. Also fixed the off-scale annotations, which overprinted each other at a single y (both clipped folds wrote to the same spot); they are now stacked and read `−6.7 → −7.9` and `−2.7 → −2.7`. Dead `local_bad` helper removed. Final numbers: 21 folds, 4 sessions, median R² 0.777 in-sample → 0.667 held out, **median paired drop 0.050**; 4/21 folds held-out < 0, of which **3 also fail in-sample**.
+**Why:** The paired drop of 0.05 is the number that answers "does the plant model generalise" — the 0.78→0.67 median gap is mostly composition, not generalisation loss, because the folds dragging the held-out median down are amplitudes the fit never captured in the first place. The `−2.7 → −2.7` flat line is the visual proof and is why the off-scale labels had to be legible rather than merely present.
+**Next:** none.
+
+### 2026-08-20 — LTI cross-validation figure: leave-one-amplitude-out prediction, 21 folds / 4 sessions
+**Changed/Found:** New `talk/make_lti_cv_fig.m`; `utils/imp_tf_fit_session.m` now stores the LOAO held-out prediction (`T.loao_pred`, `T.loao_meas`) alongside the existing `R2_loao`, which previously kept only the scalar. Two panel types exported to `talk/`: `tf_cv_traces_<session>.pdf` (measured solid vs held-out prediction dashed, one pair per amplitude) and `tf_cv_r2.pdf` (in-sample vs held-out R², every fold). Results — in-sample median 0.777 → held-out median 0.667 over 21 folds; per session, AL_0033 2025-01-29 e1 spans −2.75…+0.97 (9 folds), AL_0048 2026-07-15 e1 +0.67…+0.87 (3), AL_0041 e1 +0.18…+0.88 (3), AL_0041 e2 −7.90…+0.73 (6).
+**Why:** The 2C-i shape panel the talk uses is an IN-SAMPLE fit — the model saw every amplitude it is drawn against — so it cannot support "the plant model generalises". The user asked to confirm the normalised LTI panel was cross-validated; it is not, and rather than mislabel it, this builds the panel that actually is. The LOAO folds already existed in the fitter; only the held-out trace was being discarded.
+**Next:** Decide whether the talk's shape panel should be redrawn from the LOAO models instead of the in-sample `S{k}.h`.
+
+### 2026-08-20 — CV R² panel rescaled; the negative folds are fit failures, not overfitting
+**Changed/Found:** `talk/make_lti_cv_fig.m` panel 2 rewritten — y clipped to [−1.2, 1] with off-scale folds drawn at the floor and labelled with their true in-sample/held-out values, plus the paired drop (median `R²_in − R²_out`) added to the title and a `talk/tf_cv_stats.mat` dump of every fold's stats. **Finding:** on the worst folds the in-sample R² is essentially as negative as the held-out one (AL_0033's weakest amplitude: −2.75 in-sample, −2.75 held out — the connecting line is flat), so those amplitudes are ones the model fits badly whether or not they were held out. In AL_0041 e2 the −7.90 fold's *measured* trace has no inhibitory dip at all — it rises monotonically to +2.4 %ΔF/F — so the model is being scored against a response that is not an impulse response.
+**Why:** The first render let a −7.9 and a −6.7 fold set the ylim, squeezing the other 17 folds into a ~5%-tall band and hiding the in-sample-vs-held-out comparison the panel exists to show. Clipping with labelled off-scale folds relocates them rather than hiding them. The paired drop is the statistic that answers "does it generalise"; comparing the two medians conflates generalisation loss with amplitudes the fit never captured.
+**Next:** Check AL_0041 e2's positive-going amplitude before quoting the −7.90 anywhere — it looks like a bad amplitude (wrong stim detection or too few trials), not a model failure, and if so it should be excluded from the fold set rather than explained away.
+
+### 2026-08-20 — `pooled_new_mice.m`: PNM_DROPNEW knob; 13-session 3K without the highlighted pair
+**Changed/Found:** `controller-analysis/pooled_new_mice.m` — added `PNM_DROPNEW` (drops the two 2026-07-29 sessions AL_0048/AL_0051 outright instead of drawing them highlighted in black), plus `PNM_OUTNAME` / `PNM_OUTDIR`. Default output basename is now `pooled_ol_cl_rmse_%dsess` computed from the surviving session count, so a dropped-session export cannot be confused on disk with the paper's 15-session panel. Exported `talk/_stage/images/figure3/pooled_ol_cl_rmse_13sess_nohl.pdf/.png`: 13 sessions, OL med-of-med 2.50 → CL 2.02, CL lower in 13/13, signrank p = 2.4e-4 (15-session version was p = 6.1e-5 with the same direction).
+**Why:** Asked for on 2026-08-19 for the talk. Note a bookkeeping failure worth recording: the knobs were reported as added that day but the heredoc-based patch had silently failed its `assert`, so nothing reached disk — the edit only landed today. Cause: `bash` heredocs in this environment collapse `\\` to `\` inside the script body, which corrupts both Windows paths and MATLAB `fprintf` format strings; patch scripts are now written with the Write tool instead.
+**Why (scientific):** The black highlight advertises "these two are special" and pulls a talk audience into a side question about the new mice, when the claim on that slide is the pooled one. The paper panel keeps all 15 — this is a separate staged export, never the same file.
+**Next:** Decide whether the talk uses 13 or 15; if 15, delete the staged copy so only one version of the panel exists.
+
+### 2026-08-20 — Face-camera motion clips for the talk (`talk/make_motion_clip.py`)
+**Changed/Found:** New `talk/make_motion_clip.py` cuts face.mp4 (AL_0048 2026-07-15 exp 1, server) at windows chosen from the facemap motion trace and renders video + synchronised z-scored trace with the motThresh = 1.5 line. Exports `talk/motion_high_t1886.mp4` (6 s, mean z +6.17, peak +19.13) and `talk/motion_quiet_t9822.mp4` (mean z −0.33). Gotcha recorded in the header: this face camera is **30 fps with one motion sample per frame**, so frame index == motion index — `load_experiments`' `motion_1(1:2:end)` decimation must NOT be applied here (those rigs run the face camera at 2× the blue-frame rate); applying it would desync video from trace by 2×.
+**Why:** The talk asserts high motion is a brain state that changes closed-loop performance, but the audience has never been shown what the motion regressor is. Window picked as the strongest *sustained* 6 s bout (mean-z over a 6 s boxcar), not the peak spike, and restricted to t > 8 min because minute 4 (z = 4.38) is the mouse being mounted, not spontaneous movement.
+**Next:** If the talk wants the clip on a controller session instead of AL_0048, re-point `VIDEO`/`PROC` — the picker is session-agnostic.
+
+### 2026-08-20 — Combined talk video pass 2: title card straight into OPEN LOOP, more real-time trials
+**Changed/Found:** `presentation/make_video_combined.py` — `INTRO` 108 → 34 (title card only: 24 solid frames + a 10-frame fade; the setup walk-through beats and `THE SETUP` act label are gone, `INTRO_BEATS` left in place but no longer drawn), `NHERO` 3 → 5 per condition, new `MONT_MAX = 16` subsampling the fast montage evenly across the remaining trials, and 4th/5th narration sets added to both `OL_HERO_BEATS` and `CL_HERO_BEATS`. Total 3050 frames (101.7 s at 30 fps) vs ~3020 before, so runtime is held.
+**Why:** User asked for the title card to hand straight over to the open-loop card and for more real-time trials than fast ones at unchanged total length. Real-time share rises from 6 to 10 hero trials (900 → 1500 frames) and the montage falls from every remaining trial to 16 per condition; the montage is subsampled rather than sped up further because at FAST = 8 a trial is already ~0.27 s and shaving it turns the montage into a flicker.
+**Next:** Watch the OL→CL montage chunking — 16 trials split across 5 hero passes is ~3 trials (~0.8 s) between real-time passes; if that reads as too abrupt, drop `NHERO` to 4 and raise `MONT_MAX` rather than lengthening the video.
+
+### 2026-08-19 - State panels re-expressed as PREDICTION ERROR in %dF/F
+**Changed/Found:** `imp_state_trialvar.m` now also computes `R(k).sdRaw` - the SD of the RAW
+deviation from the amplitude mean, pooled WITHIN each (session x amplitude) cell - and
+`imp_state_trialvar_fig.m` gained `STVF_UNITS` ('sd' default = published 2J/2K axis, 'raw' =
+%dF/F). `talk/make_state_panels.m` runs 'raw'. The bootstrap CI is carried over by the per-bin
+conversion factor. Numbers (Q1->Q4, %dF/F):
+  motion, all trials      2.78 -> 3.18 -> 3.08 -> **2.08**
+  pre-trial var, mot-excl 1.11 -> 2.06 -> 3.21 -> **4.09**
+**Why:** user, 2026-08-19: "sd of dev is not a great explainer ... use prediction error in its
+correct units". The published y is the deviation scaled by the within-amplitude SD, so it is
+~1 by construction and unitless - it can say wider/narrower but never HOW wide, which is the
+whole point of the slide.
+**Next:** pooling within (session x amplitude) cells is load-bearing, not cosmetic - a plain SD
+over the bin would inherit the between-amplitude spread of response SIZE, so a bin holding more
+high-amplitude trials would read as more uncertain purely because its responses are bigger.
+That is the same reason the DV was scaled per amplitude originally; this keeps the protection
+and the units. The panels now state the claim directly: prediction error falls to **2.1 %dF/F**
+in the top motion quartile and climbs to **4.1 %dF/F** in the top pre-stim-variance quartile -
+a ~3.7x span across variance quartiles. Caveat unchanged: pre-trial variance is the 2026-07-02
+signal-power confound, and here the confound is MORE visible, not less, because larger ongoing
+signal mechanically inflates a residual measured in absolute units. Present it as the confound.
+
+
+### 2026-08-19 - The normalised-LTI panel is NOT cross-validated; footer now states what it is
+**Changed/Found:** `utils/imp_tf_paper_fig.m` gained `opts.cvtag` (wired to RUN_TALK in
+`imp_tf_run.m`). The dashed curve in 2C-i is `S{k}.h` - the unit response of a model fitted on
+ALL amplitudes of that session, i.e. **in-sample**. The cross-validated quantity in the same
+struct is `R2_loao` (refit without one amplitude, predict it), which is a different number and
+is not what the panel draws. So instead of labelling the curve "cross-validated" as asked, the
+footer states both: `fit: in-sample | leave-one-amplitude-out R^2 = 0.67 (median, 21 folds)`.
+**Why:** user asked me to "confirm its cross validated and then put a label on the plot that it
+is". It is not, and a CV label on an in-sample curve is exactly the claim a referee checks first.
+**Next:** the per-session LOAO column in the TFRUN summary is 0.53 / **-1.22** / 0.39 / 0.79 -
+AL_0041 12/02 e2 generalises WORSE THAN ITS OWN MEAN across amplitudes. The 0.67 median over 21
+per-amplitude folds hides that. If the talk claims the plant transfers across drive levels, that
+session is the counter-example and should be named. Redrawing the dashed curve from the LOAO
+models (a genuinely held-out shape panel) is the honest upgrade if the claim needs to be strong.
+
+### 2026-08-19 - Inhibition energy: real y axis with units, per-MOUSE labels
+**Changed/Found:** `impulse-analysis/dose_response.m` gained `DR_YAXIS` (default false) and
+`DR_LABEL='mouse'`; `talk/redraw_plant_panels.m` + new `talk/redraw_dose_only.m` drive them.
+Labels number the UNIQUE animals, not the sessions: the impulse set is AL_0041 e1, AL_0041 e2,
+AL_0033, AL_0048 - four sessions from **three** mice - so the two AL_0041 sessions come out as
+Mouse 1a / Mouse 1b. Y label carries the units: "Inhibition energy (% dF/F, 0-200 ms)".
+**Why:** user, 2026-08-19: "put axis on y and put units and put labels mouse 1,2,3".
+**Next:** first attempt set the ticks BEFORE `paperAxes` and they vanished - paperAxes is
+cleanAxes + shortCornerAxes_plot and both strip the real axes, so the y axis must be rebuilt
+AFTER the call. Noted in the code; watch for the same trap in any other corner-axes panel.
+
+### 2026-08-19 - Amplitude-map GIF: blue-red colormap unified with the other GIFs; harder mask erosion
+**Changed/Found:** `presentation/make_ampmap_gif.py` default cmap `jet` -> **RdBu_r** with a new
+`--sym` (default on) that scales the colour axis symmetrically about zero. Regenerated with
+`--mask-open 5 --mask-erode 6` (7.6% of mask px removed, up from ~2%).
+**Why:** user asked to unify the GIF colormaps to blue-red. It also fixes a readability
+inversion: under `jet` + `Normalize(min, 0)` the NO-EFFECT background rendered dark red and the
+deepest inhibition rendered green - the loudest colour marked where nothing happened. With
+RdBu_r about zero, white = no effect, blue = inhibition, and the faint CONTRALATERAL INCREASE
+becomes visible in red for the first time (the old map had no colour left to show it).
+**Next:** the straight top-left/top-right edges are the imaging-window boundary in `brainMask`,
+not mask error - erosion cannot remove them without inventing an outline. `make_brain_gif.py`
+already used RdBu_r/+-clim, so the two now agree; `PANEL_system_architecture.gif` is a diagram
+and has no data colormap.
+
+### 2026-08-19 - Fig-3 recoloured + new 4-window OL/CL variance ratio
+**Changed/Found:** `talk/redraw_fig3_colors.m` (new) re-exports 3F/3G/3H on the current palette
+(CL green -> blue, stale since 2026-07-23) and adds `variance_ratio_4windows.pdf`: the OL/CL
+VARIANCE ratio on the SAME four windows the RMSE ratio panel uses. Loads only `data` from each
+cache, one session at a time, so it sidesteps the ~40 GB full load. 13 sessions.
+Ratios: Pre 0.95 (p=0.34) | 0-1 s 1.66 (p=0.0012) | 1-3 s 1.96 (p=0.00024) | Post 0.98 (p=0.64).
+**Why:** user is putting the RMSE-by-window and variance comparisons side by side on a slide;
+3I splits variance pre/stim/post while 3J splits RMSE pre/0-1/1-3/post, so the two panels
+invited the reader to match windows that do not match.
+**Next:** 3I is deliberately left alone (it is the published panel). The new one is additive -
+decide which of the two goes in the paper before the next Overleaf sync.
+
+
+### 2026-08-19 - Fig-2 state panels without the stim-free control; STV_MOTEXCL added
+**Changed/Found:** `impulse-analysis/imp_state_trialvar.m` gained **STV_MOTEXCL** (default false):
+drops trials with motion z > motThresh=1.5 from the pool before any marker statistic, so a
+surviving brain-state effect cannot be movement under another name. The motion-threshold split
+block is skipped when it is on (or whenever nothing is above threshold) - otherwise it divides by
+an empty group and prints NaN ratios that read like results. `talk/make_state_panels.m` rewritten
+as two passes with `STV_PLOTCTRL=false`: motion on ALL trials, then rel-delta + pre-trial variance
+motion-excluded. PNGs -> talk/figure2/S1..S3.
+**Why:** user, 2026-08-19 - "i dont need no stim controls, just state vs prediction error plot for
+motion, then motion removed: rel delta, pre-trial var".
+**Next:** motion exclusion costs 58/1767 trials (3.3%) and **barely moves the brain-state numbers**:
+rel-delta Q4/Q1 1.19 [1.04-1.38] vs 1.19 [1.04-1.37] with all trials, strat rho +0.092 vs +0.089,
+3/4 sessions; pre-trial variance 3.22 [2.82-3.62] vs 3.21 [2.89-3.63]. Useful as a robustness
+statement - these states are not movement in disguise - but it is not a new result. Pre-trial
+variance remains the 2026-07-02 signal-power CONFOUND (the script still prints "CONFOUND - not
+interpreted" beside it); it is drawn because it was asked for, not because it is admissible.
+Note the DV keeps its within-(session x amplitude) scaling from the FULL trial set by design, so
+the excluded-trial panels share a y-axis with the full ones.
+
+
+### 2026-08-19 - Combined video: variability panel out, preview made visible in the schematic, heroes = best trials
+**Changed/Found:** `presentation/make_video_combined.py`, five edits:
+1. **Across-trial variance panel deleted** (`axVar` and every artist on it). `axAvg` now spans the
+   whole right column, gs[6:92, 59:100], and carries the x-label the variance panel used to.
+2. **No running statistic on the sine act.** The tracking-MSE counter is gone from the `ff`
+   branch; the mode text is just the mode. The chapter-1 counter is untouched.
+3. **The preview branch now shows what preview IS.** Box relabelled `preview / r(t + 143 ms)` and
+   widened to 0.200 so the label fits, and a glyph at the branch root draws the reference (dotted,
+   ref colour) against the same reference advanced 143 ms (solid green) with a `+143 ms` tag. The
+   "ref sine" label drops to y=0.545 when the glyph is up, or the two collide. Narration beats for
+   mode 0 rewritten from "a feedforward branch sends it straight to the laser" to the shift.
+4. **Hero (real-time) trials are now the BEST trials by RMSE**, chapter 1 and chapter 2 both:
+   `pick_heroes` returns the n lowest-RMSE trials instead of quantiles 0.25/0.50/0.80, and the
+   sine hero is `nanargmin(e)` instead of the median-error trial.
+5. **Live trace clipped to a fixed -10..+10 %dF/F** in the sine act (was percentile-scaled), with
+   ticks forced to [-10 -5 0 5 10] so the label stops crowding the axis title.
+**Why:** all five are user calls of 2026-08-19. The variance panel was "too much to look at"; the
+counter asked the audience to read numbers while the speaker was still explaining the modes; the
+schematic said "feedforward" without ever showing that the thing fed forward is a time-shifted
+reference; the slow passes are what people actually watch, so they should be the clearest example.
+**Next:** hero picks are now the best of each condition, so the OL hero is the best OL trial - if
+anyone reads the real-time passes as typical that is now wrong, and the montage behind them is
+what carries the spread. Say so out loud when presenting.
+
+
+### 2026-08-19 - BUG: state quartiles were binned GLOBALLY, not within session; motion panel now reproduces the published one exactly
+**Changed/Found:** new `talk/verify_motion_quartiles.m` (read-only audit) + fix in
+`talk/state_quartile_panels.m`. `motion_analysis.m` computes its quantile edges INSIDE the
+session loop - quartiles are WITHIN-SESSION and only the resulting bins are pooled.
+state_quartile_panels.m used one global edge set over all pooled trials. With within-session
+edges the motion panel now reproduces the published one to the decimal: OL 30.4 / 29.8 / 29.6 /
+32.1 and CL 24.5 / 24.9 / 24.6 / 21.3 on the old un-normalised scale (x sqrt(106)).
+Two further fixes in the same pass: (a) the per-session slope is now regressed on the
+WITHIN-SESSION PERCENTILE RANK of the state, not the raw state - a raw-unit slope is not
+comparable between sessions whose state ranges differ 5x, which is why the median slope used to
+contradict the panel it annotated; (b) both median and mean slope are printed, because the
+pooled quartile curve tracks the MEAN while the signed-rank test is about the MEDIAN.
+**Why:** user spotted that the Q1/Q2 profile did not match the previous analysis. It did not -
+global edges sorted trials largely by SESSION (motion medians span -0.29..-0.03, maxima
+0.99..4.78, so Q1 was fed by only 7 of 9 sessions) and manufactured a Q2 spike out of session
+difficulty. dur = 3 for all nine sessions and all three stored window widths cross-check, so the
+window and motion definition were never wrong - only the binning.
+**Next:** corrected numbers (RMSE, Q1->Q4, slope-per-rank med/mean, interaction p):
+  motion  OL +0.16 (2.95->3.12) CL -0.31 (2.38->2.07) | OL +0.905/+0.761 CL -0.030/-0.131 | **p=0.0039**
+  prevar  OL +0.84 (2.51->3.35) CL +0.77 (1.99->2.77) | OL +0.730/+1.03  CL +0.173/+0.622 | p=0.203
+  1-4 Hz  OL +0.13 (2.96->3.09) CL +0.24 (2.21->2.45) | OL -0.253/-0.265 CL +0.142/+0.253 | p=0.098
+  1-2 Hz  OL -0.42 (3.15->2.73) CL +0.10 (2.22->2.32) | OL -0.193/-0.316 CL +0.034/+0.037 | p=0.074
+  2-4 Hz  OL +0.23 (2.80->3.03) CL +0.21 (2.22->2.43) | OL -0.151/-0.126 CL +0.118/+0.298 | p=0.129
+**The earlier "2-4 Hz carries the whole delta effect" claim from this morning is WITHDRAWN** - it
+was an artifact of the global binning. On the corrected panels every delta variant is nearly flat
+and no delta interaction reaches significance. What survives: motion (CL flattens a +0.9
+dependence to -0.03, p=0.0039) and pre-stim variance (both loops rise together, CL offset below OL).
+
+
+### 2026-08-19 - Motion panel must NOT be drawn on motion-clean trials (circular); split the trial set per state
+**Changed/Found:** `talk/state_quartile_panels.m` - the motion cut is now carried as a MASK
+(`Ko`/`Kc`) rather than applied in the gather loop, and each state declares whether it uses it:
+motion -> ALL trials (`state_motion_quartile_allTrials.png`), brain states -> motion-clean.
+Filenames and x-labels carry the set, and the console prints it per line. Added 2-4 Hz to the
+exemplar figures. Motion on the full range: OL 2.47->3.05, CL 1.84->2.05, within-session slope
+OL +0.554 vs CL -0.010, interaction **p=0.0078**.
+**Why:** user, 2026-08-19 - "motion with motion clean trials makes no sense". Correct: binning
+motion inside a set the same 1.5 threshold already truncated makes Q4 "the most movement among
+quiet trials", not the high-motion tail. The clean-set motion panel from earlier today was
+deleted.
+**Next:** MATLAB gotcha worth remembering - a logical mask accumulated as `K=[]; K=[K; logical]`
+comes out DOUBLE, and a double 0/1 vector then fails as a subscript ("indices must be positive
+integers or logical"). Seed it `false(0,1)`.
+
+
+### 2026-08-19 - Delta split 1-2 vs 2-4 Hz: the 2-4 sub-band carries the whole delta effect
+**Changed/Found:** `talk/state_quartile_panels.m` extended - state list is now motion, pre-stim
+variance, relative 1-4, relative 1-2, relative 2-4 Hz (all ratios to P(0.4-10)), plus a Q1-vs-Q4
+EXEMPLAR figure (4 real trials per bin, OL row / CL row, deterministic pick spread across the
+bin's own state range) for motion and relative delta. Pooled Q1->Q4 trial RMSE, 9 sessions:
+  motion   OL 2.46->2.95  CL 1.83->2.01 | within-sess slope OL +0.648 CL +0.023 | **p=0.0039**
+  prevar   OL 2.42->3.81  CL 1.93->3.33 | OL +0.089 CL +0.038 | p=0.25
+  1-4 Hz   OL 2.83->3.45  CL 2.00->2.78 | OL -0.436 CL +0.328 | p=0.13
+  1-2 Hz   OL 3.19->2.75  CL 2.35->2.22 | OL -0.463 CL +0.074 | p=0.055
+  2-4 Hz   OL 2.76->3.48  CL 1.95->2.79 | OL -0.498 CL +0.141 | p=0.16
+**Why:** user asked for the delta band broken into the same 1-2 / 2-4 split figure 4 already uses
+(delta12/delta24), and for real traces behind the bin means.
+**Next:** two things fall out. (1) **Motion is the only state with a significant OL-vs-CL
+interaction inside the motion-clean set** (p=0.0039, OL slope +0.648 vs CL +0.023) - i.e. the
+"CL rejects motion" claim survives even after the high-motion tail is cut, which is a stronger
+version of it than the full-range panel. (2) **The 1-4 Hz effect lives entirely in 2-4 Hz**: the
+1-2 Hz panel is flat-to-falling in both loops, the 2-4 Hz panel reproduces the 1-4 Hz rise almost
+exactly. Consistent with figure 4's framing of 2-4 Hz as the hard-to-control sub-band. Caveat
+unchanged and now flagged automatically in the console: for 1-4 and 2-4 the pooled OL trend and
+the median within-session OL slope have OPPOSITE signs, so those two panels need a
+session-normalised redraw before they can be called a within-animal state effect. 1-2 Hz and
+pre-stim variance are self-consistent.
+
+
+### 2026-08-19 - State-quartile OL/CL panels (pre-stim variance, relative delta) on motion-clean trials
+**Changed/Found:** new `talk/state_quartile_panels.m` - the state twin of the motion-quartile
+panel. Motion cut first (|mean z-motion, onset-2 s .. trial end| <= 1.5 = motThresh), then trial
+RMSE pooled into quartiles of a PRE-onset state measured over [-2, 0) s: variance, and relative
+1-4 Hz power (P(1-4)/P(0.4-10), a ratio, so power-independent). Lean - loads only `data` from
+each cache, one session at a time. **Only 9 of the 13 sessions have a motion trace** (m1, m3, m7,
+m8 have none), so these panels are n=9, not n=13. Motion removes just 24/990 trials (2.4%).
+Numbers: prevar Q1->Q4 OL 2.42->3.81, CL 1.93->3.33, per-session slope OL +0.089 vs CL +0.038,
+interaction signrank p=0.25. Delta Q1->Q4 OL 2.83->3.45, CL 2.00->2.78, slope OL -0.436 vs
+CL +0.328, p=0.13.
+**Why:** user wants the motion panel's argument repeated with brain state on the x-axis, with
+motion excluded so it cannot be the driver.
+**Next:** **the delta panel's pooled curve disagrees with its own within-session slopes** - pooled
+OL rises Q1->Q4 while the median per-session OL slope is NEGATIVE, i.e. the rise is between-session
+difficulty leaking into a raw-trial pool (exactly the effect cl_factor_olcl_panels.m removed on
+2026-08-13 by subtracting each session's own level). Do not put the delta panel on a slide as a
+within-animal state effect until it is redrawn session-normalised. Pre-stim variance agrees in
+sign both ways and is safe; neither interaction is significant, so the honest claim is "CL sits
+below OL at every level of state", not "CL flattens the state dependence".
+
+
+### 2026-08-19 — Figure-5 panels exported as talk PNGs; make_panel_pngs.py takes a group argument
+**Changed/Found:** `talk/make_panel_pngs.py` — added a `FIG5` list (5B-5K plus the two pooled
+RMSE-with-clean variants) reading from `paper/images/figure5/`, and replaced the hard-coded
+three-group loop with `GROUPS` + `sys.argv` so one figure can be re-exported alone. 12 panels
+-> `talk/figure5/` at 600 dpi.
+**Why:** the deck needs the sine/preview performance panels as slide images, and re-running the
+whole 2/3/4 sweep to get them was wasteful. Session variant fixed to **2026-07-21**, the
+representative session the PAPER.md Fig-5 caption names (a 2026-07-14 set also exists on disk).
+**Next:** 5I/5J/5K are the pooled three-session claims — use those, not the single-session
+5G/5H violin/phase, for any statement about feedback or preview in the talk.
+
+### 2026-08-19 — Fig-3 F/G/H still drawn with the retired GREEN closed-loop colour
+**Changed/Found:** `controller-analysis/variance_mse.m` — replaced every hard-coded `[0 0.5 0]`
+green and `[1 0 0]`/`'r'`/`'g*'` red with `PS.col_ol`/`PS.col_cl` (panel F line, panel G violin
+mean stars, and the G2 windowed-MSE block). `controller-analysis/step_response.m` already used
+the PS constants.
+**Why:** `PS.col_cl` changed green -> blue on 2026-07-23, but 3F/3G/3H were last exported
+2026-07-16, so they are the only Fig-3 panels still showing CL in green (A-E, 2026-08-17, are
+already red/blue; I/J are greyscale). The hard-coded greens meant a plain re-run would only
+have fixed part of it.
+**Next:** re-export 3F/3G/3H — see the `talk/redraw_fig3_colors.m` entry.
+
+
+### 2026-08-19 — Individual paper panels exported to talk/figure{2,3,4}/
+**Changed/Found:** New `talk/make_panel_pngs.py` → 12 Fig-2, 11 Fig-3 and 21 Fig-4 panels as individual PNGs, 600 dpi from PDF where a PDF exists, white-margin cropped, filenames prefixed with the panel ID (`3K_pooled_ol_cl_rmse_15sess.png`). Panel lists come from PAPER.md's registry for Figs 2 and 3; Fig 4 has no registry table, so its panels are grouped by the three-block story (`b1_` trial-average state dependence, `b2_` error contribution + factor slopes, `b3_` disturbance rejection, `map_` the contra→ipsi coupling). Retired panels (2D step response, 2H pre-var heatmap) are deliberately excluded. The earlier flat `talk/FIG3_*.png` dump was removed.
+**Why:** User wanted the individual panels, not the assembled figures, and in per-figure subfolders.
+**Next:** ⚠ The assembled `Figure3.pdf` still carries pre-rename axis labels ("Trial MSE", "MSE dF/F") — the metric was renamed RMSE on 2026-07-16 and 3H is genuinely MAE. The individually exported panels inherit those labels wherever the panel PDF predates the rename; re-export from source before any of them carry a metric claim on a slide.
+
+### 2026-08-19 — Combined video: closing stats slide off, stale trace fixed, sine act lengthened
+**Changed/Found:** `presentation/make_video_combined.py` — three changes. (1) The closing cross-session statistics slide is OFF by default (`OUTRO = 200 if args.outro else 0`, new `--outro` flag); `act_start` now uses `next(..., None)` because with no outro phase the old bare `next()` raised StopIteration. (2) `enter_ff()` now also hides `df_line` / `df_head` — the chapter-1 live trace was never added to `const_art`, so a stale closed-loop-blue curve survived the switch and sat under the sine trace on the live panel. (3) The moving-reference act gets more time: the hero trial plays `FF_REPS = 2` times per condition and the montage grew (`FAST_FF` 4→5, `FF_MONT` 22→30). Schedule is now 3020 frames ≈ 101 s at 30 fps.
+**Why:** User: "in the combined video, i dont want that statistics panel at the end. and in the sine wave case there is a blue trace left over on the live trace panel, also give more time to sine wave case on both those modes as i need to explain what they are."
+**Next:** The extra sine time comes from REPEATING the real-time pass, not from slowing it — so the "REAL TIME" label stays honest. If more air is still needed, raise `FF_REPS` rather than stretching a single pass.
+
+### 2026-08-19 — Grid star now marks the auto-tune endpoint, not the grid minimum
+**Changed/Found:** `controller-tuning/gain_grid.m` — new `GG_MARKPT` / `GG_MARKLBL` knobs. When `GG_MARKPT` is set the panel skips its own minimum star and marks that point instead; label offset in DATA units (0.04 × x-span), since a 13 pt star is wider than any run of leading spaces. Regenerated AL_0033 2025-03-05 with the star at the auto-tune's converged gains **(0.0677, 0.0636)**, which land inside the swept basin (grid min is (0.05, 0.10), J = 16.1).
+**Why:** User: "remove the star from grid and place the one generated from path onto the grid location". The two methods are independent, so *where the online search lands relative to the exhaustive surface* is the actual claim — and two stars on one axis would muddle which is which. Drawn ON the point rather than offset because it is not a grid node, so nothing is hidden underneath.
+**Next:** none. `PANEL_tuning_AL0033.png` rebuilt (grid | path | cost, 600 dpi).
+
+### 2026-08-19 — load_grid caches to data/grid_tuning_cache.mat
+**Changed/Found:** After a `clear`, `gain_grid.m` can be re-run from `load('data/grid_tuning_cache.mat')` instead of paying the full server load again — the cache holds both `G` (grid) and `A` (auto-tune).
+**Why:** Re-running `load_grid.m` reads every session off the share; the cache turns a several-minute round trip into a second.
+**Next:** none.
+
+### 2026-08-19 — Star marker moved OFF the point it marks (new `utils/starOffset.m`)
+**Changed/Found:** New `utils/starOffset.m`; `controller-tuning/gain_grid.m` now calls it for both the 2-D surface minimum and the 1-D sweep minimum. The star is placed a fixed fraction of the axis span away with a hairline leader, and flips direction when the point sits near an edge.
+**Why:** User: "the star on that figure is hiding the color of the last point". On a cost surface the marked node IS the result, and an opaque white star on top of it hid the one datum the panel exists to report. Regenerated `AL_0033 2025-03-05` — the minimum at (0.05, 0.10) now shows its own dark-navy fill.
+**Next:** `auto_tune.m` still plots its cost star with a plain `'p'` marker at line ~69; swap it for `starOffset` when that figure is next touched.
+
+### 2026-08-19 — The published auto-tune path figure has no source in the repo
+**Changed/Found:** `autotune_convergence_*.pdf` (2026-06-29) draw a (Kp,Ki) trajectory and an axis labelled "tune iteration". Nothing in the repo — at HEAD or anywhere in git history (`git log -S "tune iteration" --all` is empty) — produces that figure; the committed `auto_tune.m` draws Kp/Ki against trial on a yyaxis pair plus a cost scatter, a different panel entirely. New `talk/redraw_autotune_AL0033.m` rebuilds it from source: accepted gains `Kdata.npy` + costs `Kval.npy` off the server, 9 accepted iterations, cost 16.6 → 12.3, best (0.0677, 0.0636).
+**Why:** The figure could not be changed at all without a generator. Also note the published version's grey "whiskers" were **rejected probes from input_params**, drawn unlabelled — `controller-tuning/CLAUDE.md` says figures must use accepted `Kdata`/`Kval`, so the redraw omits them.
+**Next:** Decide whether the talk wants rejected probes shown *as* rejected probes (honest, and it makes the panel read as a search). If so, add them as a labelled faint layer — do not resurrect the unlabelled whiskers.
+
+### 2026-08-19 — Trailing Kdata slots log cost 0, which is not a cost of zero
+**Changed/Found:** `Kdata.npy` for AL_0033 03-17 is 10×2 but only 9 rows were evaluated; row 10 carries `Kval = 0`. `redraw_autotune_AL0033.m` filters on `V > 0` before plotting.
+**Why:** Kept in, that row is the global minimum of the colour scale and the "best" point — the star would land on an iteration that never ran.
+**Next:** Check the same guard is applied wherever else Kval is read.
+
+### 2026-08-19 — Tuning panels narrowed to AL_0033 only
+**Changed/Found:** Deleted the AL_0034 tuning PNGs and the multi-mouse sheets from `talk/`; `PANEL_tuning_AL0033.png` is now the single sheet — grid, auto-tune path, cost curve, side by side at 600 dpi.
+**Why:** User: "lets keep AL33 grid and controller path". AL_0034 is a tuning-only mouse that appears nowhere else in the talk, so it cost a sentence of explanation for no gain.
+**Next:** none — the AL_0034 source PDFs remain in `paper/images/tuning/` if the methods figure still wants them.
+
+### 2026-08-19 — Controller-tuning contact sheets: every gain path beside its cost curve
+**Changed/Found:** New `talk/make_tuning_sheet.py` → `talk/PANEL_tuning_AL0033_0317.png`, `PANEL_tuning_AL0034_1025.png` (path | cost per session), `PANEL_tuning_grids.png` (both cost surfaces), `PANEL_tuning_overview.png` (all of it on one sheet), plus the individual halves. The published `autotune_convergence_*.pdf` stack path above cost; these re-lay them left-to-right and caption each panel, since the source PDFs are inconsistent about carrying their own session title.
+**Why:** User asked for all controller-tuning images as side-by-side PNGs of the cost curves and their paths. Left-to-right is the readable pairing on a slide — "where the search went" then "what that bought".
+**Next:** Only 2 of 4 grid sessions and 2 of 3 auto-tune sessions have publishable figures — see the entry below before anyone asks for "the rest".
+
+### 2026-08-19 — Which tuning sessions can and cannot be shown
+**Changed/Found:** Confirmed against `controller-tuning/CLAUDE.md` + PAPER.md while assembling the sheets. Grids: AL_0033 03-05 and AL_0034 10-17 are exported; AL_0033 01-10 / 03-03 and AL_0034 10-18 are `needs rewire`, and the two 7-column AL_0034 sessions have **no onset column and no input_amps.csv**, so onsets are unavailable and they sit at `status='hold'`. Auto-tune: only AL_0033 03-17 and AL_0034 10-25 e1 have a LIVE online cost; **AL_0033 12-19 had a dead online cost (random walk)** and **AL_0034 10-25 e2 stuck at (0,0)**.
+**Why:** "Give me all of them" needs an answer about what all is. These four are missing for concrete, documented reasons, not oversight.
+**Next:** The 7-col onset adapter (derive onsets from Timeline `lightCommand`/`galvo` @2 kHz mapped onto the 35 Hz states axis) is the one unblock that would add two more grid sessions.
+
+### 2026-08-19 — Splitting stacked figures by fixed fraction leaves a sliver
+**Changed/Found:** `talk/make_tuning_sheet.py` cuts stacked panels at the widest all-white row band in the middle third rather than at a hard-coded 0.5/0.52 fraction. The fraction left a strip of the upper axis on the lower crop — visible as a stray glyph floating above the cost curve.
+**Why:** Same trap will hit any future split of a multi-panel PDF; the gap-detection version is 15 lines and exact.
+**Next:** none.
+
+### 2026-08-19 — Impulse-trace legend moved clear of the traces (talk variant)
+**Changed/Found:** `impulse-analysis/trace_overlay.m` — in talk mode (`TO_FITWIN=false`) the amplitude legend is now pinned to the bottom-right corner of the axes in normalised units and shrunk to 0.75× the paper font. At `Location='southeast'` the 5-row key still landed on the rebound.
+**Why:** User: "the imp response plot needs the legend shifted farther to bottom right to not overlap the traces, maybe make the text smaller". Paper output unaffected — the tweak is inside the `~TO_FITWIN` branch.
+**Next:** none.
+
+### 2026-08-19 — New `talk/make_site_map.m`: the stim site and its effect
+**Changed/Found:** New script. Trial-averaged peri-stim map for AL_0033 2025-01-29 e1 at 4.9 V — `imp.resp_map{end} − imp.base_map{end}` (the locked 0–200 ms window) painted inside `brainMask`, drawn in the canonical TRANSPOSED view with the cached data-derived site [row 373, col 353] ringed. Depth at site −3.17 %ΔF/F. → `talk/PANEL_site_map.png` (400 dpi).
+**Why:** User asked for "a image of brain with stim site and its effect for this particular imp response dataset" — the talk shows the impulse traces without ever showing where on the cortex they come from.
+**Next:** none. Note the map shows focal inhibition at the site spreading across the whole ipsilateral hemisphere with the contralateral side near zero — consistent with the Global/Local framing later in the talk.
+
+### 2026-08-19 — brewermap is not installed; the silent fallback was flipud(jet)
+**Changed/Found:** `talk/make_site_map.m` builds its own blue–white–red diverging colormap instead of `try brewermap ... catch flipud(jet)`. The fallback painted the entire ipsilateral hemisphere saturated red and hid the focal spot.
+**Why:** A `try/catch` colormap fallback fails silently and produces a scientifically misleading picture rather than an error. Negative is now blue, so inhibition reads as suppression.
+**Next:** Any other script using the same `try brewermap` idiom will be hitting the same fallback — worth a grep before trusting a diverging map from this repo.
+
+### 2026-08-19 — System-architecture diagram animated as a signal-flow GIF
+**Changed/Found:** New `talk/make_arch_gif.py` → `talk/PANEL_system_architecture.gif` (1200 px, 90 frames, ~6 MB). Composites a moving comet along a hand-traced polyline over the published `mouse_sys.pdf` backdrop — main loop plus the Kr feedforward branch, offset by a third of a cycle. The figure itself is not redrawn. Also exported `PANEL_control_architecture`, `PANEL_system_architecture`, `PANEL_rig_schematic`, `PANEL_widefield_lightpath` as high-res PNGs.
+**Why:** User: "can we actually convert the system architecture image into a gif showing signal flow?" The static block diagram cannot show that the loop RUNS; a comet says it in one glance, and a GIF autoplays in PowerPoint with no animation setup.
+**Next:** Path coordinates are hard-coded against the 2000-px view of the current `mouse_sys.pdf` — if that figure is re-exported with a different layout, the polyline in `MAIN`/`FF` must be re-traced.
+
+### 2026-08-19 — Talk-only variants of the three plant panels, redrawn into talk/
+**Changed/Found:** `impulse-analysis/trace_overlay.m` (`TO_FITWIN`, `TO_OUTDIR`), `impulse-analysis/dose_response.m` (`DR_LABEL='none'`, `DR_OUTDIR`), `utils/imp_tf_paper_fig.m` (`opts.preshow`/`tmin_s`/`lgd_len`), `utils/imp_tf_fit_session.m` (stores `T.tPre` / `T.h_measPre`, new `opts.preShow_s=0.15`), `impulse-analysis/imp_tf_run.m` (`RUN_TALK`), `impulse-analysis/imp_tf_figs.m` (`FIG_TALK`, `FIG_OUTDIR`), new driver `talk/redraw_plant_panels.m`. Redrew all three into `talk/`: 2A without the model-fit window, 2B without the per-session direct labels, 2C-i with a 150 ms pre-onset lead-in, a red stim marker at t=0, and a 20 pt legend token so the dashed sample reads as a dash. The 2C-i legend also moves to the top-right in talk mode — at the longer token it ran straight through the dip in the southeast corner.
+**Why:** User, for the NeuroAI deck: no fit window on the impulse panel, no legend on the inhibition-energy panel, and on the normalised-response panel "the legend trace longer so that the dash is visible as a dash", plus a baseline before 0 and a stim marker. Every knob defaults to the paper behaviour, so `paper/images/figure2/` is untouched.
+**Next:** The talk PDFs sit in `talk/` alongside the paper copies in `figure2/` — if 2C-i's lead-in is wanted in the paper too, flip `RUN_TALK` there rather than duplicating the file.
+
+### 2026-08-19 — Controller slide: tuning figures into talk/, gain path added
+**Changed/Found:** Copied `grid_cost_surface_AL_0033_0305.pdf` and `autotune_convergence_AL_0033_0317.pdf` into `talk/`; the lean deck's controller slide now shows the gain grid beside the **2-D (Kp, Ki) auto-tune trajectory** (coloured by cost) instead of the cost staircase, with the path spelled out: (0,0) → (0.046, 0.018) → (0.068, 0.062), cost 16.6 → 12.3, landing in the grid's basin.
+**Why:** User: "for the controller slide i want the figures put into same folder and I want to see the data driven controller algorithm showing the progression of kp.ki gain on 2d plot too". The staircase showed that cost fell; the 2-D path shows *where the algorithm went*, which is the actual claim — and it lands in the same basin the exhaustive grid found.
+**Next:** none — the cost staircase stays available as `talk/img/t_tune_cost.png` if a backup slide wants it.
+
+### 2026-08-19 — Video embed was failing silently after the mp4s moved to talk/
+**Changed/Found:** `talk/build_deck_lean.py` — `movie()` now looks in `talk/` first and falls back to `presentation/`. The two mp4s had moved to `talk/`, so both embeds were failing and quietly degrading to poster images; the only visible symptom was the deck dropping from 84 MB to 3 MB.
+**Why:** A missing video degrades to a still with no error on the slide — a failure you would discover on stage. `build_deck.py` (verbose deck) still points at `presentation/` only and will need the same fix if that deck is used.
+**Next:** Apply the same fallback to `build_deck.py`, or retire it once the lean deck is chosen.
+
 ### 2026-08-19 — Dose-spread mask: brainMask has 31 components, only 1 is brain
 **Changed/Found:** `presentation/make_ampmap_gif.py` — added a subtractive mask cleanup (`--mask-open` 3, largest connected component, `--mask-erode` 2, disable with `--keep-blobs`). `load_experiments.m` builds `brainMask` as a bare intensity cut (`mimg > 0.1*max(mimg)`), which for AL_0033 2025-01-29 e1 yields **31 connected components**: the brain is 231 425 px and the other 30 (1947, 810, 170, ...) are bright non-brain junk outside the window that was rendering as islands in the animation. Cleanup removes 3.5% of the mask pixels. Deliberately SUBTRACTIVE ONLY — `imp.resp_map` is defined solely on the original mask, so an excluded region cannot be filled in without inventing data.
 **Why:** User: the brain mask in the laser-level GIF was bad, with blobs from outside the brain region.
