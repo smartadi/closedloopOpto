@@ -196,6 +196,24 @@ for e = 1:nExp_s
 end
 fprintf('[STV] %d trials from %d sessions\n', numel(T.dev), numel(unique(T.sess)));
 
+% ---- optional MOTION EXCLUSION (STV_MOTEXCL, added 2026-08-19) ---------------------------------
+% Drops high-motion trials from the POOL entirely, so a surviving state effect cannot be movement
+% wearing a different label. Threshold is the same locked project motThresh the split below uses,
+% so it is not a free parameter chosen here. Off by default -- the published 2J/2K keep all trials
+% and treat motion as one of the states.
+% NOTE the DV was already scaled within (session x amplitude) using ALL trials of that cell, and
+% that is deliberate: holding the scaling fixed keeps an excluded-trial panel on the same y-axis
+% as the full one, so the two can be read against each other.
+if ~exist('STV_MOTEXCL','var') || isempty(STV_MOTEXCL), STV_MOTEXCL = false; end
+if ~exist('STV_MOTTHR','var')  || isempty(STV_MOTTHR),  STV_MOTTHR  = 1.5;   end
+if STV_MOTEXCL
+    keepM = T.MOT <= STV_MOTTHR;
+    fnT = fieldnames(T);
+    for iF = 1:numel(fnT), T.(fnT{iF}) = T.(fnT{iF})(keepM); end
+    fprintf('[STV] MOTION EXCLUSION on: dropped %d/%d trials (motion z > %.1f), %d remain\n', ...
+            nnz(~keepM), numel(keepM), STV_MOTTHR, nnz(keepM));
+end
+
 % Analysis copy of each marker. See STV_STATESCALE at the top for what each mode costs.
 grp = findgroups(T.sess, T.amp);
 for k = 1:nMK
@@ -255,6 +273,36 @@ for k = 1:nMK
     sdP = arrayfun(@(b) std(yp(g==b),'omitnan'),  1:STV_NBIN);
     bf  = local_bftest(y,  g);
     bfP = local_bftest(yp, g);
+
+    % --- the SAME curve in %dF/F: PREDICTION UNCERTAINTY --------------------------------------
+    % (user, 2026-08-19: "sd of dev is not a great explainer, we should use something simpler
+    %  like prediction error in its correct units".) `y` is the deviation from the amplitude
+    % mean scaled by the within-amplitude SD, so std(y) is ~1 by construction and unitless --
+    % it can only say "wider or narrower than average", never how wide.
+    %
+    % The interpretable quantity is the residual of the simplest possible predictor: knowing
+    % only the laser amplitude, predict the amplitude mean. What is left is T.devRaw, in
+    % %dF/F, and its SD within a state bin is literally "if you predict the impulse response
+    % from the drive alone, in this state you will be off by about this much".
+    %
+    % Pooled WITHIN (session x amplitude) cell, not across them. A plain std over the bin
+    % would inherit the between-amplitude spread of response size -- a bin holding more
+    % high-amplitude trials would look more uncertain purely because its responses are
+    % bigger. Pooling within cells is the same reason the DV was scaled per amplitude in the
+    % first place; this keeps that protection AND keeps the units.
+    sdRaw = nan(1, STV_NBIN);
+    for b = 1:STV_NBIN
+        inB = (g == b);
+        num = 0; den = 0;
+        for cc = unique(grp(inB)).'
+            v = T.devRaw(inB & grp == cc);
+            v = v(isfinite(v));
+            if numel(v) < 3, continue; end
+            num = num + (numel(v)-1) * var(v);
+            den = den + (numel(v)-1);
+        end
+        if den > 0, sdRaw(b) = sqrt(num/den); end
+    end
     trend  = corr((1:STV_NBIN).', sdB(:), 'type','Spearman');
     trendP = corr((1:STV_NBIN).', sdP(:), 'type','Spearman');
 
@@ -305,6 +353,7 @@ for k = 1:nMK
     R(k).tag=MK{k,1}; R(k).name=MK{k,2}; R(k).adm=MK{k,3};
     R(k).rho=rho; R(k).p=p; R(k).rhoP=rhoP; R(k).pP=pP;
     R(k).sdB=sdB; R(k).sdP=sdP; R(k).bf=bf; R(k).bfP=bfP;
+    R(k).sdRaw = sdRaw;    % same curve in %dF/F -- see the PREDICTION UNCERTAINTY block above
     R(k).trend=trend; R(k).trendP=trendP; R(k).ratio=rat; R(k).ci=ci;
     R(k).verdict=verdict; R(k).x=x; R(k).y=y; R(k).n=nnz(ok);
     R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;
@@ -322,6 +371,12 @@ end
 % constant motThresh = 1.5 (root CLAUDE.md) so the split is not a free parameter chosen here.
 if ~exist('STV_MOTTHR','var') || isempty(STV_MOTTHR), STV_MOTTHR = 1.5; end
 hiM = T.MOT > STV_MOTTHR;
+if STV_MOTEXCL || ~any(hiM)
+    % Nothing above threshold -- STV_MOTEXCL already removed it. The split would divide by an
+    % empty group and report NaN ratios that look like results.
+    MTS = struct('thr',STV_MOTTHR,'nLo',nnz(~hiM),'nHi',0,'skipped',true);
+    fprintf('\n[STV] motion threshold split SKIPPED (no trials above z > %.1f).\n', STV_MOTTHR);
+else
 MTS = struct('thr',STV_MOTTHR,'nLo',nnz(~hiM),'nHi',nnz(hiM));
 MTS.sdLo   = std(T.dev(~hiM),'omitnan');     MTS.sdHi   = std(T.dev(hiM),'omitnan');
 MTS.sdLoP  = std(T.devPre(~hiM),'omitnan');  MTS.sdHiP  = std(T.devPre(hiM),'omitnan');
@@ -384,6 +439,7 @@ for i = 1:numel(uSm)
     if nnz(kk & hiM) < 8, continue; end
     MTS.perSess(i) = std(T.dev(kk & hiM),'omitnan') / max(std(T.dev(kk & ~hiM),'omitnan'), eps);
 end
+end   % STV_MOTEXCL / no high-motion trials -> whole split block skipped
 
 %% ================= (3) per-session replication of the admissible markers ========================
 uS = unique(T.sess).';

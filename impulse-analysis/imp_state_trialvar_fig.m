@@ -47,7 +47,16 @@ if exist('STVF_PAPERROOT','var') == 1 && ~isempty(STVF_PAPERROOT)
 else
     paperRoot = fullfile(fileparts(here), 'paper');
 end
-paperNames = struct('MOT','imp_state_var_motion', 'DPr','imp_state_var_reldelta');
+paperNames = struct('MOT','imp_state_var_motion', 'DPr','imp_state_var_reldelta', ...
+                    'PVv','imp_state_var_prevar',  'DPa','imp_state_var_absdelta');
+% STVF_MARKERS: draw a chosen marker set instead of the admissible ones. Added 2026-08-19
+% so the talk can show pre-trial variance and ABSOLUTE delta in the same panel style as
+% 2J/2K. ⚠ THOSE TWO ARE THE RETRACTED CONFOUNDS (RESEARCH 2026-07-02): variance is the
+% denominator of the R² they were scored with, so a positive relationship there is a
+% signal-power artifact, not a brain-state result. They are drawn on request; they must
+% not be presented as findings alongside 2J/2K without that caveat.
+% Note the y-axis is SHARED across whatever set is drawn, so adding markers can move the
+% limits of the panels you already had -- run the full set together or not at all.
 % Inherit the control switch from the main script so the two never disagree about what is
 % being shown. Default true, matching imp_state_trialvar.m.
 if ~exist('STV_PLOTCTRL','var') || isempty(STV_PLOTCTRL), STV_PLOTCTRL = true; end
@@ -57,6 +66,11 @@ if ~exist(outDir,'dir'), mkdir(outDir); end
 
 R   = STV.R;
 adm = find([R.adm]);                       % admissible markers only (motion, rel delta)
+if exist('STVF_MARKERS','var') == 1 && ~isempty(STVF_MARKERS)
+    adm = arrayfun(@(t) find(strcmpi({R.tag}, t{1}), 1), STVF_MARKERS(:).');
+    adm = adm(~cellfun(@isempty, num2cell(adm)));
+    fprintf('[STVF] marker set OVERRIDDEN -> %s\n', strjoin({R(adm).tag}, ', '));
+end
 C_stim = PS.col_ol;                        % red  -- impulse response
 C_ctl  = PS.col_inp_ol;                    % gray -- stim-free control
 nB     = STV.nbin;
@@ -81,6 +95,19 @@ yAll = [ [CI.lo] [CI.hi] R(adm).sdB ];
 if STV_PLOTCTRL, yAll = [yAll [CI.ploLo] [CI.ploHi] R(adm).sdP]; end
 yAll = yAll(isfinite(yAll));
 yLimSD = [floor(min(yAll)*20)/20, ceil(max(yAll)*20)/20];     % common y-axis, rounded to 0.05
+
+% STVF_UNITS: 'sd' (default) = SD of the amplitude-scaled deviation, the published 2J/2K
+% y-axis. 'raw' = the same curve as PREDICTION ERROR in %dF/F (user, 2026-08-19). One shared
+% y-limit across the drawn markers either way, so the panels stay mutually comparable.
+if ~exist('STVF_UNITS','var') || isempty(STVF_UNITS), STVF_UNITS = 'sd'; end
+yRawMax = 1;
+if strcmpi(STVF_UNITS,'raw')
+    rawAll = [];
+    for kk = adm
+        if isfield(R(kk),'sdRaw'), rawAll = [rawAll R(kk).sdRaw(isfinite(R(kk).sdRaw))]; end %#ok<AGROW>
+    end
+    if ~isempty(rawAll), yRawMax = 1.15 * max(rawAll); end
+end
 
 %% ---- pass 2: draw ------------------------------------------------------------------------------
 for i = 1:numel(adm)
@@ -122,12 +149,28 @@ for i = 1:numel(adm)
 
     f = paperFig(PS.f2w, PS.f2h);  ax = axes(f);  hold(ax,'on');   % 2J / 2K -- Fig-2 grid
     xb = r.binMed(:).';
+    % STVF_UNITS='raw' plots the SAME curve in %dF/F instead of SD-of-scaled-deviation: the
+    % residual left when the impulse response is predicted from the laser amplitude alone,
+    % pooled within (session x amplitude) cells. It reads directly as "in this state,
+    % predicting the response leaves you off by about this much", which the unitless
+    % SD-of-deviation cannot say -- that one is ~1 by construction and can only report
+    % "wider or narrower than average". See the PREDICTION UNCERTAINTY block in
+    % imp_state_trialvar.m. The stim-free control has no raw-units counterpart, so 'raw'
+    % implies a single series.
+    useRaw = strcmpi(STVF_UNITS,'raw') && isfield(r,'sdRaw') && any(isfinite(r.sdRaw));
+    if useRaw
+        yv   = r.sdRaw(:).';
+        sc   = yv ./ max(r.sdB(:).', eps);      % per-bin conversion factor, scaled -> %dF/F
+        ciLo = ciLo .* sc;  ciHi = ciHi .* sc;  % carry the bootstrap CI into the new units
+    else
+        yv = r.sdB;
+    end
     fill(ax, [xb fliplr(xb)], [ciLo fliplr(ciHi)], C_stim, ...
          'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
-    hS = plot(ax, xb, r.sdB, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, ...
+    hS = plot(ax, xb, yv, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, ...
               'LineWidth', PS.lw_mean, 'MarkerSize', 2.5, 'DisplayName','Impulse response');
     hAll = hS;
-    if STV_PLOTCTRL
+    if STV_PLOTCTRL && ~useRaw
         fill(ax, [xb fliplr(xb)], [cpLo fliplr(cpHi)], C_ctl, ...
              'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
         hC = plot(ax, xb, r.sdP, '--s', 'Color', C_ctl, 'MarkerFaceColor', C_ctl, ...
@@ -139,10 +182,15 @@ for i = 1:numel(adm)
     % which would invite reading the x position as a magnitude it does not carry.
     xticks(ax, 0.125:0.25:0.875);
     xticklabels(ax, {'Q1','Q2','Q3','Q4'});
-    xlim(ax, [0 1]);  ylim(ax, yLimSD);
+    xlim(ax, [0 1]);
+    if useRaw, ylim(ax, [0 yRawMax]); else, ylim(ax, yLimSD); end
     set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
     xlabel(ax, sprintf('%s quartile', r.name), 'FontSize', PS.fs, 'FontWeight', PS.fw);
-    ylabel(ax, 'SD of deviation', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    if useRaw
+        ylabel(ax, 'Prediction error (% \DeltaF/F)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    else
+        ylabel(ax, 'SD of deviation', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    end
     % NO in-panel stats text (user, 2026-08-12: "i dont like the text we put there"). The
     % numbers are printed to the console by imp_state_trialvar and belong in the caption --
     % Q4/Q1 with CI and the stratified rho are sentences, not annotations, and at 6 pt inside
