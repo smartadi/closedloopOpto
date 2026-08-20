@@ -45,7 +45,8 @@ def rdp(pts, eps):
         if L < 1e-12:
             d = np.hypot(*(seg - a).T)
         else:
-            d = np.abs(np.cross(ab, a - seg)) / L
+            v = a - seg          # explicit 2-D cross: np.cross on 2-vectors
+            d = np.abs(ab[0] * v[:, 1] - ab[1] * v[:, 0]) / L   # is deprecated
         j = int(np.argmax(d))
         if d[j] > eps:
             k = i0 + 1 + j

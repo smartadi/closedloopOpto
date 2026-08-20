@@ -45,8 +45,20 @@ INK = {"white": "#15191f", "bone": "#15191f", "dark": "#f2efe9"}
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mat", default=None, help="ampmaps_*.mat (default: newest)")
-    ap.add_argument("--cmap", default="jet",
-                    help="'jet' matches the supplementary figure")
+    # Blue->red, symmetric about zero, is now the DECK-WIDE map (user, 2026-08-19: "unify
+    # the colormap across the gifs ... make them all blue to red"). It matches
+    # make_brain_gif.py's RdBu_r/+-clim and talk/make_site_map.m, so a colour means the same
+    # thing in every animation. It also fixes a readability inversion in the old default:
+    # under `jet` with Normalize(min, 0) the NO-EFFECT background was dark red and the
+    # deepest inhibition was green -- i.e. the loudest colour marked where nothing happened.
+    # With RdBu_r about zero, white = no effect and deep blue = strong inhibition.
+    ap.add_argument("--cmap", default="RdBu_r",
+                    help="deck default RdBu_r (blue=inhibition, white=0); "
+                         "'jet' reproduces the old supplementary figure")
+    ap.add_argument("--sym", dest="sym", action="store_true", default=True,
+                    help="scale the colour axis symmetrically about 0 (default)")
+    ap.add_argument("--no-sym", dest="sym", action="store_false",
+                    help="scale from the data minimum to 0, as the old jet version did")
     ap.add_argument("--px", type=int, default=620, help="output width in pixels")
     ap.add_argument("--fps", type=int, default=20)
     ap.add_argument("--hold", type=int, default=11, help="frames held on each map")
@@ -124,7 +136,15 @@ def main():
     # display orientation is TRANSPOSED (brain vertical) and the peak marker
     # swaps coordinates with it — see impulse-analysis/CLAUDE.md
     disp = [maps[:, :, k].T for k in range(nA)]
-    norm = Normalize(float(np.nanmin(maps)), 0.0)
+    if args.sym:
+        # symmetric about zero so the map's white point IS zero. With Normalize(min, 0) a
+        # diverging colormap gets its blue half stretched over the whole range and its
+        # midpoint lands on half-maximum inhibition, which reads as "no effect" in the
+        # wrong place.
+        c = float(np.nanmax(np.abs(maps)))
+        norm = Normalize(-c, c)
+    else:
+        norm = Normalize(float(np.nanmin(maps)), 0.0)
     cmap = plt.get_cmap(args.cmap).copy()
     cmap.set_bad(alpha=0.0)
 
