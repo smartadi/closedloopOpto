@@ -38,14 +38,19 @@ function C = imp_tf_cv_session(A, fs, tWin, T, opts)
 %   T     the full-data fit for this session (imp_tf_fit_session output) -> order + window
 %   opts  .nSplit (100) .seed (7) .minTrials (6, per half per amplitude)
 %         .nPre (11 = default maxPoles+maxZeros+2, matches the fit path) .verbose (true)
+%         .perAmp (true) also accumulate per-AMPLITUDE held-out traces for the single-session
+%                 supplementary panel (measured held-out vs LTI prediction at each drive).
 %
 % OUTPUT C: label, mn, ok, np/nz/nd, nSplit, nOK, reject (fraction of folds that failed),
 %   R2_out [2nSplit x 1], R2_shape [2nSplit x 1], R2_in [2nSplit x 1],
 %   tPost, h_meas_cv (mean held-out measured, amp-norm), h_pred_cv (mean held-out prediction),
-%   R2h_full (=T.R2_h, the in-sample fit shown in 2C-i, for reference).
+%   R2h_full (=T.R2_h, the in-sample fit shown in 2C-i, for reference),
+%   amp (when perAmp): .uA [nAmp x 1], .idx (amplitudes with CV data), .n [nAmp x 1] folds,
+%       .meas [nAmp x nPost] split-averaged held-out MEASURED trace (%dF/F, at true drive),
+%       .pred [nAmp x nPost] split-averaged held-out LTI PREDICTION (uA*hHat), .R2 [nAmp x 1].
 
 if nargin < 5, opts = struct(); end
-def = struct('nSplit',100,'seed',7,'minTrials',6,'nPre',11,'verbose',true);
+def = struct('nSplit',100,'seed',7,'minTrials',6,'nPre',11,'verbose',true,'perAmp',true);
 fn = fieldnames(def);
 for i = 1:numel(fn), if ~isfield(opts,fn{i}) || isempty(opts.(fn{i})), opts.(fn{i}) = def.(fn{i}); end, end
 
@@ -96,6 +101,8 @@ rng(opts.seed, 'twister');
 
 R2out = nan(2*opts.nSplit,1);  R2shp = nan(2*opts.nSplit,1);  R2in = nan(2*opts.nSplit,1);
 accMeas = zeros(nPost,1);  accPred = zeros(nPost,1);  nAcc = 0;
+% per-amplitude held-out accumulators (measured vs LTI prediction at each drive)
+ampMeas = zeros(nAmp, nPost);  ampPred = zeros(nAmp, nPost);  ampN = zeros(nAmp,1);
 
 for s = 1:opts.nSplit
     % ---- stratified split: permute each amplitude's trials, halve within amplitude ----
@@ -118,6 +125,25 @@ for s = 1:opts.nSplit
     % ---- accumulate held-out measured/predicted for the overlay ----
     if ~isempty(pr1) && all(isfinite(hB)), accMeas = accMeas + hB;  accPred = accPred + pr1; nAcc = nAcc + 1; end
     if ~isempty(pr2) && all(isfinite(hA)), accMeas = accMeas + hA;  accPred = accPred + pr2; nAcc = nAcc + 1; end
+
+    % ---- per-amplitude held-out traces: measured (test half) vs LTI prediction uA*hHat ----
+    % pr1 is the unit response of the model trained on H1 -> predicts the H2 measured trace;
+    % pr2 trained on H2 -> predicts H1. Both halves contribute a held-out measurement per amp.
+    if opts.perAmp
+        for j = 1:numel(idxA)
+            a = idxA(j);
+            if ~isempty(pr1)
+                ampMeas(a,:) = ampMeas(a,:) + mean(dfI{a}(H2{j}, iPost), 1, 'omitnan');
+                ampPred(a,:) = ampPred(a,:) + (uA(a) * pr1(:)).';
+                ampN(a) = ampN(a) + 1;
+            end
+            if ~isempty(pr2)
+                ampMeas(a,:) = ampMeas(a,:) + mean(dfI{a}(H1{j}, iPost), 1, 'omitnan');
+                ampPred(a,:) = ampPred(a,:) + (uA(a) * pr2(:)).';
+                ampN(a) = ampN(a) + 1;
+            end
+        end
+    end
 end
 
 C.ok        = true;
@@ -132,6 +158,17 @@ C.tPost     = T.tPost(:);
 C.h_meas_cv = accMeas / max(nAcc,1);
 C.h_pred_cv = accPred / max(nAcc,1);
 C.R2h_full  = T.R2_h;
+
+if opts.perAmp
+    keep = ampN > 0;
+    amp = struct('uA', uA, 'idx', find(keep), 'n', ampN, ...
+                 'meas', ampMeas ./ max(ampN,1), 'pred', ampPred ./ max(ampN,1), ...
+                 'R2', nan(nAmp,1));
+    for a = find(keep).'
+        amp.R2(a) = local_r2(amp.meas(a,:).', amp.pred(a,:).');   % on split-averaged held-out traces
+    end
+    C.amp = amp;
+end
 
 if opts.verbose
     fprintf(['  [CV] %-24s  %dp%dz%dd | %d splits x2 dir | held-out R2 %.3f [%.3f %.3f] ' ...

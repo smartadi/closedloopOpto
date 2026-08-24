@@ -41,6 +41,11 @@ if ~exist('CV_EXPORT','var') || isempty(CV_EXPORT), CV_EXPORT = true; end
 % CV_PANELB: also draw the in-sample vs held-out R^2 comparison. NOT a paper panel
 % (user, 2026-08-24: "dont need the r2 comparision for paper"), so off by default.
 if ~exist('CV_PANELB','var') || isempty(CV_PANELB), CV_PANELB = false; end
+% CV_SINGLE: the SUPPLEMENTARY single-session per-amplitude CV fit (user, 2026-08-24: "single
+% session tf fitting ... same cross validation treatment ... same constraints" -> to supp).
+% Uses the SAME engine/constraints as the cross-session fits, so consistency is automatic.
+if ~exist('CV_SINGLE','var')    || isempty(CV_SINGLE),    CV_SINGLE    = true;      end
+if ~exist('CV_SINGLE_MN','var') || isempty(CV_SINGLE_MN), CV_SINGLE_MN = 'AL_0033'; end
 % Paper panel 2C goes straight into the paper figure folder (user, 2026-08-24: "only put them
 % in the paper figure folders"). tf_cv_shape_across_sessions keeps a name distinct from the
 % in-sample tf_shape_across_sessions (2C-i, written by imp_tf_run) so neither overwrites the other.
@@ -138,6 +143,50 @@ title(axB, sprintf('%d sessions   median %.2f \\rightarrow %.2f   \\Delta %.2f',
       n, median(mi), median(mo), median(mi-mo)), 'FontSize', PS.fs, 'FontWeight', PS.fw);
 if CV_EXPORT, paperExport(figB, fullfile(CV_OUTDIR,'tf_cv_r2_trial.pdf')); end
 end   % CV_PANELB
+
+%% ---- (4b) SUPPLEMENTARY: single-session per-amplitude CV fit -----------------------------------
+% "Single session TF fitting" (the old tf_data_vs_model view) but TRIAL-cross-validated and at the
+% SAME widened constraints as the cross-session fits -- measured HELD-OUT trace vs the LTI
+% prediction uA*h(t) of a model that never saw those trials, one pair per amplitude. Grey ramp =
+% amplitudes within one session (Fig-2 colour policy); the session is named in the title.
+if CV_SINGLE
+    ksel = find(cellfun(@(c) contains(c.mn, CV_SINGLE_MN), CV), 1);
+    if isempty(ksel), ksel = 1; end
+    S1 = CV{ksel};
+    if isfield(S1,'amp') && ~isempty(S1.amp.idx)
+        aidx  = S1.amp.idx(:).';
+        nShow = min(5, numel(aidx));
+        ashow = aidx(unique(round(linspace(1, numel(aidx), nShow))));
+        ramp  = interp1([0 1], [PS.grad0; PS.grad1], linspace(0,1,max(numel(ashow),2)));
+        t     = S1.tPost(:);
+        figS  = paperFig(PS.f2w*1.2, PS.f2h*1.1);  axS = axes(figS);  hold(axS,'on');
+        hL = gobjects(numel(ashow),1);  lgS = cell(numel(ashow),1);
+        for i = 1:numel(ashow)
+            a = ashow(i);  c = ramp(i,:);
+            hL(i) = plot(axS, t, S1.amp.meas(a,:), '-',  'Color', c, 'LineWidth', PS.lw_mean);
+            plot(axS, t, S1.amp.pred(a,:), '--', 'Color', c, 'LineWidth', PS.lw_fit);
+            lgS{i} = sprintf('%.1f V  R^2=%.2f', S1.amp.uA(a), S1.amp.R2(a));
+        end
+        yline(axS, 0, '-', 'Color', [.6 .6 .6], 'LineWidth', PS.lw_zero);
+        xlim(axS, [0 0.5]);
+        xlabel(axS, 'time from onset (s)');  ylabel(axS, '\DeltaF/F (%)');
+        set(axS, 'FontSize', PS.fs, 'FontWeight', PS.fw, 'TickDir','out', 'Box','off');
+        title(axS, sprintf('%s  (held-out, %dp%dz%dd)', mouseLab{ksel}, S1.np, S1.nz, S1.nd), ...
+              'FontSize', PS.fs, 'FontWeight', PS.fw, 'Interpreter','none');
+        lg = legend(axS, hL, lgS, 'Location','southeast', 'Box','off');
+        lg.ItemTokenSize = [12 PS.lgd_token(2)];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
+        suppDir = fullfile(root,'paper','images','supplementary');
+        if ~exist(suppDir,'dir'), mkdir(suppDir); end
+        if CV_EXPORT
+            paperExport(figS, fullfile(suppDir, ...
+                sprintf('tf_cv_single_%s.pdf', matlab.lang.makeValidName(char(S1.mn)))));
+        end
+        fprintf('[CV] single-session supp panel (%s, %d amps) -> %s\n', ...
+                S1.label, numel(ashow), suppDir);
+    else
+        fprintf(2,'[CV] CV_SINGLE on but no per-amplitude data for %s -- skipped\n', CV_SINGLE_MN);
+    end
+end
 
 %% ---- (5) numbers for the caption ------------------------------------------------------------
 fprintf('\n=============================== [CV] SUMMARY ===============================\n');
