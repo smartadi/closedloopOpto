@@ -18,15 +18,18 @@ h1 = yline(0,'--k');
 ax_c = gca;
 
 nExp = numel(allExperiments);
-% DR_LABEL controls how verbose the direct labels are: 'slope' = "s1  -0.34" (default),
+% DR_LABEL controls how verbose the direct labels are: 'slope' = "s1  -0.34",
 % 'id' = "s1" only, with the slopes left to the caption, 'none' = no labels at all.
 % 'none' added 2026-08-19 for the talk deck (user: "i want the inhibition energy plot to not
 % have legends") -- on a slide the per-session slopes are read out loud, not squinted at.
-if ~exist('DR_LABEL','var') || isempty(DR_LABEL), DR_LABEL = 'slope'; end
+% DEFAULT = 'mouse' (per-ANIMAL labels) since 2026-08-24: the paper panel now adopts the
+% NeuroAI-talk treatment (user: "update the main panel like we did for the neuroai conference").
+if ~exist('DR_LABEL','var') || isempty(DR_LABEL), DR_LABEL = 'mouse'; end
 if ~exist('DR_OUTDIR','var'), DR_OUTDIR = ''; end   % non-empty = export here, not figure2/
 % DR_YAXIS = true -> draw a REAL y axis with ticks and units instead of the corner-axes look
-% (user, 2026-08-19: "put axis on y and put units"). The default keeps the paper panel.
-if ~exist('DR_YAXIS','var') || isempty(DR_YAXIS), DR_YAXIS = false; end
+% (user, 2026-08-19: "put axis on y and put units"). DEFAULT = true since 2026-08-24 so the
+% committed paper panel 2B carries the real y axis, matching the talk version.
+if ~exist('DR_YAXIS','var') || isempty(DR_YAXIS), DR_YAXIS = true; end
 
 % ---- mouse labels, for DR_LABEL='mouse' -----------------------------------------------------
 % NOTE sessions are NOT mice: the impulse set is AL_0041 e1, AL_0041 e2, AL_0033 e1, AL_0048 e1,
