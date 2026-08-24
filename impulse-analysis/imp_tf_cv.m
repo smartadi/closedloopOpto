@@ -75,6 +75,8 @@ PS = paperStyle();  setPaperDefaults();
 %% ---- (3) panel A: cross-validated normalised overlay, all sessions --------------------------
 figA = paperFig(PS.f2w, PS.f2h);  axA = axes(figA);  hold(axA,'on');
 tmax = 0.5;
+hLine  = gobjects(n,1);          % one solid (measured) handle per session for the legend
+legTxt = cell(n,1);              % "s1  R^2=0.50" -- session held-out R^2 written ON the legend
 for k = 1:n
     c   = PS.sessColor(k);
     t   = CV{k}.tPost(:);
@@ -83,23 +85,27 @@ for k = 1:n
     t = t(1:m); hm = hm(1:m); hp = hp(1:m);
     sc  = max(abs(hm(isfinite(hm))));         % peak-normalise on the MEASURED held-out trace
     if isempty(sc) || sc == 0, continue; end
-    plot(axA, t, hm/sc, '-',  'Color', c, 'LineWidth', PS.lw_mean);   % measured (held out)
-    plot(axA, t, hp/sc, '--', 'Color', c, 'LineWidth', PS.lw_fit);    % predicted (never saw these trials)
+    hLine(k) = plot(axA, t, hm/sc, '-',  'Color', c, 'LineWidth', PS.lw_mean);   % measured (held out)
+    plot(axA, t, hp/sc, '--', 'Color', c, 'LineWidth', PS.lw_fit);               % predicted (never saw these trials)
+    legTxt{k} = sprintf('s%d  R^2=%.2f', k, median(CV{k}.R2_out,'omitnan'));     % held-out amp-norm R^2
 end
 yline(axA, 0, '-', 'Color', [.6 .6 .6], 'LineWidth', PS.lw_zero);
 xlim(axA, [0 tmax]);
 xlabel(axA, 'time from onset (s)');
 ylabel(axA, 'normalised \DeltaF/F');
 set(axA, 'FontSize', PS.fs, 'FontWeight', PS.fw, 'TickDir','out', 'Box','off');
-hM = plot(axA, NaN, NaN, '-',  'Color','k', 'LineWidth', PS.lw_mean);
-hP = plot(axA, NaN, NaN, '--', 'Color','k', 'LineWidth', PS.lw_fit);
-lg = legend(axA, [hM hP], {'measured (held out)','LTI fit (held out)'}, ...
-            'Location','southeast', 'Box','off');
-lg.ItemTokenSize = [20 PS.lgd_token(2)];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
-% Footer: the held-out R2 the dashed curve actually earns, pooled across sessions x splits.
+% Per-session legend carrying each session's HELD-OUT R^2 (user, 2026-08-24: "write down r2
+% values on legends"). Colour = session (the solid measured handle); the dashed fit shares the
+% hue, so the encoding note below the axis carries solid=measured / dashed=fit instead of eating
+% two more legend rows in a 4 cm panel.
+val = isgraphics(hLine);
+lg  = legend(axA, hLine(val), legTxt(val), 'Location','southeast', 'Box','off');
+lg.ItemTokenSize = [12 PS.lgd_token(2)];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
+% Footer: the solid/dashed encoding + the pooled held-out R2 across sessions x splits.
 allOut = cell2mat(cellfun(@(c) c.R2_out(:),   CV, 'uni', 0));
 allShp = cell2mat(cellfun(@(c) c.R2_shape(:), CV, 'uni', 0));
-txt = sprintf('held-out R^2 = %.2f (amp-norm) | %.2f (shape) | median over %d sessions x %d splits', ...
+txt = sprintf(['solid measured \\cdot dashed held-out fit \\cdot R^2 = held-out (amp-norm)\n' ...
+               'pooled %.2f amp-norm | %.2f shape, over %d sessions x %d splits'], ...
               median(allOut,'omitnan'), median(allShp,'omitnan'), n, 2*CV_NSPLIT);
 text(axA, 0.5, -0.235, txt, 'Units','normalized', 'HorizontalAlignment','center', ...
      'VerticalAlignment','top', 'FontSize', max(4.5,PS.fs*0.85), 'FontWeight', PS.fw, ...
