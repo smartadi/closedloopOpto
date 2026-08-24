@@ -35,17 +35,9 @@ if ~exist('DR_YAXIS','var') || isempty(DR_YAXIS), DR_YAXIS = true; end
 % NOTE sessions are NOT mice: the impulse set is AL_0041 e1, AL_0041 e2, AL_0033 e1, AL_0048 e1,
 % so a bare "Mouse 1..4" would claim four animals where there are three. Number the UNIQUE mouse
 % names and suffix a/b when one animal contributes more than one session.
-mnAll = arrayfun(@(e) string(allExperiments(e).mn), 1:nExp);
-[uMn, ~, mIdx] = unique(mnAll, 'stable');
-mouseTxt = cell(nExp,1);
-for e = 1:nExp
-    sib = find(mIdx == mIdx(e));
-    if numel(sib) > 1
-        mouseTxt{e} = sprintf('Mouse %d%c', mIdx(e), char('a' + find(sib == e) - 1));
-    else
-        mouseTxt{e} = sprintf('Mouse %d', mIdx(e));
-    end
-end
+mnAll    = arrayfun(@(e) allExperiments(e).mn, 1:nExp, 'UniformOutput', false);
+mouseTxt = imp_mouse_label(mnAll);           % shared cross-figure convention (utils/imp_mouse_label.m)
+uMn      = unique(string(mnAll), 'stable');
 fprintf('[DR] %d sessions from %d mice: %s\n', nExp, numel(uMn), strjoin(mouseTxt', ', '));
 
 labX = nan(nExp,1); labY = nan(nExp,1); labT = cell(nExp,1);

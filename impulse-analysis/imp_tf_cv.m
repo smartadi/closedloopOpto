@@ -81,8 +81,9 @@ PS = paperStyle();  setPaperDefaults();
 %% ---- (3) panel A: cross-validated normalised overlay, all sessions --------------------------
 figA = paperFig(PS.f2w, PS.f2h);  axA = axes(figA);  hold(axA,'on');
 tmax = 0.5;
-hLine  = gobjects(n,1);          % one solid (measured) handle per session for the legend
-legTxt = cell(n,1);              % "s1  R^2=0.50" -- session held-out R^2 written ON the legend
+hLine   = gobjects(n,1);         % one solid (measured) handle per session for the legend
+legTxt  = cell(n,1);             % "Mouse 1a  R^2=0.50" -- animal label + held-out R^2 on the legend
+mouseLab = imp_mouse_label(cellfun(@(c) c.mn, CV(:), 'uni', 0));   % shared cross-figure convention
 for k = 1:n
     c   = PS.sessColor(k);
     t   = CV{k}.tPost(:);
@@ -93,7 +94,7 @@ for k = 1:n
     if isempty(sc) || sc == 0, continue; end
     hLine(k) = plot(axA, t, hm/sc, '-',  'Color', c, 'LineWidth', PS.lw_mean);   % measured (held out)
     plot(axA, t, hp/sc, '--', 'Color', c, 'LineWidth', PS.lw_fit);               % predicted (never saw these trials)
-    legTxt{k} = sprintf('s%d  R^2=%.2f', k, median(CV{k}.R2_out,'omitnan'));     % held-out amp-norm R^2
+    legTxt{k} = sprintf('%s  R^2=%.2f', mouseLab{k}, median(CV{k}.R2_out,'omitnan'));  % animal + held-out R^2
 end
 yline(axA, 0, '-', 'Color', [.6 .6 .6], 'LineWidth', PS.lw_zero);
 xlim(axA, [0 tmax]);
