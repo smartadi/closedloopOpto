@@ -38,8 +38,14 @@ if ~exist('fs','var')   || isempty(fs),   fs   = 35;  end
 if ~exist('tWin','var') || isempty(tWin), tWin = 3.0; end
 if ~exist('CV_NSPLIT','var') || isempty(CV_NSPLIT), CV_NSPLIT = 100; end
 if ~exist('CV_EXPORT','var') || isempty(CV_EXPORT), CV_EXPORT = true; end
+% CV_PANELB: also draw the in-sample vs held-out R^2 comparison. NOT a paper panel
+% (user, 2026-08-24: "dont need the r2 comparision for paper"), so off by default.
+if ~exist('CV_PANELB','var') || isempty(CV_PANELB), CV_PANELB = false; end
+% Paper panel 2C goes straight into the paper figure folder (user, 2026-08-24: "only put them
+% in the paper figure folders"). tf_cv_shape_across_sessions keeps a name distinct from the
+% in-sample tf_shape_across_sessions (2C-i, written by imp_tf_run) so neither overwrites the other.
 if ~exist('CV_OUTDIR','var') || isempty(CV_OUTDIR)
-    CV_OUTDIR = fullfile(root,'paper','explore','tf_cv');   % candidate panel, not locked -> not figureN
+    CV_OUTDIR = fullfile(root,'paper','images','figure2');
 end
 if CV_EXPORT && ~exist(CV_OUTDIR,'dir'), mkdir(CV_OUTDIR); end
 
@@ -94,25 +100,22 @@ xlim(axA, [0 tmax]);
 xlabel(axA, 'time from onset (s)');
 ylabel(axA, 'normalised \DeltaF/F');
 set(axA, 'FontSize', PS.fs, 'FontWeight', PS.fw, 'TickDir','out', 'Box','off');
-% Per-session legend carrying each session's HELD-OUT R^2 (user, 2026-08-24: "write down r2
-% values on legends"). Colour = session (the solid measured handle); the dashed fit shares the
-% hue, so the encoding note below the axis carries solid=measured / dashed=fit instead of eating
-% two more legend rows in a 4 cm panel.
+% Per-session legend carrying each session's HELD-OUT R^2 (user: "write down r2 values on
+% legends"). Placed NORTHWEST: early post-onset the traces are diving to the dip (y<0), so the
+% top-left is the empty quadrant -- southeast ran the box through the rising limb. Small token +
+% no box = minimal (user, 2026-08-24). solid=measured / dashed=fit goes in the CAPTION now, not
+% a footer, so the paper panel stays clean.
 val = isgraphics(hLine);
-lg  = legend(axA, hLine(val), legTxt(val), 'Location','southeast', 'Box','off');
-lg.ItemTokenSize = [12 PS.lgd_token(2)];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
-% Footer: the solid/dashed encoding + the pooled held-out R2 across sessions x splits.
+lg  = legend(axA, hLine(val), legTxt(val), 'Location','northwest', 'Box','off');
+lg.ItemTokenSize = [7 PS.lgd_token(2)];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
 allOut = cell2mat(cellfun(@(c) c.R2_out(:),   CV, 'uni', 0));
 allShp = cell2mat(cellfun(@(c) c.R2_shape(:), CV, 'uni', 0));
-txt = sprintf(['solid measured \\cdot dashed held-out fit \\cdot R^2 = held-out (amp-norm)\n' ...
-               'pooled %.2f amp-norm | %.2f shape, over %d sessions x %d splits'], ...
-              median(allOut,'omitnan'), median(allShp,'omitnan'), n, 2*CV_NSPLIT);
-text(axA, 0.5, -0.235, txt, 'Units','normalized', 'HorizontalAlignment','center', ...
-     'VerticalAlignment','top', 'FontSize', max(4.5,PS.fs*0.85), 'FontWeight', PS.fw, ...
-     'Color', [0.25 0.25 0.25], 'Clipping','off');
+% PAPER PANEL 2C -- the cross-validated shape overlay (user: "this figure will become 2C").
 if CV_EXPORT, paperExport(figA, fullfile(CV_OUTDIR,'tf_cv_shape_across_sessions.pdf')); end
 
 %% ---- (4) panel B: in-sample vs held-out R^2 per session (median + IQR) -----------------------
+% Diagnostic only -- not a paper panel. Off unless CV_PANELB is set.
+if CV_PANELB
 figB = paperFig(PS.f2w*1.1, PS.f2h*1.1);  axB = axes(figB);  hold(axB,'on');
 yline(axB, 0, '--', 'Color',[0.35 0.35 0.35], 'LineWidth', PS.lw_ref, 'HandleVisibility','off');
 for k = 1:n
@@ -133,6 +136,7 @@ mo = cellfun(@(c) median(c.R2_out,'omitnan'), CV);
 title(axB, sprintf('%d sessions   median %.2f \\rightarrow %.2f   \\Delta %.2f', ...
       n, median(mi), median(mo), median(mi-mo)), 'FontSize', PS.fs, 'FontWeight', PS.fw);
 if CV_EXPORT, paperExport(figB, fullfile(CV_OUTDIR,'tf_cv_r2_trial.pdf')); end
+end   % CV_PANELB
 
 %% ---- (5) numbers for the caption ------------------------------------------------------------
 fprintf('\n=============================== [CV] SUMMARY ===============================\n');
