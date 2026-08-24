@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-24 — Single-session CV panel: fewer amps + drop SNR-floor amplitudes
+**Changed/Found:** `impulse-analysis/imp_tf_cv.m` — single-session supp panel now draws `CV_SINGLE_NAMP` (default **3**) amplitudes instead of 5, and **drops amplitudes with held-out R² ≤ 0** (the SNR floor) before spacing the rest. AL_0033 now shows 1.1 V (R² 0.51) / 3.2 V (0.93) / 4.9 V (0.99); the 0.5 V amp (R² −2.72) is gone.
+**Why:** User: "not so many amps, only a few." Doubles as CV-R² improvement lever #3 (exclude sub-threshold drives where the response is pure noise and no LTI fit can score).
+**Next:** The bigger CV-R² question (is Mouse 1a's 0.50 model-limited or noise-limited?) is still open — needs the split-half **noise-ceiling** computation + attenuation-corrected R² in `imp_tf_cv_session`. Not yet built.
+
 ### 2026-08-24 — Single-session CV TF fit → supplementary; 2I step response → supplementary (pending)
 **Changed/Found:** (1) `utils/imp_tf_cv_session.m` gained per-amplitude accumulation (`opts.perAmp`, default true): returns `C.amp` with split-averaged held-out **measured** and **LTI-predicted** (`uA·hHat`) traces + per-amp held-out R². (2) `impulse-analysis/imp_tf_cv.m` gained the **supplementary single-session panel** (`CV_SINGLE`, default true; `CV_SINGLE_MN='AL_0033'`) → `paper/images/supplementary/tf_cv_single_AL_0033.pdf`: representative amplitudes, measured held-out solid vs held-out prediction dashed, at **4p3z0d** (the widened cross-session constraints — user wanted "same constraints"). Per-amp held-out R²: 0.5V **−2.72** (SNR floor), 1.6V 0.81, 2.7V 0.78, 3.7V 0.95, 4.9V 0.99. (3) PAPER.md: 2I (`ol_tf_trial_avg`, OL step LTI fit) reclassified **→ supplementary**, registered the new single-session panel.
 **Why:** User settled two forks: 2C stays the all-session CV overlay, the single-session per-amplitude fit goes to supplementary; and the step response (2I only) moves to supplementary reframed to justify the integral controller. Building the single-session fit through the SAME engine (`imp_tf_fit_session`/`imp_tf_cv_session`) gives constraint-consistency for free — AL_0033 now fits at 4p3z0d (vs the old single-session `tf_fit.m` 3p/0d), and CV proves 4p does NOT overfit (held-out R² 0.95).

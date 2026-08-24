@@ -46,6 +46,10 @@ if ~exist('CV_PANELB','var') || isempty(CV_PANELB), CV_PANELB = false; end
 % Uses the SAME engine/constraints as the cross-session fits, so consistency is automatic.
 if ~exist('CV_SINGLE','var')    || isempty(CV_SINGLE),    CV_SINGLE    = true;      end
 if ~exist('CV_SINGLE_MN','var') || isempty(CV_SINGLE_MN), CV_SINGLE_MN = 'AL_0033'; end
+% CV_SINGLE_NAMP: how many amplitudes to draw on the single-session panel (user, 2026-08-24:
+% "not so many amps, only a few"). Sub-threshold amplitudes (held-out R^2 <= 0, the SNR floor)
+% are dropped first, then this many are spaced across what remains.
+if ~exist('CV_SINGLE_NAMP','var') || isempty(CV_SINGLE_NAMP), CV_SINGLE_NAMP = 3; end
 % Paper panel 2C goes straight into the paper figure folder (user, 2026-08-24: "only put them
 % in the paper figure folders"). tf_cv_shape_across_sessions keeps a name distinct from the
 % in-sample tf_shape_across_sessions (2C-i, written by imp_tf_run) so neither overwrites the other.
@@ -155,7 +159,9 @@ if CV_SINGLE
     S1 = CV{ksel};
     if isfield(S1,'amp') && ~isempty(S1.amp.idx)
         aidx  = S1.amp.idx(:).';
-        nShow = min(5, numel(aidx));
+        good  = aidx(S1.amp.R2(aidx) > 0);          % drop SNR-floor amps (held-out R^2 <= 0)
+        if numel(good) >= 2, aidx = good; end       % keep the panel from emptying if all are noisy
+        nShow = min(CV_SINGLE_NAMP, numel(aidx));
         ashow = aidx(unique(round(linspace(1, numel(aidx), nShow))));
         ramp  = interp1([0 1], [PS.grad0; PS.grad1], linspace(0,1,max(numel(ashow),2)));
         t     = S1.tPost(:);
