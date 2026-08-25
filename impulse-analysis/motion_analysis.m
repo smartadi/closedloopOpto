@@ -24,12 +24,14 @@ tLabels_m      = {'Low motion', 'Mid motion', 'High motion'};
 %   'peakdev' = |Peak_imp - mean(Peak_imp)| per amp (ORIGINAL: deviation from
 %               trial-averaged response). Always available.
 %   'cperr'   = CP-4 per-trial prediction error (contra-pred + TF route). Needs
-%               contra_prediction.m to have run (populates imp.cp_err).
+%               archive/contra_prediction.m to have run (populates imp.cp_err).
+%               That script is ARCHIVED (2026-08-25) -- restore it to use this metric;
+%               otherwise this route falls back to 'peakdev' (guard below).
 % Output filenames are tagged with the stream so the two never overwrite.
 if ~exist('dev_metric','var'), dev_metric = 'cperr'; end   % 'peakdev' | 'cperr'
 dev_tag = dev_metric;
 % ---- SILENT-FALLBACK GUARD (added 2026-08-12) --------------------------------------------------
-% imp.cp_err is populated by contra_prediction.m and is ABSENT in a plain load_experiments run.
+% imp.cp_err is populated by archive/contra_prediction.m (ARCHIVED) and is ABSENT in a plain run.
 % The per-amp plotting guards below are `isfield(imp_e,'cp_err') && ...`, so with dev_metric='cperr'
 % and no such field every plot silently falls back to Peak_imp_dev -- while dev_tag stays 'cperr'
 % and dev_ylabel stays 'Prediction error'. The result is a figure labelled and FILENAMED as a
@@ -44,7 +46,7 @@ if strcmp(dev_metric,'cperr')
     end
     if ~haveCP
         warning('motion_analysis:cperrMissing', ...
-          ['dev_metric=''cperr'' but imp.cp_err is absent (run contra_prediction.m first).\n' ...
+          ['dev_metric=''cperr'' but imp.cp_err is absent (run archive/contra_prediction.m, now ARCHIVED).\n' ...
            '         FALLING BACK to peakdev -- tag and axis label corrected so the export is not mislabelled.']);
         dev_metric = 'peakdev';  dev_tag = 'peakdev';
     end

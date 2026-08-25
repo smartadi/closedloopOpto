@@ -27,8 +27,25 @@
   `[CP-KERNEL]`/`[CP-BLEED]` + explorers all use the `plot(px_prim,py_prim)` rule.
 - TODO: replicate `cp_find_stim_site` on AL_0041 e1/e2; re-cache the explorer dumps (old A pixel).
 
-## Residual / state-dependence workbench — PRIMARY ACTIVE STREAM (2026-06)
-`contra_prediction.m` — SECTIONED MATLAB workbench (the residual/state sections were merged in
+## ⭐ ONE SCRIPT for the residual-error story (2026-08-25)
+`ols_tf_pipeline.m` is now **THE single runnable script** for the residual/state-dependence story.
+Run the whole thing headless:
+```matlab
+load_experiments                 % once: loads data (slow, server; does its own clear all)
+RUN_ALL = true; ols_tf_pipeline  % SELECT → state-dep → §18 batch, no interactive gate
+```
+`RUN_ALL=true` sets `RUN_ALLSESS=true`, `affect_mode='matched'` (skips the §10T3 uiwait gate) and
+`RUN_SESSION_VIEWER=false`. New-session ROIs are drawn once with `cp_draw_roi.m` (never blocks a batch).
+**Archived to `impulse-analysis/archive/`** (off-path, restorable via `git mv`): `contra_prediction.m`,
+`ols_pixel_predictor.m`, `ols_pixel_predictor_wip.m`, `kernelmap_paint.m`. See `archive/README.md`.
+⚠ `contra_prediction.m`'s reviewer-defense controls (`[CP-BLEEDCTRL]`/`[CP-CLEAN]`/`[CP-STIMAFF]`/
+`[CP-PREDQ]`) are NOT in the pipeline — restore the script to regenerate them. `motion_analysis.m`'s
+`dev_metric='cperr'` also needs it (guarded fallback to `peakdev` otherwise). KEPT (not archived):
+`imp_state_trialvar.m`/`_fig.m` (sham-control view), `cp_doseresponse.m`, `cp_hemo_ablation.m`,
+`cp_zhiwen_*.m`, `lds_ipsi.m`, and all `utils/cp_*.m` helpers.
+
+## Residual / state-dependence workbench — historical detail (contra_prediction.m, ARCHIVED 2026-08-25)
+`archive/contra_prediction.m` — SECTIONED MATLAB workbench (the residual/state sections were merged in
 from the now-retired `contra_residual.m`, deleted 2026-07-01). Isolates the LOCAL stim effect =
 actual ipsi dip − contra prediction (contra predicts the GLOBAL network activity flowing into the
 ipsi kernel), then tests its brain-state dependence. Shared compute: `utils/cp_residual_core.m`. Run order:
@@ -59,9 +76,9 @@ fit → §10T3 interactive SELECTOR) → **Stage 2** stim-blind model (§17d `[S
 - Cross-session combiners: `imp_state_xsess.m` (state-dep; consumes `ALLSESS`, reports per-session +
   pooled-blocked + Stouffer), `imp_tf_xsess.m` (impulse LTI/TF across sessions; standalone).
 
-- **`ols_pixel_predictor.m`** — SUPERSEDED by `ols_tf_pipeline.m` (frozen at the 2026-07-04 projection
+- **`archive/ols_pixel_predictor.m`** — ARCHIVED 2026-08-25; SUPERSEDED by `ols_tf_pipeline.m` (frozen at the 2026-07-04 projection
   version; the WIP→pipeline line was never merged back into it). STANDALONE direct-pixel (no-lag) contra→ipsi OLS predictor (separate from the RRR pipeline). Sectioned; run after `load_experiments.m`. **REVERTED 2026-07-06 to the HEAD/2026-07-04 projection version** (§17 [AGL-STIMBLIND] PRIMARY: spont-trained OLS with the per-amp stim-dip coupling subspace projected out → Global carries ongoing state, residual/Local = full stim effect; §18 [BESTPRED] SECONDARY ceiling; §15 [SETTLETIME] `dip_win_s=0.300`; §16 [FARPIX]; §19 all-session headless; §20 SESSION-VIEWER). The 2026-07-06 per-amp-pixel-selection experiment was found WRONG and moved OUT of this canonical file.
-  - **`ols_pixel_predictor_wip.m`** (untracked) — REFERENCE ONLY since 2026-07-13, when the clean linear
+  - **`archive/ols_pixel_predictor_wip.m`** (ARCHIVED 2026-08-25) — REFERENCE ONLY since 2026-07-13, when the clean linear
     rewrite was extracted from it into `ols_tf_pipeline.m`. Its §17 GREEDY / §17b NATIVE / §17b2 NAIVE
     stim-blind models are all superseded — they enforce dip-blindness BY CONSTRUCTION (greedy removal of
     dip-drivers; exact KKT constraint), so `Local = Actual − Global` recovers ~100% of the dip

@@ -89,6 +89,23 @@ if exist('OLS_OVERRIDE','var') && isstruct(OLS_OVERRIDE)
     end
 end
 
+% ── ONE-SHOT RUN-ALL ─────────────────────────────────────────────────────────────────
+% This is THE single script for the residual-error story. RUN_ALL=true runs it headless
+% from here through the §18 cross-session batch with NO interactive gate.
+% load_experiments.m does its own `clear all`, so it CANNOT be called from inside this
+% script -- run it ONCE first, then drive the whole story with two lines:
+%       load_experiments                 % once: loads data (slow, reads the server)
+%       RUN_ALL = true; ols_tf_pipeline  % runs SELECT -> state-dep -> §18 batch headless
+% A new session's ROI must be drawn once with cp_draw_roi.m before RUN_ALL can reach it.
+if ~exist('RUN_ALL','var') || isempty(RUN_ALL), RUN_ALL = false; end
+if RUN_ALL
+    RUN_ALLSESS        = true;    % §18: go all the way to the cross-session batch
+    RUN_SESSION_VIEWER = false;   % §20: no interactive viewer in a headless run
+    if ~exist('OLS_OVERRIDE','var') || ~isstruct(OLS_OVERRIDE), OLS_OVERRIDE = struct; end
+    OLS_OVERRIDE.affect_mode = 'matched';   % skip the §10T3 uiwait CONFIRM gate
+    fprintf('[RUN-ALL] headless: matched affected-set, §18 batch ON, viewer OFF.\n');
+end
+
 % HEADS-UP for batch runs, printed BEFORE the ~minutes of setup rather than discovered after it.
 % §18 [ALLSESS] sits AFTER the §10T3 selector, and that selector BLOCKS on uiwait (~line 755) until
 % "CONFIRM selection & build model" is pressed. So RUN_ALLSESS=true ALONE does not get you to the
@@ -118,10 +135,10 @@ end
 rng(7,'twister');
 
 if ~exist('allExperiments','var') || isempty(allExperiments)
-    error('ols_pixel_predictor: run load_experiments.m first.');
+    error('ols_tf_pipeline: run load_experiments.m first (then RUN_ALL=true; ols_tf_pipeline for the full story).');
 end
 mn = allExperiments(selExp).mn;  td = allExperiments(selExp).td;  en = allExperiments(selExp).en;
-fprintf('ols_pixel_predictor: %s %s en=%d\n', mn, td, en);
+fprintf('ols_tf_pipeline: %s %s en=%d\n', mn, td, en);
 
 % (2) Load SVD + session params
 y_full  = allExperiments(selExp).dF(:);
@@ -184,9 +201,9 @@ nF_m = min(numel(y_full), size(V_cp,2));
 
 % (4) Contra (predictor) hemisphere mask + stim-onset list
 % REUSE the existing mask — never redraw here. Priority: (a) a contra mask already in
-% the workspace (valid_cp_svd, from contra_prediction.m); (b) the cached ROI geometry
-% (cp_roi2_*.mat, loaded — no draw); (c) error with instructions. The draw GUI only
-% ever opens from contra_prediction.m S04, which is the single source of truth.
+% the workspace (valid_cp_svd); (b) the cached ROI geometry (cp_roi2_*.mat, loaded — no
+% draw); (c) error with instructions. The draw GUI only ever opens from cp_draw_roi.m,
+% the standalone one-time ROI tool — this pipeline never blocks on a draw GUI.
 roi_file = fullfile(dataDir, sprintf('cp_roi2_%s.mat', sess_tag_cp));
 if exist('valid_cp_svd','var') && exist('ipsi_mask_cp','var') && isequal(size(valid_cp_svd),[nY_cp nX_cp])
     contra_mask = logical(valid_cp_svd);  ipsi_mask = logical(ipsi_mask_cp);
@@ -198,8 +215,8 @@ elseif exist(roi_file,'file')
     fprintf('[MASK] loaded contra + ipsi masks from cache: %s\n', roi_file);
 else
     error(['[MASK] no masks found (workspace valid_cp_svd/ipsi_mask_cp absent; cache missing:\n  %s\n' ...
-           'Run contra_prediction.m section S04 once to draw + cache the ROI, then re-run this. ' ...
-           'Not opening the draw GUI here.'], roi_file);
+           'Run cp_draw_roi.m once (DRAW_SEL=%d) to draw + cache the ROI, then re-run this. ' ...
+           'Not opening the draw GUI here.'], roi_file, selExp);
 end
 
 imp_data = allExperiments(selExp).imp;  uAmp = allExperiments(selExp).uAmp;
@@ -2413,7 +2430,7 @@ nF_m = min(numel(y_full), size(V_cp,2));
 % --- (4) contra mask (cache only) + stim onsets ---------------------------------------
 roi_file = fullfile(cfg.dataDir, sprintf('cp_roi2_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
 if ~exist(roi_file,'file')
-    error('[ALLSESS] missing ROI cache for %s:\n  %s\nDraw it once via contra_prediction.m S04.', label, roi_file);
+    error('[ALLSESS] missing ROI cache for %s:\n  %s\nDraw it once via cp_draw_roi.m (register the session, DRAW_SEL=index).', label, roi_file);
 end
 M = cp_roi_masks(mimg_cp, roi_file, px_prim, py_prim, struct('redefine',false,'thr_pctile',20,'plot',false));
 mask = logical(M.contra);
