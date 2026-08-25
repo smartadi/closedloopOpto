@@ -36,6 +36,14 @@ RUN_ALL = true; ols_tf_pipeline  % SELECT → state-dep → §18 batch, no inter
 ```
 `RUN_ALL=true` sets `RUN_ALLSESS=true`, `affect_mode='matched'` (skips the §10T3 uiwait gate) and
 `RUN_SESSION_VIEWER=false`. New-session ROIs are drawn once with `cp_draw_roi.m` (never blocks a batch).
+**Two §18 modes** (`RUN_MODE`): `'validate'` (default) runs straight through to the pooled
+state-dependence with no pauses; `'diagnose'` draws each session's stim-blind panel + a GOOD/CHECK
+verdict (spont R² vs 0.85 floor, %Local / Global-leak) and **pauses one-by-one** (`Enter`=accept,
+`q`=abort) so you confirm each model before the pooled state-dep runs. `imp_state_xsess` (per-session +
+pooled-blocked + Stouffer) is **folded into the §18 tail** (`RUN_XSESS`, default true), so one run ENDS
+on the state-dependence result. ⚠ §17c single-session state-dep still runs before §18 (Stage 3 < Stage 4),
+so in diagnose mode the primary session's state figures appear before the per-session confirmation; the
+POOLED result correctly runs last.
 **Archived to `impulse-analysis/archive/`** (off-path, restorable via `git mv`): `contra_prediction.m`,
 `ols_pixel_predictor.m`, `ols_pixel_predictor_wip.m`, `kernelmap_paint.m`. See `archive/README.md`.
 ⚠ `contra_prediction.m`'s reviewer-defense controls (`[CP-BLEEDCTRL]`/`[CP-CLEAN]`/`[CP-STIMAFF]`/

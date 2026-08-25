@@ -30,6 +30,7 @@ end
 utilsDir   = fullfile(impulseDir,'..','utils');
 dataDir    = fullfile(impulseDir,'data');
 addpath(utilsDir);  addpath(genpath(utilsDir));
+addpath(impulseDir);   % so the folded imp_state_xsess (and cp_draw_roi) resolve by name
 if exist(fullfile('paper','images'),'dir'),        paper_root = 'paper';
 elseif exist(fullfile('..','paper','images'),'dir'),paper_root = fullfile('..','paper');
 else,                                               paper_root = 'paper';  end
@@ -105,6 +106,15 @@ if RUN_ALL
     OLS_OVERRIDE.affect_mode = 'matched';   % skip the §10T3 uiwait CONFIRM gate
     fprintf('[RUN-ALL] headless: matched affected-set, §18 batch ON, viewer OFF.\n');
 end
+
+% MODE for the §18 cross-session batch (applies whenever RUN_ALLSESS is on):
+%   'validate' (default) -- no pauses; run straight through §18 to the pooled state-dependence.
+%   'diagnose'           -- pause after EACH session's stim-blind panel so you can confirm the
+%                           model is good ONE BY ONE before the pooled state-dependence runs.
+if ~exist('RUN_MODE','var') || isempty(RUN_MODE), RUN_MODE = 'validate'; end
+% Fold the pooled cross-session state-dependence (imp_state_xsess) into the batch tail, so ONE run
+% ends on the results. Set false to stop after §18 and run imp_state_xsess by hand.
+if ~exist('RUN_XSESS','var') || isempty(RUN_XSESS), RUN_XSESS = true; end
 
 % HEADS-UP for batch runs, printed BEFORE the ~minutes of setup rather than discovered after it.
 % §18 [ALLSESS] sits AFTER the §10T3 selector, and that selector BLOCKS on uiwait (~line 755) until
@@ -1758,8 +1768,10 @@ if RUN_ALLSESS
                  'select_l1frac',select_l1frac,'select_penNear',select_penNear,'select_penFar',select_penFar, ...
                  'select_ridge',select_ridge);
     ALLSESS = cell(numel(allSelExp),1);
-    fprintf('\n[ALLSESS-STIMBLIND] combined PRIMARY stim-blind across %d sessions %s:\n', ...
-            numel(allSelExp), mat2str(allSelExp));
+    diagnose = strcmpi(RUN_MODE,'diagnose');
+    r2floor  = 0.85;   % spont-R^2 floor for a trustworthy stim-blind model (matches the controller batch)
+    fprintf('\n[ALLSESS-STIMBLIND] combined PRIMARY stim-blind across %d sessions %s  (mode: %s):\n', ...
+            numel(allSelExp), mat2str(allSelExp), RUN_MODE);
     for si = 1:numel(allSelExp)
         S = local_stimblind_session(allSelExp(si), cfg, allExperiments);
         ALLSESS{si} = S;
@@ -1769,32 +1781,23 @@ if RUN_ALLSESS
             fprintf('      %5.2f V | A %+.3f  G %+.3f  L %+.3f  (%3.0f%% Local)\n', ...
                     S.amps(ai), S.Actual(ai), S.Global(ai), S.Local(ai), 100*S.Local(ai)/S.Actual(ai));
         end
-    end
-
-    % --- (a) per-session per-amp trial-average panels (Actual / Global / Local) ----------
-    for si = 1:numel(ALLSESS)
-        S = ALLSESS{si};  na = numel(S.amps);  tt = S.rel/S.Fs;
-        nc = min(na,5);  nr = ceil(na/nc);
-        figure('Color','w','Name',sprintf('[ALLSESS] stim-blind trial avg — %s',S.label), ...
-               'Position',[40 40 300*nc 240*nr]);
-        for ai = 1:na
-            ax = subplot(nr,nc,ai); hold(ax,'on'); box(ax,'on');
-            if isempty(S.trA{ai}), title(ax,sprintf('%.2f V (n/a)',S.amps(ai))); continue; end
-            plot(ax,tt,S.trA{ai},'k-','LineWidth',1.6);
-            plot(ax,tt,S.trG{ai},'-','Color',[.85 .2 .2],'LineWidth',1.3);
-            plot(ax,tt,S.trL{ai},'-','Color',[.1 .4 .85],'LineWidth',1.3);
-            xline(ax,0,'k:'); yline(ax,0,'k:'); xlim(ax,[-.5 1]);
-            title(ax,sprintf('%.2f V  (%.0f%% Local)',S.amps(ai),100*S.Local(ai)/S.Actual(ai)), ...
-                  'FontSize',9,'FontWeight','bold');
-            if ai==1
-                legend(ax,{'Actual','Global (clean contra pred)','Local (residual=stim)'}, ...
-                       'FontSize',6,'Location','best');
-                ylabel(ax,'\DeltaF/F %');
+        % Draw this session's Actual/Global/Local panel AS IT IS BUILT, so a diagnose run can confirm
+        % ONE model before the next (slow) session is loaded.
+        local_draw_agl_panel(S);
+        % STIM-BLIND QUALITY VERDICT. A trustworthy blind model has HIGH spont R^2 (contra predicts
+        % ipsi off-stim) AND HIGH %Local (little of the dip LEAKED into the Global contra prediction;
+        % Global leak = 100 - %Local). Low R^2 or a big leak means the residual/state result is soft.
+        leakPct = 100 - S.medLocalPct;
+        good = (S.r2_ols >= r2floor) && (S.medLocalPct >= 50);
+        fid  = 1 + double(~good);   % GOOD -> stdout ; CHECK -> stderr (red)
+        fprintf(fid, '   [VERDICT %-24s] spont R^2 %.3f (floor %.2f) | %.0f%% Local (Global leak %.0f%%) -> %s\n', ...
+                S.label, S.r2_ols, r2floor, S.medLocalPct, leakPct, ternstr(good,'GOOD','CHECK MODEL'));
+        if diagnose
+            resp = strtrim(input('   [DIAGNOSE] Enter = accept & continue to next session, q = abort batch: ','s'));
+            if strcmpi(resp,'q')
+                error('OLS:diagnoseAbort','[ALLSESS] batch aborted by user after %s (diagnose mode).', S.label);
             end
-            if ai>na-nc, xlabel(ax,'t re onset (s)'); end
         end
-        sgtitle(sprintf('STIM-BLIND (per-amp clean pixels) — %s   (full-grid spont R^2 %.3f, median %.0f%% Local)', ...
-                S.label, S.r2_ols, S.medLocalPct),'FontWeight','bold');
     end
 
     % --- (a2) per-session bleed characterization (§13/§14 headless) for every session ----
@@ -1815,6 +1818,15 @@ if RUN_ALLSESS
     yline(0,'k:'); xlabel('amplitude (V)'); ylabel(sprintf('Local dip (\\DeltaF/F %%, 0-%.0f ms)',1000*dip_win_s));
     title('STIM-BLIND Local-effect dose curve across sessions','FontWeight','bold');
     legend('Location','best','FontSize',8);
+
+    % --- (c) POOLED cross-session state-dependence == THE RESULT ==========================
+    % Fold imp_state_xsess into the batch tail so ONE run ends on the state-dependence result
+    % (per-session + pooled-blocked + Stouffer), consuming the .ST payloads §18 just built.
+    % Identical in diagnose and validate mode. Set RUN_XSESS=false to stop after §18 instead.
+    if RUN_XSESS
+        fprintf('\n[ALLSESS] folding in pooled cross-session state-dependence (imp_state_xsess)...\n');
+        imp_state_xsess;
+    end
 end
 
 % (§20 SESSION-VIEWER merged into §8 — the interactive session-picker map now runs there.)
@@ -2603,6 +2615,33 @@ S = struct('label',label,'sel',sel,'amps',amps,'Actual',A_dip,'Global',G_dip,'Lo
            'r2_ols',r2_ols,'r2clean',r2clean,'nDrop',nDrop,'nActive',nActA,'medLocalPct',medLocalPct,'nG',nG, ...
            'bledA',bledA,'cleanMaskA',cleanMaskA,'bCleanA',{bCleanA}, ...
            'couple_win_s',couple_win_s,'null_win_s',null_win_s,'ST',ST);
+end
+
+function local_draw_agl_panel(S)
+% Per-session per-amp Actual/Global/Local trial-average panel. Extracted from §18 (a) so the batch
+% can draw each session AS IT IS BUILT -- a diagnose run confirms one model before the next loads.
+na = numel(S.amps);  tt = S.rel/S.Fs;
+nc = min(na,5);  nr = ceil(na/nc);
+figure('Color','w','Name',sprintf('[ALLSESS] stim-blind trial avg — %s',S.label), ...
+       'Position',[40 40 300*nc 240*nr]);
+for ai = 1:na
+    ax = subplot(nr,nc,ai); hold(ax,'on'); box(ax,'on');
+    if isempty(S.trA{ai}), title(ax,sprintf('%.2f V (n/a)',S.amps(ai))); continue; end
+    plot(ax,tt,S.trA{ai},'k-','LineWidth',1.6);
+    plot(ax,tt,S.trG{ai},'-','Color',[.85 .2 .2],'LineWidth',1.3);
+    plot(ax,tt,S.trL{ai},'-','Color',[.1 .4 .85],'LineWidth',1.3);
+    xline(ax,0,'k:'); yline(ax,0,'k:'); xlim(ax,[-.5 1]);
+    title(ax,sprintf('%.2f V  (%.0f%% Local)',S.amps(ai),100*S.Local(ai)/S.Actual(ai)), ...
+          'FontSize',9,'FontWeight','bold');
+    if ai==1
+        legend(ax,{'Actual','Global (clean contra pred)','Local (residual=stim)'}, ...
+               'FontSize',6,'Location','best');
+        ylabel(ax,'\DeltaF/F %');
+    end
+    if ai>na-nc, xlabel(ax,'t re onset (s)'); end
+end
+sgtitle(sprintf('STIM-BLIND (per-amp clean pixels) — %s   (full-grid spont R^2 %.3f, median %.0f%% Local)', ...
+        S.label, S.r2_ols, S.medLocalPct),'FontWeight','bold');
 end
 
 function motz = local_session_motion(sel, allExperiments, serverRoot, mn, td, en)

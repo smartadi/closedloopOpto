@@ -25,10 +25,17 @@ Run the whole story headless:
 
 ```matlab
 load_experiments                 % once: loads data (slow, reads the server; does its own clear all)
-RUN_ALL = true; ols_tf_pipeline  % SELECT → state-dep → §18 batch, no interactive gate
+RUN_ALL = true; ols_tf_pipeline  % validate: SELECT → state-dep → §18 batch → pooled state-dep
 ```
 
-A new session's ROI is drawn once with `../cp_draw_roi.m` (never blocks a batch).
+Diagnosis (confirm each session's stim-blind model one-by-one, then the pooled state-dep):
+
+```matlab
+RUN_ALL = true; RUN_MODE = 'diagnose'; ols_tf_pipeline
+```
+
+The pooled cross-session state-dependence (`imp_state_xsess`) is folded into the §18 tail
+(`RUN_XSESS`, default true). A new session's ROI is drawn once with `../cp_draw_roi.m`.
 
 ## To restore any file
 
