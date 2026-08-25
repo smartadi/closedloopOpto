@@ -2408,6 +2408,14 @@ function S = local_stimblind_session(sel, cfg, allExperiments)
 mn = allExperiments(sel).mn;  td = allExperiments(sel).td;  en = allExperiments(sel).en;
 label = sprintf('%s %s e%d', mn, td, en);
 Fs = cfg.Fs;
+% Site-qualified cache tag -- MIRRORS the single-session path (lines ~165). Bilateral sessions
+% (AL_0048) register a sess_tag like 'AL_0048_0715_e1_R'; building the name from mn/td/en alone
+% would drop the _R and miss the cached site/ROI (then error on ROI, silently recompute the site).
+if isfield(allExperiments,'sess_tag') && ~isempty(allExperiments(sel).sess_tag)
+    tag = allExperiments(sel).sess_tag;
+else
+    tag = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
+end
 
 % --- (2) SVD + session params ---------------------------------------------------------
 y_full = allExperiments(sel).dF(:);  t_full = allExperiments(sel).timeBlue(:);
@@ -2420,7 +2428,7 @@ k_prim = double(d_tmp.params.kernel);  clear d_tmp
 
 % --- (3) data-derived site + retarget y_full ------------------------------------------
 if cfg.USE_DATA_SITE
-    site_file = fullfile(cfg.dataDir, sprintf('cp_stim_site_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+    site_file = fullfile(cfg.dataDir, sprintf('cp_stim_site_%s.mat', tag));
     if exist(site_file,'file')
         SS = load(site_file);  stim_rc = double(SS.rowcol);
     else
@@ -2440,7 +2448,7 @@ end
 nF_m = min(numel(y_full), size(V_cp,2));
 
 % --- (4) contra mask (cache only) + stim onsets ---------------------------------------
-roi_file = fullfile(cfg.dataDir, sprintf('cp_roi2_%s_%s%s_e%d.mat', mn, td(6:7), td(9:10), en));
+roi_file = fullfile(cfg.dataDir, sprintf('cp_roi2_%s.mat', tag));
 if ~exist(roi_file,'file')
     error('[ALLSESS] missing ROI cache for %s:\n  %s\nDraw it once via cp_draw_roi.m (register the session, DRAW_SEL=index).', label, roi_file);
 end
