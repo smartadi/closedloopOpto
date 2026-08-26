@@ -140,6 +140,12 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
     % for the next, q to stop). The pause is in the DRIVER, outside evalc, so input() is legal here.
     if exist('CLICKER_STEP','var') && ~isempty(CLICKER_STEP), CLK.step = logical(CLICKER_STEP);
     else,                                                     CLK.step = false; end
+    % CLICKER_COMBINED=true -> also draw ONE pooled 4-panel figure: every session's single-trial
+    % (state z, Local-dip DV z) overlaid, coloured by session, with a pooled fit + Spearman rho.
+    if exist('CLICKER_COMBINED','var') && ~isempty(CLICKER_COMBINED), CLK.comb = logical(CLICKER_COMBINED);
+    else,                                                             CLK.comb = false; end
+    CLK.pDV = []; CLK.pSess = []; CLK.pSt = {[],[],[],[]};    % pooled DV, session ordinal, per-state z
+    CLK.names = {}; CLK.admis = []; CLK.lbls = {};            % state names, admissibility, session labels
     for kk = 1:numel(CLK.sess)
         CLK.i = kk;                                           % stash index in CLK (kk is clobbered by the inner run)
         delete(setdiff(findobj('Type','figure'), CLK.keep));  % clear prior clutter, keep the clickers
@@ -173,12 +179,66 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
         set(fST,'Position',[30+(CLK.i-1)*36, 520-(CLK.i-1)*44, 1320, 360]);   % cascade so each title bar is grabbable
         CLK.keep(end+1) = fST; %#ok<SAGROW>
         fprintf('[CLICKERS] kept %s\n', lbl);
+        if CLK.comb                                          % harvest this session's plotted (state,DV) for the pooled figure
+            SDc = guidata(fST);
+            if isstruct(SDc) && isfield(SDc,'DVz') && isfield(SDc,'stateZ')
+                CLK.lbls{end+1} = lbl; %#ok<SAGROW>
+                j  = numel(CLK.lbls);                        % this session's pooled ordinal (skips failed sessions)
+                nT = numel(SDc.DVz);
+                CLK.pDV   = [CLK.pDV;   SDc.DVz(:)];
+                CLK.pSess = [CLK.pSess; j*ones(nT,1)];
+                for s = 1:4, CLK.pSt{s} = [CLK.pSt{s}; SDc.stateZ{s}(:)]; end
+                if isempty(CLK.names),  CLK.names = SDc.stateName; end
+                if isempty(CLK.admis) && exist('STATEDEP','var') && isfield(STATEDEP,'admissible')
+                    CLK.admis = STATEDEP.admissible;
+                end
+            end
+        end
         if CLK.step && CLK.i < numel(CLK.sess)               % one-by-one: hold on this session before the next
             if isgraphics(fST), figure(fST); end             % focus the session just built (guard invalid handle)
             r = strtrim(input(sprintf( ...
                 '[CLICKERS] %s ready — click points to inspect. Enter = next session, q = stop: ', lbl),'s'));
             if strcmpi(r,'q'), fprintf('[CLICKERS] stopped at user request.\n'); break; end
         end
+    end
+    % ── COMBINED: one pooled 4-panel DV-vs-state figure across all harvested sessions ─────────
+    if CLK.comb && ~isempty(CLK.pDV)
+        if isempty(CLK.admis),  CLK.admis = [true false false true]; end   % Motion + Rel-δ admissible
+        nSs  = numel(CLK.lbls);  cols = lines(max(nSs,1));
+        fCB  = figure('Color','w','Name','[STATEDEP-COMBINED] Local dip dev vs state (all sessions pooled)', ...
+                      'Position',[90 90 1320 360]);
+        for s = 1:4
+            ax = subplot(1,4,s); hold(ax,'on'); box(ax,'on');
+            x = CLK.pSt{s}(:);  y = CLK.pDV(:);  g = CLK.pSess(:);  m = isfinite(x) & isfinite(y);
+            for j = 1:nSs
+                mj = m & g==j;
+                if any(mj), scatter(ax, x(mj), y(mj), 10, cols(j,:), 'filled', ...
+                                    'MarkerFaceAlpha',0.45, 'DisplayName',CLK.lbls{j}); end
+            end
+            rho = NaN; pp = NaN;
+            if nnz(m) > 2
+                pco = polyfit(x(m), y(m), 1);  xx = linspace(min(x(m)), max(x(m)), 2);
+                plot(ax, xx, polyval(pco,xx), 'r-','LineWidth',1.6,'HandleVisibility','off');
+                [rho, pp] = corr(x(m), y(m), 'type','Spearman');
+            end
+            admis = logical(CLK.admis(s));  tcol = [0 0 0];  if ~admis, tcol = [.6 .3 0]; end
+            title(ax, sprintf('%s  \\rho_{pool}=%+.2f (p=%.3f)', CLK.names{s}, rho, pp), ...
+                  'FontSize',9,'FontWeight','bold','Color',tcol);
+            if ~admis
+                xlabel(ax, {sprintf('%s (z)',regexprep(CLK.names{s},'\\','')); '(power-confound — not interpreted)'}, ...
+                       'FontSize',7,'Color',[.6 .3 0]);
+            else
+                xlabel(ax, sprintf('%s (z)',regexprep(CLK.names{s},'\\','')));
+            end
+            if s==1, ylabel(ax,'Local dip dev (signed, z)'); end
+            yline(ax,0,'k:');
+            if s==4, legend(ax,'Location','best','FontSize',7); end
+        end
+        sgtitle(sprintf(['STATEDEP COMBINED — %d sessions pooled (%d trials) — single-trial Local dip dev vs state ' ...
+                         '(pooled Spearman; interpret Motion + Rel-\\delta only)'], nSs, nnz(isfinite(CLK.pDV))), ...
+                'FontWeight','bold','FontSize',9);
+        CLK.keep(end+1) = fCB; %#ok<SAGROW>
+        fprintf('[CLICKERS] combined pooled figure built (%d sessions, %d trials).\n', nSs, numel(CLK.pDV));
     end
     delete(setdiff(findobj('Type','figure'), CLK.keep));      % leave only the kept clickers
     CLK.keep = CLK.keep(isgraphics(CLK.keep));                % drop any handles that got deleted
