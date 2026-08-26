@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-25 — Clickers: CLICKER_STEP one-by-one mode (pause between sessions)
+**Changed/Found:** `ols_tf_pipeline.m` (RUN_CLICKERS block) + `imp_statedep_clickers.m` doc — added `CLICKER_STEP=true`: after each session's clicker is built, focus it and `input(...)` (Enter=next, q=stop) so sessions are viewed ONE BY ONE instead of all four opening at once. The pause is in the driver, OUTSIDE evalc, so `input()` is legal; clicking scatter points still works while paused (input drains the graphics event queue). Prior-session inspection popups are cleared when advancing (they're not in `CLK.keep`).
+**Why:** User: "i want all one by one" — step through each session's state-vs-prediction clicker rather than getting all windows simultaneously.
+**Next:** none — `CLICKER_STEP=true; imp_statedep_clickers`. Default (unset) preserves the all-at-once behaviour.
+
 ### 2026-08-25 — Blend clickers into ols_tf_pipeline.m as RUN_CLICKERS mode (fixes "Cannot call INPUT from EVALC")
 **Changed/Found:** `ols_tf_pipeline.m` (+`RUN_CLICKERS` driver block after the flag defaults) and `imp_statedep_clickers.m` (now a thin wrapper: clears stale flags, sets `RUN_CLICKERS=true`, calls the pipeline). The standalone loop crashed with `Cannot call INPUT from EVALC`: a leftover `RUN_ALL=true` in the workspace made the pipeline re-enable the §18 batch, whose diagnose pause calls `input()` — illegal inside the output-silencing `evalc`. The blended `RUN_CLICKERS` block self-invokes per session with `CLK_ACTIVE` set (skips the driver) and forces `RUN_ALL=false; RUN_ALLSESS=false` (§18 OFF → no `input()`), clearing the stale run-flags each pass so it's always fresh. All state lives in a `CLK` struct the inner run can't clobber. Verified dispatch: with `RUN_ALL=true; RUN_MODE='diagnose'` pre-set, the wrapper still routed into the clicker block (hit the allExperiments guard) instead of the §18 input path.
 **Why:** User: "just blend it with the single script i can run everything fresh" — one entry point, robust to leftover workspace flags.
