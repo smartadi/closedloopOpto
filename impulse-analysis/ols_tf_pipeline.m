@@ -300,6 +300,86 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
         end
         fprintf('  (* = pooled p<0.05. Divergent per-session signs => the pooled rho describes a disagreement.)\n');
         fprintf('[CLICKERS] combined pooled figure + stats built (%d sessions, %d trials).\n', nSs, numel(CLK.pDV));
+
+        % ── COMBINED VARIABILITY: does the residual prediction VARY MORE as the state rises? ──────────
+        % THIS is the state-dependence question (not the mean slope above): the single-trial Local-dip
+        % cloud FANS OUT at high state (heteroscedastic), so the metric is DISPERSION, not mean. Per
+        % state: pooled trials binned by state quantile; y = MAD of |Local dip dev| in each bin with a
+        % bootstrap 95% band; a RISING curve = the finding. Statistic = partial Spearman(|dev|, state |
+        % dev_pre), pooled session-blocked — the same test §17c2 [STATEDEP-VAR] uses, pooled here.
+        nBinV = 5;  nBoot = 1000;
+        adv = abs(CLK.pDV(:));                                % |Local dip dev| = per-trial variability metric
+        rhoVpool = nan(1,4);  pVpool = nan(1,4);  rhoVsess = nan(4,nSs);
+        fVAR = figure('Color','w','Name','[STATEDEP-COMBINED-VAR] residual variability vs state (all sessions pooled)', ...
+                      'Position',[110 110 1320 360]);
+        for s = 1:4
+            ax = subplot(1,4,s); hold(ax,'on'); box(ax,'on');
+            st = CLK.pSt{s}(:);  m = isfinite(st) & isfinite(adv);  if hasPRE, m = m & isfinite(pre); end
+            for si = 1:nSs                                    % per-session variability partial (agreement read)
+                mi = m & gsess==si;
+                if nnz(mi) > 10
+                    if hasPRE, rhoVsess(s,si) = partialcorr(adv(mi), st(mi), pre(mi), 'type','Spearman');
+                    else,      rhoVsess(s,si) = corr(adv(mi), st(mi), 'type','Spearman'); end
+                end
+            end
+            if nnz(m) > 10                                    % pooled, session-blocked + dev_pre controlled
+                ctrl = [];  if hasPRE, ctrl = pre(m); end
+                if nSs > 1,  ctrl = [ctrl, Dum(m,:)]; end
+                if isempty(ctrl), [rhoVpool(s), pVpool(s)] = corr(adv(m), st(m), 'type','Spearman');
+                else,             [rhoVpool(s), pVpool(s)] = partialcorr(adv(m), st(m), ctrl, 'type','Spearman'); end
+            end
+            % per-bin MAD dispersion of |dev| with a bootstrap 95% band -> the RISING curve
+            sv = st(m);  dv = adv(m);
+            if numel(sv) >= nBinV*3
+                edges = quantile(sv, linspace(0,1,nBinV+1));  edges(1) = -inf;  edges(end) = inf;
+                bx = nan(nBinV,1);  by = nan(nBinV,1);  blo = nan(nBinV,1);  bhi = nan(nBinV,1);
+                for b = 1:nBinV
+                    inb = sv >= edges(b) & sv < edges(b+1);  vb = dv(inb);
+                    if nnz(inb) >= 5
+                        bx(b) = median(sv(inb));  by(b) = mad(vb,1);       % MAD = median abs deviation
+                        bs = nan(nBoot,1);
+                        for t = 1:nBoot, bs(t) = mad(vb(randi(numel(vb),numel(vb),1)),1); end
+                        blo(b) = prctile(bs,2.5);  bhi(b) = prctile(bs,97.5);
+                    end
+                end
+                good = isfinite(bx) & isfinite(by);
+                if any(good)
+                    fill(ax, [bx(good); flipud(bx(good))], [blo(good); flipud(bhi(good))], [.2 .4 .85], ...
+                         'FaceAlpha',0.15, 'EdgeColor','none', 'HandleVisibility','off');
+                    plot(ax, bx(good), by(good), '-o', 'Color',[.15 .35 .8], 'MarkerFaceColor',[.15 .35 .8], 'LineWidth',1.8);
+                end
+            end
+            admis = logical(CLK.admis(s));  tcol = [0 0 0];  if ~admis, tcol = [.6 .3 0]; end
+            mkp = ' ';  if pVpool(s) < 0.05, mkp = '*'; end
+            title(ax, sprintf('%s  \\rho_{|dev|}=%+.2f (p=%.3f)%s', CLK.names{s}, rhoVpool(s), pVpool(s), mkp), ...
+                  'FontSize',9,'FontWeight','bold','Color',tcol);
+            if ~admis
+                xlabel(ax, {sprintf('%s (z)',regexprep(CLK.names{s},'\\','')); '(power-confound — not interpreted)'}, ...
+                       'FontSize',7,'Color',[.6 .3 0]);
+            else
+                xlabel(ax, sprintf('%s (z)',regexprep(CLK.names{s},'\\','')));
+            end
+            if s==1, ylabel(ax,'|Local dip dev|  (MAD \pm boot 95%)'); end
+        end
+        sgtitle(sprintf(['STATEDEP COMBINED VARIABILITY — %d sessions pooled — DOES THE RESIDUAL PREDICTION VARY MORE ' ...
+                         'AS STATE RISES?  y = per-bin dispersion (MAD) of |Local dip dev|; RISING = heteroscedastic. ' ...
+                         'partial Spearman(|dev|, state | dev_{pre}), session-blocked; interpret Motion + Rel-\\delta'], nSs), ...
+                'FontWeight','bold','FontSize',9);
+        CLK.keep(end+1) = fVAR; %#ok<SAGROW>
+
+        fprintf('\n=========== [CLICKERS-COMBINED-VAR] partial Spearman (|Local dip dev| vs state), %d sessions ===========\n', nSs);
+        fprintf('  variability test: rho>0 => the residual is LESS PREDICTABLE (more variable) at high state.\n');
+        fprintf('  %-16s %10s |', 'state', 'pooled');
+        for si = 1:nSs, fprintf(' %12s', sprintf('Session %d',si)); end
+        fprintf('\n');
+        for s = 1:4
+            mkp = ' ';  if pVpool(s) < 0.05, mkp = '*'; end
+            fprintf('  %-16s %+9.3f%s |', regexprep(CLK.names{s},'\\',''), rhoVpool(s), mkp);
+            for si = 1:nSs, fprintf(' %+12.3f', rhoVsess(s,si)); end
+            if ~logical(CLK.admis(s)), fprintf('   <- power-confound, NOT a finding'); end
+            fprintf('\n');
+        end
+        fprintf('  (* = pooled p<0.05. This is the heteroscedastic "variability rises with state" test, pooled.)\n');
     end
     delete(setdiff(findobj('Type','figure'), CLK.keep));      % leave only the kept clickers
     CLK.keep = CLK.keep(isgraphics(CLK.keep));                % drop any handles that got deleted

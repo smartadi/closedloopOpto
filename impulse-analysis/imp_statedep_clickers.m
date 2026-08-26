@@ -12,7 +12,8 @@
 % PREREQUISITE: allExperiments already in the base workspace (run load_experiments.m first).
 % USAGE:  imp_statedep_clickers                          % all loaded sessions ([3 1 2 4]), all at once
 %         CLICKER_STEP = true;      imp_statedep_clickers % ONE BY ONE: pause after each (Enter=next, q=stop)
-%         CLICKER_COMBINED = true;  imp_statedep_clickers % also draw ONE pooled 4-panel figure (all sessions)
+%         CLICKER_COMBINED = true;  imp_statedep_clickers % pooled 4-panel MEAN scatter + pooled VARIABILITY
+%                                                          %   (per-bin MAD vs state) figures across all sessions
 %         CLICKER_SESS = [3 1];     imp_statedep_clickers % a subset, in that order
 % Equivalent to:  RUN_CLICKERS = true; ols_tf_pipeline
 % ------------------------------------------------------------------------------------------
