@@ -126,11 +126,14 @@ for fc = faceCands
         Fp = load(fc{1},'motion_1');
         if isfield(Fp,'motion_1') && ~isempty(Fp.motion_1)
             mvraw = double(Fp.motion_1(:));
-            mvz_b = zscore(mvraw(1:2:end));            % face frames -> blue-frame cadence
+            mvz_b = zscore(mvraw(1:2:end));            % face frames -> blue-frame cadence (face = 2x blue)
             fprintf('[BLI] motion: %d face frames -> %d samples from %s\n', ...
                 numel(mvraw), numel(mvz_b), fc{1});
+            break                                      % got usable motion -> stop searching
         end
-        break
+        % File existed but had no usable motion_1. Do NOT stop here -- a bad/empty candidate
+        % (e.g. a stale server face_proc.mat) must not shadow a good later one (the local copy).
+        fprintf('[BLI] %s exists but has no usable motion_1 -- trying next candidate\n', fc{1});
     end
 end
 if isempty(mvz_b)
@@ -258,9 +261,18 @@ for sI = sIlist
     allExperiments(e).dF = dF_b(:);
     allExperiments(e).timeBlue = t_b;
     if ~isempty(mvz_b)
+        % Sanity: the 1:2:end downsample assumes face = 2x blue. If the blue-cadence motion is
+        % much shorter than the blue timeline, that assumption is wrong for this rig and the
+        % motion would be padded with NaN and MISALIGNED -- warn loudly rather than skip silently.
+        if numel(mvz_b) < 0.95*numel(t_b)
+            warning(['[BLI] motion has %d blue-cadence samples vs %d blue frames (%.0f%%): the face:blue ' ...
+                     'ratio may not be 2:1 -- motion will be NaN-padded and may be MISALIGNED. Check run_facemap.'], ...
+                     numel(mvz_b), numel(t_b), 100*numel(mvz_b)/numel(t_b));
+        end
         mvz_e = mvz_b(1:min(numel(mvz_b), numel(t_b)));
         mvz_e(end+1:numel(t_b)) = NaN;           % pad if the camera stopped a frame early
         allExperiments(e).mv_z = mvz_e;
+        fprintf('[BLI] mv_z: %d/%d blue frames finite\n', nnz(isfinite(mvz_e)), numel(t_b));
     else
         allExperiments(e).mv_z = nan(numel(t_b),1);
     end
