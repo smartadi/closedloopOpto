@@ -131,8 +131,14 @@ def notes(s, key, extra=""):
 
 
 def movie(s, fname, poster, x, y, w, h):
+    # talk/ first, presentation/ second -- the mp4s were moved into talk/ on 2026-08-19 and
+    # a missing file here degrades SILENTLY to a poster image, which is exactly the failure
+    # you do not want to discover on stage.
+    src = os.path.join(HERE, fname)
+    if not os.path.exists(src):
+        src = os.path.join(ROOT, "presentation", fname)
     try:
-        s.shapes.add_movie(os.path.join(ROOT, "presentation", fname),
+        s.shapes.add_movie(src,
                            Inches(x), Inches(y), Inches(w), Inches(h),
                            poster_frame_image=os.path.join(IMG, poster),
                            mime_type="video/mp4")
@@ -210,9 +216,9 @@ Widefield SVD readout at 35 Hz -> kernel-mean dF/F at a target pixel -> PI contr
 
 # ================================================================ 3 PLANT
 s = slide("The plant is approximately linear — and it transfers", "1:00")
-pic(s, "imp_single.png", 0.6, 1.5, 3.9, 3.2, top=True)
-pic(s, "imp_response.png", 4.7, 1.5, 3.9, 3.2, top=True)
-pic(s, "tf_shape.png", 8.8, 1.5, 3.9, 3.2, top=True)
+pic(s, "t_imp_single.png", 0.6, 1.5, 3.9, 3.2, top=True)
+pic(s, "t_imp_response.png", 4.7, 1.5, 3.9, 3.2, top=True)
+pic(s, "t_tf_shape.png", 8.8, 1.5, 3.9, 3.2, top=True)
 text(s, "A low-order LTI model explains the trial-averaged response.",
      0.6, 5.0, 12.1, 0.5, size=22, bold=True)
 bullets(s, [
@@ -241,13 +247,16 @@ bullets(s, [
     ("The integrator is a STATE:  ξ = Σ e Δt", 0, True),
 ], 0.7, 5.0, 6.2, 1.4, size=18)
 
-pic(s, "tune_grid.png", 7.3, 1.6, 2.8, 2.6, top=True)
-pic(s, "tune_auto_cost.png", 10.2, 1.6, 2.5, 2.4, top=True)
-caption(s, "gain grid J(Kp,Ki)", 7.3, 4.25, 2.8)
-caption(s, "online auto-tune", 10.2, 4.25, 2.5)
-text(s, "Tuned per session, model-free.", 7.3, 4.9, 5.4, 0.4, size=20, bold=True)
+pic(s, "t_tune_grid.png", 7.2, 1.55, 2.7, 2.5, top=True)
+pic(s, "t_tune_path.png", 10.0, 1.55, 2.8, 2.5, top=True)
+caption(s, "gain grid  J(Kp, Ki)", 7.2, 4.2, 2.7)
+caption(s, "auto-tune path, coloured by cost", 10.0, 4.2, 2.8)
+text(s, "Tuned per session, model-free.", 7.2, 4.85, 5.6, 0.4, size=20, bold=True)
+text(s, "The controller walks its own gains downhill: (0,0) → (0.046, 0.018) → "
+        "(0.068, 0.062), cost 16.6 → 12.3 — landing in the grid's basin.",
+     7.2, 5.3, 5.6, 1.0, size=16, col=GREY)
 text(s, "No model needed to tune PI.\nA model is what it takes to beat it.",
-     7.3, 5.5, 5.4, 1.0, size=18, italic=True)
+     7.2, 6.35, 5.6, 1.0, size=18, italic=True)
 notes(s, "ctrl", """
 Kr = U Y-dagger, least squares on the impulse calibration (Methods eq:kr).
 Anti-windup clamp on the accumulator while the actuator saturates.
