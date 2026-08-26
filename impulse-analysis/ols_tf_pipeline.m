@@ -1826,6 +1826,13 @@ if RUN_ALLSESS
     if RUN_XSESS
         fprintf('\n[ALLSESS] folding in pooled cross-session state-dependence (imp_state_xsess)...\n');
         imp_state_xsess;
+        % ...and the per-session + COMBINED DV-vs-state scatter/forest plots (the visual of the same
+        % stats, all sessions -- not just the primary). Default to Motion + Pre-var + Rel-delta
+        % (pre-var is a signal-power confound, LABELLED as such on its panel). Override XSP_* before
+        % the run to change DV ('DVz'|'GAINz'|'L1DEVz'), states, or layout ('combined'|'rows').
+        fprintf('[ALLSESS] plotting per-session + combined DV-vs-state (imp_state_xsess_plot)...\n');
+        if ~exist('XSP_STATES','var') || isempty(XSP_STATES), XSP_STATES = {'MOT','PVv','DPr'}; end
+        imp_state_xsess_plot;
     end
 end
 

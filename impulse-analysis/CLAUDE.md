@@ -41,7 +41,10 @@ state-dependence with no pauses; `'diagnose'` draws each session's stim-blind pa
 verdict (spont R² vs 0.85 floor, %Local / Global-leak) and **pauses one-by-one** (`Enter`=accept,
 `q`=abort) so you confirm each model before the pooled state-dep runs. `imp_state_xsess` (per-session +
 pooled-blocked + Stouffer) is **folded into the §18 tail** (`RUN_XSESS`, default true), so one run ENDS
-on the state-dependence result. ⚠ §17c single-session state-dep still runs before §18 (Stage 3 < Stage 4),
+on the state-dependence result. It also runs **`imp_state_xsess_plot`** → the per-session + COMBINED
+DV-vs-state scatter (all sessions coloured + pooled fit) + forest plot, defaulting to Motion + Pre-var
++ Rel-δ (`XSP_STATES`; pre-var panel is labelled POWER-CONFOUND). Override `XSP_DV`
+(`'DVz'`|`'GAINz'`|`'L1DEVz'`), `XSP_STATES`, `XSP_LAYOUT` (`'combined'`|`'rows'`) before the run. ⚠ §17c single-session state-dep still runs before §18 (Stage 3 < Stage 4),
 so in diagnose mode the primary session's state figures appear before the per-session confirmation; the
 POOLED result correctly runs last.
 **Archived to `impulse-analysis/archive/`** (off-path, restorable via `git mv`): `contra_prediction.m`,
