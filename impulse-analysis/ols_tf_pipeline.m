@@ -145,6 +145,7 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
     if exist('CLICKER_COMBINED','var') && ~isempty(CLICKER_COMBINED), CLK.comb = logical(CLICKER_COMBINED);
     else,                                                             CLK.comb = false; end
     CLK.pDV = []; CLK.pSess = []; CLK.pSt = {[],[],[],[]};    % pooled DV, session ordinal, per-state z
+    CLK.pErr = [];                                            % pooled per-trial pre-stim prediction error (trust)
     CLK.names = {}; CLK.admis = []; CLK.lbls = {};            % state names, admissibility, session labels
     for kk = 1:numel(CLK.sess)
         CLK.i = kk;                                           % stash index in CLK (kk is clobbered by the inner run)
@@ -192,6 +193,11 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
                 if isempty(CLK.admis) && exist('STATEDEP','var') && isfield(STATEDEP,'admissible')
                     CLK.admis = STATEDEP.admissible;
                 end
+                if exist('STATEDEP','var') && isfield(STATEDEP,'pre_error') && numel(STATEDEP.pre_error)==nT
+                    CLK.pErr = [CLK.pErr; STATEDEP.pre_error(:)];   % aligned per-trial with DVz
+                else
+                    CLK.pErr = [CLK.pErr; nan(nT,1)];               % keep length in lockstep with pDV
+                end
             end
         end
         if CLK.step && CLK.i < numel(CLK.sess)               % one-by-one: hold on this session before the next
@@ -205,6 +211,14 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
     if CLK.comb && ~isempty(CLK.pDV)
         if isempty(CLK.admis),  CLK.admis = [true false false true]; end   % Motion + Rel-δ admissible
         nSs  = numel(CLK.lbls);  cols = lines(max(nSs,1));
+        % point SIZE encodes prediction error (trust): LARGER = LOWER pre-stim error = more trustworthy.
+        % Rank-normalised over the whole pool so size is comparable across sessions; robust to outliers.
+        perr = CLK.pErr(:);  finE = isfinite(perr);  szAll = 14*ones(numel(CLK.pDV(:)),1);
+        if any(finE)
+            tr = zeros(numel(perr),1);
+            tr(finE) = 1 - (tiedrank(perr(finE)) - 0.5)/nnz(finE);   % 1 = low error (trustworthy), 0 = high error
+            szAll = 6 + 34*tr;  szAll(~finE) = 6;
+        end
         fCB  = figure('Color','w','Name','[STATEDEP-COMBINED] Local dip dev vs state (all sessions pooled)', ...
                       'Position',[90 90 1320 360]);
         for s = 1:4
@@ -212,7 +226,7 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
             x = CLK.pSt{s}(:);  y = CLK.pDV(:);  g = CLK.pSess(:);  m = isfinite(x) & isfinite(y);
             for j = 1:nSs
                 mj = m & g==j;
-                if any(mj), scatter(ax, x(mj), y(mj), 10, cols(j,:), 'filled', ...
+                if any(mj), scatter(ax, x(mj), y(mj), szAll(mj), cols(j,:), 'filled', ...
                                     'MarkerFaceAlpha',0.45, 'DisplayName',CLK.lbls{j}); end
             end
             rho = NaN; pp = NaN;
@@ -234,8 +248,9 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
             yline(ax,0,'k:');
             if s==4, legend(ax,'Location','best','FontSize',7); end
         end
-        sgtitle(sprintf(['STATEDEP COMBINED — %d sessions pooled (%d trials) — single-trial Local dip dev vs state ' ...
-                         '(pooled Spearman; interpret Motion + Rel-\\delta only)'], nSs, nnz(isfinite(CLK.pDV))), ...
+        sgtitle(sprintf(['STATEDEP COMBINED — %d sessions pooled (%d trials) — Local dip dev vs state | ' ...
+                         'colour = session, point size = trust (larger = lower pre-stim error) | ' ...
+                         'pooled Spearman; interpret Motion + Rel-\\delta only'], nSs, nnz(isfinite(CLK.pDV))), ...
                 'FontWeight','bold','FontSize',9);
         CLK.keep(end+1) = fCB; %#ok<SAGROW>
         fprintf('[CLICKERS] combined pooled figure built (%d sessions, %d trials).\n', nSs, numel(CLK.pDV));

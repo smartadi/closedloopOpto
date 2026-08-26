@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-25 — Combined clicker figure: encode prediction error as marker SIZE (colour stays session)
+**Changed/Found:** `ols_tf_pipeline.m` (RUN_CLICKERS combined block) — points in the pooled 4-panel figure now carry TWO channels: colour = session (unchanged), marker SIZE = trust (larger = LOWER pre-stim error). Harvests `STATEDEP.pre_error` per session in lockstep with `DVz` (guarded to NaN if length mismatch, keeping `CLK.pErr` aligned with `CLK.pDV`); size is rank-normalised over the whole pool (`tiedrank`, 6–40 pt), robust to outliers. sgtitle documents the encoding. Chose size over per-point alpha because per-point `MarkerFaceAlpha` vectors are version-fragile whereas scatter size vectors work everywhere.
+**Why:** User: "colour the points by session and find a way to also discriminate them by prediction error" — needed both dimensions in one pooled view.
+**Next:** none — `CLICKER_COMBINED=true; imp_statedep_clickers`. If a size legend is wanted, add two reference markers; trust currently readable from the sgtitle note.
+
 ### 2026-08-25 — Clickers: CLICKER_COMBINED pooled 4-panel state-vs-DV figure (all sessions)
 **Changed/Found:** `ols_tf_pipeline.m` (RUN_CLICKERS block) + `imp_statedep_clickers.m` doc — added `CLICKER_COMBINED=true`: during the per-session clicker loop it harvests each session's plotted single-trial pairs from the STATEDEP figure's `guidata` (`SDc.stateZ{1..4}`, `SDc.DVz` — the exact z-scored quantities the per-session panels show), pools them across sessions, and draws ONE 4-panel figure (Motion/Pre-var/Pre-δ/Rel-δ) with points coloured by session, a pooled linear fit, and a pooled Spearman ρ/p per panel. Admissible panels (Motion + Rel-δ) titled black; Pre-var/Pre-δ marked power-confound (brown). Session ordinal for colour/legend uses `numel(CLK.lbls)` so a failed session doesn't misalign colours. States are z-within-session and DV is z-within-amp, so cross-session pooling is on a common scale. Figure is added to `CLK.keep` (survives cleanup); per-session clickers are still kept too.
 **Why:** User wanted a combined version of the four-state vs deviation plot pooling all sessions, not one figure per session.
