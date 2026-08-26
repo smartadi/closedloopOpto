@@ -10,7 +10,8 @@
 % self-contained in each figure's guidata).
 %
 % PREREQUISITE: allExperiments already in the base workspace (run load_experiments.m first).
-% USAGE:  imp_statedep_clickers                         % all loaded sessions ([3 1 2 4])
+% USAGE:  imp_statedep_clickers                         % all loaded sessions ([3 1 2 4]), all at once
+%         CLICKER_STEP = true;  imp_statedep_clickers   % ONE BY ONE: pause after each (Enter=next, q=stop)
 %         CLICKER_SESS = [3 1]; imp_statedep_clickers   % a subset, in that order
 % Equivalent to:  RUN_CLICKERS = true; ols_tf_pipeline
 % ------------------------------------------------------------------------------------------

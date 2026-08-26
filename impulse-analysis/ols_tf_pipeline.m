@@ -136,6 +136,10 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
     CLK.sess = CLK.sess(CLK.sess >= 1 & CLK.sess <= numel(allExperiments));   % only loaded sessions
     CLK.self = [mfilename('fullpath') '.m'];
     CLK.keep = gobjects(0);                                   % accumulated clicker figures
+    % CLICKER_STEP=true -> ONE BY ONE: pause after each session (click points to inspect, then Enter
+    % for the next, q to stop). The pause is in the DRIVER, outside evalc, so input() is legal here.
+    if exist('CLICKER_STEP','var') && ~isempty(CLICKER_STEP), CLK.step = logical(CLICKER_STEP);
+    else,                                                     CLK.step = false; end
     for kk = 1:numel(CLK.sess)
         CLK.i = kk;                                           % stash index in CLK (kk is clobbered by the inner run)
         delete(setdiff(findobj('Type','figure'), CLK.keep));  % clear prior clutter, keep the clickers
@@ -169,6 +173,12 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
         set(fST,'Position',[30+(CLK.i-1)*36, 520-(CLK.i-1)*44, 1320, 360]);   % cascade so each title bar is grabbable
         CLK.keep(end+1) = fST; %#ok<SAGROW>
         fprintf('[CLICKERS] kept %s\n', lbl);
+        if CLK.step && CLK.i < numel(CLK.sess)               % one-by-one: hold on this session before the next
+            figure(fST);                                     % focus the session just built
+            r = strtrim(input(sprintf( ...
+                '[CLICKERS] %s ready — click points to inspect. Enter = next session, q = stop: ', lbl),'s'));
+            if strcmpi(r,'q'), fprintf('[CLICKERS] stopped at user request.\n'); break; end
+        end
     end
     delete(setdiff(findobj('Type','figure'), CLK.keep));      % leave only the kept clickers
     if ~isempty(CLK.keep), figure(CLK.keep(1)); end
