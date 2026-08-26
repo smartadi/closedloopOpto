@@ -174,13 +174,14 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
         CLK.keep(end+1) = fST; %#ok<SAGROW>
         fprintf('[CLICKERS] kept %s\n', lbl);
         if CLK.step && CLK.i < numel(CLK.sess)               % one-by-one: hold on this session before the next
-            figure(fST);                                     % focus the session just built
+            if isgraphics(fST), figure(fST); end             % focus the session just built (guard invalid handle)
             r = strtrim(input(sprintf( ...
                 '[CLICKERS] %s ready — click points to inspect. Enter = next session, q = stop: ', lbl),'s'));
             if strcmpi(r,'q'), fprintf('[CLICKERS] stopped at user request.\n'); break; end
         end
     end
     delete(setdiff(findobj('Type','figure'), CLK.keep));      % leave only the kept clickers
+    CLK.keep = CLK.keep(isgraphics(CLK.keep));                % drop any handles that got deleted
     if ~isempty(CLK.keep), figure(CLK.keep(1)); end
     fprintf('[CLICKERS] DONE — %d clickable state-vs-prediction figures open.\n', numel(CLK.keep));
     clear RUN_CLICKERS                                        % one-shot: a later plain run is normal, not clicker mode
