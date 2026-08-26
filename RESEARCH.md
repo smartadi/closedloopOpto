@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-25 — Clickers: guard figure() against invalid handles (stale-cache crash hardening)
+**Changed/Found:** `ols_tf_pipeline.m` — wrapped the two clicker `figure()` calls in validity checks (`if isgraphics(fST)`; `CLK.keep = CLK.keep(isgraphics(CLK.keep))` before `figure(CLK.keep(1))`). User hit "Error using figure / Argument must be a Figure object or a positive integer" at line 174 — but line 174 on disk is a plain assignment, and the wrapper frame pointed at `RUN_CLICKERS = true;` (not the pipeline call): both are line-text/execution mismatches, i.e. MATLAB was running a STALE cached parse from the pre-CLICKER_STEP version (where line 174 WAS `figure(CLK.keep(1))`). Root fix is `clear ols_tf_pipeline imp_statedep_clickers; rehash` before running; the guards are belt-and-suspenders so a deleted handle can never abort the whole loop.
+**Why:** Repeated cache-staleness after editing a running `.m` (see [[reference_matlab_function_cache]]); the clicker driver should degrade gracefully rather than crash on an invalid handle.
+**Next:** none — always `clear`/`rehash` after editing these scripts before re-running.
+
 ### 2026-08-25 — Clickers: CLICKER_STEP one-by-one mode (pause between sessions)
 **Changed/Found:** `ols_tf_pipeline.m` (RUN_CLICKERS block) + `imp_statedep_clickers.m` doc — added `CLICKER_STEP=true`: after each session's clicker is built, focus it and `input(...)` (Enter=next, q=stop) so sessions are viewed ONE BY ONE instead of all four opening at once. The pause is in the driver, OUTSIDE evalc, so `input()` is legal; clicking scatter points still works while paused (input drains the graphics event queue). Prior-session inspection popups are cleared when advancing (they're not in `CLK.keep`).
 **Why:** User: "i want all one by one" — step through each session's state-vs-prediction clicker rather than getting all windows simultaneously.
