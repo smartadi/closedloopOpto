@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-26 — Reordered grant prelim-data figures; LTI moved last + made mouse+macaque combined
+**Changed/Found:** `draft/.../frontmatter.tex` — the LTI fits figure (old `fig:gainlaw`, macaque-only OS-Pulse) was jumping the gun as Figure 4, before the macaque interface. Moved it to LAST in the preliminary-data flow and merged in the mouse LTI panel: new combined `fig:lti` = (A) mouse widefield impulse vs fitted TF (`figs2/mouse_lti.png`, copied from brain-paper Fig 2C `2C_tf_data_vs_model_AL_0033_2025-01-29_en1.png`, R²≤0.88) + (B) macaque per-condition LTI (`ospulse_percond_fits.png`). Pulled the LTI prose out of the macaque paragraph into a new `\lead{... linear system identification in both species.}` beat. Figure order now (verified via .aux): **3** mouse platform → **4** macaque interface → **5** causally effective both species → **6** LTI both species. Compiles clean (exit 0, 0 undefined refs, 25 pp).
+**Why:** User: "figure 4 jumps the gun to describe LTI fit" — wanted the flow platform → macaque interface → causal-effectiveness-both-species → LTI-both-species, with LTI showing monkey (OS-Pulse) AND mouse (brain-paper Fig 2) together.
+**Next:** none; upload zip + Overleaf set rebuilt (21 figs).
+
 ### 2026-08-26 — FINDING: OL prediction error is flat vs motion but rises vs pre-stim variance
 **Changed/Found:** `talk/dump_pred_state.m` (new) — drive-only PREDICTION error on constant-ref open-loop widefield trials (per-trial evoked-scalar residual from session mean, pooled within-session SD), binned by pre-stim state. Result over 13 sessions/477 trials: **vs motion Q1→Q4 = 1.53→1.47 (essentially FLAT)**; **vs pre-stim variance Q1→Q4 = 1.13→1.55 (RISES)**. So for prediction, movement does NOT enlarge the evoked-response residual, whereas ongoing variability does (the latter partly a power/level effect).
 **Why:** User's intended Aim-1 arc asks for "state dependence of motion and pre-stim var to prediction." Built the metric to supply both axes; the data says motion→prediction is flat — a real dissociation from the CONTROL result (ctrl_statedep: control error FALLS at high motion, rises with variance). This contradicts the assumed "motion→prediction" beat, so the Aim-1 figure/framing is a user decision, not auto-built.
