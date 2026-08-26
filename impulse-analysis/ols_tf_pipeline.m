@@ -2422,9 +2422,17 @@ y_full = allExperiments(sel).dF(:);  t_full = allExperiments(sel).timeBlue(:);
 serverRoot = expPath(mn, td, en);
 [U_cp, V_cp, ~, mimg_cp] = loadUVt(serverRoot, cfg.nSV_load);
 [nY,nX] = size(mimg_cp);  nSV = size(U_cp,3);
-d_tmp = loadData(serverRoot, mn, td, en);
-py_prim = double(d_tmp.params.pixel(1));  px_prim = double(d_tmp.params.pixel(2));
-k_prim = double(d_tmp.params.kernel);  clear d_tmp
+try
+    d_tmp = loadData(serverRoot, mn, td, en);
+    py_prim = double(d_tmp.params.pixel(1));  px_prim = double(d_tmp.params.pixel(2));
+    k_prim = double(d_tmp.params.kernel);  clear d_tmp
+catch
+    % Blocks/Signals session (AL_0048): no input_params.csv/params.mat, loadData cannot open it.
+    % USE_DATA_SITE overwrites px/py from the cached site below; k_prim falls back to the default 10
+    % (= BLI.kern in load_bilateral_impulse). Mirrors the single-session §1 fallback (lines ~174).
+    py_prim = NaN;  px_prim = NaN;  k_prim = 10;
+    fprintf('[ALLSESS] no controller-rig params for %s (Signals session) -- data-derived site, k_prim=%d\n', label, k_prim);
+end
 
 % --- (3) data-derived site + retarget y_full ------------------------------------------
 if cfg.USE_DATA_SITE

@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-25 — §18 engine guards loadData for blocks/Signals sessions (AL_0048 has no input_params.csv)
+**Changed/Found:** `local_stimblind_session`'s `loadData` call is now wrapped in try/catch, mirroring the single-session §1 fallback (lines ~174): on failure `px/py_prim=NaN` (overwritten by the `USE_DATA_SITE` cached site) and `k_prim=10` (= `BLI.kern` in `load_bilateral_impulse`). AL_0048 2026-07-15 was recorded with the BLOCKS pipeline — no `input_params.csv`/`params.mat` — so the bare `loadData` threw at §18. Verified the other batch-path `loadData` calls are already guarded (`local_session_motion` try/catch + `mv_z` preference) and `imp_statedep_trials` takes motion precomputed (no `loadData`). Code Analyzer clean.
+**Why:** User running the all-four batch; AL_0048 is a Signals/blocks session whose pixel/kernel live in the loader (`BLI.kern=10`, data-derived site), not a CSV — "info required should be there actually."
+**Next:** re-run `[3 1 2 4]`. If AL_0048 motion is unavailable its Motion state column is NaN (handled — rel-δ still contributes). The §8 session-viewer's `loadData` (~line 2876) is still unguarded but OFF under RUN_ALL; fix it + its `mn/td/en` site name if the picker is ever opened on AL_0048.
+
 ### 2026-08-25 — §18 local_stimblind_session now sess_tag-aware (unblocks the AL_0048 4-session batch)
 **Changed/Found:** `ols_tf_pipeline.m` `local_stimblind_session` now builds `site_file`/`roi_file` from `allExperiments(sel).sess_tag` (fallback `mn_<td>_e<en>`), mirroring the single-session path (lines ~165). Before this, `allSelExp=[3 1 2 4]` HARD-ERRORED on AL_0048: its caches carry the `_R` site suffix (`cp_roi2_AL_0048_0715_e1_R.mat`) but the engine looked for `cp_roi2_AL_0048_0715_e1.mat`; the site cache would also have silently recomputed with the generic `cp_find_stim_site` instead of the bilateral `SITE_MODE='response'`. Verified all four tags resolve (`AL_0041_1202_e1/e2`, `AL_0033_0129_e1`, `AL_0048_0715_e1_R`). `LE_BILATERAL` defaults true so `load_experiments` yields 4 sessions (idx 4 = AL_0048). Code Analyzer clean.
 **Why:** User asked for a command to run all four sessions; AL_0048 (session 4) was unreachable by the batch engine without the site-qualified tag.
