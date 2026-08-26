@@ -116,6 +116,67 @@ if ~exist('RUN_MODE','var') || isempty(RUN_MODE), RUN_MODE = 'validate'; end
 % ends on the results. Set false to stop after §18 and run imp_state_xsess by hand.
 if ~exist('RUN_XSESS','var') || isempty(RUN_XSESS), RUN_XSESS = true; end
 
+% ── CLICKERS: one clickable §17c state-vs-prediction scatter PER session ─────────────────────
+% RUN_CLICKERS=true loops THIS script over CLICKER_SESS (default [3 1 2 4]) and KEEPS each
+% session's §17c STATEDEP figure — single-trial Local-dip DV vs Motion/Pre-var/Pre-δ/Rel-δ.
+% Each stays clickable (its callback data is self-contained in the figure's guidata), so after
+% the loop you can click any point in any of the four windows to see that trial's actual /
+% stim-blind prediction / residual / motion traces. The driver SELF-INVOKES per session with
+% CLK_ACTIVE set (so this block is skipped on the inner run) and with §18 OFF (RUN_ALLSESS=false)
+% so nothing calls input() inside the output-silencing evalc. It clears the stale run-flags each
+% pass, so a leftover RUN_ALL/RUN_MODE from an earlier run can't corrupt it — always fresh.
+if ~exist('RUN_CLICKERS','var') || isempty(RUN_CLICKERS), RUN_CLICKERS = false; end
+if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
+    if ~exist('allExperiments','var') || isempty(allExperiments)
+        error('RUN_CLICKERS: allExperiments not in workspace — run load_experiments.m first.');
+    end
+    CLK = struct();
+    if exist('CLICKER_SESS','var') && ~isempty(CLICKER_SESS), CLK.sess = CLICKER_SESS(:).';
+    else,                                                     CLK.sess = [3 1 2 4]; end
+    CLK.sess = CLK.sess(CLK.sess >= 1 & CLK.sess <= numel(allExperiments));   % only loaded sessions
+    CLK.self = [mfilename('fullpath') '.m'];
+    CLK.keep = gobjects(0);                                   % accumulated clicker figures
+    for kk = 1:numel(CLK.sess)
+        CLK.i = kk;                                           % stash index in CLK (kk is clobbered by the inner run)
+        delete(setdiff(findobj('Type','figure'), CLK.keep));  % clear prior clutter, keep the clickers
+        clear OLS_OVERRIDE RUN_ALL RUN_ALLSESS RUN_MODE RUN_XSESS RUN_SESSION_VIEWER
+        CLK_ACTIVE         = true;                            % sentinel -> inner run skips this driver block
+        OLS_OVERRIDE       = struct('affect_mode','matched','selExp',CLK.sess(CLK.i));  % headless, no §10T3 gate
+        RUN_ALL = false; RUN_ALLSESS = false; RUN_SESSION_VIEWER = false;               % §18 OFF -> no input()
+        CLK.err = '';
+        fprintf('[CLICKERS] running selExp=%d (%d of %d) ...\n', CLK.sess(CLK.i), CLK.i, numel(CLK.sess));
+        try
+            evalc(['run(''' CLK.self ''')']);                % silence the per-session console spew
+        catch ME
+            CLK.err = ME.message;                            % ME set here, after the inner run stopped -> safe
+        end
+        clear CLK_ACTIVE
+        % from here trust ONLY CLK: the inner run just overwrote every ordinary variable
+        if ~isempty(CLK.err)
+            fprintf(2,'[CLICKERS] selExp=%d FAILED: %s\n', CLK.sess(CLK.i), CLK.err); continue;
+        end
+        fST = findobj('Type','figure','Name','[STATEDEP] Local dip vs brain state');
+        if isempty(fST)
+            fprintf(2,'[CLICKERS] selExp=%d: no STATEDEP figure produced\n', CLK.sess(CLK.i)); continue;
+        end
+        fST = fST(1);
+        if exist('mn','var') && exist('td','var') && exist('en','var')   % identity the inner run left in the workspace
+            lbl = sprintf('%s %s e%d', mn, td, en);
+        else
+            lbl = sprintf('selExp %d', CLK.sess(CLK.i));
+        end
+        set(fST,'Name',sprintf('STATEDEP %s — state vs prediction (CLICK a point to see the trial)', lbl));
+        set(fST,'Position',[30+(CLK.i-1)*36, 520-(CLK.i-1)*44, 1320, 360]);   % cascade so each title bar is grabbable
+        CLK.keep(end+1) = fST; %#ok<SAGROW>
+        fprintf('[CLICKERS] kept %s\n', lbl);
+    end
+    delete(setdiff(findobj('Type','figure'), CLK.keep));      % leave only the kept clickers
+    if ~isempty(CLK.keep), figure(CLK.keep(1)); end
+    fprintf('[CLICKERS] DONE — %d clickable state-vs-prediction figures open.\n', numel(CLK.keep));
+    clear RUN_CLICKERS                                        % one-shot: a later plain run is normal, not clicker mode
+    return
+end
+
 % HEADS-UP for batch runs, printed BEFORE the ~minutes of setup rather than discovered after it.
 % §18 [ALLSESS] sits AFTER the §10T3 selector, and that selector BLOCKS on uiwait (~line 755) until
 % "CONFIRM selection & build model" is pressed. So RUN_ALLSESS=true ALONE does not get you to the

@@ -47,6 +47,13 @@ DV-vs-state scatter (all sessions coloured + pooled fit) + forest plot, defaulti
 (`'DVz'`|`'GAINz'`|`'L1DEVz'`), `XSP_STATES`, `XSP_LAYOUT` (`'combined'`|`'rows'`) before the run. ⚠ §17c single-session state-dep still runs before §18 (Stage 3 < Stage 4),
 so in diagnose mode the primary session's state figures appear before the per-session confirmation; the
 POOLED result correctly runs last.
+**Clickers mode** (`RUN_CLICKERS=true`, or the thin wrapper `imp_statedep_clickers`): keeps one
+CLICKABLE §17c STATEDEP scatter (Local-dip DV vs Motion/Pre-var/Pre-δ/Rel-δ) per session — click a
+point → that trial's actual/stim-blind-pred/residual/motion. The driver self-invokes per session with
+`CLK_ACTIVE` set (skips its own block) and forces §18 OFF (`RUN_ALLSESS=false`) so nothing calls
+`input()` inside its output-silencing `evalc`; it clears the stale run-flags each pass (robust to a
+leftover `RUN_ALL`). Sessions default `[3 1 2 4]`; override with `CLICKER_SESS`. ⚠ do NOT wrap the
+pipeline in `evalc` with §18 ON — the diagnose pause's `input()` is illegal inside evalc.
 **Archived to `impulse-analysis/archive/`** (off-path, restorable via `git mv`): `contra_prediction.m`,
 `ols_pixel_predictor.m`, `ols_pixel_predictor_wip.m`, `kernelmap_paint.m`. See `archive/README.md`.
 ⚠ `contra_prediction.m`'s reviewer-defense controls (`[CP-BLEEDCTRL]`/`[CP-CLEAN]`/`[CP-STIMAFF]`/
