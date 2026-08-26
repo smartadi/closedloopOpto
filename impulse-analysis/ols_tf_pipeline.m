@@ -219,6 +219,32 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
             tr(finE) = 1 - (tiedrank(perr(finE)) - 0.5)/nnz(finE);   % 1 = low error (trustworthy), 0 = high error
             szAll = 6 + 34*tr;  szAll(~finE) = 6;
         end
+        % ---- STATISTICS on the pooled clicker data (SINGLE path; no separate imp_state_xsess run) ----
+        % Partial Spearman of DV vs each state with dev_pre (prediction error) CONTROLLED; the POOLED
+        % value additionally BLOCKS session via dummies — the SAME definition imp_state_xsess uses, but
+        % computed here on the §17d-SELECT residuals the clicker already harvested (NOT §18's energy engine).
+        gsess = CLK.pSess(:);  pre = CLK.pErr(:);  hasPRE = any(isfinite(pre));
+        Dum = zeros(numel(gsess), max(nSs-1,0));
+        for si = 1:nSs-1, Dum(:,si) = double(gsess==si); end
+        rhoPool = nan(1,4);  pPool = nan(1,4);  rhoSess = nan(4,nSs);
+        for s = 1:4
+            st = CLK.pSt{s}(:);
+            for si = 1:nSs                                   % per-session partial (the agreement read)
+                m = gsess==si & isfinite(CLK.pDV) & isfinite(st);  if hasPRE, m = m & isfinite(pre); end
+                if nnz(m) > 10
+                    if hasPRE, rhoSess(s,si) = partialcorr(CLK.pDV(m), st(m), pre(m), 'type','Spearman');
+                    else,      rhoSess(s,si) = corr(CLK.pDV(m), st(m), 'type','Spearman'); end
+                end
+            end
+            m = isfinite(CLK.pDV) & isfinite(st);  if hasPRE, m = m & isfinite(pre); end   % pooled, session-blocked
+            if nnz(m) > 10
+                ctrl = [];  if hasPRE, ctrl = pre(m); end
+                if nSs > 1,  ctrl = [ctrl, Dum(m,:)]; end
+                if isempty(ctrl), [rhoPool(s), pPool(s)] = corr(CLK.pDV(m), st(m), 'type','Spearman');
+                else,             [rhoPool(s), pPool(s)] = partialcorr(CLK.pDV(m), st(m), ctrl, 'type','Spearman'); end
+            end
+        end
+
         fCB  = figure('Color','w','Name','[STATEDEP-COMBINED] Local dip dev vs state (all sessions pooled)', ...
                       'Position',[90 90 1320 360]);
         for s = 1:4
@@ -226,17 +252,20 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
             x = CLK.pSt{s}(:);  y = CLK.pDV(:);  g = CLK.pSess(:);  m = isfinite(x) & isfinite(y);
             for j = 1:nSs
                 mj = m & g==j;
-                if any(mj), scatter(ax, x(mj), y(mj), szAll(mj), cols(j,:), 'filled', ...
-                                    'MarkerFaceAlpha',0.45, 'DisplayName',CLK.lbls{j}); end
+                if nnz(mj) >= 3
+                    scatter(ax, x(mj), y(mj), szAll(mj), cols(j,:), 'filled', ...
+                            'MarkerFaceAlpha',0.45, 'DisplayName',CLK.lbls{j});
+                    pcj = polyfit(x(mj), y(mj), 1);  xxj = linspace(min(x(mj)), max(x(mj)), 2);   % thin per-session fit
+                    plot(ax, xxj, polyval(pcj,xxj), '-','Color',cols(j,:),'LineWidth',1.0,'HandleVisibility','off');
+                end
             end
-            rho = NaN; pp = NaN;
-            if nnz(m) > 2
-                pco = polyfit(x(m), y(m), 1);  xx = linspace(min(x(m)), max(x(m)), 2);
-                plot(ax, xx, polyval(pco,xx), 'r-','LineWidth',1.6,'HandleVisibility','off');
-                [rho, pp] = corr(x(m), y(m), 'type','Spearman');
+            if nnz(m) > 2                                    % thick pooled least-squares line (visual summary)
+                pco = polyfit(x(m), y(m), 1);  xx = linspace(prctile(x(m),1), prctile(x(m),99), 2);
+                plot(ax, xx, polyval(pco,xx), 'k-','LineWidth',2.0,'HandleVisibility','off');
             end
             admis = logical(CLK.admis(s));  tcol = [0 0 0];  if ~admis, tcol = [.6 .3 0]; end
-            title(ax, sprintf('%s  \\rho_{pool}=%+.2f (p=%.3f)', CLK.names{s}, rho, pp), ...
+            mkp = ' ';  if pPool(s) < 0.05, mkp = '*'; end
+            title(ax, sprintf('%s  \\rho_{pool}=%+.2f (p=%.3f)%s', CLK.names{s}, rhoPool(s), pPool(s), mkp), ...
                   'FontSize',9,'FontWeight','bold','Color',tcol);
             if ~admis
                 xlabel(ax, {sprintf('%s (z)',regexprep(CLK.names{s},'\\','')); '(power-confound — not interpreted)'}, ...
@@ -250,10 +279,27 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
         end
         sgtitle(sprintf(['STATEDEP COMBINED — %d sessions pooled (%d trials) — Local dip dev vs state | ' ...
                          'colour = session, point size = trust (larger = lower pre-stim error) | ' ...
-                         'pooled Spearman; interpret Motion + Rel-\\delta only'], nSs, nnz(isfinite(CLK.pDV))), ...
-                'FontWeight','bold','FontSize',9);
+                         'partial Spearman (dev_{pre} controlled, session-blocked); interpret Motion + Rel-\\delta'], ...
+                         nSs, nnz(isfinite(CLK.pDV))), 'FontWeight','bold','FontSize',9);
         CLK.keep(end+1) = fCB; %#ok<SAGROW>
-        fprintf('[CLICKERS] combined pooled figure built (%d sessions, %d trials).\n', nSs, numel(CLK.pDV));
+
+        % ---- console table: per-session + pooled partial rho, with sign read ("do the sessions agree") ----
+        fprintf('\n=========== [CLICKERS-COMBINED] partial Spearman (Local dip dev vs state), %d sessions ===========\n', nSs);
+        fprintf('  DV = signed Local dip dev (z-within-amp); dev_pre controlled; pooled additionally blocks session.\n');
+        fprintf('  (computed on §17d-SELECT residuals — this is the single clicker path, not §18/imp_state_xsess.)\n');
+        for si = 1:nSs, fprintf('     Session %d = %s\n', si, CLK.lbls{si}); end
+        fprintf('  %-16s %10s |', 'state', 'pooled');
+        for si = 1:nSs, fprintf(' %12s', sprintf('Session %d',si)); end
+        fprintf('\n');
+        for s = 1:4
+            mkp = ' ';  if pPool(s) < 0.05, mkp = '*'; end
+            fprintf('  %-16s %+9.3f%s |', regexprep(CLK.names{s},'\\',''), rhoPool(s), mkp);
+            for si = 1:nSs, fprintf(' %+12.3f', rhoSess(s,si)); end
+            if ~logical(CLK.admis(s)), fprintf('   <- power-confound, NOT a finding'); end
+            fprintf('\n');
+        end
+        fprintf('  (* = pooled p<0.05. Divergent per-session signs => the pooled rho describes a disagreement.)\n');
+        fprintf('[CLICKERS] combined pooled figure + stats built (%d sessions, %d trials).\n', nSs, numel(CLK.pDV));
     end
     delete(setdiff(findobj('Type','figure'), CLK.keep));      % leave only the kept clickers
     CLK.keep = CLK.keep(isgraphics(CLK.keep));                % drop any handles that got deleted
