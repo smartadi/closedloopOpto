@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-26 — Variability figure: switch to WITHIN-SESSION quartiles (drop pooled-z-bins)
+**Changed/Found:** `ols_tf_pipeline.m` (RUN_CLICKERS combined VAR block) — replaced the pooled-z-quantile binning + bootstrap band with WITHIN-SESSION state QUARTILES: each session is ranked on its own state distribution, MAD(|Local dip dev|) computed per quartile within session (≥8 trials/quartile), then drawn as one thin Q1→Q4 curve per session + a thick mean±SEM across sessions. x-axis now Q1..Q4, not state-z. Console adds per-state mean Q4−Q1 rise and #sessions-up. Pooled statistic unchanged (partial Spearman(|dev|,state|dev_pre), session-blocked) — rank-based, so scale-free.
+**Why:** User, 2026-08-26: pooling z-scores across sessions to bin is a bad way to compare variance — z standardises away the between-session scale, and per session there are too few trials to trust a pooled-bin variance. Within-session quartiles keep each session self-referential (repeated-measures aggregation). See [[project_statedep_question]].
+**Next:** run `CLICKER_COMBINED=true; imp_statedep_clickers`; read the VAR figure Q1→Q4 slope per session + the mean curve (Motion + Rel-δ only). For a formal across-session test: Wilcoxon signed-rank on per-session Q4−Q1 (n=4 weak), or the per-trial pooled rho already shown.
+
 ### 2026-08-26 — Fig-3 3F/3G: titles added; 3F y-label → title + proper corner y scale bar
 **Changed/Found:** (1) `controller-analysis/variance_mse.m` `fig_F` (`all_variance_sessions.pdf`, 3F): the rotated descriptive y-label ("Average of Session / Variance across trials") moved to a **title**; the corner y axis, previously `YLength 0.01` + blank label (no bar), is now a real scale bar **`5 (%ΔF/F)²`**. Top margin bumped (tm2 0.08→0.20) for the 2-line title. (2) `controller-analysis/step_response.m` `fig_H` (`all_average_sessions.pdf`, 3G): added a parallel **title** "Average of Session / Tracking error" (tm_h 0.08→0.20). Both panels regenerated (15 sessions).
 **Why:** User: "that figure [3G] needs a title too; the variance average across sessions [3F] needs to move the y label to title and put a proper ylabel in short-corner-axes form." The blank y bar meant 3F's variance magnitude had no readable scale.

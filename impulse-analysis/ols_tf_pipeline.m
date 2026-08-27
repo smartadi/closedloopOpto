@@ -301,85 +301,92 @@ if RUN_CLICKERS && ~exist('CLK_ACTIVE','var')
         fprintf('  (* = pooled p<0.05. Divergent per-session signs => the pooled rho describes a disagreement.)\n');
         fprintf('[CLICKERS] combined pooled figure + stats built (%d sessions, %d trials).\n', nSs, numel(CLK.pDV));
 
-        % ── COMBINED VARIABILITY: does the residual prediction VARY MORE as the state rises? ──────────
-        % THIS is the state-dependence question (not the mean slope above): the single-trial Local-dip
-        % cloud FANS OUT at high state (heteroscedastic), so the metric is DISPERSION, not mean. Per
-        % state: pooled trials binned by state quantile; y = MAD of |Local dip dev| in each bin with a
-        % bootstrap 95% band; a RISING curve = the finding. Statistic = partial Spearman(|dev|, state |
-        % dev_pre), pooled session-blocked — the same test §17c2 [STATEDEP-VAR] uses, pooled here.
-        nBinV = 5;  nBoot = 1000;
+        % ── COMBINED VARIABILITY (WITHIN-SESSION QUARTILES) ──────────────────────────────────────────
+        % THE state-dependence question: does the residual become LESS PREDICTABLE (more variable) as
+        % state rises? Pooling z-scores across sessions to bin is fragile — z standardises away the very
+        % between-session scale, and per session there are too few trials to trust a pooled-bin variance.
+        % So bin WITHIN SESSION into state QUARTILES (each session ranked on its OWN state distribution),
+        % take the robust dispersion (MAD of the Local-dip dev) per quartile, draw each session's Q1->Q4
+        % curve, and the mean-across-sessions curve ± SEM. A consistent RISE Q1->Q4 = the finding. The
+        % pooled statistic stays partial Spearman(|dev|, state | dev_pre), session-blocked — rank-based,
+        % so the z-comparability concern does not touch it.
+        nQ = 4;  minQ = 8;                                    % state quartiles; need >=8 trials/quartile for a MAD
         adv = abs(CLK.pDV(:));                                % |Local dip dev| = per-trial variability metric
-        rhoVpool = nan(1,4);  pVpool = nan(1,4);  rhoVsess = nan(4,nSs);
-        fVAR = figure('Color','w','Name','[STATEDEP-COMBINED-VAR] residual variability vs state (all sessions pooled)', ...
-                      'Position',[110 110 1320 360]);
+        rhoVpool = nan(1,4);  pVpool = nan(1,4);
+        dispQ = nan(4, nQ, nSs);                              % [state x quartile x session] MAD of |dev|
         for s = 1:4
-            ax = subplot(1,4,s); hold(ax,'on'); box(ax,'on');
-            st = CLK.pSt{s}(:);  m = isfinite(st) & isfinite(adv);  if hasPRE, m = m & isfinite(pre); end
-            for si = 1:nSs                                    % per-session variability partial (agreement read)
-                mi = m & gsess==si;
-                if nnz(mi) > 10
-                    if hasPRE, rhoVsess(s,si) = partialcorr(adv(mi), st(mi), pre(mi), 'type','Spearman');
-                    else,      rhoVsess(s,si) = corr(adv(mi), st(mi), 'type','Spearman'); end
-                end
-            end
-            if nnz(m) > 10                                    % pooled, session-blocked + dev_pre controlled
+            st = CLK.pSt{s}(:);
+            m = isfinite(st) & isfinite(adv);  if hasPRE, m = m & isfinite(pre); end
+            if nnz(m) > 10                                    % pooled rank-based partial (scale-free), session-blocked
                 ctrl = [];  if hasPRE, ctrl = pre(m); end
                 if nSs > 1,  ctrl = [ctrl, Dum(m,:)]; end
                 if isempty(ctrl), [rhoVpool(s), pVpool(s)] = corr(adv(m), st(m), 'type','Spearman');
                 else,             [rhoVpool(s), pVpool(s)] = partialcorr(adv(m), st(m), ctrl, 'type','Spearman'); end
             end
-            % per-bin MAD dispersion of |dev| with a bootstrap 95% band -> the RISING curve
-            sv = st(m);  dv = adv(m);
-            if numel(sv) >= nBinV*3
-                edges = quantile(sv, linspace(0,1,nBinV+1));  edges(1) = -inf;  edges(end) = inf;
-                bx = nan(nBinV,1);  by = nan(nBinV,1);  blo = nan(nBinV,1);  bhi = nan(nBinV,1);
-                for b = 1:nBinV
-                    inb = sv >= edges(b) & sv < edges(b+1);  vb = dv(inb);
-                    if nnz(inb) >= 5
-                        bx(b) = median(sv(inb));  by(b) = mad(vb,1);       % MAD = median abs deviation
-                        bs = nan(nBoot,1);
-                        for t = 1:nBoot, bs(t) = mad(vb(randi(numel(vb),numel(vb),1)),1); end
-                        blo(b) = prctile(bs,2.5);  bhi(b) = prctile(bs,97.5);
+            for si = 1:nSs                                    % WITHIN-SESSION quartiles (each session on its own scale)
+                mi = gsess==si & isfinite(st) & isfinite(adv);
+                sv = st(mi);  dv = adv(mi);
+                if numel(sv) >= nQ*minQ
+                    qe = quantile(sv, linspace(0,1,nQ+1));  qe(1) = -inf;  qe(end) = inf;
+                    for q = 1:nQ
+                        inq = sv >= qe(q) & sv < qe(q+1);
+                        if nnz(inq) >= minQ, dispQ(s,q,si) = mad(dv(inq),1); end
                     end
                 end
-                good = isfinite(bx) & isfinite(by);
-                if any(good)
-                    fill(ax, [bx(good); flipud(bx(good))], [blo(good); flipud(bhi(good))], [.2 .4 .85], ...
-                         'FaceAlpha',0.15, 'EdgeColor','none', 'HandleVisibility','off');
-                    plot(ax, bx(good), by(good), '-o', 'Color',[.15 .35 .8], 'MarkerFaceColor',[.15 .35 .8], 'LineWidth',1.8);
+            end
+        end
+
+        fVAR = figure('Color','w','Name','[STATEDEP-COMBINED-VAR] residual variability vs state quartile (within-session)', ...
+                      'Position',[110 110 1320 360]);
+        for s = 1:4
+            ax = subplot(1,4,s); hold(ax,'on'); box(ax,'on');
+            D = reshape(dispQ(s,:,:), nQ, nSs);               % [nQ x nSs]  (per-session MAD per quartile)
+            for si = 1:nSs
+                if any(isfinite(D(:,si)))
+                    plot(ax, 1:nQ, D(:,si), '-o', 'Color',cols(si,:), 'MarkerFaceColor',cols(si,:), ...
+                         'MarkerSize',3, 'LineWidth',1.0, 'DisplayName',CLK.lbls{si});
                 end
+            end
+            mu = mean(D,2,'omitnan');  sem = std(D,0,2,'omitnan')./sqrt(max(sum(isfinite(D),2),1));
+            gq = isfinite(mu);
+            if any(gq)
+                errorbar(ax, find(gq), mu(gq), sem(gq), '-o', 'Color','k', 'LineWidth',2.2, ...
+                         'MarkerFaceColor','k', 'CapSize',4, 'DisplayName','mean \pm SEM');
             end
             admis = logical(CLK.admis(s));  tcol = [0 0 0];  if ~admis, tcol = [.6 .3 0]; end
             mkp = ' ';  if pVpool(s) < 0.05, mkp = '*'; end
             title(ax, sprintf('%s  \\rho_{|dev|}=%+.2f (p=%.3f)%s', CLK.names{s}, rhoVpool(s), pVpool(s), mkp), ...
                   'FontSize',9,'FontWeight','bold','Color',tcol);
+            xlim(ax,[.5 nQ+.5]);  set(ax,'XTick',1:nQ,'XTickLabel',{'Q1','Q2','Q3','Q4'});
             if ~admis
-                xlabel(ax, {sprintf('%s (z)',regexprep(CLK.names{s},'\\','')); '(power-confound — not interpreted)'}, ...
+                xlabel(ax, {sprintf('%s quartile',regexprep(CLK.names{s},'\\','')); '(power-confound — not interpreted)'}, ...
                        'FontSize',7,'Color',[.6 .3 0]);
             else
-                xlabel(ax, sprintf('%s (z)',regexprep(CLK.names{s},'\\','')));
+                xlabel(ax, sprintf('%s quartile (low \\rightarrow high)',regexprep(CLK.names{s},'\\','')));
             end
-            if s==1, ylabel(ax,'|Local dip dev|  (MAD \pm boot 95%)'); end
+            if s==1, ylabel(ax,'|Local dip dev| dispersion (MAD)'); end
+            if s==4, legend(ax,'Location','best','FontSize',6); end
         end
-        sgtitle(sprintf(['STATEDEP COMBINED VARIABILITY — %d sessions pooled — DOES THE RESIDUAL PREDICTION VARY MORE ' ...
-                         'AS STATE RISES?  y = per-bin dispersion (MAD) of |Local dip dev|; RISING = heteroscedastic. ' ...
-                         'partial Spearman(|dev|, state | dev_{pre}), session-blocked; interpret Motion + Rel-\\delta'], nSs), ...
+        sgtitle(sprintf(['STATEDEP COMBINED VARIABILITY — %d sessions, WITHIN-SESSION state quartiles — does the residual ' ...
+                         'get LESS PREDICTABLE as state rises?  y = MAD of |Local dip dev| per quartile; thin = each ' ...
+                         'session, thick = mean\\pmSEM; RISING = heteroscedastic. Interpret Motion + Rel-\\delta'], nSs), ...
                 'FontWeight','bold','FontSize',9);
         CLK.keep(end+1) = fVAR; %#ok<SAGROW>
 
-        fprintf('\n=========== [CLICKERS-COMBINED-VAR] partial Spearman (|Local dip dev| vs state), %d sessions ===========\n', nSs);
-        fprintf('  variability test: rho>0 => the residual is LESS PREDICTABLE (more variable) at high state.\n');
-        fprintf('  %-16s %10s |', 'state', 'pooled');
-        for si = 1:nSs, fprintf(' %12s', sprintf('Session %d',si)); end
-        fprintf('\n');
+        % console: per-state Q4-Q1 dispersion rise across sessions + the pooled rank statistic
+        fprintf('\n=========== [CLICKERS-COMBINED-VAR] residual dispersion by WITHIN-SESSION state quartile, %d sessions ===========\n', nSs);
+        fprintf('  y = MAD(|Local dip dev|) per quartile; Q4-Q1 > 0 and #up ~ nSess => variability RISES with state.\n');
+        fprintf('  %-16s %10s %8s | %s\n', 'state', 'mean Q4-Q1', '#up/n', 'pooled rho(|dev|,state|pre,block)');
         for s = 1:4
+            D = reshape(dispQ(s,:,:), nQ, nSs);
+            dq = D(nQ,:) - D(1,:);  dq = dq(isfinite(dq));
+            if isempty(dq), q41 = NaN;  nup = 0;  nn = 0;  else, q41 = mean(dq);  nup = sum(dq>0);  nn = numel(dq);  end
             mkp = ' ';  if pVpool(s) < 0.05, mkp = '*'; end
-            fprintf('  %-16s %+9.3f%s |', regexprep(CLK.names{s},'\\',''), rhoVpool(s), mkp);
-            for si = 1:nSs, fprintf(' %+12.3f', rhoVsess(s,si)); end
+            fprintf('  %-16s %+10.3f %6d/%-2d | %+.3f%s', regexprep(CLK.names{s},'\\',''), q41, nup, nn, rhoVpool(s), mkp);
             if ~logical(CLK.admis(s)), fprintf('   <- power-confound, NOT a finding'); end
             fprintf('\n');
         end
-        fprintf('  (* = pooled p<0.05. This is the heteroscedastic "variability rises with state" test, pooled.)\n');
+        fprintf('  (* = pooled p<0.05. Within-session quartiles avoid comparing z-scores across sessions.)\n');
     end
     delete(setdiff(findobj('Type','figure'), CLK.keep));      % leave only the kept clickers
     CLK.keep = CLK.keep(isgraphics(CLK.keep));                % drop any handles that got deleted
