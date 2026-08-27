@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-26 — Fig-3 3F/3G: titles added; 3F y-label → title + proper corner y scale bar
+**Changed/Found:** (1) `controller-analysis/variance_mse.m` `fig_F` (`all_variance_sessions.pdf`, 3F): the rotated descriptive y-label ("Average of Session / Variance across trials") moved to a **title**; the corner y axis, previously `YLength 0.01` + blank label (no bar), is now a real scale bar **`5 (%ΔF/F)²`**. Top margin bumped (tm2 0.08→0.20) for the 2-line title. (2) `controller-analysis/step_response.m` `fig_H` (`all_average_sessions.pdf`, 3G): added a parallel **title** "Average of Session / Tracking error" (tm_h 0.08→0.20). Both panels regenerated (15 sessions).
+**Why:** User: "that figure [3G] needs a title too; the variance average across sessions [3F] needs to move the y label to title and put a proper ylabel in short-corner-axes form." The blank y bar meant 3F's variance magnitude had no readable scale.
+**Next:** none. Titles use the parallel "Average of Session / <quantity>" form so 3F and 3G read as a pair.
+
 ### 2026-08-24 — Fig-3 all-sessions error panel: MAE → RMSE
 **Changed/Found:** `controller-analysis/step_response.m` `fig_H` (`all_average_sessions.pdf`, 3G) switched from **MAE** (`abs(mean(e over trials))`) to **RMSE** (`sqrt(mean(e² over trials))`), for both the faint per-session traces (deviation kept as a trials×T matrix before the RMS) and the bold cross-session mean (`sqrt(mean(data.error_nc².,1))`). y-label MAE→"RMSE dF/F"; ylim now data-driven (`max([6, 1.08·max])`) since RMSE runs above the old hardcoded 6. Root CLAUDE.md locked-decision note + PAPER.md 3G row updated.
 **Why:** User: "everything else has RMSE" — the panel was the last MAE holdout, reversing the prior "3H is genuinely MAE" locked decision. Matches the RMSE logic already vetted in `talk/redraw_fig3_colors.m` (`F3_METRIC`).

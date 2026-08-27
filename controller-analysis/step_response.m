@@ -18,7 +18,7 @@ end
 %% H: All-session trial average
 fig_H = paperFig(3, 4);
 
-lm_h = 0.18; rm_h = 0.05; bm_h = 0.12; tm_h = 0.08;
+lm_h = 0.18; rm_h = 0.05; bm_h = 0.12; tm_h = 0.20;   % top room for the title
 ax_H = axes(fig_H, 'Position', [lm_h, bm_h, 1-lm_h-rm_h, 1-bm_h-tm_h]);
 
 t1_h = (-3*35 : 35*(dur+3)) / 35;
@@ -67,6 +67,8 @@ hold(ax_H, 'off');
 lgd_H = legend(ax_H, {'Open-Loop', 'Closed-Loop'}, 'Location','northeast');
 paperLegend(lgd_H);
 paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','RMSE dF/F');
+title(ax_H, {'Average of Session'; 'Tracking error'}, ...
+    'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');    % user, 2026-08-26
 paperExport(fig_H, fullfile(paper_root, 'images', 'figure3', 'all_average_sessions.pdf'));
 
 
