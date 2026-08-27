@@ -28,34 +28,45 @@ colCL = PS.col_cl;
 
 Error_nc = [];
 Error_wc = [];
+faintMax = 0;
 
+% METRIC = RMSE, not MAE (user, 2026-08-24: "everything else has RMSE"). MAE here was
+% abs(mean(e over trials)) -- opposite-sign errors on different trials CANCEL, so it measured
+% BIAS only. RMSE = sqrt(mean(e^2 over trials)) cancels nothing (RMSE^2 = bias^2 + across-trial
+% variance), matching every other Fig-3 error panel. Keep the deviation as a TRIALS x T matrix
+% (no early mean) so the across-trial RMS can be taken. Supersedes the "3H is genuinely MAE"
+% locked note. ⚠ RMSE folds in the across-trial spread, so this panel now shares information
+% with the variance panel (3F) -- they are no longer independent evidence.
 hold(ax_H, 'on');
 for k = 1:length(fields)
-    error_NC = mean(mouse.(fields{k}).data.pncDfk_l - ...
+    dev_NC = mouse.(fields{k}).data.pncDfk_l - ...
         [mouse.(fields{k}).data.pncDfk_l(:,1:35*3), ...
          -5*ones(length(mouse.(fields{k}).data.nc), 35*3), ...
-         mouse.(fields{k}).data.pncDfk_l(:,35*6+1:end)]);
-    error_WC = mean(mouse.(fields{k}).data.pwcDfk_l - ...
+         mouse.(fields{k}).data.pncDfk_l(:,35*6+1:end)];
+    dev_WC = mouse.(fields{k}).data.pwcDfk_l - ...
         [mouse.(fields{k}).data.pwcDfk_l(:,1:35*3), ...
          -5*ones(length(mouse.(fields{k}).data.wc), 35*3), ...
-         mouse.(fields{k}).data.pwcDfk_l(:,35*6+1:end)]);
-    error_nc = mean(mouse.(fields{k}).data.error_nc);
-    error_wc = mean(mouse.(fields{k}).data.error_wc);
-    Error_nc = [Error_nc; abs(error_nc)];
-    Error_wc = [Error_wc; abs(error_wc)];
-    plot(ax_H, t1_h, abs(error_NC), 'Color', [colOL, PS.fa], 'LineWidth', PS.lw_trial, 'HandleVisibility','off');
-    plot(ax_H, t1_h, abs(error_WC), 'Color', [colCL, PS.fa], 'LineWidth', PS.lw_trial, 'HandleVisibility','off');
+         mouse.(fields{k}).data.pwcDfk_l(:,35*6+1:end)];
+    rmse_NC = sqrt(mean(dev_NC.^2, 1));
+    rmse_WC = sqrt(mean(dev_WC.^2, 1));
+    Error_nc = [Error_nc; sqrt(mean(mouse.(fields{k}).data.error_nc.^2, 1))]; %#ok<AGROW>
+    Error_wc = [Error_wc; sqrt(mean(mouse.(fields{k}).data.error_wc.^2, 1))]; %#ok<AGROW>
+    faintMax = max([faintMax, rmse_NC, rmse_WC]);
+    plot(ax_H, t1_h, rmse_NC, 'Color', [colOL, PS.fa], 'LineWidth', PS.lw_trial, 'HandleVisibility','off');
+    plot(ax_H, t1_h, rmse_WC, 'Color', [colCL, PS.fa], 'LineWidth', PS.lw_trial, 'HandleVisibility','off');
 end
 plot(ax_H, t_h, mean(Error_nc), 'Color', colOL, 'LineWidth', PS.lw_mean);
 plot(ax_H, t_h, mean(Error_wc), 'Color', colCL, 'LineWidth', PS.lw_mean);
 addStimPatch(ax_H, 0, dur);
 xlim(ax_H, [-0.5 dur+0.5]);
-ylim(ax_H, [-0.25 6]);
+% RMSE runs above the old MAE range -- take the top from the data (floored at the old 6) so
+% the faint traces do not clip.
+ylim(ax_H, [-0.25, max([6, 1.08*faintMax, 1.08*max([Error_nc(:); Error_wc(:)])])]);
 hold(ax_H, 'off');
 
 lgd_H = legend(ax_H, {'Open-Loop', 'Closed-Loop'}, 'Location','northeast');
 paperLegend(lgd_H);
-paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','MAE dF/F');
+paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','RMSE dF/F');
 paperExport(fig_H, fullfile(paper_root, 'images', 'figure3', 'all_average_sessions.pdf'));
 
 

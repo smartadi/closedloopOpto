@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-24 — Fig-3 all-sessions error panel: MAE → RMSE
+**Changed/Found:** `controller-analysis/step_response.m` `fig_H` (`all_average_sessions.pdf`, 3G) switched from **MAE** (`abs(mean(e over trials))`) to **RMSE** (`sqrt(mean(e² over trials))`), for both the faint per-session traces (deviation kept as a trials×T matrix before the RMS) and the bold cross-session mean (`sqrt(mean(data.error_nc².,1))`). y-label MAE→"RMSE dF/F"; ylim now data-driven (`max([6, 1.08·max])`) since RMSE runs above the old hardcoded 6. Root CLAUDE.md locked-decision note + PAPER.md 3G row updated.
+**Why:** User: "everything else has RMSE" — the panel was the last MAE holdout, reversing the prior "3H is genuinely MAE" locked decision. Matches the RMSE logic already vetted in `talk/redraw_fig3_colors.m` (`F3_METRIC`).
+**Next:** ⚠ RMSE² = bias² + across-trial variance, so 3G now shares information with the variance panel 3F — they are no longer independent evidence; say so in the caption/text. Recompute any quoted OL/CL gain in RMSE units (talk found 29% vs the MAE-era 44%).
+
+### 2026-08-24 — Fig-3 variance ratio split into 4 windows + "Stim" band on both ratio panels
+**Changed/Found:** `controller-analysis/variance_mse.m` — `fig_Fr` (`variance_ratio_by_window.pdf`, 3I) now uses **4 windows Pre / 0-1 s / 1-3 s / Post** (stim split into early 0-1 s and late 1-3 s, matching the RMSE-ratio panel `fig_G2r`), with per-window Wilcoxon signrank stars. New shared util `utils/mark_stim_span.m` draws a grey band (`[0.9 0.9 0.9]` α0.3, matching `addStimPatch`) + centred "Stim" label over the two middle dots; called on BOTH `fig_Fr` (3I) and `fig_G2r` (3J).
+**Why:** User: the variance ratio wasn't split into 0-1s/1-3s like the RMSE ratio, and neither panel said the two middle dots are the stim period. Splitting separates the inhibitory transient (0-1 s) from the settled hold (1-3 s); the band makes the stim window explicit.
+**Next:** none — both panels regenerated (15 sessions). 3I stars: *** on both stim windows.
+
 ### 2026-08-26 — Reordered grant prelim-data figures; LTI moved last + made mouse+macaque combined
 **Changed/Found:** `draft/.../frontmatter.tex` — the LTI fits figure (old `fig:gainlaw`, macaque-only OS-Pulse) was jumping the gun as Figure 4, before the macaque interface. Moved it to LAST in the preliminary-data flow and merged in the mouse LTI panel: new combined `fig:lti` = (A) mouse widefield impulse vs fitted TF (`figs2/mouse_lti.png`, copied from brain-paper Fig 2C `2C_tf_data_vs_model_AL_0033_2025-01-29_en1.png`, R²≤0.88) + (B) macaque per-condition LTI (`ospulse_percond_fits.png`). Pulled the LTI prose out of the macaque paragraph into a new `\lead{... linear system identification in both species.}` beat. Figure order now (verified via .aux): **3** mouse platform → **4** macaque interface → **5** causally effective both species → **6** LTI both species. Compiles clean (exit 0, 0 undefined refs, 25 pp).
 **Why:** User: "figure 4 jumps the gun to describe LTI fit" — wanted the flow platform → macaque interface → causal-effectiveness-both-species → LTI-both-species, with LTI showing monkey (OS-Pulse) AND mouse (brain-paper Fig 2) together.

@@ -40,33 +40,34 @@ text(ax_var, -0.12, 0.5, {'Average of Session'; 'Variance across trials'}, ...
 paperExport(fig_F, fullfile(paper_root, 'images', 'figure3', 'all_variance_sessions.pdf'));
 
 
-%% Fr: Cross-session OL/CL variance ratio -- pre / stim / post windows
+%% Fr: Cross-session OL/CL variance ratio -- pre / 0-1 s / 1-3 s / post windows
+% Stim split into early (0-1 s) and late (1-3 s), matching the RMSE-ratio panel (G2r), so the
+% inhibitory transient is separated from the settled hold (user, 2026-08-24).
 valid_rows_f = any(Mvarnc > 0, 2) & any(Mvarwc > 0, 2);
 Mvarnc_f = Mvarnc(valid_rows_f, :);
 Mvarwc_f = Mvarwc(valid_rows_f, :);
 nSess_f  = size(Mvarnc_f, 1);
 
-idx_pre_f  = tp >= -3 & tp <  0;
-idx_stim_f = tp >=  0 & tp <= dur;
-idx_post_f = tp >  dur & tp <= dur+3;
+idx_pre_f   = tp >= -3 & tp <  0;
+idx_early_f = tp >=  0 & tp <= 1;      % 0-1 s stim
+idx_late_f  = tp >   1 & tp <= dur;    % 1-3 s stim
+idx_post_f  = tp >  dur & tp <= dur+3;
 
-r_pre_f  = mean(Mvarnc_f(:, idx_pre_f),  2) ./ mean(Mvarwc_f(:, idx_pre_f),  2);
-r_stim_f = mean(Mvarnc_f(:, idx_stim_f), 2) ./ mean(Mvarwc_f(:, idx_stim_f), 2);
-r_post_f = mean(Mvarnc_f(:, idx_post_f), 2) ./ mean(Mvarwc_f(:, idx_post_f), 2);
+r_pre_f   = mean(Mvarnc_f(:, idx_pre_f),   2) ./ mean(Mvarwc_f(:, idx_pre_f),   2);
+r_early_f = mean(Mvarnc_f(:, idx_early_f), 2) ./ mean(Mvarwc_f(:, idx_early_f), 2);
+r_late_f  = mean(Mvarnc_f(:, idx_late_f),  2) ./ mean(Mvarwc_f(:, idx_late_f),  2);
+r_post_f  = mean(Mvarnc_f(:, idx_post_f),  2) ./ mean(Mvarwc_f(:, idx_post_f),  2);
 
-% Wilcoxon signed-rank tests: OL variance vs CL variance per window
-% Test whether variance ratio differs from 1 (OL != CL).
-% For each window, collect per-session OL and CL mean variance, then test.
-varnc_pre_f  = mean(Mvarnc_f(:, idx_pre_f),  2);
-varnc_stim_f = mean(Mvarnc_f(:, idx_stim_f), 2);
-varnc_post_f = mean(Mvarnc_f(:, idx_post_f), 2);
-varwc_pre_f  = mean(Mvarwc_f(:, idx_pre_f),  2);
-varwc_stim_f = mean(Mvarwc_f(:, idx_stim_f), 2);
-varwc_post_f = mean(Mvarwc_f(:, idx_post_f), 2);
+% Wilcoxon signed-rank tests: OL variance vs CL variance per window (test ratio != 1).
+varnc_pre_f   = mean(Mvarnc_f(:, idx_pre_f),   2);  varwc_pre_f   = mean(Mvarwc_f(:, idx_pre_f),   2);
+varnc_early_f = mean(Mvarnc_f(:, idx_early_f), 2);  varwc_early_f = mean(Mvarwc_f(:, idx_early_f), 2);
+varnc_late_f  = mean(Mvarnc_f(:, idx_late_f),  2);  varwc_late_f  = mean(Mvarwc_f(:, idx_late_f),  2);
+varnc_post_f  = mean(Mvarnc_f(:, idx_post_f),  2);  varwc_post_f  = mean(Mvarwc_f(:, idx_post_f),  2);
 
-p_fr_pre  = signrank(varnc_pre_f,  varwc_pre_f);
-p_fr_stim = signrank(varnc_stim_f, varwc_stim_f);
-p_fr_post = signrank(varnc_post_f, varwc_post_f);
+p_fr_pre   = signrank(varnc_pre_f,   varwc_pre_f);
+p_fr_early = signrank(varnc_early_f, varwc_early_f);
+p_fr_late  = signrank(varnc_late_f,  varwc_late_f);
+p_fr_post  = signrank(varnc_post_f,  varwc_post_f);
 
 stars_fr = @(p) repmat('*', 1, (p < 0.001)*3 + (p >= 0.001 && p < 0.01)*2 + (p >= 0.01 && p < 0.05)*1);
 
@@ -75,17 +76,17 @@ ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.18 0.14 0.78 0.78]);
 hold(ax_fr, 'on');
 
 for s = 1:nSess_f
-    plot(ax_fr, [1 2 3], [r_pre_f(s) r_stim_f(s) r_post_f(s)], ...
+    plot(ax_fr, [1 2 3 4], [r_pre_f(s) r_early_f(s) r_late_f(s) r_post_f(s)], ...
         '-o', 'Color',[0.6 0.6 0.6], 'MarkerSize',3, ...
         'MarkerFaceColor',[0.6 0.6 0.6], 'LineWidth',0.6, 'HandleVisibility','off');
 end
-plot(ax_fr, [1 2 3], [mean(r_pre_f) mean(r_stim_f) mean(r_post_f)], ...
+plot(ax_fr, [1 2 3 4], [mean(r_pre_f) mean(r_early_f) mean(r_late_f) mean(r_post_f)], ...
     'k-o', 'LineWidth',1.5, 'MarkerSize',5, 'MarkerFaceColor','k', 'DisplayName','Mean');
 yline(ax_fr, 1, 'k--', 'LineWidth',0.75, 'HandleVisibility','off');
 hold(ax_fr, 'off');
 
-xlim(ax_fr, [0.5 3.5]);
-ax_fr.XTick = [1 2 3]; ax_fr.XTickLabel = {'Pre','Stim','Post'};
+xlim(ax_fr, [0.5 4.5]);
+ax_fr.XTick = [1 2 3 4]; ax_fr.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
 ylabel(ax_fr, 'OL/CL variance ratio', 'FontWeight','bold');
 lgd_fr = legend(ax_fr, 'Location','best'); paperLegend(lgd_fr);
 
@@ -93,14 +94,17 @@ lgd_fr = legend(ax_fr, 'Location','best'); paperLegend(lgd_fr);
 yl_fr = ylim(ax_fr);
 star_y_fr = yl_fr(2) + 0.04 * (yl_fr(2) - yl_fr(1));
 ylim(ax_fr, [yl_fr(1), yl_fr(2) + 0.12 * (yl_fr(2) - yl_fr(1))]);
-fr_pvals = {p_fr_pre, p_fr_stim, p_fr_post};
-for wi = 1:3
+fr_pvals = {p_fr_pre, p_fr_early, p_fr_late, p_fr_post};
+for wi = 1:4
     ss = stars_fr(fr_pvals{wi});
     if ~isempty(ss)
         text(ax_fr, wi, star_y_fr, ss, 'HorizontalAlignment','center', ...
             'VerticalAlignment','bottom', 'FontSize',6, 'FontWeight','bold', 'Color','k');
     end
 end
+
+% Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
+mark_stim_span(ax_fr);
 
 paperExport(fig_Fr, fullfile(paper_root, 'images', 'figure3', 'variance_ratio_by_window.pdf'));
 
@@ -455,6 +459,10 @@ ax_g2r.XTick = [1 2 3 4];
 ax_g2r.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
 ylabel(ax_g2r, 'OL/CL RMSE ratio', 'FontWeight','bold');
 lgd_g2r = legend(ax_g2r, 'Location','best'); paperLegend(lgd_g2r);
+
+% Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
+mark_stim_span(ax_g2r);
+
 paperExport(fig_G2r, fullfile(paper_root, 'images', 'figure3', 'MSE_ratio_by_window.pdf'));
 
 
