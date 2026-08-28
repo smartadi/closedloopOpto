@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-28 — Mouse LTI in grant Fig 6 split into within-session + across-session panels
+**Changed/Found:** `draft/.../frontmatter.tex` — `fig:lti` mouse part is now TWO panels: (A) within-session `figs2/mouse_lti.png` (2C data-vs-TF, R²≤0.88) + (B) across-session `figs2/mouse_lti_across.png` (copied from talk `2Ci_tf_shape_across_sessions.png`, measured-vs-LTI-fit over sessions); macaque OS-Pulse becomes (C). Updated caption + prose refs (mouse A→A,B; macaque B→C). Compiles clean (exit 0, 0 undefined refs, 25 pp; fig:lti = Fig 6, p.8).
+**Why:** User wanted the mouse LTI shown as within-session AND across-session fits, borrowing the NeuroAI-talk PNGs.
+**Next:** none; upload zip + Overleaf set rebuilt (22 figs).
+
 ### 2026-08-26 — Variability figure: switch to WITHIN-SESSION quartiles (drop pooled-z-bins)
 **Changed/Found:** `ols_tf_pipeline.m` (RUN_CLICKERS combined VAR block) — replaced the pooled-z-quantile binning + bootstrap band with WITHIN-SESSION state QUARTILES: each session is ranked on its own state distribution, MAD(|Local dip dev|) computed per quartile within session (≥8 trials/quartile), then drawn as one thin Q1→Q4 curve per session + a thick mean±SEM across sessions. x-axis now Q1..Q4, not state-z. Console adds per-state mean Q4−Q1 rise and #sessions-up. Pooled statistic unchanged (partial Spearman(|dev|,state|dev_pre), session-blocked) — rank-based, so scale-free.
 **Why:** User, 2026-08-26: pooling z-scores across sessions to bin is a bad way to compare variance — z standardises away the between-session scale, and per session there are too few trials to trust a pooled-bin variance. Within-session quartiles keep each session self-referential (repeated-measures aggregation). See [[project_statedep_question]].
