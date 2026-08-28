@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-08-28 — Grant: skipped the per-quartile figure; cropped title off smooth brain map + shrank it
+**Changed/Found:** `draft/.../aim1.tex` — wrapped the per-quartile actual-vs-expected figure (`fig:gridstate`) in `\iffalse … \fi` (SKIP for now, reversible) and removed its one-sentence text reference in the "Third" result. The consolidated site→readout figure is now **Fig 9** (was 10). Smooth brain-map panel A: title band cropped off the PNG (matplotlib row-ink detection, removed top 284 px → `figs2/grid_efferent_smooth.png`, source `bilateral/grid/grid_png/grid_spatial.png`) and `\includegraphics` width reduced 0.66→0.50\textwidth; it now fits on one page instead of floating to p.18. Compiles clean (27 pp, 0 undefined refs).
+**Why:** User (this turn): "skip figure 9 content for now"; "regenerate it [smooth map] without the title … make the figure smaller, it's too big." Re-running `run_grid.py` to drop the suptitle needs the raw session off the server, so cropped the existing PNG instead.
+**Next:** none; to restore the quartile figure, delete the `\iffalse`/`\fi` pair around `fig:gridstate`.
+
 ### 2026-08-28 — Grant Fig 9 → individual trials; Fig 10A → smooth widefield brain-map overview
 **Changed/Found:** (1) `grid_state_quartile_exemplars.py` plotting switched from quartile mean±SD band to **18 individual trial traces per quartile** (thin, α=0.4) overlaid on the expected drive-only dashed line — user wanted individual examples, not averages. Spread visibly fans out Q1→Q4 (resid SD unchanged: 1.12/1.24/1.31/1.49). (2) `fig:gridfields` panel A now uses `figs2/grid_efferent_smooth.png` (copied from `bilateral/grid/grid_png/grid_spatial.png` — trial-averaged widefield ΔF/F **brain images** per stim site, 40–120 ms, amp 2.0, smooth cortex not scatter dots), replacing the discrete `grid_efferent_overview.png`. Captions updated. Compiles clean (27 pp, 0 undefined refs).
 **Why:** User (this turn): "figure 9 I actually want individual trial examples not trial avg"; "figure 10a … can we do the smooth brain map version, look into grid folder" → `grid_spatial.png` is that smooth version.
