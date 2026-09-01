@@ -16,7 +16,10 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
-### 2026-08-28 — Grant: skipped the per-quartile figure; cropped title off smooth brain map + shrank it
+### 2026-08-31 — Two-PC sync: git-ignore data/decks/panels, untrack the tracked talk deck
+**Changed/Found:** `.gitignore` — added `talk/*.pptx|*.key|*.jpg|*.svg|*.npz`, `talk/_cache/`, and `manuscriptPanels/` (421 MB of Illustrator/Affinity binaries). `git rm --cached talk/neuroai_seattle_2026_lean.pptx` (85 MB) to untrack it (file kept on disk). `CLAUDE.md` — added a "Two-machine sync (lab ⇄ home)" rule under Git discipline: `git sync` (pull-rebase-autostash) at session start, commit+`git sync` at end. Repo now syncs across lab + home PC; only code+docs go over git.
+**Why:** User setting up the home PC as a second workstation without AnyDesk. Data/plots/decks can't live in git (already-bloated 694 MB `.git`); decks move to `OneDrive\Talks\NeuroAI2026\` instead, data stays lab-PC-only.
+**Next:** On the home PC, clone + `git checkout alpha`; see `OneDrive\Notes\Two-PC setup.md`. Optionally delete `talk/` deck copies once OneDrive confirms the decks synced.
 **Changed/Found:** `draft/.../aim1.tex` — wrapped the per-quartile actual-vs-expected figure (`fig:gridstate`) in `\iffalse … \fi` (SKIP for now, reversible) and removed its one-sentence text reference in the "Third" result. The consolidated site→readout figure is now **Fig 9** (was 10). Smooth brain-map panel A: title band cropped off the PNG (matplotlib row-ink detection, removed top 284 px → `figs2/grid_efferent_smooth.png`, source `bilateral/grid/grid_png/grid_spatial.png`) and `\includegraphics` width reduced 0.66→0.50\textwidth; it now fits on one page instead of floating to p.18. Compiles clean (27 pp, 0 undefined refs).
 **Why:** User (this turn): "skip figure 9 content for now"; "regenerate it [smooth map] without the title … make the figure smaller, it's too big." Re-running `run_grid.py` to drop the suptitle needs the raw session off the server, so cropped the existing PNG instead.
 **Next:** none; to restore the quartile figure, delete the `\iffalse`/`\fi` pair around `fig:gridstate`.
