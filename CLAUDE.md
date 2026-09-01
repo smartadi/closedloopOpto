@@ -62,11 +62,18 @@ The Change Log is the record *between* commits; commits + push are the durable r
 
 1. **Branch:** work on `alpha` (current). **Never commit directly to `main`.** If on `main`, create/switch to a feature branch first.
 2. **Commit at every logical unit** — a finished analysis, a working figure, a bug fix. Don't let the working tree accumulate a day's worth of unrelated changes in one commit.
-3. **Push after every commit** (or at minimum at the end of every working session). Unpushed work is unbacked-up work — this is a single-machine research repo, so push is the only backup.
+3. **Push after every commit** (or at minimum at the end of every working session). Unpushed work is unbacked-up work — and this repo now syncs across **two machines** (lab PC + home PC), so an unpushed commit on one PC is a merge conflict waiting to happen on the other. Push is both the backup and the sync.
 4. **Before committing:** stage intentionally (`git add` specific files, not blind `git add -A`); confirm the corresponding `RESEARCH.md` Change Log entry is included in the same commit so log and code move together.
 5. **Commit message:** imperative one-line summary (≤72 chars), matching the style of recent commits (e.g. `Add cl_mse_factors.m: CL MSE variance decomposition`). Body only if the why isn't obvious.
 6. **Never** `--force`, `--no-verify`, or rewrite pushed history unless the user explicitly asks.
 7. **End-of-session checklist:** (a) Change Log up to date → (b) commit staged work → (c) `git push`. State to the user whether the push succeeded.
+
+### Two-machine sync (lab PC ⇄ home PC)
+
+This repo lives on both PCs. To never hit merge conflicts:
+- **At session start, before touching anything:** `git sync` (alias for `git pull --rebase --autostash`) so you build on whatever the other PC pushed.
+- **At session end / every logical unit:** commit, then `git sync` (pull-rebase then push). Never walk away with unpushed commits or uncommitted work.
+- Data, plots, talk decks, and manuscript panels are **git-ignored** (they don't sync via git — data stays lab-PC-local, decks sync via OneDrive). Only code + docs move over git.
 
 ---
 
