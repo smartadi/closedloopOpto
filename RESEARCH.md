@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-01 — Port Figure 3 (CL vs OL) panel pipeline to Python
+**Changed/Found:** `pyFigure3/` (new package: `io.py`, `panels.py`, `figure3.py`, `style.py`, `synth.py`, `test_figure3.py`, `README.md`) — Python reimplementation of Fig-3 panels A–J, ported from `controller-analysis/variance_mse.m` (F/G/I), `step_response.m` (H) and `utils/analysisPlots_combined.m` (A–E). Reads the same `data/<session>.mat` (-v7.3/HDF5) caches via `h5py`, pulling ONLY the Fig-3 fields (`ncDfk/wcDfk/pncDfk/pwcDfk/ncInp/wcInp/er_*`) so the multi-GB SVD in `d` is never loaded. RMSE kept sample-normalised (`sqrt(mean((seg−ref)²))`, ref=−5). Panel J (settling 0–1 s vs steady 1–3 s OL/CL RMSE ratio) derived from the early/late windowed RMSE, since no literal `panel_J` exists in the MATLAB.
+**Why:** Enable regenerating Fig 3 from the home PC without a MATLAB license, and start consolidating brain_paper analysis onto the Python stack (yazdanlab/LDS_fitting are already Python). No session caches exist on the home PC, so validation used synthetic fixtures.
+**Next:** On the **lab PC** (where `data/` caches live) run `pyFigure3.figure3.make_figure3(cache_paths=[...13 sessions...], rep_path=..., outdir='paper/images/figure3')` and diff the panels against the MATLAB `paper/images/figure3/*.pdf` for numerical parity. First likely tweak: `io._read` if any cache stores a struct field via HDF5 object references rather than a plain dataset.
+
 ### 2026-08-31 — Two-PC sync: git-ignore data/decks/panels, untrack the tracked talk deck
 **Changed/Found:** `.gitignore` — added `talk/*.pptx|*.key|*.jpg|*.svg|*.npz`, `talk/_cache/`, and `manuscriptPanels/` (421 MB of Illustrator/Affinity binaries). `git rm --cached talk/neuroai_seattle_2026_lean.pptx` (85 MB) to untrack it (file kept on disk). `CLAUDE.md` — added a "Two-machine sync (lab ⇄ home)" rule under Git discipline: `git sync` (pull-rebase-autostash) at session start, commit+`git sync` at end. Repo now syncs across lab + home PC; only code+docs go over git.
 **Why:** User setting up the home PC as a second workstation without AnyDesk. Data/plots/decks can't live in git (already-bloated 694 MB `.git`); decks move to `OneDrive\Talks\NeuroAI2026\` instead, data stays lab-PC-only.
