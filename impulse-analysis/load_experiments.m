@@ -1,3 +1,4 @@
+%% 
 % impulse-analysis -- extracted from Impulse_mouseDataAnalysis_all.m
 % Run from impulse-analysis/ directory.
 

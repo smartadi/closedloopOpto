@@ -30,3 +30,14 @@ __pycache__/
 ~$*.docx
 ~$*.xlsx
 
+
+# Talk decks & assets — synced via OneDrive, not git (large binaries)
+talk/*.pptx
+talk/*.key
+talk/*.jpg
+talk/*.svg
+talk/*.npz
+talk/_cache/
+
+# Manuscript figure/design panels — large binaries, not synced via git
+manuscriptPanels/
