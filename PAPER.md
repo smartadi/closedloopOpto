@@ -852,6 +852,48 @@ Single-session panels (A–E): m4 (AL_0033, 2025-02-26). Cross-session panels (F
 > Two more checks before submission: panel H is genuinely MAE and must stay labelled so (project decision 2026-07-16), and the 3H/3J *filenames* still say "MSE" although the metric is RMSE.
 > Old panel **(K)** — the three-session step-response TF fit — is now **Fig 2 panel 2I**; do not describe it here.
 
+### Figure 4 — build pipeline *(2026-09-07 — two-mechanism reframe)*
+
+One driver regenerates the whole figure: **`controller-analysis/build_figure4.m`** (run after
+`load_sessions.m`; it runs `load_sessions` itself if `mouse`/`fields` are absent). It executes the
+blocks in reading order and exports every panel to `paper/images/figure4/`.
+
+**COHORT — reconciled 2026-09-07 (user).** The whole figure uses the **13 controller sessions
+(m1–m13)**; the new-rig mice **AL_0048 / AL_0051 (m14/m15) are excluded everywhere** (absolute
+OL-vs-CL RMSE is not rig-comparable — the reason Block A already dropped them). Motion-/spectrum-
+complete panels are the **9 of those 13 with motion (513 CL trials)**; the burst gallery and the
+rejection anchor need no motion and use all **13 sessions (752 CL trials)**. Two numbers, both subsets
+of the same set. The 4-animal / 15-session mixed-effects (P1-d) is retained **as supplementary
+robustness only**, never quoted over a main-figure panel.
+
+**FORMAT — no regression/slope panels (user 2026-09-07).** The figure is built from the
+exemplar + decomposition-bar style. All linear-fit/slope panels are **out**: `factor_slope_*`,
+`distrej_statedep_scatter/slopes`, and the retracted `distrej_decouple_initdev.pdf`. Decoupling is
+carried by the **decomposition bars** (init-dev unique-R² collapses across windows inside
+`cl_rmse_factor_windows`), not by an OL-vs-CL slope plot.
+
+| Block | Story | Script(s) | Panel file(s) in `figure4/` |
+|---|---|---|---|
+| **A — disturbance rejection** | the loop rejects the laser disturbance (CL closer to ref than OL, **13/13 sessions, ~1.48×, p=2.4e-4**) | `ctrl_disturbance_rejection.m` `[DISTREJ]` | `disturbance_rejection_pooled_panel.pdf` (panel), `disturbance_rejection_pooled.png`, `disturbance_rejection_persession.png` — **moved from `figure3/` 2026-09-07** |
+| **B — error composition** *(the "emotion" panels — user 2026-09-07; also carries decoupling via the decomposition bars)* | what the residual CL error is made of, shown as physiology: init-dev owns the transient, **rel 2–4 Hz** owns the settled window, motion owns none | `cl_rmse_factor_windows.m` (513 tr/9 sess), `cl_mse_exemplars.m` (513/9), `cl_delta_burst_explore.m` (752/13) | `cl_rmse_factor_windows.png`, `cl_mse_exemplars.png`, `delta_burst_gallery.png` |
+
+**Supplementary analysis, NOT a panel:** `ctrl_distrej_statedep.m` `[DRSTATE]` — init-dev decoupling
+(OL steep / CL flat, paired **p=0.013, 11/13**). Regression figures; cited in text/supplement only,
+deliberately not run by `build_figure4.m`.
+
+**Two-mechanism thesis (agreed 2026-09-07):** feedback *removes* the response's dependence on state
+it can act on (initial deviation + motion decouple) and leaves *one irreducible residual* — ongoing
+**2–4 Hz** activity, whose contribution to the settled-window error does **not** decouple (the locked
+`factor_slope_delta24` result, OL −0.47 → CL +0.85). Block B carries this at the physiology level.
+
+**Still open (do not resolve silently):**
+1. **Replace vs supplement.** Block B's three physiology figures are the emotional lead. Whether they
+   *replace* the LOCKED summary panels (`f4p1_error_decomp`, and the `factor_slope_*` set now dropped
+   by the format decision) or the decomposition bars get re-cut in the exemplar style is **unresolved**
+   — the locked Part-1 panels below are untouched pending that call.
+2. **Nick's metric.** Block A uses plain RMSE-to-ref (Fig-3 currency), not the ρ or energy-ratio
+   metric the 2026-08-10 note attributes to Nick. Confirm RMSE-to-ref is acceptable as the anchor.
+
 ### Figure 4 — draft caption *(three-block state-dependence reframe, 2026-07-29)*
 
 > 🔴 **THIS CAPTION IS A PREDICTION THAT DID NOT HOLD — do not write from it. Annotated 2026-08-10.**

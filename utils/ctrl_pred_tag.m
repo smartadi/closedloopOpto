@@ -41,11 +41,12 @@ catch
     % not set in base -> default. (Also the path taken inside functions/parfor.)
 end
 switch mode
-    case 'rank',    suffix = '';
-    case 'ridge',   suffix = '_ridge';
-    case 'deflate', suffix = '_deflate';
+    case 'rank',      suffix = '';
+    case 'ridge',     suffix = '_ridge';
+    case 'deflate',   suffix = '_deflate';
+    case 'softblind', suffix = '_softblind';   % ridge + TUNABLE soft leak penalty (utils/ctrl_softblind.m)
     otherwise
-        error(['ctrl_pred_tag: CTRL_PRED must be ''rank'', ''ridge'' or ''deflate'' ' ...
-               '(got ''%s'').'], mode);
+        error(['ctrl_pred_tag: CTRL_PRED must be ''rank'', ''ridge'', ''deflate'' or ' ...
+               '''softblind'' (got ''%s'').'], mode);
 end
 end

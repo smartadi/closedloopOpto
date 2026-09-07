@@ -1,5 +1,12 @@
-function [U, V, t, mimg] = cp_loadUVt(expRoot, nSV, tFallback)
+function [U, V, t, mimg] = cp_loadUVt(expRoot, nSV, tFallback, forceUncorr)
 % cp_loadUVt  loadUVt with a Timeline-timestamp fallback.
+%
+% forceUncorr (optional, default false): when true, ALWAYS take the manual uncorrected branch
+%   (blue/ U,V,mimg + detrendAndFilt, timebase = tFallback), even when a corrected corr/ V exists.
+%   USE for sessions whose canonical getpixel target data.dFk is UNCORRECTED but which happen to
+%   ship a corr/ folder, so loadUVt would otherwise hand back a hemo-corrected V that lives in a
+%   different signal space than the target (AL_0039 0419/0420: corrected-V corr(y_full,dFk)=0.617,
+%   uncorrected-V corr=0.919 -- RESEARCH 2026-09-05). Requires tFallback (needs the timebase).
 %
 % Five of the 13 controller sessions (m6 m7 m8 m11 m12 -- the ones with no hemo-corrected
 % `corr/` folder) also ship WITHOUT `blue/svdTemporalComponents.timestamps.npy`, so the
@@ -26,11 +33,12 @@ function [U, V, t, mimg] = cp_loadUVt(expRoot, nSV, tFallback)
 % Usage:  [U,V,t,mimg] = cp_loadUVt(expPath(mn,td,en), nSV, d_s.timeBlue);
 
 if nargin < 3; tFallback = []; end
+if nargin < 4 || isempty(forceUncorr); forceUncorr = false; end
 
 tsFile = fullfile(expRoot, 'blue', 'svdTemporalComponents.timestamps.npy');
 corrOK = exist(fullfile(expRoot, 'corr', 'svdTemporalComponents_corr.npy'), 'file') > 0;
 
-if corrOK || exist(tsFile, 'file')
+if ~forceUncorr && (corrOK || exist(tsFile, 'file'))
     [U, V, t, mimg] = loadUVt(expRoot, nSV);
     return;
 end

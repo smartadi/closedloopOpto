@@ -6,6 +6,12 @@ function [r, c] = cp_orient_inv(T, dr, dc)
 
 if isempty(T), r = dr; c = dc; return; end
 r = dr;  c = dc;
+if isfield(T,'rot') && T.rot ~= 0               % undo the fine rotation FIRST (rotate by -rot)
+    r0 = (T.Hd+1)/2; c0 = (T.Wd+1)/2; ph = -T.rot*pi/180;
+    x = c - c0;  y = r0 - r;
+    xr = x*cos(ph) - y*sin(ph);  yr = x*sin(ph) + y*cos(ph);
+    c = c0 + xr;  r = r0 - yr;
+end
 if T.fl, c = T.Wd + 1 - c; end
 if T.fu, r = T.Hd + 1 - r; end
 if T.tr, tmp = r;  r = c;  c = tmp; end

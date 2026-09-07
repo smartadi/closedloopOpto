@@ -49,6 +49,7 @@ Y=[]; X1=[]; X2=[]; X3=[]; SESS=[]; TRI=[];
 
 for k = 1:numel(fields)
     s = mouse.(fields{k});
+    if ismember(s.mn,{'AL_0048','AL_0051'}); continue; end   % Fig-4 cohort = 13 controller sessions; exclude new-rig m14/m15 (2026-09-07)
     if isfield(s,'skip') && s.skip;      continue; end
     if ~isfield(s,'data');               continue; end
     if ~s.has_motion;                    continue; end
@@ -202,7 +203,7 @@ for r = 1:3
     end
 end
 
-title(tl, sprintf('CL trial exemplars by error factor  (n=%d trials, 9 sessions)', n), ...
+title(tl, sprintf('CL trial exemplars by error factor  (n=%d trials, %d sessions)', n, numel(unique(SESS))), ...
     'FontSize',7,'FontWeight','bold');
 
 paperExport(fig, fullfile(paper_root,'images','figure4','cl_mse_exemplars.png'));

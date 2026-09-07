@@ -70,7 +70,7 @@ rng(7,'twister');
 %   'yfull'     = SVD raw-kernel + rolling-baseline reconstruction (legacy; ~1.5x scale, overshoots ref)
 % The legacy y_full is only ~0.9-correlated with data.dFk and ~1.5x its amplitude, so ||A-ref|| in
 % y_full units is invalid (CL overshoots ref). Regress onto data.dFk so A and G share the ref frame.
-target_mode = 'canonical';
+target_mode = 'canonical';   % per-session default + BATCH override applied AFTER sess_tag exists (~L100)
 
 assert(exist('mouse','var') && exist('fields','var'), ...
     '[CTRL-OL] run controller-analysis/load_sessions.m first (need `mouse`,`fields`).');
@@ -88,6 +88,16 @@ fld = fields{selField};
 d_s  = mouse.(fld).d;  data = mouse.(fld).data;
 mn = mouse.(fld).mn; td = mouse.(fld).td; en = mouse.(fld).en;
 sess_tag = sprintf('%s_%s%s_e%d', mn, td(6:7), td(9:10), en);
+
+% TARGET per-session default: the canonical target is data.dFk, but a session whose ONLINE dFk is not
+% frame-aligned to the widefield SVD must instead target the SVD-rebuilt readout 'yfull' (predictors +
+% onsets both live in the SVD timebase, so yfull is the only frame-consistent target). m13
+% AL_0039_0420_e2: dFk 75 fr short of SVD, corr(dFk,SVD-pixel)=0.03, scattered frame loss (no global
+% shift fixes it) -- RESEARCH 2026-09-07. yfull is NOT ref-referenced (~1.5x scale), so quote m13's
+% ||A-ref|| rejection metric with that caveat; the Global/Local shares (ratios) are scale-invariant.
+YFULL_DEFAULT = {'AL_0039_0420_e2'};
+if any(strcmpi(sess_tag, YFULL_DEFAULT)); target_mode = 'yfull'; end
+if exist('BATCH_target_mode','var') && ~isempty(BATCH_target_mode); target_mode = BATCH_target_mode; end
 
 % Selection committed in ctrl_affected_gui.m ("Build predictor"), if any. Adopted ONLY when it was
 % saved under the method now in force -- a pre-2026-08-10 file holds a dip-score threshold with no
@@ -142,7 +152,25 @@ fprintf('[CTRL-OL] %s | Stage 1: site [row %d col %d], %d contra grid px, %d spo
 
 serverRoot = expPath(mn, td, en);
 % timestamps-npy fallback for the uncorrected sessions -- see utils/cp_loadUVt.m
-[U_cp, V_cp, t_svd, mimg_cp] = cp_loadUVt(serverRoot, nSV_load, d_s.timeBlue);
+% FORCE-UNCORRECTED override: some corr/-bearing sessions ship an uncorrected canonical dFk, so the
+% preferred corrected V lives in a different signal space than the target (AL_0039 0419/0420:
+% corr(y_full,dFk) 0.617 corrected vs 0.919 uncorrected). Set base var CTRL_FORCE_UNCORR = true, or
+% a cellstr of sess_tags, to take the uncorrected branch for those sessions. RESEARCH 2026-09-05.
+% DEFAULT uncorrected list: sessions where the uncorrected blue V matches the (uncorrected)
+% canonical dFk target BETTER than the corrected corr/ V, measured by corr(y_full,dFk). Verified
+% 2026-09-05: 0419·AL39 0.62->0.92, 0420·AL39 0.62->0.85 (uncorrected wins big). NOT global -- 0212
+% is the opposite (corrected 0.90 vs uncorrected 0.76), 0224 a wash -- so this stays a per-session
+% list, not a blanket switch. Rule if adding a session: pick the V with the higher corr(y_full,dFk).
+UNCORR_DEFAULT = {'AL_0039_0419_e1','AL_0039_0420_e1'};
+force_uncorr = any(strcmpi(sess_tag, UNCORR_DEFAULT));
+if exist('CTRL_FORCE_UNCORR','var') && ~isempty(CTRL_FORCE_UNCORR)   % base-var override wins
+    if islogical(CTRL_FORCE_UNCORR); force_uncorr = CTRL_FORCE_UNCORR;
+    elseif iscellstr(CTRL_FORCE_UNCORR) || isstring(CTRL_FORCE_UNCORR)
+        force_uncorr = any(strcmpi(sess_tag, CTRL_FORCE_UNCORR));
+    end
+end
+if force_uncorr; fprintf('[CTRL-OL] FORCE-UNCORRECTED V for %s (matches uncorrected dFk target).\n', sess_tag); end
+[U_cp, V_cp, t_svd, mimg_cp] = cp_loadUVt(serverRoot, nSV_load, d_s.timeBlue, force_uncorr);
 V_cp = double(V_cp);
 [nY_cp, nX_cp] = size(mimg_cp);  nSV_cp = size(U_cp,3);
 Uflat = reshape(U_cp, nY_cp*nX_cp, nSV_cp);
@@ -187,6 +215,28 @@ switch target_mode
         error('[CTRL-OL] unknown target_mode ''%s''.', target_mode);
 end
 
+% --- FIT-TARGET DETREND (2026-09-05) -----------------------------------------------
+% Stage 1 fit against the ROLLING-BASELINE y_full (stationary) and got held-out R^2 0.91
+% even on AL_0051; Stage 2 switched to canonical data.dFk so ||A-ref|| shares the ref=-5
+% frame. But the 2026-07 new-mice dFk carries a large low-frequency DRIFT (AL_0051: target
+% mean -0.13 in the train block vs +3.96 in the test block, dmean +4.08 = 1.5 SD), and the
+% temporal train/test split then makes the deployed R^2 measure the drift, not the coupling
+% (R^2 = -2.06, worse than the mean). Fix: fit the predictor on a detrended target using the
+% SAME rolling window y_full uses (horizon), then ADD the baseline BACK to Global at deploy
+% so Actual/Global/Local stay in raw dFk (ref=-5) units and the rejection metric is untouched.
+% No-op for the older mice (drift ~0 -> yb ~ a constant that muY absorbs). RESEARCH 2026-09-05.
+DETREND_FIT = true;
+if exist('BATCH_detrend_fit','var') && ~isempty(BATCH_detrend_fit); DETREND_FIT = BATCH_detrend_fit; end
+if DETREND_FIT
+    yb = movmedian(ytrace, horizon, 'omitnan');    % slow baseline, same window as y_full
+    ytrace_fit = ytrace - yb;                       % stationary target for the FIT only
+    fprintf('[CTRL-OL] fit-target detrend ON (movmedian %d fr): train/test target mean gap %.2f -> %.2f\n', ...
+        horizon, mean(ytrace(frames(itr)))-mean(ytrace(frames(ite))), ...
+        mean(ytrace_fit(frames(itr)))-mean(ytrace_fit(frames(ite))));
+else
+    yb = zeros(size(ytrace));  ytrace_fit = ytrace;
+end
+
 % contra grid timecourses (dF reconstruction), full session
 Xg_full = double(Uflat(gridIdx,:)) * V_cp;                 % [nG x T]
 
@@ -222,7 +272,8 @@ if ~isempty(keep_n); det_opts.keep_n = keep_n; end
 KSEL = struct('used',false,'reachable',true,'K_star',NaN,'R2_star',NaN,'R2_ceiling',NaN);
 [pred_suffix, pred_mode] = ctrl_pred_tag();     % 'ridge' = PROJECT MODEL; 'rank'/'deflate' retired
 useDeflate = strcmpi(pred_mode,'deflate');      % retired 2026-08-13 -- kept only for the bracket
-useRidge   = strcmpi(pred_mode,'ridge') || useDeflate;   % deflate = ridge + one linear constraint
+useSoft    = strcmpi(pred_mode,'softblind');    % ridge + TUNABLE soft leak penalty (2026-09-05)
+useRidge   = strcmpi(pred_mode,'ridge') || useDeflate || useSoft;   % all whole-grid ridge variants
 if useRidge
     % RIDGE MODEL: no pixel is dropped, so there is no K to choose. The detector still RUNS --
     % its score is the diagnostic that says how much bleed the kept set carries, and it is what
@@ -232,6 +283,9 @@ if useRidge
     if useDeflate
         fprintf(['[CTRL-OL] predictor mode = DEFLATE: whole grid, ridge lambda from catch windows, ' ...
                  'then weights constrained orthogonal to the contra stim direction.\n']);
+    elseif useSoft
+        fprintf(['[CTRL-OL] predictor mode = SOFTBLIND: whole grid, ridge lambda, then a TUNABLE ' ...
+                 'soft penalty on the contra stim direction (leak swept, op point by held-out target).\n']);
     else
         fprintf('[CTRL-OL] predictor mode = RIDGE: whole grid kept, lambda chosen from catch windows.\n');
     end
@@ -269,14 +323,14 @@ Su = find(unaff);
 Xs = Xg_full(Su, frames);
 mu = mean(Xs(:,itr),2);  sd = std(Xs(:,itr),0,2);  sd(sd==0) = 1;   % TRAIN z-score
 Ztr = ((Xs(:,itr)-mu)./sd).';  Zte = ((Xs(:,ite)-mu)./sd).';
-ys = ytrace(frames);  ytr = ys(itr);  yte = ys(ite);  muY = mean(ytr);
+ys = ytrace_fit(frames);  ytr = ys(itr);  yte = ys(ite);  muY = mean(ytr);
 r2f = @(y,yh) 1 - sum((y(:)-yh(:)).^2)/max(sum((y(:)-mean(y(:))).^2),eps);
 RPATH = struct('used',false);
 if useRidge
     % Whole grid, weights shrunk, lambda picked from LASER-OFF catch windows only. The Gram is
     % built over the same frames and split as the direct fit above, so R^2 is the same number by
     % the same definition -- only the estimator changed.
-    FG    = ctrl_gram_build(Xg_full, frames, itr, ite, ytrace);
+    FG    = ctrl_gram_build(Xg_full, frames, itr, ite, ytrace_fit);
     % Catch windows need CONTIGUOUS laser-off stretches, and `frames` may be a decimated subsample
     % (ctrl_ols_spont caps at 60000 by even spacing), which has no contiguity at all. Rebuild the
     % un-decimated laser-off mask from the onsets, using the same rule ctrl_ols_spont used, and
@@ -317,6 +371,83 @@ if useRidge
         b     = DEF.b;
         R2_te = DEF.R2te;  R2_tr = DEF.R2tr;
         RPATH.DEF = DEF;
+    end
+
+    if useSoft
+        % SOFT-BLINDING (utils/ctrl_softblind.m): the penalty leakW*(d'b)^2 swept to a per-session
+        % leak<->R^2 curve; the operating point is the LEAST blinding whose HELD-OUT leak clears a
+        % target (d fit on ODD trials, leak scored on EVEN, same guard as deflate). Unlike deflate
+        % the leak is REPORTED, not forced to 0. The whole curve is cached (RPATH.SOFT) for tuning.
+        df_odd = 1:2:nTr;  df_even = 2:2:nTr;
+        d_all  = local_stim_dir(Xg_full, onF,          rel, bwin, swin, FG.mu, FG.sd);
+        d_odd  = local_stim_dir(Xg_full, onF(df_odd),  rel, bwin, swin, FG.mu, FG.sd);
+        d_even = local_stim_dir(Xg_full, onF(df_even), rel, bwin, swin, FG.mu, FG.sd);
+        % x-axis = target fraction of the ridge (leakW=0) leak, so it is den-independent + readable
+        fracs = [1 .8 .6 .45 .35 .25 .18 .12 .08 .05 .03 .015 0];
+        S0 = ctrl_softblind(FG, RPATH.lambda_abs, d_all, 0);          % one call for den, proj_free
+        lw = zeros(size(fracs));  pos = fracs>0;
+        lw(pos)  = (1./fracs(pos) - 1) / max(S0.den, eps);
+        lw(~pos) = 1e12;                                              % -> hard deflate limit
+        SWa = ctrl_softblind(FG, RPATH.lambda_abs, d_all, lw);        % deployed weights per leakW
+        SWo = ctrl_softblind(FG, RPATH.lambda_abs, d_odd, lw);        % held-out: BUILT on ODD trials
+        holdRef  = d_even.' * SWo.b(:,1);                             % even-trial leak of the ridge fit
+        leakHold = (d_even.' * SWo.b) / max(abs(holdRef), eps);       % held-out leak fraction curve
+        % OP-POINT RULE. Default 'minleak' (RECOMMENDED since 2026-09-05, replacing r2budget): among
+        % the leakW whose held-out R^2 clears ctrl_r2_floor() (+ optional SOFT_R2MARGIN), pick the one
+        % that MINIMISES |held-out leak|. WHY not just blind maximally (r2budget): the held-out leak is
+        % NON-MONOTONE in leakW -- on 0430 it dips to 0.07 mid-curve then rises to 0.59 at the deflate
+        % end, so maximal blinding OVER-blinds into a worse honest leak. minleak deploys the genuinely
+        % most-stim-blind operating point the R^2 budget allows, and it is exactly the achLeak the
+        % tuner (ctrl_softblind_tuner.m) scores. Modes:
+        %   'minleak'  (default) argmin |held-out leak| s.t. held-out R^2 >= floor
+        %   'r2budget' most-blinded leakW s.t. held-out R^2 >= floor  (can over-blind; kept for compare)
+        %   'target_leak' least-blinding leakW whose |held-out leak| <= SOFT_TARGET
+        sel_mode = 'minleak';
+        if exist('SOFT_MODE','var') && ~isempty(SOFT_MODE); sel_mode = lower(char(SOFT_MODE)); end
+        SOFT_TGT = 0.25;
+        if exist('SOFT_TARGET','var') && ~isempty(SOFT_TARGET); SOFT_TGT = SOFT_TARGET; end
+        r2budget = ctrl_r2_floor();
+        if exist('SOFT_R2MARGIN','var') && ~isempty(SOFT_R2MARGIN); r2budget = r2budget + SOFT_R2MARGIN; end
+        inBudget = SWa.R2te >= r2budget;
+        soft_feasible = any(inBudget);
+        switch sel_mode
+            case 'minleak'
+                lh = abs(leakHold); lh(~inBudget) = inf;              % restrict to the R^2 budget
+                [~,okp] = min(lh);
+                if ~soft_feasible, okp = 1; end                      % even ridge fails floor -> least blind
+            case 'r2budget'
+                okp = find(inBudget, 1, 'last');                     % fracs descending -> last clearing = most blinded
+                if isempty(okp), okp = 1; end
+            otherwise % 'target_leak'
+                okp = find(abs(leakHold) <= SOFT_TGT, 1, 'first');
+                if isempty(okp), okp = numel(lw); end
+        end
+        % COMMITTED op point (hand-picked in ctrl_softblind_session_tuner.m -> data/ctrl_opsel_<sess>.mat)
+        % OVERRIDES the rule: deploy the sweep index nearest the committed leak-fraction, so a per-session
+        % op point chosen by eye persists into the deployed Global/Local and every downstream metric.
+        % Delete the file to revert to the rule.
+        opsel_file = fullfile(dataDir, sprintf('ctrl_opsel_%s.mat', sess_tag));
+        if exist(opsel_file,'file')
+            OS = load(opsel_file,'sel_frac');
+            if isfield(OS,'sel_frac') && ~isempty(OS.sel_frac)
+                [~,okp] = min(abs(fracs(:) - OS.sel_frac));
+                sel_mode = 'committed';
+                fprintf('[CTRL-OL] COMMITTED op point: frac %.3f -> sweep idx %d (overrides the %s rule)\n', ...
+                    OS.sel_frac, okp, 'auto');
+            end
+        end
+        SOFT = struct('fracs',fracs,'leakW',lw,'den',S0.den,'target',SOFT_TGT,'mode',sel_mode, ...
+                      'r2budget',r2budget,'feasible',soft_feasible, ...
+                      'R2te',SWa.R2te,'R2te_free',SWa.R2te_free, ...
+                      'leak_all',SWa.leak_frac,'leak_hold',leakHold, ...
+                      'sel_idx',okp,'sel_leakW',lw(okp),'sel_frac',fracs(okp));
+        SOFT.b_sweep = SWa.b;        % [nG x nW] weights at EVERY op point -> per-session tuner (ctrl_softblind_session_tuner.m)
+        b     = SWa.b(:,okp);
+        R2_te = SWa.R2te(okp);  R2_tr = SWa.R2tr(okp);
+        RPATH.SOFT = SOFT;
+        fprintf(['[CTRL-OL] SOFTBLIND op (%s): leak_frac all=%.2f held-out=%.2f | spont R^2 %.3f ' ...
+                 '(ridge %.3f, cost %.3f) | feasible=%d\n'], sel_mode, ...
+                 SWa.leak_frac(okp), leakHold(okp), R2_te, SWa.R2te_free, SWa.R2te_free-R2_te, soft_feasible);
     end
     clear FG
     fprintf(['[CTRL-OL] Global predictor (RIDGE, %d px, lambda* %.3g): held-out spont R^2 = ' ...
@@ -360,7 +491,11 @@ nSub = min(numel(VAL.yte), 5000);                          % scatter subsample, 
 VAL.sub = unique(round(linspace(1, numel(VAL.yte), nSub)));
 
 % Global over all frames = counterfactual ipsi from unaffected contra ongoing state
-Gall = muY + (((Xg_full(Su,:)-mu)./sd).') * b;             % [T x 1]
+Gall = muY + (((Xg_full(Su,:)-mu)./sd).') * b;             % [T x 1], detrended-target units
+% Add the slow baseline BACK so Global is in raw dFk (ref=-5) units, matching Actual. b predicts
+% (dFk - yb); the deployed counterfactual ipsi is that prediction + yb. Local = A - G is then
+% drift-free by construction. No-op when DETREND_FIT is off (yb == 0).
+Lyb = min(numel(yb), numel(Gall));  Gall(1:Lyb) = Gall(1:Lyb) + yb(1:Lyb);
 
 %% [CTRL-OL-DEPLOY] OL Actual / Global / Local -------------------------------
 A_tr = zeros(nTr,nRel);  G_tr = zeros(nTr,nRel);
@@ -371,6 +506,28 @@ end
 bl = @(M) M - mean(M(:,bwin),2);                          % per-trial baseline-subtract
 A_tr = bl(A_tr);  G_tr = bl(G_tr);  L_tr = A_tr - G_tr;   % Local = Actual - Global, per trial
 Aa = mean(A_tr,1);  Gg = mean(G_tr,1);  Lo = mean(L_tr,1);% trial averages
+
+% SWEEP cache: the trial-averaged Global at EVERY soft-blind op point, so the per-session tuner
+% (ctrl_softblind_session_tuner.m) can redraw the Actual/Global/Local decomposition live as the
+% blinding slider moves, with no session reload. Global is linear in b, so trial-avg-then-baseline
+% commutes: Gg_k = bl(mean_j Gall_k(onF(j)+rel)). Only for softblind runs that cached b_sweep.
+clear SWEEP                                               % never carry a stale sweep into another run
+if useSoft && isfield(RPATH,'SOFT') && isfield(RPATH.SOFT,'b_sweep')
+    Bsw = RPATH.SOFT.b_sweep;  nWs = size(Bsw,2);
+    Gsw_all = muY + (((Xg_full(Su,:)-mu)./sd).') * Bsw;   % [T x nWs] all op points at once
+    Lyb2 = min(numel(yb), size(Gsw_all,1));
+    Gsw_all(1:Lyb2,:) = Gsw_all(1:Lyb2,:) + yb(1:Lyb2);   % baseline add-back (op-independent)
+    Gsweep = zeros(nWs,nRel);
+    for k = 1:nWs
+        Gk = zeros(nTr,nRel);
+        for j = 1:nTr; Gk(j,:) = Gsw_all(onF(j)+rel,k).'; end
+        Gk = bl(Gk);  Gsweep(k,:) = mean(Gk,1);
+    end
+    SWEEP = struct('Gsweep',Gsweep,'Aa',Aa,'tt',rel/Fs,'twin',twin,'swin',swin, ...
+                   'fracs',RPATH.SOFT.fracs,'R2te',RPATH.SOFT.R2te,'leak_hold',RPATH.SOFT.leak_hold, ...
+                   'sel_idx',RPATH.SOFT.sel_idx,'r2_floor',r2_floor,'feasible',RPATH.SOFT.feasible, ...
+                   'nTr',nTr,'pre_s',pre_s,'dur',dur);
+end
 
 % capture over transient + sustained windows
 capt = @(win) 100*mean(Lo(win))/mean(Aa(win));
@@ -415,6 +572,42 @@ scatter(aC, aR, 34, [0.9 0.2 0.1], 'filled');                          % affecte
 plot(sC, sR, 'g+', 'MarkerSize',13, 'LineWidth',2.2);
 title(sprintf('contra grid: %d unaffected (blue) / %d affected (red) + site', nnz(unaff), nnz(affected)));
 
+% MAP cache for the session tuner's stim-blind pixel view (no reload): oriented mean image, ALL
+% grid-pixel oriented coords + their per-pixel dip scores, the affected dip threshold, and the
+% site. Lets the tuner recolor pixels by dip and re-count "affected" as the dip-threshold knob moves.
+[gAllR, gAllC] = cp_orient_fwd(Tor, grR, grC);
+MAP = struct('img',single(gg),'gR',gAllR(:),'gC',gAllC(:),'dip',dipScore(:), ...
+             'thr',aff_dip_thr,'sR',sR,'sC',sC);
+% NATIVE geometry too, so ctrl_orient_checker / the session tuner can re-apply ANY display view T
+% live (cp_pixel_overlay) with no cache rebuild: native mean image, native grid r/c, native site,
+% the session tag, and the view baked here (Tor). dip is per-pixel so orientation-free (kept above).
+MAP.mimg_native = single(mimg_cp);
+MAP.gRn = grR(:); MAP.gCn = grC(:);
+MAP.siteRn = px_prim; MAP.siteCn = py_prim;
+MAP.Tor = Tor; MAP.sess_tag = sess_tag;
+% Laser-spot alignment layer for the tuner: the DATA-DERIVED laser effect map (cp_find_stim_site,
+% peri-stim inhibition, negative) for contours, the laser spot itself, and the controller's ONLINE
+% output pixel d.params.pixel (stored [x y] = [col row]; flip to [row col]) -- so the user can eyeball
+% whether the readout pixel actually sat on the laser spot. Nothing is moved; this is a check overlay.
+try
+    lsite = cp_find_stim_site(U_cp, V_cp, mimg_cp, onF, 'fs', Fs);
+    MAP.dipMap = single(cp_orient_img(Tor, lsite.map));
+    [MAP.laserR, MAP.laserC] = cp_orient_fwd(Tor, lsite.rowcol(1), lsite.rowcol(2));
+    MAP.laser_depth = lsite.depth;
+    MAP.dipMap_native = single(lsite.map);           % native, for live re-orientation
+    MAP.laserRn = lsite.rowcol(1); MAP.laserCn = lsite.rowcol(2);
+    MAP.ppR = NaN; MAP.ppC = NaN; MAP.pp_native = [NaN NaN];
+    MAP.ppRn = NaN; MAP.ppCn = NaN;
+    if isfield(d_s,'params') && isfield(d_s.params,'pixel') && numel(d_s.params.pixel) >= 2
+        ppx = d_s.params.pixel(:).';                 % stored [x y] = [col row]
+        MAP.pp_native = [ppx(2) ppx(1)];             % -> [row col]
+        MAP.ppRn = ppx(2); MAP.ppCn = ppx(1);
+        [MAP.ppR, MAP.ppC] = cp_orient_fwd(Tor, ppx(2), ppx(1));
+    end
+catch MEls
+    fprintf(2,'[CTRL-OL] laser-spot layer skipped: %s\n', MEls.message);
+end
+
 sgtitle(figD, sprintf('[CTRL-OL] stim-blind (pure unaffected-pixel)  %s  (%d OL trials)', ...
     strrep(sess_tag,'_','\_'), nTr));
 fig_png = fullfile(fig_dir, sprintf('ctrl_ol_stimblind_%s.png', sess_tag));
@@ -442,6 +635,8 @@ OL.A_tr=A_tr; OL.G_tr=G_tr; OL.L_tr=L_tr; OL.Aa=Aa; OL.Gg=Gg; OL.Lo=Lo;
 OL.capt_tran=capt(twin); OL.leak_tran=leak(twin); OL.capt_sus=capt(swin);
 OL.px_prim=px_prim; OL.py_prim=py_prim; OL.gridIdx=gridIdx; OL.grR=grR; OL.grC=grC;
 OL.pred_mode=pred_mode; OL.RPATH=RPATH; OL.VAL=VAL;
+if exist('SWEEP','var') && ~isempty(SWEEP); OL.SWEEP=SWEEP; end   % per-op-point Global for the session tuner
+if exist('MAP','var') && ~isempty(MAP); OL.MAP=MAP; end           % stim-blind pixel view for the session tuner
 if RPATH.used
     OL.lambda=RPATH.lambda_star; OL.lambda_abs=RPATH.lambda_abs;
     OL.bnorm=RPATH.nrm_star; OL.catch_def=RPATH.catch_star; OL.catch_falls=RPATH.catch_falls;

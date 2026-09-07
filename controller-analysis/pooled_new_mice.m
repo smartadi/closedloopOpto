@@ -14,7 +14,12 @@
 %              paper panel keeps them -- this is a SEPARATE export, never the same file.
 % PNM_OUTNAME override the output basename (defaults follow the surviving session count).
 % PNM_OUTDIR   override the output directory (default paper/images/figure3).
+% PNM_NOHILITE keep all sessions in the pool but draw the two 2026-07-29 sessions
+%              exactly like the rest (grey connector, no black ring) and drop the
+%              "(2 new, black)" title tag. Use when the "new" distinction is not the
+%              point being made (e.g. the grant panel) but the sessions should still count.
 if ~exist('PNM_DROPNEW','var') || isempty(PNM_DROPNEW), PNM_DROPNEW = false; end
+if ~exist('PNM_NOHILITE','var')|| isempty(PNM_NOHILITE),PNM_NOHILITE = false; end
 if ~exist('PNM_OUTNAME','var'), PNM_OUTNAME = ''; end
 if ~exist('PNM_OUTDIR','var'),  PNM_OUTDIR  = ''; end
 
@@ -48,13 +53,13 @@ fig = paperFig(6,5);
 ax = axes(fig,'Position',[0.16 0.12 0.80 0.82]); hold(ax,'on');
 for k=1:nS
     lw = 0.5; cl = [0.6 0.6 0.6 0.6];
-    if isNew(k); lw = 1.5; cl = [0 0 0 0.9]; end
+    if isNew(k) && ~PNM_NOHILITE; lw = 1.5; cl = [0 0 0 0.9]; end
     plot(ax,[1 2],[medOL(k) medCL(k)],'-','Color',cl,'LineWidth',lw,'HandleVisibility','off');
 end
 hOL=plot(ax,ones(nS,1),medOL,'o','MarkerFaceColor',PS.col_ol,'MarkerEdgeColor','none','MarkerSize',4);
 hCL=plot(ax,2*ones(nS,1),medCL,'o','MarkerFaceColor',PS.col_cl,'MarkerEdgeColor','none','MarkerSize',4);
-% emphasise the two new mice (nothing to emphasise once they are dropped)
-if any(isNew)
+% emphasise the two new mice (nothing to emphasise once they are dropped or de-highlighted)
+if any(isNew) && ~PNM_NOHILITE
     plot(ax,ones(sum(isNew),1),medOL(isNew),'o','MarkerFaceColor',PS.col_ol,'MarkerEdgeColor','k','LineWidth',0.75,'MarkerSize',6);
     plot(ax,2*ones(sum(isNew),1),medCL(isNew),'o','MarkerFaceColor',PS.col_cl,'MarkerEdgeColor','k','LineWidth',0.75,'MarkerSize',6);
 end
@@ -64,7 +69,7 @@ plot(ax,[1.8 2.2],median(medCL)*[1 1],'Color',PS.col_cl,'LineWidth',2.5,'HandleV
 xlim(ax,[0.6 2.4]); ylim(ax,[0 max([medOL;medCL])*1.1]);
 set(ax,'XTick',[1 2],'XTickLabel',{'OL','CL'},'Box','off','TickDir','out','FontSize',PS.fs,'FontWeight',PS.fw);
 ylabel(ax,'Session median trial RMSE (% \DeltaF/F)','FontSize',PS.fs,'FontWeight',PS.fw);
-if any(isNew)
+if any(isNew) && ~PNM_NOHILITE
     ttl = sprintf('%d sessions (2 new, black)   p=%.3g', nS, pWil);
 else
     ttl = sprintf('%d sessions   p=%.3g', nS, pWil);

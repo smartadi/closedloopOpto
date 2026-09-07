@@ -28,7 +28,7 @@ inh = np.where((sites[:, 0] > 0) & lateral)[0]
 s_exc = exc[np.argmax([gi[i, i] for i in exc])]
 s_inh = inh[np.argmin([gi[i, i] for i in inh])]
 
-K = 5                                  # readouts per injection (self + 4 targets)
+K = 4                                  # readouts per injection (self + 3 targets)
 
 
 def readouts(inj):
@@ -66,8 +66,6 @@ axes[0, K - 1].plot([], [], "k-", lw=1.5, label="data")
 axes[0, K - 1].plot([], [], "k--", lw=1.1, label="LTI fit")
 axes[0, K - 1].legend(fontsize=7, frameon=False, loc="upper right",
                       handlelength=1.2, borderaxespad=0.2)
-fig.suptitle(f"Site$\\rightarrow$readout transfer functions at increasing distance "
-             f"(amp {amps[ai]:.1f}; data solid, LTI fit dashed)", fontsize=9)
 fig.tight_layout()
 fig.savefig(OUT, dpi=300, facecolor="white", bbox_inches="tight")
 print("wrote", OUT)
