@@ -21,6 +21,10 @@
 
 assert(exist('mouse','var') && exist('fields','var'), '[DRQUART] run load_sessions.m first.');
 SESS = 1:numel(fields);  ref = -5;  c0 = 36; c1 = 71; c2 = 141;  dur = 3;
+% delta STATE = canonical relative 2-4 Hz power (cl_reldelta). PRIMARY across CL
+% analyses (user 2026-09-08). DOPT.post=3 = the -2 s -> stim-end window that
+% matches cl_rmse_factor_windows; set DOPT.post=0 for a pre-stim-only window.
+if ~exist('DOPT','var') || isempty(DOPT); DOPT = struct('pre',2,'post',3); end
 PS = paperStyle(); setPaperDefaults();
 colOL = PS.col_ol;  colCL = PS.col_cl;
 here_s = fileparts(mfilename('fullpath')); if isempty(here_s); here_s = fullfile(pwd,'controller-analysis'); end
@@ -43,13 +47,14 @@ for k = SESS
         oc = size(d.ncmotion,2) - 35*dur;
         S.motion = {mean(d.ncmotion(:,1:oc),2), mean(d.wcmotion(:,1:oc),2)};
     else, S.motion = {nan(numel(yOL),1), nan(numel(yCL),1)}; end
-    FPnc=[]; FPwc=[];
-    if isfield(d,'ncFreqPow') && any(d.ncFreqPow(:)); FPnc=d.ncFreqPow; FPwc=d.wcFreqPow;
-    elseif isfield(d,'ncFreqSpec') && any(d.ncFreqSpec(:)); FPnc=d.ncFreqSpec; FPwc=d.wcFreqSpec; end
-    if ~isempty(FPnc) && isfield(d,'freqBandCtrs')
+    % PRIMARY delta state: canonical relative 2-4 Hz from the buffered trace.
+    if isfield(d,'pncDfk_l') && ~isempty(d.pncDfk_l) && isfield(d,'pwcDfk_l') && ~isempty(d.pwcDfk_l)
+        S.delta = {cl_reldelta(d.pncDfk_l,106,35,DOPT), cl_reldelta(d.pwcDfk_l,106,35,DOPT)};
+    elseif isfield(d,'wcFreqSpec') && any(d.wcFreqSpec(:)) && isfield(d,'freqBandCtrs')
+        % SECONDARY fallback: precomputed normalized spectrum (1-4 Hz, pre-only bins)
         fb=d.freqBandCtrs; dmsk=fb>=1 & fb<=4; ob=3; if isfield(d,'freqOnsetBin'); ob=d.freqOnsetBin; end
         pbins=1:max(1,ob-1);
-        S.delta = {squeeze(mean(mean(FPnc(:,pbins,dmsk),2),3)), squeeze(mean(mean(FPwc(:,pbins,dmsk),2),3))};
+        S.delta = {squeeze(mean(mean(d.ncFreqSpec(:,pbins,dmsk),2),3)), squeeze(mean(mean(d.wcFreqSpec(:,pbins,dmsk),2),3))};
     else, S.delta = {nan(numel(yOL),1), nan(numel(yCL),1)}; end
 
     % z-score RMSE within session (combined OL+CL)

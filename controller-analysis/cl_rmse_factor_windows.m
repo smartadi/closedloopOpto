@@ -92,6 +92,8 @@ for k = 1:numel(fields)
         xdel(t)  = pd;
         xslow(t) = ps;
         xrel(t)  = bandpow(seg,hi_bnd(1),hi_bnd(2)) / max(pt, eps);  % relative 2-4 Hz (hard-to-control sub-band)
+        % ^ CANONICAL CL delta state. utils/cl_reldelta.m is the extracted, verified-identical
+        %   version other CL scripts call -- keep the two in sync if this line changes.
         xpre(t)  = bandpow(pseg, delta_bnd(1), delta_bnd(2));  % delta, pre-stim only
     end
 

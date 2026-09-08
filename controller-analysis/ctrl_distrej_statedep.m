@@ -18,6 +18,8 @@
 
 assert(exist('mouse','var') && exist('fields','var'), '[DRSTATE] run load_sessions.m first.');
 SESS = 1:numel(fields);  ref = -5;  c0=36; c1=71; c2=141;  dur = 3;   % all loaded sessions incl. new-rig (2026-09-07)
+% delta STATE = canonical relative 2-4 Hz power (cl_reldelta), PRIMARY across CL analyses (user 2026-09-08)
+if ~exist('DOPT','var') || isempty(DOPT); DOPT = struct('pre',2,'post',3); end
 colOL=[0.85 0.16 0.14]; colCL=[0.13 0.34 0.79];
 here_s = fileparts(mfilename('fullpath')); if isempty(here_s); here_s=fullfile(pwd,'controller-analysis'); end
 figdir = fullfile(here_s,'..','paper','images','figure4');
@@ -43,15 +45,16 @@ for k = SESS
     % delta (pre-onset bins x 1-4 Hz bands). Prefer absolute ncFreqPow; these caches only carry the
     % NORMALIZED ncFreqSpec (power ratio), so fall back to it like trial_state_mse.m -- a delta-ratio
     % state index (rebuild caches with r_ctrl=0 for absolute power if a paper panel needs it).
-    FPnc=[]; FPwc=[];
-    if isfield(d,'ncFreqPow') && any(d.ncFreqPow(:)); FPnc=d.ncFreqPow; FPwc=d.wcFreqPow;
-    elseif isfield(d,'ncFreqSpec') && any(d.ncFreqSpec(:)); FPnc=d.ncFreqSpec; FPwc=d.wcFreqSpec; end
-    if ~isempty(FPnc) && isfield(d,'freqBandCtrs')
+    % PRIMARY delta state: canonical relative 2-4 Hz from the buffered trace (cl_reldelta).
+    if isfield(d,'pncDfk_l') && ~isempty(d.pncDfk_l) && isfield(d,'pwcDfk_l') && ~isempty(d.pwcDfk_l)
+        S.delta = {cl_reldelta(d.pncDfk_l,106,35,DOPT), cl_reldelta(d.pwcDfk_l,106,35,DOPT)};
+    elseif isfield(d,'wcFreqSpec') && any(d.wcFreqSpec(:)) && isfield(d,'freqBandCtrs')
+        % SECONDARY fallback: precomputed normalized spectrum (1-4 Hz, pre-only bins)
         fb = d.freqBandCtrs; dmsk = fb>=1 & fb<=4;
         ob = 3; if isfield(d,'freqOnsetBin'); ob = d.freqOnsetBin; end
-        pbins = 1:max(1,ob-1);                                  % pre-onset spectral bins
-        S.delta = {squeeze(mean(mean(FPnc(:,pbins,dmsk),2),3)), ...
-                   squeeze(mean(mean(FPwc(:,pbins,dmsk),2),3))};
+        pbins = 1:max(1,ob-1);
+        S.delta = {squeeze(mean(mean(d.ncFreqSpec(:,pbins,dmsk),2),3)), ...
+                   squeeze(mean(mean(d.wcFreqSpec(:,pbins,dmsk),2),3))};
     else, S.delta = {nan(numel(yOL),1), nan(numel(yCL),1)}; end
 
     for pn = preds; nm=pn{1};
