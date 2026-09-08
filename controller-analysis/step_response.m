@@ -143,7 +143,7 @@ paperExport(fig, fullfile(paper_root, 'images', 'figure2', sprintf('step_respons
 close all;
 
 n_sample   = 3;                          % number of fields to sample
-custom_idx = randperm(13, n_sample);     % random sample of n ints from 1:13
+custom_idx = randperm(numel(fields), n_sample);  % random sample of n ints from all loaded sessions
 
 
 

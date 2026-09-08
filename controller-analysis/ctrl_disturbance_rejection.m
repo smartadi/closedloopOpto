@@ -21,7 +21,7 @@
 
 assert(exist('mouse','var') && exist('fields','var'), '[DISTREJ] run load_sessions.m first.');
 
-SESS   = 1:13;                          % controller set (exclude new-mice m14/m15)
+SESS   = 1:numel(fields);               % all loaded sessions incl. new-rig m14/m15 (user "add al48 al51" 2026-09-07)
 ref    = -5;
 c0=36; c1=71; c2=141;                   % onset / +1 s / +3 s columns in ncDfk/wcDfk
 colOL  = [0.85 0.16 0.14];              % OL = red (locked scheme)

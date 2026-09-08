@@ -62,7 +62,6 @@ YE=[]; YL=[]; YF=[]; SESS=[]; TRI=[];
 
 for k = 1:numel(fields)
     s = mouse.(fields{k});
-    if ismember(s.mn,{'AL_0048','AL_0051'}); continue; end   % Fig-4 cohort = 13 controller sessions; exclude new-rig m14/m15 (2026-09-07)
     if isfield(s,'skip') && s.skip;  continue; end
     if ~isfield(s,'data');           continue; end
     if ~s.has_motion;                continue; end

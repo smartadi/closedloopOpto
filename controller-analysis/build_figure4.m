@@ -17,9 +17,11 @@
 %            cl_mse_exemplars.m             per-factor exemplar trials
 %            cl_delta_burst_explore.m       short delta-burst gallery
 %
-% COHORT (2026-09-07): all blocks use the 13 controller sessions (m1-m13); the new-rig
-% mice AL_0048/AL_0051 (m14/m15) are excluded everywhere. Motion-/spectrum-complete
-% panels are naturally the 9 of those 13 with motion (513 trials).
+% COHORT (2026-09-07, user "add al48 al51"): all loaded sessions incl. the new-rig mice
+% AL_0048/AL_0051 (m14/m15) -> 15 sessions / 4 mice. Blocks follow numel(fields), so the
+% cohort is whatever load_sessions provides. Motion-/spectrum-complete panels are the 11
+% sessions with motion (613 trials). NOTE new-rig absolute RMSE is not strictly rig-
+% comparable (different build/opsins) -- included per user direction.
 %
 % NOT a panel: ctrl_distrej_statedep.m [DRSTATE] (init-dev decoupling p=0.013) is a
 % SUPPLEMENTARY regression analysis, cited in text only -- deliberately NOT run here.

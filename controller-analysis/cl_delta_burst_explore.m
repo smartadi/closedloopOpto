@@ -37,8 +37,7 @@ sust_s  = 2.5;                                   % sustained if run > this (s)
 % ---- pass 1: pool envelopes to set the amplitude floor ----
 Eall=[]; T=struct('E',{},'dfk',{},'sess',{},'tr',{});
 for k=1:numel(fields)
-    s=mouse.(fields{k}); if ismember(s.mn,{'AL_0048','AL_0051'});continue;end   % Fig-4 cohort = 13 controller sessions (2026-09-07)
-    if isfield(s,'skip')&&s.skip;continue;end; if ~isfield(s,'data');continue;end
+    s=mouse.(fields{k}); if isfield(s,'skip')&&s.skip;continue;end; if ~isfield(s,'data');continue;end
     wc=s.data.pwcDfk_l;
     for t=1:size(wc,1)
         seg=double(wc(t,sa:sb));

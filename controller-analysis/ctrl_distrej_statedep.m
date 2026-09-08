@@ -17,7 +17,7 @@
 % OL-vs-CL slope pairs per predictor. USAGE: run load_sessions.m, then this.
 
 assert(exist('mouse','var') && exist('fields','var'), '[DRSTATE] run load_sessions.m first.');
-SESS = 1:13;  ref = -5;  c0=36; c1=71; c2=141;  dur = 3;
+SESS = 1:numel(fields);  ref = -5;  c0=36; c1=71; c2=141;  dur = 3;   % all loaded sessions incl. new-rig (2026-09-07)
 colOL=[0.85 0.16 0.14]; colCL=[0.13 0.34 0.79];
 here_s = fileparts(mfilename('fullpath')); if isempty(here_s); here_s=fullfile(pwd,'controller-analysis'); end
 figdir = fullfile(here_s,'..','paper','images','figure4');

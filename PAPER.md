@@ -33,7 +33,7 @@ These claims have identified problems and must be revisited before submission.
 ### results.tex
 - [x] 2026-06-29 — All typo/ref/`\aditya{}` items closed; Kp/Ki/Kr placeholders filled (Kr = 0.1, Kp = 0.07, Ki = 0.1); broken cross-refs resolved grep-clean.
 - [ ] Three content `\todo` gaps remain: §pre-stim brain state, §low-freq spectral attribution, §contra→ipsi prediction — all blocked on analysis, see TASKS 🔴.
-- [x] **Fig 3 cohort = 13 sessions / 2 mice** (RESOLVED 2026-09-07 — user "keep 13 for figure 3"). The new-rig mice AL_0048/AL_0051 (m14/m15) are excluded from every Fig 3 panel including 3K; they appear only in their own supp panels (N1–N4). Manuscript caption already reads "2 mice, 13 sessions"; panel 3K regenerated as `pooled_ol_cl_rmse_13sess.pdf` (CL<OL 13/13, p=2.4e-4).
+- [x] **Fig 3 cohort = 15 sessions / 4 mice** (2026-09-07 — user "add al48 al51 … all the way", reverses the earlier same-day "keep 13"). New-rig AL_0048/AL_0051 (m14/m15) now IN every Fig 3 panel (F–K regenerated at 15) and Fig 4. Panel 3K = `pooled_ol_cl_rmse_15sess.pdf`, blended/no-black (`PNM_NOHILITE`), CL<OL 14/15, p=1.2e-4. ⚠ Rig-comparability: the new mice are the weakest rejectors (AL_0048 ~tie).
 
 ### discussion.tex
 - [x] 2026-06-29 — All typo/incomplete-sentence items closed.
@@ -108,7 +108,7 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3H | Fig3 | paper/images/figure3/all_MSE_sessions.pdf | 7.8 × 4 | image 300dpi | — | variance_mse.m fig_G — cross-session **trial-RMSE** violin; mean dot too large (open task) |
 | 3I | Fig3 | paper/images/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_Fr — OL/CL variance ratio. **4 WINDOWS since 2026-08-24**: Pre / 0-1 s / 1-3 s / Post (stim split into early/late, matching 3J); Wilcoxon stars per window; grey **"Stim" band** over the two middle dots (`mark_stim_span`). |
 | 3J | Fig3 | paper/images/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | variance_mse.m fig_G2r — OL/CL RMS MSE ratio: Pre / 0-1 s / 1-3 s / Post; grey **"Stim" band** over the two middle dots (`mark_stim_span`, 2026-08-24). ⚠ filename still says "MSE"; metric is RMSE |
-| 3K | Fig3 | paper/images/figure3/pooled_ol_cl_rmse_13sess.pdf | 5 × 4 | vector | — | per-session median OL vs CL RMSE, **13 sessions / 2 mice** (new-rig m14/m15 excluded — user "keep 13" 2026-09-07). `controller-analysis/pooled_new_mice.m` with `PNM_DROPNEW=true`. **CL < OL in 13/13, signrank p = 2.4e-4** (OL 2.50 vs CL 2.02). Lean load (`load(path,'data')`) — never holds `d`. Cross-session headline. ⚠ **composite Figure3_extra.pdf must be re-assembled with this 13-session panel** (old 15sess.pdf superseded) |
+| 3K | Fig3 | paper/images/figure3/pooled_ol_cl_rmse_15sess.pdf | 5 × 4 | vector | — | per-session median OL vs CL RMSE, **15 sessions / 4 mice** (new-rig m14/m15 included, BLENDED/no-black — user "add al48 al51 all the way" 2026-09-07). `controller-analysis/pooled_new_mice.m` with `PNM_NOHILITE=true`. **CL < OL in 14/15, signrank p = 1.2e-4** (OL 2.56 vs CL 2.04; AL_0048 the lone tie). Lean load — never holds `d`. Cross-session headline. ⚠ **re-assemble Figure3_extra.pdf with this 15-session blended panel** |
 | ~~2I~~ → Supp | ~~Fig2~~ Supp | paper/images/figure2/ol_tf_trial_avg.pdf | 6 × 4 | vector | — | **MOVING TO SUPPLEMENTARY 2026-08-24** (user: "step response ... little to no use ... move to supplementary, though it is needed to justify the use of integral controller, need reframing"). The OL step LTI fit. ⚠ **PENDING**: (a) redirect the export path from `figure2/` → `supplementary/` in the generating script (`tf_fit.m`/`plottingScript.m` `fig_tf_paper`); (b) **reframe** — the panel's job is now to show the OL step's steady-state offset that motivates the **integral term** in the PI controller, not to sit as a co-equal fit beside the impulse. Part of the Fig-2 reframe. all 3 sessions, solid = OL trial mean, dashed = TF fit, np capped at 2 (R² 0.22/0.77/0.89) |
 | Supp-TFsingle | Supp | paper/images/supplementary/tf_cv_single_AL_0033.pdf | 5 × 4 | vector | — | **NEW 2026-08-24.** Single-session (AL_0033 = Mouse 2) per-amplitude TF fit, **trial-cross-validated**, at the widened **4p3z0d** (= cross-session constraints, for consistency). Measured held-out solid vs held-out LTI prediction `uA·h(t)` dashed, grey amplitude ramp, per-amp held-out R² in legend (0.5V −2.72 SNR-limited → 4.9V 0.99). `impulse-analysis/imp_tf_cv.m` (`CV_SINGLE`) → `utils/imp_tf_cv_session.m` (`.amp`). The single-session detail companion to the all-session CV 2C. |
 | N1–N4 | Fig3 supp? | paper/images/newmice/{AL_0048,AL_0051}/ctrl_{trialavg,variance,rmse,input}.pdf | 6×4 / 5.5×4 / 4.2×5.4 / 6×4 | vector | ±std | **NEW 2026-07-30, placement UNDECIDED.** Paper-styled single-session panels for the two new mice (last-100 locked-Kp block). `new_mice_paper_panels.m`. Input panel is in **mW** (`laser_v2mw`); active laser differs by mouse (AL_0048 = 638 nm, AL_0051 = 594 nm). Per-session RMSE is **n.s.** (p=0.48/0.43) — the CL benefit is in the mean trace; significance comes from pooling (3K). No single-trial or avg-input equivalent of 3A/3C (this build has no valid `d.inpVals`) |
@@ -519,7 +519,7 @@ section1:
 section2:
   row1:  3I(5×4)  3J(5×4)  3K(5×4)
 ```
-> **3K = the 13-session pooled RMSE panel** (`pooled_ol_cl_rmse_13sess.pdf`, new-rig excluded 2026-09-07), NOT the old step-TF fit —
+> **3K = the 15-session pooled RMSE panel** (`pooled_ol_cl_rmse_15sess.pdf`, new-rig included/blended 2026-09-07), NOT the old step-TF fit —
 > that moved to Fig 2 as **2I** on 2026-07-23. Section 2 is now the three cross-session summary panels.
 Fit checks (last computed, gap=0.3):
 - col2 row1 @H=3.5: D(3→3.00) E(3→3.50) + 0.3 = **6.8/7.8** ✓ (+1.0)
@@ -846,9 +846,9 @@ All panels: mouse AL_0033 unless noted; inhibition energy is the mean ΔF/F over
 
 ### Figure 3 — draft caption
 **Figure 3. Closed-loop feedback reduces both trial-to-trial variability and tracking error relative to open loop.**
-Single-session panels (A–E): m4 (AL_0033, 2025-02-26). Cross-session panels (F–K): **13 sessions across two mice** (AL_0033, AL_0039); reference −5 % ΔF/F; error is RMSE over 0–3 s after laser onset unless noted. Open loop and closed loop are shown in **red and blue** throughout; the laser input command is gray (solid, bold).
-**(A)** A single representative trial, open loop versus closed loop. **(B)** All trials with the trial average (±std). **(C)** Trial-averaged laser command. **(D)** Across-trial variance over time. **(E)** Per-trial RMSE distribution (half-violins). **(F)** Cross-session variance trace (±SEM). **(G)** Per-session trial averages, faint, with the cross-session mean in bold (±SEM). **(H)** Cross-session error distribution; this panel reports **MAE**, not RMSE. **(I)** Open/closed-loop variance ratio split by window (pre, stim, post); asterisks are Wilcoxon. **(J)** Open/closed-loop RMSE ratio split by window (pre, 0–1 s, 1–3 s, post). **(K)** Per-session median tracking error, open versus closed loop, for all 13 sessions. **Closed loop is lower in 13 of 13 sessions (Wilcoxon signed-rank, p = 2.4 × 10⁻⁴).**
-> ✅ **Cohort RESOLVED 2026-09-07 (user "keep 13"):** all of F–K are on the same **13** sessions / 2 mice. Panel 3K regenerated with the new-rig mice dropped (`pooled_ol_cl_rmse_13sess.pdf`, CL<OL 13/13). The two new-rig mice appear only in their own supplementary panels (N1–N4). ⚠ The assembled `Figure3_extra.pdf` still carries the old 15-session 3K — re-drop the 13-session panel in Illustrator before submission.
+Single-session panels (A–E): m4 (AL_0033, 2025-02-26). Cross-session panels (F–K): **15 sessions across four mice** (AL_0033, AL_0039, AL_0048, AL_0051); reference −5 % ΔF/F; error is RMSE over 0–3 s after laser onset unless noted. Open loop and closed loop are shown in **red and blue** throughout; the laser input command is gray (solid, bold).
+**(A)** A single representative trial, open loop versus closed loop. **(B)** All trials with the trial average (±std). **(C)** Trial-averaged laser command. **(D)** Across-trial variance over time. **(E)** Per-trial RMSE distribution (half-violins). **(F)** Cross-session variance trace (±SEM). **(G)** Per-session trial averages, faint, with the cross-session mean in bold (±SEM). **(H)** Cross-session error distribution; this panel reports **MAE**, not RMSE. **(I)** Open/closed-loop variance ratio split by window (pre, stim, post); asterisks are Wilcoxon. **(J)** Open/closed-loop RMSE ratio split by window (pre, 0–1 s, 1–3 s, post). **(K)** Per-session median tracking error, open versus closed loop, for all 15 sessions. **Closed loop is lower in 14 of 15 sessions (Wilcoxon signed-rank, p = 1.2 × 10⁻⁴).**
+> **Cohort 2026-09-07 (user "add al48 al51 all the way", reverses "keep 13"):** all of F–K on **15** sessions / 4 mice; F–K regenerated at 15 (`variance_mse` + `step_response` + `pooled_new_mice` NOHILITE). ⚠ Two sub-analyses still at the old cohort — spontaneous-mean stationarity (13) + motion regression (n=9) — recompute at 15/11. ⚠ Re-assemble `Figure3_extra.pdf` (Illustrator) with the 15-session panels.
 > Two more checks before submission: panel H is genuinely MAE and must stay labelled so (project decision 2026-07-16), and the 3H/3J *filenames* still say "MSE" although the metric is RMSE.
 > Old panel **(K)** — the three-session step-response TF fit — is now **Fig 2 panel 2I**; do not describe it here.
 
@@ -858,13 +858,15 @@ One driver regenerates the whole figure: **`controller-analysis/build_figure4.m`
 `load_sessions.m`; it runs `load_sessions` itself if `mouse`/`fields` are absent). It executes the
 blocks in reading order and exports every panel to `paper/images/figure4/`.
 
-**COHORT — reconciled 2026-09-07 (user).** The whole figure uses the **13 controller sessions
-(m1–m13)**; the new-rig mice **AL_0048 / AL_0051 (m14/m15) are excluded everywhere** (absolute
-OL-vs-CL RMSE is not rig-comparable — the reason Block A already dropped them). Motion-/spectrum-
-complete panels are the **9 of those 13 with motion (513 CL trials)**; the burst gallery and the
-rejection anchor need no motion and use all **13 sessions (752 CL trials)**. Two numbers, both subsets
-of the same set. The 4-animal / 15-session mixed-effects (P1-d) is retained **as supplementary
-robustness only**, never quoted over a main-figure panel.
+**COHORT — 2026-09-07 (user "add al48 al51 … all the way", reverses the earlier same-day "keep 13").**
+The whole figure now uses **all 15 sessions / 4 mice** (new-rig AL_0048/AL_0051 included). Scripts
+follow `numel(fields)`, so the cohort = whatever `load_sessions` provides. Motion-/spectrum-complete
+panels are the **11 with motion (613 CL trials)**; the burst gallery and rejection anchor use all
+**15 (752→852 CL trials)**. Updated numbers: anchor **15/15, 1.39×, p=6.1e-5** (diluted from 1.48× —
+the two new sessions barely reject: AL_0048 within-session p=0.6, AL_0051 p=0.2); decomposition
+613 tr/11 sess (init-dev 0.38→0.03, rel 2–4 Hz 0.09→0.12). ⚠ **Rig-comparability caveat stands** —
+absolute OL-vs-CL RMSE for the new build (different opsins/wavelengths) is weaker; the new mice
+dilute the headline but do not reverse it (noted in the manuscript).
 
 **FORMAT — no regression/slope panels (user 2026-09-07).** The figure is built from the
 exemplar + decomposition-bar style. All linear-fit/slope panels are **out**: `factor_slope_*`,
