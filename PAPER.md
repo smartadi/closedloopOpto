@@ -194,6 +194,16 @@ Orphans: `Figure2_extra.pdf` (an assembly inside a panel folder), `imp_response_
 
 ### ▦ Fig 2 — physical layout, 4 rows × 4 panels (2026-08-17, user)
 
+> **DROPPED 2026-09-08 (user: "step response doesn't add anything"):** the entire step-response
+> demonstration is out of Fig 2 — both the old 3-session **2D** (`step_response.pdf`) AND the
+> 15-session **2I** (`ol_tf_trial_avg.pdf`, OL trial-avg + LTI fit). The impulse response (2A/2B/2C-i)
+> now carries the linearity/LTI claim alone. In the manuscript: old panel **E → relabeled D**;
+> section-opening LTI sentence is impulse-only; step-response body paragraph removed (variance-slope
+> result kept). Loose ends flagged in results.tex `\todo`: integral-term motivation (was step-derived),
+> Methods "Step response protocol" trim (variance part stays), and the n=13-vs-15 variance-slope
+> mismatch. Ignore every "2I"/"step input"/"OL average + LTI fit" row below — they are superseded by
+> this note. `tf_fit.m`/`step_response.m` scripts stay (step_response.m still makes Fig 3G).
+
 Rows 1–2 are the fits, each split **75% impulse data / 25% step input**; row 3 is state dependence
 of the trial average; row 4 is the residual analysis.
 
