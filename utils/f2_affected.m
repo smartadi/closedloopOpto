@@ -24,17 +24,32 @@ if nargin < 2, opt = struct(); end
 if ~isfield(opt,'plot') || isempty(opt.plot), opt.plot = true; end
 if ~isfield(opt,'require_all_amps') || isempty(opt.require_all_amps), opt.require_all_amps = false; end
 
-f = fullfile(P.cfg.dataDir, sprintf('tf_sens_%s.mat', P.tf_tag));
-if ~exist(f,'file')
-    error(['f2_affected: no CONFIRMED stim-affected selection for %s.\n  missing: %s\n' ...
-           '  Produce it once with the validated detector:\n' ...
-           '      selExp_override = <index>; OLS_OVERRIDE = struct(''tf_reuseSens'',false); ols_tf_pipeline\n' ...
-           '  then press "CONFIRM selection & build model" at the §10T3 selector. This stream will not\n' ...
-           '  invent a second definition of stim-affected.'], P.label, f);
+% A committed RANK-based selection (utils/f2_affected_detect, tuned in f2_affected_gui) OVERRIDES the
+% TF mask when present -- the robust, per-session candidate set that replaces the brittle absolute
+% tf_sens cut. It stores only the RULE (method + K); the mask is rebuilt from the CURRENT P, so it can
+% never desync from this session's geometry.
+selfile = fullfile(P.cfg.dataDir, sprintf('f2_affsel_%s.mat', P.sess_tag));
+srcTfSens = NaN;  isRank = false;  A_rank = [];
+if exist(selfile,'file')
+    Sx = load(selfile);
+    assert(isfield(Sx,'sel'), 'f2_affected: %s has no sel struct.', selfile);
+    dopt = Sx.sel;  dopt.verbose = false;              % sel carries method + its params (mono_thr / keep_n)
+    A_rank = f2_affected_detect(P, dopt);
+    aff = A_rank.affected;  srcFile = selfile;  srcSavedOn = local_def(Sx.sel,'saved_on','?');  isRank = true;
+else
+    f = fullfile(P.cfg.dataDir, sprintf('tf_sens_%s.mat', P.tf_tag));
+    if ~exist(f,'file')
+        error(['f2_affected: no CONFIRMED stim-affected selection for %s.\n  missing: %s\n' ...
+               '  Produce it once with the validated TF detector:\n' ...
+               '      selExp_override = <index>; OLS_OVERRIDE = struct(''tf_reuseSens'',false); ols_tf_pipeline\n' ...
+               '  then press "CONFIRM selection & build model" at the §10T3 selector; OR commit a rank\n' ...
+               '  selection in f2_affected_gui. This stream will not invent a second definition.'], P.label, f);
+    end
+    S = load(f);
+    assert(isfield(S,'affected_tf'), 'f2_affected: %s has no affected_tf -- it predates the mask-saving fix.', f);
+    aff = logical(S.affected_tf);
+    srcFile = f;  srcTfSens = local_def(S,'tf_sens',NaN);  srcSavedOn = local_def(S,'saved_on','?');
 end
-S = load(f);
-assert(isfield(S,'affected_tf'), 'f2_affected: %s has no affected_tf -- it predates the mask-saving fix.', f);
-aff = logical(S.affected_tf);
 
 % GEOMETRY CHECK. The mask is indexed by the contra grid, which depends on nGrid/edgeMargin/the ROI.
 % A silent size mismatch here would misassign every pixel, so it is a hard error.
@@ -48,15 +63,25 @@ end
 A = struct();
 A.affected  = aff;
 A.nAff      = sum(aff,1);
-A.tf_sens   = local_def(S,'tf_sens',NaN);
-A.saved_on  = local_def(S,'saved_on','?');
-A.file      = f;
+A.tf_sens   = srcTfSens;                       % NaN when a rank selection is in force (not a TF cut)
+A.saved_on  = srcSavedOn;
+A.file      = srcFile;
+A.isRank    = isRank;
+if isRank                                       % carry the rank extras for the selector / diagnostics
+    A.score = A_rank.score;  A.rank = A_rank.rank;  A.K = A_rank.K;  A.bleed_kept = A_rank.bleed_kept;
+    A.detMethod = A_rank.method;  A.mono = A_rank.mono;
+end
 % POOLED candidate set: unaffected at EVERY amplitude. One predictor set serves all amps, which is
 % what makes per-amp leak comparable at all -- a per-amp set changes the model between amplitudes
 % and then the dose-response of the leak is partly a dose-response of the pixel selection.
 A.unaff_pooled = find(all(~aff, 2));
 
-fprintf('[F2-AFFECT] %s | tf_sens %.2f (confirmed %s)\n', P.label, A.tf_sens, A.saved_on);
+if isRank
+    fprintf('[F2-AFFECT] %s | %s selection: %d px kept (committed %s, residual dip bleed %+.2f)\n', ...
+            P.label, A.detMethod, A.K, A.saved_on, A.bleed_kept);
+else
+    fprintf('[F2-AFFECT] %s | tf_sens %.2f (confirmed %s)\n', P.label, A.tf_sens, A.saved_on);
+end
 fprintf('   per-amp affected: ');  fprintf('%d ', A.nAff);  fprintf('of %d px\n', P.nG);
 fprintf('   pooled UNAFFECTED (candidate predictors, all amps): %d px (%.0f%%)\n', ...
         numel(A.unaff_pooled), 100*numel(A.unaff_pooled)/P.nG);

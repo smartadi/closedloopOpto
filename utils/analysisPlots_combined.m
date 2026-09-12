@@ -194,7 +194,7 @@ plot(ax_F, Tin, 3*wc_inp_mean, 'Color', colInpCL, 'LineWidth', PS.lw_mean, 'Hand
 plot(ax_F, Tref, d.ref*ones(1,length(Tref)), '--k', 'LineWidth', PS.lw_ref, 'HandleVisibility','off');
 xline(ax_F, 0, 'HandleVisibility','off');
 xline(ax_F, dur, 'HandleVisibility','off');
-ylim(ax_F, [-1 4]); xlim(ax_F, [-3 dur+3]);
+ylim(ax_F, [-2 5]); xlim(ax_F, [-3 dur+3]);   % match ax_E (OL) so OL/CL inputs share one scale
 addStimPatch(ax_F, x1, x2);
 uistack(findobj(ax_F,'Type','line'), 'top');
 hold(ax_F, 'off');

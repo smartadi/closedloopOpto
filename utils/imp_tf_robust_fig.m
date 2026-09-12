@@ -61,6 +61,12 @@ if ~isfield(opts,'tag'),      opts.tag      = '';    end
 if ~isfield(opts,'export'),   opts.export   = true;  end
 if ~isfield(opts,'amp_norm'), opts.amp_norm = true;  end
 if ~isfield(opts,'panels'),   opts.panels   = {'A','D'}; end
+% bareA: draw TF-A as BARE POINTS (slow/fast markers only, no per-point interval). The
+% trial-bootstrap CI is right-censored -- a large fraction of resamples return tau beyond
+% the 0.5 s fit window and are dropped, so the surviving bar piles at the window edge and is
+% not a usable interval (it reads as a "full line" across the axis). For the paper panel the
+% point estimate is shown alone; quote the estimate with the rejection fraction, not the bar.
+if ~isfield(opts,'bareA'),    opts.bareA    = false; end
 wantP = @(c) any(strcmpi(opts.panels, c));
 
 PS = paperStyle();
@@ -85,22 +91,25 @@ lblS = "s" + string(1:n).';
 tau1 = nan(n,1); lo = nan(n,1); hi = nan(n,1); sdW = nan(n,1);
 tau2 = nan(n,1); lo2 = nan(n,1); hi2 = nan(n,1);
 for k = 1:n
-    if ~isempty(S{k}.tau), tau1(k) = S{k}.tau(1); end
-    % SECOND pole where the selected order has one (user, 2026-08-12: "make tau forest more
-    % informative by also showing other poles"). Sessions whose AIC-selected model is
-    % first-order simply have no fast pole -- that is a fact about the fit, so it is left
-    % as a gap in the panel rather than filled in from a re-fit at a forced order.
-    if numel(S{k}.tau) >= 2, tau2(k) = S{k}.tau(2); end
-    % *** BUG FIX 2026-08-12. *** tauCI is [maxPoles x 2] (imp_tf_fit_session line ~260:
-    % [prctile(tauBoot,2.5,1).' , prctile(tauBoot,97.5,1).']), so row = pole, col = bound.
-    % The previous code read it with LINEAR indices -- lo = tauCI(1), hi = tauCI(2) -- and
-    % MATLAB is column-major, so tauCI(2) is row 2 of column 1: the FAST pole's 2.5th
-    % percentile, not the slow pole's 97.5th. Whenever maxPoles >= 2 the TF-A error bar was
-    % therefore drawn from slow-tau-lower to fast-tau-lower, i.e. a backwards interval that
-    % is not a confidence interval for anything. Correct only in the maxPoles == 1 case.
+    tf = S{k}.tau(:);
+    if isempty(tf), continue; end
+    % SLOW = slowest mode (largest tau); FAST = fastest mode (smallest tau). Selected by
+    % max/min, NOT by tau(1)/tau(2) (user 2026-09-10: "only the slowest and fastest mode").
+    % A complex-conjugate or repeated pole makes tau(2) a COPY of the slow pole -- e.g.
+    % tau=[540 540 93 93] or [333 333 150 150] -- so the old "second pole" rule drew the FAST
+    % square on top of the slow circle and never showed the genuinely fast mode. A session
+    % with one distinct time constant simply has no fast marker (left as a gap).
+    [tsl, isl] = max(tf);  [tfa, ifa] = min(tf);
+    tau1(k) = tsl;
+    if tfa < tsl - 1e-9, tau2(k) = tfa; end
+    % tauCI is [maxPoles x 2] (imp_tf_fit_session: [prctile(2.5).' prctile(97.5).']), row =
+    % pole, col = bound. Index the CI by the SAME pole chosen above (isl for slow, ifa for
+    % fast). (Fixes the 2026-08-12 linear-index bug AND keeps the interval attached to its
+    % own pole now that slow/fast are max/min rather than positions 1/2.)
     if isfield(S{k},'tauCI') && ~isempty(S{k}.tauCI)
-        lo(k) = S{k}.tauCI(1,1);  hi(k) = S{k}.tauCI(1,2);
-        if size(S{k}.tauCI,1) >= 2, lo2(k) = S{k}.tauCI(2,1);  hi2(k) = S{k}.tauCI(2,2); end
+        nCI = size(S{k}.tauCI,1);
+        if isl <= nCI, lo(k)  = S{k}.tauCI(isl,1);  hi(k)  = S{k}.tauCI(isl,2); end
+        if isfinite(tau2(k)) && ifa <= nCI, lo2(k) = S{k}.tauCI(ifa,1);  hi2(k) = S{k}.tauCI(ifa,2); end
     end
     if isfield(S{k},'tauSD') && ~isempty(S{k}.tauSD), sdW(k)=S{k}.tauSD(1); end
 end
@@ -127,14 +136,14 @@ if isfinite(mu) && isfinite(sdB)
 end
 for k = 1:n
     yS = k + hasFast*dy;                       % slow row nudges up only if a fast row exists
-    if isfinite(lo(k)) && isfinite(hi(k))
+    if ~opts.bareA && isfinite(lo(k)) && isfinite(hi(k))
         plot(axA, [lo(k) hi(k)], [yS yS], '-', 'Color', grad(k), 'LineWidth', PS.lw_fit);
     end
     plot(axA, tau1(k), yS, 'o', 'MarkerSize',3.5, ...
          'MarkerFaceColor',grad(k), 'MarkerEdgeColor',grad(k));
     if isfinite(tau2(k))
         yF = k - dy;
-        if isfinite(lo2(k)) && isfinite(hi2(k))
+        if ~opts.bareA && isfinite(lo2(k)) && isfinite(hi2(k))
             plot(axA, [lo2(k) hi2(k)], [yF yF], '-', 'Color', grad(k), 'LineWidth', PS.lw_fit);
         end
         plot(axA, tau2(k), yF, 's', 'MarkerSize',3.2, ...

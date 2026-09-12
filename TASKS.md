@@ -154,6 +154,11 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 - [ ] Recover AL_0048's 200 amp-0 sham trials via the Block↔Timeline clock map (they fire no laser, so they are absent from the detected onsets) — gives a proper zero-amp control per side.
 
 ### Contra→ipsi prediction framework (impulse) — from JOURNAL 2026-06-16
+> **⛔ CUT FROM THE PAPER 2026-09-11 (arXiv fast-pace).** The residual / Actual=Global+Local state-dependence
+> is no longer a paper claim (see RESEARCH 2026-09-11 + PAPER.md Fig-2 note). Everything in THIS section and
+> the "Reviewer-proofing the residual state claim" + "OLS pixel-predictor stim-blind decomposition" blocks
+> below is now OFF the submission path — kept for a possible future methods paper / Fig-4 reuse only. Do not
+> spend submission time here. Tools on disk: f2_tuner.m, f2_affected_gui.m, f2_affected_detect.m, f2_model.m.
 > **STATE (2026-07-01):** the residual workbench lives in `impulse-analysis/contra_prediction.m` (sectioned: `[CP-SETUP]`→`[CP-RESi]`/`[CP-LOCAL]`/`[CP-MOTION]`/`[CP-MOTION-AMP]`/`[CP-VAR]`/`[CP-DELTA]`/`[CP-BLEEDCTRL]`/`[CP-KRECON]`; core `utils/cp_residual_core.m`). Retargeted to the laser center [373,353]; **DV = L1-dev (predictability) primary**, template-gain secondary. Findings + design in FINDINGS.md ("Local photoinhibition response is state-robust to motion") and `impulse-analysis/CLAUDE.md`. (The old `contra_residual.m` was retired/deleted 2026-07-01.)
 - [ ] **[PRIMARY] Replicate the residual state-dependence on AL_0041 e1/e2** — first localize each site (`cp_find_stim_site`, cache `cp_stim_site_*`) so the retarget inherits, then run `load_experiments.m` + `contra_prediction.m` sections with `selExp`=1 then 2 (draw midline+contra ROI on first run). Single-session (AL_0033) result needs replication before any claim. Cross-session driver: `cp_state_batch.m`.
 

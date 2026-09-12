@@ -238,7 +238,7 @@ if ~exist('RUN_TALK','var') || isempty(RUN_TALK), RUN_TALK = false; end
 figs = imp_tf_paper_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT,'tmax_s',0.5, ...
         'preshow',RUN_TALK, 'tmin_s',0.15, 'lgd_len', 6 + 14*RUN_TALK, 'cvtag',RUN_TALK));
 RB   = imp_tf_robust_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT, ...
-                         'amp_norm',true,'panels',{{'A','D'}}));
+                         'amp_norm',true,'panels',{{'A','D'}},'bareA',true));
 PF   = imp_tf_poles_fig(Sprim, outDir, struct('tag','','export',RUN_EXPORT));
 
 %% ---- (4) the numbers the caption needs ------------------------------------------------

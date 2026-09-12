@@ -58,7 +58,7 @@ These claims have identified problems and must be revisited before submission.
 
 ### Paper story (figure-level) — updated 2026-07-29
 - **Fig 1 — System architecture.** Widefield + opto interface, SVD readout, control-loop schematic.
-- **Fig 2 — System properties.** Impulse response + step response with **their LTI (TF) fits**; state dependence on the **raw average trial**; state dependence of the **residual stim only activity**.
+- **Fig 2 — System properties.** Impulse response with **its LTI (TF) fit**; state dependence on the **raw average trial**. *(Residual/stim-only state-dependence CUT 2026-09-11 — see the layout note below.)*
 - **Fig 3 — Controller results.** Closed-loop vs open-loop (single-session example + cross-session summary).
 - **Fig 4 — Controller state dependence.** Three blocks, in order: (1) **trial-average state dependence** — pre-stim state (contra-derived Global level) → true trial outcome, OL steep vs CL flat (`ctrl_state_dependence.m`); (2) **error-contribution model** — per-trial RMSE regressed on **initial deviation**, **motion**, **relative δ power** (`cl_mse_factors.m` / `cl_rmse_factor_windows.m`); (3) **residual-based state dependence** — disturbance rejection ρ = ‖A−ref‖/‖G‖ vs motion & δ quartiles (`internal_model_principle.m` `[IMP-STATE-QUARTILE]`).
 - **Fig 5 — Feedforward / preview model.** Single-session results on **s3** (dark-screen session) + **combined stats across s1/s2/s3** (total RMSE, total variance, phase lag).
@@ -192,7 +192,17 @@ Orphans: `Figure2_extra.pdf` (an assembly inside a panel folder), `imp_response_
 > or caption built on a `_cperr` asset is mislabelled. Either wire `contra_prediction.m` so `imp.cp_err`
 > exists, or delete the option and the assets.
 
-### ▦ Fig 2 — physical layout, 4 rows × 4 panels (2026-08-17, user)
+### ▦ Fig 2 — physical layout (2026-08-17, user)
+
+> **RESIDUAL ROW CUT 2026-09-11 (user, for arXiv fast-pace):** row 4 (residual / stim-only
+> Actual=Global+Local state-dependence) is DROPPED from the paper. It never had a figure, `f2_model.m`
+> was never approved, the pooled state-dep p swung with tuning choices, and the Tier-1 reviewer
+> objections (hemodynamic confound, n=1, "Local is a modeling residual") were unresolved — the weakest,
+> most exposed part of the paper. **Fig 2 is now 3 rows.** The residual/state-dependence claim is not
+> in the paper; the impulse LTI fit + raw-trial state dependence carry Fig 2. Tools built for it
+> (`f2_tuner.m`, `f2_affected_gui.m`, `f2_affected_detect.m`, `f2_model.m`) stay on disk, unused by the
+> manuscript. The `results.tex` §contra→ipsi-prediction stub (L130) and §pre-stim-brain-state stub
+> (L64–68) collapse to the raw-trial motion/rel-δ result. Ignore "row 4"/"residual analysis" below.
 
 > **DROPPED 2026-09-08 (user: "step response doesn't add anything"):** the entire step-response
 > demonstration is out of Fig 2 — both the old 3-session **2D** (`step_response.pdf`) AND the
@@ -205,14 +215,14 @@ Orphans: `Figure2_extra.pdf` (an assembly inside a panel folder), `imp_response_
 > this note. `tf_fit.m`/`step_response.m` scripts stay (step_response.m still makes Fig 3G).
 
 Rows 1–2 are the fits, each split **75% impulse data / 25% step input**; row 3 is state dependence
-of the trial average; row 4 is the residual analysis.
+of the trial average. **(Row 4 residual analysis CUT 2026-09-11 — see note above.)**
 
 | Row | col 1 | col 2 | col 3 | col 4 |
 |---|---|---|---|---|
 | **1** — fits, measured response | 2A traces | 2B dose–response | 2C-i h(t) measured vs fit | **2I** OL average + LTI fit |
 | **2** — fits, model across sessions | TF-A τ per session | TF-D model swap | *open* | **2E** onset variance |
 | **3** — state dep. of trial average | 2F | 2J | 2G | 2K |
-| **4** — residual analysis | *empty* | *empty* | *empty* | *empty* |
+| ~~**4** — residual analysis~~ | ~~*cut 2026-09-11*~~ | | | |
 
 **The 75/25 split resolves to a plain 4-column grid.** 75% of the width over 3 panels is within a
 hair of 25% over 1, so all four columns are the same width and the step-input column lines up with
@@ -232,9 +242,8 @@ panel width than it did at 6 cm. Re-exporting is not sufficient — each panel n
 ticks and legend re-checked at the new size. 2I is checked and holds. Not yet checked: 2J, 2K, 2G,
 TF-D, 2E.
 
-**Two holes in this layout, both real:**
-1. **Row 4 has no panels at all.** The residual/stim-only block has never had a figure; `f2_model.m`
-   is unapproved. Either build it or the figure is 3 rows.
+**Remaining hole:**
+1. ~~Row 4 has no panels.~~ **RESOLVED 2026-09-11 — row 4 (residual) cut; Fig 2 is 3 rows.**
 2. **Row 2 column 3 is open.** TF-P is the obvious filler but it overlaps TF-A and the standing
    decision is to ship only one of the two. The alternative is 2 wider panels in row 2's impulse block.
 

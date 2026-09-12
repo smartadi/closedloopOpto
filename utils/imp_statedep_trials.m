@@ -18,7 +18,7 @@ function ST = imp_statedep_trials(P)
 %   MOT  total |z| motion over [-2,+0.5] s        POWER-INDEPENDENT  <- admissible
 %   PVv  var(y) over [-1,+0.5] s                  POWER-CONFOUND     <- reported, not interpreted
 %   DPa  absolute 1-4 Hz power, same window       POWER-CONFOUND     <- reported, not interpreted
-%   DPr  RELATIVE delta = DPa / (0.5-30 Hz)       POWER-INDEPENDENT  <- admissible
+%   DPr  RELATIVE delta = (2-4 Hz)/(0.4-10 Hz)     POWER-INDEPENDENT  <- admissible (canonical CL band)
 % plus the two prediction-quality controls that every state partial conditions on:
 %   PRE   pre-onset (-0.2..0 s) residual energy   (no stim -> pure fit quality)
 %   POST  settled-tail (last 0.2 s) energy        (2nd stim-free probe, guards non-stationarity)
@@ -48,8 +48,8 @@ vd_preN  = round(1*Fs);    vd_postN  = round(0.5*Fs);  % var/delta window [-1,+0
 motPreN  = round(2*Fs);    motPostN  = round(0.5*Fs);  % motion window    [-2,+0.5] s
 nWvd   = vd_preN + vd_postN + 1;  win_r = hann(nWvd);  W_r = sum(win_r.^2);
 nfft_r = 2^nextpow2(nWvd);  fr = (0:nfft_r-1)'/nfft_r*Fs;  nB_r = floor(nfft_r/2)+1;
-delta_r = fr(1:nB_r) >= 1   & fr(1:nB_r) <= 4;         % 1-4 Hz delta band
-tot_r   = fr(1:nB_r) >= 0.5 & fr(1:nB_r) <= 30;        % broadband for the RELATIVE-delta ratio
+delta_r = fr(1:nB_r) >= 2   & fr(1:nB_r) <= 4;         % 2-4 Hz delta band (canonical CL band, 2026-09-08)
+tot_r   = fr(1:nB_r) >= 0.4 & fr(1:nB_r) <= 10;        % 0.4-10 Hz total, RELATIVE-delta ratio (matches Xrel)
 
 DVz=[]; GNz=[]; L1z=[]; LD=[]; PRE=[]; POST=[]; MOT=[]; PVv=[]; DPa=[]; DPr=[];
 AMPv=[]; AMPi=[]; TRi=[];

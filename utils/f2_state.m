@@ -10,7 +10,7 @@ function S = f2_state(F2, opt)
 %
 % STATES. Only two are interpretable, and this file says so in the output rather than in a comment:
 %   MOTION          power-independent  -> ADMISSIBLE
-%   RELATIVE delta  (1-4 Hz / 0.5-30 Hz), power-independent -> ADMISSIBLE
+%   RELATIVE delta  (2-4 Hz / 0.4-10 Hz), power-independent -> ADMISSIBLE (canonical CL band)
 %   pre-var, ABSOLUTE delta            -> POWER CONFOUNDS. Retracted 2026-07-01 (both are ~signal
 %                                         power, entangled with the DV magnitude). Computed and
 %                                         printed for completeness, never interpreted.
