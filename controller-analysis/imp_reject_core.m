@@ -5,11 +5,29 @@ function R = imp_reject_core(Aol, Gol, Acl, Gcl, pre, Fs, resp_s, ref)
 %   Stream 2 (confirmatory): imp_reject_across_sessions.m (combined, all sessions)
 %
 % ---------------------------------------------------------------------------
-% TWO METRICS ARE RETURNED.  ER is the reporting metric; RHO is kept so every
-% pre-2026-08-10 number stays reproducible.  They are NOT interchangeable.
+% THREE METRICS ARE RETURNED.  SR is the reporting metric (2026-09-11); ER and
+% RHO are kept so every earlier number stays reproducible.  NOT interchangeable.
 % ---------------------------------------------------------------------------
 %
-% (1) ER  -- ENERGY RATIO  [PRIMARY, Nick 2026-07-28]
+% (0) SR  -- FLUCTUATION-ENERGY RATIO  [PRIMARY, 2026-09-11]
+%       SR_k = ||A_k - <A_k>||^2 / ||G_k - <G_k>||^2      (each centred on its
+%              OWN within-window mean <.>, per trial, over window w)
+%     A proper disturbance-rejection ratio.  The counterfactual G is the no-stim
+%     prediction and therefore sits around BASELINE (~0), while A is held at the
+%     setpoint ref=-5 -- so ||G-ref||^2 (ER) and ||G||^2 (RHO) both compare terms
+%     living in DIFFERENT reference frames, and ER's denominator is dominated by
+%     the constant (0-ref)^2 offset, i.e. by SETPOINT TRACKING, not rejection.
+%     SR removes the arbitrary DC from BOTH signals (centre each on its own mean)
+%     so only the STATE-DRIVEN FLUCTUATION remains in numerator and denominator.
+%       SR  = 1  -> the output fluctuates as much as the disturbance (no rejection)
+%       SR < 1  -> disturbance fluctuation suppressed;  1-SR = fraction rejected
+%     This is the empirical closed-loop sensitivity |S|^2 (fluctuation energy).
+%     A = G + L by construction, so SR<1 REQUIRES the controller action L to be
+%     anti-correlated with G -- exactly the signature of active rejection; in OL,
+%     L does not cancel G and SR ~ 1.  Setpoint tracking (does A reach ref) is a
+%     SEPARATE claim, carried by RMSE-to-ref in Fig-4 Rows 1-2, and is NOT mixed in.
+%
+% (1) ER  -- ENERGY RATIO  [prior primary, Nick 2026-07-28]
 %       ER_k = ||A_k - ref||^2 / ||G_k - ref||^2
 %     Numerator   = energy of the error that REMAINS with the controller running.
 %     Denominator = energy of the error that WOULD have occurred with no control,
@@ -64,8 +82,25 @@ erP   = @(A,G,w) sum((A(:,w)-ref).^2,'all') ./ sum((G(:,w)-ref).^2,'all');    % 
 % --- LEGACY transmission ratio (amplitude, zero-referenced denominator).
 rejW  = @(A,G,w) sqrt(mean((A(:,w)-ref).^2,2)) ./ sqrt(mean(G(:,w).^2,2));
 poolW = @(A,G,w) sqrt(sum((A(:,w)-ref).^2,'all')/sum(G(:,w).^2,'all'));
+% --- SR: fluctuation-energy ratio (PRIMARY). Each signal centred on its OWN
+%     within-window mean per trial => the setpoint/baseline DC drops from both,
+%     leaving only the state-driven fluctuation. Frame-consistent by construction.
+srW   = @(A,G,w) sum((A(:,w)-mean(A(:,w),2)).^2,2) ./ sum((G(:,w)-mean(G(:,w),2)).^2,2);
+srP   = @(A,G,w) sum((A(:,w)-mean(A(:,w),2)).^2,'all') ./ sum((G(:,w)-mean(G(:,w),2)).^2,'all');
 
 R.ref = ref;  R.w_tr = w_tr;  R.w_rej = w_rej;  R.w_stim = w_stim;  R.resp_s = resp_s;
+
+% ---------------- SR: PRIMARY (0-3 s stim window) + the two sub-windows --------
+R.sr_ol      = srW(Aol,Gol,w_stim);  R.sr_cl      = srW(Acl,Gcl,w_stim);   % 0-3 s PRIMARY
+R.sr_ol_tr   = srW(Aol,Gol,w_tr);    R.sr_cl_tr   = srW(Acl,Gcl,w_tr);     % 0-1 s
+R.sr_ol_rej  = srW(Aol,Gol,w_rej);   R.sr_cl_rej  = srW(Acl,Gcl,w_rej);    % 1-3 s
+R.srP_ol     = srP(Aol,Gol,w_stim);  R.srP_cl     = srP(Acl,Gcl,w_stim);
+R.sr_med_ol  = median(R.sr_ol);   R.sr_iqr_ol = iqr(R.sr_ol);
+R.sr_med_cl  = median(R.sr_cl);   R.sr_iqr_cl = iqr(R.sr_cl);
+R.sr_q_ol    = prctile(R.sr_ol,[25 50 75]);
+R.sr_q_cl    = prctile(R.sr_cl,[25 50 75]);
+% Fraction of disturbance fluctuation rejected (1 - pooled SR), per condition.
+R.rej_frac_ol = 1 - R.srP_ol;   R.rej_frac_cl = 1 - R.srP_cl;
 
 % ---------------- ER: primary (0-3 s stim window) + the two sub-windows --------
 R.er_ol      = erW(Aol,Gol,w_stim);  R.er_cl      = erW(Acl,Gcl,w_stim);   % 0-3 s PRIMARY
@@ -106,10 +141,12 @@ R.n_ol = size(Aol,1);  R.n_cl = size(Acl,1);
 if R.n_ol>0 && R.n_cl>0
     R.p_rho = ranksum(R.rho_ol,R.rho_cl);   R.p_tr = ranksum(R.rho_ol_tr,R.rho_cl_tr);
     R.p_er  = ranksum(R.er_ol, R.er_cl);                       % OL vs CL, per-trial
-    % Does each condition do work at all?  One-sample test of ER against 1.
+    R.p_sr  = ranksum(R.sr_ol, R.sr_cl);                       % OL vs CL, per-trial (PRIMARY)
+    % Does each condition reject at all?  One-sample test of SR/ER against 1.
     R.p_er_ol1 = signrank(R.er_ol,1);   R.p_er_cl1 = signrank(R.er_cl,1);
+    R.p_sr_ol1 = signrank(R.sr_ol,1);   R.p_sr_cl1 = signrank(R.sr_cl,1);
 else
-    R.p_rho = NaN;  R.p_tr = NaN;  R.p_er = NaN;
-    R.p_er_ol1 = NaN;  R.p_er_cl1 = NaN;
+    R.p_rho = NaN;  R.p_tr = NaN;  R.p_er = NaN;  R.p_sr = NaN;
+    R.p_er_ol1 = NaN;  R.p_er_cl1 = NaN;  R.p_sr_ol1 = NaN;  R.p_sr_cl1 = NaN;
 end
 end

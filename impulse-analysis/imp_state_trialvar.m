@@ -23,7 +23,8 @@
 % STATES    MOT  mean |z| motion                                    power-independent  ADMISSIBLE
 %           PVv  var(dF/F)                                          POWER CONFOUND
 %           DPa  absolute 1-4 Hz power                              POWER CONFOUND
-%           DPr  RELATIVE delta = DPa / (0.5-30 Hz)                 power-independent  ADMISSIBLE
+%           DPr  RELATIVE delta = abs(2-4 Hz) / (0.4-10 Hz)        power-independent  ADMISSIBLE
+%                (canonical CL bands, matches cl_reldelta.m / imp_statedep_trials.m; was 1-4/0.5-30)
 %
 % ⚠ H2 AND H3 ARE PARTLY UNFALSIFIABLE AS STATED. Pre-trial variance and ABSOLUTE delta ARE signal
 % power. The DV is a spread. A trial in a high-power state has more variance everywhere, so "higher
@@ -132,7 +133,7 @@ assert(~any(ismember(find(iState), iSham)), '[STV] state and sham windows overla
 MK = { 'MOT','Motion',            true,  'motion z-score'
        'PVv','Pre-trial variance',false, '(\DeltaF/F)^2'
        'DPa','Abs \delta power',  false, '(\DeltaF/F)^2'
-       'DPr','Rel \delta',        true,  'fraction of 0.5-30 Hz' };
+       'DPr','Rel \delta',        true,  '2-4 / 0.4-10 Hz' };
 % The unit strings above describe the RAW marker. Under 'norm'/'z' the analysis axis is no longer
 % in those units, and an axis labelled with units it is not in is worse than one with none.
 switch STV_STATESCALE
@@ -628,7 +629,10 @@ end
 end
 
 function [dpa, dpr] = local_delta(seg, fs)
-%LOCAL_DELTA  absolute 1-4 Hz power and its RELATIVE share of 0.5-30 Hz, per trial (rows of seg).
+%LOCAL_DELTA  absolute 2-4 Hz power and its RELATIVE share of 0.4-10 Hz, per trial (rows of seg).
+% CANONICAL rel-delta bands (2026-09-11): numerator 2-4 Hz, denominator 0.4-10 Hz -- identical to
+% utils/cl_reldelta.m (controller) and utils/imp_statedep_trials.m (residual pipeline), so Fig-2 and
+% Fig-4 measure the SAME state. (Was 1-4 / 0.5-30 Hz before this date.)
 % Mean-removed + Hann so the DC term and edge leakage do not land in the delta band.
 n = size(seg,2);
 w = hann(n).';
@@ -638,8 +642,8 @@ X = abs(fft(x .* w, [], 2)).^2;
 f = (0:n-1) * (fs/n);
 half = 1:floor(n/2);
 f = f(half);  X = X(:,half);
-bD = f >= 1   & f <= 4;
-bT = f >= 0.5 & f <= 30;
+bD = f >= 2   & f <= 4;      % numerator: 2-4 Hz absolute power (DPa)
+bT = f >= 0.4 & f <= 10;     % denominator: 0.4-10 Hz total power
 dpa = sum(X(:,bD), 2);
 dpr = dpa ./ max(sum(X(:,bT), 2), eps);
 end

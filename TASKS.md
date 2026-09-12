@@ -76,6 +76,19 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] (if a variance panel is still wanted) Re-run `trial_state_mse.m` with `varWinMode='pre2trial'` — restores window-disjointness; the current `'trial'` setting makes x and y the same statistic of the same samples. Also note this figure has **no `paperExport` call**.
 - [ ] Sweep the other sub-area CLAUDE.md files for the same doc rot found in `controller-analysis/CLAUDE.md` (script names that no longer resolve): `git log --diff-filter=D --name-only` → grep the deleted names.
 
+### 🆕 MPC extension — main-vs-supplementary decision (Nick 2026-09-11)
+> **Split out of Fig 4 per user 2026-09-11.** MPC is its OWN thread now, NOT a Fig-4 blocker.
+> Nick questioned whether the MPC simulation earns a main-figure slot vs supplemental. The whole
+> section's justification hinges on ONE number (the achievable σ of real predictors, tracked in the
+> Ziyu supplementary block below). Do NOT let this block the Fig-4 SR + session-stat finalization.
+> Code: `controller-analysis/ctrl_tube_mpc.m` (untracked working-tree file).
+- [ ] **[BLOCKING for MPC panel] Resolve the MPC metric discrepancy** (`2026-09-11.3`): clairvoyant MPC (σ=0) reports ~38% improvement yet its trace sits nearly on ref, while σ=0.3 reports ~36% yet visibly misses ref — two near-equal numbers for visibly different tracking is a bug, not a result. Likely a **normalization mismatch or misaligned integration window across conditions** (see "explain 3" analysis, RESEARCH 2026-09-11): the σ=0 case must integrate to ~0 tracking error on a linear plant, so 38% signals the denominator (disturbance energy vs reference-relative baseline) or the control window differs between σ conditions. Fix before the panel supports any claim.
+- [ ] **[GATES main-vs-supp] Decide MPC placement** (`2026-09-11.5`, with Nick) — pending the σ number from the Ziyu block. If real-predictor σ lands in the flat/high-σ regime, MPC WEAKENS the story → supplementary or cut; if near the useful knee (σ~0.3), it earns a main slot.
+
+#### Supplementary — Ziyu model prediction-uncertainty σ (gates the MPC decision)
+> This is the evidence the MPC section stands or falls on. Supplementary track feeding the decision above.
+- [ ] **Extract per-timestep prediction uncertainty σ from Ziyu's model** on the closed-loop dataset (`2026-09-11.4`); then **locate that σ on the MPC performance-vs-σ curve** to decide whether existing predictors are already useful (σ~0.3) or not (σ~1.6+). This single number gates whether MPC is worth pursuing experimentally AND whether it belongs in the paper. Needs the perf-vs-σ curve from `ctrl_tube_mpc.m` (post metric-fix) + Ziyu's model outputs on the CL sessions.
+
 ---
 
 ## 🟡 Next sprint

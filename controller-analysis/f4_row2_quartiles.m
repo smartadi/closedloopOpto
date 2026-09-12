@@ -88,8 +88,8 @@ for k=1:numel(fields)
 end
 
 % ---- stats + per-state figure ---------------------------------------------------------------
-fprintf('\n============ ROW 2: OL-CL rejection GAP by state quartile (TRIAL-LEVEL) ============\n');
-fprintf('state     nTrials nSess | dGap(Q4-Q1)  interaction beta   t      p\n');
+fprintf('\n============ ROW 2: OL-CL rejection GAP by state quartile (SESSION-LEVEL primary) ============\n');
+fprintf('state     nTrials nSess | session-level paired (PRIMARY)         || trial-pooled OLS (reference)\n');
 for ip=1:numel(preds); nm=preds{ip};
     zx=Pl.(nm).zx; zy=Pl.(nm).zy; g=Pl.(nm).g;
     if isempty(zx); fprintf('%-9s (no data)\n',nm); continue; end
@@ -99,15 +99,27 @@ for ip=1:numel(preds); nm=preds{ip};
     qmC=arrayfun(@(b) mean(zy(qb==b&g==1),'omitnan'),1:4);
     qsO=arrayfun(@(b) std(zy(qb==b&g==0),'omitnan')/sqrt(max(1,nnz(qb==b&g==0))),1:4);
     qsC=arrayfun(@(b) std(zy(qb==b&g==1),'omitnan')/sqrt(max(1,nnz(qb==b&g==1))),1:4);
-    % TRIAL-LEVEL interaction (pooled, no session structure): does the OL-CL gap
-    % depend on state?  zRMSE ~ 1 + cond + state + cond:state ; test cond:state.
-    G=g; nTr=numel(zy); nG=numel(Pl.(nm).gap1);
+    % SESSION-LEVEL paired test (PRIMARY, Nick 2026-09-11): one OL-CL gap per
+    % session in Q1 and Q4; paired signed-rank of gap4 vs gap1 across sessions.
+    % This respects session/mouse structure -- the trial-pooled OLS below ignores
+    % it (pseudoreplication: 87% of "15 sessions" are 2 mice) and is kept for
+    % reference in the console only; the STAR and the headline are session-level.
+    g1s=Pl.(nm).gap1(:); g4s=Pl.(nm).gap4(:);
+    ok=isfinite(g1s)&isfinite(g4s); g1s=g1s(ok); g4s=g4s(ok);
+    dS=g4s-g1s; nSess=numel(dS);                    % per-session gap change Q4-Q1
+    pSess=local_signrank(g4s,g1s);
+    nAgree=nnz(sign(dS)==sign(median(dS)) & dS~=0); % sessions matching group direction
+    dGapS=median(dS);                               % session-level median gap change
+    % --- trial-pooled OLS interaction (REFERENCE ONLY, not reported in figure) ---
+    G=g; nTr=numel(zy);
     Xd=[ones(nTr,1), G, zx, G.*zx]; bd=Xd\zy;
     resid=zy-Xd*bd; dof=max(nTr-4,1); s2=sum(resid.^2)/dof;
     covb=s2*inv(Xd'*Xd); se=sqrt(diag(covb)); tI=bd(4)/se(4);
-    pGap=2*tcdf(-abs(tI),dof); bInt=bd(4);
+    pGap=2*tcdf(-abs(tI),dof); bInt=bd(4);          % pooled p + beta, diagnostic only
     dGap=(qmO(4)-qmC(4))-(qmO(1)-qmC(1));           % descriptive Q4-Q1 gap change (pooled)
-    fprintf('%-9s  %6d  %3d | %+.2f        %+.3f          %+.2f  %8.3g\n', nm,nTr,nG,dGap,bInt,tI,pGap);
+    fprintf(['%-9s  %6d  %3d | sess dGap %+.2f  %d/%d agree  signrank p=%.3g' ...
+             '   || pooled dGap %+.2f  beta %+.3f  p=%.3g\n'], ...
+             nm,nTr,nSess,dGapS,nAgree,nSess,pSess, dGap,bInt,pGap);
 
     % ---- panel ----
     fq=paperFig(5,4.6); ax=axes(fq); hold(ax,'on');
@@ -124,9 +136,11 @@ for ip=1:numel(preds); nm=preds{ip};
     set(ax,'XTick',1:4,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out', ...
         'FontSize',PS.fs,'FontWeight','bold');
     ylim(ax,[-0.65 1.40]); yl=ylim(ax);   % common range across the 3 panels (gap trends comparable)
-    % gap-change star (Q1 vs Q4 gap), placed over the gap line span
-    text(ax,2.5,yl(2)-0.02*range(yl),sprintf('\\Deltagap %s',starstr(pGap)), ...
+    % gap-change star (Q1 vs Q4 gap) -- SESSION-LEVEL paired signed-rank (primary)
+    text(ax,2.5,yl(2)-0.02*range(yl),sprintf('\\Deltagap %s',starstr(pSess)), ...
         'HorizontalAlignment','center','VerticalAlignment','top','FontSize',6,'FontWeight','bold','Color',[0.1 0.1 0.1]);
+    text(ax,2.5,yl(2)-0.02*range(yl)-0.11*range(yl),sprintf('%d/%d sess',nAgree,nSess), ...
+        'HorizontalAlignment','center','VerticalAlignment','top','FontSize',5,'Color',[0.35 0.35 0.35]);
     title(ax,sprintf('%s  (%d tr)',titR2{ip},nTr),'FontSize',PS.fs,'FontWeight','bold');
     if ip==1
         ylabel(ax,'RMSE to ref (z)','FontSize',PS.fs,'FontWeight','bold');
