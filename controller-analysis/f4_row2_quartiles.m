@@ -35,7 +35,10 @@ else;  paper_root = 'paper'; warning('[F4R2] cannot locate paper/.'); end
 outdir = fullfile(paper_root,'images','figure4');
 if ~exist(outdir,'dir'); mkdir(outdir); end
 
-Fs=35; ref=-5; c0=36; c1=71; c2=141; dur=3; c0_mot=71; c0_l=106;
+Fs=35; ref=-5; c0=36; c1=71; c2=141; dur=3; c0_mot=71; c0_l=106; c0_p=351;
+% c0_p = onset col in pncDfk/pwcDfk (controllerData buffers dFk(i-350:i+..), 350-sample
+% pre => onset at col 351). Current caches store pncDfk/pwcDfk, NOT the older _l variants
+% (onset col 106); the delta path falls back to these so rel-delta needs no cache rebuild.
 relopts = struct('pre',2,'post',3);            % delta window -2 -> stim end (matches row 1)
 colOL = PS.col_ol; colCL = PS.col_cl;
 preds = {'initdev','motion','delta'};
@@ -62,6 +65,8 @@ for k=1:numel(fields)
     else, S.motion={nan(nO,1),nan(nC,1)}; end
     if isfield(d,'pncDfk_l')&&~isempty(d.pncDfk_l)&&isfield(d,'pwcDfk_l')&&~isempty(d.pwcDfk_l)
         S.delta={cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts), cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts)};
+    elseif isfield(d,'pncDfk')&&~isempty(d.pncDfk)&&isfield(d,'pwcDfk')&&~isempty(d.pwcDfk)
+        S.delta={cl_reldelta(d.pncDfk,c0_p,Fs,relopts), cl_reldelta(d.pwcDfk,c0_p,Fs,relopts)};
     else, S.delta={nan(nO,1),nan(nC,1)}; end
 
     muY=mean([yOL;yCL],'omitnan'); sgY=std([yOL;yCL],'omitnan'); if sgY==0||isnan(sgY); continue; end
