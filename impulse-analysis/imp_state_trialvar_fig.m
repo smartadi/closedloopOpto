@@ -207,6 +207,11 @@ for i = 1:numel(adm)
         txt = sprintf('p=%.2g %s   %d/%d sess', r.pLME, stStar, r.nSessAgree, r.nSess);
         text(ax, 0.5, 0.99, txt, 'Units','normalized', 'HorizontalAlignment','center', ...
              'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
+        if ~r.adm      % confound controls (abs delta, pre-stim var): say so on the panel
+            text(ax, 0.5, 0.99-0.09, 'power confound', 'Units','normalized', ...
+                 'HorizontalAlignment','center', 'VerticalAlignment','top', ...
+                 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.70 0.15 0.15]);
+        end
     end
     % Full caption numbers still print to the console (Q4/Q1 with CI + the stratified rho are
     % sentences for the caption, too long for a 4 cm axis).
@@ -224,7 +229,11 @@ for i = 1:numel(adm)
         if ~isfield(paperNames, r.tag)
             warning('[STVF] no locked filename for marker %s -- PDF skipped.', r.tag);
         else
-            pdfDir = fullfile(paperRoot, 'images', 'figure2');
+            % Admissible markers (motion, rel-delta) are the main-figure panels 2J/2K.
+            % Non-admissible ones (absolute delta, pre-stim variance) are POWER-CONFOUND
+            % controls -> they belong in supplementary, not beside the findings.
+            if r.adm, subDir = 'figure2'; else, subDir = 'supplementary'; end
+            pdfDir = fullfile(paperRoot, 'images', subDir);
             if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
             paperExport(f, fullfile(pdfDir, [paperNames.(r.tag) '.pdf']));
         end
