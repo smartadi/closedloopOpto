@@ -185,6 +185,27 @@ if CV_REVAMP
     set(axE,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
     if CV_EXPORT, paperExport(fE, fullfile(CV_OUTDIR,'tf_cv_2D_endlabels.pdf')); end
     fprintf('[CV] 2D candidates -> tf_cv_2D_sidebar.pdf , tf_cv_2D_endlabels.pdf\n');
+
+    % ---------- MAIN Fig-2D (user 2026-09-13): held-out R^2 only ----------
+    % User: "only use held out r2 image that's the best, keep others for supplementary."
+    % Standalone per-session held-out R^2 (median o + IQR whisker), pooled-median guide.
+    poolMed = median(cell2mat(cellfun(@(c) c.R2_out(:), CV, 'UniformOutput', false)), 'omitnan');
+    fH = paperFig(PS.f2w, PS.f2h);  axH = axes(fH);  hold(axH,'on');
+    yline(axH, poolMed, ':', 'Color', [.55 .55 .55], 'LineWidth', PS.lw_zero);  % pooled median guide
+    for k = 1:n
+        c = PS.sessColor(k);
+        plot(axH,[k k],[q25(k) q75(k)],'-','Color',c,'LineWidth',1.0);
+        plot(axH,k,med(k),'o','Color',c,'MarkerFaceColor',c,'MarkerSize',3.5);
+    end
+    ylim(axH,[max(-0.05,min(q25)-0.05) 1.02]);  xlim(axH,[0.5 n+0.5]);
+    set(axH,'XTick',1:n,'XTickLabel',mlab,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
+    axH.XAxis.FontSize = PS.fs-1;  ylabel(axH,'held-out R^2');
+    text(axH, n+0.45, poolMed, sprintf('%.2f', poolMed), 'Color',[.45 .45 .45], ...
+         'FontSize',PS.fs-1,'FontWeight',PS.fw,'HorizontalAlignment','right','VerticalAlignment','bottom');
+    if CV_EXPORT
+        paperExport(fH, fullfile(CV_OUTDIR,'tf_cv_heldout_r2.pdf'));
+        fprintf('[CV] MAIN Fig-2D -> tf_cv_heldout_r2.pdf  (pooled median R^2 = %.3f)\n', poolMed);
+    end
 end
 
 %% ---- (4) panel B: in-sample vs held-out R^2 per session (median + IQR) -----------------------

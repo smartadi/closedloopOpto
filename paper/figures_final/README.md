@@ -21,7 +21,7 @@ match the filenames (E=variance, F=RMSE, J=phase, K=variance) — read the path.
 | Figure | panels copied | notes |
 |--------|---------------|-------|
 | figure1 | 3 | only the raster/vector panels; 1D/1E/1F are Illustrator-native (no PDF) |
-| figure2 | 8 | verified against assembled Figure2.pdf (A–H): A imp_response, B imp_single, C tf_cv_single (from supplementary/), D tf_cv_shape_across, E tf_model_swap, F tf_tau_forest, G imp_state_var_motion, H imp_state_var_reldelta |
+| figure2 | 8 | A imp_response, B imp_single, C tf_cv_single (from supplementary/), **D tf_cv_heldout_r2** (2026-09-13: held-out R² per session + IQR, pooled median 0.86; the shape overlays tf_cv_shape_across / _2D_sidebar / _2D_endlabels moved to panels/supplementary/), E tf_model_swap, F tf_tau_forest, G imp_state_var_motion, H imp_state_var_reldelta |
 | figure3 | 10 | verified against assembled Figure3.pdf (A–J). 3K (pooled_ol_cl_rmse_15sess) is NOT in this assembly — it's pending re-assembly per PAPER.md; the manuscript includes Figure3_extra.pdf, which may differ |
 | figure4 | 10 | ⚠ PROVISIONAL — current f4_* set; PAPER.md Fig-4 section is stale, panels being finalized (Row-2 = today's session-level; SR rejection panel + re-assembly pending) |
 | figure5 | 10 | verified against assembled Figure5.pdf (B–K; A is the Illustrator control diagram, no PDF). s2 primary session + 3 across-session combined panels |
