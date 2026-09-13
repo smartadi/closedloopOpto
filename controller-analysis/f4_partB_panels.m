@@ -42,7 +42,11 @@ if ~exist(outdir,'dir'); mkdir(outdir); end
 Fs      = 35;
 c0      = 36;    % onset col in wcDfk
 c0_mot  = 71;    % onset col in wcmotion
-c0_l    = 106;   % onset col in pwcDfk_l (3 s pre-buffer)
+c0_l    = 106;   % onset col in the legacy pwcDfk_l (3 s pre-buffer)
+c0_p    = 351;   % onset col in pwcDfk/pncDfk (controllerData 10 s pre-buffer: dFk(i-350:i+..)).
+% Current caches store pwcDfk, NOT the legacy _l variants -> pick_pwc() (EOF) returns whichever
+% CL delta buffer a session actually has + its onset col, so no cache rebuild is needed
+% (mirrors the f4_row2_quartiles.m fallback, RESEARCH 2026-09-12).
 mot_pre = 2;     % motion window start (s before onset)
 relopts = struct('pre',2,'post',3);   % rel 2-4 Hz window: -2 s -> stim end (dur=3)
 
@@ -69,7 +73,11 @@ for k = 1:numel(fields)
     if ~isfield(s,'data');           continue; end
     if ~s.has_motion;                continue; end
     dk = s.data; if ~isfield(dk,'wcmotion'); continue; end
-    ref = s.d.ref; dur = s.d.params.dur; nT = size(dk.wcDfk,1);
+    % ref/dur from d when present; else the locked project defaults (d is not held in the
+    % lean data-only load path -- ref=-5 and dur=3 are project-wide, see root CLAUDE.md).
+    if isfield(s,'d') && isfield(s.d,'ref') && ~isempty(s.d.ref); ref = s.d.ref; else; ref = -5; end
+    if isfield(s,'d') && isfield(s.d,'params') && isfield(s.d.params,'dur'); dur = s.d.params.dur; else; dur = 3; end
+    nT = size(dk.wcDfk,1);
 
     % X1 initial deviation
     x1 = abs(dk.wcDfk(:,c0) - ref);
@@ -82,8 +90,10 @@ for k = 1:numel(fields)
     x2 = mean(max(dk.wcmotion(1:nT, ws:we), 0), 2);
 
     % X3 rel 2-4 Hz (canonical), + absolute delta (comp) for the robustness panel
-    [xrel, comp]      = cl_reldelta(dk.pwcDfk_l, c0_l, Fs, relopts);
-    [~,   comp_pre]   = cl_reldelta(dk.pwcDfk_l, c0_l, Fs, ...
+    [dbuf, c0_d]      = pick_pwc(dk, c0_l, c0_p);   % legacy _l else pwcDfk@351 (field-rot fallback)
+    if isempty(dbuf);  continue;  end
+    [xrel, comp]      = cl_reldelta(dbuf, c0_d, Fs, relopts);
+    [~,   comp_pre]   = cl_reldelta(dbuf, c0_d, Fs, ...
                                     struct('pre',2,'post',0));   % pre-stim-only delta
     xdel = comp.delta(:);         % absolute 1-4 Hz power, -2 -> stim end
     xpre = comp_pre.delta(:);     % absolute 1-4 Hz power, pre-stim only
@@ -185,11 +195,13 @@ end
 titA = {'Initial deviation','Motion','Rel 2-4 Hz'};   % state display names
 disp_pre = 2; disp_post = 5;
 tvec  = (-disp_pre : 1/Fs : disp_post).';
-dcols = (c0_l - disp_pre*Fs) : (c0_l + disp_post*Fs);
+dcols_at = @(c0d) (c0d - disp_pre*Fs) : (c0d + disp_post*Fs);   % onset col varies per buffer type
 % shared y-scale across the 3 traces
 gmn=inf; gmx=-inf;
 for j=1:3
-    seg = mouse.(fields{SESS(pick(j))}).data.pwcDfk_l(TRI(pick(j)), dcols);
+    dkj = mouse.(fields{SESS(pick(j))}).data;
+    [dbj, c0dj] = pick_pwc(dkj, c0_l, c0_p);
+    seg = dbj(TRI(pick(j)), dcols_at(c0dj));
     gmn=min(gmn,min(seg)); gmx=max(gmx,max(seg));
 end
 pad = 0.10*(gmx-gmn); yl = [gmn-pad, gmx+pad];
@@ -197,13 +209,15 @@ pad = 0.10*(gmx-gmn); yl = [gmn-pad, gmx+pad];
 figA = paperFig(8.4, 4.2);
 tlA  = tiledlayout(figA,1,3,'TileSpacing','compact','Padding','compact');
 for j=1:3
-    t   = pick(j); dk = mouse.(fields{SESS(t)}).data; ref = mouse.(fields{SESS(t)}).d.ref;
-    trace = dk.pwcDfk_l(TRI(t), dcols);
+    t   = pick(j); dk = mouse.(fields{SESS(t)}).data; sj = mouse.(fields{SESS(t)});
+    if isfield(sj,'d') && isfield(sj.d,'ref') && ~isempty(sj.d.ref); ref = sj.d.ref; else; ref = -5; end
+    [dbt, c0dt] = pick_pwc(dk, c0_l, c0_p); dcols = dcols_at(c0dt);
+    trace = dbt(TRI(t), dcols);
     ax = nexttile(tlA); hold(ax,'on');
     xlim(ax,[-disp_pre disp_post]); ylim(ax,yl);
     addStimPatch(ax, 0, 3);                                   % laser window, Fig-3 grey
     plot(ax,tvec([1 end]),[ref ref],'--','Color',[0.35 0.35 0.35],'LineWidth',PS.lw_ref);
-    mtr = mean(dk.pwcDfk_l(:,dcols),1,'omitnan');             % this session's trial-average CL response
+    mtr = mean(dbt(:,dcols),1,'omitnan');                     % this session's trial-average CL response
     plot(ax,tvec,mtr,'-','Color',[0.60 0.60 0.60],'LineWidth',1.0);
     plot(ax,tvec,trace,'-','Color',col(j,:),'LineWidth',PS.lw_mean);
     plot(ax,0,dk.wcDfk(TRI(t),c0),'o','MarkerSize',3,'MarkerFaceColor',col(j,:),'MarkerEdgeColor','k','LineWidth',0.4);
@@ -282,4 +296,18 @@ cand = idx(Z(idx,oth(1))<=0.5 & Z(idx,oth(2))<=0.5);
 if isempty(cand), cand = idx; end
 [~,mi] = max(Z(cand,j));
 t = cand(mi);
+end
+
+function [dbuf, c0d] = pick_pwc(dk, c0_l, c0_p)
+% CL pre-buffered dFk trace + its onset column, tolerating the cache field rot:
+% current caches store pwcDfk (10 s pre, onset col c0_p=351); older ones stored the
+% legacy pwcDfk_l (3 s pre, onset col c0_l=106). Mirrors the f4_row2_quartiles.m
+% fallback so the delta state needs no cache rebuild (RESEARCH 2026-09-12).
+if isfield(dk,'pwcDfk_l') && ~isempty(dk.pwcDfk_l)
+    dbuf = dk.pwcDfk_l; c0d = c0_l;
+elseif isfield(dk,'pwcDfk') && ~isempty(dk.pwcDfk)
+    dbuf = dk.pwcDfk;   c0d = c0_p;
+else
+    dbuf = []; c0d = NaN;
+end
 end

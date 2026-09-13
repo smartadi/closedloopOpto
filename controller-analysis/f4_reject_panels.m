@@ -11,13 +11,17 @@
 % Consequence: re-run imp_reject_across_sessions.m first whenever the caches change; this
 % script will happily draw a stale struct and say so in its header line.
 %
-% METRIC. Primary is the ENERGY RATIO (Nick, 2026-07-28)
-%     ER = ||A - ref||^2 / ||G - ref||^2   over the 0-3 s stim window
-%     1 = the controller did no work (holds identically when A == G),  <1 = controller gain
-% The legacy transmission ratio rho = ||A-ref||/||G|| is available via MET='rho' for
-% reproducing pre-2026-08-10 numbers ONLY. The two are NOT interchangeable: rho's denominator
-% is zero-referenced, so its LEVEL depends on where the brain's natural level happens to sit
-% relative to the target and only the OL-vs-CL contrast ever meant anything. Quote one.
+% METRIC. Primary is the FLUCTUATION-ENERGY RATIO (SR, 2026-09-11)
+%     SR = ||A - <A>||^2 / ||G - <G>||^2   over the 0-3 s stim window, EACH signal centred
+%          on its OWN within-window mean.
+%     1 = output fluctuates as much as the disturbance (no rejection),  <1 = suppressed;
+%     1-SR = fraction of the disturbance fluctuation rejected ( = empirical closed-loop |S|^2 ).
+% SR replaces ENERGY RATIO (ER = ||A-ref||^2/||G-ref||^2, MET='ER') and the legacy transmission
+% ratio (rho = ||A-ref||/||G||, MET='rho'), both kept for reproduction only. ER/rho reference
+% each signal to the SAME fixed ref while A is held at ref and G sits at its natural spontaneous
+% level, so their LEVELS were never interpretable (a constant DC offset dominates) -- only the
+% OL-vs-CL contrast meant anything. Centring each signal on its own mean removes that offset, so
+% SR's level IS interpretable as sensitivity. Quote one.
 %
 % WHAT TRAVELS WITH THESE PANELS. ER is a ratio against a Global the predictor produced, so
 % two numbers must be quoted with it and both are printed by [F4-REJ-REPORT]:
@@ -46,7 +50,7 @@
 %           [F4-REJ-D] [F4-REJ-REPORT]
 
 %% [F4-REJ-CFG] -----------------------------------------------------------------
-MET      = 'ER';       % 'ER' (primary) | 'rho' (legacy, reproduction only)
+MET      = 'SR';       % 'SR' (PRIMARY, 2026-09-11) | 'ER' (secondary) | 'rho' (legacy, reproduction only)
 EXPORT   = true;
 % REVIEW WORKFLOW (user, 2026-08-12): PNG first, approve, THEN vector PDFs. Flip to
 % {'pdf','png'} once the panels are signed off -- nothing else changes, so the approved
@@ -94,6 +98,13 @@ end
 assert(nS >= 2, '[F4-REJ] need >=2 qualifying sessions for a paired panel (have %d).', nS);
 
 switch upper(MET)
+    case 'SR'
+        s_ol = XS.sr_med_ol(:);  s_cl = XS.sr_med_cl(:);
+        t_ol = vertcat(Q.sr_ol);  t_cl = vertcat(Q.sr_cl);      % pooled per-trial
+        gainV = XS.sr_gain(:);  gain_ci = XS.sr_gain_ci;  p_sess = XS.p_sr_sess;
+        ylab  = 'fluctuation ratio |S|^2 = ||A-<A>||^2/||G-<G>||^2';
+        ylab_s = 'sensitivity |S|^2';
+        nullY = 1;   % 1 = output fluctuates as much as the disturbance (no rejection)
     case 'ER'
         s_ol = XS.er_med_ol(:);  s_cl = XS.er_med_cl(:);
         t_ol = vertcat(Q.er_ol);  t_cl = vertcat(Q.er_cl);      % pooled per-trial
@@ -109,7 +120,7 @@ switch upper(MET)
         ylab_s = 'transmission';
         nullY = 1;
     otherwise
-        error('[F4-REJ] MET must be ''ER'' or ''rho'' (got ''%s'').', MET);
+        error('[F4-REJ] MET must be ''SR'', ''ER'' or ''rho'' (got ''%s'').', MET);
 end
 tag = lower(MET);
 mice = unique({Q.mn});
@@ -159,7 +170,8 @@ else
 
     % that session's OWN per-trial statistic -- the single-session claim, before pooling
     % keyed off `tag` rather than an if/else on MET, which the analyzer constant-folds
-    DVSRC  = struct('er', {{E.er_ol, E.er_cl, E.p_er}}, 'rho', {{E.rho_ol, E.rho_cl, E.p_rho}});
+    DVSRC  = struct('sr', {{E.sr_ol, E.sr_cl, E.p_sr}}, ...
+                    'er', {{E.er_ol, E.er_cl, E.p_er}}, 'rho', {{E.rho_ol, E.rho_cl, E.p_rho}});
     dsel   = DVSRC.(tag);
     dv_ol  = dsel{1};  dv_cl = dsel{2};  p_demo = dsel{3};
     figF = paperFig(W,H); axF = axes(figF); hold(axF,'on');
@@ -282,7 +294,11 @@ fprintf('  per-session median  : OL %.3f [IQR %.3f] | CL %.3f [IQR %.3f]\n', ...
 fprintf('  paired OL vs CL     : signrank p=%.3g, mean gain %+.3f, 95%% CI [%+.3f, %+.3f]\n', ...
     p_sess, mean(gainV), gain_ci(1), gain_ci(2));
 fprintf('  CL better in        : %d/%d sessions\n', nnz(gainV>0), nS);
-if strcmpi(MET,'ER')
+if strcmpi(MET,'SR')
+    fprintf('  vs the no-reject line: OL p=%.3g | CL p=%.3g  (signrank vs 1)\n', XS.p_sr_ol1, XS.p_sr_cl1);
+    fprintf('  fraction rejected 1-SR: OL %.1f%% | CL %.1f%%  (per-session median)\n', ...
+        100*median(XS.rej_frac_ol), 100*median(XS.rej_frac_cl));
+elseif strcmpi(MET,'ER')
     fprintf('  vs the no-work line : OL p=%.3g | CL p=%.3g  (signrank vs 1)\n', XS.p_er_ol1, XS.p_er_cl1);
 end
 fprintf('  pooled per-trial    : OL %.3f | CL %.3f   (DESCRIPTIVE ONLY, n=%d/%d trials)\n', ...

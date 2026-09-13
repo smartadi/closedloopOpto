@@ -93,7 +93,16 @@ for s = SESS
     Q(k).p_rho = R.p_rho;  Q(k).rhoP_ol = R.rhoP_ol;  Q(k).rhoP_cl = R.rhoP_cl;
     Q(k).Gdip_ol = R.Gdip_ol;  Q(k).Gdip_cl = R.Gdip_cl;  Q(k).R2_te = S.R2_te;
     Q(k).rho_ol = R.rho_ol;  Q(k).rho_cl = R.rho_cl;
-    % ENERGY RATIO (primary, Nick 2026-07-28): 1 = no work, <1 = controller gain.
+    % SR: FLUCTUATION-ENERGY RATIO (PRIMARY, 2026-09-11). Each signal centred on its OWN
+    % within-window mean => 1 = output fluctuates as much as the disturbance (no rejection),
+    % <1 = fluctuation suppressed, 1-SR = fraction rejected (empirical closed-loop |S|^2).
+    Q(k).sr_ol = R.sr_ol;  Q(k).sr_cl = R.sr_cl;
+    Q(k).sr_med_ol = R.sr_med_ol;  Q(k).sr_iqr_ol = R.sr_iqr_ol;
+    Q(k).sr_med_cl = R.sr_med_cl;  Q(k).sr_iqr_cl = R.sr_iqr_cl;
+    Q(k).srP_ol = R.srP_ol;  Q(k).srP_cl = R.srP_cl;
+    Q(k).rej_frac_ol = R.rej_frac_ol;  Q(k).rej_frac_cl = R.rej_frac_cl;
+    Q(k).p_sr = R.p_sr;
+    % ENERGY RATIO (secondary, Nick 2026-07-28; demoted by SR 2026-09-11): 1 = no work, <1 = gain.
     Q(k).er_ol = R.er_ol;  Q(k).er_cl = R.er_cl;
     Q(k).er_med_ol = R.er_med_ol;  Q(k).er_iqr_ol = R.er_iqr_ol;
     Q(k).er_med_cl = R.er_med_cl;  Q(k).er_iqr_cl = R.er_iqr_cl;
@@ -108,6 +117,7 @@ for s = SESS
             'Acl_m',mean(S.Acl,1), 'Gcl_m',mean(S.Gcl,1), ...
             'Aol_e',std(S.Aol,0,1)/sqrt(size(S.Aol,1)), 'Gol_e',std(S.Gol,0,1)/sqrt(size(S.Gol,1)), ...
             'Acl_e',std(S.Acl,0,1)/sqrt(size(S.Acl,1)), 'Gcl_e',std(S.Gcl,0,1)/sqrt(size(S.Gcl,1)), ...
+            'sr_ol',R.sr_ol, 'sr_cl',R.sr_cl, 'p_sr',R.p_sr, ...
             'er_ol',R.er_ol, 'er_cl',R.er_cl, 'rho_ol',R.rho_ol, 'rho_cl',R.rho_cl, ...
             'p_er',R.p_er, 'p_rho',R.p_rho, 'n_ol',R.n_ol, 'n_cl',R.n_cl, 'R2_te',S.R2_te);
     end
@@ -149,7 +159,41 @@ fprintf('  pooled per-trial rho   : OL %+.3f | CL %+.3f  (rank-sum p=%.3g, all t
 fprintf('  network co-suppression (Global dip, 1-3 s): OL %+.3f +/- %.3f | CL %+.3f +/- %.3f  %%dF/F\n', ...
     mean(Gdip_ol),std(Gdip_ol), mean(Gdip_cl),std(Gdip_cl));
 
-%% [XSESS-ER] ENERGY RATIO -- the reporting metric (Nick 2026-07-28) -------------
+%% [XSESS-SR] FLUCTUATION-ENERGY RATIO -- the PRIMARY reporting metric (2026-09-11) ----
+% SR = ||A-<A>||^2 / ||G-<G>||^2 over the 0-3 s stim window, EACH signal centred on its OWN
+% within-window mean. Removes the DC-offset frame mismatch that made the ER/rho LEVELS
+% uninterpretable (A held at ref, G at its natural spontaneous level).
+%   1  = output fluctuates as much as the disturbance (no rejection)
+%   <1 = disturbance fluctuation suppressed;  1-SR = fraction rejected ( = empirical |S|^2 )
+% Inference is SESSION-LEVEL (n = sessions): median +/- IQR per condition, Wilcoxon signed-rank
+% on the paired session medians. Not circular despite A=G+L: SR<1 requires the control L to be
+% anti-correlated with G (the rejection signature) -- OL, with no control, sits at SR ~ 1.
+sr_med_ol = [Q.sr_med_ol].';  sr_med_cl = [Q.sr_med_cl].';
+sr_gain   = sr_med_ol - sr_med_cl;              % >0 => CL suppresses more fluctuation
+if nS>=2
+    p_sr_sess = signrank(sr_med_cl, sr_med_ol);             % paired OL vs CL
+    p_sr_ol1  = signrank(sr_med_ol, 1);                     % does OL reject at all?
+    p_sr_cl1  = signrank(sr_med_cl, 1);                     % does CL reject at all?
+else
+    p_sr_sess = NaN;  p_sr_ol1 = NaN;  p_sr_cl1 = NaN;
+end
+bsS = zeros(nBoot,1);
+for i=1:nBoot, ix=randi(nS,nS,1); bsS(i)=mean(sr_gain(ix)); end
+sr_gain_ci = prctile(bsS,[2.5 97.5]);
+rej_frac_ol = [Q.rej_frac_ol].';  rej_frac_cl = [Q.rej_frac_cl].';   % 1 - pooled SR, per session
+
+fprintf('\n[XSESS-SR] FLUCTUATION-ENERGY RATIO  SR = ||A-<A>||^2/||G-<G>||^2  (0-3 s), %d sessions  [PRIMARY]\n', nS);
+fprintf('           1 = no rejection, <1 = fluctuation suppressed.  Inference session-level (n=%d).\n', nS);
+fprintf('  per-session median SR  : OL %.3f [IQR %.3f] | CL %.3f [IQR %.3f]\n', ...
+    median(sr_med_ol), iqr(sr_med_ol), median(sr_med_cl), iqr(sr_med_cl));
+fprintf('  vs 1 (signrank)        : OL p=%.3g | CL p=%.3g\n', p_sr_ol1, p_sr_cl1);
+fprintf('  OL vs CL paired        : signrank p=%.3g   mean gain %+.3f  95%% CI [%+.3f, %+.3f]\n', ...
+    p_sr_sess, mean(sr_gain), sr_gain_ci(1), sr_gain_ci(2));
+fprintf('  CL suppresses more fluctuation in %d/%d sessions\n', nnz(sr_gain>0), nS);
+fprintf('  median fraction rejected (1-SR): OL %.1f%% | CL %.1f%%\n', ...
+    100*median(rej_frac_ol), 100*median(rej_frac_cl));
+
+%% [XSESS-ER] ENERGY RATIO -- secondary (Nick 2026-07-28; demoted by SR 2026-09-11) -------------
 % ER = ||A-ref||^2 / ||G-ref||^2 over the 0-3 s stim window.
 %   1  = controller did no work    (holds identically when A == G)
 %   <1 = controller gain
@@ -237,6 +281,9 @@ XS = struct('CFG',CFG,'nS',nS,'Q',Q, ...
     'med_ol',med_ol,'med_cl',med_cl,'gain',gain,'gain_ci',gain_ci, ...
     'p_sess',p_sess,'p_pool',p_pool,'Gdip_ol',Gdip_ol,'Gdip_cl',Gdip_cl, ...
     'pooled_ol',pooled_ol,'pooled_cl',pooled_cl, ...
+    'sr_med_ol',sr_med_ol,'sr_med_cl',sr_med_cl,'sr_gain',sr_gain,'sr_gain_ci',sr_gain_ci, ...
+    'p_sr_sess',p_sr_sess,'p_sr_ol1',p_sr_ol1,'p_sr_cl1',p_sr_cl1, ...
+    'rej_frac_ol',rej_frac_ol,'rej_frac_cl',rej_frac_cl, ...
     'er_med_ol',er_med_ol,'er_med_cl',er_med_cl,'er_gain',er_gain, ...
     'er_gain_ci',er_gain_ci,'p_er_sess',p_er_sess,'p_er_ol1',p_er_ol1,'p_er_cl1',p_er_cl1);
 save(fullfile(dataDir,'imp_reject_across_sessions.mat'),'XS');
