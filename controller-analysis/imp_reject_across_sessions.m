@@ -93,15 +93,18 @@ for s = SESS
     Q(k).p_rho = R.p_rho;  Q(k).rhoP_ol = R.rhoP_ol;  Q(k).rhoP_cl = R.rhoP_cl;
     Q(k).Gdip_ol = R.Gdip_ol;  Q(k).Gdip_cl = R.Gdip_cl;  Q(k).R2_te = S.R2_te;
     Q(k).rho_ol = R.rho_ol;  Q(k).rho_cl = R.rho_cl;
-    % SR: FLUCTUATION-ENERGY RATIO (PRIMARY, 2026-09-11). Each signal centred on its OWN
-    % within-window mean => 1 = output fluctuates as much as the disturbance (no rejection),
-    % <1 = fluctuation suppressed, 1-SR = fraction rejected (empirical closed-loop |S|^2).
-    Q(k).sr_ol = R.sr_ol;  Q(k).sr_cl = R.sr_cl;
-    Q(k).sr_med_ol = R.sr_med_ol;  Q(k).sr_iqr_ol = R.sr_iqr_ol;
-    Q(k).sr_med_cl = R.sr_med_cl;  Q(k).sr_iqr_cl = R.sr_iqr_cl;
-    Q(k).srP_ol = R.srP_ol;  Q(k).srP_cl = R.srP_cl;
-    Q(k).rej_frac_ol = R.rej_frac_ol;  Q(k).rej_frac_cl = R.rej_frac_cl;
-    Q(k).p_sr = R.p_sr;
+    % SR: FLUCTUATION-ENERGY RATIO (PRIMARY, 2026-09-11) on the SETTLED 1-3 s window --
+    % the locked disturbance-rejection window (matches rho; skips the inhibitory ONSET
+    % transient, which otherwise dominates the 0-3 s numerator (SR_tr ~2-4x) and NULLS the
+    % metric -- RESEARCH 2026-09-13). Each signal centred on its OWN within-window mean =>
+    % 1 = output fluctuates as much as the disturbance, <1 = fluctuation suppressed.
+    srol = R.sr_ol_rej(isfinite(R.sr_ol_rej));  srcl = R.sr_cl_rej(isfinite(R.sr_cl_rej));
+    Q(k).sr_ol = R.sr_ol_rej;  Q(k).sr_cl = R.sr_cl_rej;
+    Q(k).sr_med_ol = median(srol);  Q(k).sr_iqr_ol = iqr(srol);
+    Q(k).sr_med_cl = median(srcl);  Q(k).sr_iqr_cl = iqr(srcl);
+    Q(k).sr_med_ol_full = R.sr_med_ol;  Q(k).sr_med_cl_full = R.sr_med_cl;   % 0-3 s reference (transient-contaminated)
+    Q(k).p_sr = ranksum(srol, srcl);                                          % settled per-trial OL vs CL
+    Q(k).rej_frac_ol = 1 - median(srol);  Q(k).rej_frac_cl = 1 - median(srcl);  % per-session fraction rejected
     % ENERGY RATIO (secondary, Nick 2026-07-28; demoted by SR 2026-09-11): 1 = no work, <1 = gain.
     Q(k).er_ol = R.er_ol;  Q(k).er_cl = R.er_cl;
     Q(k).er_med_ol = R.er_med_ol;  Q(k).er_iqr_ol = R.er_iqr_ol;
@@ -117,7 +120,8 @@ for s = SESS
             'Acl_m',mean(S.Acl,1), 'Gcl_m',mean(S.Gcl,1), ...
             'Aol_e',std(S.Aol,0,1)/sqrt(size(S.Aol,1)), 'Gol_e',std(S.Gol,0,1)/sqrt(size(S.Gol,1)), ...
             'Acl_e',std(S.Acl,0,1)/sqrt(size(S.Acl,1)), 'Gcl_e',std(S.Gcl,0,1)/sqrt(size(S.Gcl,1)), ...
-            'sr_ol',R.sr_ol, 'sr_cl',R.sr_cl, 'p_sr',R.p_sr, ...
+            'sr_ol',R.sr_ol_rej, 'sr_cl',R.sr_cl_rej, ...
+            'p_sr',ranksum(R.sr_ol_rej(isfinite(R.sr_ol_rej)),R.sr_cl_rej(isfinite(R.sr_cl_rej))), ...
             'er_ol',R.er_ol, 'er_cl',R.er_cl, 'rho_ol',R.rho_ol, 'rho_cl',R.rho_cl, ...
             'p_er',R.p_er, 'p_rho',R.p_rho, 'n_ol',R.n_ol, 'n_cl',R.n_cl, 'R2_te',S.R2_te);
     end
@@ -160,9 +164,10 @@ fprintf('  network co-suppression (Global dip, 1-3 s): OL %+.3f +/- %.3f | CL %+
     mean(Gdip_ol),std(Gdip_ol), mean(Gdip_cl),std(Gdip_cl));
 
 %% [XSESS-SR] FLUCTUATION-ENERGY RATIO -- the PRIMARY reporting metric (2026-09-11) ----
-% SR = ||A-<A>||^2 / ||G-<G>||^2 over the 0-3 s stim window, EACH signal centred on its OWN
-% within-window mean. Removes the DC-offset frame mismatch that made the ER/rho LEVELS
-% uninterpretable (A held at ref, G at its natural spontaneous level).
+% SR = ||A-<A>||^2 / ||G-<G>||^2 over the SETTLED 1-3 s window (locked rejection window,
+% matches rho; skips the onset transient), EACH signal centred on its OWN within-window
+% mean. Removes the DC-offset frame mismatch that made the ER/rho LEVELS uninterpretable
+% (A held at ref, G at its natural spontaneous level).
 %   1  = output fluctuates as much as the disturbance (no rejection)
 %   <1 = disturbance fluctuation suppressed;  1-SR = fraction rejected ( = empirical |S|^2 )
 % Inference is SESSION-LEVEL (n = sessions): median +/- IQR per condition, Wilcoxon signed-rank
@@ -182,7 +187,7 @@ for i=1:nBoot, ix=randi(nS,nS,1); bsS(i)=mean(sr_gain(ix)); end
 sr_gain_ci = prctile(bsS,[2.5 97.5]);
 rej_frac_ol = [Q.rej_frac_ol].';  rej_frac_cl = [Q.rej_frac_cl].';   % 1 - pooled SR, per session
 
-fprintf('\n[XSESS-SR] FLUCTUATION-ENERGY RATIO  SR = ||A-<A>||^2/||G-<G>||^2  (0-3 s), %d sessions  [PRIMARY]\n', nS);
+fprintf('\n[XSESS-SR] FLUCTUATION-ENERGY RATIO  SR = ||A-<A>||^2/||G-<G>||^2  (1-3 s settled), %d sessions  [PRIMARY]\n', nS);
 fprintf('           1 = no rejection, <1 = fluctuation suppressed.  Inference session-level (n=%d).\n', nS);
 fprintf('  per-session median SR  : OL %.3f [IQR %.3f] | CL %.3f [IQR %.3f]\n', ...
     median(sr_med_ol), iqr(sr_med_ol), median(sr_med_cl), iqr(sr_med_cl));
