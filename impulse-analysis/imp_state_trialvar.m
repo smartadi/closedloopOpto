@@ -257,6 +257,22 @@ for k = 1:nMK
     rhoStrat = sum(rs.*ws) / max(sum(ws), eps);
     nSessAgree = nnz(sign(rs) == sign(rhoStrat));
 
+    % --- SESSION-AWARE scale test: mixed model |dev| ~ state + (1|session) ---------------------
+    % The pooled rho/p above treat 1767 trials as independent (pseudoreplication -- the exact
+    % objection Nick raised for the controller Fig-4 quartiles). |dev| is the amplitude-scaled
+    % deviation, so its MEAN across state is a Levene-style SCALE test; clustering on session with
+    % a random intercept gives a p that respects the 4-session / 3-mouse structure. Random slope
+    % is not identifiable from 4 clusters, so intercept only; mouse noted in the caption.
+    pLME = NaN; bLME = NaN;
+    try
+        tlme = table(abs(y), x, categorical(T.sess(ok)), 'VariableNames', {'adev','state','sess'});
+        lme  = fitlme(tlme, 'adev ~ state + (1|sess)');
+        ixb  = strcmp(lme.Coefficients.Name, 'state');
+        bLME = lme.Coefficients.Estimate(ixb);  pLME = lme.Coefficients.pValue(ixb);
+    catch MEl
+        fprintf('   [STV] LME failed for %s: %s\n', MK{k,2}, MEl.message);
+    end
+
     % --- POWER-PARTIALLED rho: what survives once signal amplitude is removed ------------------
     % log(pre-trial variance) is the gain axis. Absolute delta partials to ~0 here because it IS
     % power; anything that survives is carrying information beyond loudness.
@@ -351,6 +367,9 @@ for k = 1:nMK
                 '  (| log PreVar)','', '--','--','', '', '', '', '', '');
     end
 
+    fprintf('%-22s %7s beta=%+.4f  p=%.3g   %d/%d sess agree (strat rho %+.3f)   <- SESSION-CLUSTERED LME (1|sess)\n', ...
+            '  (session-aware)','', bLME, pLME, nSessAgree, numel(rs), rhoStrat);
+
     R(k).tag=MK{k,1}; R(k).name=MK{k,2}; R(k).adm=MK{k,3};
     R(k).rho=rho; R(k).p=p; R(k).rhoP=rhoP; R(k).pP=pP;
     R(k).sdB=sdB; R(k).sdP=sdP; R(k).bf=bf; R(k).bfP=bfP;
@@ -358,6 +377,7 @@ for k = 1:nMK
     R(k).trend=trend; R(k).trendP=trendP; R(k).ratio=rat; R(k).ci=ci;
     R(k).verdict=verdict; R(k).x=x; R(k).y=y; R(k).n=nnz(ok);
     R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;
+    R(k).pLME=pLME; R(k).bLME=bLME; R(k).nSess=numel(rs);   % session-clustered scale test
     R(k).rhoPow=rhoPow; R(k).pPow=pPow; R(k).rhoPowC=rhoPowC; R(k).pPowC=pPowC;
     R(k).binMed = arrayfun(@(b) median(x(g==b),'omitnan'), 1:STV_NBIN);   % raw value per bin
     R(k).gbin   = g;    % bin index per trial -- so imp_state_trialvar_fig can bootstrap per-bin CIs

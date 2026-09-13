@@ -191,13 +191,28 @@ for i = 1:numel(adm)
     else
         ylabel(ax, 'SD of deviation', 'FontSize', PS.fs, 'FontWeight', PS.fw);
     end
-    % NO in-panel stats text (user, 2026-08-12: "i dont like the text we put there"). The
-    % numbers are printed to the console by imp_state_trialvar and belong in the caption --
-    % Q4/Q1 with CI and the stratified rho are sentences, not annotations, and at 6 pt inside
-    % a 4 cm axis they were competing with the data for the reader's first glance. Printed
-    % here so the caption can be written straight off the run.
-    fprintf('[STVF] %-12s caption numbers: Q4/Q1 %.2f [%.2f-%.2f], BF p %.2g, strat rho %+.3f, n=%d\n', ...
-            r.name, r.ratio, r.ci(1), r.ci(2), r.bf, r.rhoStrat, r.n);
+    % Session-aware test ON the panel (user, 2026-09-13: "statistical tests on the state-dep
+    % plots"). This reverses the 2026-08-12 "no in-panel text" preference, but kept to ONE compact
+    % top line so it does not compete with the data. The p shown is the SESSION-CLUSTERED mixed-
+    % effects test (|dev| ~ state + (1|session)) -- NOT the pooled trial-level p, which overstates
+    % significance by pseudoreplication (same fix as Fig-4 Row-2). Plus how many of the N sessions
+    % move in the group direction. Toggle with STVF_STATTXT=false.
+    if ~exist('STVF_STATTXT','var') || isempty(STVF_STATTXT), STVF_STATTXT = true; end
+    if STVF_STATTXT && isfield(r,'pLME')
+        if     isnan(r.pLME), stStar = '';
+        elseif r.pLME < 1e-3, stStar = '***';
+        elseif r.pLME < 1e-2, stStar = '**';
+        elseif r.pLME < 0.05, stStar = '*';
+        else,                 stStar = 'n.s.'; end
+        txt = sprintf('p=%.2g %s   %d/%d sess', r.pLME, stStar, r.nSessAgree, r.nSess);
+        text(ax, 0.5, 0.99, txt, 'Units','normalized', 'HorizontalAlignment','center', ...
+             'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
+    end
+    % Full caption numbers still print to the console (Q4/Q1 with CI + the stratified rho are
+    % sentences for the caption, too long for a 4 cm axis).
+    fprintf(['[STVF] %-12s caption: Q4/Q1 %.2f [%.2f-%.2f], BF p %.2g, strat rho %+.3f, ' ...
+             'LME p %.3g (%d/%d sess), n=%d\n'], ...
+            r.name, r.ratio, r.ci(1), r.ci(2), r.bf, r.rhoStrat, r.pLME, r.nSessAgree, r.nSess, r.n);
     % A one-entry legend labels a panel that has only one thing on it -- drop it and let the
     % y-label do the work. It comes back automatically when the control adds a second series.
     if numel(hAll) > 1, lg = legend(ax, hAll, 'Location','best');  paperLegend(lg); end
