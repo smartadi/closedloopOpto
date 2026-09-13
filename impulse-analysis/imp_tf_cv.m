@@ -123,6 +123,70 @@ allShp = cell2mat(cellfun(@(c) c.R2_shape(:), CV, 'uni', 0));
 % PAPER PANEL 2C -- the cross-validated shape overlay (user: "this figure will become 2C").
 if CV_EXPORT, paperExport(figA, fullfile(CV_OUTDIR,'tf_cv_shape_across_sessions.pdf')); end
 
+%% ---- (3b) 2D REVAMP CANDIDATES (user 2026-09-13: cross-validated, clean, no text on curves) ---
+% Two candidates, drawn from the SAME CV data, exported side by side so the user can pick which
+% becomes 2D. The canonical file above is left untouched until then.
+%   'sidebar'   left = clean CV shape overlay (NO legend on data) + right = held-out R^2 per
+%               session (median + IQR whiskers) -> shows the CV spread (s1's instability).
+%   'endlabels' single-panel overlay, legend box removed, each session's R^2 direct-labelled at
+%               the right edge of its trace (off the data).
+if ~exist('CV_REVAMP','var') || isempty(CV_REVAMP), CV_REVAMP = true; end
+if CV_REVAMP
+    mlab = mouseLab;  tmax2 = 0.5;
+    med = cellfun(@(c) median(c.R2_out,'omitnan'), CV);
+    q25 = cellfun(@(c) prctile(c.R2_out,25), CV);
+    q75 = cellfun(@(c) prctile(c.R2_out,75), CV);
+
+    % ---------- candidate 1: traces + R^2 side panel ----------
+    fS = paperFig(PS.f2w*1.7, PS.f2h);
+    tS = tiledlayout(fS,1,3,'TileSpacing','compact','Padding','compact');
+    axL = nexttile(tS,[1 2]);  hold(axL,'on');            % left 2/3: overlay, no legend
+    for k = 1:n
+        c = PS.sessColor(k);  t = CV{k}.tPost(:);
+        hm = CV{k}.h_meas_cv(:);  hp = CV{k}.h_pred_cv(:);
+        m = min([numel(t) numel(hm) numel(hp)]);  t=t(1:m); hm=hm(1:m); hp=hp(1:m);
+        sc = max(abs(hm(isfinite(hm))));  if isempty(sc)||sc==0, continue; end
+        plot(axL, t, hm/sc, '-',  'Color', c, 'LineWidth', PS.lw_mean);
+        plot(axL, t, hp/sc, '--', 'Color', c, 'LineWidth', PS.lw_fit);
+    end
+    yline(axL,0,'-','Color',[.6 .6 .6],'LineWidth',PS.lw_zero);  xlim(axL,[0 tmax2]);
+    xlabel(axL,'time from onset (s)');  ylabel(axL,'normalised \DeltaF/F');
+    set(axL,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
+    axR = nexttile(tS,1);  hold(axR,'on');               % right 1/3: held-out R^2 per session
+    for k = 1:n
+        c = PS.sessColor(k);
+        plot(axR,[k k],[q25(k) q75(k)],'-','Color',c,'LineWidth',1.0);
+        plot(axR,k,med(k),'o','Color',c,'MarkerFaceColor',c,'MarkerSize',3.5);
+    end
+    ylim(axR,[max(-0.2,min(q25)-0.05) 1.02]);  xlim(axR,[0.5 n+0.5]);
+    set(axR,'XTick',1:n,'XTickLabel',mlab,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
+    axR.XAxis.FontSize = PS.fs-1;  ylabel(axR,'held-out R^2');
+    if CV_EXPORT, paperExport(fS, fullfile(CV_OUTDIR,'tf_cv_2D_sidebar.pdf')); end
+
+    % ---------- candidate 3: overlay with R^2 labels at trace ends ----------
+    fE = paperFig(PS.f2w, PS.f2h);  axE = axes(fE);  hold(axE,'on');
+    xLab = 0.36;  iLab = zeros(n,1);  yv = nan(n,1);
+    for k = 1:n
+        c = PS.sessColor(k);  t = CV{k}.tPost(:);
+        hm = CV{k}.h_meas_cv(:);  hp = CV{k}.h_pred_cv(:);
+        m = min([numel(t) numel(hm) numel(hp)]);  t=t(1:m); hm=hm(1:m); hp=hp(1:m);
+        sc = max(abs(hm(isfinite(hm))));  if isempty(sc)||sc==0, continue; end
+        plot(axE, t, hm/sc, '-',  'Color', c, 'LineWidth', PS.lw_mean);
+        plot(axE, t, hp/sc, '--', 'Color', c, 'LineWidth', PS.lw_fit);
+        [~,iLab(k)] = min(abs(t - xLab));  yv(k) = hm(iLab(k))/sc;
+    end
+    yline(axE,0,'-','Color',[.6 .6 .6],'LineWidth',PS.lw_zero);  xlim(axE,[0 tmax2]);
+    yspread = local_declutter(yv, 0.12*range(ylim(axE)));   % nudge labels apart vertically
+    for k = 1:n
+        text(axE, xLab+0.015, yspread(k), sprintf('%s  R^2=%.2f', mlab{k}, med(k)), ...
+             'Color', PS.sessColor(k), 'FontSize', PS.fs, 'FontWeight', PS.fw, 'VerticalAlignment','middle');
+    end
+    xlabel(axE,'time from onset (s)');  ylabel(axE,'normalised \DeltaF/F');
+    set(axE,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
+    if CV_EXPORT, paperExport(fE, fullfile(CV_OUTDIR,'tf_cv_2D_endlabels.pdf')); end
+    fprintf('[CV] 2D candidates -> tf_cv_2D_sidebar.pdf , tf_cv_2D_endlabels.pdf\n');
+end
+
 %% ---- (4) panel B: in-sample vs held-out R^2 per session (median + IQR) -----------------------
 % Diagnostic only -- not a paper panel. Off unless CV_PANELB is set.
 if CV_PANELB
@@ -210,3 +274,16 @@ fprintf('POOLED held-out R2: amp-norm %.3f | shape %.3f   (median over %d sessio
 fprintf('CAPTION: order is selected once on the full session and held FIXED across folds;\n');
 fprintf('         the CV validates the fitted DYNAMICS, not the order-selection step.\n');
 fprintf('[CV] panels -> %s\n', CV_OUTDIR);
+
+% ------------------------------------------------------------------------------------------------
+function y2 = local_declutter(y, gap)
+% Nudge label y-positions apart (>= gap) while preserving order, so direct trace-end labels
+% do not sit on top of each other where traces converge.
+y = y(:);  [ys, ord] = sort(y);
+for i = 2:numel(ys)
+    if isfinite(ys(i)) && isfinite(ys(i-1)) && (ys(i) - ys(i-1) < gap)
+        ys(i) = ys(i-1) + gap;
+    end
+end
+y2 = zeros(size(y));  y2(ord) = ys;
+end
