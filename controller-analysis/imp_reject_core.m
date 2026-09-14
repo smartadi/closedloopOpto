@@ -87,6 +87,19 @@ poolW = @(A,G,w) sqrt(sum((A(:,w)-ref).^2,'all')/sum(G(:,w).^2,'all'));
 %     leaving only the state-driven fluctuation. Frame-consistent by construction.
 srW   = @(A,G,w) sum((A(:,w)-mean(A(:,w),2)).^2,2) ./ sum((G(:,w)-mean(G(:,w),2)).^2,2);
 srP   = @(A,G,w) sum((A(:,w)-mean(A(:,w),2)).^2,'all') ./ sum((G(:,w)-mean(G(:,w),2)).^2,'all');
+% --- RR: RESPONSE/DISTURBANCE ENERGY RATIO  [Fig-4 Row-3 SELECTED metric, user 2026-09-11]
+%       RR_k = ||A_k - ref||^2 / ||G_k||^2       (response energy over disturbance energy)
+%     Numerator   = residual response energy that REMAINS around the setpoint (A vs ref).
+%     Denominator = the disturbance's own excursion energy, referenced to ZERO (the
+%                   counterfactual "no-laser" level the contra prediction sits at), NOT to
+%                   ref -- the user's call: "we are over-estimating the disturbance if we
+%                   reference G to ref; disturbance energy = global minus zero, response
+%                   energy = response minus reference". Identically = rho^2 (rho=||A-ref||/||G||),
+%                   so on the settled window rr_*_rej == rho_*.^2 (single source, no drift).
+%       RR = 1  -> response fluctuates as much as the disturbance
+%       RR < 1  -> disturbance energy suppressed (active rejection);  RR > 1 -> amplified
+rrW   = @(A,G,w) sum((A(:,w)-ref).^2,2) ./ sum(G(:,w).^2,2);
+rrP   = @(A,G,w) sum((A(:,w)-ref).^2,'all') ./ sum(G(:,w).^2,'all');
 
 R.ref = ref;  R.w_tr = w_tr;  R.w_rej = w_rej;  R.w_stim = w_stim;  R.resp_s = resp_s;
 
@@ -116,6 +129,16 @@ R.er_q_cl   = prctile(R.er_cl,[25 50 75]);
 % Fraction of trials on which the controller actually did work (ER < 1).
 R.er_frac_ol = mean(R.er_ol < 1);   R.er_frac_cl = mean(R.er_cl < 1);
 
+% ---------------- RR: response/disturbance energy ratio (Fig-4 Row-3 selected) --
+% Settled 1-3 s is the locked disturbance-rejection window (skips the inhibitory onset
+% transient); 0-3 s and 0-1 s kept for reference. rr_*_rej == rho_*.^2 by construction.
+R.rr_ol      = rrW(Aol,Gol,w_rej);   R.rr_cl      = rrW(Acl,Gcl,w_rej);    % 1-3 s PRIMARY
+R.rr_ol_tr   = rrW(Aol,Gol,w_tr);    R.rr_cl_tr   = rrW(Acl,Gcl,w_tr);     % 0-1 s
+R.rr_ol_full = rrW(Aol,Gol,w_stim);  R.rr_cl_full = rrW(Acl,Gcl,w_stim);   % 0-3 s reference
+R.rrP_ol     = rrP(Aol,Gol,w_rej);   R.rrP_cl     = rrP(Acl,Gcl,w_rej);
+R.rr_med_ol  = median(R.rr_ol);   R.rr_iqr_ol = iqr(R.rr_ol);
+R.rr_med_cl  = median(R.rr_cl);   R.rr_iqr_cl = iqr(R.rr_cl);
+
 % ---------------- RHO: legacy, unchanged ---------------------------------------
 R.rho_ol_tr = rejW(Aol,Gol,w_tr);   R.rho_cl_tr = rejW(Acl,Gcl,w_tr);
 R.rho_ol    = rejW(Aol,Gol,w_rej);  R.rho_cl    = rejW(Acl,Gcl,w_rej);
@@ -142,11 +165,12 @@ if R.n_ol>0 && R.n_cl>0
     R.p_rho = ranksum(R.rho_ol,R.rho_cl);   R.p_tr = ranksum(R.rho_ol_tr,R.rho_cl_tr);
     R.p_er  = ranksum(R.er_ol, R.er_cl);                       % OL vs CL, per-trial
     R.p_sr  = ranksum(R.sr_ol, R.sr_cl);                       % OL vs CL, per-trial (PRIMARY)
+    R.p_rr  = ranksum(R.rr_ol, R.rr_cl);                       % OL vs CL, per-trial (settled RR)
     % Does each condition reject at all?  One-sample test of SR/ER against 1.
     R.p_er_ol1 = signrank(R.er_ol,1);   R.p_er_cl1 = signrank(R.er_cl,1);
     R.p_sr_ol1 = signrank(R.sr_ol,1);   R.p_sr_cl1 = signrank(R.sr_cl,1);
 else
-    R.p_rho = NaN;  R.p_tr = NaN;  R.p_er = NaN;  R.p_sr = NaN;
+    R.p_rho = NaN;  R.p_tr = NaN;  R.p_er = NaN;  R.p_sr = NaN;  R.p_rr = NaN;
     R.p_er_ol1 = NaN;  R.p_er_cl1 = NaN;  R.p_sr_ol1 = NaN;  R.p_sr_cl1 = NaN;
 end
 end

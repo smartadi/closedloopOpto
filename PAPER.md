@@ -60,7 +60,7 @@ These claims have identified problems and must be revisited before submission.
 - **Fig 1 — System architecture.** Widefield + opto interface, SVD readout, control-loop schematic.
 - **Fig 2 — System properties.** Impulse response with **its LTI (TF) fit**; state dependence on the **raw average trial**. *(Residual/stim-only state-dependence CUT 2026-09-11 — see the layout note below.)*
 - **Fig 3 — Controller results.** Closed-loop vs open-loop (single-session example + cross-session summary).
-- **Fig 4 — Controller state dependence.** Three blocks, in order: (1) **trial-average state dependence** — pre-stim state (contra-derived Global level) → true trial outcome, OL steep vs CL flat (`ctrl_state_dependence.m`); (2) **error-contribution model** — per-trial RMSE regressed on **initial deviation**, **motion**, **relative δ power** (`cl_mse_factors.m` / `cl_rmse_factor_windows.m`); (3) **residual-based state dependence** — disturbance rejection ρ = ‖A−ref‖/‖G‖ vs motion & δ quartiles (`internal_model_principle.m` `[IMP-STATE-QUARTILE]`).
+- **Fig 4 — Controller state dependence.** Three blocks, in order: (1) **trial-average state dependence** — pre-stim state (contra-derived Global level) → true trial outcome, OL steep vs CL flat (`ctrl_state_dependence.m`); (2) **error-contribution model** — per-trial RMSE regressed on **initial deviation**, **motion**, **relative δ power** (`cl_mse_factors.m` / `cl_rmse_factor_windows.m`); (3) **residual-based state dependence** — disturbance rejection **RR = ‖A−ref‖²/‖G‖²** (response energy over disturbance energy, G to zero; settled 1–3 s) OL vs CL, plus the model-example decomposition on AL_0033_0415 (`controller-analysis/f4_disturb_rejection.m`; 2026-09-14 SELECTED build — supersedes the ρ / ER / SR generations below). Quartile-vs-motion/δ views: `f4_row2_quartiles.m`.
 - **Fig 5 — Feedforward / preview model.** Single-session results on **s3** (dark-screen session) + **combined stats across s1/s2/s3** (total RMSE, total variance, phase lag).
 
 > Moves vs prior plan: the **step LTI fit** (`ol_tf_trial_avg.pdf`, was panel 3K) moves to **Fig 2** to sit with the impulse TF fit. **Fig 5** primary session flips **s2 → s3** (the 2026-07-21 "s2 primary" note predates s3) and adds the 3 across-session panels from `sine_ff_across_sessions.m`.
@@ -569,6 +569,18 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > ER/SR classified by motion & 2–4 Hz quartiles (`[IMP-STATE-QUARTILE]`). ⚠ ρ = ‖A−ref‖/‖G‖ retired as
 > the reported metric (its zero-referenced denominator made the LEVEL uninterpretable); ER settled per
 > the Methods energy-ratio plan (Nick 2026-07-28).
+>
+> ⭐ **SUPERSEDED 2026-09-14 (user SELECTED build).** Row-3 metric is now **RR = ‖A−ref‖²/‖G‖²**
+> (response energy over disturbance energy, **G referenced to ZERO** — user: disturbance = global minus
+> zero, response = response minus reference), settled 1–3 s, **ridge** predictor. On the settled window
+> **RR == ρ²**, so it is the same family as the retired ρ but reported as an energy ratio. The ER (G→ref)
+> and SR (fluctuation) generations above are NOT what ships. **Permanent script:
+> `controller-analysis/f4_disturb_rejection.m`** (promotes the 2026-09-11 scratchpad panels; metric folded
+> into `imp_reject_core.m` as `R.rr_*`). Exemplar = **AL_0033_0415_e2** (most stim-blind). Panels →
+> `paper/images/figure4/`: `f4_disturb_ol_response`, `f4_disturb_cl_response`, `f4_decomp_schematic`,
+> `f4_disturb_pertrial` (NEW per-trial RR scatter), `f4_disturb_rejection_paired`. **Cross-session (n=13):
+> RR med OL 1.20 → CL 0.77, CL<OL 12/13, signrank p=4.9e-4.** Exemplar: RR med OL 3.12 → CL 0.93, ranksum
+> p=4.0e-7. Paired panel on a **log y-axis** (most stim-blind sessions have smallest ‖G‖² → largest RR).
 
 > **Panel plan.** Currently **single-session (m4 = AL_0033 2025-02-26)** + exploratory styling → these
 > are *drafts*; production panels await the **Stage 1→2 cross-session sweep** (automated affected
@@ -578,7 +590,7 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > |---|---|---|---|
 > | 4A | 1 | Trial-average state dependence: pre-stim Global level (state) → absolute Actual outcome; OL steep vs CL flat slope (bootstrap OL−CL slope diff) | `ctrl_state_dependence.m` (`s_lvl→o_act`) |
 > | 4B | 2 | Error-contribution model: per-trial RMSE regressed on initial deviation + motion + relative δ; ΔR² / standardized coefficients | `cl_mse_factors.m` / `cl_rmse_factor_windows.m` |
-> | 4C | 3 | Residual decomposition + rejection: Actual = Global (contra-predicted disturbance) + Local (controller effect); **rejection ER = ‖A−ref‖²/‖G−ref‖² (settled 1–3 s)**, OL vs CL (SR robustness) | `f4_reject_panels.m` / `imp_reject_across_sessions.m` |
+> | 4C | 3 | Residual decomposition + rejection: Actual = Global (contra-predicted disturbance) + Local (controller effect); **rejection RR = ‖A−ref‖²/‖G‖² (settled 1–3 s, G→zero)** OL vs CL + model-example decomposition on AL_0033_0415 + per-trial RR scatter (2026-09-14 SELECTED build) | `controller-analysis/f4_disturb_rejection.m` / `imp_reject_across_sessions.m` |
 > | 4D | 3 | rejection vs motion-energy quartile (OL/CL); session-level signrank + LME (`f4_row2_lme.mat`) | `f4_row2_quartiles.m` |
 > | 4E | 3 | rejection vs relative 2–4 Hz quartile (OL/CL); + band-specificity panel `f4_1T_bands` (<4 Hz specific) | `f4_row2_quartiles.m` / `f4_partB_panels.m` |
 > | (supp) | — | Predictor validity: contra→ipsi CV-R² (Global vs Global+Local) + pre-stim control; distributed contra co-suppression (proves Global = shared-network disturbance) | `[IMP-PROOF-FIG]` (a) · `stim_network_coupling.m` `[SNC]` |
