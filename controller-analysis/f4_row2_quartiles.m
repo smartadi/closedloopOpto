@@ -47,7 +47,11 @@ fnout = {'f4_2A_initdev.pdf','f4_2B_motion.pdf','f4_2C_delta.pdf'};
 
 % ---- per-session z-scored state + z-scored RMSE, per condition -------------------------------
 Pl = struct();
-for pn=preds; Pl.(pn{1})=struct('zx',[],'zy',[],'g',[],'gap1',[],'gap4',[]); end
+% zx/zy/g = pooled trial arrays for the panel; gap1/gap4 = per-session Q1/Q4 gaps (primary test).
+% l* = per-trial table for the LME supplement (ly outcome, lc cond, lx within-session state z,
+% lq within-session quartile, lsess session id, lmouse mouse name).
+for pn=preds; Pl.(pn{1})=struct('zx',[],'zy',[],'g',[],'gap1',[],'gap4',[], ...
+        'ly',[],'lc',[],'lx',[],'lq',[],'lsess',[],'lmouse',{{}}); end
 for k=1:numel(fields)
     M=mouse.(fields{k}); if ~isfield(M,'data'); continue; end; d=M.data;
     if ~isfield(d,'ncDfk')||isempty(d.ncDfk)||~isfield(d,'wcDfk')||isempty(d.wcDfk); continue; end
@@ -89,6 +93,14 @@ for k=1:numel(fields)
         g1=mean(zyOL(qO==1),'omitnan')-mean(zyCL(qC==1),'omitnan');
         g4=mean(zyOL(qO==4),'omitnan')-mean(zyCL(qC==4),'omitnan');
         if isfinite(g1)&&isfinite(g4); Pl.(nm).gap1(end+1)=g1; Pl.(nm).gap4(end+1)=g4; end
+        % per-trial LME table (trials in sessions in mice); within-session quartile + state z
+        nOk=nnz(oOK); nCk=nnz(cOK);
+        Pl.(nm).ly    =[Pl.(nm).ly;    zyOL(oOK); zyCL(cOK)];
+        Pl.(nm).lc    =[Pl.(nm).lc;    zeros(nOk,1); ones(nCk,1)];
+        Pl.(nm).lx    =[Pl.(nm).lx;    zxOL(oOK); zxCL(cOK)];
+        Pl.(nm).lq    =[Pl.(nm).lq;    qO(oOK); qC(cOK)];
+        Pl.(nm).lsess =[Pl.(nm).lsess; repmat(k,nOk+nCk,1)];
+        Pl.(nm).lmouse=[Pl.(nm).lmouse; repmat({M.mn},nOk+nCk,1)];
     end
 end
 
@@ -163,6 +175,57 @@ for ip=1:numel(preds); nm=preds{ip};
 end
 fprintf('\n[F4R2] row-2 panels -> %s\n', outdir);
 
+%% ============ ROW 2 SUPPLEMENT: mixed-effects (LME) referee-proof interaction (Nick) ============
+% Nick 2026-09-11: the session-level signed-rank above is the PRIMARY test; he asked for a mixed
+% model as the referee-proof version -- trials nested in sessions nested in mice, with the
+% OL/CL x state INTERACTION as the tested term. (1|mouse)+(1|sess) encodes the nesting (session
+% labels are globally unique, so each session loads on exactly one mouse). Two models per state:
+%   PRIMARY     Q1 vs Q4 (Nick's framing):  zrmse ~ cond*q  + (1|mouse) + (1|sess)
+%   ROBUSTNESS  continuous state (all Q):    zrmse ~ cond*sx + (1|mouse) + (1|sess)
+% The interaction sign convention matches the panel gap = OL-CL: a NEGATIVE cond(CL):highstate
+% term = the CL advantage SHRINKS at high state (gap closes); positive = it grows.
+fprintf('\n============ ROW 2 LME (mixed-effects, referee-proof interaction) ============\n');
+fprintf('%-9s %6s %5s %5s | %-28s | %-28s\n','state','nTr','nSes','nMse','Q1/Q4  cond:q  beta  p','continuous cond:sx  beta  p');
+LME = struct();
+for ip=1:numel(preds); nm=preds{ip};
+    ly=Pl.(nm).ly; lc=Pl.(nm).lc; lx=Pl.(nm).lx; lq=Pl.(nm).lq; ls=Pl.(nm).lsess; lm=Pl.(nm).lmouse;
+    keep=isfinite(ly)&isfinite(lc)&isfinite(lx)&isfinite(lq);
+    ly=ly(keep); lc=lc(keep); lx=lx(keep); lq=lq(keep); ls=ls(keep); lm=lm(keep);
+    if isempty(ly); fprintf('%-9s (no data)\n',nm); continue; end
+    cond=categorical(lc,[0 1],{'OL','CL'});
+    nMse=numel(unique(lm)); nSes=numel(unique(ls));
+    % PRIMARY: Q1 vs Q4 binary interaction
+    q14=ismember(lq,[1 4]);
+    Tb=table(ly(q14),cond(q14),categorical(lq(q14)),categorical(ls(q14)),categorical(lm(q14)), ...
+        'VariableNames',{'zrmse','cond','q','sess','mouse'});
+    [bQ,pQ,ciQ,~]=lme_inter(Tb,'zrmse ~ cond*q + (1|mouse) + (1|sess)');
+    % ROBUSTNESS: continuous state interaction (all quartiles)
+    Tc=table(ly,cond,lx,categorical(ls),categorical(lm), ...
+        'VariableNames',{'zrmse','cond','sx','sess','mouse'});
+    [bC,pC,ciC,~]=lme_inter(Tc,'zrmse ~ cond*sx + (1|mouse) + (1|sess)');
+    fprintf('%-9s %6d %5d %5d | beta %+.3f [%+.3f,%+.3f] p=%.3g | beta %+.3f [%+.3f,%+.3f] p=%.3g\n', ...
+        nm,numel(ly),nSes,nMse, bQ,ciQ(1),ciQ(2),pQ, bC,ciC(1),ciC(2),pC);
+    LME.(nm)=struct('nTr',numel(ly),'nSes',nSes,'nMse',nMse, ...
+        'q14_beta',bQ,'q14_p',pQ,'q14_ci',ciQ,'cont_beta',bC,'cont_p',pC,'cont_ci',ciC);
+end
+try, save(fullfile('data','f4_row2_lme.mat'),'LME'); fprintf('[F4R2-LME] -> data/f4_row2_lme.mat\n'); catch ME; warning('[F4R2-LME] save skipped (%s)',ME.message); end
+
 function e=uniqedges(e); for i=2:numel(e); if e(i)<=e(i-1); e(i)=e(i-1)+eps(e(i-1))*1e3; end; end; end
 function s=starstr(p); if isnan(p), s='n.s.'; elseif p<1e-3, s='***'; elseif p<1e-2, s='**'; elseif p<0.05, s='*'; else, s='n.s.'; end; end
 function p=local_signrank(a,b); try, p=signrank(a,b); catch, [~,p]=ttest(a,b); end; end
+
+function [b,p,ci,name]=lme_inter(T,formula)
+% Fit an LME and return the INTERACTION term (the one coefficient whose name contains ':').
+% Robust to fit failure / rank-deficiency (returns NaN so the table still prints).
+b=NaN; p=NaN; ci=[NaN NaN]; name='(none)';
+try
+    lme=fitlme(T,formula);
+    cn=lme.CoefficientNames; ix=find(contains(cn,':'),1,'last');
+    if ~isempty(ix)
+        b=lme.Coefficients.Estimate(ix); p=lme.Coefficients.pValue(ix);
+        ci=[lme.Coefficients.Lower(ix) lme.Coefficients.Upper(ix)]; name=cn{ix};
+    end
+catch ME
+    warning('[F4R2-LME] fit failed (%s): %s', formula, ME.message);
+end
+end

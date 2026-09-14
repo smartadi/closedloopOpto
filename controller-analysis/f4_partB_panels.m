@@ -49,6 +49,10 @@ c0_p    = 351;   % onset col in pwcDfk/pncDfk (controllerData 10 s pre-buffer: d
 % (mirrors the f4_row2_quartiles.m fallback, RESEARCH 2026-09-12).
 mot_pre = 2;     % motion window start (s before onset)
 relopts = struct('pre',2,'post',3);   % rel 2-4 Hz window: -2 s -> stim end (dur=3)
+% Frequency-band specificity panel (2026-09-13): relative power (band / 0.4-10 Hz total) in
+% each band, same -2->stim-end window. Shows the CL-error effect is slow-band-specific
+% (<4 Hz), not broadband. Bands kept <=8 Hz so the numerator stays inside the total band.
+bands_hz  = {[0.4 1],[1 2],[2 4],[4 8]};   band_lbl = {'0.4-1','1-2','2-4','4-8'};
 
 eE = c0            : c0+round(1*Fs);          % 0 -> 1 s   (early transient)
 lL = c0+round(1*Fs)+1 : c0+round(3*Fs);       % 1 -> 3 s   (settled)
@@ -64,7 +68,7 @@ fitR2 = @(Xp, yp) ...
         max(sum((yp - mean(yp)).^2), eps);
 
 %% ── Pool CL trials ──────────────────────────────────────────────────────────
-X1=[]; X2=[]; Xrel=[]; Xdel=[]; Xpre=[];
+X1=[]; X2=[]; Xrel=[]; Xdel=[]; nB=numel(bands_hz); Xbnd=cell(1,nB); [Xbnd{:}]=deal([]);
 YE=[]; YL=[]; YF=[]; SESS=[]; TRI=[];
 
 for k = 1:numel(fields)
@@ -89,14 +93,17 @@ for k = 1:numel(fields)
     we = min(size(dk.wcmotion,2), c0_mot + round(dur*Fs) - 1);
     x2 = mean(max(dk.wcmotion(1:nT, ws:we), 0), 2);
 
-    % X3 rel 2-4 Hz (canonical), + absolute delta (comp) for the robustness panel
+    % X3 rel 2-4 Hz (canonical) + absolute delta (comp) for the abs-vs-rel confound control,
+    % + relative power in each band for the frequency-specificity panel.
     [dbuf, c0_d]      = pick_pwc(dk, c0_l, c0_p);   % legacy _l else pwcDfk@351 (field-rot fallback)
     if isempty(dbuf);  continue;  end
     [xrel, comp]      = cl_reldelta(dbuf, c0_d, Fs, relopts);
-    [~,   comp_pre]   = cl_reldelta(dbuf, c0_d, Fs, ...
-                                    struct('pre',2,'post',0));   % pre-stim-only delta
-    xdel = comp.delta(:);         % absolute 1-4 Hz power, -2 -> stim end
-    xpre = comp_pre.delta(:);     % absolute 1-4 Hz power, pre-stim only
+    xdel = comp.delta(:);         % absolute 2-4 Hz power, -2 -> stim end
+    xb   = nan(size(dbuf,1), nB); % relative power per band, same window
+    for b = 1:nB
+        ob = relopts; ob.hi = bands_hz{b};
+        xb(:,b) = cl_reldelta(dbuf, c0_d, Fs, ob);
+    end
 
     % outcomes
     yE = sqrt(mean((dk.wcDfk(1:nT,eE) - ref).^2, 2));
@@ -104,16 +111,18 @@ for k = 1:numel(fields)
     yF = dk.er_wcDfk(1:nT);
 
     m = min([nT numel(yF) numel(xrel)]);
-    X1=[X1;x1(1:m)]; X2=[X2;x2(1:m)]; Xrel=[Xrel;xrel(1:m)]; %#ok<*AGROW>
-    Xdel=[Xdel;xdel(1:m)]; Xpre=[Xpre;xpre(1:m)];
+    X1=[X1;x1(1:m)]; X2=[X2;x2(1:m)]; Xrel=[Xrel;xrel(1:m)]; Xdel=[Xdel;xdel(1:m)]; %#ok<*AGROW>
+    for b=1:nB; Xbnd{b}=[Xbnd{b};xb(1:m,b)]; end
     YE=[YE;yE(1:m)]; YL=[YL;yL(1:m)]; YF=[YF;yF(1:m)];
     SESS=[SESS;repmat(k,m,1)]; TRI=[TRI;(1:m)'];
 end
 
-ok = all(isfinite([X1 X2 Xrel Xdel Xpre YE YL YF]),2) & Xdel>0 & Xpre>0;
+ok = all(isfinite([X1 X2 Xrel Xdel YE YL YF]),2) & Xdel>0;
+for b=1:nB; ok = ok & isfinite(Xbnd{b}); end
 f = @(v) v(ok);
-[X1,X2,Xrel,Xdel,Xpre,YE,YL,YF,SESS,TRI] = ...
-    deal(f(X1),f(X2),f(Xrel),f(Xdel),f(Xpre),f(YE),f(YL),f(YF),f(SESS),f(TRI));
+[X1,X2,Xrel,Xdel,YE,YL,YF,SESS,TRI] = ...
+    deal(f(X1),f(X2),f(Xrel),f(Xdel),f(YE),f(YL),f(YF),f(SESS),f(TRI));
+for b=1:nB; Xbnd{b}=f(Xbnd{b}); end
 n   = numel(YE); nS = numel(unique(SESS));
 fprintf('\n[F4B] %d valid CL trials / %d sessions.\n', n, nS);
 
@@ -144,10 +153,13 @@ fprintf('\nPartial (unique) R^2 by window:\n  %-12s %10s %10s\n','factor',out_na
 for j=1:3, fprintf('  %-12s %10.3f %10.3f\n', pred_names{j}, Pr(j,1),Pr(j,2)); end
 fprintf('  %-12s %10.3f %10.3f\n','FULL R2', Rfull);
 
-%% ── Delta robustness: abs / rel / pre-only unique R^2 × window ──────────────
-delvar = {log10(Xdel), Xrel, log10(Xpre)}; del_lbl = {'absolute','relative','pre-stim'};
-Drob = nan(3,2);
-for d = 1:3
+%% ── Delta robustness: abs vs rel unique R^2 × window (power-confound control) ──
+% pre-stim-only definition dropped 2026-09-13 (user: not relevant). Keeps the abs-vs-rel
+% contrast = the power-confound control (absolute 2-4 Hz power is entangled with signal power;
+% relative = the canonical clean choice).
+delvar = {log10(Xdel), Xrel}; del_lbl = {'absolute','relative'};
+Drob = nan(numel(delvar),2);
+for d = 1:numel(delvar)
     Xd = zscore([X1, X2, delvar{d}]);
     for o = 1:2
         y = outs{o}; rf = fitR2(Xd,y);
@@ -155,7 +167,21 @@ for d = 1:3
     end
 end
 fprintf('\nDelta unique R^2 (holding init-dev + motion):\n  %-9s %10s %10s\n','def','early','late');
-for d=1:3, fprintf('  %-9s %10.3f %10.3f\n', del_lbl{d}, Drob(d,1), Drob(d,2)); end
+for d=1:numel(delvar), fprintf('  %-9s %10.3f %10.3f\n', del_lbl{d}, Drob(d,1), Drob(d,2)); end
+
+%% ── Frequency-band specificity: relative-power unique R^2 per band × window ──
+% Is the CL-error effect specific to a slow band, or broadband? Relative power (band/total)
+% for each band, unique R^2 holding init-dev + motion. Power-independent (relative), so it
+% is not the abs-power confound. (2026-09-13, replaces the pre-stim delta bar.)
+Dband = nan(nB,2);
+for b = 1:nB
+    Xb = zscore([X1, X2, Xbnd{b}]);
+    for o = 1:2
+        y = outs{o}; Dband(b,o) = fitR2(Xb,y) - fitR2(Xb(:,[1 2]), y);
+    end
+end
+fprintf('\nBand specificity: relative-power unique R^2 (holding init-dev + motion):\n  %-8s %10s %10s\n','band(Hz)','0-1s','1-3s');
+for b=1:nB, fprintf('  %-8s %10.3f %10.3f\n', band_lbl{b}, Dband(b,1), Dband(b,2)); end
 
 %% ── Select isolating exemplars from a SINGLE session ────────────────────────
 % All three exemplars come from one session so the grey trial-average is the
@@ -273,7 +299,7 @@ try, paperExport(figB, fullfile(outdir,'f4_1C_uniqueR2.pdf')); catch ME, warning
 figC = paperFig(6, 4.5); axC = axes(figC); hold(axC,'on');
 yline(axC,0,'-','Color',[0.6 0.6 0.6],'LineWidth',0.5,'HandleVisibility','off');
 hc = bar(axC, Drob, 'grouped','EdgeColor','none'); hc(1).FaceColor=col_e; hc(2).FaceColor=col_l;
-set(axC,'XTick',1:3,'XTickLabel',del_lbl,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+set(axC,'XTick',1:numel(del_lbl),'XTickLabel',del_lbl,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
 xtickangle(axC,20);
 ylabel(axC,'Delta unique R^2','FontSize',6,'FontWeight','bold');
 lg=legend(axC,hc,{'0-1 s','1-3 s'},'FontSize',5,'Box','off','Location','northeast'); lg.ItemTokenSize=[6 6];
@@ -281,11 +307,23 @@ title(axC,'Delta effect vs magnitude control','FontSize',6,'FontWeight','bold');
 hold(axC,'off');
 try, paperExport(figC, fullfile(outdir,'f4_1S_delta_robust.pdf')); catch ME, warning('[F4B] skip S (%s)',ME.message); end
 
+%% ══ PANEL T: frequency-band specificity (relative power) ════════════════════
+figT = paperFig(6, 4.5); axT = axes(figT); hold(axT,'on');
+yline(axT,0,'-','Color',[0.6 0.6 0.6],'LineWidth',0.5,'HandleVisibility','off');
+ht = bar(axT, Dband, 'grouped','EdgeColor','none'); ht(1).FaceColor=col_e; ht(2).FaceColor=col_l;
+set(axT,'XTick',1:nB,'XTickLabel',band_lbl,'Box','off','TickDir','out','FontSize',6,'FontWeight','bold');
+xlabel(axT,'band (Hz)','FontSize',6,'FontWeight','bold');
+ylabel(axT,'unique R^2','FontSize',6,'FontWeight','bold');
+lg=legend(axT,ht,{'0-1 s','1-3 s'},'FontSize',5,'Box','off','Location','northeast'); lg.ItemTokenSize=[6 6];
+title(axT,'Frequency-band specificity','FontSize',6,'FontWeight','bold');
+hold(axT,'off');
+try, paperExport(figT, fullfile(outdir,'f4_1T_bands.pdf')); catch ME, warning('[F4B] skip T (%s)',ME.message); end
+
 %% ── cache ───────────────────────────────────────────────────────────────────
 save(fullfile('data','f4_partB_panels.mat'), ...
-    'Pr','PrCI','Rfull','Drob','pred_names','out_names','n','nS', ...
-    'X1','X2','Xrel','Xdel','Xpre','YE','YL','YF','SESS','TRI','pick');
-fprintf('\n[F4B] exported 3 paper panels -> %s\n', outdir);
+    'Pr','PrCI','Rfull','Drob','Dband','band_lbl','pred_names','out_names','n','nS', ...
+    'X1','X2','Xrel','Xdel','Xbnd','YE','YL','YF','SESS','TRI','pick');
+fprintf('\n[F4B] exported 4 paper panels -> %s\n', outdir);
 
 % ── local helper ─────────────────────────────────────────────────────────────
 function t = localBestIso(Z, idx, j)
