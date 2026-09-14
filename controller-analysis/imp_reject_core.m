@@ -138,6 +138,16 @@ R.rr_ol_full = rrW(Aol,Gol,w_stim);  R.rr_cl_full = rrW(Acl,Gcl,w_stim);   % 0-3
 R.rrP_ol     = rrP(Aol,Gol,w_rej);   R.rrP_cl     = rrP(Acl,Gcl,w_rej);
 R.rr_med_ol  = median(R.rr_ol);   R.rr_iqr_ol = iqr(R.rr_ol);
 R.rr_med_cl  = median(R.rr_cl);   R.rr_iqr_cl = iqr(R.rr_cl);
+% PHI = 1 - RR : rejection FRACTION (fraction of disturbance energy removed).
+%   phi = 1  -> perfect rejection (response energy -> 0)
+%   phi = 0  -> no rejection (response energy == disturbance energy)
+%   phi < 0  -> amplification (response bigger than the disturbance)
+% Reporting form for the Fig-4 headline (1 = perfect, up = better); same object as RR
+% (monotone), so every OL-vs-CL statistic is identical. NOTE: per-trial phi is UNBOUNDED
+% below (tiny per-trial ||G||^2 -> huge RR -> very negative phi), so report phi at the
+% SESSION/summary level and keep RR (log) for any per-trial view.
+R.rjf_ol     = 1 - R.rr_ol;    R.rjf_cl     = 1 - R.rr_cl;         % per-trial (settled)
+R.rjf_med_ol = 1 - R.rr_med_ol;  R.rjf_med_cl = 1 - R.rr_med_cl;   % = median-based fraction
 
 % ---------------- RHO: legacy, unchanged ---------------------------------------
 R.rho_ol_tr = rejW(Aol,Gol,w_tr);   R.rho_cl_tr = rejW(Acl,Gcl,w_tr);

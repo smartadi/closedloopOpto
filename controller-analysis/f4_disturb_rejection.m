@@ -7,6 +7,9 @@
 %   counterfactual no-laser level). Defined once in imp_reject_core.m (R.rr_*). On the
 %   settled window RR == rho^2, so it reuses the per-trial rho already stored in the cache.
 %   RR<1 = disturbance energy suppressed (active rejection); RR>1 = response >= disturbance.
+%   REPORTED as PHI = 1 - RR (fraction of disturbance energy removed): 1 = perfect, 0 = none,
+%   <0 = amplification. Session/summary panel + manuscript use PHI (1=perfect, up=better);
+%   the per-trial exemplar scatter keeps RR on a log axis (per-trial PHI is unbounded below).
 % WINDOW : settled t=+1..+3 s (locked disturbance-rejection window; skips the inhibitory
 %   onset transient that otherwise dominates 0-3 s).
 % PREDICTOR: ridge (regularized) -- the selected deployed predictor (ctrl_pred_tag == 'ridge').
@@ -94,8 +97,7 @@ for c = 1:2
     xlabel(ax,'time from stim (s)','FontSize',PS.fs,'FontWeight',PS.fw);
     ylabel(ax,'\DeltaF/F (%)','FontSize',PS.fs,'FontWeight',PS.fw);
     set(ax,'FontSize',PS.fs,'FontWeight',PS.fw);
-    rr = (c==1)*Rex.rr_med_ol + (c==2)*Rex.rr_med_cl;
-    title(ax,sprintf('%s   RR = %.2f',CE{c,1},rr),'FontSize',PS.fs,'FontWeight',PS.fw);
+    title(ax,CE{c,1},'FontSize',PS.fs,'FontWeight',PS.fw);
     if c==1
         lg = legend(ax,[hD hA],{'disturbance','subdued response'},'Location','southeast','Box','off');
         lg.ItemTokenSize = PS.lgd_token; lg.FontSize = PS.fs;
@@ -155,25 +157,31 @@ paperExport(f, fullfile(outfig,'f4_disturb_pertrial.pdf'));
 paperExport(f, fullfile(outview,'f4_disturb_pertrial.png'));
 
 %% ===== PANEL 5 : per-session disturbance rejection (all sessions, paired) ======
+% Reported as PHI = 1 - RR = fraction of disturbance ENERGY removed (1 = perfect, 0 = no
+% rejection, <0 = amplification). Same object as RR (monotone) -> identical paired stats.
 L = load(fullfile(dd,'imp_reject_across_sessions_ridge.mat')); XS = L.XSr; Q = XS.Q; nS = numel(Q);
 rr_ol = arrayfun(@(q) median(q.rho_ol.^2), Q).';   % RR settled = rho^2, per session median
 rr_cl = arrayfun(@(q) median(q.rho_cl.^2), Q).';
-p_sess = signrank(rr_ol, rr_cl); nwin = nnz(rr_ol > rr_cl);
-fprintf('per-session RR: median OL %.3f -> CL %.3f | CL<OL %d/%d | signrank p=%.2e\n', ...
-    median(rr_ol), median(rr_cl), nwin, nS, p_sess);
+phi_ol = 1 - rr_ol;  phi_cl = 1 - rr_cl;           % rejection fraction (1 = perfect)
+p_sess = signrank(phi_ol, phi_cl); nwin = nnz(phi_cl > phi_ol);
+nrej_cl = nnz(phi_cl > 0); nrej_ol = nnz(phi_ol > 0);
+fprintf('per-session phi=1-RR: median OL %+.3f -> CL %+.3f | CL>OL %d/%d | signrank p=%.2e | CL phi>0 %d/%d, OL %d/%d\n', ...
+    median(phi_ol), median(phi_cl), nwin, nS, p_sess, nrej_cl, nS, nrej_ol, nS);
+ylo = -2.2;  yhi = 1.05;   % clip the lone deep amplifier (AL_0051 OL phi=-6.3) so the cluster is legible
 f = paperFig(W,H); ax = axes(f); hold(ax,'on');
-for k=1:nS, plot(ax,[1 2],[rr_ol(k) rr_cl(k)],'-','Color',[.75 .75 .75],'LineWidth',0.5,'HandleVisibility','off'); end
-yline(ax,1,'--','Color',[.55 .55 .55],'LineWidth',1,'HandleVisibility','off');
-scatter(ax,ones(nS,1),rr_ol,9,col_ol,'filled','MarkerFaceAlpha',.85);
-scatter(ax,2*ones(nS,1),rr_cl,9,col_cl,'filled','MarkerFaceAlpha',.85);
-plot(ax,[1 2],[median(rr_ol) median(rr_cl)],'-k','LineWidth',1.6);
-set(ax,'YScale','log');
-set(ax,'XTick',[1 2],'XTickLabel',{'open loop','closed loop'}); xlim(ax,[.7 2.3]);
-ylim(ax,[min([rr_ol;rr_cl])*0.8, max([rr_ol;rr_cl])*1.25]);
-ylabel(ax,'RR = ||A-ref||^2 / ||G||^2','FontSize',PS.fs,'FontWeight',PS.fw);
+for k=1:nS, plot(ax,[1 2],[max(phi_ol(k),ylo) max(phi_cl(k),ylo)],'-','Color',[.75 .75 .75],'LineWidth',0.5,'HandleVisibility','off'); end
+yline(ax,0,'--','Color',[.5 .5 .5],'LineWidth',1,'HandleVisibility','off');       % no rejection
+yline(ax,1,':','Color',[.6 .6 .6],'LineWidth',0.8,'HandleVisibility','off');       % perfect
+scatter(ax,ones(nS,1),max(phi_ol,ylo),9,col_ol,'filled','MarkerFaceAlpha',.85);
+scatter(ax,2*ones(nS,1),max(phi_cl,ylo),9,col_cl,'filled','MarkerFaceAlpha',.85);
+plot(ax,[1 2],[median(phi_ol) median(phi_cl)],'-k','LineWidth',1.6);
+set(ax,'XTick',[1 2],'XTickLabel',{'open loop','closed loop'}); xlim(ax,[.7 2.3]); ylim(ax,[ylo yhi]);
+ylabel(ax,'disturbance rejected  \phi = 1 - ||A-ref||^2/||G||^2','FontSize',PS.fs,'FontWeight',PS.fw);
 set(ax,'FontSize',PS.fs,'FontWeight',PS.fw);
-title(ax,sprintf('n=%d, %d/%d CL<OL, signrank p=%s',nS,nwin,nS,pstr(p_sess)),'FontSize',PS.fs,'FontWeight',PS.fw);
+title(ax,sprintf('n=%d, CL>OL %d/%d, signrank p=%s',nS,nwin,nS,pstr(p_sess)),'FontSize',PS.fs,'FontWeight',PS.fw);
+text(ax,2.36,0,'0','FontSize',PS.fs,'Color',[.5 .5 .5],'HorizontalAlignment','left','VerticalAlignment','middle');
 text(ax,2.36,1,'1','FontSize',PS.fs,'Color',[.5 .5 .5],'HorizontalAlignment','left','VerticalAlignment','middle');
+if any(phi_ol<ylo), text(ax,1,ylo,'\downarrow','FontSize',PS.fs+1,'Color',col_ol,'HorizontalAlignment','center','VerticalAlignment','bottom'); end
 cleanAxes(ax);
 paperExport(f, fullfile(outfig,'f4_disturb_rejection_paired.pdf'));
 paperExport(f, fullfile(outview,'f4_disturb_rejection_paired.png'));
