@@ -217,6 +217,34 @@ end
 
 % Analysis copy of each marker. See STV_STATESCALE at the top for what each mode costs.
 grp = findgroups(T.sess, T.amp);
+
+% PER-SESSION NORMALIZER (user 2026-09-13): the raw prediction-error panels sit on a large,
+% session-specific %dF/F baseline, so the quartile modulation is buried and the two panels are
+% not on a common scale. Rescale each session's raw residual by that session's OWN characteristic
+% spread (within-(session x amplitude)-cell pooled SD over all of its trials), so every session
+% enters at unit scale and the pooled per-bin curve reads as "x the session-typical error"
+% (~1 by construction). This is the spread-DV form of dividing by the session mean, and it is
+% session-fair for the same reason the LME clusters on session. devRawN is marker-independent
+% (depends only on grp), so compute it once here; the per-bin re-pool happens inside the loop.
+uSn_norm = unique(T.sess).';
+sigSess  = nan(size(uSn_norm));
+for si = 1:numel(uSn_norm)
+    inS = T.sess == uSn_norm(si);
+    num = 0; den = 0;
+    for cc = unique(grp(inS)).'
+        v = T.devRaw(inS & grp == cc);  v = v(isfinite(v));
+        if numel(v) < 3, continue; end
+        num = num + (numel(v)-1)*var(v);  den = den + (numel(v)-1);
+    end
+    if den > 0, sigSess(si) = sqrt(num/den); end
+end
+devRawN = T.devRaw;
+for si = 1:numel(uSn_norm)
+    if isfinite(sigSess(si)) && sigSess(si) > 0
+        m = T.sess == uSn_norm(si);  devRawN(m) = T.devRaw(m) / sigSess(si);
+    end
+end
+
 for k = 1:nMK
     v = double(T.(MK{k,1})(:));
     switch STV_STATESCALE
@@ -320,6 +348,19 @@ for k = 1:nMK
         end
         if den > 0, sdRaw(b) = sqrt(num/den); end
     end
+    % SAME curve, per-session normalized (see PER-SESSION NORMALIZER above): within-cell pooled
+    % SD of the session-rescaled residual devRawN. Dimensionless, ~1 = session-typical error.
+    sdRawN = nan(1, STV_NBIN);
+    for b = 1:STV_NBIN
+        inB = (g == b);
+        num = 0; den = 0;
+        for cc = unique(grp(inB)).'
+            v = devRawN(inB & grp == cc);  v = v(isfinite(v));
+            if numel(v) < 3, continue; end
+            num = num + (numel(v)-1)*var(v);  den = den + (numel(v)-1);
+        end
+        if den > 0, sdRawN(b) = sqrt(num/den); end
+    end
     trend  = corr((1:STV_NBIN).', sdB(:), 'type','Spearman');
     trendP = corr((1:STV_NBIN).', sdP(:), 'type','Spearman');
 
@@ -374,6 +415,7 @@ for k = 1:nMK
     R(k).rho=rho; R(k).p=p; R(k).rhoP=rhoP; R(k).pP=pP;
     R(k).sdB=sdB; R(k).sdP=sdP; R(k).bf=bf; R(k).bfP=bfP;
     R(k).sdRaw = sdRaw;    % same curve in %dF/F -- see the PREDICTION UNCERTAINTY block above
+    R(k).sdRawN = sdRawN;  % same curve, per-session normalized (x session-typical error, ~1)
     R(k).trend=trend; R(k).trendP=trendP; R(k).ratio=rat; R(k).ci=ci;
     R(k).verdict=verdict; R(k).x=x; R(k).y=y; R(k).n=nnz(ok);
     R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;

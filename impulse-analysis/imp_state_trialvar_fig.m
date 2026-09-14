@@ -97,8 +97,11 @@ yAll = yAll(isfinite(yAll));
 yLimSD = [floor(min(yAll)*20)/20, ceil(max(yAll)*20)/20];     % common y-axis, rounded to 0.05
 
 % STVF_UNITS: 'sd' (default) = SD of the amplitude-scaled deviation, the published 2J/2K
-% y-axis. 'raw' = the same curve as PREDICTION ERROR in %dF/F (user, 2026-08-19). One shared
-% y-limit across the drawn markers either way, so the panels stay mutually comparable.
+% y-axis. 'raw' = the same curve as PREDICTION ERROR in %dF/F (user, 2026-08-19). 'norm' = that
+% same curve PER-SESSION NORMALIZED (user, 2026-09-13) -- each session rescaled by its own
+% characteristic spread so the pooled curve reads "x session-typical error" (~1), removing the
+% session-specific %dF/F baseline and putting motion and rel-delta on one common scale.
+% One shared y-limit across the drawn markers in every mode, so the panels stay comparable.
 if ~exist('STVF_UNITS','var') || isempty(STVF_UNITS), STVF_UNITS = 'sd'; end
 yRawMax = 1;
 if strcmpi(STVF_UNITS,'raw')
@@ -107,6 +110,22 @@ if strcmpi(STVF_UNITS,'raw')
         if isfield(R(kk),'sdRaw'), rawAll = [rawAll R(kk).sdRaw(isfinite(R(kk).sdRaw))]; end %#ok<AGROW>
     end
     if ~isempty(rawAll), yRawMax = 1.15 * max(rawAll); end
+end
+% shared, zoomed y-limit for normalized units -- span the drawn per-bin values + their CIs with a
+% little padding (values cluster near 1, so a 0-anchored axis would flatten the modulation).
+yNormLim = [0.6 1.4];
+if strcmpi(STVF_UNITS,'norm')
+    nAll = [];
+    for i = 1:numel(adm)
+        k = adm(i);
+        if ~isfield(R(k),'sdRawN'), continue; end
+        sc = R(k).sdRawN ./ max(R(k).sdB, eps);           % scaled -> normalized, per bin
+        nAll = [nAll R(k).sdRawN(:).' CI(i).lo.*sc CI(i).hi.*sc]; %#ok<AGROW>
+    end
+    nAll = nAll(isfinite(nAll));
+    if ~isempty(nAll)
+        yNormLim = [floor(min(nAll)*20)/20, ceil(max(nAll)*20)/20];
+    end
 end
 
 %% ---- pass 2: draw ------------------------------------------------------------------------------
@@ -157,8 +176,13 @@ for i = 1:numel(adm)
     % "wider or narrower than average". See the PREDICTION UNCERTAINTY block in
     % imp_state_trialvar.m. The stim-free control has no raw-units counterpart, so 'raw'
     % implies a single series.
-    useRaw = strcmpi(STVF_UNITS,'raw') && isfield(r,'sdRaw') && any(isfinite(r.sdRaw));
-    if useRaw
+    useRaw  = strcmpi(STVF_UNITS,'raw')  && isfield(r,'sdRaw')  && any(isfinite(r.sdRaw));
+    useNorm = strcmpi(STVF_UNITS,'norm') && isfield(r,'sdRawN') && any(isfinite(r.sdRawN));
+    if useNorm
+        yv   = r.sdRawN(:).';
+        sc   = yv ./ max(r.sdB(:).', eps);      % per-bin conversion factor, scaled -> normalized
+        ciLo = ciLo .* sc;  ciHi = ciHi .* sc;  % carry the bootstrap CI into the new units
+    elseif useRaw
         yv   = r.sdRaw(:).';
         sc   = yv ./ max(r.sdB(:).', eps);      % per-bin conversion factor, scaled -> %dF/F
         ciLo = ciLo .* sc;  ciHi = ciHi .* sc;  % carry the bootstrap CI into the new units
@@ -170,7 +194,7 @@ for i = 1:numel(adm)
     hS = plot(ax, xb, yv, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, ...
               'LineWidth', PS.lw_mean, 'MarkerSize', 2.5, 'DisplayName','Impulse response');
     hAll = hS;
-    if STV_PLOTCTRL && ~useRaw
+    if STV_PLOTCTRL && ~useRaw && ~useNorm
         fill(ax, [xb fliplr(xb)], [cpLo fliplr(cpHi)], C_ctl, ...
              'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
         hC = plot(ax, xb, r.sdP, '--s', 'Color', C_ctl, 'MarkerFaceColor', C_ctl, ...
@@ -183,10 +207,20 @@ for i = 1:numel(adm)
     xticks(ax, 0.125:0.25:0.875);
     xticklabels(ax, {'Q1','Q2','Q3','Q4'});
     xlim(ax, [0 1]);
-    if useRaw, ylim(ax, [0 yRawMax]); else, ylim(ax, yLimSD); end
+    if useNorm
+        ylim(ax, yNormLim);
+        hRef = yline(ax, 1, ':', 'Color', [.55 .55 .55], 'LineWidth', PS.lw_zero);
+        hRef.HandleVisibility = 'off';  uistack(hRef, 'bottom');   % session-typical error = 1
+    elseif useRaw
+        ylim(ax, [0 yRawMax]);
+    else
+        ylim(ax, yLimSD);
+    end
     set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
     xlabel(ax, sprintf('%s quartile', r.name), 'FontSize', PS.fs, 'FontWeight', PS.fw);
-    if useRaw
+    if useNorm
+        ylabel(ax, 'Normalized prediction error', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    elseif useRaw
         ylabel(ax, 'Prediction error (% \DeltaF/F)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
     else
         ylabel(ax, 'SD of deviation', 'FontSize', PS.fs, 'FontWeight', PS.fw);
