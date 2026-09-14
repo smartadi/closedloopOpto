@@ -17,10 +17,13 @@
 % z-scored within session across the combined OL+CL trials (removes session
 % baseline, keeps the OL-vs-CL level difference).
 %
-% TEST (the star): per session compute gap = mean(zRMSE_OL) - mean(zRMSE_CL) in
-% Q1 and in Q4; paired Wilcoxon signed-rank of gap(Q4) vs gap(Q1) across sessions.
-% A shrinking gap at high state = feedback helps less there (the irreducible
-% disturbance); a stable gap = state-independent rejection.
+% TEST (the star): session-aware linear mixed model on z-scored RMSE, cond x state
+% interaction with trials nested in sessions nested in mice
+% (zrmse ~ cond*state + (1|mouse) + (1|sess)) -- the panel star is this LMM
+% interaction p (Nick 2026-09-11; replaces the old session-level signed-rank, which
+% is still printed to the console for reference). The 3-state forest of the same
+% model is f4_2S_stats (f4_row2_stats.m). A NEGATIVE cond(CL):state term = the CL
+% advantage SHRINKS at high state (gap closes); a flat gap = state-independent rejection.
 %
 % OUTPUT: three vector PDFs (paper/images/figure4/): f4_2A_initdev.pdf,
 %         f4_2B_motion.pdf, f4_2C_delta.pdf.   Requires load_sessions.m first.
@@ -106,7 +109,8 @@ end
 
 % ---- stats + per-state figure ---------------------------------------------------------------
 fprintf('\n============ ROW 2: OL-CL rejection GAP by state quartile (SESSION-LEVEL primary) ============\n');
-fprintf('state     nTrials nSess | session-level paired (PRIMARY)         || trial-pooled OLS (reference)\n');
+fprintf('state     nTrials nSess | session-aware LMM cond:state (PRIMARY star)  || refs: sess signrank / pooled\n');
+LME = struct();
 for ip=1:numel(preds); nm=preds{ip};
     zx=Pl.(nm).zx; zy=Pl.(nm).zy; g=Pl.(nm).g;
     if isempty(zx); fprintf('%-9s (no data)\n',nm); continue; end
@@ -134,9 +138,24 @@ for ip=1:numel(preds); nm=preds{ip};
     covb=s2*inv(Xd'*Xd); se=sqrt(diag(covb)); tI=bd(4)/se(4);
     pGap=2*tcdf(-abs(tI),dof); bInt=bd(4);          % pooled p + beta, diagnostic only
     dGap=(qmO(4)-qmC(4))-(qmO(1)-qmC(1));           % descriptive Q4-Q1 gap change (pooled)
-    fprintf(['%-9s  %6d  %3d | sess dGap %+.2f  %d/%d agree  signrank p=%.3g' ...
-             '   || pooled dGap %+.2f  beta %+.3f  p=%.3g\n'], ...
-             nm,nTr,nSess,dGapS,nAgree,nSess,pSess, dGap,bInt,pGap);
+    % ---- session-aware LMM interaction (Nick 2026-09-11): cond x state, trials in sess in mice.
+    % This (not the signed-rank) is the panel STAR; 3-state forest of the same model = f4_2S_stats.
+    lyk=Pl.(nm).ly; lck=Pl.(nm).lc; lxk=Pl.(nm).lx; lqk=Pl.(nm).lq; lsk=Pl.(nm).lsess; lmk=Pl.(nm).lmouse;
+    kp=isfinite(lyk)&isfinite(lck)&isfinite(lxk)&isfinite(lqk);
+    lyk=lyk(kp); lck=lck(kp); lxk=lxk(kp); lqk=lqk(kp); lsk=lsk(kp); lmk=lmk(kp);
+    condL=categorical(lck,[0 1],{'OL','CL'}); nSes=numel(unique(lsk)); nMse=numel(unique(lmk));
+    Tc=table(lyk,condL,lxk,categorical(lsk),categorical(lmk), ...
+        'VariableNames',{'zrmse','cond','sx','sess','mouse'});
+    [bC,pC,ciC]=lme_inter(Tc,'zrmse ~ cond*sx + (1|mouse) + (1|sess)');   % continuous-state interaction (panel star)
+    q14=ismember(lqk,[1 4]);
+    Tb=table(lyk(q14),condL(q14),categorical(lqk(q14)),categorical(lsk(q14)),categorical(lmk(q14)), ...
+        'VariableNames',{'zrmse','cond','q','sess','mouse'});
+    [bQ,pQ,ciQ]=lme_inter(Tb,'zrmse ~ cond*q + (1|mouse) + (1|sess)');    % Q1-vs-Q4 interaction (robustness)
+    LME.(nm)=struct('nTr',numel(lyk),'nSes',nSes,'nMse',nMse, ...
+        'q14_beta',bQ,'q14_p',pQ,'q14_ci',ciQ,'cont_beta',bC,'cont_p',pC,'cont_ci',ciC);
+    fprintf(['%-9s  %6d  %3d | LMM cond:state beta %+.3f p=%.3g  (Q1/Q4 p=%.3g)' ...
+             '   || sess signrank p=%.3g  pooled p=%.3g\n'], ...
+             nm,nTr,nSes,bC,pC,pQ, pSess,pGap);
 
     % ---- panel ----
     fq=paperFig(5,4.6); ax=axes(fq); hold(ax,'on');
@@ -153,10 +172,10 @@ for ip=1:numel(preds); nm=preds{ip};
     set(ax,'XTick',1:4,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out', ...
         'FontSize',PS.fs,'FontWeight','bold');
     ylim(ax,[-0.65 1.40]); yl=ylim(ax);   % common range across the 3 panels (gap trends comparable)
-    % gap-change star (Q1 vs Q4 gap) -- SESSION-LEVEL paired signed-rank (primary)
-    text(ax,2.5,yl(2)-0.02*range(yl),sprintf('\\Deltagap %s',starstr(pSess)), ...
+    % decoupling star -- SESSION-AWARE LMM cond x state interaction (Nick 2026-09-11)
+    text(ax,2.5,yl(2)-0.02*range(yl),sprintf('cond\\timesstate %s',starstr(pC)), ...
         'HorizontalAlignment','center','VerticalAlignment','top','FontSize',6,'FontWeight','bold','Color',[0.1 0.1 0.1]);
-    text(ax,2.5,yl(2)-0.02*range(yl)-0.11*range(yl),sprintf('%d/%d sess',nAgree,nSess), ...
+    text(ax,2.5,yl(2)-0.02*range(yl)-0.11*range(yl),sprintf('LMM p=%.2g',pC), ...
         'HorizontalAlignment','center','VerticalAlignment','top','FontSize',5,'Color',[0.35 0.35 0.35]);
     title(ax,sprintf('%s  (%d tr)',titR2{ip},nTr),'FontSize',PS.fs,'FontWeight','bold');
     if ip==1
@@ -175,38 +194,21 @@ for ip=1:numel(preds); nm=preds{ip};
 end
 fprintf('\n[F4R2] row-2 panels -> %s\n', outdir);
 
-%% ============ ROW 2 SUPPLEMENT: mixed-effects (LME) referee-proof interaction (Nick) ============
-% Nick 2026-09-11: the session-level signed-rank above is the PRIMARY test; he asked for a mixed
-% model as the referee-proof version -- trials nested in sessions nested in mice, with the
-% OL/CL x state INTERACTION as the tested term. (1|mouse)+(1|sess) encodes the nesting (session
-% labels are globally unique, so each session loads on exactly one mouse). Two models per state:
-%   PRIMARY     Q1 vs Q4 (Nick's framing):  zrmse ~ cond*q  + (1|mouse) + (1|sess)
-%   ROBUSTNESS  continuous state (all Q):    zrmse ~ cond*sx + (1|mouse) + (1|sess)
-% The interaction sign convention matches the panel gap = OL-CL: a NEGATIVE cond(CL):highstate
-% term = the CL advantage SHRINKS at high state (gap closes); positive = it grows.
-fprintf('\n============ ROW 2 LME (mixed-effects, referee-proof interaction) ============\n');
-fprintf('%-9s %6s %5s %5s | %-28s | %-28s\n','state','nTr','nSes','nMse','Q1/Q4  cond:q  beta  p','continuous cond:sx  beta  p');
-LME = struct();
+%% ============ ROW 2 SUPPLEMENT: mixed-effects (LME) interaction table (Nick) ============
+% The panel star IS the session-aware LMM cond x state interaction (continuous state), computed in
+% the panel loop above and stored in LME. Here we just tabulate both parameterizations:
+%   continuous state (all Q, = panel star):  zrmse ~ cond*sx + (1|mouse) + (1|sess)
+%   Q1 vs Q4 (Nick's framing, robustness):    zrmse ~ cond*q  + (1|mouse) + (1|sess)
+% Trials nested in sessions nested in mice; (1|mouse)+(1|sess) encodes the nesting (session labels
+% are globally unique => each session loads on one mouse). NEGATIVE cond(CL):state = CL advantage
+% SHRINKS at high state (gap closes); positive = it grows. Full 3-state forest = f4_2S_stats.
+fprintf('\n============ ROW 2 LME (mixed-effects interaction, session-aware) ============\n');
+fprintf('%-9s %6s %5s %5s | %-32s | %-26s\n','state','nTr','nSes','nMse','continuous cond:sx  beta  p (STAR)','Q1/Q4  cond:q  beta  p');
 for ip=1:numel(preds); nm=preds{ip};
-    ly=Pl.(nm).ly; lc=Pl.(nm).lc; lx=Pl.(nm).lx; lq=Pl.(nm).lq; ls=Pl.(nm).lsess; lm=Pl.(nm).lmouse;
-    keep=isfinite(ly)&isfinite(lc)&isfinite(lx)&isfinite(lq);
-    ly=ly(keep); lc=lc(keep); lx=lx(keep); lq=lq(keep); ls=ls(keep); lm=lm(keep);
-    if isempty(ly); fprintf('%-9s (no data)\n',nm); continue; end
-    cond=categorical(lc,[0 1],{'OL','CL'});
-    nMse=numel(unique(lm)); nSes=numel(unique(ls));
-    % PRIMARY: Q1 vs Q4 binary interaction
-    q14=ismember(lq,[1 4]);
-    Tb=table(ly(q14),cond(q14),categorical(lq(q14)),categorical(ls(q14)),categorical(lm(q14)), ...
-        'VariableNames',{'zrmse','cond','q','sess','mouse'});
-    [bQ,pQ,ciQ,~]=lme_inter(Tb,'zrmse ~ cond*q + (1|mouse) + (1|sess)');
-    % ROBUSTNESS: continuous state interaction (all quartiles)
-    Tc=table(ly,cond,lx,categorical(ls),categorical(lm), ...
-        'VariableNames',{'zrmse','cond','sx','sess','mouse'});
-    [bC,pC,ciC,~]=lme_inter(Tc,'zrmse ~ cond*sx + (1|mouse) + (1|sess)');
+    if ~isfield(LME,nm); fprintf('%-9s (no data)\n',nm); continue; end
+    E=LME.(nm);
     fprintf('%-9s %6d %5d %5d | beta %+.3f [%+.3f,%+.3f] p=%.3g | beta %+.3f [%+.3f,%+.3f] p=%.3g\n', ...
-        nm,numel(ly),nSes,nMse, bQ,ciQ(1),ciQ(2),pQ, bC,ciC(1),ciC(2),pC);
-    LME.(nm)=struct('nTr',numel(ly),'nSes',nSes,'nMse',nMse, ...
-        'q14_beta',bQ,'q14_p',pQ,'q14_ci',ciQ,'cont_beta',bC,'cont_p',pC,'cont_ci',ciC);
+        nm,E.nTr,E.nSes,E.nMse, E.cont_beta,E.cont_ci(1),E.cont_ci(2),E.cont_p, E.q14_beta,E.q14_ci(1),E.q14_ci(2),E.q14_p);
 end
 try, save(fullfile('data','f4_row2_lme.mat'),'LME'); fprintf('[F4R2-LME] -> data/f4_row2_lme.mat\n'); catch ME; warning('[F4R2-LME] save skipped (%s)',ME.message); end
 
