@@ -562,8 +562,13 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > RMSE regressed on **initial deviation + motion energy + relative δ power**; ΔR² waterfall /
 > standardized coefficients show which state factors drive residual error.
 > **Block 3 — residual state dependence** (`internal_model_principle.m`): the fine-grained mechanism —
-> Actual = Global + Local decomposition, disturbance rejection ρ = ‖A−ref‖/‖G‖ over 1–3 s (0 = full
-> rejection), and ρ classified by motion & δ quartiles (`[IMP-STATE-QUARTILE]`).
+> Actual = Global + Local decomposition; disturbance rejection = **energy ratio ER = ‖A−ref‖²/‖G−ref‖²
+> over the settled 1–3 s window** (HEADLINE, user 2026-09-13; 1 = no work, <1 = controller gain), with
+> the fluctuation-only sensitivity **SR = ‖A−⟨A⟩‖²/‖G−⟨G⟩‖²** (settled) as robustness. Cross-session
+> (n=13): ER OL 0.233 → CL 0.099, signrank p=4.9e-4, 12/13; SR CL 0.927 vs 1 p=0.027, paired p=0.068.
+> ER/SR classified by motion & 2–4 Hz quartiles (`[IMP-STATE-QUARTILE]`). ⚠ ρ = ‖A−ref‖/‖G‖ retired as
+> the reported metric (its zero-referenced denominator made the LEVEL uninterpretable); ER settled per
+> the Methods energy-ratio plan (Nick 2026-07-28).
 
 > **Panel plan.** Currently **single-session (m4 = AL_0033 2025-02-26)** + exploratory styling → these
 > are *drafts*; production panels await the **Stage 1→2 cross-session sweep** (automated affected
@@ -573,9 +578,9 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > |---|---|---|---|
 > | 4A | 1 | Trial-average state dependence: pre-stim Global level (state) → absolute Actual outcome; OL steep vs CL flat slope (bootstrap OL−CL slope diff) | `ctrl_state_dependence.m` (`s_lvl→o_act`) |
 > | 4B | 2 | Error-contribution model: per-trial RMSE regressed on initial deviation + motion + relative δ; ΔR² / standardized coefficients | `cl_mse_factors.m` / `cl_rmse_factor_windows.m` |
-> | 4C | 3 | Residual decomposition + rejection: Actual = Global (contra-predicted disturbance) + Local (controller effect); rejection ρ = ‖A−ref‖/‖G‖ (1–3 s), OL vs CL | `[IMP-PROOF-FIG]` / `[IMP-REJECT]` |
-> | 4D | 3 | ρ vs motion-energy quartile (OL/CL) | `[IMP-STATE-QUARTILE]` |
-> | 4E | 3 | ρ vs relative-δ (2–4 Hz) quartile (OL/CL) | `[IMP-STATE-QUARTILE]` |
+> | 4C | 3 | Residual decomposition + rejection: Actual = Global (contra-predicted disturbance) + Local (controller effect); **rejection ER = ‖A−ref‖²/‖G−ref‖² (settled 1–3 s)**, OL vs CL (SR robustness) | `f4_reject_panels.m` / `imp_reject_across_sessions.m` |
+> | 4D | 3 | rejection vs motion-energy quartile (OL/CL); session-level signrank + LME (`f4_row2_lme.mat`) | `f4_row2_quartiles.m` |
+> | 4E | 3 | rejection vs relative 2–4 Hz quartile (OL/CL); + band-specificity panel `f4_1T_bands` (<4 Hz specific) | `f4_row2_quartiles.m` / `f4_partB_panels.m` |
 > | (supp) | — | Predictor validity: contra→ipsi CV-R² (Global vs Global+Local) + pre-stim control; distributed contra co-suppression (proves Global = shared-network disturbance) | `[IMP-PROOF-FIG]` (a) · `stim_network_coupling.m` `[SNC]` |
 >
 > **State definitions are IDENTICAL across all three blocks** (they inherit `cl_rmse_factor_windows.m`):

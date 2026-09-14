@@ -50,7 +50,8 @@
 %           [F4-REJ-D] [F4-REJ-REPORT]
 
 %% [F4-REJ-CFG] -----------------------------------------------------------------
-MET      = 'SR';       % 'SR' (PRIMARY, 2026-09-11) | 'ER' (secondary) | 'rho' (legacy, reproduction only)
+MET      = 'ER';       % 'ER' (Fig-4 HEADLINE, user 2026-09-13; settled 1-3 s) | 'SR' (fluctuation-only
+                       % robustness) | 'rho' (legacy). ER + SR are both aggregated on the settled window.
 if exist('F4_MET','var') && ~isempty(F4_MET); MET = F4_MET; end   % caller override (like F4_FMT)
 EXPORT   = true;
 % REVIEW WORKFLOW (user, 2026-08-12): PNG first, approve, THEN vector PDFs. Flip to

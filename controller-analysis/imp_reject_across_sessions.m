@@ -105,11 +105,17 @@ for s = SESS
     Q(k).sr_med_ol_full = R.sr_med_ol;  Q(k).sr_med_cl_full = R.sr_med_cl;   % 0-3 s reference (transient-contaminated)
     Q(k).p_sr = ranksum(srol, srcl);                                          % settled per-trial OL vs CL
     Q(k).rej_frac_ol = 1 - median(srol);  Q(k).rej_frac_cl = 1 - median(srcl);  % per-session fraction rejected
-    % ENERGY RATIO (secondary, Nick 2026-07-28; demoted by SR 2026-09-11): 1 = no work, <1 = gain.
-    Q(k).er_ol = R.er_ol;  Q(k).er_cl = R.er_cl;
-    Q(k).er_med_ol = R.er_med_ol;  Q(k).er_iqr_ol = R.er_iqr_ol;
-    Q(k).er_med_cl = R.er_med_cl;  Q(k).er_iqr_cl = R.er_iqr_cl;
-    Q(k).p_er = R.p_er;  Q(k).er_frac_ol = R.er_frac_ol;  Q(k).er_frac_cl = R.er_frac_cl;
+    % ENERGY RATIO ER = ||A-ref||^2/||G-ref||^2 -- Fig-4 HEADLINE metric (user 2026-09-13):
+    % regulation-to-target controllability. Computed on the SETTLED 1-3 s window (er_*_rej) to
+    % match the locked disturbance-rejection window (rho + SR) -- the 0-3 s version violated that
+    % rule and is kept only as er_med_*_full reference. 1 = no work, <1 = controller gain.
+    erol = R.er_ol_rej(isfinite(R.er_ol_rej));  ercl = R.er_cl_rej(isfinite(R.er_cl_rej));
+    Q(k).er_ol = R.er_ol_rej;  Q(k).er_cl = R.er_cl_rej;
+    Q(k).er_med_ol = median(erol);  Q(k).er_iqr_ol = iqr(erol);
+    Q(k).er_med_cl = median(ercl);  Q(k).er_iqr_cl = iqr(ercl);
+    Q(k).er_med_ol_full = R.er_med_ol;  Q(k).er_med_cl_full = R.er_med_cl;   % 0-3 s reference (incl. transient)
+    Q(k).p_er = ranksum(erol, ercl);                                         % settled per-trial OL vs CL
+    Q(k).er_frac_ol = mean(erol<1);  Q(k).er_frac_cl = mean(ercl<1);
     % --- exemplar traces for the demo panel (trial averages only; the full trial matrices
     % would bloat the struct and the panel draws mean +/- SEM) ---
     if strcmp(S.sess_tag, EXEMPLAR) || (~isfield(EX,'sess_tag') && k == 1)
@@ -122,7 +128,7 @@ for s = SESS
             'Acl_e',std(S.Acl,0,1)/sqrt(size(S.Acl,1)), 'Gcl_e',std(S.Gcl,0,1)/sqrt(size(S.Gcl,1)), ...
             'sr_ol',R.sr_ol_rej, 'sr_cl',R.sr_cl_rej, ...
             'p_sr',ranksum(R.sr_ol_rej(isfinite(R.sr_ol_rej)),R.sr_cl_rej(isfinite(R.sr_cl_rej))), ...
-            'er_ol',R.er_ol, 'er_cl',R.er_cl, 'rho_ol',R.rho_ol, 'rho_cl',R.rho_cl, ...
+            'er_ol',R.er_ol_rej, 'er_cl',R.er_cl_rej, 'rho_ol',R.rho_ol, 'rho_cl',R.rho_cl, ...
             'p_er',R.p_er, 'p_rho',R.p_rho, 'n_ol',R.n_ol, 'n_cl',R.n_cl, 'R2_te',S.R2_te);
     end
     pooled_ol=[pooled_ol; R.rho_ol]; pooled_cl=[pooled_cl; R.rho_cl];
@@ -187,7 +193,7 @@ for i=1:nBoot, ix=randi(nS,nS,1); bsS(i)=mean(sr_gain(ix)); end
 sr_gain_ci = prctile(bsS,[2.5 97.5]);
 rej_frac_ol = [Q.rej_frac_ol].';  rej_frac_cl = [Q.rej_frac_cl].';   % 1 - pooled SR, per session
 
-fprintf('\n[XSESS-SR] FLUCTUATION-ENERGY RATIO  SR = ||A-<A>||^2/||G-<G>||^2  (1-3 s settled), %d sessions  [PRIMARY]\n', nS);
+fprintf('\n[XSESS-SR] FLUCTUATION-ENERGY RATIO  SR = ||A-<A>||^2/||G-<G>||^2  (1-3 s settled), %d sessions  [robustness]\n', nS);
 fprintf('           1 = no rejection, <1 = fluctuation suppressed.  Inference session-level (n=%d).\n', nS);
 fprintf('  per-session median SR  : OL %.3f [IQR %.3f] | CL %.3f [IQR %.3f]\n', ...
     median(sr_med_ol), iqr(sr_med_ol), median(sr_med_cl), iqr(sr_med_cl));
@@ -198,12 +204,14 @@ fprintf('  CL suppresses more fluctuation in %d/%d sessions\n', nnz(sr_gain>0), 
 fprintf('  median fraction rejected (1-SR): OL %.1f%% | CL %.1f%%\n', ...
     100*median(rej_frac_ol), 100*median(rej_frac_cl));
 
-%% [XSESS-ER] ENERGY RATIO -- secondary (Nick 2026-07-28; demoted by SR 2026-09-11) -------------
-% ER = ||A-ref||^2 / ||G-ref||^2 over the 0-3 s stim window.
+%% [XSESS-ER] ENERGY RATIO -- Fig-4 HEADLINE metric (user 2026-09-13) -------------
+% ER = ||A-ref||^2 / ||G-ref||^2 over the SETTLED 1-3 s window (locked disturbance-rejection
+% window; the 0-3 s version violated that rule -> kept only as er_med_*_full reference).
 %   1  = controller did no work    (holds identically when A == G)
-%   <1 = controller gain
+%   <1 = controller gain (regulation to target despite the disturbance = controllability)
 % Inference is SESSION-LEVEL (n = sessions), per Nick: median +/- IQR reported
 % separately for OL and CL, Wilcoxon signed-rank on the paired session medians.
+% (SR above is the fluctuation-only robustness; ER is the reported Fig-4 number.)
 er_med_ol = [Q.er_med_ol].';  er_med_cl = [Q.er_med_cl].';
 er_gain   = er_med_ol - er_med_cl;              % >0 => CL suppresses more energy
 if nS>=2
@@ -217,7 +225,7 @@ bsE = zeros(nBoot,1);
 for i=1:nBoot, ix=randi(nS,nS,1); bsE(i)=mean(er_gain(ix)); end
 er_gain_ci = prctile(bsE,[2.5 97.5]);
 
-fprintf('\n[XSESS-ER] ENERGY RATIO  ER = ||A-ref||^2/||G-ref||^2  (0-3 s stim window), %d sessions\n', nS);
+fprintf('\n[XSESS-ER] ENERGY RATIO  ER = ||A-ref||^2/||G-ref||^2  (1-3 s settled), %d sessions  [HEADLINE]\n', nS);
 fprintf('           1 = no work done, <1 = controller gain.  Inference is session-level (n=%d).\n', nS);
 fprintf('  per-session median ER  : OL %.3f [IQR %.3f] | CL %.3f [IQR %.3f]\n', ...
     median(er_med_ol), iqr(er_med_ol), median(er_med_cl), iqr(er_med_cl));
