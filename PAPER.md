@@ -584,6 +584,17 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > user 2026-09-14): per-session **median OL −0.20 → CL +0.23, CL>OL 12/13, p=4.9e-4** (identical stats,
 > monotone); CL rejects (φ>0) in 11/13 vs 5/13 OL. Per-session paired panel = φ (linear, up=better);
 > per-trial exemplar scatter stays **RR (log)** because per-trial φ is unbounded below.
+>
+> ⭐ **Fig-4 4-BLOCK STORY (user 2026-09-15).** (1) exemplar trials for the 4 states; (2) error
+> decomposition `controller-analysis/f4_error_decomp.m` — unique + combined R², 4 factors (init-dev,
+> motion, rel 2-4 Hz, abs δ), both windows (0-1/1-3 s), pooled + per-session. **MAIN = rel-only δ**
+> (locked 2026-09-15): init-dev 0.38→0.03, motion ≈0 (rejected), rel 2-4 Hz 0.09→0.12; abs-only and
+> both are supplementary options (abs inflates settled R² to 0.30 but is the magnitude confound; both
+> shows rel/abs collinearity r=0.53). δ-profile check: `f4_delta_candidates.m`. (3) Q1-Q4 quartiles per
+> state, session-aware LMM (Block-3 above). (4) contra model = disturbance rejection (φ) + prediction:
+> **contra→ipsi KERNEL MAP `controller-analysis/f4_kernel_map.m`** (ridge weights per contra pixel on the
+> brain, ipsi target marked; weights DISTRIBUTED across the contra hemisphere — supports the shared-network
+> disturbance reading) replaces the abstract 3×3 grid cue on `f4_decomp_schematic`.
 
 > **Panel plan.** Currently **single-session (m4 = AL_0033 2025-02-26)** + exploratory styling → these
 > are *drafts*; production panels await the **Stage 1→2 cross-session sweep** (automated affected
