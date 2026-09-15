@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-15 — Fig-4 Block-1: 4-state exemplar-trial panel (f4_state_exemplars.m)
+**Changed/Found:** New `controller-analysis/f4_state_exemplars.m` — the figure's opening panel: one representative CL trial per pre-stim state (high init-dev / motion / rel 2-4 Hz / abs δ), each picked to be SPECIFIC (max of z_target − max(other z), z_target>1). 1×4 row of readout traces (−2→+3 s) with ref + stim window; the motion panel overlays the concurrent z-motion trace. Picks: init-dev m13 tr25 (z=+3.0), motion m4 tr54 (z=+20.5, heavy-tailed outlier), rel m11 tr36 (z=+2.6), abs δ m2 tr85 (z=+2.4). Panel `f4_state_exemplars.pdf`.
+**Why:** User's Fig-4 story block 1 (2026-09-15): "show example trials with the [four] states we chose."
+**Next:** the motion exemplar z=+20.5 is an extreme tail trial — consider a percentile-capped pick if a more typical high-motion trial reads better.
+
 ### 2026-09-15 — Fig-4 contra→ipsi KERNEL MAP (f4_kernel_map.m) + lock rel-only decomposition
 **Changed/Found:** New `controller-analysis/f4_kernel_map.m` — Fig-4 Block-4 "prediction capability" panel (idea #1). Shows the stim-blind Global predictor's spatial weights: each contra grid pixel colored by its ridge weight `b` for predicting the ipsi target site, interpolated + Gaussian-smoothed (σ=5) over the contra hemisphere on the mean brain image, ipsi target starred, arrow contra→ipsi. Exemplar AL_0033_0415_e2 (R²_te=0.75). No SVD load — uses Stage-1 grid coords/masks/site, Stage-2 ridge `b` (408 px), mean image from the `cp_stim_site` cache. **Finding:** ridge weights are DISTRIBUTED across the contra hemisphere (not a single homolog hotspot) — consistent with treating Global as a shared-network disturbance. Also **locked rel-only as the main Block-2 decomposition** (PAPER.md); abs-only + both kept as supplementary options.
 **Why:** User (2026-09-15): "build #1 [kernel map], lock rel-only as main decomposition." Replaces the abstract 3×3 grid cue on `f4_decomp_schematic` with real anatomy.
