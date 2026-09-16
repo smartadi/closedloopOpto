@@ -32,35 +32,43 @@ if isfield(C,'rowcol') && numel(C.rowcol)>=2, sy=C.rowcol(1); sx=C.rowcol(2); en
 fprintf('[f4_kernel_map] %d grid px | b range [%.3f %.3f] | ipsi site (col %d,row %d)\n', ...
     numel(b), min(b),max(b), round(sx),round(sy));
 
-% ---- background: grayscale brain as RGB (ignores colormap) ----
+% ---- USER-DEFINED brain mask (the ROI drawn during contra-model setup) ----
+% Clip to the user's defined brain mask via ctrl_brain_mask (one source of truth
+% across all Fig-4 brain panels): the drawn ROI rasterized by Stage-1 (contra|ipsi),
+% its boundary as the outline (outline == clip edge), and the drawn midline.
+[brainMask,bnd,mid] = ctrl_brain_mask(tag);
+haveROI = ~isempty(mid);
+
+% ---- background: grayscale brain as RGB, masked to the drawn ROI (white outside) ----
 g = mat2gray(brain); g = 0.35 + 0.55*g;              % lighten for overlay contrast
 RGBbrain = cat(3,g,g,g);
+mk3 = repmat(~brainMask,1,1,3);                       % outside-ROI -> white
+RGBbrain(mk3) = 1;
 
 % ---- per-pixel DOT weight map (each contra grid pixel = one dot, colored by weight) ----
 f=paperFig(7.2,6.6); ax=axes(f); hold(ax,'on');
-image(ax, RGBbrain);                             % gray brain (ignores colormap)
+image(ax, RGBbrain);                             % masked gray brain (ignores colormap)
 bmax=prctile(abs(b),99);                          % robust symmetric colour range
 scatter(ax, grC, grR, 22, b, 'filled', 'MarkerEdgeColor','none', 'MarkerFaceAlpha',0.95);
 % diverging blue-white-red colormap
 cmap=interp1([0 .5 1],[0.16 0.34 0.66; 1 1 1; 0.78 0.16 0.12], linspace(0,1,256));
 colormap(ax,cmap); clim(ax,[-bmax bmax]);
+% brain-mask boundary (outline = clip) + the drawn midline
+plot(ax,bnd(:,2),bnd(:,1),'-','Color',[.2 .2 .2],'LineWidth',0.9);
+if haveROI
+    plot(ax,mid.x,mid.y,':','Color',[.35 .35 .35],'LineWidth',0.8);
+end
 % ipsi target marker
 plot(ax, sx, sy, 'p', 'MarkerSize',12, 'MarkerFaceColor',[1 .85 .1], 'MarkerEdgeColor','k','LineWidth',0.6);
 % arrow from contra weight centroid -> ipsi site (in-axes, data coords)
 wpos=max(b,0); wc_c=sum(grC.*wpos)/sum(wpos); wc_r=sum(grR.*wpos)/sum(wpos);
 quiver(ax, wc_c, wc_r, sx-wc_c, sy-wc_r, 0, 'Color',[.1 .1 .1], 'LineWidth',1.3, 'MaxHeadSize',0.4);
-% midline (if available)
-try
-    R=load(fullfile(dd,sprintf('cp_roi2_ctrl_%s.mat',tag)));
-    fn=fieldnames(R);
-    for i=1:numel(fn), v=R.(fn{i});
-        if isnumeric(v)&&ismatrix(v)&&size(v,1)==2&&size(v,2)==2
-            plot(ax, v(:,1), v(:,2), ':', 'Color',[.35 .35 .35],'LineWidth',0.8); break; end
-    end
-catch; end
 
 axis(ax,'image'); set(ax,'YDir','reverse'); axis(ax,'off');
-xlim(ax,[1 nX]); ylim(ax,[1 nY]);
+% crop to the drawn-ROI bounding box (tight framing on the brain)
+[ry,rx]=find(brainMask); pad=12;
+xlim(ax,[max(1,min(rx)-pad) min(nX,max(rx)+pad)]);
+ylim(ax,[max(1,min(ry)-pad) min(nY,max(ry)+pad)]);
 title(ax,sprintf('Contra\\rightarrowipsi prediction kernel (%s, R^2_{te}=%.2f)', ...
     strrep(tag,'_','\_'), S2.R2_te),'FontSize',PS_fs(),'FontWeight','bold');
 cb=colorbar(ax); cb.Label.String='pixel weight (predicts ipsi)'; cb.FontSize=6; cb.Label.FontSize=6;
