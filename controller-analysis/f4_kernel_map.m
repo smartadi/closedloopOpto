@@ -36,16 +36,11 @@ fprintf('[f4_kernel_map] %d grid px | b range [%.3f %.3f] | ipsi site (col %d,ro
 g = mat2gray(brain); g = 0.35 + 0.55*g;              % lighten for overlay contrast
 RGBbrain = cat(3,g,g,g);
 
-% ---- interpolate + smooth the per-pixel weights into a contra heatmap ----
-[XX,YY]=meshgrid(1:nX,1:nY);
-F=scatteredInterpolant(grC,grR,b,'natural','none'); W0=F(XX,YY);
-cmask = logical(S1.contra_mask); W0(isnan(W0))=0;
-Ws=imgaussfilt(W0,5); Ws(~cmask)=NaN;
-bmax=prctile(abs(Ws(cmask)),99);
-
+% ---- per-pixel DOT weight map (each contra grid pixel = one dot, colored by weight) ----
 f=paperFig(7.2,6.6); ax=axes(f); hold(ax,'on');
 image(ax, RGBbrain);                             % gray brain (ignores colormap)
-hW=imagesc(ax, Ws); set(hW,'AlphaData', 0.82*double(cmask));   % weight heatmap over contra
+bmax=prctile(abs(b),99);                          % robust symmetric colour range
+scatter(ax, grC, grR, 22, b, 'filled', 'MarkerEdgeColor','none', 'MarkerFaceAlpha',0.95);
 % diverging blue-white-red colormap
 cmap=interp1([0 .5 1],[0.16 0.34 0.66; 1 1 1; 0.78 0.16 0.12], linspace(0,1,256));
 colormap(ax,cmap); clim(ax,[-bmax bmax]);
