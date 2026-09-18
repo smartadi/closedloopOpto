@@ -68,8 +68,7 @@ axis(ax,'image'); set(ax,'YDir','reverse'); axis(ax,'off');
 [ry,rx]=find(brainMask); pad=12;
 xlim(ax,[max(1,min(rx)-pad) min(nX,max(rx)+pad)]);
 ylim(ax,[max(1,min(ry)-pad) min(nY,max(ry)+pad)]);
-title(ax,sprintf('Stim site linear predictor kernel weights (R^2_{te}=%.2f)', S2.R2_te), ...
-    'FontSize',PS_fs(),'FontWeight','bold');
+title(ax,'Stim site linear predictor kernel weights','FontSize',PS_fs(),'FontWeight','bold');
 cb=colorbar(ax); cb.FontSize=6;                    % no label; only extreme ticks
 cb.Ticks=[-bmax bmax]; cb.TickLabels={sprintf('%+.2f',-bmax),sprintf('%+.2f',bmax)};
 cb.TickLength=0;
