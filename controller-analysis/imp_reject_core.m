@@ -128,6 +128,11 @@ R.er_q_ol   = prctile(R.er_ol,[25 50 75]);
 R.er_q_cl   = prctile(R.er_cl,[25 50 75]);
 % Fraction of trials on which the controller actually did work (ER < 1).
 R.er_frac_ol = mean(R.er_ol < 1);   R.er_frac_cl = mean(R.er_cl < 1);
+% HEADLINE rejection metric (Fig-4 Panel C, locked 2026-09-18): 1 - ER, per-session median.
+% Bounded (do-nothing A==G -> 0, perfect A==ref -> 1); both terms referenced to ref so OL can
+% never be "worse than nothing" -- replaces phi=1-RR, whose zero-referenced denominator sent OL
+% to -6.3. Keeps the contra model (G is the contra-predicted counterfactual). Report session-wise.
+R.rejER_ol = 1 - R.er_med_ol;   R.rejER_cl = 1 - R.er_med_cl;
 
 % ---------------- RR: response/disturbance energy ratio (Fig-4 Row-3 selected) --
 % Settled 1-3 s is the locked disturbance-rejection window (skips the inhibitory onset
