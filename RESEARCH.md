@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-18 — Fig-4 kernel map: drop R² from title
+**Changed/Found:** `f4_kernel_map.m` — removed `R²_te` from the title; title is now just "Stim site linear predictor kernel weights".
+**Why:** User: "Lets not write r2 here we will write it next to the prediction plots." R² belongs with the contra-model prediction panels, not the kernel map.
+**Next:** Report R²_te (0.75) next to the A=G+L prediction plots in the #4 composite panel.
+
 ### 2026-09-18 — Fig-4 kernel map: cosmetics (black site marker, clean colorbar, no session tag)
 **Changed/Found:** `f4_kernel_map.m` — stimulation-site dot + label switched green→black (more visible on the gray cortex); colorbar stripped to extreme ticks only (`±bmax`, tick length 0) with the "pixel weight" label removed; title reduced to one line "Stim site linear predictor kernel weights (R²_te=0.75)" with the session/mouse tag dropped.
 **Why:** User cleanup pass: "Make the text and dot black", "Remove text next to color bar and only use extreme ticks", "Remove the mouse info as well."
