@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-18 — Fig-4 kernel map: show the actual mean brain image in the background
+**Changed/Found:** `f4_kernel_map.m` background — replaced the washed-out `0.35+0.55*mat2gray` fill with a real contrast stretch of the mean image over in-ROI pixels (`lo/hi = 1st/99th pctile of brain(brainMask)`, then `0.12+0.85*g`), white outside the mask. The cortical anatomy (vasculature, low-fluorescence areas) now reads instead of a flat gray silhouette.
+**Why:** User: "put the actual brain image in background." The prior lightening was tuned only to make the weight dots pop and hid the anatomy.
+**Next:** Carry the same background treatment into the #4 contra-model composite panel.
+
 ### 2026-09-18 — Fig-4 brain mask: use the HAND-DRAWN polygon (fix row/col swap in ctrl_brain_mask)
 **Changed/Found:** `utils/ctrl_brain_mask.m` reworked. Traced the "actual brain I drew" to `cp_roi_masks.m`: the drawn outline is stored as `bx/by` NATIVE (row,col); `M.brain = inpolygon(bx,by) & (A>20th pctile)`, and `ctrl_ols_spont` saves `contra_mask/ipsi_mask = M.contra/M.ipsi`. So the raster `contra|ipsi` I used before is the drawn polygon MINUS a brightness floor (~7300 px: ragged edges + a dark hole). Confirmed numerically: correctly-oriented `poly2mask(by,bx)` (188376 px) contains 100% of the raster mask (181099 px). Helper now returns the smooth drawn polygon `poly2mask(by,bx)` as the mask, its boundary as the outline, and the midline plotted x=`my`(col)/y=`mx`(row). **Also fixed a latent bug:** my first version had bx/by (and mx/my) row/col swapped, which transposed the mask and laid the vertical midline flat — the midline now correctly runs vertical (~col 280), separating the contra weights from the ipsi target. `f4_kernel_map.m` unchanged (calls the helper).
 **Why:** User: "is this the actual brain mask that i drew? recheck the script where the hand drawn version lives and use that instead." The intensity-floored raster mask is for pixel selection, not display; the outline the user clicked is the polygon.

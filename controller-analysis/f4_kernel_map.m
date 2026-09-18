@@ -39,11 +39,13 @@ fprintf('[f4_kernel_map] %d grid px | b range [%.3f %.3f] | ipsi site (col %d,ro
 [brainMask,bnd,mid] = ctrl_brain_mask(tag);
 haveROI = ~isempty(mid);
 
-% ---- background: grayscale brain as RGB, masked to the drawn ROI (white outside) ----
-g = mat2gray(brain); g = 0.35 + 0.55*g;              % lighten for overlay contrast
-RGBbrain = cat(3,g,g,g);
-mk3 = repmat(~brainMask,1,1,3);                       % outside-ROI -> white
-RGBbrain(mk3) = 1;
+% ---- background: the actual mean brain image, contrast-stretched over in-ROI pixels ----
+lo=prctile(brain(brainMask),1); hi=prctile(brain(brainMask),99);   % anatomy contrast
+g=min(max((brain-lo)/max(hi-lo,eps),0),1);           % real grayscale brain (full range)
+g=0.12+0.85*g;                                        % keep near-black off pure black
+RGBbrain=cat(3,g,g,g);
+mk3=repmat(~brainMask,1,1,3);                         % outside-ROI -> white
+RGBbrain(mk3)=1;
 
 % ---- per-pixel DOT weight map (each contra grid pixel = one dot, colored by weight) ----
 f=paperFig(7.2,6.6); ax=axes(f); hold(ax,'on');
