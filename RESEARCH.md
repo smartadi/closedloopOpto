@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-18 — Fig-4: contra-model decomposition schematic (f4_contra_schematic.m)
+**Changed/Found:** new `controller-analysis/f4_contra_schematic.m` — Block-4 schematic of "how the contra model isolates the local disturbance." Left: the stim-site kernel on the real mean brain (reuses `ctrl_mean_img`+`ctrl_brain_mask`), arrow "ridge weights b, stim-blind λ". Right: the exemplar's trial-averaged Actual (`Aa`, dips to −3.8) vs Global (`Gg`, stays flat −0.6..0.17 through the stim), with the shaded gap = Local = A−G (stim + control). Real data, so it literally shows Global being blind to the local input. Exports `f4_contra_schematic.pdf` (18×6 cm) to paper/images/figure4.
+**Why:** User asked to "build a schematic" after the discussion of how the ridge Global predictor negates the stim effect (built from the other hemisphere; ridge shrinks the small-eigenvalue directions where stim leaks; λ set stim-blind from laser-off catch windows). Replaces the abstract 3×3 grid cue on the old `f4_decomp_schematic`.
+**Next:** Compose the #4 composite (kernel map + this A=G+L schematic + φ rejection); add R²_te (0.75) next to the prediction; consider a small eigenvalue-shrinkage inset for the stim-blind mechanism.
+
 ### 2026-09-18 — Fig-4 kernel map: drop R² from title
 **Changed/Found:** `f4_kernel_map.m` — removed `R²_te` from the title; title is now just "Stim site linear predictor kernel weights".
 **Why:** User: "Lets not write r2 here we will write it next to the prediction plots." R² belongs with the contra-model prediction panels, not the kernel map.
