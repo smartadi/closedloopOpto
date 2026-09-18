@@ -16,7 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
-### 2026-09-18 — Fig-4 kernel map: retitle + relabel dot
+### 2026-09-18 — Fig-4 kernel map: cosmetics (black site marker, clean colorbar, no session tag)
+**Changed/Found:** `f4_kernel_map.m` — stimulation-site dot + label switched green→black (more visible on the gray cortex); colorbar stripped to extreme ticks only (`±bmax`, tick length 0) with the "pixel weight" label removed; title reduced to one line "Stim site linear predictor kernel weights (R²_te=0.75)" with the session/mouse tag dropped.
+**Why:** User cleanup pass: "Make the text and dot black", "Remove text next to color bar and only use extreme ticks", "Remove the mouse info as well."
+**Next:** none.
+
+### 2026-09-18 — Methods: add session-aware LMM paragraph for Fig-4 D/E (+ motion panel)
+**Changed/Found:** `Closedloop_edit/methods_edit.tex` (draft branch) — replaced the superseded per-trial φ-vs-state Spearman/quartile test in the "Disturbance decomposition and rejection" subsection with the session-aware linear mixed-effects model that Fig-4 D/E and the motion panel now use: `RMSE ~ condition*state + (1+condition|session) + (1|mouse)`, state centred/scaled within session; condition main effect = OL–CL gap, condition×state interaction = state-dependence of the rejection benefit; corroborated by mouse→session→trial hierarchical bootstrap.
+**Why:** Methods had no description of the referee-proof LMM (Nick's "account for sessions" ask) that the finalized Fig-4 Results (L136) and caption already report (init-dev interaction p=0.56 n.s., delta p=0.014 n=15, motion p=0.0027 n=11). Methods text still described only the old quartile+Spearman approach → Methods/Results mismatch.
+**Next:** none (numbers stay in Results/caption; Methods describes the model only). Compiles clean (34 pp).
+
+### 2026-09-18 — Methods: reconcile disturbance-rejection metric ρ→φ to match finalized Fig-4
+**Changed/Found:** `Closedloop_edit/methods_edit.tex` (draft branch) — rewrote the rejection-metric definition from the linear ratio `ρ = ‖A−r‖/‖G‖` (0=perfect, 1=passthrough, rank-sum test) to the energy-based fraction removed `φ = 1 − ‖A−r‖²/‖G‖²` (φ=1 perfect, 0 none, <0 amplification), summarised per session by median φ and compared OL vs CL with the two-sided Wilcoxon **signed-rank** test.
+**Why:** Results L133 already uses φ (median −0.20 OL → +0.23 CL, 12/13 sessions, signed-rank p=4.9e-4); Methods still carried the old linear ρ and named a rank-sum test → definition + test-name mismatch. User (2026-09-18) chose the [0,1]-oriented "fraction rejected, 0=no rejection" form, which is exactly φ. NOTE for Nick review: this keeps the 1− offset he asked to drop on 2026-07-28 — flagged deliberately.
+**Next:** none.
+
 **Changed/Found:** `f4_kernel_map.m` — title now "Stim site linear predictor kernel weights" (session tag + R²_te on a 2nd line to avoid left-edge clipping at 7.2 cm / 6 pt); green-dot subtitle changed from "ipsi" to "stimulation site".
 **Why:** User: "Make the title say stim site linear predictor kernel weights, make the dot subtitle say stimulation site."
 **Next:** none.
