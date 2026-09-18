@@ -20,7 +20,7 @@ S1=load(fullfile(dd,sprintf('ctrl_ols_spont_%s.mat',tag)));
 O =load(fullfile(dd,sprintf('ctrl_ols_ol_stimblind%s_%s.mat',sfx,tag)));
 brain=ctrl_mean_img(tag); [bm,bnd,mid]=ctrl_brain_mask(tag); [nY,nX]=size(brain);
 b=O.b(:); grR=O.grR(:); grC=O.grC(:);
-sx=S1.px_prim; sy=S1.py_prim;                 % stim site (col,row)
+sx=S1.py_prim; sy=S1.px_prim;                 % stim site: x=col(py_prim), y=row(px_prim)
 t=O.rel(:).'/O.Fs; A=O.Aa(:).'; G=O.Gg(:).'; L=O.Lo(:).';   % trial-avg traces (t in s)
 colA=[0.10 0.10 0.10]; colG=[0.20 0.40 0.75]; colL=[0.78 0.16 0.12];
 

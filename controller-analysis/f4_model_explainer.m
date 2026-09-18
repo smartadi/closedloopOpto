@@ -19,7 +19,7 @@ S1=load(fullfile(dd,sprintf('ctrl_ols_spont_%s.mat',tag)));
 [sfx,pmode]=ctrl_pred_tag(); assert(strcmp(pmode,'ridge'),'need ridge predictor');
 O =load(fullfile(dd,sprintf('ctrl_ols_ol_stimblind%s_%s.mat',sfx,tag)));
 brain=ctrl_mean_img(tag); [bm,bnd,mid]=ctrl_brain_mask(tag); [nY,nX]=size(brain);
-b=O.b(:); grR=O.grR(:); grC=O.grC(:); sx=S1.px_prim; sy=S1.py_prim;
+b=O.b(:); grR=O.grR(:); grC=O.grC(:); sx=S1.py_prim; sy=S1.px_prim;   % stim site x=col, y=row
 t=O.rel(:).'/O.Fs; A=O.Aa(:).'; G=O.Gg(:).';
 P=O.RPATH; [la,ord]=sort(P.lambdas); R2te=P.R2te(ord); leak=P.catchdef(ord); nrm=P.nrm(ord); lstar=P.lambda_star;
 colG=[0.20 0.40 0.75]; colA=[0.10 0.10 0.10]; colL=[0.78 0.16 0.12]; colK=[0.30 0.30 0.30];

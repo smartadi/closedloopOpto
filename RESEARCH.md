@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-18 — Fig-4 schematic/explainer: fix swapped stim-site pixel (px/py_prim = row/col)
+**Changed/Found:** `f4_contra_schematic.m` + `f4_model_explainer.m` — the stim-site dot was plotted at `(px_prim,py_prim)` as `(x,y)`, but per `cp_roi_masks` `px_prim`=ROW and `py_prim`=COLUMN, so x/y were swapped (dot at col 322,row 398 instead of the true col 398,row 322 = `rowcol`). Fixed to `sx=py_prim (col)`, `sy=px_prim (row)`. `f4_kernel_map.m` was already correct (it overrides with `C.rowcol`).
+**Why:** User: "the ipsi pixel is wrongly placed." Coordinate convention mismatch dropped when the rowcol cross-check wasn't carried into the new scripts.
+**Next:** none.
+
 ### 2026-09-18 — Fig-4: 3-step model explainer figure (f4_model_explainer.m)
 **Changed/Found:** new `controller-analysis/f4_model_explainer.m` — pedagogical "how the stim-blind contra→ipsi model works" figure, 3 real-data steps with numbered badges + arrows: (1) LEARN — kernel on the real brain, "fit on laser-off frames"; (2) REGULARIZE — the actual ridge path (catch-window leak rel. + spont R² vs λ, log-x, λ*=0.046 marked; ‖b‖ 7.9→0.1); (3) DECOMPOSE — Actual vs Global with shaded Local=A−G. Exports `f4_model_explainer.pdf` (19×6.6 cm). Uses the RPATH fields (lambdas/R2te/catchdef/nrm) from the ridge cache — no rebuild.
 **Why:** User: "Can we build an explanatory figure that shows how this model works." Extends the compact `f4_contra_schematic` (decomposition only) with the training + stim-blind-λ steps. Corrected panel-2 caption to "cut leak, stop before R² falls" — at λ* the catch leak is still declining, so λ* is the leak-vs-R² knee, not a leak plateau.
