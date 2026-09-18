@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-18 — Fig-4 kernel map: drop centroid arrow, ipsi target = green dot
+**Changed/Found:** `f4_kernel_map.m` — removed the weight-centroid→ipsi quiver arrow; ipsi target marker changed from yellow star to a plain green filled dot (label recoloured green to match).
+**Why:** User: "Drop the arrow and make it the ipsi just a green dot." Cleaner read; the arrow implied a single directional path that overstated the spatially distributed kernel.
+**Next:** none.
+
 ### 2026-09-18 — Fig-4 kernel map: show the actual mean brain image in the background
 **Changed/Found:** `f4_kernel_map.m` background — replaced the washed-out `0.35+0.55*mat2gray` fill with a real contrast stretch of the mean image over in-ROI pixels (`lo/hi = 1st/99th pctile of brain(brainMask)`, then `0.12+0.85*g`), white outside the mask. The cortical anatomy (vasculature, low-fluorescence areas) now reads instead of a flat gray silhouette.
 **Why:** User: "put the actual brain image in background." The prior lightening was tuned only to make the weight dots pop and hid the anatomy.
