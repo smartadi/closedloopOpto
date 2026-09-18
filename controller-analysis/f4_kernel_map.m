@@ -20,11 +20,11 @@ tag='AL_0033_0415_e2';
 S1=load(fullfile(dd,sprintf('ctrl_ols_spont_%s.mat',tag)));
 [sfx,pmode]=ctrl_pred_tag(); assert(strcmp(pmode,'ridge'),'need ridge predictor');
 S2=load(fullfile(dd,sprintf('ctrl_ols_ol_stimblind%s_%s.mat',sfx,tag)));
-C =load(fullfile(dd,sprintf('cp_stim_site_ctrl_%s.mat',tag)));   % brain image + site
+C =load(fullfile(dd,sprintf('cp_stim_site_ctrl_%s.mat',tag)));   % site rowcol (C.brain is BINARY)
 
 b   = S2.b(:);                 % per grid-pixel weight (Su = 1..nGrid)
 grR = S1.grR(:); grC = S1.grC(:);
-brain = double(C.brain);       % mean image (560x560)
+brain = ctrl_mean_img(tag);    % ACTUAL mean SVD image (560x560, native frame)
 [nY,nX]=size(brain);
 % ipsi target site (col=px, row=py); cross-check with cp_stim_site rowcol
 sx = S1.px_prim; sy = S1.py_prim;
@@ -71,8 +71,9 @@ ylim(ax,[max(1,min(ry)-pad) min(nY,max(ry)+pad)]);
 title(ax,sprintf('Contra\\rightarrowipsi prediction kernel (%s, R^2_{te}=%.2f)', ...
     strrep(tag,'_','\_'), S2.R2_te),'FontSize',PS_fs(),'FontWeight','bold');
 cb=colorbar(ax); cb.Label.String='pixel weight (predicts ipsi)'; cb.FontSize=6; cb.Label.FontSize=6;
-% legend-ish text
-text(ax, double(sx)+10, double(sy), 'ipsi target', 'Color',[0.15 0.55 0.20],'FontSize',6,'FontWeight','bold');
+% label below the green dot
+text(ax, double(sx), double(sy)+16, 'ipsi', 'Color',[0.15 0.55 0.20],'FontSize',6,'FontWeight','bold', ...
+    'HorizontalAlignment','center','VerticalAlignment','top');
 
 paperExport(f, fullfile(outfig,'f4_kernel_map.pdf'));
 paperExport(f, fullfile(outview,'f4_kernel_map.png'));

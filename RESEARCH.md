@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-18 — Fig-4 kernel map: real mean SVD image background (C.brain was BINARY); "ipsi" label under dot
+**Changed/Found:** `f4_kernel_map.m` + new `utils/ctrl_mean_img.m`. Root cause of the white background: `cp_stim_site` `.brain` is a **binary silhouette** (unique values {0,1}), not the mean image — my contrast stretch mapped 1→white, 0→black. New helper `ctrl_mean_img(tag)` loads the actual mean fluorescence image from `blue/meanImage.npy` (via `expPath`), returns it native [nY×nX] (verified: in-mask brightness 3.58× vs 2.12× transposed → native orientation aligns with masks), and caches to `data/ctrl_meanimg_<tag>.mat` (git-ignored) so the figure is offline-safe (raw server data is lab-PC-only). Figure now shows real cortical anatomy under the weight dots. Also: ipsi marker label moved to read "ipsi" centred BELOW the green dot.
+**Why:** User: "i just see white background instead of the mean svd brain image" + "Write ipsi below the dot." `.brain` had silently been a mask all along.
+**Next:** First run on the home PC hit the reachable server to build the cache; the cache now travels with nothing (git-ignored) so a fresh lab-PC checkout rebuilds it on first run. Reuse `ctrl_mean_img` for the #4 composite panel.
+
 ### 2026-09-18 — Fig-4 kernel map: drop centroid arrow, ipsi target = green dot
 **Changed/Found:** `f4_kernel_map.m` — removed the weight-centroid→ipsi quiver arrow; ipsi target marker changed from yellow star to a plain green filled dot (label recoloured green to match).
 **Why:** User: "Drop the arrow and make it the ipsi just a green dot." Cleaner read; the arrow implied a single directional path that overstated the spatially distributed kernel.
