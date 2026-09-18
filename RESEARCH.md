@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-18 — Fig-4 kernel map: retitle + relabel dot
+**Changed/Found:** `f4_kernel_map.m` — title now "Stim site linear predictor kernel weights" (session tag + R²_te on a 2nd line to avoid left-edge clipping at 7.2 cm / 6 pt); green-dot subtitle changed from "ipsi" to "stimulation site".
+**Why:** User: "Make the title say stim site linear predictor kernel weights, make the dot subtitle say stimulation site."
+**Next:** none.
+
 ### 2026-09-18 — Fig-4 kernel map: real mean SVD image background (C.brain was BINARY); "ipsi" label under dot
 **Changed/Found:** `f4_kernel_map.m` + new `utils/ctrl_mean_img.m`. Root cause of the white background: `cp_stim_site` `.brain` is a **binary silhouette** (unique values {0,1}), not the mean image — my contrast stretch mapped 1→white, 0→black. New helper `ctrl_mean_img(tag)` loads the actual mean fluorescence image from `blue/meanImage.npy` (via `expPath`), returns it native [nY×nX] (verified: in-mask brightness 3.58× vs 2.12× transposed → native orientation aligns with masks), and caches to `data/ctrl_meanimg_<tag>.mat` (git-ignored) so the figure is offline-safe (raw server data is lab-PC-only). Figure now shows real cortical anatomy under the weight dots. Also: ipsi marker label moved to read "ipsi" centred BELOW the green dot.
 **Why:** User: "i just see white background instead of the mean svd brain image" + "Write ipsi below the dot." `.brain` had silently been a mask all along.
