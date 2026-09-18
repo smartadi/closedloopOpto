@@ -60,8 +60,8 @@ plot(ax,bnd(:,2),bnd(:,1),'-','Color',[.2 .2 .2],'LineWidth',0.9);
 if haveROI
     plot(ax,mid.x,mid.y,':','Color',[.35 .35 .35],'LineWidth',0.8);
 end
-% ipsi target marker: plain green dot
-plot(ax, sx, sy, 'o', 'MarkerSize',8, 'MarkerFaceColor',[0.15 0.65 0.20], 'MarkerEdgeColor','none');
+% stimulation-site marker: plain black dot
+plot(ax, sx, sy, 'o', 'MarkerSize',8, 'MarkerFaceColor','k', 'MarkerEdgeColor','none');
 
 axis(ax,'image'); set(ax,'YDir','reverse'); axis(ax,'off');
 % crop to the drawn-ROI bounding box (tight framing on the brain)
@@ -73,7 +73,7 @@ title(ax,{'Stim site linear predictor kernel weights', ...
     'FontSize',PS_fs(),'FontWeight','bold');
 cb=colorbar(ax); cb.Label.String='pixel weight (predicts ipsi)'; cb.FontSize=6; cb.Label.FontSize=6;
 % label below the green dot
-text(ax, double(sx), double(sy)+16, 'stimulation site', 'Color',[0.15 0.55 0.20],'FontSize',6,'FontWeight','bold', ...
+text(ax, double(sx), double(sy)+16, 'stimulation site', 'Color','k','FontSize',6,'FontWeight','bold', ...
     'HorizontalAlignment','center','VerticalAlignment','top');
 
 paperExport(f, fullfile(outfig,'f4_kernel_map.pdf'));
