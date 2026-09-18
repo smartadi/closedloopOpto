@@ -68,10 +68,11 @@ axis(ax,'image'); set(ax,'YDir','reverse'); axis(ax,'off');
 [ry,rx]=find(brainMask); pad=12;
 xlim(ax,[max(1,min(rx)-pad) min(nX,max(rx)+pad)]);
 ylim(ax,[max(1,min(ry)-pad) min(nY,max(ry)+pad)]);
-title(ax,{'Stim site linear predictor kernel weights', ...
-    sprintf('%s, R^2_{te}=%.2f', strrep(tag,'_','\_'), S2.R2_te)}, ...
+title(ax,sprintf('Stim site linear predictor kernel weights (R^2_{te}=%.2f)', S2.R2_te), ...
     'FontSize',PS_fs(),'FontWeight','bold');
-cb=colorbar(ax); cb.Label.String='pixel weight (predicts ipsi)'; cb.FontSize=6; cb.Label.FontSize=6;
+cb=colorbar(ax); cb.FontSize=6;                    % no label; only extreme ticks
+cb.Ticks=[-bmax bmax]; cb.TickLabels={sprintf('%+.2f',-bmax),sprintf('%+.2f',bmax)};
+cb.TickLength=0;
 % label below the green dot
 text(ax, double(sx), double(sy)+16, 'stimulation site', 'Color','k','FontSize',6,'FontWeight','bold', ...
     'HorizontalAlignment','center','VerticalAlignment','top');
