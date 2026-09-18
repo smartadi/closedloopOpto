@@ -47,7 +47,7 @@ badge(0.015,0.86,'1');
 annotation(f,'arrow',[0.29 0.335],[0.5 0.5],'HeadStyle','vback2','HeadWidth',6,'HeadLength',6,'Color',colK);
 
 % ===== STEP 2 -- REGULARIZE (stim-blind lambda) ===================================
-axL=axes(f,'Position',[0.375 0.20 0.21 0.58]); hold(axL,'on');
+axL=axes(f,'Position',[0.375 0.47 0.21 0.31]); hold(axL,'on');
 yyaxis(axL,'left');
 plot(axL,la,leak/max(leak),'-o','Color',colL,'MarkerFaceColor',colL,'MarkerSize',2.5,'LineWidth',PS.lw_mean);
 ylabel(axL,'catch leak (rel.)','Color',colL,'FontSize',PS.fs,'FontWeight',PS.fw); ylim(axL,[0.75 1.02]);
@@ -61,8 +61,25 @@ text(axL,lstar,0.79,'  \lambda*','Color',colK,'FontSize',PS.fs,'FontWeight','bol
 xlabel(axL,'ridge \lambda','FontSize',PS.fs,'FontWeight',PS.fw);
 set(axL,'Box','off','TickDir','out','FontSize',PS.fs,'FontWeight',PS.fw);
 title(axL,{'Regularize (stim-blind):','cut leak, stop before R^2 falls'},'FontSize',PS.fs,'FontWeight','bold');
-text(axL,min(la)*2,0.685,sprintf('||b||: %.1f\\rightarrow%.1f',nrm(1),nrm(end)),'Color',colK,'FontSize',PS.fs-0.5,'FontWeight','bold');
 badge(0.375,0.82,'2');
+
+% --- step-2 inset: WHY shrinkage works -- ridge retention across variance-ranked modes ---
+% Real ridge filter f = e/(e+lambda*) applied to an illustrative contra-covariance spectrum:
+% high-variance (shared-disturbance) modes are kept (f~1); the low-variance, collinear tail --
+% where the stim signature concentrates -- is shrunk away (f~0). Schematic spectrum, real filter.
+axE=axes(f,'Position',[0.375 0.135 0.21 0.20]); hold(axE,'on');
+nM=80; ev=logspace(1.4,-2.0,nM); ev=ev/mean(ev);        % illustrative eigenvalues (variance-ranked)
+fret=ev./(ev+lstar);                                    % REAL ridge retention per mode
+its=find(fret<0.5);
+if ~isempty(its)
+    patch(axE,[its(1) nM nM its(1)],[0 0 1.05 1.05],colL,'FaceAlpha',0.12,'EdgeColor','none');
+end
+plot(axE,1:nM,fret,'-','Color',colK,'LineWidth',PS.lw_mean);
+xlim(axE,[1 nM]); ylim(axE,[0 1.08]); set(axE,'Box','off','TickDir','out','FontSize',PS.fs,'FontWeight',PS.fw,'XTick',[]);
+ylabel(axE,'kept by ridge','FontSize',PS.fs,'FontWeight',PS.fw); xlabel(axE,'contra mode (variance-ranked)','FontSize',PS.fs,'FontWeight',PS.fw);
+text(axE,3,0.28,'shared','Color',colG,'FontSize',PS.fs-0.5,'FontWeight','bold');
+text(axE,3,0.12,'disturbance','Color',colG,'FontSize',PS.fs-0.5,'FontWeight','bold');
+if ~isempty(its), text(axE,nM-2,0.72,{'stim leak','(shrunk)'},'Color',colL,'FontSize',PS.fs-0.5,'FontWeight','bold','HorizontalAlignment','right'); end
 
 annotation(f,'arrow',[0.60 0.645],[0.5 0.5],'HeadStyle','vback2','HeadWidth',6,'HeadLength',6,'Color',colK);
 

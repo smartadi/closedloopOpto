@@ -595,6 +595,19 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > **contra→ipsi KERNEL MAP `controller-analysis/f4_kernel_map.m`** (ridge weights per contra pixel on the
 > brain, ipsi target marked; weights DISTRIBUTED across the contra hemisphere — supports the shared-network
 > disturbance reading) replaces the abstract 3×3 grid cue on `f4_decomp_schematic`.
+>
+> ⭐ **Block-4 build (2026-09-18).** MAIN-TEXT panel = **`controller-analysis/f4_contra_model.m`** — composite
+> row: (a) stim-site linear predictor kernel weights on the real mean brain (clipped to the drawn ROI via
+> `utils/ctrl_brain_mask`, background = mean SVD image via `utils/ctrl_mean_img`), (b) deploy Actual vs Global,
+> gap = Local = A−G, R²_te=0.75 annotated, (c) per-session φ=1−RR OL→CL (median −0.20→+0.23, CL>OL 12/13,
+> signrank p=4.9e-4). SUPPLEMENT / methods = **`controller-analysis/f4_model_explainer.m`** — 3-step "how it
+> works" (Learn on laser-off frames → Regularize with stim-blind λ [real ridge path: catch-leak↓, spont R²
+> held; + eigenvalue-retention inset: ridge keeps high-variance shared modes, shrinks the low-variance
+> stim-leak tail] → Decompose A=G+L). `f4_contra_schematic.m` = compact standalone decomposition (superseded
+> by f4_contra_model panel b for main text; kept as an alternative). Mechanism note: Global negates the stim
+> because it is built from the OTHER hemisphere (local input not reproducible) and ridge shrinks the
+> small-eigenvalue directions the stim signature occupies; λ set from laser-off catch windows (never a stim
+> trial). Residual leak ~7% → Local is a mild UNDER-estimate of the controller effect (conservative).
 
 > **Panel plan.** Currently **single-session (m4 = AL_0033 2025-02-26)** + exploratory styling → these
 > are *drafts*; production panels await the **Stage 1→2 cross-session sweep** (automated affected

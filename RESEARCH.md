@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-18 — Fig-4 Block-4: composite contra-model panel + eigenvalue inset + main/supp decision
+**Changed/Found:** (1) new `controller-analysis/f4_contra_model.m` — MAIN-TEXT Block-4 composite (a kernel weights on brain + colorbar, b Actual-vs-Global decomposition with R²_te=0.75, c per-session φ OL→CL paired: median −0.203→+0.226, CL>OL 12/13, signrank p=4.9e-4). Reuses `ctrl_brain_mask`/`ctrl_mean_img` and the φ data from `imp_reject_across_sessions_ridge.mat`. (2) `f4_model_explainer.m` — added the step-2 eigenvalue-retention inset: real ridge filter e/(e+λ*) over an illustrative variance-ranked contra spectrum, shading the shrunk low-variance "stim-leak" tail vs kept "shared disturbance" modes. (3) PAPER.md: main = f4_contra_model, supp/methods = f4_model_explainer, f4_contra_schematic noted as superseded-but-kept.
+**Why:** User "Do all" — build the eigenvalue inset, compose the #4 panel, and pick main-vs-supp. Eigenvalue inset kept SCHEMATIC (real filter, illustrative spectrum): the quantitative per-mode version needs Xg_full → reload of m8's 2.5 GB spatial SVD (+ d.timeBlue, no local session cache), judged not worth the OOM/MCP-crash risk for an illustrative point.
+**Next:** If a quantitative eigenvalue spectrum is wanted, build `ctrl_stimblind_spectrum.m` as a standalone lab-PC run (load SVD once, cache eigenvalues + stim-signature projection). Assemble Figure4.pdf from the 4 blocks at paperStyle.
+
 ### 2026-09-18 — Fig-4 schematic/explainer: fix swapped stim-site pixel (px/py_prim = row/col)
 **Changed/Found:** `f4_contra_schematic.m` + `f4_model_explainer.m` — the stim-site dot was plotted at `(px_prim,py_prim)` as `(x,y)`, but per `cp_roi_masks` `px_prim`=ROW and `py_prim`=COLUMN, so x/y were swapped (dot at col 322,row 398 instead of the true col 398,row 322 = `rowcol`). Fixed to `sx=py_prim (col)`, `sy=px_prim (row)`. `f4_kernel_map.m` was already correct (it overrides with `C.rowcol`).
 **Why:** User: "the ipsi pixel is wrongly placed." Coordinate convention mismatch dropped when the rowcol cross-check wasn't carried into the new scripts.
