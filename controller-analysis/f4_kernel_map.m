@@ -60,11 +60,8 @@ plot(ax,bnd(:,2),bnd(:,1),'-','Color',[.2 .2 .2],'LineWidth',0.9);
 if haveROI
     plot(ax,mid.x,mid.y,':','Color',[.35 .35 .35],'LineWidth',0.8);
 end
-% ipsi target marker
-plot(ax, sx, sy, 'p', 'MarkerSize',12, 'MarkerFaceColor',[1 .85 .1], 'MarkerEdgeColor','k','LineWidth',0.6);
-% arrow from contra weight centroid -> ipsi site (in-axes, data coords)
-wpos=max(b,0); wc_c=sum(grC.*wpos)/sum(wpos); wc_r=sum(grR.*wpos)/sum(wpos);
-quiver(ax, wc_c, wc_r, sx-wc_c, sy-wc_r, 0, 'Color',[.1 .1 .1], 'LineWidth',1.3, 'MaxHeadSize',0.4);
+% ipsi target marker: plain green dot
+plot(ax, sx, sy, 'o', 'MarkerSize',8, 'MarkerFaceColor',[0.15 0.65 0.20], 'MarkerEdgeColor','none');
 
 axis(ax,'image'); set(ax,'YDir','reverse'); axis(ax,'off');
 % crop to the drawn-ROI bounding box (tight framing on the brain)
@@ -75,7 +72,7 @@ title(ax,sprintf('Contra\\rightarrowipsi prediction kernel (%s, R^2_{te}=%.2f)',
     strrep(tag,'_','\_'), S2.R2_te),'FontSize',PS_fs(),'FontWeight','bold');
 cb=colorbar(ax); cb.Label.String='pixel weight (predicts ipsi)'; cb.FontSize=6; cb.Label.FontSize=6;
 % legend-ish text
-text(ax, double(sx)+10, double(sy), 'ipsi target', 'Color',[.15 .15 .15],'FontSize',6,'FontWeight','bold');
+text(ax, double(sx)+10, double(sy), 'ipsi target', 'Color',[0.15 0.55 0.20],'FontSize',6,'FontWeight','bold');
 
 paperExport(f, fullfile(outfig,'f4_kernel_map.pdf'));
 paperExport(f, fullfile(outview,'f4_kernel_map.png'));
