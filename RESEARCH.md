@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-18 — Fig-4: 3-step model explainer figure (f4_model_explainer.m)
+**Changed/Found:** new `controller-analysis/f4_model_explainer.m` — pedagogical "how the stim-blind contra→ipsi model works" figure, 3 real-data steps with numbered badges + arrows: (1) LEARN — kernel on the real brain, "fit on laser-off frames"; (2) REGULARIZE — the actual ridge path (catch-window leak rel. + spont R² vs λ, log-x, λ*=0.046 marked; ‖b‖ 7.9→0.1); (3) DECOMPOSE — Actual vs Global with shaded Local=A−G. Exports `f4_model_explainer.pdf` (19×6.6 cm). Uses the RPATH fields (lambdas/R2te/catchdef/nrm) from the ridge cache — no rebuild.
+**Why:** User: "Can we build an explanatory figure that shows how this model works." Extends the compact `f4_contra_schematic` (decomposition only) with the training + stim-blind-λ steps. Corrected panel-2 caption to "cut leak, stop before R² falls" — at λ* the catch leak is still declining, so λ* is the leak-vs-R² knee, not a leak plateau.
+**Next:** Decide which is the main-text panel (compact schematic) vs methods/supp (this explainer); optionally add an eigenvalue-spectrum inset (needs Xg_full → a rebuild, not cached).
+
 ### 2026-09-18 — Fig-4: contra-model decomposition schematic (f4_contra_schematic.m)
 **Changed/Found:** new `controller-analysis/f4_contra_schematic.m` — Block-4 schematic of "how the contra model isolates the local disturbance." Left: the stim-site kernel on the real mean brain (reuses `ctrl_mean_img`+`ctrl_brain_mask`), arrow "ridge weights b, stim-blind λ". Right: the exemplar's trial-averaged Actual (`Aa`, dips to −3.8) vs Global (`Gg`, stays flat −0.6..0.17 through the stim), with the shaded gap = Local = A−G (stim + control). Real data, so it literally shows Global being blind to the local input. Exports `f4_contra_schematic.pdf` (18×6 cm) to paper/images/figure4.
 **Why:** User asked to "build a schematic" after the discussion of how the ridge Global predictor negates the stim effect (built from the other hemisphere; ridge shrinks the small-eigenvalue directions where stim leaks; λ set stim-blind from laser-off catch windows). Replaces the abstract 3×3 grid cue on the old `f4_decomp_schematic`.
