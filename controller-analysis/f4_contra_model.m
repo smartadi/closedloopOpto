@@ -61,7 +61,7 @@ text(axD,xl(1)+0.1,yl(1)*0.92,sprintf('R^2_{te} = %.2f',R2),'Color',colG,'FontSi
 title(axD,'Global predicts the counterfactual','FontSize',PS.fs,'FontWeight','bold');
 
 % ===== (c) per-session disturbance rejection: 1 - ER (bounded, contra model) =======
-% ER = ||A-ref||^2 / ||G-ref||^2 (both referenced to ref) on the 0-3 s stim window, so a
+% ER = ||A-ref||^2 / ||G-ref||^2 (both referenced to ref) on the SETTLED 1-3 s window, so a
 % do-nothing controller (A==G) gives ER=1 -> rejection 0, and the fraction stays in [0,1]
 % (unlike phi=1-RR, whose zero-referenced denominator sent OL to -6). Per session = 1-median(ER).
 axP=axes(f,'Position',[0.80 0.20 0.165 0.60]); hold(axP,'on');

@@ -609,15 +609,19 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > small-eigenvalue directions the stim signature occupies; λ set from laser-off catch windows (never a stim
 > trial). Residual leak ~7% → Local is a mild UNDER-estimate of the controller effect (conservative).
 >
-> ⭐ **Rejection metric LOCKED = 1 − ER (2026-09-18, user: "using the contra model is the whole point").**
-> ER = ‖A−ref‖² / ‖G−ref‖² (BOTH referenced to ref), 0–3 s stim window, per-session median. Bounded:
-> do-nothing A==G → 0, perfect A==ref → 1; OL can never be "worse than nothing". **Replaces φ=1−RR**
-> (RR=‖A−ref‖²/‖G‖², zero-referenced denominator), whose per-session OL ran to −6.3 — a normalization
-> artefact, not amplification. Session-wise (n=13): **median OL 0.71 → CL 0.80, CL>OL 13/13, signrank
-> p=2.4e-4** (validated per-session with 2000× trial bootstrap). Single source `imp_reject_core.rejER_ol/cl`.
-> Alternative considered + rejected: CL-vs-OL raw-ipsi ratio (median 0.52, 12/13>0) — bounded and OL=baseline
-> but drops the contra model (≈ Fig-3 RMSE in the settled window). Comparison fig: `f4_reject_metric_compare.m`.
-> Panels updated: `f4_contra_model.m` (c), `f4_disturb_rejection.m` (panel 5 → `f4_disturb_rejection_paired`).
+> ⭐ **Rejection metric LOCKED = 1 − ER, SETTLED 1–3 s (2026-09-19, user: "using the contra model is
+> the whole point" + "lock 1-ER on 1-3s").** ER = ‖A−ref‖² / ‖G−ref‖² (BOTH referenced to ref), the
+> locked 1–3 s window (`Q.er_ol = er_ol_rej`), per-session median. Bounded: do-nothing A==G → 0, perfect
+> A==ref → 1 (all 13 sessions × both conditions land in [0,1]); OL never "worse than nothing". **Replaces
+> φ=1−RR** (RR=‖A−ref‖²/‖G‖², zero-referenced denominator), whose per-session OL ran to −6.3 — a
+> normalization artefact, not amplification. **CACHE REBUILT 2026-09-19** (was stale 2026-08-13 → 0–3 s;
+> fresh run on the settled window). Session-wise (n=13): **median OL 0.77 → CL 0.90, CL>OL 12/13, signrank
+> p=4.9e-4**; lone non-rejector AL_0048 (ER 0.233→0.243). Single source `imp_reject_core.rejER_ol/cl`.
+> Alternatives considered + REJECTED: (a) **SR** = ‖A−⟨A⟩‖²/‖G−⟨G⟩‖² (mean-removed fluctuation) — n.s.
+> (OL 2.5%→CL 7.3%, 10/13, p=0.068) and NOT bounded (5 OL sessions amplify), because the stim disturbance
+> is a MEAN excursion SR discards; code labels it robustness, ER headline. (b) CL-vs-OL raw-ipsi ratio —
+> bounded but drops the contra model (≈ Fig-3 RMSE). Comparison fig: `f4_reject_metric_compare.m`.
+> Panels: `f4_contra_model.m` (c), `f4_disturb_rejection.m` (panel 5 → `f4_disturb_rejection_paired`).
 
 > **Panel plan.** Currently **single-session (m4 = AL_0033 2025-02-26)** + exploratory styling → these
 > are *drafts*; production panels await the **Stage 1→2 cross-session sweep** (automated affected

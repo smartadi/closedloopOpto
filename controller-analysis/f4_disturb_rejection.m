@@ -157,10 +157,10 @@ paperExport(f, fullfile(outfig,'f4_disturb_pertrial.pdf'));
 paperExport(f, fullfile(outview,'f4_disturb_pertrial.png'));
 
 %% ===== PANEL 5 : per-session disturbance rejection (all sessions, paired) ======
-% Reported as 1 - ER, ER = ||A-ref||^2 / ||G-ref||^2 (BOTH referenced to ref), 0-3 s stim
-% window. Do-nothing (A==G) -> ER=1 -> rejection 0; perfect (A==ref) -> 1. Strictly bounded
-% and OL can never be "worse than nothing" -- unlike phi=1-RR (zero-referenced denominator),
-% whose per-session OL ran to -6.3 (a normalization artefact). RESEARCH 2026-09-18.
+% Reported as 1 - ER, ER = ||A-ref||^2 / ||G-ref||^2 (BOTH referenced to ref), SETTLED 1-3 s
+% window (Q.er_ol = er_ol_rej). Do-nothing (A==G) -> ER=1 -> rejection 0; perfect (A==ref) -> 1.
+% Strictly bounded and OL can never be "worse than nothing" -- unlike phi=1-RR (zero-referenced
+% denominator), whose per-session OL ran to -6.3 (a normalization artefact). RESEARCH 2026-09-19.
 L = load(fullfile(dd,'imp_reject_across_sessions_ridge.mat')); XS = L.XSr; Q = XS.Q; nS = numel(Q);
 rej_ol = arrayfun(@(q) 1 - median(q.er_ol), Q).';   % 1 - median ER per session (0-3 s)
 rej_cl = arrayfun(@(q) 1 - median(q.er_cl), Q).';

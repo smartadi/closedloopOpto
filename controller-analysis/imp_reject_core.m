@@ -128,11 +128,14 @@ R.er_q_ol   = prctile(R.er_ol,[25 50 75]);
 R.er_q_cl   = prctile(R.er_cl,[25 50 75]);
 % Fraction of trials on which the controller actually did work (ER < 1).
 R.er_frac_ol = mean(R.er_ol < 1);   R.er_frac_cl = mean(R.er_cl < 1);
-% HEADLINE rejection metric (Fig-4 Panel C, locked 2026-09-18): 1 - ER, per-session median.
-% Bounded (do-nothing A==G -> 0, perfect A==ref -> 1); both terms referenced to ref so OL can
-% never be "worse than nothing" -- replaces phi=1-RR, whose zero-referenced denominator sent OL
-% to -6.3. Keeps the contra model (G is the contra-predicted counterfactual). Report session-wise.
-R.rejER_ol = 1 - R.er_med_ol;   R.rejER_cl = 1 - R.er_med_cl;
+% HEADLINE rejection metric (Fig-4 Panel C, locked 2026-09-19): 1 - ER on the SETTLED 1-3 s
+% window (er_*_rej), matching the locked disturbance-rejection window (rho/SR). Bounded
+% (do-nothing A==G -> 0, perfect A==ref -> 1); both terms referenced to ref so OL can never be
+% "worse than nothing" -- replaces phi=1-RR, whose zero-referenced denominator sent OL to -6.3.
+% Keeps the contra model (G = contra-predicted counterfactual). Report session-wise. NB the
+% cross-session builder already stores Q.er_ol = er_ol_rej (1-3 s); use that, not the 0-3 s er_med.
+R.rejER_ol = 1 - median(R.er_ol_rej(isfinite(R.er_ol_rej)));
+R.rejER_cl = 1 - median(R.er_cl_rej(isfinite(R.er_cl_rej)));
 
 % ---------------- RR: response/disturbance energy ratio (Fig-4 Row-3 selected) --
 % Settled 1-3 s is the locked disturbance-rejection window (skips the inhibitory onset
