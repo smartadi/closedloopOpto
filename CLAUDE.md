@@ -157,6 +157,23 @@ After reading the sub-area file, also check:
 - PDF only for panels listed in `PAPER.md` under "Paper panels in use", or user says "paper panel / paper figure".
 - If unsure, use PNG.
 
+## Finalized-panels rule (Illustrator pull-folder)
+
+**A panel is "final" iff it is listed in `paper/figures_final/MANIFEST.txt`.** That folder
+(`paper/figures_final/panels/<figure>/`) is the ONLY place to pull panels into Illustrator —
+it holds the locked set and nothing else. The scattered `paper/images/figureN/` dirs are
+working dirs full of superseded/exploratory panels; never point the assembly at them.
+
+- **When a panel is locked in:** add its source line (path relative to `paper/images/`) under
+  the right `[section]` in `MANIFEST.txt`, then run `paper/figures_final/collect_final_panels.m`.
+- **When a panel is retired/superseded:** delete its line and re-run the collector.
+- The collector makes `panels/<section>/` match the manifest EXACTLY — it copies listed
+  sources in and **deletes any panel PDF not listed**, so the pull-folder never accumulates
+  unused panels. `collect_final_panels('dry')` previews without changing anything.
+- Keep `MANIFEST.txt` in sync with PAPER.md's "Paper panels in use" registry (same set).
+- `paper/` is gitignored (PDFs are local-only), so the **manifest + collector .m + README are
+  the tracked record**; the panel PDFs themselves live only on disk.
+
 ---
 
 ## Locked-in project decisions

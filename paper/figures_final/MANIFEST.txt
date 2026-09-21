@@ -1,0 +1,75 @@
+# MANIFEST — the locked paper panels, and NOTHING else.
+# ---------------------------------------------------------------------------
+# This file is the single source of truth for what lives in figures_final/panels/.
+# Each [section] is a destination folder panels/<section>/. Every line under it is
+# ONE source panel path, relative to paper/images/ (paths may contain spaces —
+# the whole line is the path, do not split on spaces). '#' starts a comment.
+#
+# Run  collect_final_panels.m  to make panels/<section>/ hold EXACTLY these files:
+# it copies each listed source in and DELETES any panel PDF not listed. That is
+# what keeps Illustrator's pull-folder free of retired/exploratory panels.
+#
+# THE RULE: a panel is "final" iff it is listed here. When you lock a panel, add
+# its source line here and re-run the collector; when you retire one, delete its
+# line and re-run. Never point Illustrator at paper/images/figureN/ (working dirs,
+# full of superseded panels) — always pull from figures_final/panels/.
+# Keep this list in sync with PAPER.md's "Paper panels in use" registry.
+# ===========================================================================
+
+[figure1]
+wfpath.pdf
+schematic_optoephyswf (1).pdf
+figure1/svd_frame_AL_0039_2025-04-19.pdf
+
+[figure2]
+figure2/imp_response.pdf
+figure2/imp_single_AL_0033_2025-01-29_en1.pdf
+supplementary/tf_cv_single_AL_0033.pdf
+figure2/tf_cv_heldout_r2.pdf
+figure2/tf_model_swap.pdf
+figure2/tf_tau_forest.pdf
+figure2/imp_state_var_motion.pdf
+figure2/imp_state_var_reldelta.pdf
+
+[figure3]
+figure3/panel_A.pdf
+figure3/panel_B.pdf
+figure3/panel_C.pdf
+figure3/panel_D.pdf
+figure3/panel_E.pdf
+figure3/all_variance_sessions.pdf
+figure3/all_average_sessions.pdf
+figure3/all_MSE_sessions.pdf
+figure3/variance_ratio_by_window.pdf
+figure3/MSE_ratio_by_window.pdf
+
+# figure_motion is its own manuscript figure (fig:figure_motion), not part of Fig 4.
+[figure_motion]
+figure4/f4_2B_motion.pdf
+
+# PROVISIONAL — Panel A (keep/expand/drop) and the final Panel-C layout
+# (composite f4_contra_model vs the individual disturb sub-panels) are still open.
+# Update this section once those two decisions land.
+[figure4]
+figure4/f4_state_exemplars.pdf
+figure4/f4_decomp_unique_rel.pdf
+figure4/f4_contra_model.pdf
+figure4/f4_2A_initdev.pdf
+figure4/f4_2C_delta.pdf
+
+[figure5]
+figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf
+figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf
+figure5/sine_5D_trialavg_input_AL_0048_2026-07-14_1.pdf
+figure5/sine_5E_rmse_time_AL_0048_2026-07-14_1.pdf
+figure5/sine_5F_variance_AL_0048_2026-07-14_1.pdf
+figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf
+figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf
+figure5/sine_combined_phase.pdf
+figure5/sine_combined_rmse.pdf
+figure5/sine_combined_variance.pdf
+
+[supplementary]
+figure2/tf_cv_2D_endlabels.pdf
+figure2/tf_cv_2D_sidebar.pdf
+figure2/tf_cv_shape_across_sessions.pdf

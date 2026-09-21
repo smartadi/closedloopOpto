@@ -1,8 +1,23 @@
-# figures_final — current assembled paper figures
+# figures_final — the locked paper panels (Illustrator pull-folder)
 
-Snapshot of the figure PDFs currently in use, one per manuscript figure.
-Copied here (originals stay in `paper/images/...`). Refresh by re-copying after
-re-assembling a figure. `paper/` is gitignored, so this folder is local-only.
+**Pull every panel into Illustrator from `panels/<figure>/` — never from
+`paper/images/figureN/`** (those are working dirs full of superseded panels).
+
+`panels/<figure>/` holds EXACTLY the locked set and nothing else. The list is
+`MANIFEST.txt`; the sync is `collect_final_panels.m`:
+
+- **Lock a panel** → add its source line under the right `[section]` of `MANIFEST.txt`,
+  then run `collect_final_panels` (from MATLAB, in this folder).
+- **Retire a panel** → delete its line, re-run. The collector copies listed sources in
+  and **deletes any panel PDF not in the manifest**, so the folder never accumulates
+  unused panels. `collect_final_panels('dry')` previews without changing anything.
+- Keep `MANIFEST.txt` = PAPER.md's "Paper panels in use" registry.
+
+`paper/` is gitignored, so the tracked record is **MANIFEST.txt + collect_final_panels.m +
+this README**; the panel PDFs themselves are local-only.
+
+The top-level `FigureN.pdf` below are the assembled figures (Illustrator output); refresh
+by re-copying after re-assembling.
 
 | File | Source | Source date | Status |
 |------|--------|-------------|--------|
@@ -23,7 +38,8 @@ match the filenames (E=variance, F=RMSE, J=phase, K=variance) — read the path.
 | figure1 | 3 | only the raster/vector panels; 1D/1E/1F are Illustrator-native (no PDF) |
 | figure2 | 8 | A imp_response, B imp_single, C tf_cv_single (from supplementary/), **D tf_cv_heldout_r2** (2026-09-13: held-out R² per session + IQR, pooled median 0.86; the shape overlays tf_cv_shape_across / _2D_sidebar / _2D_endlabels moved to panels/supplementary/), E tf_model_swap, F tf_tau_forest, G imp_state_var_motion, H imp_state_var_reldelta |
 | figure3 | 10 | verified against assembled Figure3.pdf (A–J). 3K (pooled_ol_cl_rmse_15sess) is NOT in this assembly — it's pending re-assembly per PAPER.md; the manuscript includes Figure3_extra.pdf, which may differ |
-| figure4 | 10 | ⚠ PROVISIONAL — current f4_* set; PAPER.md Fig-4 section is stale, panels being finalized (Row-2 = today's session-level; SR rejection panel + re-assembly pending) |
+| figure4 | 5 | ⚠ PROVISIONAL (2026-09-21) — locked set via MANIFEST: f4_state_exemplars, f4_decomp_unique_rel, f4_contra_model (Panel C composite), f4_2A_initdev (D), f4_2C_delta (E). Panel A (keep/expand/drop) + final C layout (composite vs individual disturb sub-panels) still open |
+| figure_motion | 1 | f4_2B_motion (its own manuscript figure, split out of Fig 4) |
 | figure5 | 10 | verified against assembled Figure5.pdf (B–K; A is the Illustrator control diagram, no PDF). s2 primary session + 3 across-session combined panels |
 
 ## Caveats
@@ -34,4 +50,4 @@ match the filenames (E=variance, F=RMSE, J=phase, K=variance) — read the path.
 - Fig 4 here is the pre-2026-09-12 assembly; it does NOT yet reflect the
   regenerated Row-2 panels (session-level star) or the SR rejection metric.
 
-_Last refreshed: 2026-09-12._
+_Last refreshed: 2026-09-21 (manifest-driven via collect_final_panels.m)._
