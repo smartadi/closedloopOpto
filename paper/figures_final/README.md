@@ -38,8 +38,7 @@ match the filenames (E=variance, F=RMSE, J=phase, K=variance) — read the path.
 | figure1 | 3 | only the raster/vector panels; 1D/1E/1F are Illustrator-native (no PDF) |
 | figure2 | 8 | A imp_response, B imp_single, C tf_cv_single (from supplementary/), **D tf_cv_heldout_r2** (2026-09-13: held-out R² per session + IQR, pooled median 0.86; the shape overlays tf_cv_shape_across / _2D_sidebar / _2D_endlabels moved to panels/supplementary/), E tf_model_swap, F tf_tau_forest, G imp_state_var_motion, H imp_state_var_reldelta |
 | figure3 | 10 | verified against assembled Figure3.pdf (A–J). 3K (pooled_ol_cl_rmse_15sess) is NOT in this assembly — it's pending re-assembly per PAPER.md; the manuscript includes Figure3_extra.pdf, which may differ |
-| figure4 | 5 | ⚠ PROVISIONAL (2026-09-21) — locked set via MANIFEST: f4_state_exemplars, f4_decomp_unique_rel, f4_contra_model (Panel C composite), f4_2A_initdev (D), f4_2C_delta (E). Panel A (keep/expand/drop) + final C layout (composite vs individual disturb sub-panels) still open |
-| figure_motion | 1 | f4_2B_motion (its own manuscript figure, split out of Fig 4) |
+| figure4 | 7 | 2026-09-21 user spec: exemplars (f4_state_exemplars); error decomp init/motion/rel-2-4/abs-δ each δ own model (f4_decomp_unique_sep); quartile OL−CL gap vs pred error init/motion/rel-2-4/abs-δ w/ session-aware LMM star (f4_2A_initdev, f4_2B_motion, f4_2C_delta, f4_2D_absdelta); contra-model setup letter-free (f4_contra_model). Letters added in Illustrator. Old contra-level Panel A (ctrl_state_xsess) DROPPED |
 | figure5 | 10 | verified against assembled Figure5.pdf (B–K; A is the Illustrator control diagram, no PDF). s2 primary session + 3 across-session combined panels |
 
 ## Caveats

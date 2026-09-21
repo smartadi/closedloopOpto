@@ -116,6 +116,33 @@ for mi=1:numel(modes)
     DEC.(mo)=struct('Up',Up,'Cp',Cp,'Us',Us,'Cs',Cs,'okS',okS,'fac',{fl},'grp',{grpL},'nSok',nSok);
 end
 
+%% ── MODE 'sep': 4 bars, but rel & abs delta each in its OWN init+motion+delta model ──────────
+% (user 2026-09-21) rel-2-4 and abs-delta are collinear, so a single 4-factor model makes them
+% cannibalise each other (abs wins, rel -> 0). Here each delta's unique R^2 is taken over the
+% SAME init+motion base but in its own 3-factor model, so both are shown "separately" without
+% competing: u_init/u_motion from the rel model; u_rel from {init,motion,rel}; u_abs from
+% {init,motion,abs}. This is the Panel-B main-text decomposition.
+%   Xall cols: 1=init 2=motion 3=rel-2-4 4=abs-delta(log10)
+sepU = @(Z,y) [ fitR2(Z(:,[1 2 3]),y)-fitR2(Z(:,[2 3]),y); ...   % init  (rel model)
+                fitR2(Z(:,[1 2 3]),y)-fitR2(Z(:,[1 3]),y); ...   % motion(rel model)
+                fitR2(Z(:,[1 2 3]),y)-fitR2(Z(:,[1 2]),y); ...   % rel   (unique over init+motion)
+                fitR2(Z(:,[1 2 4]),y)-fitR2(Z(:,[1 2]),y) ];     % abs   (unique over init+motion)
+Usep=nan(4,2);
+for w=1:2, Usep(:,w)=sepU(zscore(Xall),Wout{w}); end
+okSsep=false(nS,1); UsepS=nan(4,2,nS);
+for si=1:nS
+    ix=SESS==usess(si); if nnz(ix)<minTr; continue; end
+    okSsep(si)=true; Zs=zscore(Xall(ix,:));
+    for w=1:2, UsepS(:,w,si)=sepU(Zs,Wout{w}(ix)); end
+end
+nSsep=nnz(okSsep);
+fprintf('\n==== MODE ''sep'' (each delta in its own init+motion+d model) | UNIQUE R^2 (0-1 / 1-3) ====\n');
+for j=1:4, fprintf('  %-11s %6.3f %6.3f\n',fac_lbl{j},Usep(j,1),Usep(j,2)); end
+draw_grouped(Usep, UsepS(:,:,okSsep), fac_lbl, {col_e,col_l}, win_lbl, 'unique R^2', ...
+    sprintf('Unique R^2 (each \\delta own model) (n=%d, %d sess)',n,nSsep), PS, ...
+    fullfile(outfig,'f4_decomp_unique_sep.pdf'), fullfile(outview,'f4_decomp_unique_sep.png'));
+DEC.sep=struct('Up',Usep,'Us',UsepS,'okS',okSsep,'fac',{fac_lbl},'nSok',nSsep);
+
 save(fullfile(root,'controller-analysis','data','f4_error_decomp.mat'), ...
     'DEC','usess','win_lbl','n','nS','minTr','fac_lbl');
 fprintf('\n[f4_error_decomp] wrote unique+combined panels for %d delta modes -> %s\n', numel(modes), outfig);

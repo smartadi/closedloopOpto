@@ -43,19 +43,20 @@ figure3/all_MSE_sessions.pdf
 figure3/variance_ratio_by_window.pdf
 figure3/MSE_ratio_by_window.pdf
 
-# figure_motion is its own manuscript figure (fig:figure_motion), not part of Fig 4.
-[figure_motion]
-figure4/f4_2B_motion.pdf
-
-# PROVISIONAL — Panel A (keep/expand/drop) and the final Panel-C layout
-# (composite f4_contra_model vs the individual disturb sub-panels) are still open.
-# Update this section once those two decisions land.
+# Figure 4 (user spec 2026-09-21). Four blocks; letters added in Illustrator.
+#   1 exemplars (4 states)
+#   2 error decomposition: init/motion/rel-2-4/abs-delta, each delta in its OWN model (f4_error_decomp 'sep')
+#   3 quartile OL-CL gap vs pred error: init/motion/rel-2-4/abs-delta, session-aware LMM star
+#   4 contra-model setup (letter-free; lettered in Illustrator)
+# (The old contra-level Panel A = ctrl_state_xsess is DROPPED from Fig 4.)
 [figure4]
 figure4/f4_state_exemplars.pdf
-figure4/f4_decomp_unique_rel.pdf
-figure4/f4_contra_model.pdf
+figure4/f4_decomp_unique_sep.pdf
 figure4/f4_2A_initdev.pdf
+figure4/f4_2B_motion.pdf
 figure4/f4_2C_delta.pdf
+figure4/f4_2D_absdelta.pdf
+figure4/f4_contra_model.pdf
 
 [figure5]
 figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf

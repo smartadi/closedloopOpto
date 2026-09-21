@@ -21,8 +21,9 @@ function [POOL, meta] = f4_row2_pool(mouse, fields)
 % meta holds the constants used, for callers that need them.
 Fs=35; ref=-5; c0=36; c1=71; c2=141; dur=3; c0_mot=71; c0_l=106; c0_p=351;
 relopts=struct('pre',2,'post',3);           % delta window -2 -> stim end (matches row 1)
-states={'initdev','motion','delta'};
+states={'initdev','motion','delta','absdelta'};   % absdelta = log10 abs 1-4 Hz power (same window as rel)
 POOL=struct(); for s=states, POOL.(s{1})=table(); end
+adlog=@(v) reshape(log10(max(double(v(:)),eps)),[],1);
 
 for k=1:numel(fields)
     M=mouse.(fields{k}); if ~isfield(M,'data'); continue; end; d=M.data;
@@ -39,10 +40,12 @@ for k=1:numel(fields)
         S.motion={mean(d.ncmotion(:,wsO:weO),2), mean(d.wcmotion(:,wsC:weC),2)};   % PLAIN mean, no rectify
     else, S.motion={nan(numel(yOL),1),nan(numel(yCL),1)}; end
     if isfield(d,'pncDfk_l')&&~isempty(d.pncDfk_l)&&isfield(d,'pwcDfk_l')&&~isempty(d.pwcDfk_l)
-        S.delta={cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts), cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts)};
+        [rO,cO]=cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts);
     elseif isfield(d,'pncDfk')&&~isempty(d.pncDfk)&&isfield(d,'pwcDfk')&&~isempty(d.pwcDfk)
-        S.delta={cl_reldelta(d.pncDfk,c0_p,Fs,relopts), cl_reldelta(d.pwcDfk,c0_p,Fs,relopts)};
-    else, S.delta={nan(numel(yOL),1),nan(numel(yCL),1)}; end
+        [rO,cO]=cl_reldelta(d.pncDfk,c0_p,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk,c0_p,Fs,relopts);
+    else, rO=nan(numel(yOL),1); rC=nan(numel(yCL),1); cO.delta=rO; cC.delta=rC; end
+    S.delta={rO,rC};
+    S.absdelta={adlog(cO.delta), adlog(cC.delta)};   % same [-2,+3]s window, abs 1-4 Hz power (log10)
 
     for s=states, nm=s{1};
         xO=S.(nm){1}; xC=S.(nm){2};

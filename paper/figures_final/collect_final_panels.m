@@ -37,7 +37,7 @@ for i = 1:numel(lines)
 end
 
 figs = fieldnames(sec);
-nCopy=0; nDel=0; nMiss=0; nKeep=0;
+nCopy=0; nDel=0; nMiss=0; nKeep=0; nLock=0;
 fprintf('\n=== collect_final_panels %s ===\n', ternary(dry,'(DRY RUN)',''));
 for f = 1:numel(figs)
     fn = figs{f}; destdir = fullfile(here,'panels',fn);
@@ -58,8 +58,14 @@ for f = 1:numel(figs)
         end
         needcopy = ~isfile(dest) || dir(src).datenum > dir(dest).datenum;
         if needcopy
-            if ~dry; copyfile(src,dest); end
-            fprintf('  copy     %s\n', base); nCopy = nCopy+1;
+            okc = true;
+            if ~dry
+                try, copyfile(src,dest);
+                catch, okc=false; nLock=nLock+1;
+                    fprintf('  LOCKED   %s  (close it in Illustrator/Acrobat, then re-run)\n', base);
+                end
+            end
+            if okc; fprintf('  copy     %s\n', base); nCopy = nCopy+1; end
         else
             nKeep = nKeep+1;
         end
@@ -68,14 +74,21 @@ for f = 1:numel(figs)
     existing = dir(fullfile(destdir,'*.pdf'));
     for k = 1:numel(existing)
         if ~any(wantBase == string(existing(k).name))
-            if ~dry; delete(fullfile(destdir,existing(k).name)); end
-            fprintf('  DELETE   %s  (not in manifest)\n', existing(k).name); nDel = nDel+1;
+            okd = true;
+            if ~dry
+                try, delete(fullfile(destdir,existing(k).name));
+                catch, okd=false; nLock=nLock+1;
+                    fprintf('  LOCKED   %s  (open elsewhere; not deleted)\n', existing(k).name);
+                end
+            end
+            if okd; fprintf('  DELETE   %s  (not in manifest)\n', existing(k).name); nDel = nDel+1; end
         end
     end
 end
-fprintf('--- %d copied, %d up-to-date, %d deleted, %d missing sources ---\n', ...
-    nCopy, nKeep, nDel, nMiss);
+fprintf('--- %d copied, %d up-to-date, %d deleted, %d missing sources, %d locked ---\n', ...
+    nCopy, nKeep, nDel, nMiss, nLock);
 if nMiss>0; fprintf('  (missing = listed in MANIFEST but not yet exported to paper/images/)\n'); end
+if nLock>0; fprintf('  (locked = open in another app; close them and re-run to finish the sync)\n'); end
 if dry; fprintf('  DRY RUN: nothing was changed.\n'); end
 end
 

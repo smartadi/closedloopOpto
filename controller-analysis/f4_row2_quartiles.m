@@ -44,9 +44,9 @@ Fs=35; ref=-5; c0=36; c1=71; c2=141; dur=3; c0_mot=71; c0_l=106; c0_p=351;
 % (onset col 106); the delta path falls back to these so rel-delta needs no cache rebuild.
 relopts = struct('pre',2,'post',3);            % delta window -2 -> stim end (matches row 1)
 colOL = PS.col_ol; colCL = PS.col_cl;
-preds = {'initdev','motion','delta'};
-titR2 = {'Initial deviation','Motion','Rel 2-4 Hz'};
-fnout = {'f4_2A_initdev.pdf','f4_2B_motion.pdf','f4_2C_delta.pdf'};
+preds = {'initdev','motion','delta','absdelta'};
+titR2 = {'Initial deviation','Motion','Rel 2-4 Hz','Abs \delta'};
+fnout = {'f4_2A_initdev.pdf','f4_2B_motion.pdf','f4_2C_delta.pdf','f4_2D_absdelta.pdf'};
 
 % ---- session-aware LMM: SHARED with f4_row2_stats.m so the panel star == f4_2S_stats decoupling p.
 % Same pool (f4_row2_pool) + same model (f4_row2_fit): RMSE~cond*state_wc+(1+cond|sess)+(1|mouse).
@@ -76,10 +76,13 @@ for k=1:numel(fields)
         S.motion={mean(d.ncmotion(:,wsO:weO),2), mean(d.wcmotion(:,wsC:weC),2)};   % PLAIN mean (unified w/ f4_row2_pool)
     else, S.motion={nan(nO,1),nan(nC,1)}; end
     if isfield(d,'pncDfk_l')&&~isempty(d.pncDfk_l)&&isfield(d,'pwcDfk_l')&&~isempty(d.pwcDfk_l)
-        S.delta={cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts), cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts)};
+        [rO,cO]=cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts);
     elseif isfield(d,'pncDfk')&&~isempty(d.pncDfk)&&isfield(d,'pwcDfk')&&~isempty(d.pwcDfk)
-        S.delta={cl_reldelta(d.pncDfk,c0_p,Fs,relopts), cl_reldelta(d.pwcDfk,c0_p,Fs,relopts)};
-    else, S.delta={nan(nO,1),nan(nC,1)}; end
+        [rO,cO]=cl_reldelta(d.pncDfk,c0_p,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk,c0_p,Fs,relopts);
+    else, rO=nan(nO,1); rC=nan(nC,1); cO.delta=rO; cC.delta=rC; end
+    S.delta={rO,rC};
+    adlog=@(v) reshape(log10(max(double(v(:)),eps)),[],1);
+    S.absdelta={adlog(cO.delta), adlog(cC.delta)};    % log10 abs 1-4 Hz power, same window as rel
 
     muY=mean([yOL;yCL],'omitnan'); sgY=std([yOL;yCL],'omitnan'); if sgY==0||isnan(sgY); continue; end
     zyOL=(yOL-muY)/sgY; zyCL=(yCL-muY)/sgY;
@@ -168,12 +171,12 @@ for ip=1:numel(preds); nm=preds{ip};
     set(ax,'XTick',1:4,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out', ...
         'FontSize',PS.fs,'FontWeight','bold');
     ylim(ax,[-0.65 1.40]); yl=ylim(ax);   % common range across the 3 panels (gap trends comparable)
-    % decoupling star -- SESSION-AWARE LMM cond x state interaction (Nick 2026-09-11)
-    text(ax,2.5,yl(2)-0.02*range(yl),sprintf('cond\\timesstate %s',starstr(pC)), ...
-        'HorizontalAlignment','center','VerticalAlignment','top','FontSize',6,'FontWeight','bold','Color',[0.1 0.1 0.1]);
-    text(ax,2.5,yl(2)-0.02*range(yl)-0.11*range(yl),sprintf('LMM p=%.2g',pC), ...
-        'HorizontalAlignment','center','VerticalAlignment','top','FontSize',5,'Color',[0.35 0.35 0.35]);
-    title(ax,sprintf('%s  (%d tr)',titR2{ip},nTr),'FontSize',PS.fs,'FontWeight','bold');
+    % decoupling star -- session-aware LMM cond x state interaction (top-RIGHT, clear of bars+legend)
+    text(ax,4.45,yl(2),sprintf('cond\\timesstate %s',starstr(pC)), ...
+        'HorizontalAlignment','right','VerticalAlignment','top','FontSize',5.5,'FontWeight','bold','Color',[0.1 0.1 0.1]);
+    text(ax,4.45,yl(2)-0.10*range(yl),sprintf('p=%.2g',pC), ...
+        'HorizontalAlignment','right','VerticalAlignment','top','FontSize',5,'Color',[0.35 0.35 0.35]);
+    title(ax,titR2{ip},'FontSize',PS.fs,'FontWeight','bold');   % trial count -> caption (cleaner panel)
     if ip==1
         ylabel(ax,'RMSE to ref (z)','FontSize',PS.fs,'FontWeight','bold');
         % compact legend

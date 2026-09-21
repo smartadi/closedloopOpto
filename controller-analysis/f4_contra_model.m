@@ -77,10 +77,7 @@ xlim(axP,[0.6 2.4]); ylim(axP,[0 1]); set(axP,'XTick',[1 2],'XTickLabel',{'OL','
 ylabel(axP,'disturbance rejected  1 - ER','FontSize',PS.fs,'FontWeight',PS.fw);
 title(axP,sprintf('n=%d, CL>OL %d/%d, p=%s',nS,nwin,nS,pstr(p_sess)),'FontSize',PS.fs,'FontWeight',PS.fw);
 
-% panel letters
-annotation(f,'textbox',[0.005 0.90 .03 .06],'String','a','FontSize',PS.fs+2,'FontWeight','bold','EdgeColor','none');
-annotation(f,'textbox',[0.375 0.90 .03 .06],'String','b','FontSize',PS.fs+2,'FontWeight','bold','EdgeColor','none');
-annotation(f,'textbox',[0.755 0.90 .03 .06],'String','c','FontSize',PS.fs+2,'FontWeight','bold','EdgeColor','none');
+% panel letters intentionally OMITTED -- lettered in Illustrator to match the rest of Fig 4.
 
 paperExport(f,fullfile(outfig,'f4_contra_model.pdf'));
 paperExport(f,fullfile(outview,'f4_contra_model.png'));
