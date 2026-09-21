@@ -1,59 +1,53 @@
 function ctrl_tube_mpc(varargin)
-%CTRL_TUBE_MPC  STAGE 4c: what a 1-s disturbance PREVIEW buys over the PI controller,
-%               and where a REAL forecaster (Lu et al. 2025 benchmark) lands on that curve.
+%CTRL_TUBE_MPC  STAGE 4c: disturbance-preview tube-MPC vs the PI controller --
+%               swept over forecast uncertainty and preview horizon, with the actuator-gain
+%               uncertainty MEASURED from open-loop trials, and a real forecaster (Lu et al.
+%               2025 benchmark) placed on the curve.
 %
-% STORY (user, 2026-09-11 rebuild)
-%   Stage-4b (ctrl_optimal_control.m) showed the best-possible CAUSAL controller is a
-%   receding-horizon MPC that predicts the disturbance as CONSTANT (hold-last). This script
-%   asks the next question: if instead the controller PREVIEWS the disturbance ~1 s ahead --
-%   but the preview is UNCERTAIN (a tube of width sigma around the mean disturbance) -- how
-%   much RMSE does that preview buy over PI, and how does the benefit decay with sigma?
+% METRIC (2026-09-15, user): residual disturbance-rejection RMSE as a RATIO to the PI controller,
+%   rho_r = RMSE_MPC / RMSE_PI   (PI = 1; lower is better; 0.30 means "70% less error than PI").
+%   Reported on the +1..+3 s window (skips the irreducible onset transient). The ratio is clearer
+%   than a "% improvement" that saturates at a misleading 100%.
 %
-%   Then it ANCHORS sigma to reality using the same lab's forecasting benchmark:
-%     Lu, Li, Ladd, Matveev, Deole, Shea-Brown, Kutz, Steinmetz.
-%     "Benchmarking Probabilistic Time Series Forecasting Models on Neural Activity."
-%     NeurIPS 2025 Workshop: Data on the Brain & Mind.   (same widefield rig, 35 Hz, CCF/SVD)
-%   Their Fig 1e reports Std(pred dist)/Std(training data) ~ 0.90 at a 1-s horizon for the
-%   best models (PatchTST, AR); ~0.83 at 0.5 s. For a calibrated probabilistic forecaster the
-%   predictive-std ratio ~ normalized forecast-error std, and our disturbance's climatology
-%   std IS sigma_nat -- so a forecaster's operating point on our axis is
-%       sigma_model = ratio_at_1s * sigma_nat.
-%   Naive (repeat-last) carries no skill vs climatology -> sigma ~ sigma_nat (right edge).
+% WHY PERFECT PREVIEW IS NOT PERFECT. Two limits survive even with a flawless disturbance forecast:
+%   (i) the actuator dynamics/delay must be respected (in H); over the slow settled window they do
+%   not bite, but (ii) the laser->activity GAIN is state dependent and varies trial to trial. We
+%   MEASURE that variability from the open-loop trials (per-trial gain scatter, CV ~ 0.35) and carry
+%   it as a multiplicative gain error g~N(0,sigma_u^2) on the REALIZED plant, the controller planning
+%   with the nominal plant. So every "realistic" curve sits above 0 no matter how good the forecast.
 %
-% FRAMING NOTES (honest, carried from the change log)
-%   * Plant = Stage-4a LTI (delay absorbed). Disturbance d = y_PI - H*u_PI is the SAME
-%     plant-inversion disturbance the Stage-4b optimal solve fights; sigma_nat = std(d).
-%   * Only the DISTURBANCE preview is uncertain here (full-state feedback assumed) -- the tube
-%     is a first-order (DC-gain) constraint-tightening, not a full rigid-tube invariant set.
-%   * The sigma axis is a swept knob; the benchmark markers translate a published, same-modality
-%     forecastability number onto it. The forecaster is NOT re-fit on our (short, stim-locked)
-%     disturbance -- that is a different, data-starved regime and would understate skill.
+% FORECAST-ERROR MODEL. Preview error std at lead tau = f_skill * sigma_nat * rho(tau), where rho is
+%   Lu et al. Fig 1e Std(pred)/Std(train) vs lead time on the same widefield modality (rho~0.1 @0s,
+%   0.6 @0.2s, 0.83 @0.5s, 0.90 @1s). Near term nearly known, far term climatological.
 %
-% USAGE
-%   ctrl_tube_mpc                      % default session AL_0033_0226_e2 (=m4)
-%   ctrl_tube_mpc('sess','AL_0033_0226_e2','nMC',30,'seed',7)
+%     Lu, Li, Ladd, Matveev, Deole, Shea-Brown, Kutz, Steinmetz. "Benchmarking Probabilistic Time
+%     Series Forecasting Models on Neural Activity." NeurIPS 2025 Workshop: Data on the Brain & Mind.
 %
-% OUT  paper/images/figure4/tubempc_improvement.png  (money plot + benchmark markers)
-%      paper/images/figure4/tubempc_example.png      (one rollout: disturbance/tube, tracking, command)
+% OUT  paper/images/figure4/tubempc_improvement.png  (residual ratio vs forecast sigma)
+%      paper/images/figure4/tubempc_horizon.png      (residual ratio vs preview horizon, capped 1 s)
+%      paper/images/figure4/tubempc_example.png      (rollout with TUBES around the response)
 %      controller-analysis/data/ctrl_tube_mpc_<sess>.mat
 
 %% [TMPC-CFG] -------------------------------------------------------------------
 P.sess   = 'AL_0033_0226_e2';   % m4
 P.Fs     = 35;
-P.Hp     = 35;                  % preview / MPC horizon = 1 s
-P.ref    = -5;                  % setpoint (%dF/F), project default
-P.lam    = 1e-4;                % input regularization (conditioning)
-P.uMode  = 'CL';                % actuator ceiling = PI's own usage (fair same-budget)
-P.nMC    = 30;                  % Monte-Carlo forecast-error draws per sigma
-P.nSig   = 7;                   % sigma grid points 0 .. sigMax
-P.sigMul = 1.2;                 % sigMax = sigMul * sigma_nat
-P.kTube  = 2.0;                 % tube tightening = kTube-sigma DC-gain margin
-P.corrMs = 86;                  % forecast-error temporal smoothing (ms) ~ loop delay
-% Lu et al. Fig 1e Std(pred dist)/Std(train) @ 1-s horizon. AR & PatchTST ~0.90 (the paper:
-% "PatchTST and AR perform similarly") -> collapsed to one best-model point; Naive = no skill.
+P.Hp     = 35;                  % nominal preview / MPC horizon = 1 s
+P.ref    = -5;
+P.lam    = 1e-4;
+P.uMode  = 'CL';
+P.rmseWin= [1 3];
+P.nMC    = 150;                 % high enough for a stable median under the large measured sigma_u
+P.nSig   = 7;
+P.sigMul = 1.2;
+P.kTube  = 2.0;
+P.corrMs = 86;
+P.sigU   = 'auto';              % INPUT gain uncertainty: 'auto' = measure from OL trials, else a number
+P.HpGridS= [0.15 0.20 0.30 0.50 0.75 1.0];        % preview horizons (s) -- CAPPED at 1 s
+P.rho    = [0 0.10; 0.15 0.50; 0.20 0.60; 0.35 0.75; 0.50 0.83; 0.75 0.87; 1.0 0.90];
 P.bench  = struct('name',{'AR / PatchTST','Naive'}, 'ratio',{0.90, 1.00});
 P.seed   = 7;
-P.exSig  = 0.30;                % sigma for the example rollout figure
+P.exSig  = 0.30;
+P.exNMC  = 60;                  % rollouts for the response-tube example
 for a=1:2:numel(varargin); P.(varargin{a})=varargin{a+1}; end
 rng(P.seed);
 
@@ -73,156 +67,199 @@ switch upper(P.uMode)
     case 'CL', u_max = L.uMaxCL;   case 'HW', u_max = L.uMaxHW;
     otherwise, error('bad uMode');
 end
-[h, H, md] = ctrl_plant_markov(L, N);        % y = H*u from rest (delay in states)
+[h, H, md] = ctrl_plant_markov(L, N);
 [A,B,C,D]  = ssdata(md);
-y_PI = S3.AaAbs(pre+1:pre+N).';              % measured PI-controlled ipsi (absolute avg)
-u_PI = L.u_CL(pre+1:pre+N); u_PI = u_PI(:);  % PI's own laser command
-dbar = y_PI - H*u_PI;                        % plant-inversion disturbance (the sim ground truth)
+y_PI = S3.AaAbs(pre+1:pre+N).';
+u_PI = L.u_CL(pre+1:pre+N); u_PI = u_PI(:);
+dbar = y_PI - H*u_PI;
 r    = P.ref*ones(N,1);
-tt   = (1:N).'/P.Fs;
-sig_nat = std(dbar);
-dcg = abs(L.dcgain);
+tt   = (1:N).'/P.Fs;   Ts = 1/P.Fs;
+dcg  = abs(L.dcgain);
 
-rmse = @(y) sqrt(mean((y - r).^2));          % full-window RMSE (0..dur), %dF/F
+wmask = tt>=P.rmseWin(1) & tt<=P.rmseWin(2);
+rmse  = @(y) sqrt(mean((y(wmask) - r(wmask)).^2));
+sig_nat = std(dbar(wmask));
 RMSE_PI = rmse(y_PI);
+ratiofun = @(y) rmse(y)/RMSE_PI;                 % residual RMSE relative to PI (lower is better)
 
-fprintf('[TMPC] %s | N=%d (%.1fs) Hp=%d u_max=%.3f | sigma_nat=std(dbar)=%.3f | RMSE_PI=%.3f\n', ...
-    P.sess, N, dur, P.Hp, u_max, sig_nat, RMSE_PI);
+%% [TMPC-SIGU] actuator-gain uncertainty MEASURED from open-loop trials ----------
+src = 'set by caller';
+if ischar(P.sigU) && strcmpi(P.sigU,'auto')
+    sig_u = 0.35; src = 'default (OL cache missing)';
+    try
+        O = load(fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', P.sess)));
+        Aol = O.A_tr(:, pre+1:end);  mu = O.Aa(pre+1:end).';        % per-trial OL responses & mean
+        s   = (Aol*mu)/(mu.'*mu);                                    % per-trial best-fit gain scale
+        sig_u = std(s)/mean(s); src = sprintf('measured, OL n=%d trials', size(O.A_tr,1));
+    catch, end
+    P.sigU = sig_u;
+end
+fprintf('[TMPC] %s | Hp=%d | win [%.1f,%.1f]s | sigma_nat=%.3f | RMSE_PI=%.3f | sigma_u=%.2f (%s)\n', ...
+    P.sess, P.Hp, P.rmseWin(1), P.rmseWin(2), sig_nat, RMSE_PI, P.sigU, src);
 
-% correlated-forecast-error kernel (Gaussian smoother, unit-output-std normalized)
+% lognormal actuator-gain draw (mean 1, CV = sigma_u, always positive -> no sign flips)
+sigU_ln = sqrt(log(1+P.sigU^2));
+gdraw = @() exp(sigU_ln*randn - 0.5*sigU_ln^2);
+
+% forecast-error smoothing kernel + per-lead skill ratio rho(lead)
 ksig = max(1, round(P.corrMs/1000*P.Fs));
-kern = exp(-0.5*((-3*ksig:3*ksig)/ksig).^2); kern = kern/norm(kern); % unit-energy -> preserves std
+kern = exp(-0.5*((-3*ksig:3*ksig)/ksig).^2); kern = kern/norm(kern);
+maxHp = max([P.Hp, round(P.HpGridS*P.Fs)]);
+rhoLead  = min(max(interp1(P.rho(:,1), P.rho(:,2), (0:maxHp-1)*Ts, 'linear','extrap'),0),1.0).';
+onesLead = ones(maxHp,1);
 
-%% [TMPC-SWEEP] improvement vs preview uncertainty sigma -------------------------
+%% [TMPC-SWEEP-SIGMA] residual ratio vs forecast uncertainty ---------------------
+% idealized = perfect actuator (sigma_u=0); realistic = measured sigma_u ALWAYS on.
 sigGrid = linspace(0, P.sigMul*sig_nat, P.nSig);
-impMed = nan(1,P.nSig); impLo = nan(1,P.nSig); impHi = nan(1,P.nSig);
+[rIdeal,rReal,rRealLo,rRealHi] = deal(nan(1,P.nSig));
 for is = 1:P.nSig
     sig = sigGrid(is);
-    imp = nan(1,P.nMC);
-    for m = 1:P.nMC
-        fe = feDraw(N, sig, kern);                 % correlated forecast error, std=sig
-        y  = roll(dbar, fe, sig);                  % tube-MPC realized output
-        imp(m) = 100*(RMSE_PI - rmse(y))/RMSE_PI;
+    a0 = nan(1,P.nMC); aU = nan(1,P.nMC);
+    for m = 1:P.nMC       % common random numbers across sigma (variance reduction -> smooth curve)
+        rng(P.seed+m);           a0(m) = ratiofun( roll(dbar, sig, onesLead, P.Hp, 1) );
+        rng(P.seed+10000+m); gf=gdraw(); aU(m) = ratiofun( roll(dbar, sig, onesLead, P.Hp, gf) );
     end
-    impMed(is)=median(imp); impLo(is)=prctile(imp,5); impHi(is)=prctile(imp,95);
+    rIdeal(is)=median(a0);
+    rReal(is)=median(aU); rRealLo(is)=prctile(aU,5); rRealHi(is)=prctile(aU,95);
 end
-% clairvoyant ceiling (sigma=0, perfect preview, no tube)
-y_cl = roll(dbar, zeros(N,1), 0); imp_cl = 100*(RMSE_PI - rmse(y_cl))/RMSE_PI;
-fprintf('[TMPC] clairvoyant improvement = %.1f%% (RMSE %.3f) | @sigma_nat = %.1f%%\n', ...
-    imp_cl, rmse(y_cl), interp1(sigGrid,impMed,sig_nat));
+fprintf('[TMPC] residual ratio @sigma=0: ideal %.2f  realistic(+sigma_u) %.2f | @sigma_nat realistic %.2f\n', ...
+    rIdeal(1), rReal(1), interp1(sigGrid,rReal,sig_nat));
 
-%% [TMPC-BENCH] benchmarked-forecaster operating points -------------------------
+% benchmark operating points on the realistic curve
 nb = numel(P.bench);
 for b = 1:nb
-    P.bench(b).sigma = P.bench(b).ratio * sig_nat;                 % onto our axis
-    P.bench(b).imp   = interp1(sigGrid, impMed, P.bench(b).sigma, 'linear','extrap');
-    fprintf('   %-9s: ratio=%.2f -> sigma=%.3f %%dF/F -> improvement %.1f%% over PI\n', ...
-        P.bench(b).name, P.bench(b).ratio, P.bench(b).sigma, P.bench(b).imp);
+    P.bench(b).sigma = P.bench(b).ratio * sig_nat;
+    P.bench(b).ratio_r = interp1(sigGrid, rReal, P.bench(b).sigma, 'linear','extrap');
+    fprintf('   %-13s sigma=%.3f -> residual %.2f x PI  (%.0f%% less error)\n', ...
+        P.bench(b).name, P.bench(b).sigma, P.bench(b).ratio_r, 100*(1-P.bench(b).ratio_r));
 end
 
-%% [TMPC-FIG1] money plot -------------------------------------------------------
-f1 = figure('Color','w','Position',[80 80 760 560]);
-ax=axes(f1); hold(ax,'on');
-fill([sigGrid fliplr(sigGrid)],[impLo fliplr(impHi)],[.80 .88 .98], ...
-     'EdgeColor','none','FaceAlpha',.7,'DisplayName','5-95% band');
-plot(sigGrid, impMed, '-o','Color',[.10 .34 .70],'LineWidth',2.4, ...
-     'MarkerFaceColor',[.10 .34 .70],'MarkerSize',6,'DisplayName','tube MPC (median)');
-yline(imp_cl,'--','Color',[.90 .45 .10],'LineWidth',1.8,'Label','clairvoyant ceiling', ...
-     'LabelHorizontalAlignment','left','FontSize',10,'DisplayName','clairvoyant ceiling');
-yline(0,'-','Color',[.4 .4 .4],'LineWidth',1,'Label','PI baseline', ...
-     'LabelHorizontalAlignment','left','FontSize',9,'HandleVisibility','off');
-xline(sig_nat,':','Color',[.5 .5 .5],'LineWidth',1,'Label','\sigma_{nat}', ...
-     'LabelVerticalAlignment','bottom','FontSize',9,'HandleVisibility','off');
-% benchmark markers (Lu et al. forecasters translated onto our sigma axis)
-bcol = [0.85 0.20 0.45; 0.45 0.45 0.45];        % AR/PatchTST (magenta) / Naive (grey)
-blab = [+2.0 -1; -2.4 +1];                       % [dy, halign(-1 left/+1 right)] per marker
-halign = {'right','left'};
-for b=1:nb
-    plot(P.bench(b).sigma, P.bench(b).imp,'p','MarkerSize',15, ...
-        'MarkerFaceColor',bcol(b,:),'MarkerEdgeColor','k','LineWidth',.8, ...
-        'DisplayName',sprintf('%s (Lu et al.)',P.bench(b).name));
-    text(P.bench(b).sigma-0.008*(blab(b,2)<0)+0.008*(blab(b,2)>0), P.bench(b).imp+blab(b,1), ...
-        sprintf('%s  %.0f%%',P.bench(b).name,P.bench(b).imp), ...
-        'HorizontalAlignment',halign{b},'FontSize',9,'Color',bcol(b,:),'FontWeight','bold');
+%% [TMPC-SWEEP-HORIZON] residual ratio vs preview horizon (capped 1 s) -----------
+HpG = round(P.HpGridS*P.Fs); nH = numel(HpG);
+[hIdeal,hReal,hRealLo,hRealHi] = deal(nan(1,nH));
+for iH = 1:nH
+    Hp_i = HpG(iH);
+    hIdeal(iH) = ratiofun( roll(dbar, 0, onesLead, Hp_i, 1) );      % perfect preview, perfect actuator
+    aU = nan(1,P.nMC);
+    for m = 1:P.nMC       % common random numbers across horizons
+        rng(P.seed+20000+m); gf=gdraw(); aU(m) = ratiofun( roll(dbar, sig_nat, rhoLead, Hp_i, gf) );
+    end
+    hReal(iH)=median(aU); hRealLo(iH)=prctile(aU,5); hRealHi(iH)=prctile(aU,95);
 end
-hold(ax,'off'); grid(ax,'on'); box(ax,'on');
-xlabel('preview uncertainty  \sigma  (%\DeltaF/F forecast-error std)','FontSize',11);
-ylabel('RMSE improvement over PI (%)','FontSize',11);
-title(sprintf('What a 1-s disturbance preview buys  (m4, %d trials/\\sigma)',P.nMC),'FontSize',12);
-ylim([0 max(impHi)+3]); xlim([0 max(sigGrid)]);
-legend('Location','southwest','FontSize',9,'Box','off');
+fprintf('[TMPC] horizon: realistic residual @100ms %.2f | @200ms %.2f | @1s %.2f  (ideal @1s %.2f)\n', ...
+    hReal(1), hReal(P.HpGridS==0.2), hReal(end), hIdeal(end));
+
+%% [TMPC-FIG1] residual ratio vs forecast uncertainty ---------------------------
+f1 = figure('Color','w','Position',[80 80 780 560]); ax=axes(f1); hold(ax,'on');
+fill([sigGrid fliplr(sigGrid)],[rRealLo fliplr(rRealHi)],[.86 .90 .84],'EdgeColor','none','FaceAlpha',.6,'DisplayName','5-95% band');
+yline(1,'-','Color',[.30 .30 .34],'LineWidth',1.6,'Label','PI controller','LabelHorizontalAlignment','left','FontSize',10,'HandleVisibility','off');
+plot(sigGrid,rIdeal,'--','Color',[.90 .55 .20],'LineWidth',1.8,'DisplayName','perfect actuator (idealized)');
+plot(sigGrid,rReal,'-o','Color',[.15 .45 .72],'LineWidth',2.4,'MarkerFaceColor',[.15 .45 .72],'MarkerSize',6, ...
+     'DisplayName',sprintf('realistic (measured \\sigma_u=%.0f%%)',100*P.sigU));
+xline(sig_nat,':','Color',[.5 .5 .5],'LineWidth',1,'Label','\sigma_{nat}','LabelVerticalAlignment','bottom','FontSize',9,'HandleVisibility','off');
+bcol=[0.85 0.20 0.45;0.45 0.45 0.45]; halign={'right','left'}; dx=[-.006 .006];
+for b=1:nb
+    plot(P.bench(b).sigma,P.bench(b).ratio_r,'p','MarkerSize',15,'MarkerFaceColor',bcol(b,:),'MarkerEdgeColor','k','LineWidth',.8, ...
+        'DisplayName',sprintf('%s (Lu et al.)',P.bench(b).name));
+    text(P.bench(b).sigma+dx(b),P.bench(b).ratio_r+0.03,sprintf('%s',P.bench(b).name),'HorizontalAlignment',halign{b},'FontSize',9,'Color',bcol(b,:),'FontWeight','bold');
+end
+hold(ax,'off'); grid on; box on;
+xlabel('forecast uncertainty  \sigma  (%\DeltaF/F)','FontSize',11);
+ylabel('residual RMSE  (\div PI,  lower = better)','FontSize',11);
+title({'Disturbance-rejection residual vs forecast quality  (m4)', sprintf('RMSE ratio to PI, +%.0f..+%.0f s window',P.rmseWin(1),P.rmseWin(2))},'FontSize',12);
+ylim([0 1.12]); xlim([0 max(sigGrid)]);
+legend('Location','northwest','FontSize',8.5,'Box','off');
 exportgraphics(f1, fullfile(figDir,'tubempc_improvement.png'),'Resolution',300);
 
-%% [TMPC-FIG2] example rollout at exSig -----------------------------------------
-fe_ex = feDraw(N, P.exSig, kern);
-[y_ex,u_ex] = roll(dbar, fe_ex, P.exSig);
-[y_c0,~   ] = roll(dbar, zeros(N,1), 0);
-wtube = P.kTube*P.exSig/dcg;
-f2 = figure('Color','w','Position',[60 60 1500 420]);
+%% [TMPC-FIG3] residual ratio vs preview horizon (capped 1 s) --------------------
+f3 = figure('Color','w','Position',[100 100 780 560]); ax3=axes(f3); hold(ax3,'on');
+xs=P.HpGridS;
+fill([xs fliplr(xs)],[hRealLo fliplr(hRealHi)],[.86 .90 .84],'EdgeColor','none','FaceAlpha',.6,'DisplayName','5-95% band');
+yline(1,'-','Color',[.30 .30 .34],'LineWidth',1.6,'Label','PI controller','LabelHorizontalAlignment','left','FontSize',10,'HandleVisibility','off');
+plot(xs,hIdeal,'--','Color',[.90 .55 .20],'LineWidth',1.8,'DisplayName','perfect preview & actuator (idealized)');
+plot(xs,hReal,'-o','Color',[.15 .45 .72],'LineWidth',2.4,'MarkerFaceColor',[.15 .45 .72],'MarkerSize',6,'DisplayName',sprintf('realistic (Lu et al. \\rho + \\sigma_u=%.0f%%)',100*P.sigU));
+xline(0.086,':','Color',[.6 .3 .3],'LineWidth',1,'Label','loop delay','FontSize',8,'HandleVisibility','off');
+xline(0.2,':','Color',[.4 .4 .4],'LineWidth',1,'Label','200 ms','FontSize',9,'HandleVisibility','off');
+hold(ax3,'off'); grid on; box on;
+xlabel('preview horizon  H_p  (s)','FontSize',11);
+ylabel('residual RMSE  (\div PI,  lower = better)','FontSize',11);
+title({'Residual vs how far ahead the controller previews  (m4)','forecast error grows with lead time (Lu et al. \rho); horizon capped at 1 s'},'FontSize',12);
+ylim([0 1.12]); xlim([0 1.0]);
+legend('Location','northeast','FontSize',8.5,'Box','off');
+exportgraphics(f3, fullfile(figDir,'tubempc_horizon.png'),'Resolution',300);
+
+%% [TMPC-FIG2] example rollout with TUBES around the response --------------------
+Yr = nan(P.exNMC,N); Ur = nan(P.exNMC,N); resid_i = nan(P.exNMC,1);
+for m=1:P.exNMC
+    [ym,um] = roll(dbar, sig_nat, rhoLead, P.Hp, gdraw());        % realistic ensemble
+    Yr(m,:)=ym.'; Ur(m,:)=um.'; resid_i(m)=ratiofun(ym);
+end
+yTube = prctile(Yr,[5 50 95]); uTube = prctile(Ur,[5 50 95]);
+y_cl = roll(dbar, 0, onesLead, P.Hp, 1);                          % idealized clairvoyant
+band = sig_nat*rhoLead(P.Hp);                                     % 1-s-ahead forecast band width
+resid_med = median(resid_i);                                     % typical PER-TRIAL residual (not of the median trace)
+f2 = figure('Color','w','Position',[60 60 1500 430]);
 t=tiledlayout(f2,1,3,'Padding','compact','TileSpacing','compact');
-title(t,sprintf('Tube-MPC example rollout  m4  (1-s preview, \\sigma=%.2f, tighten=%.2f)', ...
-    P.exSig, wtube),'FontSize',12);
+title(t,sprintf('Tube-MPC rollout  m4  (1-s preview, Lu et al. forecast + measured \\sigma_u=%.0f%%, %d trials)',100*P.sigU,P.exNMC),'FontSize',12);
 nexttile; hold on;
-  fill([tt;flipud(tt)],[dbar+P.exSig;flipud(dbar-P.exSig)],[.85 .80 .90], ...
-       'EdgeColor','none','FaceAlpha',.6,'DisplayName','tube \pm\sigma');
-  plot(tt,dbar,'-','Color',[.35 .15 .45],'LineWidth',2,'DisplayName','mean disturbance');
-  plot(tt,dbar+fe_ex,'-','Color',[.65 .45 .75],'LineWidth',1,'DisplayName','previewed (realized)');
+  fill([tt;flipud(tt)],[dbar+band;flipud(dbar-band)],[.85 .80 .90],'EdgeColor','none','FaceAlpha',.55,'DisplayName','1-s forecast band');
+  plot(tt,dbar,'-','Color',[.35 .15 .45],'LineWidth',2,'DisplayName','disturbance');
   hold off; grid on; box on; xlabel('time (s)'); ylabel('disturbance (%\DeltaF/F)');
-  title(sprintf('disturbance & preview tube (\\sigma=%.2f)',P.exSig),'FontSize',10);
-  legend('Location','southeast','FontSize',8,'Box','off');
+  title('disturbance & forecast band','FontSize',10); legend('Location','southeast','FontSize',8,'Box','off');
 nexttile; hold on;
+  fill([tt;flipud(tt)],[yTube(3,:).';flipud(yTube(1,:).')],[.80 .88 .96],'EdgeColor','none','FaceAlpha',.75,'DisplayName','MPC response tube (5-95%)');
   plot(tt,y_PI,'-k','LineWidth',2,'DisplayName','PI');
-  plot(tt,y_ex,'-','Color',[.10 .34 .70],'LineWidth',2,'DisplayName','tube MPC');
-  plot(tt,y_c0,'-','Color',[.90 .35 .10],'LineWidth',1.2,'DisplayName','clairvoyant');
+  plot(tt,yTube(2,:),'-','Color',[.15 .45 .72],'LineWidth',2,'DisplayName','tube MPC (median)');
+  plot(tt,y_cl,'-','Color',[.90 .45 .10],'LineWidth',1.2,'DisplayName','clairvoyant (idealized)');
   yline(P.ref,'--','Color',[.1 .6 .1],'LineWidth',1.2,'Label','ref','FontSize',9,'HandleVisibility','off');
   hold off; grid on; box on; xlabel('time (s)'); ylabel('ipsi \DeltaF/F (%)');
-  title(sprintf('tracking: PI RMSE %.2f \\rightarrow MPC %.2f',RMSE_PI,rmse(y_ex)),'FontSize',10);
+  title(sprintf('response: residual %.2f\\times PI  (+%.0f..+%.0fs)',resid_med,P.rmseWin(1),P.rmseWin(2)),'FontSize',10);
   legend('Location','southeast','FontSize',8,'Box','off');
 nexttile; hold on;
+  fill([tt;flipud(tt)],[uTube(3,:).';flipud(uTube(1,:).')],[.80 .88 .96],'EdgeColor','none','FaceAlpha',.75,'DisplayName','MPC command tube');
   plot(tt,u_PI,'-k','LineWidth',2,'DisplayName','PI');
-  plot(tt,u_ex,'-','Color',[.10 .34 .70],'LineWidth',2,'DisplayName','tube MPC');
+  plot(tt,uTube(2,:),'-','Color',[.15 .45 .72],'LineWidth',2,'DisplayName','tube MPC (median)');
   yline(u_max,':','Color',[.4 .4 .4],'LineWidth',1,'Label','u_{max}','FontSize',9,'HandleVisibility','off');
   hold off; grid on; box on; xlabel('time (s)'); ylabel('laser command');
-  title('command (one-sided 0 \leq u \leq u_{max})','FontSize',10);
-  legend('Location','northeast','FontSize',8,'Box','off');
+  title('command (one-sided 0 \leq u \leq u_{max})','FontSize',10); legend('Location','northeast','FontSize',8,'Box','off');
 exportgraphics(f2, fullfile(figDir,'tubempc_example.png'),'Resolution',300);
 
 %% [TMPC-SAVE] ------------------------------------------------------------------
-R = struct('P',P,'sess',P.sess,'sigGrid',sigGrid,'impMed',impMed,'impLo',impLo, ...
-    'impHi',impHi,'imp_cl',imp_cl,'sig_nat',sig_nat,'RMSE_PI',RMSE_PI, ...
+R = struct('P',P,'sess',P.sess,'sigGrid',sigGrid,'rIdeal',rIdeal,'rReal',rReal,'rRealLo',rRealLo,'rRealHi',rRealHi, ...
+    'HpGridS',P.HpGridS,'hIdeal',hIdeal,'hReal',hReal,'sig_nat',sig_nat,'sig_u',P.sigU,'RMSE_PI',RMSE_PI, ...
     'bench',P.bench,'dbar',dbar,'y_PI',y_PI,'u_PI',u_PI,'u_max',u_max);
 save(fullfile(dataDir, sprintf('ctrl_tube_mpc_%s.mat',P.sess)), '-struct','R');
-fprintf('[TMPC] saved figs -> %s  (improvement + example)\n', figDir);
+fprintf('[TMPC] saved figs -> %s\n', figDir);
 
-% ---- nested: one tube-MPC rollout against realized disturbance dbar -----------
-    function [y,u] = roll(dtrue, fe, sig)
-        w  = P.kTube*sig/dcg;                      % DC-gain constraint tightening (command units)
-        umx = max(u_max - w, 0.05*u_max);          % keep a positive feasible ceiling
+% ---- nested: one tube-MPC rollout --------------------------------------------
+    function [y,u] = roll(dtrue, sigLevel, rhoVec, Hp_use, gfac)
+        w   = P.kTube*sigLevel/dcg;
+        umx = max(u_max - w, 0.05*u_max);
+        Be = gfac*B;  De = gfac*D;             % realized actuator gain (gfac=1 nominal, lognormal>0)
         u = zeros(N,1); y = zeros(N,1); x = zeros(size(A,1),1);
         qopt = optimoptions('quadprog','Display','off');
         for k = 1:N
-            p = min(P.Hp, N-k+1);
-            % free response of the plant from current state over the horizon
+            p = min(Hp_use, N-k+1);
             Psi = zeros(p,1); Ai = eye(size(A));
             for ii=1:p, Psi(ii)=C*Ai*x; Ai=Ai*A; end
-            dprev = dtrue(k:k+p-1) + fe(k:k+p-1);  % PREVIEWED disturbance over horizon (uncertain)
+            e = feStep(p, sigLevel, rhoVec(1:p), kern);
+            dprev = dtrue(k:k+p-1) + e;
             Hk = tril(toeplitz(h(1:p)));
             Qk = 2*(Hk.'*Hk + P.lam*eye(p)); Qk=(Qk+Qk.')/2;
             fk = 2*Hk.'*(Psi + dprev - r(k:k+p-1));
             uk = quadprog(Qk, fk, [],[],[],[], zeros(p,1), umx*ones(p,1), [], qopt);
-            u(k) = uk(1);                          % apply first move
-            y(k) = C*x + D*u(k) + dtrue(k);        % realized output (TRUE disturbance)
-            x = A*x + B*u(k);
+            u(k) = uk(1);
+            y(k) = C*x + De*u(k) + dtrue(k);
+            x = A*x + Be*u(k);
         end
     end
 end
 
-% ---- correlated Gaussian forecast-error draw, std = sig --------------------------
-function fe = feDraw(N, sig, kern)
-    if sig<=0, fe=zeros(N,1); return; end
-    e = randn(N+numel(kern),1);
-    e = conv(e, kern, 'same');
-    e = e(1:N);
-    fe = sig * (e/std(e));
-    fe = fe(:);
+% ---- per-step forecast error: std at lead i = sigLevel*rhoVec(i) ----------------
+function e = feStep(p, sigLevel, rhoVec, kern)
+    if sigLevel<=0, e=zeros(p,1); return; end
+    m = numel(kern);
+    z = conv(randn(p+2*m,1), kern, 'same');
+    z = z(m+1:m+p);
+    e = sigLevel * rhoVec(:) .* z(:);
 end
