@@ -15,6 +15,19 @@ else
     warning('variance_mse: cannot locate paper/ directory -- paths may be incorrect.');
 end
 
+% Fig-3 OL-vs-CL statistics: session-aware LMM (PRIMARY, Nick-approved / Fig-4-matching)
+% computed once by controller-analysis/fig3_olcl_stats.m and cached to data/fig3_olcl_lmm.mat.
+% The stim-window stars on panels I (variance ratio) and J (RMSE ratio) are drawn from the
+% LMM p; run fig3_olcl_stats first if the cache is missing. Signed-rank stays the companion.
+G3 = [];
+for dd = {'data', fullfile('..','data')}
+    mf = fullfile(dd{1},'fig3_olcl_lmm.mat');
+    if exist(mf,'file'), tmp = load(mf,'G3'); G3 = tmp.G3; break; end
+end
+if isempty(G3)
+    warning('variance_mse: data/fig3_olcl_lmm.mat not found -- run fig3_olcl_stats.m; falling back to signed-rank stars.');
+end
+
 %% F: Cross-session variance  (2.33" wide -- matches 1/3 page column)
 fig_F = paperFig(3, 3.5);
 
@@ -94,7 +107,15 @@ lgd_fr = legend(ax_fr, 'Location','best'); paperLegend(lgd_fr);
 yl_fr = ylim(ax_fr);
 star_y_fr = yl_fr(2) + 0.04 * (yl_fr(2) - yl_fr(1));
 ylim(ax_fr, [yl_fr(1), yl_fr(2) + 0.12 * (yl_fr(2) - yl_fr(1))]);
-fr_pvals = {p_fr_pre, p_fr_early, p_fr_late, p_fr_post};
+% Stim-window stars (0-1 s, 1-3 s) are the LMM primary p; pre/post keep signed-rank
+% (n.s. controls, and the 3 s pre window is not in the trial caches). See fig3_olcl_stats.m.
+p_fr_early_star = p_fr_early; p_fr_late_star = p_fr_late;
+if ~isempty(G3)
+    p_fr_early_star = G3.var_early.lmm_p; p_fr_late_star = G3.var_late.lmm_p;
+    fprintf('[Fig3-I] variance stars from LMM: 0-1s p=%.2g (sr %.2g), 1-3s p=%.2g (sr %.2g)\n', ...
+        G3.var_early.lmm_p, p_fr_early, G3.var_late.lmm_p, p_fr_late);
+end
+fr_pvals = {p_fr_pre, p_fr_early_star, p_fr_late_star, p_fr_post};
 for wi = 1:4
     ss = stars_fr(fr_pvals{wi});
     if ~isempty(ss)
@@ -459,6 +480,24 @@ ax_g2r.XTick = [1 2 3 4];
 ax_g2r.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
 ylabel(ax_g2r, 'OL/CL RMSE ratio', 'FontWeight','bold');
 lgd_g2r = legend(ax_g2r, 'Location','best'); paperLegend(lgd_g2r);
+
+% Stim-window stars from the LMM primary p (0-1 s, 1-3 s); pre/post are n.s. controls.
+if ~isempty(G3)
+    yl_g2r = ylim(ax_g2r);
+    star_y_g2r = yl_g2r(2) + 0.04*(yl_g2r(2)-yl_g2r(1));
+    ylim(ax_g2r, [yl_g2r(1), yl_g2r(2) + 0.12*(yl_g2r(2)-yl_g2r(1))]);
+    g2r_p = {NaN, G3.rmse_early.lmm_p, G3.rmse_late.lmm_p, NaN};
+    for wi = 1:4
+        if isnan(g2r_p{wi}), continue; end
+        ss = stars_fr(g2r_p{wi});
+        if ~isempty(ss)
+            text(ax_g2r, wi, star_y_g2r, ss, 'HorizontalAlignment','center', ...
+                'VerticalAlignment','bottom', 'FontSize',6, 'FontWeight','bold', 'Color','k');
+        end
+    end
+    fprintf('[Fig3-J] RMSE stars from LMM: 0-1s p=%.2g, 1-3s p=%.2g\n', ...
+        G3.rmse_early.lmm_p, G3.rmse_late.lmm_p);
+end
 
 % Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
 mark_stim_span(ax_g2r);
