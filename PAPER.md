@@ -627,13 +627,21 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > are *drafts*; production panels await the **Stage 1→2 cross-session sweep** (automated affected
 > detector, C2) + `paperFig`/`paperStyle`.
 >
+> **⭐ LETTERING LOCKED 2026-09-24 (A–H).** Reading order = error decomposition → state-quartile
+> benefits → contra-model mechanism (moved to the END). Old contra-level "Panel A"
+> (`ctrl_state_dependence.m` trial-average Global-level plot) is **DROPPED** from Fig 4. Letters are
+> added in Illustrator; source panel set = `figures_final/MANIFEST.txt [figure4]` (single source of truth).
+>
 > | Panel | Block | Content | Source |
 > |---|---|---|---|
-> | 4A | 1 | Trial-average state dependence: pre-stim Global level (state) → absolute Actual outcome; OL steep vs CL flat slope (bootstrap OL−CL slope diff) | `ctrl_state_dependence.m` (`s_lvl→o_act`) |
-> | 4B | 2 | Error-contribution model: per-trial RMSE regressed on initial deviation + motion + relative δ; ΔR² / standardized coefficients | `cl_mse_factors.m` / `cl_rmse_factor_windows.m` |
-> | 4C | 3 | Residual decomposition + rejection: Actual = Global (contra-predicted disturbance) + Local (controller effect); **rejection RR = ‖A−ref‖²/‖G‖² (settled 1–3 s, G→zero)** OL vs CL + model-example decomposition on AL_0033_0415 + per-trial RR scatter (2026-09-14 SELECTED build) | `controller-analysis/f4_disturb_rejection.m` / `imp_reject_across_sessions.m` |
-> | 4D | 3 | rejection vs motion-energy quartile (OL/CL); session-level signrank + LME (`f4_row2_lme.mat`) | `f4_row2_quartiles.m` |
-> | 4E | 3 | rejection vs relative 2–4 Hz quartile (OL/CL); + band-specificity panel `f4_1T_bands` (<4 Hz specific) | `f4_row2_quartiles.m` / `f4_partB_panels.m` |
+> | 4A | 2 | Error decomposition: unique R² of init-deviation / motion / rel-2–4 Hz / abs-2–4 Hz for per-trial RMSE, resolved by window (early 0–1 s, settled 1–3 s) + state exemplar trials | `f4_decomp_unique_sep.m` → `f4_decomp_unique_sep.pdf` + `f4_state_exemplars.pdf` |
+> | 4B | 3 | Rejection benefit (OL−CL RMSE gap) vs **init-dev** quartile; flat (LMM cond×state interaction p=0.56 n.s.; overall gap p<1e-17) | `f4_2A_initdev.pdf` (`f4_row2_quartiles.m`) |
+> | 4C | 3 | Rejection benefit vs **motion-energy** quartile | `f4_2B_motion.pdf` (`f4_row2_quartiles.m`) |
+> | 4D | 3 | Rejection benefit vs **rel 2–4 Hz** quartile; narrows at high power (interaction p=0.014) | `f4_2C_delta.pdf` (`f4_row2_quartiles.m`) |
+> | 4E | 3 | Rejection benefit vs **abs 2–4 Hz** quartile (completeness; tracks signal amplitude) | `f4_2D_absdelta.pdf` (`f4_row2_quartiles.m`) |
+> | 4F | 1 | Contra→ipsi kernel: ridge weights mapping contralateral pixels onto ipsilateral readout (representative session) | `f4_contra_model.pdf` (kernel sub-panel) |
+> | 4G | 3 | Decomposition A = Global (contra-predicted disturbance) + Local (L = A−G), trial average (representative session) | `f4_contra_model.pdf` (decomp sub-panel) / `f4_disturb_rejection.m` |
+> | 4H | 3 | Disturbance rejection φ = 1−RR, RR = ‖A−r‖²/‖G‖² (settled 1–3 s, G→own baseline) OL vs CL; median −0.22→+0.23, 12/13 sess, signrank p=4.9e-4 | `f4_contra_model.pdf` (φ sub-panel) / `imp_reject_across_sessions.m` |
 > | (supp) | — | Predictor validity: contra→ipsi CV-R² (Global vs Global+Local) + pre-stim control; distributed contra co-suppression (proves Global = shared-network disturbance) | `[IMP-PROOF-FIG]` (a) · `stim_network_coupling.m` `[SNC]` |
 >
 > **State definitions are IDENTICAL across all three blocks** (they inherit `cl_rmse_factor_windows.m`):
