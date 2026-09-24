@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-23 — Fig 2G state numbers computed and written into the draft
+**Changed/Found:** Ran `load_experiments` (4 impulse sessions: AL_0041 e1/e2, AL_0033, AL_0048; 296 s) + `imp_state_trialvar` (1767 trials, strictly-pre state window). Extracted the per-state top/bottom-quartile spread ratios + session-aware LME p from the `R` struct and pasted them into `Closedloop_edit/results.tex` Fig-2G body + caption, replacing the `\todo` placeholder. **Motion** Q4/Q1 $0.71$ [0.60–0.84], pLME $1.5\times10^{-7}$, 4/4 sess (error smaller at high movement, admissible). **Relative 2–4 Hz** Q4/Q1 $1.10$ [0.94–1.27], pLME $0.005$, 3/4 sess (error larger, power-independent). **Absolute 2–4 Hz** Q4/Q1 $1.99$ [1.69–2.37], pLME$\approx$0 — POWER CONFOUND, shown but not interpreted (pre-var $3.21$ likewise, not in the panel). Compiles 33 pp.
+**Why:** Command-board item + the `\todo` I left when writing the Fig-2 results; the panel already showed the effect but the caption/text lacked the quantitative ratios + p-values. User picked this as the next task.
+**Next:** Only remaining content `\todo` in results.tex is the supplementary low-freq example-spectra figure (`fig:lowfreq_examples`, line 115) — needs AL to choose representative low-/high-error trials. Also a small `\aditya{phase limitations}` prose note at line 36.
+
 ### 2026-09-23 — Manuscript figures sourced from figures_final; retired the _extra names
 **Changed/Found:** In `Closedloop_edit`, repointed the main-figure `\includegraphics` to clean names (`images/Figure2.pdf`, `images/Figure3.pdf`) that are byte-identical copies of the canonical `brain_paper/paper/figures_final/FigureN.pdf`, and deleted the `Figure2_extra.pdf`/`Figure3_extra.pdf` variants. Fig 1 and Fig 5 already matched figures_final. Added `Closedloop_edit/images/README.md` documenting that figures_final is the source of truth and the manuscript images/ are copies (Overleaf needs local files). Compiles 33 pp.
 **Why:** User: "use the figure 3 pdf in final figures directory not the one with extra suffix, also update everywhere that actual paper figures are in this final figures directory." Establishes figures_final as the single canonical source for the assembled main figures.
