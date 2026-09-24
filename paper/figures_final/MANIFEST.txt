@@ -28,8 +28,7 @@ supplementary/tf_cv_single_AL_0033.pdf
 figure2/tf_cv_heldout_r2.pdf
 figure2/tf_model_swap.pdf
 figure2/tf_tau_forest.pdf
-figure2/imp_state_var_motion.pdf
-figure2/imp_state_var_reldelta.pdf
+figure2/imp_state_var_combined.pdf
 
 [figure3]
 figure3/panel_A.pdf
@@ -39,7 +38,6 @@ figure3/panel_D.pdf
 figure3/panel_E.pdf
 figure3/all_variance_sessions.pdf
 figure3/all_average_sessions.pdf
-figure3/all_MSE_sessions.pdf
 figure3/variance_ratio_by_window.pdf
 figure3/MSE_ratio_by_window.pdf
 

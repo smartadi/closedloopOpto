@@ -84,8 +84,10 @@ p_fr_post  = signrank(varnc_post_f,  varwc_post_f);
 
 stars_fr = @(p) repmat('*', 1, (p < 0.001)*3 + (p >= 0.001 && p < 0.01)*2 + (p >= 0.01 && p < 0.05)*1);
 
-fig_Fr = paperFig(5, 4);
-ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.18 0.14 0.78 0.78]);
+% Compressed 5x4 -> 4.5x3.6 so panels I and J sit side by side where the retired
+% per-session RMSE-violin panel (all_MSE_sessions) used to be (user 2026-09-23).
+fig_Fr = paperFig(4.5, 3.6);
+ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.18 0.14 0.78 0.74]);
 hold(ax_fr, 'on');
 
 for s = 1:nSess_f
@@ -103,26 +105,20 @@ ax_fr.XTick = [1 2 3 4]; ax_fr.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
 ylabel(ax_fr, 'OL/CL variance ratio', 'FontWeight','bold');
 lgd_fr = legend(ax_fr, 'Location','best'); paperLegend(lgd_fr);
 
-% Add significance stars above each window point
+% ONE significance mark, carried on the panel-title CLAIM (user 2026-09-23): two identical
+% per-window *** read as ambiguous. The session-aware LMM is the primary test (both stim
+% windows p < 1e-6; pre/post n.s.); its formula + p-values live in the manuscript text, and
+% the grey "Stim" band (mark_stim_span) shows which windows the claim covers.
 yl_fr = ylim(ax_fr);
-star_y_fr = yl_fr(2) + 0.04 * (yl_fr(2) - yl_fr(1));
-ylim(ax_fr, [yl_fr(1), yl_fr(2) + 0.12 * (yl_fr(2) - yl_fr(1))]);
-% Stim-window stars (0-1 s, 1-3 s) are the LMM primary p; pre/post keep signed-rank
-% (n.s. controls, and the 3 s pre window is not in the trial caches). See fig3_olcl_stats.m.
-p_fr_early_star = p_fr_early; p_fr_late_star = p_fr_late;
+ylim(ax_fr, [yl_fr(1), yl_fr(2) + 0.06 * (yl_fr(2) - yl_fr(1))]);
+pStim_fr = max(p_fr_early, p_fr_late);                 % signed-rank fallback
 if ~isempty(G3)
-    p_fr_early_star = G3.var_early.lmm_p; p_fr_late_star = G3.var_late.lmm_p;
-    fprintf('[Fig3-I] variance stars from LMM: 0-1s p=%.2g (sr %.2g), 1-3s p=%.2g (sr %.2g)\n', ...
-        G3.var_early.lmm_p, p_fr_early, G3.var_late.lmm_p, p_fr_late);
+    pStim_fr = max(G3.var_early.lmm_p, G3.var_late.lmm_p);
+    fprintf('[Fig3-I] variance: stim LMM p<=%.2g (0-1s %.2g, 1-3s %.2g)\n', ...
+        pStim_fr, G3.var_early.lmm_p, G3.var_late.lmm_p);
 end
-fr_pvals = {p_fr_pre, p_fr_early_star, p_fr_late_star, p_fr_post};
-for wi = 1:4
-    ss = stars_fr(fr_pvals{wi});
-    if ~isempty(ss)
-        text(ax_fr, wi, star_y_fr, ss, 'HorizontalAlignment','center', ...
-            'VerticalAlignment','bottom', 'FontSize',6, 'FontWeight','bold', 'Color','k');
-    end
-end
+title(ax_fr, sprintf('CL reduces trial variance %s', stars_fr(pStim_fr)), ...
+    'FontSize',6, 'FontWeight','bold');
 
 % Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
 mark_stim_span(ax_fr);
@@ -458,8 +454,9 @@ for k = 1:length(fields)
     r_post_g2r(ki_r)  = mean(enc_post) / mean(ewc_post);
 end
 
-fig_G2r = paperFig(5, 4);
-ax_g2r = axes(fig_G2r,'Units','normalized','Position',[0.18 0.14 0.78 0.78]);
+% Compressed to match panel I (4.5x3.6); I and J now sit side by side (user 2026-09-23).
+fig_G2r = paperFig(4.5, 3.6);
+ax_g2r = axes(fig_G2r,'Units','normalized','Position',[0.18 0.14 0.78 0.74]);
 hold(ax_g2r,'on');
 
 for ki = 1:nValid_g2
@@ -481,22 +478,19 @@ ax_g2r.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
 ylabel(ax_g2r, 'OL/CL RMSE ratio', 'FontWeight','bold');
 lgd_g2r = legend(ax_g2r, 'Location','best'); paperLegend(lgd_g2r);
 
-% Stim-window stars from the LMM primary p (0-1 s, 1-3 s); pre/post are n.s. controls.
+% ONE significance mark on the panel-title CLAIM (user 2026-09-23; see panel I note).
+% Session-aware LMM is the primary test (both stim windows p < 1e-8; pre/post n.s.).
+yl_g2r = ylim(ax_g2r);
+ylim(ax_g2r, [yl_g2r(1), yl_g2r(2) + 0.06*(yl_g2r(2)-yl_g2r(1))]);
+pStim_g2r = NaN;
 if ~isempty(G3)
-    yl_g2r = ylim(ax_g2r);
-    star_y_g2r = yl_g2r(2) + 0.04*(yl_g2r(2)-yl_g2r(1));
-    ylim(ax_g2r, [yl_g2r(1), yl_g2r(2) + 0.12*(yl_g2r(2)-yl_g2r(1))]);
-    g2r_p = {NaN, G3.rmse_early.lmm_p, G3.rmse_late.lmm_p, NaN};
-    for wi = 1:4
-        if isnan(g2r_p{wi}), continue; end
-        ss = stars_fr(g2r_p{wi});
-        if ~isempty(ss)
-            text(ax_g2r, wi, star_y_g2r, ss, 'HorizontalAlignment','center', ...
-                'VerticalAlignment','bottom', 'FontSize',6, 'FontWeight','bold', 'Color','k');
-        end
-    end
-    fprintf('[Fig3-J] RMSE stars from LMM: 0-1s p=%.2g, 1-3s p=%.2g\n', ...
-        G3.rmse_early.lmm_p, G3.rmse_late.lmm_p);
+    pStim_g2r = max(G3.rmse_early.lmm_p, G3.rmse_late.lmm_p);
+    fprintf('[Fig3-J] RMSE: stim LMM p<=%.2g (0-1s %.2g, 1-3s %.2g)\n', ...
+        pStim_g2r, G3.rmse_early.lmm_p, G3.rmse_late.lmm_p);
+end
+if ~isnan(pStim_g2r)
+    title(ax_g2r, sprintf('CL reduces tracking error %s', stars_fr(pStim_g2r)), ...
+        'FontSize',6, 'FontWeight','bold');
 end
 
 % Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
