@@ -128,12 +128,21 @@ R.er_q_ol   = prctile(R.er_ol,[25 50 75]);
 R.er_q_cl   = prctile(R.er_cl,[25 50 75]);
 % Fraction of trials on which the controller actually did work (ER < 1).
 R.er_frac_ol = mean(R.er_ol < 1);   R.er_frac_cl = mean(R.er_cl < 1);
-% HEADLINE rejection metric (Fig-4 Panel C, locked 2026-09-19): 1 - ER on the SETTLED 1-3 s
-% window (er_*_rej), matching the locked disturbance-rejection window (rho/SR). Bounded
-% (do-nothing A==G -> 0, perfect A==ref -> 1); both terms referenced to ref so OL can never be
-% "worse than nothing" -- replaces phi=1-RR, whose zero-referenced denominator sent OL to -6.3.
-% Keeps the contra model (G = contra-predicted counterfactual). Report session-wise. NB the
-% cross-session builder already stores Q.er_ol = er_ol_rej (1-3 s); use that, not the 0-3 s er_med.
+% *** HEADLINE rejection metric (Fig-4 Panel C) = phi = 1 - RR, DISTURBANCE (G) REFERENCED TO 0
+%     -- RE-LOCKED 2026-09-21, reverses the 2026-09-19 "1 - ER" lock. *** rejPHI below.
+%   The disturbance's own excursion energy is Global-minus-BASELINE (~0), i.e. ||G||^2, NOT
+%   ||G-ref||^2. Referencing G to ref folds the setpoint-tracking offset (0 sits ~5 %dF/F from
+%   ref) into the "disturbance" and over-estimates it (user: "global must be referenced to 0").
+%   phi = 1 perfect rejection, 0 none, <0 amplification. Trade-off accepted: phi is unbounded
+%   below (small ||G||^2 -> very negative), so a couple of OL sessions read <0 (AL_0051 -3.5,
+%   AL_0033_0415 -2.1) -- these are clipped in the panel, not a sign OL truly amplified. Report
+%   session-wise median + signrank: OL -0.22 -> CL +0.23, 12/13, p=4.9e-4. RR_settled == rho^2,
+%   so callers can use the per-trial rho already cached (Q.rho_ol/rho_cl); no rebuild.
+rr_ol_rej = rrW(Aol,Gol,w_rej);  rr_cl_rej = rrW(Acl,Gcl,w_rej);   % 1-3 s, G ref 0 (== rho^2)
+R.rejPHI_ol = 1 - median(rr_ol_rej(isfinite(rr_ol_rej)));  % primary headline (G ref 0)
+R.rejPHI_cl = 1 - median(rr_cl_rej(isfinite(rr_cl_rej)));
+% 1 - ER (both terms ref'd to ref; bounded [0,1] but setpoint-inflated) -- KEPT for reference /
+% the robustness line, no longer the headline. Superseded 2026-09-21 by rejPHI above.
 R.rejER_ol = 1 - median(R.er_ol_rej(isfinite(R.er_ol_rej)));
 R.rejER_cl = 1 - median(R.er_cl_rej(isfinite(R.er_cl_rej)));
 
@@ -177,6 +186,29 @@ R.Dref_cl = sqrt(mean((Gcl(:,w_stim)-ref).^2,2));
 bwin = 1:pre;
 Gr_ol = Gol - mean(Gol(:,bwin),2);   Gr_cl = Gcl - mean(Gcl(:,bwin),2);
 R.Gdip_ol = mean(mean(Gr_ol(:,w_rej),2));   R.Gdip_cl = mean(mean(Gr_cl(:,w_rej),2));
+
+% ---------------- ALT disturbance: leak-corrected G (user 2026-09-24) ------------
+% GOAL: recreate the TRUE disturbance = the ipsi activity that was NOT suppressed.
+% The contra ridge model leaks the co-suppression, so the settled Global sits BELOW
+% baseline by gdipOL (the reproducible OL dip). "Shift it up to the 0 reference":
+% subtract ONE session constant gdipOL (estimated on OL, where there is no controller,
+% so the dip is pure leak) from the baseline-referenced Global in the settled window,
+% for BOTH conditions. A single constant removes only the reproducible leak and keeps
+% every trial-to-trial and within-trial fluctuation (the real disturbance) intact.
+% NOTE: per-trial demeaning would delete the disturbance -> we do NOT do that (that is
+% SR, above). This is BUILT AS AN ALTERNATE alongside the current RR/rejPHI; promote to
+% primary only if it clears our criteria. rejPHI (G ref 0, line 141) stays the headline.
+gdipOL   = R.Gdip_ol;                                                    % OL settled leak (1-3 s)
+rrAltW   = @(A,Gr,w) sum((A(:,w)-ref).^2,2) ./ sum((Gr(:,w)-gdipOL).^2,2);   % A vs ref / leak-corr G
+R.rr_ol_alt = rrAltW(Aol,Gr_ol,w_rej);   R.rr_cl_alt = rrAltW(Acl,Gr_cl,w_rej);
+R.rejPHI_ol_alt = 1 - median(R.rr_ol_alt(isfinite(R.rr_ol_alt)));
+R.rejPHI_cl_alt = 1 - median(R.rr_cl_alt(isfinite(R.rr_cl_alt)));
+% leak AFTER the shift: OL is ~0 by construction; CL residual = Gdip_cl - gdipOL.
+R.Gdip_ol_alt = mean(mean(Gr_ol(:,w_rej)-gdipOL,2));
+R.Gdip_cl_alt = mean(mean(Gr_cl(:,w_rej)-gdipOL,2));
+% disturbance energy (settled RMS) before vs after leak correction, for the audit.
+R.Dmag_ol_alt = sqrt(mean((Gr_ol(:,w_rej)-gdipOL).^2,2));
+R.Dmag_cl_alt = sqrt(mean((Gr_cl(:,w_rej)-gdipOL).^2,2));
 
 R.n_ol = size(Aol,1);  R.n_cl = size(Acl,1);
 if R.n_ol>0 && R.n_cl>0

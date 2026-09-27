@@ -101,11 +101,20 @@ PS.lgd_token = [6 6];   % ItemTokenSize for all legends
 % come out the same width and the step column aligns with column 4 of rows 3-4. One grid, not
 % two. Every Fig-2 script should size its figure with paperFig(PS.f2w, PS.f2h) rather than
 % carrying its own PW/PH, so a change of page width is one edit here.
-PS.pageW = 18.0;                                     % full text width (cm). Matches Fig 3,
-                                                     % whose paired panels are 8.9 cm each.
-PS.f2gap = 0.4;                                      % gutter between panels (cm)
-PS.f2w   = (PS.pageW - 3*PS.f2gap) / 4;              % 4.20 cm
-PS.f2h   = 3.6;                                      % row height (cm)
+% Column widths follow the Journal of Neuroscience (Information for Authors): 1 col = 8.5 cm,
+% 1.5 col = 11.6 cm, 2 col = 17.6 cm; figures are submitted at FINAL size. Fig 2 spans the
+% 2-column width. Type is 6 pt (project standard, ~ the journal's legibility floor) and CANNOT
+% shrink with the panel, so panels must stay >= ~4 cm or labels/ticks collide -- over-compressing
+% to 3 cm made the model-swap ticks + long y-labels overlap (user 2026-09-22). See RESEARCH.
+PS.col1   = 8.5;                                     % 1-column width (cm)   -- JNeurosci
+PS.col1_5 = 11.6;                                    % 1.5-column width (cm) -- JNeurosci
+PS.pageW  = 17.6;                                    % 2-column full width (cm) -- JNeurosci
+PS.f2gap  = 0.5;                                     % gutter between panels (cm)
+% Fig 2 = 2-ROW layout on the 17.6 cm block: row 1 = 4 panels (a-d) at f2w (4*4.0 + 3*gap = 17.5);
+% row 2 = model-swap, tau-forest, and ONE COMBINED state panel (motion | rel-delta | abs-delta,
+% shared y-axis).
+PS.f2w   = 4.0;                                      % Fig-2 panel width (cm)
+PS.f2h   = 3.6;                                      % Fig-2 panel height (cm)
 % NOTE: type is 6 pt ABSOLUTE, so shrinking a panel from 6 cm to 4.2 cm makes the type occupy
 % ~43% more of the panel width. Panels that were already tight at 6 cm (2J, 2K, 2G, 2I, TF-D)
 % need their labels/legends checked after the resize, not just re-exported.

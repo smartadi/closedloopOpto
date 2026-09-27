@@ -157,25 +157,33 @@ paperExport(f, fullfile(outfig,'f4_disturb_pertrial.pdf'));
 paperExport(f, fullfile(outview,'f4_disturb_pertrial.png'));
 
 %% ===== PANEL 5 : per-session disturbance rejection (all sessions, paired) ======
-% Reported as 1 - ER, ER = ||A-ref||^2 / ||G-ref||^2 (BOTH referenced to ref), SETTLED 1-3 s
-% window (Q.er_ol = er_ol_rej). Do-nothing (A==G) -> ER=1 -> rejection 0; perfect (A==ref) -> 1.
-% Strictly bounded and OL can never be "worse than nothing" -- unlike phi=1-RR (zero-referenced
-% denominator), whose per-session OL ran to -6.3 (a normalization artefact). RESEARCH 2026-09-19.
+% Reported as phi = 1 - RR, RR = ||A-ref||^2 / ||G||^2 : DISTURBANCE (G) REFERENCED TO 0 (the
+% no-laser baseline), NOT to ref -- the disturbance's own excursion energy is Global-minus-0
+% (user 2026-09-21, reverses the 2026-09-19 "1-ER" lock). SETTLED 1-3 s window; RR==rho^2 so it
+% reads the cached per-trial rho (no rebuild). phi=1 perfect, 0 none, <0 amplification. phi is
+% unbounded below (small ||G||^2 -> very negative), so two OL sessions (-2.1, -3.5) are clipped.
 L = load(fullfile(dd,'imp_reject_across_sessions_ridge.mat')); XS = L.XSr; Q = XS.Q; nS = numel(Q);
-rej_ol = arrayfun(@(q) 1 - median(q.er_ol), Q).';   % 1 - median ER per session (0-3 s)
-rej_cl = arrayfun(@(q) 1 - median(q.er_cl), Q).';
+rej_ol = arrayfun(@(q) 1 - median(q.rho_ol(isfinite(q.rho_ol)).^2), Q).';   % 1 - median RR (G ref 0)
+rej_cl = arrayfun(@(q) 1 - median(q.rho_cl(isfinite(q.rho_cl)).^2), Q).';
 p_sess = signrank(rej_ol, rej_cl); nwin = nnz(rej_cl > rej_ol);
-fprintf('per-session 1-ER: median OL %.3f -> CL %.3f | CL>OL %d/%d | signrank p=%.2e\n', ...
+fprintf('per-session phi=1-RR (G ref 0): median OL %.3f -> CL %.3f | CL>OL %d/%d | signrank p=%.2e\n', ...
     median(rej_ol), median(rej_cl), nwin, nS, p_sess);
-ylo = 0;  yhi = 1;
+ylo = -1.1;  yhi = 0.8;  oo = @(v) min(max(v,ylo+0.03),yhi);   % view window; clip extreme OL
 f = paperFig(W,H); ax = axes(f); hold(ax,'on');
-patch(ax,[.7 2.3 2.3 .7],[0 0 1 1],[.94 .97 .94],'EdgeColor','none','HandleVisibility','off');
-for k=1:nS, plot(ax,[1 2],[rej_ol(k) rej_cl(k)],'-','Color',[.75 .75 .75],'LineWidth',0.5,'HandleVisibility','off'); end
-scatter(ax,ones(nS,1),rej_ol,9,col_ol,'filled','MarkerFaceAlpha',.85);
-scatter(ax,2*ones(nS,1),rej_cl,9,col_cl,'filled','MarkerFaceAlpha',.85);
+patch(ax,[.7 2.3 2.3 .7],[0 0 yhi yhi],[.94 .97 .94],'EdgeColor','none','HandleVisibility','off');
+plot(ax,[.7 2.3],[0 0],'-','Color',[.6 .6 .6],'LineWidth',PS.lw_zero,'HandleVisibility','off');
+for k=1:nS, plot(ax,[1 2],[oo(rej_ol(k)) oo(rej_cl(k))],'-','Color',[.75 .75 .75],'LineWidth',0.5,'HandleVisibility','off'); end
+scatter(ax,ones(nS,1),oo(rej_ol),9,col_ol,'filled','MarkerFaceAlpha',.85);
+scatter(ax,2*ones(nS,1),oo(rej_cl),9,col_cl,'filled','MarkerFaceAlpha',.85);
 plot(ax,[1 2],[median(rej_ol) median(rej_cl)],'-k','LineWidth',1.6);
-set(ax,'XTick',[1 2],'XTickLabel',{'open loop','closed loop'}); xlim(ax,[.7 2.3]); ylim(ax,[ylo yhi]);
-ylabel(ax,'disturbance rejected  1 - ER   (ER=||A-ref||^2/||G-ref||^2)','FontSize',PS.fs,'FontWeight',PS.fw);
+clip=find(rej_ol<ylo).';
+if ~isempty(clip)
+    scatter(ax,ones(numel(clip),1),(ylo+0.03)*ones(numel(clip),1),16,col_ol,'v','filled','HandleVisibility','off');
+    text(ax,0.75,ylo+0.03,sprintf('OL: %s',strjoin(arrayfun(@(v)sprintf('%.1f',v),rej_ol(clip),'uni',0),', ')), ...
+        'Color',col_ol,'FontSize',PS.fs-1,'FontWeight',PS.fw,'HorizontalAlignment','left','VerticalAlignment','bottom');
+end
+set(ax,'XTick',[1 2],'XTickLabel',{'open loop','closed loop'},'YTick',[-1 -0.5 0 0.5]); xlim(ax,[.7 2.3]); ylim(ax,[ylo yhi]);
+ylabel(ax,'disturbance rejected  \phi = 1 - RR   (RR=||A-ref||^2/||G||^2)','FontSize',PS.fs,'FontWeight',PS.fw);
 set(ax,'FontSize',PS.fs,'FontWeight',PS.fw);
 title(ax,sprintf('n=%d, CL>OL %d/%d, signrank p=%s',nS,nwin,nS,pstr(p_sess)),'FontSize',PS.fs,'FontWeight',PS.fw);
 cleanAxes(ax);

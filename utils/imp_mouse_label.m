@@ -1,5 +1,8 @@
-function labs = imp_mouse_label(mnList)
+function labs = imp_mouse_label(mnList, style)
 %IMP_MOUSE_LABEL  Per-ANIMAL legend labels for a set of sessions: "Mouse 1a", "Mouse 2", ...
+%
+% style (optional): 'full' (default) -> "Mouse 1a"; 'short' -> "M1a" (for cramped axis
+% ticks / inline labels; user 2026-09-22: shorthand M1a,M1b,M2,M3 except inside a legend box).
 %
 % Sessions are NOT mice: the impulse set is AL_0041 e1, AL_0041 e2, AL_0033 e1, AL_0048 e1,
 % so a bare "Mouse 1..4" would claim four animals where there are three. This numbers the
@@ -21,14 +24,19 @@ for i = 1:n
     if iscell(mnList), x = mnList{i}; else, x = mnList(i); end
     if isstruct(x) && isfield(x,'mn'), mn(i) = string(x.mn); else, mn(i) = string(x); end
 end
+if nargin < 2 || isempty(style), style = 'full'; end
+switch lower(style)
+    case 'short', pre = 'M';
+    otherwise,    pre = 'Mouse ';
+end
 [~, ~, mIdx] = unique(mn, 'stable');           % unique animals, in order of first appearance
 labs = cell(n,1);
 for i = 1:n
     sib = find(mIdx == mIdx(i));               % all sessions from this animal
     if numel(sib) > 1
-        labs{i} = sprintf('Mouse %d%c', mIdx(i), char('a' + find(sib == i) - 1));
+        labs{i} = sprintf('%s%d%c', pre, mIdx(i), char('a' + find(sib == i) - 1));
     else
-        labs{i} = sprintf('Mouse %d', mIdx(i));
+        labs{i} = sprintf('%s%d', pre, mIdx(i));
     end
 end
 end

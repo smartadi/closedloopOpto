@@ -117,7 +117,7 @@ pe_n = pe / q1; pe_lo = np.array(pe_lo) / q1; pe_hi = np.array(pe_hi) / q1
 
 # ========================= figure ========================================
 BLUE, RED = "#3070b3", "#c02020"
-fig = plt.figure(figsize=(7.4, 2.4), dpi=300)
+fig = plt.figure(figsize=(7.4, 2.4), dpi=600)
 gs = fig.add_gridspec(1, 3, width_ratios=[1.05, 1.35, 1.0], wspace=0.46)
 
 # (A) brain
@@ -126,10 +126,46 @@ axA.imshow(mimg, cmap="gray"); axA.set_axis_off()
 sx, sy = site_px(sites[:, 0], sites[:, 1], config.BREGMA_PX,
                  config.PX_PER_MM_X, config.PX_PER_MM_Y)
 axA.scatter(sx, sy, c="w", s=9, lw=0, alpha=0.55)
+K = 4  # self + 3 efferent readouts, matched to grid_tf_multireadout.py panel D
+RESP_FRAC = 0.06
+DIST_Q = (0.35, 0.68, 1.0)
+
+
+def _readouts(s):
+    """self + 3 efferents spread across distance (near/mid/far), kept ipsilateral;
+    identical logic to grid_tf_multireadout.py so panel A dots match panel D columns."""
+    dsel = np.linalg.norm(sites - sites[s], axis=1)
+    g = np.abs(gi[s])
+    cand = [j for j in range(len(sites))
+            if j != s and dsel[j] > 0.01 and g[j] >= RESP_FRAC * g[s]
+            and sites[j, 0] * sites[s, 0] > 0]
+    cand = sorted(cand, key=lambda j: dsel[j])
+    if len(cand) >= K - 1:
+        picks = sorted({cand[int(round(q * (len(cand) - 1)))] for q in DIST_Q},
+                       key=lambda j: dsel[j])
+        for j in reversed(cand):
+            if len(picks) >= K - 1:
+                break
+            if j not in picks:
+                picks.append(j)
+        picks = sorted(picks, key=lambda j: dsel[j])[:K - 1]
+    else:
+        picks = cand
+    return sorted(picks, key=lambda j: dsel[j])
+
+
 for s, col in [(s_exc, BLUE), (s_inh, RED)]:
-    px, py = site_px(sites[s, 0], sites[s, 1], config.BREGMA_PX,
+    ix, iy = site_px(sites[s, 0], sites[s, 1], config.BREGMA_PX,
                      config.PX_PER_MM_X, config.PX_PER_MM_Y)
-    axA.scatter(px, py, ec=col, fc="none", s=120, lw=2.0)
+    ro = _readouts(s)
+    for k, j in enumerate(ro, start=1):
+        px, py = site_px(sites[j, 0], sites[j, 1], config.BREGMA_PX,
+                         config.PX_PER_MM_X, config.PX_PER_MM_Y)
+        axA.plot([ix, px], [iy, py], color=col, lw=0.9, alpha=0.5, zorder=2)
+        axA.scatter(px, py, c=col, s=64, lw=0.6, edgecolors="w", zorder=3)
+        axA.text(px, py, str(k), color="w", fontsize=6.5, fontweight="bold",
+                 ha="center", va="center", zorder=4)
+    axA.scatter(ix, iy, ec=col, fc="none", s=150, lw=2.2, zorder=3)
 axA.set_title("52-site photostim grid", fontsize=8.5, pad=3)
 # tighten to the cortical window
 axA.set_xlim(60, 500); axA.set_ylim(500, 60)
@@ -174,5 +210,5 @@ for sp in ["top", "right"]:
 for x, L in [(0.055, "A"), (0.36, "B"), (0.70, "C")]:
     fig.text(x, 1.0, L, fontsize=11, fontweight="bold", va="top", ha="right")
 
-fig.savefig(OUT, dpi=300, facecolor="white", bbox_inches="tight")
+fig.savefig(OUT, dpi=600, facecolor="white", bbox_inches="tight")
 print("wrote", OUT)

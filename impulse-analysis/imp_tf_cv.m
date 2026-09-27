@@ -92,7 +92,8 @@ figA = paperFig(PS.f2w, PS.f2h);  axA = axes(figA);  hold(axA,'on');
 tmax = 0.5;
 hLine   = gobjects(n,1);         % one solid (measured) handle per session for the legend
 legTxt  = cell(n,1);             % "Mouse 1a  R^2=0.50" -- animal label + held-out R^2 on the legend
-mouseLab = imp_mouse_label(cellfun(@(c) c.mn, CV(:), 'uni', 0));   % shared cross-figure convention
+mouseLab  = imp_mouse_label(cellfun(@(c) c.mn, CV(:), 'uni', 0));           % full "Mouse 1a" for legend boxes
+mlabShort = imp_mouse_label(cellfun(@(c) c.mn, CV(:), 'uni', 0), 'short');  % "M1a" for cramped axis ticks/inline
 for k = 1:n
     c   = PS.sessColor(k);
     t   = CV{k}.tPost(:);
@@ -198,8 +199,9 @@ if CV_REVAMP
         plot(axH,k,med(k),'o','Color',c,'MarkerFaceColor',c,'MarkerSize',3.5);
     end
     ylim(axH,[max(-0.05,min(q25)-0.05) 1.02]);  xlim(axH,[0.5 n+0.5]);
-    set(axH,'XTick',1:n,'XTickLabel',mlab,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
+    set(axH,'XTick',1:n,'XTickLabel',mlabShort,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
     axH.XAxis.FontSize = PS.fs-1;  ylabel(axH,'held-out R^2');
+    title(axH,'LTI validation within session','FontSize',PS.fs,'FontWeight',PS.fw);
     text(axH, n+0.45, poolMed, sprintf('%.2f', poolMed), 'Color',[.45 .45 .45], ...
          'FontSize',PS.fs-1,'FontWeight',PS.fw,'HorizontalAlignment','right','VerticalAlignment','bottom');
     if CV_EXPORT
@@ -248,9 +250,11 @@ if CV_SINGLE
         if numel(good) >= 2, aidx = good; end       % keep the panel from emptying if all are noisy
         nShow = min(CV_SINGLE_NAMP, numel(aidx));
         ashow = aidx(unique(round(linspace(1, numel(aidx), nShow))));
-        ramp  = interp1([0 1], [PS.grad0; PS.grad1], linspace(0,1,max(numel(ashow),2)));
+        % Grayscale amplitude ramp (user 2026-09-22): a single-mouse panel should not carry the
+        % cross-mouse session colours -- shade by amplitude in grey to avoid that confusion.
+        ramp  = interp1([0 1], [0.72 0.72 0.72; 0 0 0], linspace(0,1,max(numel(ashow),2)));
         t     = S1.tPost(:);
-        figS  = paperFig(PS.f2w*1.2, PS.f2h*1.1);  axS = axes(figS);  hold(axS,'on');
+        figS  = paperFig(PS.f2w, PS.f2h);  axS = axes(figS);  hold(axS,'on');  % Fig-2 convention size
         hL = gobjects(numel(ashow),1);  lgS = cell(numel(ashow),1);
         for i = 1:numel(ashow)
             a = ashow(i);  c = ramp(i,:);
@@ -262,10 +266,13 @@ if CV_SINGLE
         xlim(axS, [0 0.5]);
         xlabel(axS, 'time from onset (s)');  ylabel(axS, '\DeltaF/F (%)');
         set(axS, 'FontSize', PS.fs, 'FontWeight', PS.fw, 'TickDir','out', 'Box','off');
-        title(axS, sprintf('%s  (held-out, %dp%dz%dd)', mouseLab{ksel}, S1.np, S1.nz, S1.nd), ...
-              'FontSize', PS.fs, 'FontWeight', PS.fw, 'Interpreter','none');
+        title(axS, 'LTI model fit (held out)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
         lg = legend(axS, hL, lgS, 'Location','southeast', 'Box','off');
         lg.ItemTokenSize = [12 PS.lgd_token(2)];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
+        % Mouse tag just above the (southeast) legend -- names the single mouse this panel shows.
+        text(axS, 0.97, 0.40, mouseLab{ksel}, 'Units','normalized', ...
+             'HorizontalAlignment','right', 'VerticalAlignment','bottom', ...
+             'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', PS.sessColor(ksel));
         suppDir = fullfile(root,'paper','images','supplementary');
         if ~exist(suppDir,'dir'), mkdir(suppDir); end
         if CV_EXPORT

@@ -5,6 +5,10 @@
 %   b  Deploy: Actual vs Global (contra-predicted); Global flat through stim -> gap = Local = A-G.
 %      R^2_te annotated here (prediction quality lives next to the prediction).
 %   c  Per-session disturbance rejected phi = 1 - ||A-ref||^2/||G||^2, OL -> CL paired (signrank).
+%      DISTURBANCE ENERGY IS REFERENCED TO ZERO: denominator ||G||^2, NOT ||G-ref||^2. G is the
+%      stim-blind counterfactual sitting at the no-laser baseline (~0), so the disturbance's own
+%      excursion energy is Global-minus-0; referencing G to ref would fold the setpoint offset
+%      (setpoint tracking) into the "disturbance" and over-estimate it (user 2026-09-21).
 % Exemplar for a/b: AL_0033_0415_e2 (ridge). c pools all sessions (imp_reject_across_sessions_ridge).
 clc; close all;
 PS=paperStyle(); setPaperDefaults();
@@ -24,7 +28,7 @@ brain=ctrl_mean_img(tag); [bm,bnd,mid]=ctrl_brain_mask(tag); [nY,nX]=size(brain)
 b=O.b(:); grR=O.grR(:); grC=O.grC(:); sx=S1.py_prim; sy=S1.px_prim;   % stim site x=col,y=row
 t=O.rel(:).'/O.Fs; A=O.Aa(:).'; G=O.Gg(:).'; R2=O.R2_te;
 
-f=paperFig(19,6.2);
+f=paperFig(17,4.8);   % resized: was 19x6.2 (oversized); compact 3-panel row at paper scale
 
 % ===== (a) kernel weights ==========================================================
 axK=axes(f,'Position',[0.015 0.10 0.28 0.70]); hold(axK,'on');
@@ -60,28 +64,40 @@ lg=legend(axD,[hA hG],{'Actual','Global (contra pred.)'},'Box','off','Location',
 text(axD,xl(1)+0.1,yl(1)*0.92,sprintf('R^2_{te} = %.2f',R2),'Color',colG,'FontSize',PS.fs,'FontWeight','bold');
 title(axD,'Global predicts the counterfactual','FontSize',PS.fs,'FontWeight','bold');
 
-% ===== (c) per-session disturbance rejection: 1 - ER (bounded, contra model) =======
-% ER = ||A-ref||^2 / ||G-ref||^2 (both referenced to ref) on the SETTLED 1-3 s window, so a
-% do-nothing controller (A==G) gives ER=1 -> rejection 0, and the fraction stays in [0,1]
-% (unlike phi=1-RR, whose zero-referenced denominator sent OL to -6). Per session = 1-median(ER).
+% ===== (c) per-session disturbance rejection: phi = 1 - RR (G referenced to 0) =======
+% RR = ||A-ref||^2 / ||G||^2 on the SETTLED 1-3 s window. Denominator = the disturbance's OWN
+% excursion energy referenced to ZERO (Global-minus-0), NOT to ref -- so the setpoint offset is
+% not counted as disturbance. phi = 1 perfect rejection, 0 none, <0 amplification. RR_settled ==
+% rho^2, so this reads the per-trial rho already stored per session (NO rebuild). phi is unbounded
+% below (small ||G||^2 on a couple of OL sessions -> very negative); those OL outliers are clipped
+% to the floor with a marker. Report session-wise median + signrank (12/13 CL>OL).
 axP=axes(f,'Position',[0.80 0.20 0.165 0.60]); hold(axP,'on');
 L=load(fullfile(dd,'imp_reject_across_sessions_ridge.mat')); Q=L.XSr.Q; nS=numel(Q);
-rej_ol=arrayfun(@(q) 1-median(q.er_ol),Q).'; rej_cl=arrayfun(@(q) 1-median(q.er_cl),Q).';
+rej_ol=arrayfun(@(q) 1-median(q.rho_ol(isfinite(q.rho_ol)).^2),Q).';
+rej_cl=arrayfun(@(q) 1-median(q.rho_cl(isfinite(q.rho_cl)).^2),Q).';
 p_sess=signrank(rej_ol,rej_cl); nwin=nnz(rej_cl>rej_ol);
-patch(axP,[0.6 2.4 2.4 0.6],[0 0 1 1],[.94 .97 .94],'EdgeColor','none','HandleVisibility','off');
-for k=1:nS, plot(axP,[1 2],[rej_ol(k) rej_cl(k)],'-','Color',[.75 .75 .75],'LineWidth',0.5,'HandleVisibility','off'); end
-scatter(axP,ones(nS,1),rej_ol,9,col_ol,'filled','MarkerFaceAlpha',.85);
-scatter(axP,2*ones(nS,1),rej_cl,9,col_cl,'filled','MarkerFaceAlpha',.85);
+yb=-1.1; yt=0.8; oo=@(v) min(max(v,yb+0.03),yt);   % view window; clip extreme OL for plotting
+patch(axP,[0.6 2.4 2.4 0.6],[0 0 yt yt],[.94 .97 .94],'EdgeColor','none','HandleVisibility','off'); % rejection>0
+plot(axP,[0.6 2.4],[0 0],'-','Color',[.6 .6 .6],'LineWidth',PS.lw_zero,'HandleVisibility','off');    % no-rejection
+for k=1:nS, plot(axP,[1 2],[oo(rej_ol(k)) oo(rej_cl(k))],'-','Color',[.75 .75 .75],'LineWidth',0.5,'HandleVisibility','off'); end
+scatter(axP,ones(nS,1),oo(rej_ol),9,col_ol,'filled','MarkerFaceAlpha',.85);
+scatter(axP,2*ones(nS,1),oo(rej_cl),9,col_cl,'filled','MarkerFaceAlpha',.85);
 plot(axP,[1 2],[median(rej_ol) median(rej_cl)],'-k','LineWidth',1.6);
-xlim(axP,[0.6 2.4]); ylim(axP,[0 1]); set(axP,'XTick',[1 2],'XTickLabel',{'OL','CL'},'Box','off','TickDir','out','FontSize',PS.fs,'FontWeight',PS.fw);
-ylabel(axP,'disturbance rejected  1 - ER','FontSize',PS.fs,'FontWeight',PS.fw);
+clip=find(rej_ol<yb).';   % OL sessions below the floor: mark with down-triangle + value
+if ~isempty(clip)
+    scatter(axP,ones(numel(clip),1),(yb+0.03)*ones(numel(clip),1),16,col_ol,'v','filled','HandleVisibility','off');
+    text(axP,0.66,yb+0.03,sprintf('OL: %s',strjoin(arrayfun(@(v)sprintf('%.1f',v),rej_ol(clip),'uni',0),', ')), ...
+        'Color',col_ol,'FontSize',PS.fs-1,'FontWeight',PS.fw,'HorizontalAlignment','left','VerticalAlignment','bottom');
+end
+xlim(axP,[0.6 2.4]); ylim(axP,[yb yt]); set(axP,'XTick',[1 2],'XTickLabel',{'OL','CL'},'YTick',[-1 -0.5 0 0.5],'Box','off','TickDir','out','FontSize',PS.fs,'FontWeight',PS.fw);
+ylabel(axP,'disturbance rejected  \phi = 1 - RR','FontSize',PS.fs,'FontWeight',PS.fw);
 title(axP,sprintf('n=%d, CL>OL %d/%d, p=%s',nS,nwin,nS,pstr(p_sess)),'FontSize',PS.fs,'FontWeight',PS.fw);
 
 % panel letters intentionally OMITTED -- lettered in Illustrator to match the rest of Fig 4.
 
 paperExport(f,fullfile(outfig,'f4_contra_model.pdf'));
 paperExport(f,fullfile(outview,'f4_contra_model.png'));
-fprintf('[f4_contra_model] R2te=%.2f | 1-ER med OL %.3f -> CL %.3f | CL>OL %d/%d p=%.2e\n', ...
+fprintf('[f4_contra_model] R2te=%.2f | phi=1-RR (G ref 0) med OL %.3f -> CL %.3f | CL>OL %d/%d p=%.2e\n', ...
     R2, median(rej_ol), median(rej_cl), nwin, nS, p_sess);
 fprintf('[f4_contra_model] wrote composite -> %s\n', outfig);
 

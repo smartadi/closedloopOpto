@@ -211,6 +211,8 @@ for i = 1:numel(adm)
         ylim(ax, yNormLim);
         hRef = yline(ax, 1, ':', 'Color', [.55 .55 .55], 'LineWidth', PS.lw_zero);
         hRef.HandleVisibility = 'off';  uistack(hRef, 'bottom');   % session-typical error = 1
+        text(ax, 0.03, 1, ' session mean', 'Color', [.5 .5 .5], 'FontSize', PS.fs-1, ...
+             'FontWeight', PS.fw, 'VerticalAlignment','bottom', 'HorizontalAlignment','left');
     elseif useRaw
         ylim(ax, [0 yRawMax]);
     else
@@ -219,7 +221,7 @@ for i = 1:numel(adm)
     set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
     xlabel(ax, sprintf('%s quartile', r.name), 'FontSize', PS.fs, 'FontWeight', PS.fw);
     if useNorm
-        ylabel(ax, 'Normalized prediction error', 'FontSize', PS.fs, 'FontWeight', PS.fw);
+        ylabel(ax, 'Prediction error (session-normalized)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
     elseif useRaw
         ylabel(ax, 'Prediction error (% \DeltaF/F)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
     else
@@ -238,10 +240,15 @@ for i = 1:numel(adm)
         elseif r.pLME < 1e-2, stStar = '**';
         elseif r.pLME < 0.05, stStar = '*';
         else,                 stStar = 'n.s.'; end
-        txt = sprintf('p=%.2g %s   %d/%d sess', r.pLME, stStar, r.nSessAgree, r.nSess);
+        % Star + session-count only (user 2026-09-22): the exact p goes in the caption/Results,
+        % not on the panel. Console print below still carries the full p for the caption.
+        txt = sprintf('%s   %d/%d sess', stStar, r.nSessAgree, r.nSess);
         text(ax, 0.5, 0.99, txt, 'Units','normalized', 'HorizontalAlignment','center', ...
              'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
-        if ~r.adm      % confound controls (abs delta, pre-stim var): say so on the panel
+        % The "power confound" framing for non-admissible states (abs delta, pre-stim var) is NOT
+        % drawn on the image (user 2026-09-22: describe it in Results/Discussion). Re-enable with
+        % STVF_CONFOUND_TXT=true if a standalone control panel ever needs it on-figure.
+        if ~r.adm && (exist('STVF_CONFOUND_TXT','var')==1 && STVF_CONFOUND_TXT)
             text(ax, 0.5, 0.99-0.09, 'power confound', 'Units','normalized', ...
                  'HorizontalAlignment','center', 'VerticalAlignment','top', ...
                  'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.70 0.15 0.15]);
@@ -266,11 +273,58 @@ for i = 1:numel(adm)
             % Admissible markers (motion, rel-delta) are the main-figure panels 2J/2K.
             % Non-admissible ones (absolute delta, pre-stim variance) are POWER-CONFOUND
             % controls -> they belong in supplementary, not beside the findings.
-            if r.adm, subDir = 'figure2'; else, subDir = 'supplementary'; end
+            % Main Fig-2 row now includes abs-delta (DPa) alongside motion + rel-delta (user
+            % 2026-09-22); pre-stim variance and any other confound control stay in supplementary.
+            if r.adm || strcmpi(r.tag,'DPa'), subDir = 'figure2'; else, subDir = 'supplementary'; end
             pdfDir = fullfile(paperRoot, 'images', subDir);
             if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
             paperExport(f, fullfile(pdfDir, [paperNames.(r.tag) '.pdf']));
         end
+    end
+end
+
+%% ---- COMBINED state panel: motion | rel-delta | abs-delta, shared y (user 2026-09-22) ----------
+% One Fig-2 panel with three subplots on a COMMON y-axis (only the leftmost carries the y-label +
+% ticks). Replaces the three separate imp_state_var_* panels in the row-2 layout. y-label split
+% over two lines so it fits the small panel. Star + session-count only (p in caption/text).
+if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
+    mkOrder = {'MOT','DPr','DPa'};                       % motion | rel-delta | abs-delta
+    idx = arrayfun(@(t) find(strcmpi({R.tag}, t{1}), 1), mkOrder, 'UniformOutput', false);
+    idx = [idx{:}];
+    if numel(idx) >= 2
+        wC  = 2*PS.f2w + PS.col1*0.07;                  % ~8.6 cm: fills row-2 beside 2 square panels
+        fC  = paperFig(wC, PS.f2h);
+        tl  = tiledlayout(fC, 1, numel(idx), 'TileSpacing','compact', 'Padding','compact');
+        axc = gobjects(numel(idx),1);
+        for m = 1:numel(idx)
+            k = idx(m);  r = R(k);  ip = find(adm==k, 1);
+            xb = r.binMed(:).';  yv = r.sdRawN(:).';
+            sc = yv ./ max(r.sdB(:).', eps);
+            if ~isempty(ip), ciLo = CI(ip).lo .* sc;  ciHi = CI(ip).hi .* sc; else, ciLo = yv; ciHi = yv; end
+            ax = nexttile(tl);  hold(ax,'on');  axc(m) = ax;
+            fill(ax, [xb fliplr(xb)], [ciLo fliplr(ciHi)], C_stim, ...
+                 'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
+            hR = yline(ax, 1, ':', 'Color',[.55 .55 .55], 'LineWidth', PS.lw_zero); hR.HandleVisibility='off'; uistack(hR,'bottom');
+            plot(ax, xb, yv, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
+            xticks(ax, 0.125:0.25:0.875);  xticklabels(ax, {'Q1','Q2','Q3','Q4'});
+            xlim(ax, [0 1]);  ylim(ax, yNormLim);
+            set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
+            xlabel(ax, sprintf('%s quartile', r.name), 'FontSize', PS.fs, 'FontWeight', PS.fw);
+            if     isnan(r.pLME),  ss = '';
+            elseif r.pLME < 1e-3,  ss = '***';
+            elseif r.pLME < 1e-2,  ss = '**';
+            elseif r.pLME < 0.05,  ss = '*';
+            else,                  ss = 'n.s.'; end
+            text(ax, 0.5, 0.99, sprintf('%s  %d/%d', ss, r.nSessAgree, r.nSess), 'Units','normalized', ...
+                 'HorizontalAlignment','center', 'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
+            if m > 1, set(ax, 'YTickLabel', []); end     % shared y-axis
+        end
+        linkaxes(axc, 'y');  ylim(axc(1), yNormLim);
+        ylabel(axc(1), {'Prediction error','(session-normalized)'}, 'FontSize', PS.fs, 'FontWeight', PS.fw);
+        pdfDir = fullfile(paperRoot,'images','figure2');
+        if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
+        paperExport(fC, fullfile(pdfDir, 'imp_state_var_combined.pdf'));
+        fprintf('[STVF] combined state panel -> imp_state_var_combined.pdf (%s)\n', strjoin(mkOrder,' | '));
     end
 end
 

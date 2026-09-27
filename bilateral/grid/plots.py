@@ -61,16 +61,18 @@ def plot_tau(responses, sites, cfg, label):
 
 
 def plot_spatial(snapshots, sites, cfg, label):
-    """Full-frame dF/F image per site (early-response window), 8x8."""
+    """Full-frame dF/F image per site (early-response window), 8x8.
+    Brain images are TRANSPOSED (.T) so anterior/posterior (rows) and medial/lateral
+    (cols) read in the correct orientation; the site marker is swapped to match."""
     fig = plt.figure(figsize=(8, 8))
-    gs = fig.add_gridspec(8, 8, wspace=0.1, hspace=0.1)
+    gs = fig.add_gridspec(8, 8, wspace=0.04, hspace=0.04)   # tighter (was 0.1): save space
     im0 = None
     for mx, my in sites:
         ax = fig.add_subplot(gs[_layout_rc(mx, my)])
-        im0 = ax.imshow(snapshots[(mx, my)], cmap="bwr",
+        im0 = ax.imshow(snapshots[(mx, my)].T, cmap="bwr",
                         clim=(-cfg.SPATIAL_CLIM, cfg.SPATIAL_CLIM))
         cx, cy = site_px(mx, my, cfg.BREGMA_PX, cfg.PX_PER_MM_X, cfg.PX_PER_MM_Y)
-        ax.scatter(cx, cy, marker=".", c="m", s=6, lw=0)
+        ax.scatter(cy, cx, marker=".", c="m", s=6, lw=0)     # x/y swapped to match .T
         ax.set_axis_off()
     cb = fig.colorbar(im0, ax=fig.axes, shrink=0.5,
                       ticks=[-cfg.SPATIAL_CLIM, cfg.SPATIAL_CLIM])

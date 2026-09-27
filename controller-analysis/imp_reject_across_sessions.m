@@ -116,6 +116,15 @@ for s = SESS
     Q(k).er_med_ol_full = R.er_med_ol;  Q(k).er_med_cl_full = R.er_med_cl;   % 0-3 s reference (incl. transient)
     Q(k).p_er = ranksum(erol, ercl);                                         % settled per-trial OL vs CL
     Q(k).er_frac_ol = mean(erol<1);  Q(k).er_frac_cl = mean(ercl<1);
+    % ALT disturbance (leak-corrected G, user 2026-09-24) -- built alongside; promote if it
+    % clears criteria. phi_alt = 1 - RR on G shifted up by the OL leak (settled 1-3 s).
+    Q(k).rejPHI_ol_alt = R.rejPHI_ol_alt;  Q(k).rejPHI_cl_alt = R.rejPHI_cl_alt;
+    Q(k).Gdip_ol_alt = R.Gdip_ol_alt;      Q(k).Gdip_cl_alt = R.Gdip_cl_alt;   % leak AFTER shift
+    Q(k).Dmag_ol = median(R.Dmag_ol);      Q(k).Dmag_cl = median(R.Dmag_cl);   % disturbance RMS before
+    Q(k).Dmag_ol_alt = median(R.Dmag_ol_alt);  Q(k).Dmag_cl_alt = median(R.Dmag_cl_alt);  % after
+    % current headline (RR, G ref 0) for the side-by-side
+    Q(k).rejPHI_ol = 1 - median(R.rr_ol(isfinite(R.rr_ol)));
+    Q(k).rejPHI_cl = 1 - median(R.rr_cl(isfinite(R.rr_cl)));
     % --- exemplar traces for the demo panel (trial averages only; the full trial matrices
     % would bloat the struct and the panel draws mean +/- SEM) ---
     if strcmp(S.sess_tag, EXEMPLAR) || (~isfield(EX,'sess_tag') && k == 1)
@@ -243,6 +252,36 @@ end
 fprintf('  NOTE: ER and rho are NOT interchangeable -- rho divides by ||G|| (zero-referenced),\n');
 fprintf('        so its LEVEL was never interpretable, only the OL-vs-CL contrast. Quote one or the other.\n');
 
+%% [XSESS-ALT] LEAK-CORRECTED disturbance (user 2026-09-24) ----------------------
+% ALTERNATE, built alongside the current headline. Recreate the TRUE disturbance by
+% shifting Global up by the OL leak (one session constant) so its settled mean sits at
+% the 0 reference, then re-score phi = 1 - RR on that leak-corrected disturbance.
+% Reported vs the current phi (RR, G ref 0) so we can judge against our criteria before
+% promoting. Also reports the leak (Gdip) and disturbance RMS before -> after the shift.
+phi_ol_cur = [Q.rejPHI_ol];   phi_cl_cur = [Q.rejPHI_cl];
+phi_ol_alt = [Q.rejPHI_ol_alt]; phi_cl_alt = [Q.rejPHI_cl_alt];
+gd_ol_b = [Q.Gdip_ol]; gd_cl_b = [Q.Gdip_cl]; gd_ol_a = [Q.Gdip_ol_alt]; gd_cl_a = [Q.Gdip_cl_alt];
+dm_ol_b = [Q.Dmag_ol]; dm_ol_a = [Q.Dmag_ol_alt]; dm_cl_b = [Q.Dmag_cl]; dm_cl_a = [Q.Dmag_cl_alt];
+p_alt = NaN; if nS>=2; p_alt = signrank(phi_cl_alt, phi_ol_alt); end
+fprintf('\n[XSESS-ALT] LEAK-CORRECTED disturbance: phi = 1 - ||A-ref||^2/||G_shift||^2 (settled 1-3 s)\n');
+fprintf('  G shifted up by the OL leak so its settled mean -> 0 (true, un-suppressed disturbance).\n');
+fprintf('  %-22s %7s %7s | %7s %7s | %6s->%-6s %6s->%-6s | %5s->%-5s\n', ...
+    'session','phiOLc','phiOLa','phiCLc','phiCLa','GdOLb','GdOLa','GdCLb','GdCLa','DrmsO','DrmsO*');
+for k=1:nS
+    fprintf('  %-22s %7.2f %7.2f | %7.2f %7.2f | %6.2f %6.2f %6.2f %6.2f | %5.2f %5.2f\n', ...
+        Q(k).sess_tag, phi_ol_cur(k), phi_ol_alt(k), phi_cl_cur(k), phi_cl_alt(k), ...
+        gd_ol_b(k), gd_ol_a(k), gd_cl_b(k), gd_cl_a(k), dm_ol_b(k), dm_ol_a(k));
+end
+fprintf('  ---- session-level medians ----\n');
+fprintf('  CURRENT (G ref 0)   : OL %+.3f -> CL %+.3f   (%d/%d CL>OL)\n', ...
+    median(phi_ol_cur), median(phi_cl_cur), nnz(phi_cl_cur>phi_ol_cur), nS);
+fprintf('  ALT (leak-corrected): OL %+.3f -> CL %+.3f   (%d/%d CL>OL, signrank p=%.3g)\n', ...
+    median(phi_ol_alt), median(phi_cl_alt), nnz(phi_cl_alt>phi_ol_alt), nS, p_alt);
+fprintf('  leak (Gdip) OL: %+.3f -> %+.3f (should be ~0) | CL: %+.3f -> %+.3f (residual after OL corr)\n', ...
+    median(gd_ol_b), median(gd_ol_a), median(gd_cl_b), median(gd_cl_a));
+fprintf('  disturbance RMS OL: %.3f -> %.3f | CL: %.3f -> %.3f  (shift removes the leak DC)\n', ...
+    median(dm_ol_b), median(dm_ol_a), median(dm_cl_b), median(dm_cl_a));
+
 %% [XSESS-FIG] combined figure --------------------------------------------------
 figX = figure('Color','w','Position',[40 60 1500 440]);
 tl = tiledlayout(figX,1,3,'TileSpacing','compact','Padding','compact');
@@ -298,7 +337,9 @@ XS = struct('CFG',CFG,'nS',nS,'Q',Q, ...
     'p_sr_sess',p_sr_sess,'p_sr_ol1',p_sr_ol1,'p_sr_cl1',p_sr_cl1, ...
     'rej_frac_ol',rej_frac_ol,'rej_frac_cl',rej_frac_cl, ...
     'er_med_ol',er_med_ol,'er_med_cl',er_med_cl,'er_gain',er_gain, ...
-    'er_gain_ci',er_gain_ci,'p_er_sess',p_er_sess,'p_er_ol1',p_er_ol1,'p_er_cl1',p_er_cl1);
+    'er_gain_ci',er_gain_ci,'p_er_sess',p_er_sess,'p_er_ol1',p_er_ol1,'p_er_cl1',p_er_cl1, ...
+    'phi_ol_cur',phi_ol_cur,'phi_cl_cur',phi_cl_cur, ...
+    'phi_ol_alt',phi_ol_alt,'phi_cl_alt',phi_cl_alt,'p_alt',p_alt);
 save(fullfile(dataDir,'imp_reject_across_sessions.mat'),'XS');
 fprintf('[IMP-XSESS] struct -> data/imp_reject_across_sessions.mat  (%d qualifying, %d skipped)\n', ...
     nS, numel(skipped));

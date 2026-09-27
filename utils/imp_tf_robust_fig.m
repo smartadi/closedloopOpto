@@ -83,10 +83,14 @@ assert(n >= 2, '[TFROBUST] need >=2 usable session fits for a variability panel.
 % 3-session panel than in a 4-session one.
 grad = @(k) PS.sessColor(k);
 lbl  = cellfun(@(s) string(s.label), S);   % FULL label -> RB struct + console mapping
-% Tick labels are s1..sN (user, 2026-08-12: "in model swap use name s1,s2,s3,s4"). Short
-% enough that the swap matrix does not need rotated ticks, and the k -> real session mapping
-% is printed once by the driver and belongs in the caption.
-lblS = "s" + string(1:n).';
+% Tick labels: shorthand mouse labels M1a/M1b/M2/M3 (user 2026-09-22: unify with row 1's mouse
+% key across the whole figure; shorthand on cramped axes, full "Mouse 1a" only inside a legend
+% box). Falls back to s1..sN if the session structs carry no .mn field.
+if all(cellfun(@(s) isfield(s,'mn'), S))
+    lblS = string(imp_mouse_label(S, 'short'));
+else
+    lblS = "s" + string(1:n).';
+end
 
 tau1 = nan(n,1); lo = nan(n,1); hi = nan(n,1); sdW = nan(n,1);
 tau2 = nan(n,1); lo2 = nan(n,1); hi2 = nan(n,1);
@@ -129,11 +133,8 @@ figA = paperFig(PS.f2w, PS.f2h);  axA = axes(figA); hold(axA,'on');   % TF-A -- 
 % (filled circle = slow, open square = fast), not by hue. Encoding pole type in colour
 % would have cost the session identity that every other Fig-2 panel carries.
 dy = 0.16;
-if isfinite(mu) && isfinite(sdB)
-    patch(axA, [mu-sdB mu+sdB mu+sdB mu-sdB], [0.4 0.4 n+0.6 n+0.6], [.86 .86 .86], ...
-        'EdgeColor','none','FaceAlpha',0.6);
-    xline(axA, mu, '-', 'Color',[.45 .45 .45], 'LineWidth', PS.lw_ref);
-end
+% Cross-session mean line + -/+1 SD band removed per user 2026-09-22 (kept in the console
+% report below: mean tau_slow / between-session SD / ratio). Markers alone now carry the panel.
 for k = 1:n
     yS = k + hasFast*dy;                       % slow row nudges up only if a fast row exists
     if ~opts.bareA && isfinite(lo(k)) && isfinite(hi(k))
@@ -151,18 +152,21 @@ for k = 1:n
     end
 end
 ylim(axA,[0.4 n+0.6]);  set(axA,'YTick',1:n,'YTickLabel',cellstr(lblS),'TickLabelInterpreter','none');
+% Linear x starting at 0 and extended just past the largest tau (user 2026-09-22). The
+% fast/slow poles fall within one linear decade here, so a zero-based linear axis reads clean.
+xhi = 1.1 * max([tau1(:); tau2(:)], [], 'omitnan');
+if ~isfinite(xhi) || xhi <= 0, xhi = 0.5; end
+xlim(axA, [0 xhi]);
 if hasFast
-    % LOG x: tau_fast and tau_slow differ by an order of magnitude, so on a linear axis every
-    % fast pole collapses onto the y-axis and the panel says nothing about their agreement.
-    set(axA,'XScale','log');
     xlabel(axA,'\tau (s)');
     hSlow = plot(axA, NaN, NaN, 'o', 'MarkerSize',3.5, 'MarkerFaceColor',[.35 .35 .35], 'MarkerEdgeColor',[.35 .35 .35]);
     hFast = plot(axA, NaN, NaN, 's', 'MarkerSize',3.2, 'MarkerFaceColor','none', 'MarkerEdgeColor',[.35 .35 .35], 'LineWidth',0.6);
-    lgA = legend(axA, [hSlow hFast], {'slow','fast'}, 'Location','best', 'Box','off');
+    lgA = legend(axA, [hSlow hFast], {'slow','fast'}, 'Location','southeast', 'Box','off');
     lgA.ItemTokenSize = PS.lgd_token;  lgA.FontSize = PS.fs;  lgA.FontWeight = PS.fw;
 else
     xlabel(axA,'\tau_{slow} (s)');
 end
+title(axA,'Timescales','FontSize',PS.fs,'FontWeight',PS.fw);
 set(axA,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
 end
 

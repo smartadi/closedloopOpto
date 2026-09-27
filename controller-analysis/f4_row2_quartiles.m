@@ -119,6 +119,8 @@ end
 fprintf('\n============ ROW 2: OL-CL rejection GAP by state quartile (SESSION-LEVEL primary) ============\n');
 fprintf('state     nTrials nSess | session-aware LMM cond:state (PRIMARY star)  || refs: sess signrank / pooled\n');
 LME = struct();
+% ---- ONE ROW: all four states in a single 1x4 tiled figure (was 4 separate panels) ----
+figR=paperFig(18,4.6); tlR=tiledlayout(figR,1,4,'TileSpacing','compact','Padding','compact');
 for ip=1:numel(preds); nm=preds{ip};
     zx=Pl.(nm).zx; zy=Pl.(nm).zy; g=Pl.(nm).g;
     if isempty(zx); fprintf('%-9s (no data)\n',nm); continue; end
@@ -156,8 +158,8 @@ for ip=1:numel(preds); nm=preds{ip};
              '   || sess signrank p=%.3g  pooled p=%.3g\n'], ...
              nm,nTr,LME.(nm).nSes,bC,pC,tern(Rf.randslope,'',' (rand-int)'), pSess,pGap);
 
-    % ---- panel ----
-    fq=paperFig(5,4.6); ax=axes(fq); hold(ax,'on');
+    % ---- panel (tile in the shared row) ----
+    ax=nexttile(tlR); hold(ax,'on');
     yline(ax,0,'-','Color',[0.6 0.6 0.6],'LineWidth',0.5);
     xq=1:4; w=0.36;
     bar(ax,xq-w/2,qmO,w,'FaceColor',colOL,'EdgeColor','none');
@@ -177,6 +179,7 @@ for ip=1:numel(preds); nm=preds{ip};
     text(ax,4.45,yl(2)-0.10*range(yl),sprintf('p=%.2g',pC), ...
         'HorizontalAlignment','right','VerticalAlignment','top','FontSize',5,'Color',[0.35 0.35 0.35]);
     title(ax,titR2{ip},'FontSize',PS.fs,'FontWeight','bold');   % trial count -> caption (cleaner panel)
+    if ip>1, set(ax,'YTickLabel',[]); end   % shared y-axis across the row
     if ip==1
         ylabel(ax,'RMSE to ref (z)','FontSize',PS.fs,'FontWeight','bold');
         % compact legend
@@ -189,9 +192,14 @@ for ip=1:numel(preds); nm=preds{ip};
         text(ax,xL+0.14,yTop-2*dh,'gap','FontSize',5,'FontWeight','bold','Color',[0.15 0.15 0.15],'VerticalAlignment','middle');
     end
     hold(ax,'off');
-    try, paperExport(fq, fullfile(outdir,fnout{ip})); catch ME, warning('[F4R2] skip %s (%s)',fnout{ip},ME.message); end
 end
-fprintf('\n[F4R2] row-2 panels -> %s\n', outdir);
+% ---- export the single combined row ----
+outview=fullfile('_preview'); if ~exist(outview,'dir'); mkdir(outview); end
+try
+    paperExport(figR, fullfile(outdir,'f4_row2_quartiles.pdf'));
+    paperExport(figR, fullfile(outview,'f4_row2_quartiles.png'));
+catch ME, warning('[F4R2] export skip (%s)',ME.message); end
+fprintf('\n[F4R2] row-2 combined 1x4 row -> %s\n', outdir);
 
 %% ============ ROW 2 SUPPLEMENT: mixed-effects (LME) interaction table (Nick) ============
 % The panel star IS the session-aware LMM cond x state interaction, computed by the SHARED helper

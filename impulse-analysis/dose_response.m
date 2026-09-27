@@ -156,26 +156,24 @@ end
 % look-up and no legend box competing with the traces. R2 is dropped from the panel (it is a
 % goodness-of-fit number, not the result) and still prints to the console for the caption.
 % Vertical nudging only if two lines end within a hair of each other.
-[~, ordL] = sort(labY);
-minGap = 0.055 * diff(ylim(ax));
-for ii = 2:numel(ordL)
-    a = ordL(ii-1); b = ordL(ii);
-    if labY(b) - labY(a) < minGap, labY(b) = labY(a) + minGap; end
-end
-% All labels share ONE x at the right margin rather than sitting at each line's own end.
-% Sessions stop at different amplitudes, so per-line placement dropped labels into the middle
-% of the plot on top of other sessions' points -- exactly the overlap this block exists to
-% remove. A common right-hand column costs a small disconnect for the shorter lines and buys
-% a clean reading order top-to-bottom.
+% SEQUENTIAL legend (user 2026-09-22: "just put them sequentially with no gaps"): stack the
+% labels as an evenly-spaced list in the right margin, in session order, DECOUPLED from each
+% line's end y-position. Uniform spacing => no ragged gaps; the colour still ties each entry
+% to its trace, so it reads as a clean legend column top-to-bottom.
 if ~strcmpi(DR_LABEL, 'none')
-    xr    = diff(xlim(ax));
-    labXc = max(labX) + 0.03*xr;
+    % Place the sequential legend INSIDE the axes at the top-right (the dose-response lines
+    % descend, so that corner is empty) and right-align it, so it does NOT extend the panel
+    % width. Keeps the panel within the <=4 cm Fig-2 canvas (user 2026-09-22).
+    xl    = xlim(ax);   yl = ylim(ax);   xr = diff(xl);
+    labXc = xl(1) + 0.97*xr;                    % right edge, text grows leftward
+    ytop  = yl(2) - 0.06*diff(yl);
+    ystep = 0.115*diff(yl);                     % fixed row pitch -- sequential, no gaps
     for expIdx = 1:nExp
-        text(ax, labXc, labY(expIdx), labT{expIdx}, ...
+        yy = ytop - (expIdx-1)*ystep;
+        text(ax, labXc, yy, labT{expIdx}, ...
             'Color', expColors(expIdx,:), 'FontSize', PS.fs, 'FontWeight', PS.fw, ...
-            'HorizontalAlignment','left', 'VerticalAlignment','middle', 'Clipping','off');
+            'HorizontalAlignment','right', 'VerticalAlignment','middle', 'Clipping','off');
     end
-    xlim(ax, [min(xlim(ax)), labXc + 0.22*xr]);   % room for the labels outside the data
 end
 ylabTxt = 'Inhibition Energy';
 if DR_YAXIS

@@ -1,13 +1,99 @@
 # Meeting Log — Brain Paper (Nick/Aditya)
 
-Transcripts: `C:\Users\aditya\OneDrive\Notes\Adick meetings\`  
+Transcripts: `C:\Users\aditya\OneDrive\Notes\Meetings\Adick meetings\`  
 Add a new entry here after each meeting. Parse with: give Claude the transcript path and say "parse this meeting."
 
 ---
 
-## Open Action Items — as of 2026-07-28
+## Open Action Items — as of 2026-09-15
 
-> Reconciled from the 2026-07-28 meeting's own carry-forward list (the authoritative current snapshot). Older figure/analysis items folded into the residual-framework pivot or confirmed done are recorded in the meeting entries below, not repeated here.
+> Reconciled from the 2026-09-15 meeting's own new + carried-forward list (the authoritative current snapshot). Items marked DONE were closed by work logged after the meeting (see Research Hub worklog / RESEARCH.md); the rest are open. Older detailed breakdowns are preserved further down.
+
+### Manuscript — critical path to bioRxiv (NEW 2026-09-15)
+- [ ] `2026-09-15.1` **Run Ziyu's predictor model on the contra (CL) dataset** and add the resulting **σ operating point** to the MPC performance-vs-σ curve *(THE decision item — supersedes 2026-09-11.4; ARIMA + patch-LSTM σ from literature already placed on the curve)*
+- [x] `2026-09-15.2` Finalize the statistical section; **session-level Wilcoxon Q1/Q4 tests done for all three claims** (initial-deviation, motion, rel-delta) and all three hold — **DONE**, bring the figures to next meeting for review
+- [ ] `2026-09-15.3` **Add the open-loop-optimized reference trace** to the disturbance-rejection analysis, and run **two additional control experiments** to support it *(merges 2026-07-22.3)*
+- [ ] `2026-09-15.4` Chat with **Fabiola + Anna Lee** about additional excitatory-opsin mice (PHP-serotype retro-orbital or equiv); bring a concrete acquisition plan to next meeting
+- [ ] `2026-09-15.5` Show Nick the **step-response traces** illustrating the inhibitory-rebound problem on the excitatory side
+- [ ] `2026-09-15.6` Introduce **Grace** to the 2–3 experimental streams this week; help her pick one (likely impulse-response characterization)
+- [ ] `2026-09-15.7` **Aditya + Grace**: reach out to Nick to schedule the first three-way meeting (~3-week cadence)
+- [ ] `2026-09-15.8` Continue cutting the **manuscript/grant draft to 12 pages** (Azadeh's template + AI-assisted flow) — ongoing
+- [ ] `2026-09-15.9` At the Thursday **Allen meeting**, push collaborators for SLDS/rSLDS/GDM code help; share data + code via Code Ocean
+- [ ] `2026-09-15.10` **Hold on the motorized wheel** until Alice returns (~Sep 29) to redesign the fixtures
+
+> **Settled at the 2026-09-15 meeting (was open in the Sept-11 snapshot):** the primary **disturbance-rejection metric is finalized as a 0–1 energy ratio**; the **residual-only (local) model moves to supplemental**; the **MPC clairvoyant baseline is redefined as average-OL + perfect control**. The Sept-11 items below are kept for their fuller notes.
+
+### Manuscript — from the 2026-09-11 meeting
+- [x] `2026-09-11.1` Replace pooled-trial Wilcoxon with a **session-level paired test** (one Q4−Q1 gap per session); report how many sessions individually show it — **DONE:** session-level + mixed-effects test now printed on the Fig-4 state panels and as a permanent stats panel (`f4_2S_stats`)
+- [ ] `2026-09-11.2` **Fix legend labels** in the disturbance-rejection figure ("subdued response" → "response")
+- [x] `2026-09-11.3` Resolve the **MPC calc discrepancy** (clairvoyant σ=0 ~38% ≈ σ=0.3 ~36% despite very different traces) — **DONE:** metric-window artifact; re-measured on the settled post-onset window, curve now sensible
+- [ ] `2026-09-11.4` **Extract per-timestep prediction σ from Ziyu's model** on the closed-loop dataset; place it on the MPC performance-vs-σ curve to see whether real predictors are in the useful range *(the number that decides MPC main-text vs supplement — still the key open item)*
+- [~] `2026-09-11.5` **Decide MPC main vs supplemental** (pending .4) — leaning **discussion-only, no figure** per 2026-09-21 worklog; confirm with Nick after the σ number
+
+### GDM / model-comparison + experiment design (carried from 2026-09-10)
+- [ ] `2026-09-10.1` Share the **52-point dual-opsin grid dataset** (with motion/pupil) with **Elu** via Code Ocean for GDM training
+- [ ] `2026-09-10.2` Define the **GDM task spec**: motion energy + pupil as discrete (high/low) state labels; grid data as input-output pairs
+- [ ] `2026-09-10.3` Design the **four-condition interleaved experiment** (OL; CL single controller; CL GDM-controller-1; CL GDM-controller-2) to pseudo-test state-dependent controller benefit
+- [ ] `2026-09-10.4` Build a **model-comparison library**: fit SLDS (+ cousins) alongside GDM on the grid data; define tracking-error / variability-reduction metrics
+- [x] `2026-09-10.5` Follow up with Nick to discuss manuscript + open items — **DONE (this is the 2026-09-11 meeting)**
+
+### Manuscript / grant handoff (carried from 2026-08-24 / 08-10 / 08-05)
+- [ ] `2026-08-24.1` / `2026-08-10.1` / `2026-08-05.5` **Finalize the manuscript draft** (unified dataset, three-figure structure) and send to Nick *(in progress — Fig 2/3 + text on Overleaf; Fig 4 held on local `draft` pending Row-3 headline)*
+- [ ] `2026-08-24.2` Complete a **first draft of all three aims** and share with Nick, Felix, Sophia
+- [ ] `2026-08-24.3` Coordinate a **group meeting with Felix + Sophia** to align on the grant story
+- [ ] `2026-08-24.5` Write a **concrete experiment plan for Grace** (grid stim, step + impulse, two spots, motion/pupil)
+- [ ] `2026-08-24.6` Request **Anna's multi-spot stim dataset**; study how dual-site 40 Hz alternating stim was programmed
+- [ ] `2026-08-24.7` Test **fast-galvo two-spot within one widefield frame** (ramp noise + feasibility)
+- [ ] `2026-08-24.8` Follow up with **Fabiola** on reciprocal collaboration (probe recordings during CL sessions)
+- [ ] `2026-08-24.9` Follow up with **Fabiola** on injecting more excitatory-opsin mice
+- [ ] `2026-08-24.10` Decide whether to **interview with Merge AI** (BCI co., contact Casper Kiorkowski; SF is the friction)
+- [ ] `2026-08-10.6` Write the **Aim-2 contribution for Azadeh's grant** (with Felix)
+- [ ] `2026-08-05.1` Look up the **exact virus for AL_0048** (AAV9-CamKII-ChrimsonR or equiv) from the injection sheet; confirm with Nick
+
+### Dual-opsin / excitatory-side control (carried from 2026-08-10 / 08-05 / 07-22)
+- [ ] `2026-08-10.2` Run **controllability analysis** on midline dual-opsin data (two-input LTI; check all output directions controllable → bidirectional shaping feasibility)
+- [ ] `2026-08-10.3` Test **PI closed-loop with low targets on the excitatory side** (not yet attempted)
+- [ ] `2026-08-05.2` Design an **excitatory-side input trajectory** that inverts the fitted TF to avoid the inhibitory-rebound regime; also test sine input on the excitatory side
+- [ ] `2026-07-22.2` **Fit TFs (poles + zeros) to both hemispheres**; quantify difference in dominant time constants + oscillation frequency
+- [ ] `2026-08-10.5` Run **heterogeneous-node graph-model** simulations on the grid data; generate reachability/spread plots *(now the `tpgdar` project)*
+
+### State-dependence / residual framework (carried, several likely closed by Fig-4 finalization)
+- [ ] `2026-07-06.2` Add **pre-stim-window residual control** (flat across delta/variance bins)
+- [ ] `2026-07-06.3` **Finalize the contralateral predictor mask**, then rerun Q1–Q4 residual-deviation plots before claiming significance
+- [ ] `2026-07-06.4` **Significance test on the slope** of residual deviation vs state variables, using the finalized mask
+- [ ] `2026-07-22.3` Add the **OL-optimized reference trace** to residual plots; quantify baseline flatness + stim-period deviation
+- [ ] `2026-07-22.4` **Quantify disturbance rejection per trial** vs pre-stim state (delta, motion) *(largely addressed by the Fig-4 rejection metric; confirm)*
+- [ ] `2026-06-29.13` / `2026-07-02.5` Reconcile the impulse **state-dependence result + SFN p-value** with the corrected analysis before bioRxiv
+- [ ] `2026-06-22.9` Re-run residual analysis with corrected predictor; clean + correctly-labeled trace/scatter plots
+- [ ] `2026-07-17.10` Write the discussion-anchor question: **"Are mesoscale cortical dynamics locally generated or sub-cortically imposed?"**
+
+### Ephys / spike-sorting (carried from 2026-07-22)
+- [ ] `2026-07-22.5` **Validate the Python spike-sorting re-implementation** (~50 ms); then contact Streams to share
+- [ ] `2026-07-22.6` Define the **target closed-loop ephys experiment** with Nick + lab (probe / opsin / manipulation)
+
+### Treadmill / rig hardware (carried)
+- [ ] `2026-07-28.6` **Purchase the motor**; in-situ noise test; foam housing / belt-drive if too loud
+- [ ] `2026-07-17.3` **Place the passive running wheel** in the rig now; encoder later
+- [ ] `2026-06-29.2` Add **rotary-encoder mount** to the wheel base; confirm Arduino wiring
+- [ ] `2026-06-29.3` When **Alice returns (fall)**, supervise the motorized/clutch fixture redesign
+
+### People / logistics / career (carried)
+- [ ] `2026-08-10.9` Complete **Grace's onboarding** (she started Sep 1)
+- [ ] `2026-08-05.6` Follow up with **Azadeh** to start the H1B process once the offer letter is confirmed
+- [ ] `2026-07-17.5` Ask **Anna Lee** about the **CamKII-C1V1 mouse** availability for CL experiments
+
+### Nick's items (not Aditya's)
+- [ ] `2026-08-24.4` **Nick**: brief **Grace**; assign her grid-stim data collection (dual-spot, motion, pupil) + analysis
+- [ ] `2026-08-05.3` **Nick**: talk to **Fabiola** about injecting more excitatory-opsin mice (L+R cohort)
+- [ ] `2026-08-05.4` **Nick**: contact **Dr. Whitefield** re an off-the-shelf PHP-serotype virus for retro-orbital excitatory-opsin delivery
+- [ ] `2026-08-05.7` **Nick**: finalize funding split with Eric; issue the one-year postdoc offer letter
+- [ ] `2026-07-17.9` **Nick**: simulate an inhibitory DC input into the **Kurtow & Harris** model (does output variance survive?)
+
+---
+
+## Prior carry-forward (pre-2026-09-11)
+
+> The detailed 2026-07-28-era breakdown, kept for the fuller notes on each item. Superseded by the reconciled snapshot above where they overlap.
 
 ### Disturbance-Rejection Metric & Multi-Mouse Sessions — NEW (2026-07-28, critical path)
 - [ ] `2026-07-28.1` **Invert the disturbance-rejection metric to a plain energy ratio** — actual trial energy / disturbance energy, so **1 = no work done** and **< 1 = controller gain**; drop the minus-one offset (current ρ = 1 − ‖A−ref‖/‖G‖) *(2026-07-28)*
@@ -93,6 +179,45 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 ---
 
 ## Meeting Entries
+
+---
+
+### 2026-09-15
+**Source:** `C:\Users\aditya\OneDrive\Notes\Meetings\Adick meetings\Sept 15th.md`
+
+**Overview:** Full action-item checklist review; most items in progress or carried forward. **Statistics closed out** — the session-level Wilcoxon tests (replacing the pooled-trial test Nick rejected on Sept 11) are now done for all three Q1/Q4 claims (initial disturbance, motion, relative delta) and **all three hold**. **MPC figure updated**: clairvoyant baseline redefined as **average open-loop + perfect control**; ARIMA and patch-LSTM σ values from the literature added to the performance-vs-σ curve; **Ziyu's model to be run on contra data next** (the remaining decision input). **Residual-only (local) model moved to supplemental**; the **primary disturbance-rejection metric is finalized as a 0–1 energy ratio.** Excitatory-opsin closed-loop still blocked by strong **inhibitory rebound on step inputs** → coordinate with Fabiola + Anna Lee for more excitatory-opsin mice. New rotation student **Grace** starts next week (Aditya introduces 2–3 streams, she picks one to own — likely impulse-response characterization; ~3-week three-way meetings).
+
+**Key decisions:**
+- **Statistics section is done** for the Q1/Q4 claims (session-level Wilcoxon, all three hold) — bring the figures to the next meeting
+- **Disturbance-rejection metric finalized** as a **0–1 energy ratio**; residual-only (local) model → **supplemental**
+- **MPC clairvoyant baseline** redefined as average-OL + perfect control; place literature σ (ARIMA, patch-LSTM) on the curve; **run Ziyu's model on the contra CL data** for the real operating point
+- **Add an OL-optimized reference trace** to the disturbance-rejection analysis + two supporting control experiments
+- Excitatory side: fit a 2nd-order (2-pole/1-zero) model, check for a right-half-plane (non-minimum-phase) zero to explain the step rebound; plan more excitatory-opsin mice with Fabiola/Anna Lee
+- Hold the motorized wheel until Alice returns (~Sep 29)
+
+**AI analysis flags (from transcript):**
+- **Cross-check the ARIMA/patch-LSTM σ units** against the simulation — σ as std of prediction residuals in ΔF/F vs normalized units must match before the operating points are comparable
+- **Grace onboarding vs manuscript push** is a real bandwidth risk — write her a one-page impulse-response grid protocol before day one so she starts with minimal supervision
+- **Allen collaboration is a timeline dependency** — if Thursday's meeting doesn't unblock SLDS/GDM help, scope a self-sufficient `pylds` SLDS fit rather than wait
+
+---
+
+### 2026-09-11
+**Source:** `C:\Users\aditya\OneDrive\Notes\Meetings\Adick meetings\Sept 11th.md`
+
+**Overview:** Manuscript figure-structure walkthrough. Figs 1 and 3 unchanged; **Fig 2** now = LTI fits vs impulse responses across four mice (cross-session validation, model swapping, fast/slow mode variability); **Fig 4** = closed-loop performance + state-dependence. State-dependence uses an **error-decomposition model** (RMSE attributed to initial deviation, motion, relative/absolute delta power, unique R² per feature; absolute vs relative delta capture different trial types — short bursts vs sustained heavy delta). Nick's main statistics critique: the **Q1-vs-Q4 gap test is wrong** — pooling trials across sessions ignores session/mouse correlations; switch to a **session-level paired test** now and a **linear mixed-effects model** as the eventual primary statistic. Disturbance-rejection metric shown (subdued-energy / disturbance-energy per trial, global+stim-only predictor). **MPC** simulation (clairvoyant σ=0 vs PI vs tube-MPC σ=0.3) shown, but Nick flagged a **likely calc error** (σ=0 ~38% ≈ σ=0.3 ~36% despite very different traces) and questioned whether MPC earns a main-text spot vs supplemental. Path forward: extract per-step prediction σ from **Ziyu's model**, locate it on the MPC performance-vs-σ curve, and let that decide whether MPC is worth pursuing.
+
+**Key decisions:**
+- **Switch the Q1/Q4 gap statistic** from pooled-trial Wilcoxon to a **session-level paired test** (one gap per session), moving to a **linear mixed-effects model** (mouse + session random effects) as the correct long-run test
+- **Resolve the MPC metric discrepancy** before the MPC panel can support any claim — most likely a normalization/window mismatch in the denominator
+- **Compute σ from Ziyu's model on our CL data** and place it on the performance curve — this decides MPC main-text vs supplement
+- **Fix the disturbance-rejection legend** ("subdued response" → "response")
+- Fig-2/Fig-4 structure as above is the working layout for the draft
+
+**AI analysis flags (from transcript):**
+- MPC σ=0 vs σ=0.3 numbers cannot be nearly equal given the traces — check the metric denominator (disturbance energy vs reference-relative energy) and integration window; a perfect predictor on a linear plant should integrate to ~zero tracking error
+- The MPC story is **evidence-free until the σ number lands** — if Ziyu's σ falls in the flat/high-σ regime, the MPC section *weakens* the paper; compute it before deciding inclusion
+- **Session-count imbalance (6+5+2+2 across four mice)** persists even with session-level tests — the mixed-effects model with mouse as a random effect is the correct fix; prioritize it if the effect is marginal
 
 ---
 
