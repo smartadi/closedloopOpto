@@ -22,8 +22,10 @@ clc; close all;
 PS = paperStyle(); setPaperDefaults();
 root = 'C:\Users\aditya\Documents\projects\brain_paper';
 outfig  = fullfile(root,'paper','images','figure4');
+outsupp = fullfile(root,'paper','images','supplementary');   % non-main decomp panels (user 2026-09-28)
 outview = fullfile(root,'controller-analysis','_preview');
 if ~exist(outfig,'dir');  mkdir(outfig);  end
+if ~exist(outsupp,'dir'); mkdir(outsupp); end
 if ~exist(outview,'dir'); mkdir(outview); end
 
 % ---- constants (match cl_rmse_factor_windows.m) ----
@@ -70,7 +72,9 @@ fprintf('[f4_error_decomp] %d CL trials, %d motion sessions.\n', n, nS);
 % Modes give the user options: keep only ONE delta, or BOTH.
 Wout={YE,YL}; win_lbl={'0-1 s','1-3 s'};
 col_e=[0.35 0.55 0.85]; col_l=[0.15 0.25 0.55];
-minTr=25;
+minTr=12;   % 2026-09-28 (user): include EVERY motion session in the per-session decomp
+            % (was 25, which silently dropped the 16-trial session AL_0033_0305 -> only 6 of 7).
+            % 12 is a safe floor for a 3-4 factor per-session unique-R^2 fit.
 modes = {'both','rel','abs'};
 modeCols = {[1 2 3 4], [1 2 3], [1 2 4]};
 modeFac  = {fac_lbl, fac_lbl([1 2 3]), fac_lbl([1 2 4])};
@@ -105,13 +109,14 @@ for mi=1:numel(modes)
     for j=1:nF, fprintf('  %-11s %6.3f %6.3f\n',fl{j},Up(j,1),Up(j,2)); end
     fprintf('  COMBINED:\n');
     for g=1:numel(grp), fprintf('  %-13s %6.3f %6.3f\n',grpL{g},Cp(g,1),Cp(g,2)); end
+    % NON-MAIN decomp panels -> supplementary (only 'sep' unique-R^2 is the main-text panel).
     draw_grouped(Up, Us(:,:,okS), fl, {col_e,col_l}, win_lbl, 'unique R^2', ...
         sprintf('Unique R^2 [\\delta: %s] (n=%d, %d sess)',mo,n,nSok), PS, ...
-        fullfile(outfig,sprintf('f4_decomp_unique_%s.pdf',mo)), ...
+        fullfile(outsupp,sprintf('f4_decomp_unique_%s.pdf',mo)), ...
         fullfile(outview,sprintf('f4_decomp_unique_%s.png',mo)));
     draw_grouped(Cp, Cs(:,:,okS), grpL, {col_e,col_l}, win_lbl, 'combined R^2', ...
         sprintf('Combined R^2 [\\delta: %s]',mo), PS, ...
-        fullfile(outfig,sprintf('f4_decomp_combined_%s.pdf',mo)), ...
+        fullfile(outsupp,sprintf('f4_decomp_combined_%s.pdf',mo)), ...
         fullfile(outview,sprintf('f4_decomp_combined_%s.png',mo)));
     DEC.(mo)=struct('Up',Up,'Cp',Cp,'Us',Us,'Cs',Cs,'okS',okS,'fac',{fl},'grp',{grpL},'nSok',nSok);
 end
@@ -138,9 +143,10 @@ end
 nSsep=nnz(okSsep);
 fprintf('\n==== MODE ''sep'' (each delta in its own init+motion+d model) | UNIQUE R^2 (0-1 / 1-3) ====\n');
 for j=1:4, fprintf('  %-11s %6.3f %6.3f\n',fac_lbl{j},Usep(j,1),Usep(j,2)); end
+FCfac=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];  % init,motion,rel,abs (match exemplars)
 draw_grouped(Usep, UsepS(:,:,okSsep), fac_lbl, {col_e,col_l}, win_lbl, 'unique R^2', ...
     sprintf('Unique R^2 (each \\delta own model) (n=%d, %d sess)',n,nSsep), PS, ...
-    fullfile(outfig,'f4_decomp_unique_sep.pdf'), fullfile(outview,'f4_decomp_unique_sep.png'));
+    fullfile(outfig,'f4_decomp_unique_sep.pdf'), fullfile(outview,'f4_decomp_unique_sep.png'), FCfac, 6.5);
 DEC.sep=struct('Up',Usep,'Us',UsepS,'okS',okSsep,'fac',{fac_lbl},'nSok',nSsep);
 
 save(fullfile(root,'controller-analysis','data','f4_error_decomp.mat'), ...
@@ -148,11 +154,23 @@ save(fullfile(root,'controller-analysis','data','f4_error_decomp.mat'), ...
 fprintf('\n[f4_error_decomp] wrote unique+combined panels for %d delta modes -> %s\n', numel(modes), outfig);
 
 %% ---- helpers ----
-function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath)
+function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, faceRGB, wCm)
     % P: nItem x 2(win) pooled ; Ps: nItem x 2 x nSess per-session
-    nI=size(P,1); f=paperFig(max(6,1.7*nI+2),4.6); ax=axes(f); hold(ax,'on');
+    % faceRGB (optional): nItem x 3 base colours -> 0-1 s bar = lighter, 1-3 s = darker.
+    % wCm (optional): figure width (cm).
+    if nargin<11, faceRGB=[]; end
+    nI=size(P,1);
+    if nargin<12 || isempty(wCm), wCm=max(6,1.7*nI+2); end
+    f=paperFig(wCm,4.6); ax=axes(f); hold(ax,'on');
     yline(ax,0,'-','Color',[.6 .6 .6],'LineWidth',0.5,'HandleVisibility','off');
-    hb=bar(ax,P,'grouped','EdgeColor','none'); hb(1).FaceColor=wcol{1}; hb(2).FaceColor=wcol{2};
+    hb=bar(ax,P,'grouped','EdgeColor','none');
+    if ~isempty(faceRGB)
+        lightC=1-0.55*(1-faceRGB); darkC=0.70*faceRGB;   % light = 0-1 s, dark = 1-3 s
+        hb(1).FaceColor='flat'; hb(1).CData=lightC;
+        hb(2).FaceColor='flat'; hb(2).CData=darkC;
+    else
+        hb(1).FaceColor=wcol{1}; hb(2).FaceColor=wcol{2};
+    end
     nser=2; gw=min(0.8,nser/(nser+1.5)); rng(1);
     for w=1:nser
         xc=(1:nI)-gw/2+(2*w-1)*gw/(2*nser);
@@ -167,7 +185,13 @@ function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath)
     set(ax,'XTick',1:nI,'XTickLabel',xlbl,'Box','off','TickDir','out', ...
         'FontSize',PS.fs,'FontWeight',PS.fw,'TickLabelInterpreter','tex'); xtickangle(ax,18);
     ylabel(ax,ylab,'FontSize',PS.fs,'FontWeight',PS.fw);
-    lg=legend(ax,hb,wlbl,'FontSize',PS.fs,'Box','off','Location','northeast'); lg.ItemTokenSize=[6 6];
+    if ~isempty(faceRGB)   % neutral light/dark swatches for the window legend (bars are per-factor)
+        h1=patch(ax,nan,nan,[.72 .72 .72],'EdgeColor','none'); h2=patch(ax,nan,nan,[.35 .35 .35],'EdgeColor','none');
+        lg=legend([h1 h2],wlbl,'FontSize',PS.fs,'Box','off','Location','northeast');
+    else
+        lg=legend(ax,hb,wlbl,'FontSize',PS.fs,'Box','off','Location','northeast');
+    end
+    lg.ItemTokenSize=[6 6];
     title(ax,ttl,'FontSize',PS.fs,'FontWeight',PS.fw); hold(ax,'off');
     paperExport(f,pdfpath); paperExport(f,pngpath);
 end

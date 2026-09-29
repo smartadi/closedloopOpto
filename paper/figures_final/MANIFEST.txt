@@ -54,13 +54,13 @@ figure3/MSE_ratio_by_window.pdf
 #      -> f4_contra_model.pdf (single composite source; its 3 sub-panels split/lettered in Illustrator)
 # (The old contra-level "Panel A" = ctrl_state_xsess is DROPPED from Fig 4.)
 [figure4]
-figure4/f4_decomp_unique_sep.pdf
 figure4/f4_state_exemplars.pdf
-figure4/f4_2A_initdev.pdf
-figure4/f4_2B_motion.pdf
-figure4/f4_2C_delta.pdf
-figure4/f4_2D_absdelta.pdf
-figure4/f4_contra_model.pdf
+figure4/f4_1B_equation.pdf
+figure4/f4_decomp_unique_sep.pdf
+figure4/f4_row2_quartiles.pdf
+figure4/f4_kernel_map.pdf
+figure4/f4_agl.pdf
+figure4/f4_cl_reject_RR.pdf
 
 [figure5]
 figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf

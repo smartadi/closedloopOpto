@@ -67,7 +67,7 @@ for j=1:4
 end
 
 % ================= FIGURE: 1 x 6 row =================
-fig=paperFig(18,4.4); tl=tiledlayout(fig,1,6,'TileSpacing','compact','Padding','compact');
+fig=paperFig(7.5,4.6); tl=tiledlayout(fig,1,4,'TileSpacing','compact','Padding','compact');  % row-1 LEFT: sits with equation (3.0) + decomp unique_sep (6.5) = 17 cm
 tv=(-spec_pre_s:1/Fs:spec_post_s).'; yl=[-16 10];
 
 % ----- tiles 1-4: exemplars -----
@@ -97,27 +97,9 @@ for j=1:4
     end
 end
 
-% ----- tile 5: representative error model equation (model FORM; colours = states) -----
-axE=nexttile(tl); axis(axE,'off'); hold(axE,'on'); xlim(axE,[0 1]); ylim(axE,[0 1]);
-text(axE,0.02,0.97,'error model','FontSize',PS.fs+1,'FontWeight','bold','Color',[0 0 0],'VerticalAlignment','top');
-text(axE,0.02,0.81,'RMSE_{\rightarrow ref}  \approx  \beta_0','FontSize',PS.fs,'FontWeight',PS.fw,'Color',[0 0 0],'VerticalAlignment','top');
-yy=[0.65 0.52 0.39 0.26];
-for j=1:4
-    text(axE,0.07,yy(j),sprintf('+ \\beta_%d \\cdot %s',j,eqlbl{j}), ...
-        'FontSize',PS.fs,'FontWeight',PS.fw,'Color',col(j,:),'VerticalAlignment','top');
-end
-text(axE,0.02,0.08,sprintf('4-factor R^2 = %.2f',R2full),'FontSize',PS.fs-1,'FontWeight',PS.fw,'Color',[.35 .35 .35],'VerticalAlignment','bottom');
-
-% ----- tile 6: R^2 explained bar (per state, state colours) -----
-axB=nexttile(tl); hold(axB,'on');
-for j=1:4, bar(axB,j,max(sepR2(j),0),0.72,'FaceColor',col(j,:),'EdgeColor','none'); end
-yline(axB,R2full,'--','Color',[.35 .35 .35],'LineWidth',PS.lw_ref);
-text(axB,0.5,R2full+0.008,sprintf('full model %.2f',R2full),'FontSize',PS.fs-1,'FontWeight',PS.fw,'Color',[.35 .35 .35],'HorizontalAlignment','left','VerticalAlignment','bottom');
-for j=1:4, if sepR2(j)>=0.02, text(axB,j,sepR2(j)+0.012,sprintf('%.2f',sepR2(j)),'FontSize',PS.fs-1,'FontWeight',PS.fw,'Color',col(j,:),'HorizontalAlignment','center','VerticalAlignment','bottom'); end; end
-xlim(axB,[0.4 4.6]); ylim(axB,[0 max(0.52,max(sepR2)*1.28)]);
-set(axB,'XTick',1:4,'XTickLabel',eqlbl,'XTickLabelRotation',30,'Box','off','TickDir','out','FontSize',PS.fs,'FontWeight',PS.fw);
-ylabel(axB,'variance explained (R^2)','FontSize',PS.fs,'FontWeight',PS.fw);
-title(axB,'each state, own model','FontSize',PS.fs,'FontWeight',PS.fw);
+% tiles 5 (error-model equation) and 6 (R^2 explained bar) REMOVED 2026-09-28 (user):
+% row-1 is now [state exemplars | decomp unique-R^2 (f4_error_decomp)] -- the R^2 bars live in
+% the separate decomp panel (recoloured by factor), so exemplars = 4 bigger trials only.
 
 exportgraphics(fig,fullfile(outfig,'f4_state_exemplars.pdf'),'ContentType','vector');
 exportgraphics(fig,fullfile(outview,'f4_state_exemplars.png'),'Resolution',220);

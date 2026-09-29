@@ -25,8 +25,14 @@
 % model is f4_2S_stats (f4_row2_stats.m). A NEGATIVE cond(CL):state term = the CL
 % advantage SHRINKS at high state (gap closes); a flat gap = state-independent rejection.
 %
-% OUTPUT: three vector PDFs (paper/images/figure4/): f4_2A_initdev.pdf,
-%         f4_2B_motion.pdf, f4_2C_delta.pdf.   Requires load_sessions.m first.
+% OUTPUT (paper/images/figure4/):
+%   - FOUR individual vector PDFs (kept for reference/supplement), each ~4.25 cm, own y-axis,
+%     legend only on init-dev, colored title: f4_2A_initdev/2B_motion/2C_delta/2D_absdelta.pdf.
+%   - ONE stitched 17 cm paper figure f4_row2_quartiles.pdf: 1x4 sharing a COMMON y-axis
+%     (ticks+label only on the leftmost tile), legend on init-dev only, state-colored titles.
+%     This stitched version is the main-text panel.
+%   No cond x state tag on any panel (the LMM decoupling p is still printed to console + f4_2S_stats).
+%   Requires load_sessions.m first.
 % ============================================================================
 clc; close all;
 PS = paperStyle(); setPaperDefaults();
@@ -46,6 +52,7 @@ relopts = struct('pre',2,'post',3);            % delta window -2 -> stim end (ma
 colOL = PS.col_ol; colCL = PS.col_cl;
 preds = {'initdev','motion','delta','absdelta'};
 titR2 = {'Initial deviation','Motion','Rel 2-4 Hz','Abs \delta'};
+titCol = [0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];  % init,motion,rel,abs -> match state exemplars/decomp
 fnout = {'f4_2A_initdev.pdf','f4_2B_motion.pdf','f4_2C_delta.pdf','f4_2D_absdelta.pdf'};
 
 % ---- session-aware LMM: SHARED with f4_row2_stats.m so the panel star == f4_2S_stats decoupling p.
@@ -119,8 +126,10 @@ end
 fprintf('\n============ ROW 2: OL-CL rejection GAP by state quartile (SESSION-LEVEL primary) ============\n');
 fprintf('state     nTrials nSess | session-aware LMM cond:state (PRIMARY star)  || refs: sess signrank / pooled\n');
 LME = struct();
-% ---- ONE ROW: all four states in a single 1x4 tiled figure (was 4 separate panels) ----
-figR=paperFig(18,4.6); tlR=tiledlayout(figR,1,4,'TileSpacing','compact','Padding','compact');
+% ---- FOUR INDIVIDUAL PANELS (user 2026-09-28): one standalone PDF per state, sized to sit
+% side by side in a 17 cm row in Illustrator (4 x ~4.25 cm). NOT stitched into one figure. ----
+outview=fullfile('_preview'); if ~exist(outview,'dir'); mkdir(outview); end
+PQ=struct('qmO',{},'qmC',{},'qsO',{},'qsC',{},'predP',{},'predUp',{},'ctrlP',{},'ctrlUp',{});   % per-state quantities for the stitched figure
 for ip=1:numel(preds); nm=preds{ip};
     zx=Pl.(nm).zx; zy=Pl.(nm).zy; g=Pl.(nm).g;
     if isempty(zx); fprintf('%-9s (no data)\n',nm); continue; end
@@ -158,48 +167,46 @@ for ip=1:numel(preds); nm=preds{ip};
              '   || sess signrank p=%.3g  pooled p=%.3g\n'], ...
              nm,nTr,LME.(nm).nSes,bC,pC,tern(Rf.randslope,'',' (rand-int)'), pSess,pGap);
 
-    % ---- panel (tile in the shared row) ----
-    ax=nexttile(tlR); hold(ax,'on');
-    yline(ax,0,'-','Color',[0.6 0.6 0.6],'LineWidth',0.5);
-    xq=1:4; w=0.36;
-    bar(ax,xq-w/2,qmO,w,'FaceColor',colOL,'EdgeColor','none');
-    bar(ax,xq+w/2,qmC,w,'FaceColor',colCL,'EdgeColor','none');
-    errorbar(ax,xq-w/2,qmO,qsO,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
-    errorbar(ax,xq+w/2,qmC,qsC,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
-    % gap trend line (OL-CL per quartile) - the tested quantity
-    gapq=qmO-qmC;
-    plot(ax,xq,gapq,'-o','Color',[0.15 0.15 0.15],'MarkerFaceColor',[0.15 0.15 0.15], ...
-        'MarkerSize',2.5,'LineWidth',0.9);
-    set(ax,'XTick',1:4,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out', ...
-        'FontSize',PS.fs,'FontWeight','bold');
-    ylim(ax,[-0.65 1.40]); yl=ylim(ax);   % common range across the 3 panels (gap trends comparable)
-    % decoupling star -- session-aware LMM cond x state interaction (top-RIGHT, clear of bars+legend)
-    text(ax,4.45,yl(2),sprintf('cond\\timesstate %s',starstr(pC)), ...
-        'HorizontalAlignment','right','VerticalAlignment','top','FontSize',5.5,'FontWeight','bold','Color',[0.1 0.1 0.1]);
-    text(ax,4.45,yl(2)-0.10*range(yl),sprintf('p=%.2g',pC), ...
-        'HorizontalAlignment','right','VerticalAlignment','top','FontSize',5,'Color',[0.35 0.35 0.35]);
-    title(ax,titR2{ip},'FontSize',PS.fs,'FontWeight','bold');   % trial count -> caption (cleaner panel)
-    if ip>1, set(ax,'YTickLabel',[]); end   % shared y-axis across the row
-    if ip==1
-        ylabel(ax,'RMSE to ref (z)','FontSize',PS.fs,'FontWeight','bold');
-        % compact legend
-        xL=1.05; yTop=yl(2)-0.03*range(yl); dh=0.10*range(yl);
-        plot(ax,xL,yTop,'s','MarkerFaceColor',colOL,'MarkerEdgeColor','none','MarkerSize',5);
-        text(ax,xL+0.14,yTop,'OL','FontSize',5,'FontWeight','bold','Color',colOL,'VerticalAlignment','middle');
-        plot(ax,xL,yTop-dh,'s','MarkerFaceColor',colCL,'MarkerEdgeColor','none','MarkerSize',5);
-        text(ax,xL+0.14,yTop-dh,'CL','FontSize',5,'FontWeight','bold','Color',colCL,'VerticalAlignment','middle');
-        plot(ax,xL,yTop-2*dh,'o','MarkerFaceColor',[0.15 0.15 0.15],'MarkerEdgeColor','none','MarkerSize',3);
-        text(ax,xL+0.14,yTop-2*dh,'gap','FontSize',5,'FontWeight','bold','Color',[0.15 0.15 0.15],'VerticalAlignment','middle');
-    end
-    hold(ax,'off');
+    % ---- two-concept annotation stats (from the SAME LMM) ----
+    % Predictability = trend of OPEN-LOOP outcome (xw main effect, OL ref). OL error UP -> predictability DOWN.
+    % Controllability = trend of REJECTION FRACTION (-dec). gap widens (dec<0) -> controllability UP.
+    Cc=Rf.lme.Coefficients; nc=cellstr(Cc.Name); iOL=strcmp(nc,'xw');
+    bOL=Cc.Estimate(iOL); predP=Cc.pValue(iOL); predUp = bOL<0;   % predictability arrow up iff OL improves
+    ctrlP=Rf.decP; ctrlUp = Rf.dec<0;                              % controllability arrow up iff gap widens
+    fprintf('           predictability %s (OL beta %+.3f p=%.2g) | controllability %s (dec %+.3f p=%.2g)\n', ...
+        tern(predUp,'UP','DOWN'),bOL,predP, tern(ctrlUp,'UP','DOWN'),Rf.dec,ctrlP);
+
+    % stash per-state quantities so the stitched paper figure reuses them (no recompute)
+    PQ(ip)=struct('qmO',qmO,'qmC',qmC,'qsO',qsO,'qsC',qsC, ...
+                  'predP',predP,'predUp',predUp,'ctrlP',ctrlP,'ctrlUp',ctrlUp); %#ok<AGROW>
+
+    % ---- separate standalone panel: keep its own y-axis; legend ONLY on init-dev; colored title ----
+    figP=paperFig(4.25,4.6); ax=axes(figP);
+    draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, titR2{ip}, titCol(ip,:), true, ip==1, ...
+        predP,predUp,ctrlP,ctrlUp);
+    try
+        paperExport(figP, fullfile(outdir,fnout{ip}));
+        paperExport(figP, fullfile(outview,strrep(fnout{ip},'.pdf','.png')));
+    catch ME, warning('[F4R2] export skip %s (%s)',fnout{ip},ME.message); end
 end
-% ---- export the single combined row ----
-outview=fullfile('_preview'); if ~exist(outview,'dir'); mkdir(outview); end
+fprintf('\n[F4R2] row-2 four individual panels -> %s\n', outdir);
+
+% ---- STITCHED paper figure: 1x4 sharing ONE y-axis (ticks+label only on leftmost), legend on init-dev ----
+figR=paperFig(17,5.0); tlR=tiledlayout(figR,1,4,'TileSpacing','compact','Padding','compact');
+for ip=1:numel(preds)
+    if numel(PQ)<ip || isempty(PQ(ip).qmO); continue; end
+    ax=nexttile(tlR);
+    draw_panel(ax, PQ(ip).qmO,PQ(ip).qmC,PQ(ip).qsO,PQ(ip).qsC, colOL,colCL, PS, ...
+        titR2{ip}, titCol(ip,:), ip==1, ip==1, ...   % showY only leftmost; legend only leftmost
+        PQ(ip).predP,PQ(ip).predUp,PQ(ip).ctrlP,PQ(ip).ctrlUp);
+end
+title(tlR,'Effect of state on controller performance','FontSize',PS.fs,'FontWeight','bold');
+xlabel(tlR,'sorted state quartile bins','FontSize',PS.fs,'FontWeight','bold');   % common x-label
 try
     paperExport(figR, fullfile(outdir,'f4_row2_quartiles.pdf'));
     paperExport(figR, fullfile(outview,'f4_row2_quartiles.png'));
-catch ME, warning('[F4R2] export skip (%s)',ME.message); end
-fprintf('\n[F4R2] row-2 combined 1x4 row -> %s\n', outdir);
+catch ME, warning('[F4R2] stitched export skip (%s)',ME.message); end
+fprintf('[F4R2] row-2 STITCHED paper figure -> %s\\f4_row2_quartiles.pdf\n', outdir);
 
 %% ============ ROW 2 SUPPLEMENT: mixed-effects (LME) interaction table (Nick) ============
 % The panel star IS the session-aware LMM cond x state interaction, computed by the SHARED helper
@@ -217,6 +224,55 @@ for ip=1:numel(preds); nm=preds{ip};
 end
 try, save(fullfile('data','f4_row2_lme.mat'),'LME'); fprintf('[F4R2-LME] -> data/f4_row2_lme.mat\n'); catch ME; warning('[F4R2-LME] save skipped (%s)',ME.message); end
 
+function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, showLegend, predP,predUp,ctrlP,ctrlUp)
+% One OL/CL-by-quartile panel. Colored title; optional y-axis + legend.
+% Two-concept annotation (top-right): Predictability + Controllability, each an up/down arrow
+% with significance stars (n.s. if p>=0.05). Predictability from OL-slope, Controllability from -dec.
+    hold(ax,'on');
+    yline(ax,0,'-','Color',[0.6 0.6 0.6],'LineWidth',0.5);
+    xq=1:4; w=0.36;
+    bar(ax,xq-w/2,qmO,w,'FaceColor',colOL,'EdgeColor','none');
+    bar(ax,xq+w/2,qmC,w,'FaceColor',colCL,'EdgeColor','none');
+    errorbar(ax,xq-w/2,qmO,qsO,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
+    errorbar(ax,xq+w/2,qmC,qsC,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
+    gapq=qmO-qmC;   % OL-CL gap trend (descriptive)
+    plot(ax,xq,gapq,'-o','Color',[0.15 0.15 0.15],'MarkerFaceColor',[0.15 0.15 0.15], ...
+        'MarkerSize',2.5,'LineWidth',0.9);
+    set(ax,'XTick',1:4,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out', ...
+        'FontSize',PS.fs,'FontWeight','bold');
+    xlim(ax,[0.35 4.65]); ylim(ax,[-0.65 1.40]); yl=ylim(ax);
+    title(ax,ttl,'FontSize',PS.fs,'FontWeight','bold','Color',titleCol);   % colored to match state exemplars
+    % ---- two-concept annotation (top-center, black): predictability + controllability, arrow + stars ----
+    % First/leftmost panel spells the names out; the rest abbreviate to P / C.
+    if showLegend, pN='Predictability'; cN='Controllability'; else, pN='P'; cN='C'; end
+    yA=yl(2)-0.02*range(yl); dyA=0.085*range(yl);
+    text(ax,2.5,yA,     [pN ' ' arrowstars(predP,predUp)],'Interpreter','tex','HorizontalAlignment','center', ...
+        'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
+    text(ax,2.5,yA-dyA, [cN ' ' arrowstars(ctrlP,ctrlUp)],'Interpreter','tex','HorizontalAlignment','center', ...
+        'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
+    if showY
+        ylabel(ax,'RMSE to ref (z)','FontSize',PS.fs,'FontWeight','bold');
+    else
+        set(ax,'YTickLabel',[]);
+    end
+    if showLegend
+        xL=0.5; yTop=yl(2)-0.03*range(yl); dh=0.10*range(yl);   % far-left so it clears the centered annotation
+        plot(ax,xL,yTop,'s','MarkerFaceColor',colOL,'MarkerEdgeColor','none','MarkerSize',5);
+        text(ax,xL+0.14,yTop,'OL','FontSize',5,'FontWeight','bold','Color',colOL,'VerticalAlignment','middle');
+        plot(ax,xL,yTop-dh,'s','MarkerFaceColor',colCL,'MarkerEdgeColor','none','MarkerSize',5);
+        text(ax,xL+0.14,yTop-dh,'CL','FontSize',5,'FontWeight','bold','Color',colCL,'VerticalAlignment','middle');
+        plot(ax,xL,yTop-2*dh,'o','MarkerFaceColor',[0.15 0.15 0.15],'MarkerEdgeColor','none','MarkerSize',3);
+        text(ax,xL+0.14,yTop-2*dh,'gap','FontSize',5,'FontWeight','bold','Color',[0.15 0.15 0.15],'VerticalAlignment','middle');
+    end
+    hold(ax,'off');
+end
+function s=arrowstars(p,isUp)
+% arrow (up/down) + significance stars; 'n.s.' if p>=0.05.
+    nst=(p<0.05)+(p<0.01)+(p<0.001);
+    if nst==0, s='n.s.'; return; end
+    if isUp, ar='\uparrow'; else, ar='\downarrow'; end
+    s=[ar repmat('*',1,nst)];
+end
 function e=uniqedges(e); for i=2:numel(e); if e(i)<=e(i-1); e(i)=e(i-1)+eps(e(i-1))*1e3; end; end; end
 function s=starstr(p); if isnan(p), s='n.s.'; elseif p<1e-3, s='***'; elseif p<1e-2, s='**'; elseif p<0.05, s='*'; else, s='n.s.'; end; end
 function p=local_signrank(a,b); try, p=signrank(a,b); catch, [~,p]=ttest(a,b); end; end

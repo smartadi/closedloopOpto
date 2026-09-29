@@ -48,7 +48,7 @@ mk3=repmat(~brainMask,1,1,3);                         % outside-ROI -> white
 RGBbrain(mk3)=1;
 
 % ---- per-pixel DOT weight map (each contra grid pixel = one dot, colored by weight) ----
-f=paperFig(7.2,6.6); ax=axes(f); hold(ax,'on');
+f=paperFig(5.0,4.6); ax=axes(f); hold(ax,'on');   % row-3 LEFT, sits with f4_agl (5.0) + f4_cl_reject (7.0) = 17 cm
 image(ax, RGBbrain);                             % masked gray brain (ignores colormap)
 bmax=prctile(abs(b),99);                          % robust symmetric colour range
 scatter(ax, grC, grR, 22, b, 'filled', 'MarkerEdgeColor','none', 'MarkerFaceAlpha',0.95);
