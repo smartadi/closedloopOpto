@@ -29,7 +29,7 @@ if isempty(G3)
 end
 
 %% F: Cross-session variance  (2.33" wide -- matches 1/3 page column)
-fig_F = paperFig(3, 3.5);
+fig_F = paperFig(3.4, 3.4);   % jn* resize: unify row height
 
 lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.20;   % extra top room for the 2-line title
 ax_var = axes(fig_F, 'Position', [lm2, bm2, 1-lm2-rm2, 1-bm2-tm2]);
@@ -50,7 +50,7 @@ paperAxes(ax_var, 'XLength', 1, 'YLength', 5, 'XLabel', '1 s', 'YLabel', '5 (%\D
 title(ax_var, {'Average of Session'; 'Variance across trials'}, ...
     'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');
 
-paperExport(fig_F, fullfile(paper_root, 'images', 'figure3', 'all_variance_sessions.pdf'));
+paperExport(fig_F, fullfile(paper_root, 'figures_v2', 'figure3', 'all_variance_sessions.pdf'));
 
 
 %% Fr: Cross-session OL/CL variance ratio -- pre / 0-1 s / 1-3 s / post windows
@@ -86,7 +86,7 @@ stars_fr = @(p) repmat('*', 1, (p < 0.001)*3 + (p >= 0.001 && p < 0.01)*2 + (p >
 
 % Compressed 5x4 -> 4.5x3.6 so panels I and J sit side by side where the retired
 % per-session RMSE-violin panel (all_MSE_sessions) used to be (user 2026-09-23).
-fig_Fr = paperFig(4.5, 3.6);
+fig_Fr = paperFig(4.5, 3.4);   % jn* resize: unify row height
 ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.18 0.14 0.78 0.74]);
 hold(ax_fr, 'on');
 
@@ -123,7 +123,7 @@ title(ax_fr, sprintf('CL reduces trial variance %s', stars_fr(pStim_fr)), ...
 % Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
 mark_stim_span(ax_fr);
 
-paperExport(fig_Fr, fullfile(paper_root, 'images', 'figure3', 'variance_ratio_by_window.pdf'));
+paperExport(fig_Fr, fullfile(paper_root, 'figures_v2', 'figure3', 'variance_ratio_by_window.pdf'));
 
 %% Variance slope test -- OL: linear trend in variance across pre / stim / post windows
 % Three windows: pre (-3 to 0 s), stim (0 to dur s), post (dur to dur+3 s).
@@ -455,7 +455,7 @@ for k = 1:length(fields)
 end
 
 % Compressed to match panel I (4.5x3.6); I and J now sit side by side (user 2026-09-23).
-fig_G2r = paperFig(4.5, 3.6);
+fig_G2r = paperFig(4.5, 3.4);   % jn* resize: unify row height
 ax_g2r = axes(fig_G2r,'Units','normalized','Position',[0.18 0.14 0.78 0.74]);
 hold(ax_g2r,'on');
 
@@ -496,7 +496,7 @@ end
 % Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
 mark_stim_span(ax_g2r);
 
-paperExport(fig_G2r, fullfile(paper_root, 'images', 'figure3', 'MSE_ratio_by_window.pdf'));
+paperExport(fig_G2r, fullfile(paper_root, 'figures_v2', 'figure3', 'MSE_ratio_by_window.pdf'));
 
 
 %% G2v: Windowed MSE violin -- Option B (grouped per session, both windows)

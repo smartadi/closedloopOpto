@@ -59,7 +59,7 @@ c1L = lm;
 c2L = lm + cW + cg;
 
 %% A: single trial -------------------------------------------------------
-PH_A = 4;
+PH_A = 3.4;   % jn* resize: unify row height
 fig_A = paperFig(PW, PH_A);
 
 bm = 0.12; tm = 0.12;
@@ -115,10 +115,10 @@ text(ax_B, 3*dur/4, 7, 'CL Stim', 'Color', colInpCL, ...
     'HorizontalAlignment','center', 'Clipping','off');
 
 linkaxes([ax_A ax_B], 'x');
-paperExport(fig_A, 'paper/images/figure3/panel_A.pdf');
+paperExport(fig_A, 'paper/figures_v2/figure3/panel_A.pdf');
 
 %% B: all trials + average -----------------------------------------------
-PH_B = 4;
+PH_B = 3.4;   % jn* resize: unify row height
 fig_B = paperFig(PW, PH_B);
 
 bm = 0.12; tm = 0.12;
@@ -157,7 +157,7 @@ hold(ax_D, 'off');
 paperAxes(ax_D);
 
 linkaxes([ax_C ax_D], 'x');
-paperExport(fig_B, 'paper/images/figure3/panel_B.pdf');
+paperExport(fig_B, 'paper/figures_v2/figure3/panel_B.pdf');
 
 %% C: average inputs -----------------------------------------------------
 PH_C = 3;
@@ -201,11 +201,11 @@ hold(ax_F, 'off');
 paperAxes(ax_F);
 
 linkaxes([ax_E ax_F], 'x');
-paperExport(fig_C, 'paper/images/figure3/panel_C.pdf');
+paperExport(fig_C, 'paper/figures_v2/figure3/panel_C.pdf');
 
 %% D: variance over time -------------------------------------------------
-PH_D = 3.5;
-PW_D = 3;
+PH_D = 3.4;   % jn* resize: unify row height
+PW_D = 3.4;
 fig_D = paperFig(PW_D, PH_D);
 
 lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
@@ -229,11 +229,11 @@ text(ax_var, -0.12, 0.5, 'Variance across trials', ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'Color','k', 'Clipping','off');
 
-paperExport(fig_D, 'paper/images/figure3/panel_D.pdf');
+paperExport(fig_D, 'paper/figures_v2/figure3/panel_D.pdf');
 
 %% E: MSE half-violin ----------------------------------------------------
-PH_E = 3;
-PW_E = 3;
+PH_E = 3.4;   % jn* resize: unify row height
+PW_E = 3.4;
 fig_E = paperFig(PW_E, PH_E);
 
 lm2e = 0.13; rm2e = 0.05; bm2e = 0.15; tm2e = 0.10;
@@ -265,7 +265,7 @@ text(ax_mse, -0.12, 0.5, 'Trial RMSE', ...
     'Color','k', 'Clipping','off');
 paperAxes(ax_mse);
 
-paperExport(fig_E, 'paper/images/figure3/panel_E.pdf');
+paperExport(fig_E, 'paper/figures_v2/figure3/panel_E.pdf');
 
 end
 
