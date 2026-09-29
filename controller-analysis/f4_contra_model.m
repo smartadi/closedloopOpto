@@ -14,7 +14,7 @@ clc; close all;
 PS=paperStyle(); setPaperDefaults();
 root='C:\Users\aditya\Documents\projects\brain_paper'; addpath(fullfile(root,'utils'));
 dd=fullfile(root,'controller-analysis','data');
-outfig=fullfile(root,'paper','images','figure4');
+outfig=fullfile(root,'paper','figures_v2','figure4');   % jn* v2 output
 outview=fullfile(root,'controller-analysis','_preview'); if ~exist(outview,'dir'); mkdir(outview); end
 tag='AL_0033_0415_e2';
 colG=[0.20 0.40 0.75]; colA=[0.10 0.10 0.10]; colL=[0.78 0.16 0.12];
@@ -25,7 +25,7 @@ O =load(fullfile(dd,sprintf('ctrl_ols_ol_stimblind%s_%s.mat',sfx,tag)));
 t=O.rel(:).'/O.Fs; A=O.Aa(:).'; G=O.Gg(:).'; R2=O.R2_te;
 
 % ===== A = G + L (standalone) ======================================================
-f=paperFig(5.0,4.6); axD=axes(f); hold(axD,'on');
+f=jnFig(5.0,3.3); axD=axes(f); hold(axD,'on');   % jn* v2
 xl=[t(1) t(end)]; yl=[min(A)*1.15 max(2,max(G))];
 patch(axD,[0 3 3 0],[yl(1) yl(1) yl(2) yl(2)],[.93 .90 .82],'EdgeColor','none','FaceAlpha',.6,'HandleVisibility','off');
 patch(axD,[t fliplr(t)],[A fliplr(G)],colL,'EdgeColor','none','FaceAlpha',0.20,'HandleVisibility','off');
@@ -40,6 +40,7 @@ lg=legend(axD,[hA hG],{'Actual','Global (contra pred.)'},'Box','off','Location',
 text(axD,xl(1)+0.1,yl(1)*0.92,sprintf('R^2_{te} = %.2f',R2),'Color',colG,'FontSize',PS.fs,'FontWeight','bold');
 title(axD,'Global predicts the counterfactual','FontSize',PS.fs,'FontWeight','bold');
 
+jnAxes(axD);
 paperExport(f,fullfile(outfig,'f4_agl.pdf'));
 paperExport(f,fullfile(outview,'f4_agl.png'));
 fprintf('[f4_contra_model] standalone A=G+L panel -> %s (f4_agl.pdf) | R2te=%.2f\n', outfig, R2);

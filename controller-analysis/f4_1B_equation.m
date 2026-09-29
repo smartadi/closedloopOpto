@@ -10,7 +10,7 @@
 clc; close all;
 root = 'C:\Users\aditya\Documents\projects\brain_paper'; addpath(fullfile(root,'utils'));
 PS = paperStyle();
-outfig  = fullfile(root,'paper','images','figure4');
+outfig  = fullfile(root,'paper','figures_v2','figure4');   % jn* v2 output
 outview = fullfile(root,'controller-analysis','_preview'); if ~exist(outview,'dir'); mkdir(outview); end
 
 % ---- canonical 4-state palette (SAME as f4_state_exemplars / f4_error_decomp) ----
@@ -18,7 +18,7 @@ cInit=[0.20 0.40 0.75]; cMot=[0.75 0.40 0.10]; cRel=[0.35 0.55 0.30]; cAbs=[0.55
 rgb=@(c) sprintf('\\color[rgb]{%.3f,%.3f,%.3f}',c(1),c(2),c(3));
 blk='\color[rgb]{0.10,0.10,0.10}'; gry='\color[rgb]{0.45,0.45,0.45}';
 
-f = paperFig(3.0, 2.4); ax = axes(f,'Position',[0 0 1 1]); hold(ax,'on');
+f = paperFig(3.0, 2.4); ax = axes(f,'Position',[0 0 1 1]); hold(ax,'on');   % tight-crop export -> PDF crops to eqn content (~3.14 x 1.87)
 axis(ax,[0 1 0 1]); axis(ax,'off');
 fs = 11;   % equation type size (panel is small; scaled up so it reads at figure size)
 % Line 1: RMSE ~

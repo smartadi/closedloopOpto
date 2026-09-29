@@ -22,9 +22,11 @@ clc; close all;
 PS = paperStyle(); setPaperDefaults();
 root = 'C:\Users\aditya\Documents\projects\brain_paper';
 outfig  = fullfile(root,'paper','images','figure4');
+outfig2 = fullfile(root,'paper','figures_v2','figure4');      % jn* v2 output (main-text sep panel)
 outsupp = fullfile(root,'paper','images','supplementary');   % non-main decomp panels (user 2026-09-28)
 outview = fullfile(root,'controller-analysis','_preview');
 if ~exist(outfig,'dir');  mkdir(outfig);  end
+if ~exist(outfig2,'dir'); mkdir(outfig2); end
 if ~exist(outsupp,'dir'); mkdir(outsupp); end
 if ~exist(outview,'dir'); mkdir(outview); end
 
@@ -145,8 +147,8 @@ fprintf('\n==== MODE ''sep'' (each delta in its own init+motion+d model) | UNIQU
 for j=1:4, fprintf('  %-11s %6.3f %6.3f\n',fac_lbl{j},Usep(j,1),Usep(j,2)); end
 FCfac=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];  % init,motion,rel,abs (match exemplars)
 draw_grouped(Usep, UsepS(:,:,okSsep), fac_lbl, {col_e,col_l}, win_lbl, 'unique R^2', ...
-    sprintf('Unique R^2 (each \\delta own model) (n=%d, %d sess)',n,nSsep), PS, ...
-    fullfile(outfig,'f4_decomp_unique_sep.pdf'), fullfile(outview,'f4_decomp_unique_sep.png'), FCfac, 6.5);
+    sprintf('Unique R^2 (n=%d, %d sess)',n,nSsep), PS, ...
+    fullfile(outfig2,'f4_decomp_unique_sep.pdf'), fullfile(outview,'f4_decomp_unique_sep.png'), FCfac, 5.5);
 DEC.sep=struct('Up',Usep,'Us',UsepS,'okS',okSsep,'fac',{fac_lbl},'nSok',nSsep);
 
 save(fullfile(root,'controller-analysis','data','f4_error_decomp.mat'), ...
@@ -161,7 +163,7 @@ function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, 
     if nargin<11, faceRGB=[]; end
     nI=size(P,1);
     if nargin<12 || isempty(wCm), wCm=max(6,1.7*nI+2); end
-    f=paperFig(wCm,4.6); ax=axes(f); hold(ax,'on');
+    f=jnFig(wCm,3.3); ax=axes(f); hold(ax,'on');   % jn* v2 sizing
     yline(ax,0,'-','Color',[.6 .6 .6],'LineWidth',0.5,'HandleVisibility','off');
     hb=bar(ax,P,'grouped','EdgeColor','none');
     if ~isempty(faceRGB)
@@ -171,16 +173,16 @@ function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, 
     else
         hb(1).FaceColor=wcol{1}; hb(2).FaceColor=wcol{2};
     end
-    nser=2; gw=min(0.8,nser/(nser+1.5)); rng(1);
-    for w=1:nser
-        xc=(1:nI)-gw/2+(2*w-1)*gw/(2*nser);
+    nser=2;
+    for w=1:nser   % 1 SD error bar on each bar (across-session spread), replaces scatter (user 2026-09-29)
+        xE=hb(w).XEndPoints;               % exact grouped-bar centres for this series
+        sd=nan(1,nI);
         for j=1:nI
             v=squeeze(Ps(j,w,:)); v=v(isfinite(v));
-            if ~isempty(v)
-                jitter=(rand(numel(v),1)-0.5)*gw/nser*0.7;
-                scatter(ax,xc(j)+jitter,v,4,[.25 .25 .25],'filled','MarkerFaceAlpha',.5,'HandleVisibility','off');
-            end
+            if ~isempty(v); sd(j)=std(v); end
         end
+        errorbar(ax,xE,P(:,w).',sd,'LineStyle','none','Color',[.25 .25 .25], ...
+            'LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
     end
     set(ax,'XTick',1:nI,'XTickLabel',xlbl,'Box','off','TickDir','out', ...
         'FontSize',PS.fs,'FontWeight',PS.fw,'TickLabelInterpreter','tex'); xtickangle(ax,18);
@@ -193,6 +195,7 @@ function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, 
     end
     lg.ItemTokenSize=[6 6];
     title(ax,ttl,'FontSize',PS.fs,'FontWeight',PS.fw); hold(ax,'off');
+    jnAxes(ax);
     paperExport(f,pdfpath); paperExport(f,pngpath);
 end
 function p=local_bandpow(seg,Fs,lo,hi)

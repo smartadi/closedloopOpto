@@ -6,9 +6,10 @@ function f4_cl_reject_panel()
 % Non-reachers (settled |mean A_CL-ref|>1.5) excluded. Run f4_cl_reject_lmm.m first.
 here = fileparts(mfilename('fullpath'));
 if isempty(here); here = fullfile(pwd,'controller-analysis'); end
-dataDir = fullfile(here,'data');  figDir = fullfile(here,'..','paper','images','figure4');
+dataDir = fullfile(here,'data');  figDir = fullfile(here,'..','paper','figures_v2','figure4');  % jn* v2 output
 if ~exist(figDir,'dir'); mkdir(figDir); end
-PS = paperStyle();
+addpath(fullfile(here,'..','utils'));
+PS = paperStyle(); S = jnStyle();
 L = load(fullfile(dataDir,'f4_cl_reject_lmm.mat'));   % T (logRR,sess,mouse), est, se, p1
 T = L.T;  gmLMM = exp(L.est);  ciLMM = exp([L.est-1.96*L.se, L.est+1.96*L.se]);
 
@@ -30,7 +31,7 @@ for mi=1:numel(umice)
 end
 [gm,ord]=sort(gm); lo=lo(ord); hi=hi(ord); nt=nt(ord); lab=lab(ord);
 
-fig = paperFig(7.0,4.6);  ax=axes(fig); hold(ax,'on');
+fig = jnFig(jnPanelWidth('double',3), S.rowH);  ax=axes(fig); hold(ax,'on');   % 5.53 x 3.3 cm
 % LMM CI band + geomean
 patch(ax,[0.3 nS+0.7 nS+0.7 0.3],[ciLMM(1) ciLMM(1) ciLMM(2) ciLMM(2)],[0.85 0.90 0.98],'EdgeColor','none');
 plot(ax,[0.3 nS+0.7],gmLMM*[1 1],'-','Color',PS.col_cl,'LineWidth',1.0);
@@ -46,13 +47,14 @@ set(ax,'YScale','log','XTick',1:nS,'XTickLabel',cellstr(lab),'XTickLabelRotation
     'TickLabelInterpreter','none','FontSize',PS.fs,'FontWeight',PS.fw,'LineWidth',0.75,'TickDir','out','Box','off', ...
     'YTick',[0.25 0.5 1 2]);
 xlim(ax,[0.3 nS+0.7]); ylim(ax,[0.22 2.9]);
-ylabel(ax,'RR = ||A-r||^2 / ||D||^2','FontSize',PS.fs,'FontWeight',PS.fw);
+ylabel(ax,'rejection ratio (RR)','FontSize',PS.fs,'FontWeight',PS.fw);   % self-explanatory words; RR=||A-r||^2/||D||^2 defined in caption
 % title states the claim; a single significance star marks the LMM one-sided RR<1 test.
 star = repmat('*',1,(L.p1<0.05)+(L.p1<0.01)+(L.p1<0.001)); if isempty(star), star='n.s.'; end
-title(ax,sprintf('CL rejects disturbances %s',star),'FontSize',PS.fs,'FontWeight',PS.fw);
+title(ax,sprintf('CL rejects disturbances %s',star));
 
-exportgraphics(fig, fullfile(figDir,'f4_cl_reject_RR.pdf'),'ContentType','vector');
-exportgraphics(fig, fullfile(figDir,'f4_cl_reject_RR.png'),'Resolution',300);
+jnAxes(ax);
+paperExport(fig, fullfile(figDir,'f4_cl_reject_RR.pdf'));   % exact-page vector (Option 2)
+paperExport(fig, fullfile(figDir,'f4_cl_reject_RR.png'));
 fprintf('[f4-CL-REJECT] %d sessions, LMM geomean RR=%.2f [%.2f,%.2f], p=%.2g; per-session geomean range %.2f-%.2f\n', ...
     nS, gmLMM, ciLMM(1), ciLMM(2), L.p1, min(gm), max(gm));
 end

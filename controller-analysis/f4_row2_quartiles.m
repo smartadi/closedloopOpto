@@ -42,7 +42,9 @@ if exist(fullfile('paper','images'),'dir');            paper_root = 'paper';
 elseif exist(fullfile('..','paper','images'),'dir');   paper_root = fullfile('..','paper');
 else;  paper_root = 'paper'; warning('[F4R2] cannot locate paper/.'); end
 outdir = fullfile(paper_root,'images','figure4');
+outdir2 = fullfile(paper_root,'figures_v2','figure4');   % jn* v2 output (stitched main panel)
 if ~exist(outdir,'dir'); mkdir(outdir); end
+if ~exist(outdir2,'dir'); mkdir(outdir2); end
 
 Fs=35; ref=-5; c0=36; c1=71; c2=141; dur=3; c0_mot=71; c0_l=106; c0_p=351;
 % c0_p = onset col in pncDfk/pwcDfk (controllerData buffers dFk(i-350:i+..), 350-sample
@@ -181,7 +183,7 @@ for ip=1:numel(preds); nm=preds{ip};
                   'predP',predP,'predUp',predUp,'ctrlP',ctrlP,'ctrlUp',ctrlUp); %#ok<AGROW>
 
     % ---- separate standalone panel: keep its own y-axis; legend ONLY on init-dev; colored title ----
-    figP=paperFig(4.25,4.6); ax=axes(figP);
+    figP=jnFig(jnPanelWidth('double',4),3.3); ax=axes(figP);   % jn* v2 sizing
     draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, titR2{ip}, titCol(ip,:), true, ip==1, ...
         predP,predUp,ctrlP,ctrlUp);
     try
@@ -192,7 +194,7 @@ end
 fprintf('\n[F4R2] row-2 four individual panels -> %s\n', outdir);
 
 % ---- STITCHED paper figure: 1x4 sharing ONE y-axis (ticks+label only on leftmost), legend on init-dev ----
-figR=paperFig(17,5.0); tlR=tiledlayout(figR,1,4,'TileSpacing','compact','Padding','compact');
+figR=jnFig(16.5,3.3); tlR=tiledlayout(figR,1,4,'TileSpacing','compact','Padding','tight');   % jn* v2 stitched: 16.5 canvas -> crops to ~16.6, fits 17.6 col w/ clearance
 for ip=1:numel(preds)
     if numel(PQ)<ip || isempty(PQ(ip).qmO); continue; end
     ax=nexttile(tlR);
@@ -203,10 +205,10 @@ end
 title(tlR,'Effect of state on controller performance','FontSize',PS.fs,'FontWeight','bold');
 xlabel(tlR,'sorted state quartile bins','FontSize',PS.fs,'FontWeight','bold');   % common x-label
 try
-    paperExport(figR, fullfile(outdir,'f4_row2_quartiles.pdf'));
+    paperExport(figR, fullfile(outdir2,'f4_row2_quartiles.pdf'));
     paperExport(figR, fullfile(outview,'f4_row2_quartiles.png'));
 catch ME, warning('[F4R2] stitched export skip (%s)',ME.message); end
-fprintf('[F4R2] row-2 STITCHED paper figure -> %s\\f4_row2_quartiles.pdf\n', outdir);
+fprintf('[F4R2] row-2 STITCHED paper figure -> %s\\f4_row2_quartiles.pdf\n', outdir2);
 
 %% ============ ROW 2 SUPPLEMENT: mixed-effects (LME) interaction table (Nick) ============
 % The panel star IS the session-aware LMM cond x state interaction, computed by the SHARED helper
@@ -265,6 +267,8 @@ function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, 
         text(ax,xL+0.14,yTop-2*dh,'gap','FontSize',5,'FontWeight','bold','Color',[0.15 0.15 0.15],'VerticalAlignment','middle');
     end
     hold(ax,'off');
+    jnAxes(ax);   % jn* v2: Arial, regular ticks, bold labels/title, TickDir out
+    if ~showY, set(ax,'YTickLabel',[]); end   % jnAxes restores ticklabels; re-hide on non-leftmost
 end
 function s=arrowstars(p,isUp)
 % arrow (up/down) + significance stars; 'n.s.' if p>=0.05.

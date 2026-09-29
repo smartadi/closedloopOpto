@@ -12,7 +12,7 @@
 clc; close all;
 root='C:\Users\aditya\Documents\projects\brain_paper'; addpath(fullfile(root,'utils'));
 dd=fullfile(root,'controller-analysis','data');
-outfig=fullfile(root,'paper','images','figure4');
+outfig=fullfile(root,'paper','figures_v2','figure4');   % jn* v2 output
 outview=fullfile(root,'controller-analysis','_preview');
 if ~exist(outview,'dir'); mkdir(outview); end
 tag='AL_0033_0415_e2';
@@ -48,7 +48,7 @@ mk3=repmat(~brainMask,1,1,3);                         % outside-ROI -> white
 RGBbrain(mk3)=1;
 
 % ---- per-pixel DOT weight map (each contra grid pixel = one dot, colored by weight) ----
-f=paperFig(5.0,4.6); ax=axes(f); hold(ax,'on');   % row-3 LEFT, sits with f4_agl (5.0) + f4_cl_reject (7.0) = 17 cm
+f=jnFig(4.5,3.3); ax=axes(f); hold(ax,'on');   % jn* row-3 LEFT (kernel 4.5 + agl 5.0 + reject 5.53)
 image(ax, RGBbrain);                             % masked gray brain (ignores colormap)
 bmax=prctile(abs(b),99);                          % robust symmetric colour range
 scatter(ax, grC, grR, 22, b, 'filled', 'MarkerEdgeColor','none', 'MarkerFaceAlpha',0.95);
@@ -68,7 +68,7 @@ axis(ax,'image'); set(ax,'YDir','reverse'); axis(ax,'off');
 [ry,rx]=find(brainMask); pad=12;
 xlim(ax,[max(1,min(rx)-pad) min(nX,max(rx)+pad)]);
 ylim(ax,[max(1,min(ry)-pad) min(nY,max(ry)+pad)]);
-title(ax,'Stim site linear predictor kernel weights','FontSize',PS_fs(),'FontWeight','bold');
+title(ax,'Predictor kernel weights','FontSize',PS_fs(),'FontWeight','bold');
 cb=colorbar(ax); cb.FontSize=6;                    % no label; only extreme ticks
 cb.Ticks=[-bmax bmax]; cb.TickLabels={sprintf('%+.2f',-bmax),sprintf('%+.2f',bmax)};
 cb.TickLength=0;

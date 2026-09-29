@@ -57,6 +57,29 @@ Keep these identical across every panel — mismatched weights are a common revi
 - **Line art → vector PDF** (`exportgraphics(...,'ContentType','vector')`); never rasterize plots.
 - Heatmaps/photos → 300 dpi (color/grayscale) PNG; bitmap line art → 1200 dpi.
 - White background.
+- **CROPPED, not exact-page.** `exportgraphics('vector')` crops the PDF page to the content
+  bounding box, so no title/label/trace is ever clipped. We tried exact-page `print('-vector')`
+  (page = `jnFig` canvas) but it *clips* content that overhangs the canvas (e.g. tiledlayout
+  titles flush to the top edge — panel A). Control size via the `jnFig(w,h)` canvas + small
+  fonts, never a fixed page that crops. **True import size = the cropped bbox** (measure from the
+  PDF MediaBox; it is a few mm off the nominal canvas), and that is exactly what Illustrator
+  places at 100% — quote *that*, not the nominal canvas.
+
+## 6a. Figure size catalog (measured cropped import widths, cm)
+Panels are placed at **100%** on a **17.6 cm** (double-column) artboard with **~0.25 cm** gaps;
+each row stays inside 17.6 with ≥1 cm clearance. Sizes are the real PDF MediaBox.
+
+| Fig | Panel | file (paper/figures_v2/…) | W × H (cm) |
+|-----|-------|---------------------------|------------|
+| 4 | A exemplars | figure4/f4_state_exemplars.pdf | 7.83 × 3.60 |
+| 4 | B model eqn | figure4/f4_1B_equation.pdf | 3.14 × 1.87 |
+| 4 | C unique R² | figure4/f4_decomp_unique_sep.pdf | 5.04 × 3.32 |
+| 4 | D state×perf | figure4/f4_row2_quartiles.pdf | 16.58 × 3.39 |
+| 4 | E kernel map | figure4/f4_kernel_map.pdf | 3.67 × 2.68 |
+| 4 | F A=G+L | figure4/f4_agl.pdf | 4.80 × 3.35 |
+| 4 | G rejection | figure4/f4_cl_reject_RR.pdf | 5.08 × 3.28 |
+
+Row layout: R1 = A+B+C ≈ 16.5; R2 = D 16.58; R3 = E+F+G ≈ 14.0 (all + 0.25 gaps).
 
 ## 7. The MATLAB system (`utils/jn*`)
 - `S = jnStyle()` — all constants above.

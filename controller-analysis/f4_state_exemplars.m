@@ -12,7 +12,7 @@
 clc; close all;
 PS=paperStyle(); setPaperDefaults();
 root='C:\Users\aditya\Documents\projects\brain_paper';
-outfig=fullfile(root,'paper','images','figure4');
+outfig=fullfile(root,'paper','figures_v2','figure4');   % jn* v2 output
 outview=fullfile(root,'controller-analysis','_preview'); if ~exist(outview,'dir'); mkdir(outview); end
 Fs=35; c0=36; c0_mot=71; c0_l=106; c1=71; c2=141; mot_pre=2; spec_pre_s=2; spec_post_s=3;
 delta_bnd=[1 4]; hi_bnd=[2 4]; tot_bnd=[0.4 10];
@@ -42,7 +42,7 @@ end
 ok=all(isfinite([X1 X2 Xrel Xdel Y]),2)&Xdel>0; f=@(v)v(ok);
 [X1,X2,Xrel,Xdel,Y,SESS,TRI]=deal(f(X1),f(X2),f(Xrel),f(Xdel),f(Y),f(SESS),f(TRI));
 Z=zscore([X1 X2 Xrel log10(Xdel)]); yz=zscore(Y);            % z of the 4 states + outcome
-lbl={'high initial deviation','high motion','high rel 2-4 Hz','high abs \delta'};
+lbl={'high init-dev','high motion','high rel 2-4 Hz','high abs \delta'};   % short titles: fit tile width, match panel-C labels
 eqlbl={'init-dev','motion','rel \delta','abs \delta'};
 col=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];   % SHARED state colours
 
@@ -67,7 +67,7 @@ for j=1:4
 end
 
 % ================= FIGURE: 1 x 6 row =================
-fig=paperFig(7.5,4.6); tl=tiledlayout(fig,1,4,'TileSpacing','compact','Padding','compact');  % row-1 LEFT: sits with equation (3.0) + decomp unique_sep (6.5) = 17 cm
+fig=jnFig(7.5,3.3); tl=tiledlayout(fig,1,4,'TileSpacing','compact','Padding','tight');  % jn* row-1 LEFT (exemplars 7.5 + eqn 3.0 + unique-R^2 5.5); tight-crop export = no clip
 tv=(-spec_pre_s:1/Fs:spec_post_s).'; yl=[-16 10];
 
 % ----- tiles 1-4: exemplars -----
@@ -101,8 +101,8 @@ end
 % row-1 is now [state exemplars | decomp unique-R^2 (f4_error_decomp)] -- the R^2 bars live in
 % the separate decomp panel (recoloured by factor), so exemplars = 4 bigger trials only.
 
-exportgraphics(fig,fullfile(outfig,'f4_state_exemplars.pdf'),'ContentType','vector');
-exportgraphics(fig,fullfile(outview,'f4_state_exemplars.png'),'Resolution',220);
+paperExport(fig,fullfile(outfig,'f4_state_exemplars.pdf'));   % exact-page vector (Option 2)
+paperExport(fig,fullfile(outview,'f4_state_exemplars.png'));
 fprintf('[f4_state_exemplars] wrote row-1 composite -> %s\n',outfig);
 
 function p=local_bandpow(seg,Fs,lo,hi)
