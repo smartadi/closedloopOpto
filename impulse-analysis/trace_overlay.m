@@ -91,7 +91,7 @@ if ~TO_FITWIN
     lgd.Position = [1 - pos(3) - 0.005, 0.005, pos(3), pos(4)];
 end
 
-outDirS = fullfile(paperRoot, 'images', 'figure2');
+outDirS = fullfile(paperRoot, 'figures_v2', 'figure2');
 if ~isempty(TO_OUTDIR), outDirS = TO_OUTDIR; end
 paperExport(figS, fullfile(outDirS, sprintf('imp_single_%s_%s_en%d.pdf',mn3,td3,en3)));
 

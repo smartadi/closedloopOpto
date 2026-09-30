@@ -63,7 +63,7 @@ elseif exist(fullfile('..','paper','images'), 'dir')
 else
     paper_root = 'paper';
 end
-outDir = fullfile(paper_root, 'images', 'figure5');
+outDir = fullfile(paper_root, 'figures_v2', 'figure5');
 if EXPORT && ~exist(outDir,'dir'); mkdir(outDir); end
 pngDir = fullfile(outDir, 'png');
 if EXPORT && EXPORT_PNG && ~exist(pngDir,'dir'); mkdir(pngDir); end
@@ -127,7 +127,7 @@ cW  = (1 - lm - rm - 3*cg) / 4;
 cL  = lm + (0:3)*(cW + cg);
 
 %% 5B: single trial (col1 row1) -------------------------------------------
-fig_A = paperFig(PW, 3.5);
+fig_A = paperFig(PW, 3.4);
 bm = 0.12; tm = 0.12; axH = 1 - bm - tm;
 axA = gobjects(1,nMode);
 for m = 1:nMode
@@ -158,7 +158,7 @@ if EXPORT; paperExport(fig_A, fullfile(outDir, sprintf('sine_5B_single_trial_%s.
 prev(fig_A, '5B');
 
 %% 5C: all trials + average (col1 row2) -----------------------------------
-fig_B = paperFig(PW, 3.5);
+fig_B = paperFig(PW, 3.4);
 bm = 0.12; tm = 0.12; axH = 1 - bm - tm;
 axB = gobjects(1,nMode); hLeg = gobjects(1,3);
 for m = 1:nMode
@@ -192,7 +192,7 @@ if EXPORT; paperExport(fig_B, fullfile(outDir, sprintf('sine_5C_trialavg_%s.pdf'
 prev(fig_B, '5C');
 
 %% 5D: average inputs (col1 row3 — carries the shared time axis) ----------
-fig_C = paperFig(PW, 3.5);
+fig_C = paperFig(PW, 3.4);
 bm = 0.15; tm = 0.08; axH = 1 - bm - tm;
 axC = gobjects(1,nMode);
 for m = 1:nMode
@@ -223,7 +223,7 @@ prev(fig_C, '5D');
 % sqrt is monotone, so the band still brackets the same trials -- but it becomes
 % ASYMMETRIC after the transform, which is correct, not a bug.
 nRef  = round(dur*fs);
-fig_RM = paperFig(5.2, 4);
+fig_RM = paperFig(5.2, 3.4);
 lmE = 0.17; rmE = 0.05; bmE = 0.14; tmE = 0.08;
 ax_rm = axes(fig_RM, 'Position', [lmE, bmE, 1-lmE-rmE, 1-bmE-tmE]); hold(ax_rm,'on');
 for m = 1:nMode
@@ -259,7 +259,7 @@ if EXPORT; paperExport(fig_RM, fullfile(outDir, sprintf('sine_5E_rmse_time_%s.pd
 prev(fig_RM, '5E');
 
 %% 5F: variance over time (row1) ------------------------------------------
-fig_D = paperFig(5.2, 4);
+fig_D = paperFig(5.2, 3.4);
 lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
 ax_var = axes(fig_D, 'Position', [lm2, bm2, 1-lm2-rm2, 1-bm2-tm2]); hold(ax_var,'on');
 for m = 1:nMode
@@ -293,7 +293,7 @@ prev(fig_D, '5F');
 % it is dragged by the tail).
 allRmse = cell2mat(rmseV(:));
 yLo = 0.85*min(allRmse); yHi = 1.15*max(allRmse);
-fig_E = paperFig(4.2, 5.4);
+fig_E = paperFig(4.2, 3.4);
 lm2e = 0.20; rm2e = 0.05; bm2e = 0.15; tm2e = 0.10;
 ax_mse = axes(fig_E, 'Position', [lm2e, bm2e, 1-lm2e-rm2e, 1-bm2e-tm2e]); hold(ax_mse,'on');
 set(ax_mse, 'YScale','log');
@@ -407,7 +407,7 @@ end
 % preview lookahead as an equivalent phase at the drive frequency (deg)
 prevLook = 360 * sn.hz * sess.d.input_params(find([sess.trial_meta.ff_cond]>=0,1), 8) / fs;
 
-fig_F = paperFig(4.2, 5.4);
+fig_F = paperFig(4.2, 3.4);
 % wide left margin: this is the only small panel with a numeric y-axis, so the
 % tick labels + ylabel must fit inside the figure box or raster export clips them
 lm2f = 0.30; rm2f = 0.05; bm2f = 0.20; tm2f = 0.08;

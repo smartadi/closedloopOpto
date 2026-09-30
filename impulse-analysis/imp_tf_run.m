@@ -90,7 +90,7 @@ addpath(fullfile(root,'utils'));
 % mid-loop "permission denied" leaves half the panel set rebuilt and half stale, which is
 % worse than not running at all.
 if ~exist('RUN_OUTDIR','var') || isempty(RUN_OUTDIR)
-    outDir = fullfile(root,'paper','images','figure2');
+    outDir = fullfile(root,'paper','figures_v2','figure2');
 else
     outDir = RUN_OUTDIR;
 end

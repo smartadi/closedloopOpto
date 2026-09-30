@@ -114,7 +114,7 @@ PS.f2gap  = 0.5;                                     % gutter between panels (cm
 % row 2 = model-swap, tau-forest, and ONE COMBINED state panel (motion | rel-delta | abs-delta,
 % shared y-axis).
 PS.f2w   = 4.0;                                      % Fig-2 panel width (cm)
-PS.f2h   = 3.6;                                      % Fig-2 panel height (cm)
+PS.f2h   = 3.4;                                      % Fig-2 panel height (cm)
 % NOTE: type is 6 pt ABSOLUTE, so shrinking a panel from 6 cm to 4.2 cm makes the type occupy
 % ~43% more of the panel width. Panels that were already tight at 6 cm (2J, 2K, 2G, 2I, TF-D)
 % need their labels/legends checked after the resize, not just re-exported.

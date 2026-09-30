@@ -46,8 +46,8 @@ SESS_MARK   = 'o';                % same marker for every session (aligned verti
 nS = numel(SESS_TAGS); nMode = numel(MODE_CODES);
 
 PS = paperStyle(); setPaperDefaults();
-if exist(fullfile('paper','images','figure5'),'dir'); outDir=fullfile('paper','images','figure5');
-elseif exist(fullfile('..','paper','images','figure5'),'dir'); outDir=fullfile('..','paper','images','figure5');
+if exist(fullfile('paper','figures_v2','figure5'),'dir'); outDir=fullfile('paper','figures_v2','figure5');
+elseif exist(fullfile('..','paper','figures_v2','figure5'),'dir'); outDir=fullfile('..','paper','figures_v2','figure5');
 else; outDir='.'; end
 
 %% ---- Gather per-(session,mode) metrics, with drowsy-trial exclusion -----
@@ -126,7 +126,7 @@ ybarLab = {'1% \DeltaF/F', '5 (% \DeltaF/F)^2', '20\circ'};
 
 for p = 1:3
     M = metrics{p};
-    fig = paperFig(5.5, 4.5);
+    fig = paperFig(5.5, 3.4);
     lm=0.20; rm=0.04; bm=0.16; tm=0.06;
     ax = axes(fig, 'Position', [lm bm 1-lm-rm 1-bm-tm]); hold(ax,'on');
 

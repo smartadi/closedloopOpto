@@ -54,7 +54,7 @@ if ~exist('CV_SINGLE_NAMP','var') || isempty(CV_SINGLE_NAMP), CV_SINGLE_NAMP = 3
 % in the paper figure folders"). tf_cv_shape_across_sessions keeps a name distinct from the
 % in-sample tf_shape_across_sessions (2C-i, written by imp_tf_run) so neither overwrites the other.
 if ~exist('CV_OUTDIR','var') || isempty(CV_OUTDIR)
-    CV_OUTDIR = fullfile(root,'paper','images','figure2');
+    CV_OUTDIR = fullfile(root,'paper','figures_v2','figure2');
 end
 if CV_EXPORT && ~exist(CV_OUTDIR,'dir'), mkdir(CV_OUTDIR); end
 
@@ -273,7 +273,7 @@ if CV_SINGLE
         text(axS, 0.97, 0.40, mouseLab{ksel}, 'Units','normalized', ...
              'HorizontalAlignment','right', 'VerticalAlignment','bottom', ...
              'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', PS.sessColor(ksel));
-        suppDir = fullfile(root,'paper','images','supplementary');
+        suppDir = fullfile(root,'paper','figures_v2','supplementary');
         if ~exist(suppDir,'dir'), mkdir(suppDir); end
         if CV_EXPORT
             paperExport(figS, fullfile(suppDir, ...

@@ -91,6 +91,35 @@ each row stays inside 17.6 with ≥1 cm clearance. Sizes are the real PDF MediaB
 Fig-3 row layout that fits 17.6 (0.25 cm gaps): R1 = A+B = 17.11 · R2 = C+D+E = 15.60 ·
 R3 = F+G+H+I = 15.53.
 
+| 2 | dose-response | figure2/imp_response.pdf | 3.77 × 3.67 |
+| 2 | single traces | figure2/imp_single_AL_0033_2025-01-29_en1.pdf | 3.49 × 3.10 |
+| 2 | TF cv single (supp) | supplementary/tf_cv_single_AL_0033.pdf | 3.67 × 3.46 |
+| 2 | held-out R² | figure2/tf_cv_heldout_r2.pdf | 3.74 × 3.42 |
+| 2 | model swap | figure2/tf_model_swap.pdf | 3.81 × 2.68 |
+| 2 | tau forest | figure2/tf_tau_forest.pdf | 3.70 × 3.39 |
+| 2 | state combined | figure2/imp_state_var_combined.pdf | 8.08 × 3.25 |
+| 5 | B single trial | figure5/sine_5B_single_trial_*.pdf | 12.14 × 3.00 |
+| 5 | C trial avg | figure5/sine_5C_trialavg_*.pdf | 12.14 × 3.25 |
+| 5 | D avg input | figure5/sine_5D_trialavg_input_*.pdf | 12.14 × 2.96 |
+| 5 | E RMSE(t) | figure5/sine_5E_rmse_time_*.pdf | 4.83 × 2.86 |
+| 5 | F variance | figure5/sine_5F_variance_*.pdf | 5.01 × 3.07 |
+| 5 | G RMSE violin | figure5/sine_5G_rmse_violin_*.pdf | 3.74 × 3.03 |
+| 5 | H phase lag | figure5/sine_5H_phase_lag_*.pdf | 3.67 × 3.21 |
+| 5 | I xsess RMSE | figure5/sine_combined_rmse.pdf | 5.04 × 2.96 |
+| 5 | J xsess variance | figure5/sine_combined_variance.pdf | 5.04 × 2.93 |
+| 5 | K xsess phase | figure5/sine_combined_phase.pdf | 5.33 × 2.96 |
+
+Fig-2 rows (0.25 gaps): R1 = imp_response + imp_single + tf_cv_single + tf_cv_heldout = 15.42 ·
+R2 = tf_model_swap + tf_tau_forest + state_combined = 16.09. Both inside 17.6.
+
+Fig-5 rows (0.25 gaps): B / C / D each 12.14 on their own row · I+J+K = 15.91. **E+F+G+H
+4-across = 18.00 — OVER 17.6 by 0.40 cm**; split the row or trim E/F to fit.
+
+> **`imp_response.pdf` crops TALLER than its canvas** (3.67 vs the 3.40 requested), i.e. its
+> content overhangs the `paperFig` canvas. Same failure mode as Fig-4 panel A. Harmless for
+> legibility (nothing is clipped, that is the point of cropped export) but it breaks row
+> alignment — budget the measured 3.67, not 3.40.
+
 > **Cropping defeats height unification.** All nine Fig-3 panels were drawn on a 3.4 cm
 > canvas, but their cropped heights span 2.29–3.28 cm: `exportgraphics('vector')` crops to
 > each panel's own content, so a panel with fewer tick/axis labels ends up shorter. Setting
