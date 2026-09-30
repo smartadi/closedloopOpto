@@ -132,10 +132,13 @@ figA = paperFig(PS.f2w, PS.f2h);  axA = axes(figA); hold(axA,'on');   % TF-A -- 
 % Each session gets ONE row and keeps ONE colour; the two poles are separated by MARKER
 % (filled circle = slow, open square = fast), not by hue. Encoding pole type in colour
 % would have cost the session identity that every other Fig-2 panel carries.
-% dy = 0 (user 2026-09-30): fast and slow for the SAME mouse share one horizontal
-% line, so a row reads as that mouse's pair of timescales. Marker (filled circle =
-% slow, open square = fast) already separates them; the vertical split was redundant.
-dy = 0;
+% Slow and fast sit ONE ABOVE THE OTHER within each mouse's row (dy > 0).
+% Tried dy = 0 (both on one horizontal line) earlier on 2026-09-30, reverted same day:
+% each pole carries its OWN bootstrap CI line, and a shared y superimposed them --
+% measured overlap of the shorter line was 98%% (M1a), 72%% (M3), and for M1b the two
+% abutted into what read as a single interval 0.037-0.502 s. The offset is what keeps
+% each interval attached to its own marker.
+dy = 0.16;
 % Cross-session mean line + -/+1 SD band removed per user 2026-09-22 (kept in the console
 % report below: mean tau_slow / between-session SD / ratio). Markers alone now carry the panel.
 for k = 1:n
