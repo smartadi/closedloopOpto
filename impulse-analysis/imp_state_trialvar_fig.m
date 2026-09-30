@@ -355,25 +355,50 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
     idx = arrayfun(@(t) find(strcmpi({R.tag}, t{1}), 1), mkOrder, 'UniformOutput', false);
     idx = [idx{:}];
     if numel(idx) >= 2
-        wC  = 3*PS.f2w + 2*0.5;                         % panel F = 3 single widths + 2 gaps (11.2 cm), one tile per state marker
+        wC  = 8.3;                                     % panel F: 3 tiles sharing one y-axis;
+        % narrowed from 11.2 cm (user 2026-09-30) so row 2 still closes with D and E once the
+        % model-swap grid joins the figure -- only the leftmost tile carries y ticks anyway.
         % Canvas raised 3.4 -> 3.7 (user 2026-09-30: 'appears smaller than others').
         % The tiled layout crops tighter than a single-axes panel, so an equal canvas
         % lands ~0.4 cm shorter than A-E; the extra height equalises the CROPPED size.
         fC  = paperFig(wC, PS.f2h * 1.12);
         tl  = tiledlayout(fC, 1, numel(idx), 'TileSpacing','compact', 'Padding','compact');
         axc = gobjects(numel(idx),1);
+        % Bootstrap a CI for any marker pass 1 skipped. Pass 1 only covers `adm` (the
+        % ADMISSIBLE markers), but this panel draws abs-delta too, and the old fallback
+        % `ciLo = ciHi = yv` silently drew a zero-width band -- the tile looked like it
+        % had no uncertainty at all. Collect the drawn values + CIs so the shared y-axis
+        % is set by what is on the page, not by the admissible subset (abs-delta's Q4 was
+        % landing outside it).
+        ciC = cell(numel(idx),1);  yvC = cell(numel(idx),1);  xbC = cell(numel(idx),1);
         for m = 1:numel(idx)
             k = idx(m);  r = R(k);  ip = find(adm==k, 1);
-            xb = r.binMed(:).';  yv = r.sdRawN(:).';
-            sc = yv ./ max(r.sdB(:).', eps);
-            if ~isempty(ip), ciLo = CI(ip).lo .* sc;  ciHi = CI(ip).hi .* sc; else, ciLo = yv; ciHi = yv; end
+            xbC{m} = r.binMed(:).';  yvC{m} = r.sdRawN(:).';
+            sc = yvC{m} ./ max(r.sdB(:).', eps);
+            if ~isempty(ip)
+                ciC{m} = [CI(ip).lo .* sc; CI(ip).hi .* sc];
+            else
+                [lo, hi] = local_binci(r.y, r.gbin, nB, STVF_NBOOT);
+                ciC{m} = [lo .* sc; hi .* sc];
+                fprintf('[STVF] %s is not in the admissible set -- CI bootstrapped here for the panel\n', r.tag);
+            end
+        end
+        allC = [yvC{:}];  for m = 1:numel(idx), allC = [allC ciC{m}(:).']; end %#ok<AGROW>
+        allC = allC(isfinite(allC));
+        yLimC = yNormLim;
+        if ~isempty(allC)
+            yLimC = [floor(min(allC)*20)/20, ceil(max(allC)*20)/20];
+        end
+        for m = 1:numel(idx)
+            k = idx(m);  r = R(k);
+            xb = xbC{m};  yv = yvC{m};  ciLo = ciC{m}(1,:);  ciHi = ciC{m}(2,:);
             ax = nexttile(tl);  hold(ax,'on');  axc(m) = ax;
             fill(ax, [xb fliplr(xb)], [ciLo fliplr(ciHi)], C_stim, ...
                  'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
             hR = yline(ax, 1, ':', 'Color',[.55 .55 .55], 'LineWidth', PS.lw_zero); hR.HandleVisibility='off'; uistack(hR,'bottom');
             plot(ax, xb, yv, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
             xticks(ax, 0.125:0.25:0.875);  xticklabels(ax, {'Q1','Q2','Q3','Q4'});
-            xlim(ax, [0 1]);  ylim(ax, yNormLim);
+            xlim(ax, [0 1]);  ylim(ax, yLimC);
             set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
             xlabel(ax, sprintf('%s quartile', r.name), 'FontSize', PS.fs, 'FontWeight', PS.fw);
             if     isnan(r.pLME),  ss = '';
@@ -385,7 +410,7 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
                  'HorizontalAlignment','center', 'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
             if m > 1, set(ax, 'YTickLabel', []); end     % shared y-axis
         end
-        linkaxes(axc, 'y');  ylim(axc(1), yNormLim);
+        linkaxes(axc, 'y');  ylim(axc(1), yLimC);
         ylabel(axc(1), {'Prediction error','(session-normalized)'}, 'FontSize', PS.fs, 'FontWeight', PS.fw);
         pdfDir = fullfile(paperRoot,'figures_v2','figure2');
         if ~exist(pdfDir,'dir'), mkdir(pdfDir); end

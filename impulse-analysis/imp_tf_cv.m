@@ -274,45 +274,36 @@ if CV_SINGLE
         % cross-mouse session colours -- shade by amplitude in grey to avoid that confusion.
         ramp  = interp1([0 1], [0.72 0.72 0.72; 0 0 0], linspace(0,1,max(numel(ashow),2)));
         t     = S1.tPost(:);
-        % 4.1 cm, not the single-panel width: the amplitude/R^2 key needs a strip of
-        % real margin to the right of the plot box (see the key block below).
-        figS  = paperFig(4.1, PS.f2h);
-        axS   = axes(figS, 'Position', [0.185 0.215 0.505 0.635]);  hold(axS,'on');
+        % 5.6 cm (user 2026-09-30): the legend carries the full 'x.xx mW  R^2=y.yy' labels
+        % again, so the plot box gets the width to sit beside them rather than under them.
+        figS  = paperFig(5.6, PS.f2h);
+        axS   = axes(figS, 'Position', [0.145 0.215 0.48 0.635]);  hold(axS,'on');
         hL = gobjects(numel(ashow),1);  hD = gobjects(numel(ashow),1);
         for i = 1:numel(ashow)
             a = ashow(i);  c = ramp(i,:);
             hL(i) = plot(axS, t, S1.amp.meas(a,:), '-',  'Color', c, 'LineWidth', PS.lw_mean);
             hD(i) = plot(axS, t, S1.amp.pred(a,:), '--', 'Color', c, 'LineWidth', PS.lw_fit);
+            % mW, not the raw command volts (user 2026-09-30): panels A and B are both in
+            % mW, and uA/3 is the project's V->mW conversion (see trace_overlay.m).
+            lgS{i} = sprintf('%.2f mW  R^2=%.2f', S1.amp.uA(a)/3, S1.amp.R2(a));
         end
         yline(axS, 0, '-', 'Color', [.6 .6 .6], 'LineWidth', PS.lw_zero);
         xlim(axS, [0 0.5]);  xticks(axS, [0 0.2 0.4]);
         xlabel(axS, 'time from onset (s)');  ylabel(axS, '\DeltaF/F (%)');
         set(axS, 'FontSize', PS.fs, 'FontWeight', PS.fw, 'TickDir','out', 'Box','off');
         title(axS, 'LTI model fit (held out)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
-        % ---- amplitude / R^2 key, bottom right of the margin strip (user 2026-09-30) --
-        % Two narrow right-aligned columns instead of one wide legend: the old single
-        % column of '1.1 V  R^2=0.51' labels was wider than the plot box, so it sat on
-        % the traces wherever it was put. x > 1 is outside the axes, hence Clipping off.
-        xV = 1.06;  xR = 1.58;  yHdr = 0.42;  dyK = 0.125;
-        kArgs = {'Units','normalized', 'FontSize', PS.fs, 'FontWeight', PS.fw, ...
-                 'VerticalAlignment','middle', 'Clipping','off'};
-        text(axS, xV, yHdr, 'V',   kArgs{:}, 'HorizontalAlignment','left',  'Color',[.35 .35 .35]);
-        text(axS, xR, yHdr, 'R^2', kArgs{:}, 'HorizontalAlignment','right', 'Color',[.35 .35 .35]);
-        for i = 1:numel(ashow)
-            a = ashow(i);  c = ramp(i,:);  yK = yHdr - i*dyK;
-            text(axS, xV, yK, sprintf('%.1f', S1.amp.uA(a)), kArgs{:}, ...
-                 'HorizontalAlignment','left',  'Color', c);
-            text(axS, xR, yK, sprintf('%.2f', S1.amp.R2(a)), kArgs{:}, ...
-                 'HorizontalAlignment','right', 'Color', c);
-        end
-        % Solid-vs-dashed convention: two SHORT entries, so this one can stay a legend.
-        lg = legend(axS, [hL(end) hD(end)], {'data','fit'}, 'Box','off');
-        lg.ItemTokenSize = PS.lgd_token;  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
+        % ---- legend: one entry per amplitude + a dashed 'fit' key (user 2026-09-30) ---
+        % Back to the original display. It only fits because the panel is 5.6 cm wide and
+        % the legend sits in the margin to the RIGHT of the plot box, not over the traces.
+        hFit = plot(axS, NaN, NaN, '--', 'Color', [0 0 0], 'LineWidth', PS.lw_fit);
+        lg = legend(axS, [hL(:); hFit], [lgS(:); {'fit'}], 'Box','off');
+        lg.ItemTokenSize = [8 6];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
         drawnow; lg.Units = 'normalized'; lgp = lg.Position;
-        lg.Location = 'none';  lg.Position = [0.715, 0.50, lgp(3), lgp(4)];
-        % Mouse tag at the head of the strip -- names the single mouse this panel shows.
-        text(axS, xR, 0.96, mouseLab{ksel}, kArgs{:}, ...
-             'HorizontalAlignment','right', 'Color', PS.sessColor(ksel));
+        lg.Location = 'none';  lg.Position = [0.655, 0.20, lgp(3), lgp(4)];
+        % Mouse tag at the head of the margin, clear of the legend below it.
+        text(axS, 1.06, 0.97, mouseLab{ksel}, 'Units','normalized', ...
+             'HorizontalAlignment','left', 'VerticalAlignment','middle', 'Clipping','off', ...
+             'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', PS.sessColor(ksel));
         suppDir = CV_PANELDIR;   % panel C (user 2026-09-30: main figure, not supplementary)
         if ~exist(suppDir,'dir'), mkdir(suppDir); end
         jnAxesAll(figS);   % rule-book font/axis pass

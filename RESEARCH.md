@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-30 - BUG Fig-2 F: abs-delta tile drew a zero-width CI and fell off the shared y-axis
+**Changed/Found:** `impulse-analysis/imp_state_trialvar_fig.m` combined-panel block. Pass 1 bootstraps CIs only for `adm = find([R.adm])` (the ADMISSIBLE markers: motion, rel-delta), but the combined panel draws `mkOrder = {'MOT','DPr','DPa'}` - abs-delta too. For DPa `ip` came back empty and the fallback `ciLo = yv; ciHi = yv` drew a band of zero width, so the tile looked like it carried NO uncertainty. The same omission kept DPa out of `yNormLim`, so its Q4 (1.39) sat outside the shared axis and was clipped off the top. Fixed: bootstrap a CI in-place for any drawn marker pass 1 skipped, and set the panel's y-limit `yLimC` from the values it actually draws. All three tiles now show a band; axis is [0.60 1.40].
+**Why:** User: 'the abs power quartile plots do not have shading around them why'. A silently degenerate CI is the worst failure mode here - the tile reads as a noiseless effect, and it is the tile with the LARGEST effect (Q1 0.68 -> Q4 1.39).
+**Next:** Open question for the science, not the plot: **why is DPa not in the admissible set?** `imp_state_trialvar.m` sets `R.adm`, and abs-delta is excluded there. If the exclusion is deliberate (e.g. absolute delta power is confounded with bleaching/gain drift) then showing the tile at all needs a caption caveat; if it is stale, `adm` should include it. Decide before this panel goes in the paper.
+
+### 2026-09-30 - Fig-2: model-swap grid reinstated as a panel; figure is now 7 panels, A-G
+**Changed/Found:** `impulse-analysis/imp_tf_figs.m` now copies `tf_model_swap.pdf` into `paper/figures_v2/figure2` alongside `tf_tau_forest.pdf`. `paper/figures_final/MANIFEST.txt` [figure2] re-lettered: A dose-response, B single-session traces, C LTI fit, D model swap, E LTI validation, F timescales, G state vs prediction. Panel renders 3.32 x 2.47 cm.
+**Why:** User: 'the model swap grid is needed too thats completely gone'. It had been routed to the candidates dir (`paper/images/figure2`) on 2026-09-30 when the A-F set was locked, on the reading that it was not a panel. It is - it carries the 'models do NOT transfer' result (self R^2 0.991 vs cross-session 0.714), which the Methods claim about per-session identification rests on.
+**Next:** none - manifest and panel folder are back in sync at 7 files.
+
+### 2026-09-30 - Fig-2 C: original legend restored, in mW; panel F narrowed to 8.3 cm to pay for it
+**Changed/Found:** `impulse-analysis/imp_tf_cv.m` panel C - the two-column margin key (added earlier today) reverted to a normal legend with the original per-amplitude labels plus a dashed 'fit' entry; canvas 4.1 -> 5.6 cm, axes Position [0.145 0.215 0.48 0.635] so the legend sits in the margin beside the plot box rather than over the traces. Renders 5.93 x 3.21 cm. **Units changed V -> mW** (`S1.amp.uA(a)/3`), matching panels A and B. `imp_state_trialvar_fig.m` `wC` 11.2 -> 8.3 cm.
+**Why:** User rejected the two-column key ('i dont like the legend it is now') and flagged the unit mismatch - C was the only Fig-2 panel labelled in command volts while A and B are in mW. The legend only fits at 5.6 cm; with the model-swap panel back, row 1 can no longer be A+B+C+D, so the layout is now row 1 = A B C + swap (17.59 cm), row 2 = validation + timescales + state (17.31 cm), and F had to give up 2.9 cm for row 2 to close.
+**Next:** Both rows are within ~0.3 cm of the 17.6 cm limit - any further widening needs a matching trim in the same row.
+
+
 ### 2026-09-30 - Fig-2 D: axR label was rendering across axL traces; lanes split, canvas 5.0 -> 4.7
 **Changed/Found:** `impulse-analysis/imp_tf_cv.m` panel D - `axL` Position [0.095 0.215 0.545 0.655] -> [0.105 0.215 0.455 0.655] and `axR` [0.775 ...] -> [0.805 ...], canvas `paperFig(5.0)` -> `paperFig(4.7)`. Renders 5.15 x 3.77 cm (was 5.47 x 3.63).
 **Why:** User spotted that the right sub-panel's rotated 'held-out R^2' y-label sat INSIDE the left sub-panel's plot box, on top of the traces' 0.3-0.5 s tails. The gap between the two axes (0.135 of canvas) was being eaten by axR's tick labels, leaving the ylabel nowhere to go but left. Narrowing axL and pushing axR right gives the label its own lane. The trim also pays for panel C's wider canvas so row 1 still closes at 17.6 cm.

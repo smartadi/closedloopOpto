@@ -127,5 +127,10 @@ if FIG_EXPORT && isfield(FIGS,'robust')
     src = fullfile(outDir,'tf_tau_forest.pdf');
     if exist(src,'file'), copyfile(src, fullfile(panelDir,'tf_tau_forest.pdf'));
         fprintf('[TFFIGS] panel E -> %s\n', fullfile(panelDir,'tf_tau_forest.pdf')); end
+    % The model-swap grid is a panel too (user 2026-09-30: 'thats completely gone') --
+    % it was only ever written to the candidates dir.
+    src = fullfile(outDir,'tf_model_swap.pdf');
+    if exist(src,'file'), copyfile(src, fullfile(panelDir,'tf_model_swap.pdf'));
+        fprintf('[TFFIGS] model-swap panel -> %s\n', fullfile(panelDir,'tf_model_swap.pdf')); end
 end
 fprintf('\n[TFFIGS] %d panel group(s) drawn -> %s\n', numel(fieldnames(FIGS)), outDir);
