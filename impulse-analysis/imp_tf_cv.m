@@ -54,9 +54,13 @@ if ~exist('CV_SINGLE_NAMP','var') || isempty(CV_SINGLE_NAMP), CV_SINGLE_NAMP = 3
 % in the paper figure folders"). tf_cv_shape_across_sessions keeps a name distinct from the
 % in-sample tf_shape_across_sessions (2C-i, written by imp_tf_run) so neither overwrites the other.
 if ~exist('CV_OUTDIR','var') || isempty(CV_OUTDIR)
-    CV_OUTDIR = fullfile(root,'paper','figures_v2','figure2');
+    % Candidates (shape / endlabels / heldout_r2 / r2_trial) stay in the WORKING
+    % dir. Only the two chosen Fig-2 panels go to figures_v2 via CV_PANELDIR.
+    CV_OUTDIR = fullfile(root,'paper','images','figure2');
 end
 if CV_EXPORT && ~exist(CV_OUTDIR,'dir'), mkdir(CV_OUTDIR); end
+CV_PANELDIR = fullfile(root,'paper','figures_v2','figure2');   % locked Fig-2 panels C and D
+if CV_EXPORT && ~exist(CV_PANELDIR,'dir'), mkdir(CV_PANELDIR); end
 
 %% ---- (1) full-data fits: reuse the cache if present, else fit fresh (no bootstrap) ----------
 fitFile = fullfile(here,'data','imp_tf_fits.mat');
@@ -140,8 +144,11 @@ if CV_REVAMP
 
     % ---------- candidate 1: traces + R^2 side panel ----------
     fS = paperFig(PS.f2w*1.7, PS.f2h);
-    tS = tiledlayout(fS,1,3,'TileSpacing','compact','Padding','compact');
-    axL = nexttile(tS,[1 2]);  hold(axL,'on');            % left 2/3: overlay, no legend
+    % Explicit axes, NOT a tiledlayout (2026-09-30): nexttile kept returning the
+    % spanning axL, so axR overwrote the overlay and the exported panel was the
+    % R^2 strip alone, still carrying axL's xlabel. Fixed Positions also give the
+    % exact panel geometry the Illustrator assembly wants.
+    axL = axes(fS, 'Position', [0.095 0.215 0.545 0.655]);  hold(axL,'on');   % left: overlay, no legend
     for k = 1:n
         c = PS.sessColor(k);  t = CV{k}.tPost(:);
         hm = CV{k}.h_meas_cv(:);  hp = CV{k}.h_pred_cv(:);
@@ -153,7 +160,10 @@ if CV_REVAMP
     yline(axL,0,'-','Color',[.6 .6 .6],'LineWidth',PS.lw_zero);  xlim(axL,[0 tmax2]);
     xlabel(axL,'time from onset (s)');  ylabel(axL,'normalised \DeltaF/F');
     set(axL,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
-    axR = nexttile(tS,1);  hold(axR,'on');               % right 1/3: held-out R^2 per session
+    % Tile 3, NOT 1 (fixed 2026-09-30): axL spans tiles 1-2, so nexttile(tS,1)
+    % re-entered tile 1 and REPLACED the trace overlay -- the exported sidebar
+    % was the R^2 strip alone. Latent while this panel was only a candidate.
+    axR = axes(fS, 'Position', [0.775 0.215 0.205 0.655]);  hold(axR,'on');   % right: held-out R^2 per session
     for k = 1:n
         c = PS.sessColor(k);
         plot(axR,[k k],[q25(k) q75(k)],'-','Color',c,'LineWidth',1.0);
@@ -162,7 +172,12 @@ if CV_REVAMP
     ylim(axR,[max(-0.2,min(q25)-0.05) 1.02]);  xlim(axR,[0.5 n+0.5]);
     set(axR,'XTick',1:n,'XTickLabel',mlab,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
     axR.XAxis.FontSize = PS.fs-1;  ylabel(axR,'held-out R^2');
-    if CV_EXPORT, paperExport(fS, fullfile(CV_OUTDIR,'tf_cv_2D_sidebar.pdf')); end
+    % Panel title carried by the layout so it spans both tiles (user 2026-09-30:
+    % the sidebar is Fig-2 D and needs the title that used to sit on tf_cv_heldout_r2).
+    annotation(fS, 'textbox', [0 0.90 1 0.10], 'String', 'LTI validation within session', ...
+        'HorizontalAlignment','center', 'VerticalAlignment','middle', 'LineStyle','none', ...
+        'FontSize', PS.fs, 'FontWeight', PS.fw, 'FontName', get(groot,'defaultAxesFontName'));
+    if CV_EXPORT, paperExport(fS, fullfile(CV_PANELDIR,'tf_cv_2D_sidebar.pdf')); end
 
     % ---------- candidate 3: overlay with R^2 labels at trace ends ----------
     fE = paperFig(PS.f2w, PS.f2h);  axE = axes(fE);  hold(axE,'on');
@@ -269,11 +284,15 @@ if CV_SINGLE
         title(axS, 'LTI model fit (held out)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
         lg = legend(axS, hL, lgS, 'Location','southeast', 'Box','off');
         lg.ItemTokenSize = [12 PS.lgd_token(2)];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
+        % Push the legend hard right (user 2026-09-30): 'southeast' is inside the axes
+        % box and the rising tails of the traces run straight through it.
+        drawnow; lg.Units = 'normalized'; lgp = lg.Position;
+        lg.Position = [1 - lgp(3) - 0.005, lgp(2), lgp(3), lgp(4)];
         % Mouse tag just above the (southeast) legend -- names the single mouse this panel shows.
-        text(axS, 0.97, 0.40, mouseLab{ksel}, 'Units','normalized', ...
+        text(axS, 0.99, 0.62, mouseLab{ksel}, 'Units','normalized', ...
              'HorizontalAlignment','right', 'VerticalAlignment','bottom', ...
              'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', PS.sessColor(ksel));
-        suppDir = fullfile(root,'paper','figures_v2','supplementary');
+        suppDir = CV_PANELDIR;   % panel C (user 2026-09-30: main figure, not supplementary)
         if ~exist(suppDir,'dir'), mkdir(suppDir); end
         if CV_EXPORT
             paperExport(figS, fullfile(suppDir, ...

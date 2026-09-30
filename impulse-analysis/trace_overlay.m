@@ -4,11 +4,11 @@
 
 %% Single-session trace overlay â€” session 3
 close all;
-imp3  = allExperiments(3).imp;
-uAmp3 = allExperiments(3).uAmp;
-mn3   = allExperiments(3).mn;
-td3   = allExperiments(3).td;
-en3   = allExperiments(3).en;
+imp3  = allExperiments(2).imp;
+uAmp3 = allExperiments(2).uAmp;
+mn3   = allExperiments(2).mn;
+td3   = allExperiments(2).td;
+en3   = allExperiments(2).en;
 
 PS = paperStyle();
 setPaperDefaults();
@@ -54,9 +54,16 @@ for i = 1:length(uAmp3)
     end
 end
 xlim([-1,1]);
-lgd = legend('Box','off','Location','southeast');
+lgd = legend('Box','off','Location','southwest');
 paperLegend(lgd);
 paperAxes(gca,'XLength',0.25,'YLength',1,'XLabel','250 ms','YLabel','1% dF/F');
+% Park the legend at the extreme bottom-left of the CANVAS (user 2026-09-30): the
+% traces run through the 'southeast' slot. This MUST come after paperAxes -- that
+% call resizes the axes, and an auto-located legend is re-laid-out when it does,
+% which silently undoes any Position set beforehand. Location='none' pins it.
+drawnow; lgd.Units = 'normalized'; lgp = lgd.Position;
+lgd.Location = 'none';
+lgd.Position = [0.150, 0.075, lgp(3), lgp(4)];   % clear of the paperAxes scale bars
 
 % Freeze the data-driven y-range, then draw the model-fit window spanning it
 % full height and send it to the back (behind traces and SD fills).

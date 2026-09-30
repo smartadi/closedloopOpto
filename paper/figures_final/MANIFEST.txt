@@ -22,11 +22,18 @@ schematic_optoephyswf (1).pdf
 figure1/svd_frame_AL_0039_2025-04-19.pdf
 
 [figure2]
+# Lettering LOCKED 2026-09-30 (user). Sources now in paper/figures_v2/figure2;
+#   A dose-response          -> imp_response.pdf
+#   B single-session traces  -> imp_single_AL_0041_2025-12-02_en2.pdf  (session 2)
+#   C LTI fit, one session   -> tf_cv_single_AL_0033.pdf   (promoted from supplementary)
+#   D LTI validation         -> tf_cv_2D_sidebar.pdf       (replaces tf_cv_heldout_r2)
+#   E timescales             -> tf_tau_forest.pdf
+#   F state vs prediction    -> imp_state_var_combined.pdf
+# tf_model_swap.pdf is NO LONGER a Fig-2 panel; candidates live in paper/images/figure2.
 figure2/imp_response.pdf
-figure2/imp_single_AL_0033_2025-01-29_en1.pdf
-supplementary/tf_cv_single_AL_0033.pdf
-figure2/tf_cv_heldout_r2.pdf
-figure2/tf_model_swap.pdf
+figure2/imp_single_AL_0041_2025-12-02_en2.pdf
+figure2/tf_cv_single_AL_0033.pdf
+figure2/tf_cv_2D_sidebar.pdf
 figure2/tf_tau_forest.pdf
 figure2/imp_state_var_combined.pdf
 

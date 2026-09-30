@@ -275,6 +275,8 @@ for i = 1:numel(adm)
             % controls -> they belong in supplementary, not beside the findings.
             % Main Fig-2 row now includes abs-delta (DPa) alongside motion + rel-delta (user
             % 2026-09-22); pre-stim variance and any other confound control stay in supplementary.
+            % Per-marker panels are candidates -> working dir. Only the COMBINED
+            % panel (F) is a locked Fig-2 panel (user 2026-09-30).
             if r.adm || strcmpi(r.tag,'DPa'), subDir = 'figure2'; else, subDir = 'supplementary'; end
             pdfDir = fullfile(paperRoot, 'images', subDir);
             if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
@@ -293,7 +295,10 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
     idx = [idx{:}];
     if numel(idx) >= 2
         wC  = 2*PS.f2w + PS.col1*0.07;                  % ~8.6 cm: fills row-2 beside 2 square panels
-        fC  = paperFig(wC, PS.f2h);
+        % Canvas raised 3.4 -> 3.7 (user 2026-09-30: 'appears smaller than others').
+        % The tiled layout crops tighter than a single-axes panel, so an equal canvas
+        % lands ~0.4 cm shorter than A-E; the extra height equalises the CROPPED size.
+        fC  = paperFig(wC, PS.f2h * 1.12);
         tl  = tiledlayout(fC, 1, numel(idx), 'TileSpacing','compact', 'Padding','compact');
         axc = gobjects(numel(idx),1);
         for m = 1:numel(idx)
