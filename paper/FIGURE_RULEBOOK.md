@@ -78,6 +78,25 @@ each row stays inside 17.6 with ≥1 cm clearance. Sizes are the real PDF MediaB
 | 4 | E kernel map | figure4/f4_kernel_map.pdf | 3.67 × 2.68 |
 | 4 | F A=G+L | figure4/f4_agl.pdf | 4.80 × 3.35 |
 | 4 | G rejection | figure4/f4_cl_reject_RR.pdf | 5.08 × 3.28 |
+| 3 | A single trial | figure3/panel_A.pdf | 8.43 × 3.28 |
+| 3 | B trials+avg | figure3/panel_B.pdf | 8.43 × 2.75 |
+| 3 | C avg inputs | figure3/panel_C.pdf | 8.40 × 2.43 |
+| 3 | D variance(t) | figure3/panel_D.pdf | 3.35 × 3.07 |
+| 3 | E RMSE violin | figure3/panel_E.pdf | 3.35 × 2.29 |
+| 3 | F xsess variance | figure3/all_variance_sessions.pdf | 3.21 × 3.10 |
+| 3 | G xsess RMSE(t) | figure3/all_average_sessions.pdf | 2.96 × 3.10 |
+| 3 | H variance ratio | figure3/variance_ratio_by_window.pdf | 4.20 × 3.17 |
+| 3 | I RMSE ratio | figure3/MSE_ratio_by_window.pdf | 4.41 × 3.17 |
+
+Fig-3 row layout that fits 17.6 (0.25 cm gaps): R1 = A+B = 17.11 · R2 = C+D+E = 15.60 ·
+R3 = F+G+H+I = 15.53.
+
+> **Cropping defeats height unification.** All nine Fig-3 panels were drawn on a 3.4 cm
+> canvas, but their cropped heights span 2.29–3.28 cm: `exportgraphics('vector')` crops to
+> each panel's own content, so a panel with fewer tick/axis labels ends up shorter. Setting
+> a common `jnFig` height does NOT give a common import height. If rows must align, either
+> pad the short panels in Illustrator or equalise the drawn content (same tick/label
+> furniture), and always quote the measured bbox — never the nominal canvas.
 
 Row layout: R1 = A+B+C ≈ 16.5; R2 = D 16.58; R3 = E+F+G ≈ 14.0 (all + 0.25 gaps).
 
