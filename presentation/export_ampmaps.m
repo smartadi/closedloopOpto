@@ -15,7 +15,7 @@
 % select by name, not by position: the index into allExperiments shifts
 % whenever the experiments list in load_experiments.m is edited
 WANT  = {'AL_0033', '2025-01-29', 1};
-pxMM  = 0.173;        % mm per pixel
+pxMM  = 0.0173;       % mm per pixel (rig: 57.8 px/mm); was 0.173, 10x too large
 vToMW = 1.8 / 4.9;    % command volts -> mW
 
 ROOT = fileparts(fileparts(mfilename('fullpath')));

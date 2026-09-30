@@ -7,7 +7,11 @@
 % hemodynamic component that cannot be separated from local inhibition via
 % thresholding. The maps are exported as a qualitative illustration.
 close all;
-pxMM      = 0.173;    % mm per pixel
+pxMM      = 0.0173;   % mm per pixel (rig: PIX_PER_MM = 1000/17.3 -> 57.8 px/mm)
+% 2026-09-30: was 0.173, a factor-of-ten error. Areas below were therefore 100x
+% too large. The mm radii used for the annulus and the local zone are restated to
+% keep the SELECTED PIXELS bit-identical (34.68-52.02 px and 11.56 px as before),
+% so only the reported areas change, not which pixels enter the fit.
 selExp_sp = 3;
 
 uA_sp       = allExperiments(selExp_sp).uAmp(:);
@@ -36,19 +40,19 @@ resp_strong_full = reshape(resp_strong_full, nr_s, nc_s);
 [pr_pk, pc_pk] = find(resp_strong_full == min(resp_strong_full(:)), 1);
 
 % ── Amplitude vs inhibition area ─────────────────────────────────────────
-% Background subtraction: per-amplitude mean of an annulus (6–9 mm from peak)
+% Background subtraction: per-amplitude mean of an annulus (0.6–0.9 mm from peak)
 % removes the global hemodynamic offset. Fixed threshold = 5th percentile of
 % the background-subtracted strongest-amplitude map, applied to all amplitudes.
 [all_rows_sp, all_cols_sp] = ind2sub([nr_s nc_s], find(brainMask(:)));
 dist_sp  = sqrt((all_rows_sp - pr_pk).^2 + (all_cols_sp - pc_pk).^2) * pxMM;
-ann_mask = dist_sp >= 6 & dist_sp <= 9;
+ann_mask = dist_sp >= 0.6 & dist_sp <= 0.9;
 
-% Calibrate threshold from the strongest amplitude's local zone (within 2 mm).
+% Calibrate threshold from the strongest amplitude's local zone (within 0.2 mm).
 % Using the whole-brain percentile fails because the background annulus is
 % itself inhibited, making most bg-subtracted pixels positive.
 map_str    = resp_maps(:, iStrongest);
 bg_str     = mean(map_str(ann_mask));
-local_mask = dist_sp <= 2;   % pixels within 2 mm of peak
+local_mask = dist_sp <= 0.2;   % pixels within 0.2 mm of peak
 fixed_thr  = 0.5 * median(map_str(local_mask) - bg_str);   % 50% of local median
 fprintf('Fixed threshold (50%% of local median, strongest amp): %.4f%%\n', fixed_thr);
 
