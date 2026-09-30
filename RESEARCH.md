@@ -16,6 +16,14 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-30 - fig:pid: restore the Var./RMSE y-labels and the OL/CL key the grant profile had dropped
+**Changed/Found:** `talk/make_fig11_panels.m` GRANT branch. Three things had been stripped for space and left the panels unreadable (user: "rmse and var lost their title no one knows what they are now" / "they also lost OL and cl legends"):
+ 1. `ylVar`/`ylRmse` were `''`, leaving two near-identical OL-vs-CL dot plots side by side with nothing saying which was which. Now `'Var.'` / `'RMSE'` - a ROTATED label is bounded by the PLOT-BOX HEIGHT (~33 pt here), so 11 pt allows <=5 characters. Axes rectangle 0.26 -> 0.44 left so the label clears the ticks.
+ 2. The response panels' legend was suppressed entirely. Replaced with DIRECT COLOURED TEXT ('OL' red, 'CL' blue) in the one empty corner (t<0, below baseline) - no box, no border, no legend token.
+ 3. The paired panels' 'OL'/'CL' were 6 pt numeric-tick labels. They are CONDITION NAMES, so they are now text objects at 8 pt coloured to match their own dots. MATLAB has one tick font size per axes, hence text rather than `XTickLabel`.
+**Why:** the grant pass cut anything that did not fit, and went one step too far - the caption names both quantities but not their left-to-right order, so the reader could not tell variance from RMSE.
+**Next:** `clLab` is `{'CL','CL'}` under GRANT, not `{'CL','CL+pv'}` - 5 characters at 8 pt is ~30 pt and ran into the sine traces in the ~18 pt empty corner. The LaTeX row title "B Moving reference + preview" carries the distinction; if that title ever changes, the row-2 panel loses it.
+
 ### 2026-09-30 - Grant panels: tick size 8 -> 6 pt across all eight generators
 **Changed/Found:** `bilateral/grid/grid_panels.py` (`TICK`), `yazdanlab/sysID/macaque_lti_fit_single.py` + `macaque_io_2panel.py` (`TICK_FS`), `talk/make_fig11_panels.m` (`fsTick`), and the four exact-page hooks (`dose_response.m`, `tf_fit.m`, `imp_state_trialvar_fig.m`, `f4_row2_quartiles.m`). Labels stay 11 pt bold. Every axes rectangle was re-budgeted at the same time, because tick labels are what set the left/bottom margin - so the plot boxes all grew.
 **Why:** user 2026-09-30, "ticks are too big you can make them small". The original complaint was never about the numbers; it was the axis LABELS and legend entries sitting at 2.0-4.2 pt on the page.
@@ -27,7 +35,8 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 **Next:** `W` is derived from the draft's nesting; if that 0.48 changes again the silent rescale comes back. Tick labels with descenders (Q, g, p, y) need ~0.04 more bottom margin than digits do.
 
 ### 2026-09-30 - Panel letters aligned + titles capitalized via a \pnl macro (LaTeX, delivered as a snippet)
-**Changed/Found:** not a repo file - `draft/draft` is Overleaf-only, so this went to the user as a paste-in block. `\centering` put every panel letter at a different x (that IS the "letters are not aligned" complaint) and `[b]` let a wrapped title push its own image down. Replaced with `\pnl{width}{letter}{Title}{file}`: `aggedright` + a FIXED-HEIGHT label box. `\pnllab` must be ONE `\scriptsize` line (9.5 pt): at 2.05aselineskip (measured on the 11 pt body leading) fig:grid grew ~1 line and ran into its caption, and the wrapfigure's `[20]` reservation is fixed.
+**Changed/Found:** not a repo file - `draft/draft` is Overleaf-only, so this went to the user as a paste-in block. `\centering` put every panel letter at a different x (that IS the "letters are not aligned" complaint) and `[b]` let a wrapped title push its own image down. Replaced with `\pnl{width}{letter}{Title}{file}`: `
+aggedright` + a FIXED-HEIGHT label box. `\pnllab` must be ONE `\scriptsize` line (9.5 pt): at 2.05aselineskip (measured on the 11 pt body leading) fig:grid grew ~1 line and ran into its caption, and the wrapfigure's `[20]` reservation is fixed.
 **Why:** collaborator review, same pass as the font sizes.
 **Next:** a one-line box CLIPS overflow, so every title must fit its slot - 0.46\linewidth holds ~16 characters at \scriptsize, 0.31 holds ~12. 'Near 1.5 mm' printed as bare 'H Near' before H-J were cut to a plain distance series.
 

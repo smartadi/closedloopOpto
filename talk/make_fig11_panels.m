@@ -35,9 +35,18 @@ if GRANT
     % otherwise lets labels overflow a small canvas and exportgraphics then
     % crops to the text instead of the canvas.
     W_RESP=2.906; W_PAIR=2.218;            % target printed widths, cm
-    % Short y-labels: at 2.218cm the left margin holds an 8pt rotated label (~9pt)
-    % plus 6pt y-ticks (~8pt) and no more, so 'Across-trial variance' cannot fit.
-    ylVar=''; ylRmse=''; clLab={'CL','CL+pv'};   % 14pt rotated label would clip
+    % The two paired panels MUST carry a y-label. Blanking them (as this did at first)
+    % leaves two near-identical OL-vs-CL dot plots side by side with nothing saying
+    % which is which -- the caption names both quantities but not their order
+    % (user 2026-09-30: "rmse and var lost their title no one knows what they are").
+    % A ROTATED label is bounded by the PLOT-BOX HEIGHT, ~33pt here, so at 11pt it has
+    % to be <=5 characters: 'RMSE' is ~30pt and fits, 'Across-trial variance' is ~130pt
+    % and cannot. Units go in the caption.
+    % 'CL' on BOTH rows, not 'CL+pv': the direct key sits in the one empty corner of
+    % the trace panel (t < 0, below baseline), which is ~18pt wide, and 5 characters
+    % at 8pt is ~30pt and ran straight into the sine traces. The LaTeX row title
+    % already reads "B Moving reference + preview", so the panel need not repeat it.
+    ylVar='Var.'; ylRmse='RMSE'; clLab={'CL','CL'};
 else
     OUTDIR='C:\Users\aditya\Documents\projects\draft\latest\grant_2026_10_YazdanSteinmetz (2)\figs2\pid\';
     fs=PS.fs; fsLeg=5; fsTick=PS.fs;
@@ -67,11 +76,19 @@ for r=1:2
     if ~GRANT; xlabel(ax,'Time (s)','FontSize',fs,'FontWeight','bold'); end
     ylabel(ax,tern2(GRANT,'%','\DeltaF/F (%)'),'FontSize',fs,'FontWeight','bold');
     stylize(ax,fs,fsTick);
-    if GRANT; set(ax,'Position',[0.24 0.22 0.73 0.74]); end
-    % No in-panel legend at grant size: at 8pt it sits on top of the traces and
-    % runs past the axes, which an exact-page print then clips. The caption
-    % already says "open loop red, closed loop blue, reference dashed".
-    if ~GRANT
+    if GRANT; set(ax,'Position',[0.30 0.22 0.67 0.74]); end
+    if GRANT
+        % DIRECT LABELS instead of a legend box (user 2026-09-30: "they also lost OL
+        % and cl legends"). A legend BOX at this width sits on the traces and runs
+        % past the axes, which the exact-page print then clips -- but dropping the key
+        % altogether leaves a red and a blue trace with nothing naming them. Coloured
+        % text in the lower-left corner costs no box, no border and no token: both
+        % rows sit near baseline for t < 0, so that corner is empty in each.
+        text(ax,0.02,0.34,'OL',      'Units','normalized','Color',cOL, ...
+             'FontSize',fsLeg-2,'FontWeight','bold','VerticalAlignment','middle');
+        text(ax,0.02,0.20,clLab{r},  'Units','normalized','Color',cCL, ...
+             'FontSize',fsLeg-2,'FontWeight','bold','VerticalAlignment','middle');
+    else
         lg=legend([hOL hCL],{'OL',clLab{r}},'Location','southeast');
         set(lg,'Box','off','FontSize',fsLeg);
     end
@@ -83,7 +100,9 @@ for r=1:2
     ylabel(ax,ylVar,'FontSize',fs,'FontWeight','bold');
     if GRANT; ttl=pstr(D.pVar); else; ttl=sprintf('n=%d, %s',numel(D.varOL),pstr(D.pVar)); end
     title(ax,ttl,'FontSize',fsTick,'FontWeight','bold');
-    if GRANT; set(ax,'Position',[0.26 0.24 0.71 0.60]); end
+    % Left margin must hold the 6pt y-ticks (~8pt) AND the 11pt rotated label (~11pt)
+    % on a 63pt canvas: 0.26 was sized for no label at all and would clip it.
+    if GRANT; set(ax,'Position',[0.44 0.26 0.53 0.58]); end
     exportAtWidth(fig,[OUTDIR 'cl_' tag{r} '_var.png'],W_PAIR,GRANT); close(fig);
 
     % ---------- P3: RMSE improvement across sessions ----------
@@ -93,7 +112,9 @@ for r=1:2
     ylabel(ax,ylRmse,'FontSize',fs,'FontWeight','bold');
     if GRANT; ttl=pstr(D.pRMSE); else; ttl=sprintf('n=%d, %s',nR,pstr(D.pRMSE)); end
     title(ax,ttl,'FontSize',fsTick,'FontWeight','bold');
-    if GRANT; set(ax,'Position',[0.26 0.24 0.71 0.60]); end
+    % Left margin must hold the 6pt y-ticks (~8pt) AND the 11pt rotated label (~11pt)
+    % on a 63pt canvas: 0.26 was sized for no label at all and would clip it.
+    if GRANT; set(ax,'Position',[0.44 0.26 0.53 0.58]); end
     exportAtWidth(fig,[OUTDIR 'cl_' tag{r} '_rmse.png'],W_PAIR,GRANT); close(fig);
 end
 fprintf('[fig11 panels] wrote 6 PNGs to %s\n',OUTDIR);
@@ -144,5 +165,16 @@ function paired(ax,a,b,cOL,cCL,clLab,fs,fsTick)
   if fsTick < 6.5
       yl=ylim(ax); set(ax,'YTick',[yl(1) yl(2)]);
       set(ax,'YTickLabel',compose('%.2g',get(ax,'YTick')));
+      % 'OL' / 'CL' are CONDITION NAMES, not numbers, so they should not shrink with
+      % the numeric ticks. MATLAB has one tick font size per axes, so draw them as
+      % text instead: bigger, and coloured to match their own dots, which makes the
+      % key unmistakable without a legend box (user 2026-09-30).
+      set(ax,'XTickLabel',{'',''});
+      xl=get(ax,'XTick'); cc={cOL,cCL}; ss={'OL',clLab};
+      for k=1:2
+          text(ax,xl(k),yl(1)-0.05*range(yl),ss{k},'Color',cc{k}, ...
+               'FontSize',fsTick+2,'FontWeight','bold','HorizontalAlignment','center', ...
+               'VerticalAlignment','top','Clipping','off');
+      end
   end
 end
