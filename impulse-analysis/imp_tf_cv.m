@@ -143,7 +143,7 @@ if CV_REVAMP
     q75 = cellfun(@(c) prctile(c.R2_out,75), CV);
 
     % ---------- candidate 1: traces + R^2 side panel ----------
-    fS = paperFig(4.7, PS.f2h);   % panel D: trimmed to buy panel C its key strip
+    fS = paperFig(4.2, PS.f2h);   % trimmed again so row 2 can hold the enlarged swap grid
                                   % closes just inside the 17.6 cm double column.
                                   % NB this panel CROPS ~0.4 cm wider than its canvas.
     % Explicit axes, NOT a tiledlayout (2026-09-30): nexttile kept returning the

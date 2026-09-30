@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-30 - Fig-2 model swap: `axis square` + auto colorbar had crushed the grid to ~1.2 cm
+**Changed/Found:** `utils/imp_tf_robust_fig.m` TF-D - canvas `paperFig(PS.f2w, PS.f2h)` -> `paperFig(4.6, 3.5)`, dropped `axis(axD,'square')`, pinned `axes(figD,'Position',[0.260 0.200 0.522 0.686])` (2.40 x 2.40 cm, square in centimetres) and the colorbar to [0.830 0.200 0.045 0.686]; added the missing `jnAxesAll(figD)` before export. Renders 4.73 x 3.32 cm; cells are 0.60 cm so all 16 `%.2f` annotations fit inside them.
+**Why:** User: 'increase the size of model swap figure it need it for numbers inside boxes to be visible'. The annotations were overlapping each other AND spilling outside the grid. Two causes, both layout: `axis square` sizes the plot box off the SHORTER side - on a 3.3 cm-tall canvas that is the height, most of which is axis labels - and an auto-placed colorbar then takes its width out of what is left, so the heatmap got ~1.2 cm for four columns while '0.97' at 5 pt needs 0.41 cm.
+**Next:** none.
+
+### 2026-09-30 - Fig-2 rows re-assigned: swap moves to row 2, timescales up to row 1
+**Changed/Found:** Lettering is now A dose-response, B single-session, C LTI fit, D timescales | E LTI validation, F model swap, G state vs prediction (`paper/figures_final/MANIFEST.txt`). To pay for the enlarged swap grid: `imp_tf_cv.m` validation canvas 4.7 -> 4.2 (renders 4.73), `imp_state_trialvar_fig.m` `wC` 8.3 -> 7.0 (renders 6.53) with the x-labels cut from '<marker> quartile' to '<marker>' and `xtickangle(ax,0)` pinned. Row 1 = 17.58 cm, row 2 = 17.02.
+**Why:** Row 1 was already exactly full at 17.60 cm, so the swap grid could not grow where it stood - 3.85+3.03+5.93 (C, which the user had just asked to be WIDER) leaves 3.3 cm. Moving it to row 2 and bringing the 3.21 cm timescales panel up is the only rebalance that widens the swap without narrowing anything the user asked for. The ' quartile' in G's x-labels is redundant against its own Q1-Q4 ticks and did not fit under a 2.2 cm tile.
+**Next:** Reading order now puts timescales before the cross-session validation - check that still reads correctly when the Results text is written against the final lettering.
+
+
 ### 2026-09-30 - BUG Fig-2 F: abs-delta tile drew a zero-width CI and fell off the shared y-axis
 **Changed/Found:** `impulse-analysis/imp_state_trialvar_fig.m` combined-panel block. Pass 1 bootstraps CIs only for `adm = find([R.adm])` (the ADMISSIBLE markers: motion, rel-delta), but the combined panel draws `mkOrder = {'MOT','DPr','DPa'}` - abs-delta too. For DPa `ip` came back empty and the fallback `ciLo = yv; ciHi = yv` drew a band of zero width, so the tile looked like it carried NO uncertainty. The same omission kept DPa out of `yNormLim`, so its Q4 (1.39) sat outside the shared axis and was clipped off the top. Fixed: bootstrap a CI in-place for any drawn marker pass 1 skipped, and set the panel's y-limit `yLimC` from the values it actually draws. All three tiles now show a band; axis is [0.60 1.40].
 **Why:** User: 'the abs power quartile plots do not have shading around them why'. A silently degenerate CI is the worst failure mode here - the tile reads as a noiseless effect, and it is the tile with the LARGEST effect (Q1 0.68 -> Q4 1.39).

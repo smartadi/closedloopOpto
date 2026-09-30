@@ -253,16 +253,23 @@ for i = 1:n
     end
 end
 if wantP('D')
-figD = paperFig(PS.f2w, PS.f2h);  axD = axes(figD);   % TF-D -- Fig-2 grid
+% 4.6 x 3.5 cm with the axes pinned (user 2026-09-30: 'need it for numbers inside boxes
+% to be visible'). At the Fig-2 grid size the heatmap was ~1.2 cm across and the four
+% in-cell annotations overlapped: `axis square` sizes the plot box off the SHORTER side
+% -- here the canvas height, most of which is axis labels -- and an auto-placed colorbar
+% takes its width out of the remainder. Explicit positions give each cell 0.60 cm.
+figD = paperFig(4.6, 3.5);
+axD  = axes(figD, 'Position', [0.260 0.200 0.522 0.686]);   % 2.40 x 2.40 cm, square in cm
 % Sequential navy ramp instead of flipud(gray): still monotonic in lightness (so it
 % survives a greyscale print and the cell-text contrast rule below still works), but
 % mid-range R^2 values are far easier to place against the colourbar in colour.
-imagesc(axD, X, [0 1]); axis(axD,'square'); colormap(axD, PS.cmapSeq(256));
+imagesc(axD, X, [0 1]); colormap(axD, PS.cmapSeq(256));
 set(axD,'XTick',1:n,'XTickLabel',cellstr(lblS),'YTick',1:n,'YTickLabel',cellstr(lblS), ...
     'TickLabelInterpreter','none','FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out');
 xtickangle(axD,0);   % s1..sN fit horizontally; rotation was only needed for date labels
 xlabel(axD,'applied to session'); ylabel(axD,'model from session');
-cb = colorbar(axD); cb.Label.String = 'R^2 (free gain)';
+cb = colorbar(axD, 'Position', [0.830 0.200 0.045 0.686]);   % pinned: must not take
+cb.Label.String = 'R^2 (free gain)';                         % width from the grid
 cb.FontSize = PS.fs; cb.Label.FontSize = PS.fs; cb.Label.FontWeight = PS.fw;
 % Annotate each cell so the panel is readable in print, not just on screen.
 cmD = PS.cmapSeq(256);
@@ -296,7 +303,7 @@ if opts.export
     if ~isempty(figA), jnAxesAll(figA); paperExport(figA, fullfile(outDir, sprintf('tf_tau_forest%s.pdf',      sfx))); end
     if ~isempty(figB), paperExport(figB, fullfile(outDir, sprintf('tf_tau_variability%s.pdf', sfx))); end
     if ~isempty(figC), paperExport(figC, fullfile(outDir, sprintf('tf_tau_vs_amp%s.pdf',      sfx))); end
-    if ~isempty(figD), paperExport(figD, fullfile(outDir, sprintf('tf_model_swap%s.pdf',      sfx))); end
+    if ~isempty(figD), jnAxesAll(figD); paperExport(figD, fullfile(outDir, sprintf('tf_model_swap%s.pdf',      sfx))); end
 end
 
 fprintf('\n---- [TF-ROBUST] the four numbers this block reports -------------------------\n');

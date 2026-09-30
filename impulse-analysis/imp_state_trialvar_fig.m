@@ -355,8 +355,9 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
     idx = arrayfun(@(t) find(strcmpi({R.tag}, t{1}), 1), mkOrder, 'UniformOutput', false);
     idx = [idx{:}];
     if numel(idx) >= 2
-        wC  = 8.3;                                     % panel F: 3 tiles sharing one y-axis;
-        % narrowed from 11.2 cm (user 2026-09-30) so row 2 still closes with D and E once the
+        wC  = 7.0;                                     % panel G: 3 tiles sharing one y-axis;
+        % narrowed 11.2 -> 8.3 -> 7.0 cm as panels were added to the figure; only the leftmost
+        % tile carries y ticks, so the tiles lose nothing but width.
         % model-swap grid joins the figure -- only the leftmost tile carries y ticks anyway.
         % Canvas raised 3.4 -> 3.7 (user 2026-09-30: 'appears smaller than others').
         % The tiled layout crops tighter than a single-axes panel, so an equal canvas
@@ -398,9 +399,12 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
             hR = yline(ax, 1, ':', 'Color',[.55 .55 .55], 'LineWidth', PS.lw_zero); hR.HandleVisibility='off'; uistack(hR,'bottom');
             plot(ax, xb, yv, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
             xticks(ax, 0.125:0.25:0.875);  xticklabels(ax, {'Q1','Q2','Q3','Q4'});
+            xtickangle(ax, 0);   % Q1..Q4 fit horizontally even at 2.2 cm; MATLAB rotates them
             xlim(ax, [0 1]);  ylim(ax, yLimC);
             set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
-            xlabel(ax, sprintf('%s quartile', r.name), 'FontSize', PS.fs, 'FontWeight', PS.fw);
+            % Just the marker name: the Q1..Q4 ticks already say 'quartile', and the word
+            % does not fit under a 2.3 cm tile.
+            xlabel(ax, r.name, 'FontSize', PS.fs, 'FontWeight', PS.fw);
             if     isnan(r.pLME),  ss = '';
             elseif r.pLME < 1e-3,  ss = '***';
             elseif r.pLME < 1e-2,  ss = '**';

@@ -22,21 +22,22 @@ schematic_optoephyswf (1).pdf
 figure1/svd_frame_AL_0039_2025-04-19.pdf
 
 [figure2]
-# Lettering LOCKED 2026-09-30 (user). Sources now in paper/figures_v2/figure2;
-#   A dose-response          -> imp_response.pdf
-#   B single-session traces  -> imp_single_AL_0041_2025-12-02_en2.pdf  (session 2)
-#   C LTI fit, one session   -> tf_cv_single_AL_0033.pdf   (promoted from supplementary)
-#   D model swap         -> tf_model_swap.pdf          (reinstated 2026-09-30, user)
-#   E LTI validation     -> tf_cv_2D_sidebar.pdf       (replaces tf_cv_heldout_r2)
-#   F timescales         -> tf_tau_forest.pdf
+# Lettering LOCKED 2026-09-30 (user). Sources in paper/figures_v2/figure2.
+#   A dose-response       -> imp_response.pdf
+#   B single-session      -> imp_single_AL_0041_2025-12-02_en2.pdf  (session 2)
+#   C LTI fit, 1 session  -> tf_cv_single_AL_0033.pdf
+#   D timescales          -> tf_tau_forest.pdf
+#   E LTI validation      -> tf_cv_2D_sidebar.pdf
+#   F model swap          -> tf_model_swap.pdf
 #   G state vs prediction -> imp_state_var_combined.pdf
-# Row 1 (17.59 cm): A B C D | Row 2 (17.31 cm): E F G.
+# Row 1 (17.58 cm): A B C D | Row 2 (17.02 cm): E F G.
+# F moved to row 2 on 2026-09-30 so its cell numbers could be made legible.
 figure2/imp_response.pdf
 figure2/imp_single_AL_0041_2025-12-02_en2.pdf
 figure2/tf_cv_single_AL_0033.pdf
-figure2/tf_model_swap.pdf
-figure2/tf_cv_2D_sidebar.pdf
 figure2/tf_tau_forest.pdf
+figure2/tf_cv_2D_sidebar.pdf
+figure2/tf_model_swap.pdf
 figure2/imp_state_var_combined.pdf
 
 [figure3]
