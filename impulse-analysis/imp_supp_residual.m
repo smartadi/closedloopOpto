@@ -9,16 +9,32 @@
 %   AL_0041 e2  capture 37% / leak 63% / catch -14%  -> weak model (this is pipeline index 2)
 %   AL_0048 e1  capture 29% / leak 71%               -> readout ~2.6 mm off the illuminated spot
 %
-% *** THE 91/9 ABOVE IS THE 2026-08-12 NUMBER AND THIS SCRIPT NO LONGER REPRODUCES IT. ***
-% As actually run 2026-09-30 under the CURRENTLY COMMITTED affected-pixel selection (f2_affected
-% monotone selection, 136 of 442 contra px kept, committed 2026-09-10) with select_mode='r2max':
+% WHICH AFFECTED-PIXEL MASK (knob SUPP_MASK, default 'tf'). Measured 2026-09-30, same data, same
+% select_mode='r2max', catch clean in BOTH -- so neither manufactures residual:
 %
-%   spont R^2 0.958 | capture 70% | leak 30% | catch -2% | shift-null -0.96 | 6 of 9 amps, 748 trials
+%   SUPP_MASK       per-amp exclusions (of 442)        spontR2  cap%  leak%  catch%  nPred
+%   'tf'            0 0 2 48 13 35 177 249 275         0.931     91      9      -2     91
+%   'committed'     306 x9 (flat)                      0.958     70     30      -2    136
 %
-% The ranking that picks AL_0033 is unchanged and the CATCH control is still clean (-2%), so the
-% session choice stands -- but the capture number moved 91 -> 70 because the committed predictor
-% set changed on 2026-09-10, not because anything here was re-tuned. QUOTE 70/30, NOT 91/9, and
-% re-run this script rather than copying numbers out of RESEARCH.md if the selection is recommitted.
+% 'tf' is the DEFAULT and it is the configuration behind the 91/9 on record (RESEARCH 2026-08-12);
+% it was silently lost when the monotone rank selection was committed 2026-09-10 16:12, because
+% f2_affected PREFERS a committed selection over the TF mask whenever one exists.
+%
+% WHY 'tf' CAPTURES MORE: it is AMPLITUDE-GRADED -- it excludes almost nothing at low power and 275
+% px at the highest -- which is the physically correct bleed signature (bleed scales with power:
+% absent <=1.1 V, present >=1.6 V, RESEARCH 2026-07-06). The committed monotone rule is one flat
+% pooled cut at every amplitude. NOTE this per-amp-ness is in the DETECTION only: f2_affected still
+% collapses it to ONE candidate set (`unaff_pooled` = unaffected at EVERY amp), so the model fits a
+% single weight vector deployed unchanged at every amplitude. There is no per-amp refit, and the
+% per-amp leak stays comparable across amplitudes.
+%
+% WHY 'committed' EXISTS ANYWAY, and when to prefer it: the TF cut is a hand-set per-session
+% threshold (tf_sens=2.15 here) that the user found "mostly wrong in a lot of sessions" (RESEARCH
+% 2026-09-10), which is why the robust rank/monotone rule replaced it. That cross-session
+% brittleness is the reason to distrust 'tf' in a POOLED analysis -- it is much weaker grounds in a
+% SINGLE-session supplementary panel, which is why 'tf' is the default here. Neither mask is a
+% stim-independent guard (both read the evoked response; f2_model.m:74-80), so quote capture as
+% measured under a stated mask, never as an absolute.
 %
 % ** n = 1. ** There is no pooling, no Stouffer and no replication here, and AL_0033 is also the
 % highest-powered session (748 trials / 9 amps vs 208/260/300). "The only session where the effect
@@ -26,11 +42,31 @@
 % this script prints is a single-session, single-mouse result and the caption must say so.
 %
 % WHY THIS IS SUPPLEMENTARY. The residual / Actual=Global+Local state-dependence was CUT from the
-% main paper on 2026-09-11 (TASKS.md, RESEARCH 2026-09-11). Motion on the Local effect is null and
-% the rel-delta effect does not survive pooling (held-out variability z=+0.79 p=.43), and rel-delta
-% failed to replicate on Ye/Zhiwen AB_0004 with the OPPOSITE sign (RESEARCH 2026-07-02). Panels F/G
-% are therefore a NEGATIVE / robustness result -- the decomposition is clean (A-E) and the local
-% effect is state-ROBUST -- not a positive state-dependence claim.
+% main paper on 2026-09-11 (TASKS.md, RESEARCH 2026-09-11). It does not survive pooling across the
+% 4 sessions (held-out variability z=+0.79 p=.43) and rel-delta failed to replicate on Ye/Zhiwen
+% AB_0004 with the OPPOSITE sign (RESEARCH 2026-07-02). Panels A-E (the decomposition) are the
+% defensible content; F/G are a robustness view, not a positive state-dependence claim.
+%
+% *** THE STATE RESULT IN F/G DEPENDS ON SUPP_MASK. READ THIS BEFORE QUOTING IT. ***
+% Partial Spearman, Local vs Global control, n=748, DV=L1DEVz:
+%
+%   SUPP_MASK     motion Local / Global        rel-delta Local / Global
+%   'tf'          -0.099 p=.0067 / -0.157      **+0.119 p=.0012** / -0.031 p=.39
+%   'committed'   -0.061 p=.095  / -0.187        +0.059 p=.105    / +0.020 p=.59
+%
+% Under 'tf' the rel-delta Local effect is significant AND its Global control is null with the
+% opposite sign -- the signature of a genuinely LOCAL effect, and consistent with RESEARCH
+% 2026-08-xx (a leak-minimised predictor gave Local +0.071 > Global +0.022, "GENUINELY local").
+% Under 'committed' the same test is n.s. MOTION is unchanged in conclusion either way: the Global
+% control is LARGER than Local in both, so motion sensitivity is network-wide, not local.
+%
+% FORKING-PATH EXPOSURE, stated plainly. The mask was chosen to restore CAPTURE (a model-quality
+% criterion measured without reference to any state marker), not to produce a state result -- the
+% capture comparison was run and logged before the state numbers were looked at (RESEARCH
+% 2026-09-30). That ordering is what keeps this honest. But the fact remains that changing the
+% blindness model flipped the headline state test from n.s. to p=.001, on ONE session, for an
+% effect that does NOT survive 4-session pooling and did NOT replicate on AB_0004. Report BOTH rows
+% of the table above, or report neither. Do not quote the 'tf' rel-delta number alone.
 %
 % SELECTION MODE. 'r2max' is forced. The regulariser is picked on held-out spontaneous R^2 alone,
 % so capture/leak are MEASURED rather than targeted and the GLOBAL negative control is armed. Under
@@ -49,7 +85,7 @@
 % RUN:  load_experiments        % once (reads SVD from the server; slow)
 %       imp_supp_residual
 %
-% KNOBS (set before the run):  SUPP_SESS (3) | SUPP_SELECT ('r2max') | SUPP_OUTDIR | SUPP_DV
+% KNOBS:  SUPP_SESS (3) | SUPP_SELECT ('r2max') | SUPP_MASK ('tf'|'committed') | SUPP_OUTDIR | SUPP_DV
 % --------------------------------------------------------------------------------------------------
 
 here = fileparts(mfilename('fullpath'));
@@ -61,6 +97,7 @@ addpath(here); addpath(genpath(fullfile(here,'..','utils')));
 if ~exist('SUPP_SESS','var')   || isempty(SUPP_SESS),   SUPP_SESS   = 3;        end
 if ~exist('SUPP_SELECT','var') || isempty(SUPP_SELECT), SUPP_SELECT = 'r2max';  end
 if ~exist('SUPP_DV','var')     || isempty(SUPP_DV),     SUPP_DV     = 'L1DEVz'; end
+if ~exist('SUPP_MASK','var')   || isempty(SUPP_MASK),   SUPP_MASK   = 'tf';     end
 if ~exist('SUPP_OUTDIR','var') || isempty(SUPP_OUTDIR)
     SUPP_OUTDIR = fullfile(here,'..','paper','images','supp_residual');
 end
@@ -84,11 +121,31 @@ fprintf('\n[SUPP-RES] session %d: %s %s e%d   select_mode=%s\n', SUPP_SESS, ae.m
 
 P = f2_prep(ae, struct('dataDir', fullfile(here,'data'), 'verbose',true));
 A = f2_affected(P, struct('plot',false));
+if strcmpi(SUPP_MASK,'tf') && isfield(A,'isRank') && A.isRank
+    % f2_affected PREFERS a committed rank selection over the TF mask whenever one exists, which is
+    % how the 91/9 configuration was lost on 2026-09-10. Rebuild the TF mask here rather than
+    % deleting the committed selection -- the committed rule is the right default for the POOLED
+    % cross-session work and must stay on disk for it.
+    tf_file = fullfile(here,'data', sprintf('tf_sens_%s.mat', P.tf_tag));
+    assert(exist(tf_file,'file')==2, 'imp_supp_residual: SUPP_MASK=''tf'' but %s is missing.', tf_file);
+    Stf = load(tf_file);
+    assert(isfield(Stf,'affected_tf'), 'imp_supp_residual: %s predates the mask-saving fix.', tf_file);
+    aff_tf = logical(Stf.affected_tf);
+    assert(isequal(size(aff_tf), [P.nG P.nA]), ...
+        'imp_supp_residual: TF mask is [%d x %d] but this grid is [%d x %d] -- geometry changed.', ...
+        size(aff_tf,1), size(aff_tf,2), P.nG, P.nA);
+    A = struct('affected',aff_tf, 'nAff',sum(aff_tf,1), 'tf_sens',Stf.tf_sens, ...
+               'saved_on',Stf.saved_on, 'file',tf_file, 'isRank',false, ...
+               'unaff_pooled',find(all(~aff_tf,2)));
+    fprintf(['[SUPP-RES] SUPP_MASK=''tf'' -> using the TF mask (tf_sens %.2f, confirmed %s), NOT the\n' ...
+             '           committed rank selection. per-amp affected: '], A.tf_sens, A.saved_on);
+    fprintf('%d ', A.nAff); fprintf('of %d | %d pooled candidates\n', P.nG, numel(A.unaff_pooled));
+end
 M = f2_model(P, A, struct('select_mode',SUPP_SELECT, 'use_motion',false, 'verbose',false));
 D = f2_decomp(P, M, struct('verbose',true, 'wantTraces',true));
 
 fprintf('\n=====================================================================\n');
-fprintf('  %s   (n=1, supplementary)\n', P.label);
+fprintf('  %s   (n=1, supplementary)   mask=%s\n', P.label, SUPP_MASK);
 fprintf('  spont R^2 %.3f | capture %.0f%% | leak %.0f%% | catch %+.0f%% | shift %.2f\n', ...
         M.r2_spont, D.capMed, D.leakMed, 100*D.catch.ratio, M.r2_shift);
 fprintf('=====================================================================\n');
