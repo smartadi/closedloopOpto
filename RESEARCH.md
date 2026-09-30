@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-30 - Fig-2 D: axR label was rendering across axL traces; lanes split, canvas 5.0 -> 4.7
+**Changed/Found:** `impulse-analysis/imp_tf_cv.m` panel D - `axL` Position [0.095 0.215 0.545 0.655] -> [0.105 0.215 0.455 0.655] and `axR` [0.775 ...] -> [0.805 ...], canvas `paperFig(5.0)` -> `paperFig(4.7)`. Renders 5.15 x 3.77 cm (was 5.47 x 3.63).
+**Why:** User spotted that the right sub-panel's rotated 'held-out R^2' y-label sat INSIDE the left sub-panel's plot box, on top of the traces' 0.3-0.5 s tails. The gap between the two axes (0.135 of canvas) was being eaten by axR's tick labels, leaving the ylabel nowhere to go but left. Narrowing axL and pushing axR right gives the label its own lane. The trim also pays for panel C's wider canvas so row 1 still closes at 17.6 cm.
+**Next:** none - verified by rendering the PDF at 600 dpi; no overlap remains.
+
+### 2026-09-30 - Fig-2 C: legend rebuilt as a two-column key in a real margin strip
+**Changed/Found:** `impulse-analysis/imp_tf_cv.m` panel C - dropped the 3-entry legend of '%.1f V  R^2=%.2f' labels. Now: explicit `axes(figS,'Position',[0.185 0.215 0.505 0.635])` on a 4.1 cm canvas, `xlim` back to [0 0.5], and a key drawn in the margin at axes-normalized x = 1.06 (amplitude, left) / 1.58 (R^2, right) with `Clipping','off'` - greyed 'V' / 'R^2' header, one coloured row per amplitude, bottom right. A 2-entry legend ('data' / 'fit') carries the solid-vs-dashed convention. Renders 4.13 x 3.21 cm.
+**Why:** Third attempt at this panel; the first two failed because the problem was the label WIDTH, not the legend's position. '1.1 V  R^2=0.51' is ~14 characters = ~2.1 cm at the rule-book 6 pt, on a 3.4 cm panel - wider than the plot box, so it overlapped the traces wherever it was placed, and the earlier 'extend xlim to 0.72 and flush right' fix just pushed an over-wide box onto the tails. Splitting into two ~0.5 cm numeric columns outside the plot box is the only layout that fits. User also asked for the key bottom-right, not top-right.
+**Next:** none - rendered at 600 dpi and confirmed clear of the traces.
+
+### 2026-09-30 - Fig-2 two-row layout verified: row 1 lands exactly on 17.6 cm
+**Changed/Found:** Ran `imp_tf_cv.m` + `imp_tf_figs.m`; `paper/figures_v2/figure2` now holds exactly the 6 locked panels (E, `tf_tau_forest.pdf`, had been missing after an interrupted run). Measured: A 3.85, B 3.03, C 4.13, D 5.15 -> row 1 = 17.60 cm at 0.48 cm gaps (the double-column limit, exactly); E 3.21 + F 10.48 -> row 2 = 14.17 cm. Whole figure 17.60 x 7.80 cm.
+**Why:** User required a two-row layout that obeys the JNeurosci rule book and is as small as possible; every per-panel size change has to be re-checked against the row budget because `exportgraphics('vector')` crops each PDF to its own content bbox, so canvas size != imported size.
+**Next:** Row 1 has ZERO slack - any future widening of A-D must be paid for by trimming another panel in the same row, or the gaps drop below 0.48 cm.
+
+
 ### 2026-09-30 - fig:pid: restore the Var./RMSE y-labels and the OL/CL key the grant profile had dropped
 **Changed/Found:** `talk/make_fig11_panels.m` GRANT branch. Three things had been stripped for space and left the panels unreadable (user: "rmse and var lost their title no one knows what they are now" / "they also lost OL and cl legends"):
  1. `ylVar`/`ylRmse` were `''`, leaving two near-identical OL-vs-CL dot plots side by side with nothing saying which was which. Now `'Var.'` / `'RMSE'` - a ROTATED label is bounded by the PLOT-BOX HEIGHT (~33 pt here), so 11 pt allows <=5 characters. Axes rectangle 0.26 -> 0.44 left so the label clears the ticks.

@@ -293,7 +293,7 @@ if opts.export
     sfx = opts.tag;  if ~isempty(sfx) && sfx(1) ~= '_', sfx = ['_' sfx]; end
     % Export only the panels that were actually drawn -- a stale PDF left on disk from a
     % previous run is worse than a missing one, because assembly cannot tell them apart.
-    if ~isempty(figA), paperExport(figA, fullfile(outDir, sprintf('tf_tau_forest%s.pdf',      sfx))); end
+    if ~isempty(figA), jnAxesAll(figA); paperExport(figA, fullfile(outDir, sprintf('tf_tau_forest%s.pdf',      sfx))); end
     if ~isempty(figB), paperExport(figB, fullfile(outDir, sprintf('tf_tau_variability%s.pdf', sfx))); end
     if ~isempty(figC), paperExport(figC, fullfile(outDir, sprintf('tf_tau_vs_amp%s.pdf',      sfx))); end
     if ~isempty(figD), paperExport(figD, fullfile(outDir, sprintf('tf_model_swap%s.pdf',      sfx))); end

@@ -100,6 +100,7 @@ end
 
 outDirS = fullfile(paperRoot, 'figures_v2', 'figure2');
 if ~isempty(TO_OUTDIR), outDirS = TO_OUTDIR; end
+jnAxesAll(figS);   % rule-book font/axis pass (see utils/jnAxesAll.m)
 paperExport(figS, fullfile(outDirS, sprintf('imp_single_%s_%s_en%d.pdf',mn3,td3,en3)));
 
 

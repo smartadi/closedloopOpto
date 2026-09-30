@@ -8,10 +8,10 @@ function PS = paperStyle()
 %             'FontSize', PS.fs, 'FontWeight', PS.fw);
 
 % --- line widths ---
-PS.lw_mean  = 1.5;   % mean / average trace
-PS.lw_fit   = 1.2;   % TF fit or prediction
+PS.lw_mean  = 1.0;   % mean / average trace      (rule book S4: was 1.5)
+PS.lw_fit   = 1.0;   % TF fit or prediction      (rule book S4: was 1.2)
 PS.lw_trial = 0.4;   % individual trial traces
-PS.lw_ref   = 1.0;   % dashed reference line
+PS.lw_ref   = 0.75;  % dashed reference line     (rule book S4: was 1.0)
 PS.lw_inp   = 0.75;  % input / laser trace
 PS.lw_zero  = 0.5;   % zero / baseline line
 
@@ -113,8 +113,8 @@ PS.f2gap  = 0.5;                                     % gutter between panels (cm
 % Fig 2 = 2-ROW layout on the 17.6 cm block: row 1 = 4 panels (a-d) at f2w (4*4.0 + 3*gap = 17.5);
 % row 2 = model-swap, tau-forest, and ONE COMBINED state panel (motion | rel-delta | abs-delta,
 % shared y-axis).
-PS.f2w   = 4.0;                                      % Fig-2 panel width (cm)
-PS.f2h   = 3.4;                                      % Fig-2 panel height (cm)
+PS.f2w   = 3.4;                                      % Fig-2 SINGLE-panel width (cm). C (4.1) and D (4.7) set their own canvas; row 1 = 3.85+3.03+4.13+5.15 rendered = 17.60 at 0.48 gaps
+PS.f2h   = 3.3;                                      % Fig-2 panel height (cm) = rule-book default row height
 % NOTE: type is 6 pt ABSOLUTE, so shrinking a panel from 6 cm to 4.2 cm makes the type occupy
 % ~43% more of the panel width. Panels that were already tight at 6 cm (2J, 2K, 2G, 2I, TF-D)
 % need their labels/legends checked after the resize, not just re-exported.

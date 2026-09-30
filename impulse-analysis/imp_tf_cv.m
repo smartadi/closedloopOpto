@@ -143,12 +143,16 @@ if CV_REVAMP
     q75 = cellfun(@(c) prctile(c.R2_out,75), CV);
 
     % ---------- candidate 1: traces + R^2 side panel ----------
-    fS = paperFig(PS.f2w*1.7, PS.f2h);
+    fS = paperFig(4.7, PS.f2h);   % panel D: trimmed to buy panel C its key strip
+                                  % closes just inside the 17.6 cm double column.
+                                  % NB this panel CROPS ~0.4 cm wider than its canvas.
     % Explicit axes, NOT a tiledlayout (2026-09-30): nexttile kept returning the
     % spanning axL, so axR overwrote the overlay and the exported panel was the
     % R^2 strip alone, still carrying axL's xlabel. Fixed Positions also give the
     % exact panel geometry the Illustrator assembly wants.
-    axL = axes(fS, 'Position', [0.095 0.215 0.545 0.655]);  hold(axL,'on');   % left: overlay, no legend
+    % axL narrower / axR further right (user 2026-09-30): axR's rotated 'held-out R^2'
+    % label was rendering INSIDE axL's plot box, across the traces' 0.3-0.5 s tails.
+    axL = axes(fS, 'Position', [0.105 0.215 0.455 0.655]);  hold(axL,'on');
     for k = 1:n
         c = PS.sessColor(k);  t = CV{k}.tPost(:);
         hm = CV{k}.h_meas_cv(:);  hp = CV{k}.h_pred_cv(:);
@@ -163,7 +167,7 @@ if CV_REVAMP
     % Tile 3, NOT 1 (fixed 2026-09-30): axL spans tiles 1-2, so nexttile(tS,1)
     % re-entered tile 1 and REPLACED the trace overlay -- the exported sidebar
     % was the R^2 strip alone. Latent while this panel was only a candidate.
-    axR = axes(fS, 'Position', [0.775 0.215 0.205 0.655]);  hold(axR,'on');   % right: held-out R^2 per session
+    axR = axes(fS, 'Position', [0.805 0.215 0.175 0.655]);  hold(axR,'on');
     for k = 1:n
         c = PS.sessColor(k);
         plot(axR,[k k],[q25(k) q75(k)],'-','Color',c,'LineWidth',1.0);
@@ -177,6 +181,7 @@ if CV_REVAMP
     annotation(fS, 'textbox', [0 0.90 1 0.10], 'String', 'LTI validation within session', ...
         'HorizontalAlignment','center', 'VerticalAlignment','middle', 'LineStyle','none', ...
         'FontSize', PS.fs, 'FontWeight', PS.fw, 'FontName', get(groot,'defaultAxesFontName'));
+    jnAxesAll(fS);   % rule-book font/axis pass
     if CV_EXPORT, paperExport(fS, fullfile(CV_PANELDIR,'tf_cv_2D_sidebar.pdf')); end
 
     % ---------- candidate 3: overlay with R^2 labels at trace ends ----------
@@ -269,31 +274,48 @@ if CV_SINGLE
         % cross-mouse session colours -- shade by amplitude in grey to avoid that confusion.
         ramp  = interp1([0 1], [0.72 0.72 0.72; 0 0 0], linspace(0,1,max(numel(ashow),2)));
         t     = S1.tPost(:);
-        figS  = paperFig(PS.f2w, PS.f2h);  axS = axes(figS);  hold(axS,'on');  % Fig-2 convention size
-        hL = gobjects(numel(ashow),1);  lgS = cell(numel(ashow),1);
+        % 4.1 cm, not the single-panel width: the amplitude/R^2 key needs a strip of
+        % real margin to the right of the plot box (see the key block below).
+        figS  = paperFig(4.1, PS.f2h);
+        axS   = axes(figS, 'Position', [0.185 0.215 0.505 0.635]);  hold(axS,'on');
+        hL = gobjects(numel(ashow),1);  hD = gobjects(numel(ashow),1);
         for i = 1:numel(ashow)
             a = ashow(i);  c = ramp(i,:);
             hL(i) = plot(axS, t, S1.amp.meas(a,:), '-',  'Color', c, 'LineWidth', PS.lw_mean);
-            plot(axS, t, S1.amp.pred(a,:), '--', 'Color', c, 'LineWidth', PS.lw_fit);
-            lgS{i} = sprintf('%.1f V  R^2=%.2f', S1.amp.uA(a), S1.amp.R2(a));
+            hD(i) = plot(axS, t, S1.amp.pred(a,:), '--', 'Color', c, 'LineWidth', PS.lw_fit);
         end
         yline(axS, 0, '-', 'Color', [.6 .6 .6], 'LineWidth', PS.lw_zero);
-        xlim(axS, [0 0.5]);
+        xlim(axS, [0 0.5]);  xticks(axS, [0 0.2 0.4]);
         xlabel(axS, 'time from onset (s)');  ylabel(axS, '\DeltaF/F (%)');
         set(axS, 'FontSize', PS.fs, 'FontWeight', PS.fw, 'TickDir','out', 'Box','off');
         title(axS, 'LTI model fit (held out)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
-        lg = legend(axS, hL, lgS, 'Location','southeast', 'Box','off');
-        lg.ItemTokenSize = [12 PS.lgd_token(2)];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
-        % Push the legend hard right (user 2026-09-30): 'southeast' is inside the axes
-        % box and the rising tails of the traces run straight through it.
+        % ---- amplitude / R^2 key, bottom right of the margin strip (user 2026-09-30) --
+        % Two narrow right-aligned columns instead of one wide legend: the old single
+        % column of '1.1 V  R^2=0.51' labels was wider than the plot box, so it sat on
+        % the traces wherever it was put. x > 1 is outside the axes, hence Clipping off.
+        xV = 1.06;  xR = 1.58;  yHdr = 0.42;  dyK = 0.125;
+        kArgs = {'Units','normalized', 'FontSize', PS.fs, 'FontWeight', PS.fw, ...
+                 'VerticalAlignment','middle', 'Clipping','off'};
+        text(axS, xV, yHdr, 'V',   kArgs{:}, 'HorizontalAlignment','left',  'Color',[.35 .35 .35]);
+        text(axS, xR, yHdr, 'R^2', kArgs{:}, 'HorizontalAlignment','right', 'Color',[.35 .35 .35]);
+        for i = 1:numel(ashow)
+            a = ashow(i);  c = ramp(i,:);  yK = yHdr - i*dyK;
+            text(axS, xV, yK, sprintf('%.1f', S1.amp.uA(a)), kArgs{:}, ...
+                 'HorizontalAlignment','left',  'Color', c);
+            text(axS, xR, yK, sprintf('%.2f', S1.amp.R2(a)), kArgs{:}, ...
+                 'HorizontalAlignment','right', 'Color', c);
+        end
+        % Solid-vs-dashed convention: two SHORT entries, so this one can stay a legend.
+        lg = legend(axS, [hL(end) hD(end)], {'data','fit'}, 'Box','off');
+        lg.ItemTokenSize = PS.lgd_token;  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
         drawnow; lg.Units = 'normalized'; lgp = lg.Position;
-        lg.Position = [1 - lgp(3) - 0.005, lgp(2), lgp(3), lgp(4)];
-        % Mouse tag just above the (southeast) legend -- names the single mouse this panel shows.
-        text(axS, 0.99, 0.62, mouseLab{ksel}, 'Units','normalized', ...
-             'HorizontalAlignment','right', 'VerticalAlignment','bottom', ...
-             'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', PS.sessColor(ksel));
+        lg.Location = 'none';  lg.Position = [0.715, 0.50, lgp(3), lgp(4)];
+        % Mouse tag at the head of the strip -- names the single mouse this panel shows.
+        text(axS, xR, 0.96, mouseLab{ksel}, kArgs{:}, ...
+             'HorizontalAlignment','right', 'Color', PS.sessColor(ksel));
         suppDir = CV_PANELDIR;   % panel C (user 2026-09-30: main figure, not supplementary)
         if ~exist(suppDir,'dir'), mkdir(suppDir); end
+        jnAxesAll(figS);   % rule-book font/axis pass
         if CV_EXPORT
             paperExport(figS, fullfile(suppDir, ...
                 sprintf('tf_cv_single_%s.pdf', matlab.lang.makeValidName(char(S1.mn)))));
