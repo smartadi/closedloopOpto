@@ -8,15 +8,52 @@ addpath('C:\Users\aditya\Documents\projects\brain_paper\utils');
 PS=paperStyle();
 SP='C:\Users\aditya\AppData\Local\Temp\claude\C--Users-aditya-Documents-projects-brain-paper\69483c53-45a2-45f3-9e5d-0965ff7a6be0\scratchpad\';
 S=load([SP 'const_fig11.mat']); Q=load([SP 'sine_fig11.mat']);
-OUTDIR='C:\Users\aditya\Documents\projects\draft\latest\grant_2026_10_YazdanSteinmetz (2)\figs2\pid\';
-cOL=PS.col_ol; cCL=PS.col_cl; fs=PS.fs;
-rows={S,Q}; clLab={'CL','CL+preview'}; tag={'c','s'};
-SZ=[1 1 4.8 4.2];   % cm, identical for every panel so canvases tile
+
+% ---------------------------------------------------------------------------
+% Set GRANT=true before running to export at the EXACT widths these panels are
+% printed at in the R01 (frontmatter_updated.tex fig:pid):
+%   resp     0.38 x 0.73 x 0.45 x 7.5in = 67.4pt = 2.377 cm
+%   var/rmse 0.29 x 0.73 x 0.45 x 7.5in = 51.4pt = 1.814 cm
+% so the LaTeX scale factor is 1.0 and the font sizes below ARE the sizes on the
+% page. The default 4.8 cm canvas shown at 1.81 cm is a 0.38x reduction, which
+% put 6pt labels and a 5pt legend on the page at 2.3pt and 1.9pt.
+% Labels are shortened because a ROTATED y-label is bounded by the plot-box
+% HEIGHT (~30pt here): 'Across-trial variance' at 8pt is ~84pt and would clip.
+% ---------------------------------------------------------------------------
+if ~exist('GRANT','var'); GRANT=false; end
+if GRANT
+    OUTDIR=fullfile(fileparts(mfilename('fullpath')),'grant_pid',filesep);
+    if ~exist(OUTDIR,'dir'); mkdir(OUTDIR); end
+    fs=11; fsLeg=10; fsTick=6;    % bold; 14/10 too big, then ticks 8 -> 6 (user 2026-09-30)
+    % Printed widths inside the draft's fig:pid wrapfigure, which is FIXED at
+    % 0.55\textwidth = 297pt:
+    %   resp     0.38 x 0.73 x 297pt = 82.4pt = 2.906 cm
+    %   var/rmse 0.29 x 0.73 x 297pt = 62.9pt = 2.218 cm
+    % At 2.2cm an 8pt y-label is nearly all the height available, so the paired
+    % panels keep a SHORT y-label and drop the in-panel n, which the caption
+    % carries. The axes rectangle is set explicitly below, because MATLAB
+    % otherwise lets labels overflow a small canvas and exportgraphics then
+    % crops to the text instead of the canvas.
+    W_RESP=2.906; W_PAIR=2.218;            % target printed widths, cm
+    % Short y-labels: at 2.218cm the left margin holds an 8pt rotated label (~9pt)
+    % plus 6pt y-ticks (~8pt) and no more, so 'Across-trial variance' cannot fit.
+    ylVar=''; ylRmse=''; clLab={'CL','CL+pv'};   % 14pt rotated label would clip
+else
+    OUTDIR='C:\Users\aditya\Documents\projects\draft\latest\grant_2026_10_YazdanSteinmetz (2)\figs2\pid\';
+    fs=PS.fs; fsLeg=5; fsTick=PS.fs;
+    W_RESP=4.8; W_PAIR=4.8;
+    ylVar='Across-trial variance'; ylRmse='Trial RMSE (%\DeltaF/F)'; clLab={'CL','CL+preview'};
+end
+cOL=PS.col_ol; cCL=PS.col_cl;
+rows={S,Q}; tag={'c','s'};
+AR=4.2/4.8;                       % keep the original aspect: the figure block
+SZR=[1 1 W_RESP W_RESP*AR];       % height inside the wrapfigure is unchanged
+SZP=[1 1 W_PAIR W_PAIR*AR];
 
 for r=1:2
     D=rows{r};
     % ---------- P1: CL vs OL trace comparison (best session) ----------
-    fig=figure('Color','w','Units','centimeters','Position',SZ); ax=axes(fig); hold(ax,'on');
+    fig=figure('Color','w','Units','centimeters','Position',SZR); ax=axes(fig); hold(ax,'on');
     yl=[min([D.ol_mean-D.ol_sem, D.cl_mean-D.cl_sem]) max([D.ol_mean+D.ol_sem, D.cl_mean+D.cl_sem])];
     yl=yl+[-.08 .08]*range(yl);
     patch(ax,[D.laser(1) D.laser(2) D.laser(2) D.laser(1)],[yl(1) yl(1) yl(2) yl(2)], ...
@@ -27,36 +64,72 @@ for r=1:2
     if r==1; plot(ax,D.laser,[D.ref D.ref],'k--','LineWidth',PS.lw_ref);
     else;    plot(ax,D.tref,D.ref,'k--','LineWidth',PS.lw_ref); end
     hold(ax,'off'); xlim(ax,[D.t(1) D.t(end)]); ylim(ax,yl);
-    xlabel(ax,'Time (s)','FontSize',fs,'FontWeight','bold');
-    ylabel(ax,'\DeltaF/F (%)','FontSize',fs,'FontWeight','bold');
-    stylize(ax,fs);
-    lg=legend([hOL hCL],{'OL',clLab{r}},'Location','southeast'); set(lg,'Box','off','FontSize',5);
-    exportgraphics(fig,[OUTDIR 'cl_' tag{r} '_resp.png'],'Resolution',600); close(fig);
+    if ~GRANT; xlabel(ax,'Time (s)','FontSize',fs,'FontWeight','bold'); end
+    ylabel(ax,tern2(GRANT,'%','\DeltaF/F (%)'),'FontSize',fs,'FontWeight','bold');
+    stylize(ax,fs,fsTick);
+    if GRANT; set(ax,'Position',[0.24 0.22 0.73 0.74]); end
+    % No in-panel legend at grant size: at 8pt it sits on top of the traces and
+    % runs past the axes, which an exact-page print then clips. The caption
+    % already says "open loop red, closed loop blue, reference dashed".
+    if ~GRANT
+        lg=legend([hOL hCL],{'OL',clLab{r}},'Location','southeast');
+        set(lg,'Box','off','FontSize',fsLeg);
+    end
+    exportAtWidth(fig,[OUTDIR 'cl_' tag{r} '_resp.png'],W_RESP,GRANT); close(fig);
 
     % ---------- P2: variance reduction across sessions ----------
-    fig=figure('Color','w','Units','centimeters','Position',SZ); ax=axes(fig);
-    paired(ax,D.varOL,D.varCL,cOL,cCL,clLab{r},fs);
-    ylabel(ax,'Across-trial variance','FontSize',fs,'FontWeight','bold');
-    title(ax,sprintf('n=%d, %s',numel(D.varOL),pstr(D.pVar)),'FontSize',fs,'FontWeight','bold');
-    exportgraphics(fig,[OUTDIR 'cl_' tag{r} '_var.png'],'Resolution',600); close(fig);
+    fig=figure('Color','w','Units','centimeters','Position',SZP); ax=axes(fig);
+    paired(ax,D.varOL,D.varCL,cOL,cCL,clLab{r},fs,fsTick);
+    ylabel(ax,ylVar,'FontSize',fs,'FontWeight','bold');
+    if GRANT; ttl=pstr(D.pVar); else; ttl=sprintf('n=%d, %s',numel(D.varOL),pstr(D.pVar)); end
+    title(ax,ttl,'FontSize',fsTick,'FontWeight','bold');
+    if GRANT; set(ax,'Position',[0.26 0.24 0.71 0.60]); end
+    exportAtWidth(fig,[OUTDIR 'cl_' tag{r} '_var.png'],W_PAIR,GRANT); close(fig);
 
     % ---------- P3: RMSE improvement across sessions ----------
-    fig=figure('Color','w','Units','centimeters','Position',SZ); ax=axes(fig);
-    if isfield(D,'medOL'); paired(ax,D.medOL,D.medCL,cOL,cCL,clLab{r},fs); nR=numel(D.medOL);
-    else;                  paired(ax,D.rmseOL,D.rmseCL,cOL,cCL,clLab{r},fs); nR=numel(D.rmseOL); end
-    ylabel(ax,'Trial RMSE (%\DeltaF/F)','FontSize',fs,'FontWeight','bold');
-    title(ax,sprintf('n=%d, %s',nR,pstr(D.pRMSE)),'FontSize',fs,'FontWeight','bold');
-    exportgraphics(fig,[OUTDIR 'cl_' tag{r} '_rmse.png'],'Resolution',600); close(fig);
+    fig=figure('Color','w','Units','centimeters','Position',SZP); ax=axes(fig);
+    if isfield(D,'medOL'); paired(ax,D.medOL,D.medCL,cOL,cCL,clLab{r},fs,fsTick); nR=numel(D.medOL);
+    else;                  paired(ax,D.rmseOL,D.rmseCL,cOL,cCL,clLab{r},fs,fsTick); nR=numel(D.rmseOL); end
+    ylabel(ax,ylRmse,'FontSize',fs,'FontWeight','bold');
+    if GRANT; ttl=pstr(D.pRMSE); else; ttl=sprintf('n=%d, %s',nR,pstr(D.pRMSE)); end
+    title(ax,ttl,'FontSize',fsTick,'FontWeight','bold');
+    if GRANT; set(ax,'Position',[0.26 0.24 0.71 0.60]); end
+    exportAtWidth(fig,[OUTDIR 'cl_' tag{r} '_rmse.png'],W_PAIR,GRANT); close(fig);
 end
 fprintf('[fig11 panels] wrote 6 PNGs to %s\n',OUTDIR);
 
 % ---- helpers (from make_fig11_grid.m) ----
 function band(ax,t,m,e,c); fill(ax,[t fliplr(t)],[m+e fliplr(m-e)],c,'FaceAlpha',0.18,'EdgeColor','none'); end
-function stylize(ax,fs); set(ax,'Box','off','TickDir','out','FontSize',fs,'FontWeight','bold'); end
+function stylize(ax,fs,fsTick); set(ax,'Box','off','TickDir','out','FontSize',fsTick,'FontWeight','bold');
+  set(get(ax,'XLabel'),'FontSize',fs); set(get(ax,'YLabel'),'FontSize',fs); end
+
+function exportAtWidth(fig,path,targetCm,doFit)
+% EXPORTATWIDTH  Export a PNG whose final width is EXACTLY the printed width.
+% exportgraphics always tight-crops to the content bbox, and that crop margin is
+% roughly constant, so shrinking the canvas to chase a target width oscillates
+% instead of converging. print() with an exact paper size writes the whole
+% canvas instead, which makes saved width == printed width == scale 1.0, so the
+% font sizes set above are the font sizes on the page. This is only safe because
+% every axes Position is set explicitly, so nothing overhangs the canvas and
+% there is nothing for an exact page to clip.
+  if ~doFit
+      exportgraphics(fig,path,'Resolution',600); return
+  end
+  dpi=1200;
+  p=get(fig,'Position');                 % [x y w h] in centimeters
+  set(fig,'PaperUnits','centimeters','PaperSize',[targetCm p(4)], ...
+          'PaperPosition',[0 0 targetCm p(4)],'PaperPositionMode','manual', ...
+          'Units','centimeters','Position',[p(1) p(2) targetCm p(4)]);
+  print(fig,'-dpng',sprintf('-r%d',dpi),path);
+  info=imfinfo(path); gotCm=info.Width/dpi*2.54;
+  fprintf('  %s -> %.3f cm (target %.3f, scale %.3f)\n', ...
+          path,gotCm,targetCm,targetCm/gotCm);
+end
+function v=tern2(c,a,b); if c; v=a; else; v=b; end; end
 function s=pstr(p)
   if isnan(p), s='n.s.'; elseif p<1e-3, s=sprintf('p=%.0e',p); else, s=sprintf('p=%.3g',p); end
 end
-function paired(ax,a,b,cOL,cCL,clLab,fs)
+function paired(ax,a,b,cOL,cCL,clLab,fs,fsTick)
   hold(ax,'on'); a=a(:); b=b(:);
   for i=1:numel(a); plot(ax,[1 2],[a(i) b(i)],'-','Color',[0.7 0.7 0.7],'LineWidth',0.4); end
   plot(ax,ones(size(a)),a,'o','MarkerFaceColor',cOL,'MarkerEdgeColor','none','MarkerSize',3.5);
@@ -64,6 +137,12 @@ function paired(ax,a,b,cOL,cCL,clLab,fs)
   plot(ax,[0.82 1.18],[median(a) median(a)],'-','Color',cOL,'LineWidth',2);
   plot(ax,[1.82 2.18],[median(b) median(b)],'-','Color',cCL,'LineWidth',2);
   hold(ax,'off'); xlim(ax,[0.5 2.5]);
-  set(ax,'XTick',[1 2],'XTickLabel',{'OL',clLab},'Box','off','TickDir','out','FontSize',fs,'FontWeight','bold');
+  set(ax,'XTick',[1 2],'XTickLabel',{'OL',clLab},'Box','off','TickDir','out','FontSize',fsTick,'FontWeight','bold');
   yl=ylim(ax); ylim(ax,[min(0,yl(1)) yl(2)+0.05*range(yl)]);
+  % Two y ticks only: at 2.2cm the y-tick labels set the left margin, and that
+  % margin is what stops the canvas shrinking to the printed width.
+  if fsTick < 6.5
+      yl=ylim(ax); set(ax,'YTick',[yl(1) yl(2)]);
+      set(ax,'YTickLabel',compose('%.2g',get(ax,'YTick')));
+  end
 end

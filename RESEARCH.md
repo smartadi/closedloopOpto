@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-30 - Grant panels: tick size 8 -> 6 pt across all eight generators
+**Changed/Found:** `bilateral/grid/grid_panels.py` (`TICK`), `yazdanlab/sysID/macaque_lti_fit_single.py` + `macaque_io_2panel.py` (`TICK_FS`), `talk/make_fig11_panels.m` (`fsTick`), and the four exact-page hooks (`dose_response.m`, `tf_fit.m`, `imp_state_trialvar_fig.m`, `f4_row2_quartiles.m`). Labels stay 11 pt bold. Every axes rectangle was re-budgeted at the same time, because tick labels are what set the left/bottom margin - so the plot boxes all grew.
+**Why:** user 2026-09-30, "ticks are too big you can make them small". The original complaint was never about the numbers; it was the axis LABELS and legend entries sitting at 2.0-4.2 pt on the page.
+**Next:** none - all 15 panels re-exported and verified in a full render of the draft (14 pages, 0 errors).
+
+### 2026-09-30 - Grid panels exported 4% too wide, and 'Q1/Q4' printed as 'O1/O4'
+**Changed/Found:** `bilateral/grid/grid_panels.py` - (1) `W` 51.89 -> 49.81 pt. The draft's fig:grid right block went 0.5 -> 0.48\linewidth, so the slot narrowed to 1.757 cm while the generator still exported 1.830 cm; LaTeX was silently rescaling by 0.96, i.e. 10.6 pt type instead of 11. (2) `MARGIN['bottom']` 0.26 -> 0.30: panel C's `Q1`/`Q4` x-ticks rendered as `O1`/`O4` because the Q's DESCENDER fell past the canvas edge and the exact-page export cut it off.
+**Why:** both found by MEASURING the exported PNG (864 px / 1200 dpi = 1.829 cm) and zooming the tick row - at 1.76 cm on the page neither is visible at reading size.
+**Next:** `W` is derived from the draft's nesting; if that 0.48 changes again the silent rescale comes back. Tick labels with descenders (Q, g, p, y) need ~0.04 more bottom margin than digits do.
+
+### 2026-09-30 - Panel letters aligned + titles capitalized via a \pnl macro (LaTeX, delivered as a snippet)
+**Changed/Found:** not a repo file - `draft/draft` is Overleaf-only, so this went to the user as a paste-in block. `\centering` put every panel letter at a different x (that IS the "letters are not aligned" complaint) and `[b]` let a wrapped title push its own image down. Replaced with `\pnl{width}{letter}{Title}{file}`: `aggedright` + a FIXED-HEIGHT label box. `\pnllab` must be ONE `\scriptsize` line (9.5 pt): at 2.05aselineskip (measured on the 11 pt body leading) fig:grid grew ~1 line and ran into its caption, and the wrapfigure's `[20]` reservation is fixed.
+**Why:** collaborator review, same pass as the font sizes.
+**Next:** a one-line box CLIPS overflow, so every title must fit its slot - 0.46\linewidth holds ~16 characters at \scriptsize, 0.31 holds ~12. 'Near 1.5 mm' printed as bare 'H Near' before H-J were cut to a plain distance series.
+
 ### 2026-09-30 - RECOVERED the 91/9 stim-blind model on AL_0033: it was the TF mask, lost to the 2026-09-10 recommit
 **Changed/Found:** `impulse-analysis/imp_supp_residual.m` - new knob `SUPP_MASK` ('tf' default | 'committed'). User recalled "almost perfect stim blindness" on this session; that memory is CORRECT and it was not the tautological NATIVE/KKT model. Loading the pre-existing TF mask (`data/tf_sens_AL_0033_0129_e1.mat`, tf_sens 2.15, confirmed 2026-08-10 15:33) and running the identical honest chain reproduces the 2026-08-12 record exactly:
 

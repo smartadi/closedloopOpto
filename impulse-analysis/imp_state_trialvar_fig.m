@@ -166,7 +166,18 @@ for i = 1:numel(adm)
     ciLo = CI(i).lo;  ciHi = CI(i).hi;
     if STV_PLOTCTRL, cpLo = CI(i).ploLo;  cpHi = CI(i).ploHi; end
 
-    f = paperFig(PS.f2w, PS.f2h);  ax = axes(f);  hold(ax,'on');   % 2J / 2K -- Fig-2 grid
+    % STVF_GRANT = {targetCm, outDir} exports grant copies of these panels at the EXACT width
+    % they are printed at in the R01 (fig:grid C and D), so the LaTeX scale factor is 1.0 and
+    % the font sizes below ARE the sizes on the page. Opt-in; the locked Fig-2 PDFs below are
+    % untouched when it is unset. Same pattern as dose_response.m's DR_EXACTW. (2026-09-30)
+    GR = exist('STVF_GRANT','var')==1 && ~isempty(STVF_GRANT);
+    if GR
+        PS.fs = 11;                                  % label pt, final; ticks go to 8 below
+        f = paperFig(STVF_GRANT{1}, 1.95);           % match panels A/B so the row aligns
+    else
+        f = paperFig(PS.f2w, PS.f2h);                % 2J / 2K -- Fig-2 grid
+    end
+    ax = axes(f);  hold(ax,'on');
     xb = r.binMed(:).';
     % STVF_UNITS='raw' plots the SAME curve in %dF/F instead of SD-of-scaled-deviation: the
     % residual left when the impulse response is predicted from the laser amplitude alone,
@@ -263,6 +274,56 @@ for i = 1:numel(adm)
     % y-label do the work. It comes back automatically when the control adds a second series.
     if numel(hAll) > 1, lg = legend(ax, hAll, 'Location','best');  paperLegend(lg); end
     hold(ax,'off');
+    if GR
+        % ---- grant panel: exact-page export, short labels -------------------------------
+        grantNames = struct('MOT','mouse_prederr_motion', 'DPr','mouse_prederr_reldelta', ...
+                            'DPa','mouse_prederr_absdelta', 'PVv','mouse_prederr_prevar');
+        if ~isfield(grantNames, r.tag)
+            warning('[STVF] no grant filename for marker %s -- skipped.', r.tag);
+        else
+            % No y-label at all. The left margin holds EITHER an 8 pt numeric tick (~13 pt)
+            % or an 11 pt rotated word, not both, inside a 63 pt panel -- and the numbers
+            % carry more (1 = that session's own mean error). The LaTeX panel title
+            % ("Error vs. movement") names the quantity. Keeping the word pushed it off the
+            % canvas, where the exact-page print simply cut it off.
+            ylabel(ax, ''); xlabel(ax, '');       % Q1/Q4 ticks say what x is
+            % Ticks 6 pt, not 8 (user 2026-09-30: "ticks are too big you can make them
+            % small"). They set the margins, so the plot box grows back as they shrink.
+            set(ax, 'FontSize', 6, 'FontWeight', 'bold', 'XTick', [0.125 0.875], ...
+                    'XTickLabel', {'Q1','Q4'}, 'Position', [0.24 0.21 0.73 0.68]);
+            % Margins are in FRACTIONS of a 63 x 55 pt canvas: a 6 pt bold '1.2' needs
+            % ~11 pt of left margin and 'Q1' ~9 pt of bottom, or the exact-page print cuts
+            % the leading glyph off. At 8 pt the same margins had to be 0.30/0.26.
+            ylG = ylim(ax); set(ax,'YTick',ylG, 'YTickLabel',compose('%.2g',ylG(:)));
+            % A little headroom so the '*** 4/4' line clears the Q2 peak marker.
+            ylim(ax, [ylG(1) ylG(2)+0.10*diff(ylG)]);
+            set(ax,'YTick',ylG,'YTickLabel',compose('%.2g',ylG(:)));
+            for tG = findobj(ax,'Type','text')'
+                if contains(tG.String,'session mean')
+                    delete(tG);                   % 13 characters in a 63 pt panel; the
+                    continue                      % dotted line reads on its own
+                end
+                if contains(tG.String,'sess')
+                    % '*** 4/4 sess' at 8 pt is ~52 pt and ran off the right edge once the
+                    % axes filled the canvas. Drop the word, pin it to the top-left.
+                    tG.String = strrep(tG.String,' sess','');
+                    tG.Position(1) = 0.02; tG.HorizontalAlignment = 'left';
+                end
+                tG.FontSize = 6; tG.FontWeight = 'bold';
+            end
+            pG = get(f,'Position');
+            set(f,'PaperUnits','centimeters','PaperSize',[STVF_GRANT{1} pG(4)], ...
+                  'PaperPosition',[0 0 STVF_GRANT{1} pG(4)],'PaperPositionMode','manual', ...
+                  'Units','centimeters','Position',[pG(1) pG(2) STVF_GRANT{1} pG(4)]);
+            if ~exist(STVF_GRANT{2},'dir'), mkdir(STVF_GRANT{2}); end
+            outG = fullfile(STVF_GRANT{2}, [grantNames.(r.tag) '.png']);
+            print(f,'-dpng','-r1200',outG);
+            iG = imfinfo(outG);
+            fprintf('[STVF grant] %s -> %.3f cm (target %.3f, scale %.3f)\n', outG, ...
+                    iG.Width/1200*2.54, STVF_GRANT{1}, STVF_GRANT{1}/(iG.Width/1200*2.54));
+        end
+        close(f); continue
+    end
     paperExport(f, fullfile(outDir, sprintf('stv_%s_sd%s', tag, STVF_EXT)));
 
     % ---- paper build: the same axes as a locked vector PDF -------------------------------------
@@ -294,7 +355,7 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
     idx = arrayfun(@(t) find(strcmpi({R.tag}, t{1}), 1), mkOrder, 'UniformOutput', false);
     idx = [idx{:}];
     if numel(idx) >= 2
-        wC  = 2*PS.f2w + PS.col1*0.07;                  % ~8.6 cm: fills row-2 beside 2 square panels
+        wC  = 3*PS.f2w + 2*0.5;                         % panel F = 3 single widths + 2 gaps (11.2 cm), one tile per state marker
         % Canvas raised 3.4 -> 3.7 (user 2026-09-30: 'appears smaller than others').
         % The tiled layout crops tighter than a single-axes panel, so an equal canvas
         % lands ~0.4 cm shorter than A-E; the extra height equalises the CROPPED size.
@@ -328,6 +389,7 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
         ylabel(axc(1), {'Prediction error','(session-normalized)'}, 'FontSize', PS.fs, 'FontWeight', PS.fw);
         pdfDir = fullfile(paperRoot,'figures_v2','figure2');
         if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
+        jnAxesAll(fC);   % rule-book font/axis pass
         paperExport(fC, fullfile(pdfDir, 'imp_state_var_combined.pdf'));
         fprintf('[STVF] combined state panel -> imp_state_var_combined.pdf (%s)\n', strjoin(mkOrder,' | '));
     end

@@ -8,6 +8,13 @@ close all;
 
 PS = paperStyle();
 PW_c = PS.f2w; PH_c = PS.f2h;      % 2B -- Fig-2 grid (see paperStyle f2w/f2h)
+% Grant overrides (same opt-in style as DR_LABEL / DR_OUTDIR below). The R01
+% prints this panel at 0.46 x 0.41 x 0.62 x 7.5in = 2.23 cm, so the paper's
+% 4.0 cm canvas is shown at 0.52x and its 6pt type lands on the page at ~3pt.
+% DR_SIZE sets the canvas to the printed size and DR_FS sets the type in FINAL
+% points, so the LaTeX scale factor is 1.0 and DR_FS is what the reader sees.
+if exist('DR_SIZE','var') && ~isempty(DR_SIZE), PW_c = DR_SIZE(1); PH_c = DR_SIZE(2); end
+if exist('DR_FS','var')   && ~isempty(DR_FS),   PS.fs = DR_FS;   end
 % Session colour indexed by SESSION NUMBER (see paperStyle.m): PS.sessGrad(n) resampled the
 % ramp to however many sessions this run had, so session 1 changed shade between a 3-session
 % and a 4-session run and 2B stopped matching 2C-i and the TF panels.
@@ -178,15 +185,75 @@ end
 ylabTxt = 'Inhibition Energy';
 if DR_YAXIS
     % name the units on the axis label, since there is now an axis to put them on
-    ylabTxt = 'Inhibition energy (% \DeltaF/F, 0-200 ms)';
+    % Two lines (2026-09-30): at the rule-book 7 pt this label is longer than a 3.3 cm
+    % panel is tall, so as one line it overflowed the plot box and sat on the ticks.
+    ylabTxt = {'Inhibition energy', '(% \DeltaF/F, 0-200 ms)'};
 end
-text(ax, -0.155, 0.5, ylabTxt, ...
+text(ax, -0.32, 0.5, ylabTxt, ...
     'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
-    'FontSize',PS.fs, 'FontWeight',PS.fw, 'Color','k', 'Clipping','off');
+    'FontSize',jnStyle().fs_label, 'FontWeight',PS.fw, 'Color','k', 'Clipping','off');
 outDirC = fullfile(paperRoot, 'figures_v2', 'figure2');
 if ~isempty(DR_OUTDIR), outDirC = DR_OUTDIR; end
-paperExport(fig, fullfile(outDirC, sprintf('imp_response%s.pdf', PS.cbtag)));
+% ---- DR_EXACTW: grant export at the EXACT printed width (opt-in, 2026-09-30) ---------------
+% Set DR_EXACTW = {targetCm, 'full\path\out.png'} to ALSO write a grant copy before the normal
+% export. On-page type = source pt x (displayed width / natural width); paperExport tight-crops
+% to the content, so the saved width never equals the printed width and a LaTeX scale factor
+% creeps back in. print() with an exact paper size writes the whole canvas => scale 1.0, so
+% DR_FS is literally the point size the reader sees. Only safe with an explicit axes Position.
+if exist('DR_EXACTW','var') && ~isempty(DR_EXACTW)
+    tgtCm = DR_EXACTW{1}; outPng = DR_EXACTW{2};
+    if ~exist(fileparts(outPng),'dir'), mkdir(fileparts(outPng)); end
+    % The rotated 'Inhibition energy (% dF/F, 0-200 ms)' above is bounded by the PLOT-BOX
+    % HEIGHT (~40 pt at 2.2 cm), not the width: at 11 pt it is ~140 pt and can only clip.
+    % One glyph instead; the LaTeX panel title and caption name the quantity. Match on the
+    % NORMALIZED-units text only -- paperAxes leaves a second rotated text (its blank y
+    % scale-bar label, in data units at the corner), and retargeting that one too printed a
+    % stray second '%' under the axis.
+    tRot = findobj(fig,'Type','text','Rotation',90);
+    for tt = tRot(:)'
+        if strcmp(tt.Units,'normalized'), tt.String = '%'; tt.FontSize = PS.fs;
+        else,                             delete(tt);
+        end
+    end
+    axE = ax_c;
+    % Ticks 6 pt, not 8 (user 2026-09-30: "ticks are too big you can make them small").
+    % They set the left/bottom margin, so the plot box grows back as they shrink.
+    fsTickE = 6;
+    % Left margin has to hold the 6 pt y ticks AND the 11 pt rotated '%', which sits at
+    % normalized x = -0.155 (i.e. OUTSIDE the axes). At 0.22 the '%' fell off the exact
+    % page and printed as '/o'.
+    set(axE,'Position',[0.30 0.20 0.67 0.76],'FontSize',fsTickE,'FontWeight','bold');
+    % Two y ticks, not five, and both INSET from the limits: at 8 pt bold five integer labels
+    % fill the 40 pt plot height, and a label centred on the bottom limit half-hangs into the
+    % x scale bar at the corner.
+    set(axE,'YTick',[-2 0],'YTickLabel',{'-2','0'});
+    tOth = findobj(fig,'Type','text','-not','Rotation',90);
+    set(tOth,'FontSize',max(8,PS.fs-3),'FontWeight','bold');
+    % paperAxes hangs the x scale-bar label just under the bar, which at this canvas lands on
+    % the bottom y tick; drop it clear.
+    for tt = tOth(:)'
+        if contains(tt.String,'mW'), tt.Position(2) = tt.Position(2) - 0.35; end
+    end
+    pE = get(fig,'Position');
+    set(fig,'PaperUnits','centimeters','PaperSize',[tgtCm pE(4)], ...
+            'PaperPosition',[0 0 tgtCm pE(4)],'PaperPositionMode','manual', ...
+            'Units','centimeters','Position',[pE(1) pE(2) tgtCm pE(4)]);
+    % Driver follows the extension: the draft calls this panel in as .pdf, and an exact-page
+    % PDF is vector -- "high-res for zoomability" with no raster ceiling at all.
+    if endsWith(lower(outPng),'.pdf')
+        print(fig,'-dpdf','-vector',outPng);
+        fprintf('[DR grant] %s -> %.3f cm page (vector)\n', outPng, tgtCm);
+    else
+        print(fig,'-dpng','-r1200',outPng);
+        iE = imfinfo(outPng);
+        fprintf('[DR grant] %s -> %.3f cm (target %.3f, scale %.3f)\n', ...
+                outPng, iE.Width/1200*2.54, tgtCm, tgtCm/(iE.Width/1200*2.54));
+    end
+else
+    jnAxesAll(fig);   % rule-book font/axis pass (see utils/jnAxesAll.m)
+    paperExport(fig, fullfile(outDirC, sprintf('imp_response%s.pdf', PS.cbtag)));
+end
 
 %% Combined plot - median +/- IQR (supplementary)
 figM = paperFig(PW_c, PH_c); hold on

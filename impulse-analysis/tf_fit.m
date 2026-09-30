@@ -292,10 +292,19 @@ cRep = repmat(grayLevels(:), 1, 3);   % Nx3 grayscale RGB
 
 PS = paperStyle();
 setPaperDefaults();
-fig_A = paperFig(6, 4);
+% Grant overrides, same opt-in style as dose_response.m's DR_SIZE/DR_FS (2026-09-30).
+% TF_SIZE sets the canvas to the width this panel is PRINTED at in the R01 and TF_FS sets
+% the type in FINAL points, so the LaTeX scale factor is 1.0 and TF_FS is what a reader sees.
+% Default path (6 x 4 cm, PS.fs) is untouched.
+if exist('TF_SIZE','var') && ~isempty(TF_SIZE), fig_A = paperFig(TF_SIZE(1), TF_SIZE(2));
+else,                                           fig_A = paperFig(6, 4);
+end
+if exist('TF_FS','var') && ~isempty(TF_FS), PS.fs = TF_FS; end
 hold on;
 ax_A  = gca;
-title(ax_A, 'Session 1', 'FontSize', 6, 'FontWeight', 'bold', 'Color', [0.2 0.4 0.8]);
+if ~(exist('TF_EXACTW','var') && ~isempty(TF_EXACTW))
+    title(ax_A, 'Session 1', 'FontSize', 6, 'FontWeight', 'bold', 'Color', [0.2 0.4 0.8]);
+end
 
 for k = 1:nRep
     iAmp   = repAmpIdx(k);
@@ -361,8 +370,72 @@ else
     out_imp_dir = '.';
     warning('tf_fit: cannot find paper/images/figure2/ -- exporting to current folder.');
 end
-paperExport(fig_A, fullfile(out_imp_dir, sprintf('tf_data_vs_model_%s_%s_en%d.pdf', ...
-    allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en)));
+% ---- TF_EXACTW: grant export at the EXACT printed width (opt-in, 2026-09-30) --------------
+% Set TF_EXACTW = {targetCm, 'full\path\out.png'} to write the grant copy INSTEAD of the paper
+% panel. paperExport tight-crops to the content, so its saved width never equals the printed
+% width and LaTeX re-scales (and re-shrinks) the type; print() with an exact paper size writes
+% the whole canvas, giving scale 1.0. See dose_response.m's DR_EXACTW for the same pattern.
+if exist('TF_EXACTW','var') && ~isempty(TF_EXACTW)
+    tgtCmA = TF_EXACTW{1}; outA = TF_EXACTW{2};
+    if ~exist(fileparts(outA),'dir'), mkdir(fileparts(outA)); end
+    delete(lgd_A);                       % 4 entries at 8 pt cover a 2.2 cm panel; the
+                                         % caption already says "held-out fit at three
+                                         % amplitudes, R^2 up to 0.88"
+    % 'Stim' would sit on the R^2 annotation once both are 8 pt; the red onset line and the
+    % shaded fit window carry that information on their own.
+    delete(findobj(ax_A,'Type','text','String','Stim'));
+    % paperAxes drew corner scale bars, so its '150 ms' / '1% dF/F' texts ARE this panel's
+    % axis labels and stay at the label size; only the R^2 annotation drops to tick size.
+    % Everything in this panel is an ANNOTATION on a scale-bar axis, not a real axis label,
+    % so it all goes to tick size (8 pt bold -- still 3-4x what the draft shows today). At
+    % 11 pt the '150 ms' bar label alone spans half the panel and lands on the corner bars,
+    % and '1% dF/F' rotated is ~42 pt against a ~40 pt plot height. The unit is dropped from
+    % the y bar for the same reason; LaTeX names the quantity.
+    % The scale-bar labels are this panel's axis labels, so they keep 8 pt; the R^2 is an
+    % annotation and drops to the 6 pt tick size used across the grant panels
+    % (user 2026-09-30: "ticks are too big you can make them small").
+    fsA = 8;
+    for tA = findobj(ax_A,'Type','text')'
+        if contains(tA.String,'dF/F'), tA.String = '1%'; end
+        tA.FontSize = fsA; tA.FontWeight = 'bold';
+        if startsWith(tA.String,'R^2'), tA.FontSize = 6; end
+        if startsWith(tA.String,'R^2')
+            % Top-LEFT is the only quadrant free of data: the traces climb into the
+            % top-right (paperAxes' default corner) and the dip fills the bottom-middle.
+            xlA = xlim(ax_A);
+            tA.Position(1) = xlA(1) + 0.02*range(xlA);
+            tA.HorizontalAlignment = 'left';
+        end
+    end
+    % The fit-window patch reads as a full-panel grey wash at 2.2 cm; lighten it so the
+    % traces stay the figure.
+    set(findobj(ax_A,'Type','patch'),'FaceAlpha',0.25);
+    % The red onset line runs the full height and struck through the R^2 text in its new
+    % top-left home; crop it to the lower part of the panel, where nothing else sits.
+    ylR = ylim(ax_A);
+    for lR = findall(ax_A,'Type','line')'
+        if isequal(round(lR.Color(:)'),[1 0 0]) && numel(lR.YData)==2
+            lR.YData = [ylR(1) ylR(1)+0.60*range(ylR)];
+        end
+    end
+    % Line widths are POINTS too: 1.5 pt traces drawn for a 6 cm canvas read as sausages on
+    % a 2.2 cm one, and they swallow the fit dashes. Rescale with the canvas.
+    for lA = findobj(ax_A,'Type','line')'
+        if lA.LineWidth > 1.2, lA.LineWidth = 0.9; end
+    end
+    set(ax_A,'Position',[0.20 0.20 0.77 0.76],'FontSize',max(8,PS.fs-3),'FontWeight','bold');
+    pA = get(fig_A,'Position');
+    set(fig_A,'PaperUnits','centimeters','PaperSize',[tgtCmA pA(4)], ...
+              'PaperPosition',[0 0 tgtCmA pA(4)],'PaperPositionMode','manual', ...
+              'Units','centimeters','Position',[pA(1) pA(2) tgtCmA pA(4)]);
+    if endsWith(lower(outA),'.pdf'), print(fig_A,'-dpdf','-vector',outA);
+    else,                            print(fig_A,'-dpng','-r1200',outA);
+    end
+    fprintf('[TF grant] %s -> %.3f cm page\n', outA, tgtCmA);
+else
+    paperExport(fig_A, fullfile(out_imp_dir, sprintf('tf_data_vs_model_%s_%s_en%d.pdf', ...
+        allExperiments(selExp).mn, allExperiments(selExp).td, allExperiments(selExp).en)));
+end
 
 %% â”€â”€ Paper Fig B: LOAO validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 % Full-fit RÂ² (filled circles) vs LOAO RÂ² (open squares) across amplitudes

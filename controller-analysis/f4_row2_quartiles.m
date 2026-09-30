@@ -186,6 +186,38 @@ for ip=1:numel(preds); nm=preds{ip};
     figP=jnFig(jnPanelWidth('double',4),3.3); ax=axes(figP);   % jn* v2 sizing
     draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, titR2{ip}, titCol(ip,:), true, ip==1, ...
         predP,predUp,ctrlP,ctrlUp);
+    % ---- F4Q_GRANT: grant copies of 2B/2C at the EXACT printed width (opt-in, 2026-09-30) ----
+    % Set F4Q_GRANT = {targetCm, outDir} to ALSO write fig:pid C,D for the R01. The locked
+    % paper PDFs in outdir are written either way -- this branch never touches them. These
+    % panels are natural 4.25 cm shown at 2.305 cm, a 0.54x reduction that put 6 pt labels
+    % and a 5 pt annotation on the page at 3.3 pt and 2.7 pt. Exporting at the printed width
+    % makes the scale 1.0, so the sizes set here are the sizes a reader sees.
+    if exist('F4Q_GRANT','var')==1 && ~isempty(F4Q_GRANT) && any(ip==[2 3])
+        figG=jnFig(F4Q_GRANT{1},1.95); axG=axes(figG);
+        draw_panel(axG, qmO,qmC,qsO,qsC, colOL,colCL, PS, titR2{ip}, titCol(ip,:), true, false, ...
+            predP,predUp,ctrlP,ctrlUp);
+        title(axG,''); ylabel(axG,'');    % LaTeX prints the panel title; a rotated
+                                          % 'RMSE to ref (z)' at 11 pt is ~90 pt against a
+                                          % ~38 pt plot height and can only clip
+        delete(findobj(axG,'Type','text'));   % 'P up**' / 'C n.s.' are two more lines of
+                                              % text than a 65 pt panel holds; the caption
+                                              % already explains the black gap line
+        % Ticks 6 pt, not 8 (user 2026-09-30: "ticks are too big you can make them small").
+        set(axG,'FontSize',6,'FontWeight','bold','XTick',[1 4],'XTickLabel',{'Q1','Q4'}, ...
+                'Position',[0.26 0.21 0.71 0.73]);
+        % Round tick values, not the axis limits: '-0.65' at 8 pt bold is ~22 pt and its
+        % minus sign fell off the left edge of the exact page. '-0.5' fits the margin.
+        set(axG,'YTick',[-0.5 0 1],'YTickLabel',{'-0.5','0','1'});
+        pG=get(figG,'Position');
+        set(figG,'PaperUnits','centimeters','PaperSize',[F4Q_GRANT{1} pG(4)], ...
+                 'PaperPosition',[0 0 F4Q_GRANT{1} pG(4)],'PaperPositionMode','manual', ...
+                 'Units','centimeters','Position',[pG(1) pG(2) F4Q_GRANT{1} pG(4)]);
+        if ~exist(F4Q_GRANT{2},'dir'), mkdir(F4Q_GRANT{2}); end
+        outG=fullfile(F4Q_GRANT{2},fnout{ip});     % vector: zoomable with no raster ceiling
+        print(figG,'-dpdf','-vector',outG);
+        fprintf('[F4R2 grant] %s -> %.3f cm page (vector)\n',outG,F4Q_GRANT{1});
+        close(figG);
+    end
     try
         paperExport(figP, fullfile(outdir,fnout{ip}));
         paperExport(figP, fullfile(outview,strrep(fnout{ip},'.pdf','.png')));
