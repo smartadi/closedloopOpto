@@ -16,6 +16,26 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-30 - AL_0033 high-amp dip + rebound capture: diagnosed. Rebound is NOT fixable by pixel exclusion
+**Changed/Found:** No file edited (scratch). User observed dip capture worsening from ~2.7 V up and rebound capture "really bad". Both confirmed and quantified; `Areb/Greb/Lreb` were already computed by `f2_decomp` and had never been reported.
+**Per-amp, TF mask + r2max** (dip window and rebound window are DATA-DERIVED per amp, `P.dcc`/`P.rcc`):
+| amp | DIPcap% | REBcap% | Areb / Greb / Lreb | dip win (ms) | reb win (ms) |
+|---|---|---|---|---|---|
+| 2.10 | 110 | 58 | 0.20 / 0.08 / 0.11 | 0-314 | 343-571 |
+| 2.70 | 99 | 23 | 0.57 / 0.44 / 0.13 | 0-371 | 400-600 |
+| 3.20 | 115 | 38 | 0.67 / 0.41 / 0.25 | 0-229 | 257-1000 |
+| 3.70 | 76 | 14 | 0.76 / 0.65 / 0.11 | 0-257 | 286-600 |
+| 4.30 | 71 | 29 | 0.69 / 0.49 / 0.20 | 0-257 | 286-943 |
+| 4.90 | 84 | 44 | 0.81 / 0.45 / 0.36 | 0-229 | 257-829 |
+**median DIP capture 91%, median REBOUND capture 34%.**
+**Structural gap identified:** every affectedness criterion in the repo scores pixels on the DIP - `f2_affected_detect` scores over `P.dcc` and the TF detector thresholds the suppression - so the predictor set is blind to the dip by construction and blind to the rebound by nothing.
+**Three fixes tested:**
+(1) **Rebound-aware mask** (prototype: score each pixel over `P.rcc` via the same `ctrl_affected_detect` call, gate on amp-graded rebound `Spearman(amp,rebScore)>=thr` AND peak rebound, union with the TF mask). Result: **DIP capture 91 -> 96%** (thr 0.5 / peak 6, 81 candidates, R2 0.926, catch -2%) but **REBOUND capture 34 -> 37% at best**. A free win on the dip; does nothing for the rebound.
+(2) **`select_mode='subspace'`** (basis over the whole evoked trajectory, onset->end of rebound, so it penalises the rebound too): **REBOUND 34 -> 56-59%**, but DIP falls 91 -> 73-79% and spont R2 0.931 -> 0.85-0.87. Catch stays clean (-1%). nu barely matters over 0.80-0.99.
+(3) **`frontier@0.90`**: DIP 90%, REBOUND 33% - no rebound effect at all, confirming the frontier penalty is dip-specific.
+**Why:** The rebound resists pixel surgery because it is BRAIN-WIDE: the per-pixel rebound score has median **3.93 pre-SD across all 442 contra grid pixels** (185 of them amp-graded), so excluding the most rebound-carrying pixels leaves the rest still carrying it. This is the THIRD independent instance of the 2026-07-06 distributed-direction result (after greedy pruning and the all-pixels control). Global absorbing ~66% of the rebound is therefore mostly correct, not a modelling failure.
+**Next:** (1) ⚠ **A contra-vs-ipsi rebound ratio I computed is UNRELIABLE - do not quote it.** Raw it gave contra/ipsi 8.85, but at 0.5 V (a no-response amp) contra still "rebounded" +3.6, i.e. slow drift not stim response; catch-correcting left the sign flipping across amplitudes (-2.6 at 1.1 V, +4.6 at 2.7, -0.5 at 3.2, +5.8 at 4.3). The contra grid spatial mean is drift-dominated over a ~1 s window. A usable version needs per-trial drift removal, not a pre-window mean subtraction. (2) Recommend ADOPTING the rebound-aware mask for the dip (96%/-2% catch, costs 0.005 of R2) and reporting rebound capture honestly as a limitation rather than chasing it with `subspace`, since the paper's locked metric is inhibition energy 0-200 ms. (3) Note the dip windows are data-derived and span 229-943 ms across amps (0-943 ms at 0.5 V), so "capture" is not measured over a constant window - the 6 responding amps are 229-371 ms and roughly comparable, but this should be stated wherever per-amp capture is compared. (4) `f2_affected_detect` could take a `window` option ('dip'|'rebound'|'both') so the prototype becomes a supported path.
+
 ### 2026-09-30 - TF mask ADOPTED as AL_0033's operating point; debug quartile views expose a PRE-stim confound in the rel-delta effect
 **Changed/Found:** New `impulse-analysis/imp_supp_residual_debug.m` (PNG-only diagnostics, 6 figures -> `impulse-analysis/figs/supp_residual_debug/`). Operating point of record for this session is now **TF mask + `r2max`** (user decision 2026-09-30): R2 0.931 | capture 91% | leak 9% | catch -2%. Figures: held-out prediction in 3 windows with residual on the same scale (window R2 0.946/0.952/0.853), pred-vs-actual (slope 0.938, residual mean -0.003 SD 1.374, and |residual| rising with |actual| = the power confound drawn explicitly), all 9 amps + catch, and per-state quartile panels for motion / relative delta / **absolute delta** (asked for, drawn, labelled POWER CONFOUND on its own face).
 **Quartile result, n=748, DV = Local |dev| z-within-amp, partialled on dev_pre:**
