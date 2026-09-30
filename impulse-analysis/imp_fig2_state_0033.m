@@ -16,6 +16,12 @@
 %                  spatial mean ALONE accounts for ~100% of its dip at 0.40 and 1.60 V.
 %   AL_0033 e1  -- capture 91%, leak 9%, catch -2%, 6 of 9 amps responded, 748 trials. KEPT.
 %
+% *** 91/9 IS STALE (2026-09-30). *** The affected-pixel set was recommitted 2026-09-10 (136 of 442
+% contra px left as candidates), and the same stage chain now measures capture 70% / leak 30% on
+% AL_0033, spont R^2 0.958, catch still -2%. The RANKING above is unaffected -- the other three are
+% 32/37/29% with two failing or near-failing catch -- so the exclusions stand, but do not quote 91/9.
+% Re-run rather than copying the number. See RESEARCH 2026-09-30.
+%
 % *** RETRACTED EXCLUSION REASON (2026-08-12). *** An earlier version of this header also cited
 % "AL_0041 e2 -- rel-delta runs the WRONG WAY (rho=-0.03)". That is CIRCULAR: dropping a session
 % because its outcome disagrees with the hypothesis guarantees the surviving sessions agree with it,

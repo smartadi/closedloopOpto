@@ -169,6 +169,15 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 - [ ] Recover AL_0048's 200 amp-0 sham trials via the Block↔Timeline clock map (they fire no laser, so they are absent from the detected onsets) — gives a proper zero-amp control per side.
 
 ### Contra→ipsi prediction framework (impulse) — from JOURNAL 2026-06-16
+> **↩ PARTIALLY REINSTATED AS SUPPLEMENTARY 2026-09-30 (user request).** The decomposition is back for
+> **one session only** — AL_0033 2025-01-29 e1, the best stim-blind model — as a supplementary figure.
+> Builder: `impulse-analysis/imp_supp_residual.m` → 7 vector panels in `paper/images/supp_residual/`.
+> It changes nothing below: the state-dependence is still NOT a paper claim, and panels F/G are written
+> as a NEGATIVE result (motion ρ=−0.061 against a Global control of −0.187; rel-δ +0.059 n.s. at n=1).
+> ⚠ Capture on AL_0033 is now **70% / leak 30%**, not the 91/9 quoted below — the affected-pixel set was
+> recommitted 2026-09-10. Catch is still clean (−2%) and the ranking is unchanged. RESEARCH 2026-09-30.
+> Panels are NOT yet in `figures_final/MANIFEST.txt` — lock-in is a user decision.
+>
 > **⛔ CUT FROM THE PAPER 2026-09-11 (arXiv fast-pace).** The residual / Actual=Global+Local state-dependence
 > is no longer a paper claim (see RESEARCH 2026-09-11 + PAPER.md Fig-2 note). Everything in THIS section and
 > the "Reviewer-proofing the residual state claim" + "OLS pixel-predictor stim-blind decomposition" blocks
