@@ -16,6 +16,28 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-09-30 - ⭐ The capture metric has a RANDOM BASELINE. Selection information peaks at K~91-110 and is GONE by K=35
+**Changed/Found:** No file edited (scratch, AL_0033, TF mask lineage). Restarted the per-amp pixel-selection line at the user's request with the goal of near-100% capture of dip AND rebound. Four results, in order of importance.
+**(1) The TF mask PASSES the [CP-STIMAFF] random control.** TF-selected 91 px vs 12 pre-generated random 91-px subsets: DIP 91% vs random median 79% (range 73-82), REB 34% vs 23% (20-28), beating **12/12 draws on both**. So the 91% is earned. **BUT random 91 px already yields 79%** - only ~12 of the 91 points are attributable to WHICH pixels; the rest is the model degradation you get from any 91-predictor restriction. Capture must therefore be reported against a matched-K random baseline, never alone.
+**(2) K-sweep vs matched random** (rank = #amps TF-flagged, tie-break amp-graded drive; random = median of 6 pre-generated draws):
+| K | R2 | DIP | REB | catch | rand DIP | rand REB | dDIP | dREB |
+|---|---|---|---|---|---|---|---|---|
+| 140 | 0.950 | 78 | 29 | 0 | 65 | 18 | +13 | +11 |
+| 110 | 0.938 | 86 | 29 | -2 | 70 | 19 | **+16** | +10 |
+| 91 | 0.931 | 91 | 34 | -2 | 77 | 21 | **+15** | +13 |
+| 70 | 0.925 | 95 | 36 | -3 | 88 | 24 | +7 | +12 |
+| 50 | 0.911 | 98 | 37 | -2 | 91 | 25 | +7 | +13 |
+| 35 | 0.897 | 95 | 35 | -0 | 96 | 29 | **-1** | +7 |
+| 25 | 0.888 | 98 | 26 | +1 | 94 | 25 | +4 | +1 |
+⚠ **Raw capture reaches 98% at K=50 and K=25, but random reaches 91-96% there too, and at K=35 the gap is NEGATIVE.** Near-100% capture is trivially purchasable by shrinking the predictor set and carries no information. **The catch control does NOT detect this** (it stays -3..+1 throughout) - only the matched-random baseline does. Information peaks at **K~91-110**, i.e. essentially where the TF mask already sits.
+**(3) REBOUND capture never exceeds ~37% at ANY K** (and 29% at the random-equivalent point). Pixel selection is exhausted for the rebound; only `subspace` moves it (34 -> 56-59%, at the cost of DIP 91 -> 73-79% and R2 0.931 -> 0.85).
+**(4) Naive per-amp candidate sets go the WRONG WAY** and this is now quantified at source: each amp's own unaffected set is 167-442 px vs the pooled intersection's 91, so per-amp selection ENLARGES the candidate pool, Global absorbs more, capture falls. This reproduces the 2026-07-06 diagnosis from the opposite direction. The productive use of per-amp information is a STRICTER pooled set (union of affectedness over amps and windows), not a looser per-amp one.
+**Why:** The user's goal of near-perfect capture is reachable on the raw number and meaningless there. Stating the objective correctly - maximise (capture_selected - capture_random) at matched K, subject to catch and held-out R2 - keeps the goal falsifiable and happens to endorse the operating point already in use.
+**Next:** ⚠⚠ **Two methodological traps found, both of which silently corrupted an earlier attempt in this same session:**
+(a) **`f2_model` RESEEDS the RNG internally** (the 2026-07-07 stim-affected-detection fix). A `randperm` called inside a loop that also calls `f2_model` returns the SAME permutation every iteration - my first random control produced 10 byte-identical "draws". Pre-generate all random subsets BEFORE the loop. Anything in the repo drawing randomness across `f2_model` calls should be audited for this.
+(b) **A window-mean score over a ~1 s window is DRIFT-dominated, not stim-driven.** A first `drive` score (worst deflection in dip or rebound window) gave min 2.92 pre-SD across ALL 442 px - i.e. nothing is clean - and overlapped the TF-pooled set in only 7/91 px. Re-deriving it as amp-GRADED (Spearman(amp, score), since drift is not dose-dependent) fixed the pathology but still overlaps TF in only 26/91, and TF candidates' mean drive (0.541) is indistinguishable from all pixels (0.557). **So the TF detector and the dose-monotonicity criterion select nearly independently** while giving 91% vs 70% capture - that disagreement is unexplained and is the next thing to understand before either is trusted as "the" affectedness rule.
+Recommended operating point if raw capture matters: **K=70** (DIP 95 / REB 36 / R2 0.925 / catch -3, gaps +7/+12). Otherwise keep K=91.
+
 ### 2026-09-30 - AL_0033 high-amp dip + rebound capture: diagnosed. Rebound is NOT fixable by pixel exclusion
 **Changed/Found:** No file edited (scratch). User observed dip capture worsening from ~2.7 V up and rebound capture "really bad". Both confirmed and quantified; `Areb/Greb/Lreb` were already computed by `f2_decomp` and had never been reported.
 **Per-amp, TF mask + r2max** (dip window and rebound window are DATA-DERIVED per amp, `P.dcc`/`P.rcc`):
