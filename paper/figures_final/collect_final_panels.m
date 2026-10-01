@@ -17,6 +17,11 @@ function collect_final_panels(varargin)
 
 dry = ~isempty(varargin) && any(strcmpi(varargin{1},{'dry','dryrun','-n'}));
 here     = fileparts(mfilename('fullpath'));
+% Sources are resolved against figures_v2 FIRST (the live export target of every
+% generator since the v2 switch), then images/ as a fallback for panels with no
+% generator -- Fig 1 art and a few supplementary leftovers. Before 2026-09-30 this
+% read images/ only, so every regenerated panel was invisible to the pull-folder.
+v2root   = fullfile(here,'..','figures_v2');
 imgroot  = fullfile(here,'..','images');
 manifest = fullfile(here,'MANIFEST.txt');
 assert(isfile(manifest),'MANIFEST.txt not found next to collect_final_panels.m');
@@ -48,7 +53,8 @@ for f = 1:numel(figs)
     want = sec.(fn); wantBase = strings(0,1);
     % ---- copy listed sources in ----
     for k = 1:numel(want)
-        src = fullfile(imgroot, char(want(k)));
+        src = fullfile(v2root, char(want(k)));
+        if ~isfile(src); src = fullfile(imgroot, char(want(k))); end
         [~,b,e] = fileparts(char(want(k))); base = [b e];
         wantBase(end+1,1) = string(base); %#ok<AGROW>
         dest = fullfile(destdir, base);

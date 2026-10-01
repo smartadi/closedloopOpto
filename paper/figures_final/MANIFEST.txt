@@ -2,7 +2,8 @@
 # ---------------------------------------------------------------------------
 # This file is the single source of truth for what lives in figures_final/panels/.
 # Each [section] is a destination folder panels/<section>/. Every line under it is
-# ONE source panel path, relative to paper/images/ (paths may contain spaces —
+# ONE source panel path, resolved against paper/figures_v2/ first and
+# paper/images/ as a fallback (paths may contain spaces —
 # the whole line is the path, do not split on spaces). '#' starts a comment.
 #
 # Run  collect_final_panels.m  to make panels/<section>/ hold EXACTLY these files:
@@ -51,18 +52,17 @@ figure3/all_average_sessions.pdf
 figure3/variance_ratio_by_window.pdf
 figure3/MSE_ratio_by_window.pdf
 
-# Figure 4 -- canonical lettering LOCKED 2026-09-24 (user). Panels A-H; letters added in Illustrator.
-# Reading order = error decomposition -> state-quartile benefits -> contra-model mechanism (at the END).
-#   A  error decomposition (unique R^2 init/motion/rel-2-4/abs-delta, 'sep' each own model)
-#      + state exemplar trials                     -> f4_decomp_unique_sep.pdf + f4_state_exemplars.pdf
-#   B  rejection benefit vs INIT-DEV quartile      -> f4_2A_initdev.pdf   (flat; interaction p=0.56 n.s.)
-#   C  rejection benefit vs MOTION quartile        -> f4_2B_motion.pdf
-#   D  rejection benefit vs REL 2-4 Hz quartile    -> f4_2C_delta.pdf     (narrows; interaction p=0.014)
-#   E  rejection benefit vs ABS 2-4 Hz quartile    -> f4_2D_absdelta.pdf
-#   F,G,H  contra-model TRIPTYCH, moved to the END as three INDIVIDUAL panels:
-#      F kernel map | G A=G+L decomposition | H rejection phi=1-RR OL vs CL (12/13 sess, p=4.9e-4)
-#      -> f4_contra_model.pdf (single composite source; its 3 sub-panels split/lettered in Illustrator)
-# (The old contra-level "Panel A" = ctrl_state_xsess is DROPPED from Fig 4.)
+# Figure 4 -- lettering A-G, matching the caption in results.tex. Letters in Illustrator.
+#   A state exemplars        -> f4_state_exemplars.pdf
+#   B error-decomp model     -> f4_1B_equation.pdf
+#   C unique R^2 by window   -> f4_decomp_unique_sep.pdf
+#   D state-quartile row     -> f4_row2_quartiles.pdf   (1x4 tiled: init-dev/motion/rel/abs)
+#   E contra->ipsi kernel    -> f4_kernel_map.pdf
+#   F A = G + L              -> f4_agl.pdf
+#   G disturbance rejection  -> f4_cl_reject_RR.pdf
+# Updated 2026-09-30: the previous block described an A-H set built on the four
+# standalone f4_2A..f4_2D quartile panels and a composite f4_contra_model.pdf, none of
+# which are exported any more -- it contradicted the file list directly below it.
 [figure4]
 figure4/f4_state_exemplars.pdf
 figure4/f4_1B_equation.pdf
@@ -85,6 +85,9 @@ figure5/sine_combined_rmse.pdf
 figure5/sine_combined_variance.pdf
 
 [supplementary]
+# tf_cv_2D_sidebar.pdf removed 2026-09-30: it is Figure 2E, so listing it here as well
+# had the collector place one panel into two pull-folders.
+# Neither file below has a figures_v2 export; both resolve from images/. Regenerate
+# them into figures_v2 or retire them.
 figure2/tf_cv_2D_endlabels.pdf
-figure2/tf_cv_2D_sidebar.pdf
 figure2/tf_cv_shape_across_sessions.pdf
