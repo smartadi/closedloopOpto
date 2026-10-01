@@ -121,10 +121,16 @@ paperExport(fig_A, 'paper/figures_v2/figure3/panel_A.pdf');
 PH_B = 3.4;   % jn* resize: unify row height
 fig_B = paperFig(PW, PH_B);
 
-bm = 0.12; tm = 0.12;
+% tm raised from 0.12 to make room for the spanning title (2026-09-30, user:
+% panels B and C carried no indication of what they show).
+bm = 0.12; tm = 0.20;
 axH = 1 - bm - tm;
 ax_C = axes(fig_B, 'Position', [c1L, bm, cW, axH]);
 ax_D = axes(fig_B, 'Position', [c2L, bm, cW, axH]);
+annotation(fig_B, 'textbox', [0, 1-tm+0.04, 1, tm-0.05], ...
+    'String', 'Trial-averaged response', 'EdgeColor','none', ...
+    'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
+    'FontSize', 6, 'FontWeight','bold', 'Color','k');
 
 nc_std = std(pncDfk, 0, 1);
 hold(ax_C, 'on');
@@ -162,8 +168,12 @@ paperExport(fig_B, 'paper/figures_v2/figure3/panel_B.pdf');
 %% C: average inputs -----------------------------------------------------
 PH_C = 3;
 fig_C = paperFig(PW, PH_C);
+annotation(fig_C, 'textbox', [0, 0.84, 1, 0.15], ...
+    'String', 'Trial-averaged stimulation', 'EdgeColor','none', ...
+    'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
+    'FontSize', 6, 'FontWeight','bold', 'Color','k');
 
-bm = 0.15; tm = 0.08;
+bm = 0.15; tm = 0.20;   % tm raised for the spanning title (2026-09-30)
 axH = 1 - bm - tm;
 ax_E = axes(fig_C, 'Position', [c1L, bm, cW, axH]);
 ax_F = axes(fig_C, 'Position', [c2L, bm, cW, axH]);
@@ -208,7 +218,7 @@ PH_D = 3.4;   % jn* resize: unify row height
 PW_D = 3.4;
 fig_D = paperFig(PW_D, PH_D);
 
-lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
+lm2 = 0.22; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
 ax_var = axes(fig_D, 'Position', [lm2, bm2, 1-lm2-rm2, 1-bm2-tm2]);
 
 nc_var = var(pncDfk);
@@ -223,8 +233,11 @@ ylim(ax_var, [-2 12]); xlim(ax_var, [-3 dur+3]);
 addStimPatch(ax_var, x1, x2);
 uistack(findobj(ax_var,'Type','line'), 'top');
 hold(ax_var, 'off');
-paperAxes(ax_var, 'XLength', 1, 'YLength', 0.01, 'XLabel', '1 s', 'YLabel', ' ');
-text(ax_var, -0.12, 0.5, 'Variance across trials', ...
+% Units restored on the y scale bar so this panel's y-axis is identical to the
+% cross-session variance panel (variance_mse.m fig_F); was YLength 0.01 = no bar
+% at all, which left the only variance axis in Fig 3 unitless (2026-09-30, user).
+paperAxes(ax_var, 'XLength', 1, 'YLength', 5, 'XLabel', '1 s', 'YLabel', '5 (%\DeltaF/F)^2');
+text(ax_var, -0.20, 0.5, 'Variance across trials', ...
     'Units','normalized', 'Rotation', 90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'Color','k', 'Clipping','off');

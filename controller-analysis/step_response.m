@@ -64,8 +64,8 @@ xlim(ax_H, [-0.5 dur+0.5]);
 ylim(ax_H, [-0.25, max([6, 1.08*faintMax, 1.08*max([Error_nc(:); Error_wc(:)])])]);
 hold(ax_H, 'off');
 
-lgd_H = legend(ax_H, {'Open-Loop', 'Closed-Loop'}, 'Location','northeast');
-paperLegend(lgd_H);
+% Legend removed (2026-09-30, user): OL/CL colour is established on panels A-C and
+% stated in the caption, so the in-panel key only cost plot area at 3.4 cm.
 paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','RMSE dF/F');
 title(ax_H, {'Average of Session'; 'Tracking error'}, ...
     'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');    % user, 2026-08-26

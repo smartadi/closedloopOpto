@@ -31,7 +31,7 @@ end
 %% F: Cross-session variance  (2.33" wide -- matches 1/3 page column)
 fig_F = paperFig(3.4, 3.4);   % jn* resize: unify row height
 
-lm2 = 0.13; rm2 = 0.05; bm2 = 0.12; tm2 = 0.20;   % extra top room for the 2-line title
+lm2 = 0.22; rm2 = 0.05; bm2 = 0.12; tm2 = 0.20;   % extra top room for the 2-line title
 ax_var = axes(fig_F, 'Position', [lm2, bm2, 1-lm2-rm2, 1-bm2-tm2]);
 
 hold(ax_var, 'on');
@@ -46,8 +46,14 @@ uistack(findobj(ax_var,'Type','line'), 'top');
 hold(ax_var, 'off');
 % Proper short-corner y scale bar WITH UNITS (was YLength 0.01 = effectively no y bar), and the
 % descriptive label moved from a rotated y-label to a TITLE (user, 2026-08-26).
+% y-axis matched to the single-session variance panel (panel_D) so the two can sit
+% side by side: same scale bar, same rotated label, same position (2026-09-30, user).
 paperAxes(ax_var, 'XLength', 1, 'YLength', 5, 'XLabel', '1 s', 'YLabel', '5 (%\DeltaF/F)^2');
-title(ax_var, {'Average of Session'; 'Variance across trials'}, ...
+text(ax_var, -0.20, 0.5, 'Variance across trials', ...
+    'Units','normalized', 'Rotation', 90, ...
+    'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
+    'Color','k', 'Clipping','off');
+title(ax_var, 'Average across sessions', ...
     'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');
 
 paperExport(fig_F, fullfile(paper_root, 'figures_v2', 'figure3', 'all_variance_sessions.pdf'));
