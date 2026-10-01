@@ -114,9 +114,9 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 5F | Fig5 | paper/figures_v2/figure5/sine_5E_rmse_time_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | ±SEM | RMSE over time. ⚠ letter ≠ filename |
 | 5G | Fig5 | paper/figures_v2/figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf | 4.2 × 5.4 | vector | — | per-trial RMSE by mode |
 | 5H | Fig5 | paper/figures_v2/figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf | 4.2 × 5.4 | vector | — | 1 Hz phase lag |
-| 5I | Fig5 | paper/figures_v2/figure5/sine_combined_rmse.pdf | 5.5 × 4.5 | vector | — | across-session RMSE. ⚠ **cited in Results, missing from the caption** |
-| 5J | Fig5 | paper/figures_v2/figure5/sine_combined_phase.pdf | 5.5 × 4.5 | vector | — | across-session phase lag. ⚠ **cited in Results, missing from the caption** |
-| 5K | Fig5 | paper/figures_v2/figure5/sine_combined_variance.pdf | 5.5 × 4.5 | vector | — | across-session variance. ⚠ **cited in Results, missing from the caption** |
+| 5I | Fig5 | paper/figures_v2/figure5/sine_combined_rmse.pdf | 5.5 × 4.5 | vector | — | across-session RMSE; caption entry **I** of the combined `	extbf{I--K:}` block |
+| 5J | Fig5 | paper/figures_v2/figure5/sine_combined_phase.pdf | 5.5 × 4.5 | vector | — | across-session phase lag; caption entry **J** of the combined `	extbf{I--K:}` block |
+| 5K | Fig5 | paper/figures_v2/figure5/sine_combined_variance.pdf | 5.5 × 4.5 | vector | — | across-session variance; caption entry **K** of the combined `	extbf{I--K:}` block |
 
 **Retired / superseded — kept for provenance, in no assembled figure:**
 
