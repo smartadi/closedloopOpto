@@ -81,8 +81,10 @@ end
 
 % ---- supplementary figure: per-trial mean vs trial index, small multiples ----
 PS = paperStyle(); setPaperDefaults();
-nC = 4; nR = ceil(nValid / nC);
-figBM = figure('Color','w','Units','centimeters','Position',[2 2 3.2*nC 2.6*nR]);
+% 5 x 3 at 2.6 x 2.1 cm (2026-10-01, user: smaller). Was 4 x 3.2 x 2.6 cm, which
+% made a 12.8 x 10.4 cm panel for what is a supporting control.
+nC = 5; nR = ceil(nValid / nC);
+figBM = paperFig(2.6*nC, 2.1*nR);
 tlo = tiledlayout(figBM, nR, nC, 'TileSpacing','compact','Padding','compact');
 vi = find(valid)';
 for k = 1:numel(vi)
@@ -96,6 +98,8 @@ for k = 1:numel(vi)
     sigStr = ''; if pOLS(i) < alpha, sigStr = ' *'; end
     title(ax, sprintf('%s  p=%.2f%s', fields{i}, pOLS(i), sigStr), 'FontSize',6,'FontWeight','bold');
     set(ax,'Box','off','TickDir','out','FontSize',5);
+    if mod(k-1, nC) ~= 0, set(ax,'YTickLabel',[]); end
+    if k <= numel(vi) - nC,  set(ax,'XTickLabel',[]); end
 end
 xlabel(tlo, 'Trial index (acquisition order)', 'FontSize',6,'FontWeight','bold');
 ylabel(tlo, 'Per-trial mean \DeltaF/F (%)', 'FontSize',6,'FontWeight','bold');
@@ -104,4 +108,5 @@ title(tlo, 'Spontaneous batch-mean stationarity', 'FontSize',7,'FontWeight','bol
 if isfolder('paper'), out_root = 'paper'; elseif isfolder(fullfile('..','paper')), out_root = fullfile('..','paper'); else, out_root = '.'; end
 supp_dir = fullfile(out_root, 'images', 'supplementary');
 if ~isfolder(supp_dir), mkdir(supp_dir); end
-paperExport(figBM, fullfile(supp_dir, 'batch_mean_stationarity.png'));
+% vector, not 300 dpi PNG -- the panel is line art (2026-10-01)
+paperExport(figBM, fullfile(supp_dir, 'batch_mean_stationarity.pdf'));
