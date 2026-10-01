@@ -186,45 +186,101 @@ distinct 11-session sets** in play, plus two distinct 13-session pools:
 *not* in S1. So the Fig 4 caption's single "11 sessions" is at best ambiguous and at worst
 wrong for two of the three panels it covers.
 
-### 5.1 Panels B/C — error decomposition — ✅ VERIFIED
-**397 closed-loop trials / 7 sessions.** Panel C title is literally `Unique R^2 (n=397, 7 sess)`.
-Unique R², early (0–1 s) → settled (1–3 s):
+### 5.1 Panels B/C — error decomposition — 🟥 **CANNOT BE REGENERATED** (run 2026-10-01)
 
-| factor | early | settled |
-|---|---|---|
-| initial deviation | 0.29 | 0.004 |
-| motion | <0.01 | <0.01 |
-| relative 2–4 Hz | 0.10 | 0.12 |
-| absolute 2–4 Hz | 0.23 | 0.35 |
+**The paper's numbers are 397 CL trials / 7 sessions** with unique R² (early → settled):
+init-dev 0.29→0.004, motion <0.01, rel 2–4 Hz 0.10→0.12, abs δ 0.23→0.35.
 
-✅ These match the manuscript exactly. All 7 motion sessions enter the per-session dots
-(`minTr` lowered 25 → 12 so the 16-trial m6 is not silently dropped).
+**None of that reproduces, because the generator cannot run.** Verified by running the gate
+logic over all 15 caches (`scratchpad/fig4_n_audit.m`):
 
-- 🟥 **Which 7?** Presumably S1 ∩ S2. But S1 ∩ S2 = {m2,m4,m5,m6,m9,m10,m11,m12} = **8**,
-  not 7. ⬜ **One session is unaccounted for — print the session list from the generator.**
-  This is the single most important open number in the paper.
-- ⚠ The older `cl_rmse_factor_windows.m` / `f4_partB_panels.m` three-factor version reported
-  **613 CL trials / 11 sessions** with different values (init-dev 0.381→0.029, rel 0.089→0.122).
-  That version is **superseded** — do not quote 613/11 anywhere.
+- `controller-analysis/f4_error_decomp.m:55` indexes **`dk.pwcDfk_l`** with no fallback.
+- **No cache has `pwcDfk_l`.** All 15 have `pwcDfk` instead.
+- `utils/controllerData.m` **no longer produces the `_l` buffers at all** — it writes only
+  `data.pncDfk` / `data.pwcDfk` (lines 161–162). So the field is not merely missing from
+  caches; it cannot be rebuilt by the current pipeline.
+- ⇒ **`f4_error_decomp.m` admits 0 of 15 sessions as it stands.**
+- ⚠ `utils/cl_reldelta.m`'s docstring still says "`d.pwcDfk_l` … Both are present for all 15
+  controller sessions". That is false and should be corrected.
 
-### 5.2 Panel D — state quartiles + session-aware LMM — 🟥 CONFLICT
-Caption currently says: **11 sessions, 1240 trials; motion 7 sessions, 760 trials.**
-The 2026-09-16 independent audit of the production `f4_row2_pool` + `f4_row2_fit` gave:
+**The fallback is exact.** From git history (`8673398:plottingScript.m:177`) the legacy buffer was
+`dFk(i-35*3 : i+35*(dur+3))` — 105 pre-samples, onset at col 106; the current one is
+`dFk(i-350 : i+35*(dur+3))` — 350 pre-samples, onset at col 351. **Same `dFk`, same onset
+alignment, same rate**; only the pre-buffer length differs. Columns 36–211 of the legacy buffer
+and 281–456 of the current one are therefore *the identical samples* of `dFk`
+(−2 s → +3 s). `f4_row2_pool.m` and `f4_partB_panels.m` already use this fallback;
+`f4_error_decomp.m` is the one that never got it.
 
-| factor | trials | sessions | mice |
+**Reconstruction on the defined cohort** (`scratchpad/panelC_repro.m` — f4_error_decomp's math
+and its verbatim `local_bandpow`, with the fallback applied), pool = **613 CL trials / 11 motion
+sessions** {m2,m4,m5,m6,m9,m10,m11,m12,m13,m14,m15}:
+
+| factor | early 0–1 s | settled 1–3 s | paper claims |
 |---|---|---|---|
-| initial deviation | 1670 | **15** | 4 |
-| motion | 1190 | **11** | 4 (= S2) |
-| relative / absolute δ | 1670 | **15** | 4 |
+| initial deviation | **0.279** | **0.005** | 0.29 → 0.004 ✅ reproduces |
+| motion | **0.000** | **0.000** | <0.01 ✅ reproduces |
+| relative 2–4 Hz | **0.011** | **0.012** | 0.10 → 0.12 ❌ **~10× lower** |
+| absolute δ | **0.142** | **0.219** | 0.23 → 0.35 ❌ lower |
+| full model R² | 0.549 | 0.352 | 0.41 / 0.13 (older 613/11 run) ❌ |
 
-The pool was evidently re-run after that audit (the motion interaction moved from
-−0.202 / p=0.003 to −0.212 / p=0.0042, and the manuscript quotes p=0.004). ⬜ **Re-run
-`f4_row2_pool` + `f4_row2_fit` and print per-factor n (trials / sessions / mice) and the
-session list.** Until then the caption's 11/1240/7/760 is unverified.
+Checked and excluded as causes: the bandpower implementation (swapping in the script's exact
+`local_bandpow` moved rel from 0.010→0.011 — no effect) and the spectral window (shown
+identical above).
 
-🟨 **Likely but unconfirmed:** 760 = OL+CL trials in the motion sessions, 397 = CL-only in
-the same sessions, 1240 = OL+CL across the 11. If so, 397 vs 760 is not an error — but the
-paper must say which counts are CL-only and which are both conditions. Right now it doesn't.
+🟥 **Leading hypothesis — needs the user's judgement.** With `has_motion` as the only
+session gate, the script admits **11** sessions, not 7. The published "7 sessions" is most likely
+**an artifact of which caches still carried `pwcDfk_l` at the time of that run**, not a defined
+criterion — which would mean the Fig 4C pool was never a stated inclusion rule. The two factors
+that reproduce (init-dev, motion) are the strong and the null one; the two that do not are the
+two δ measures, consistent with dilution by the 4 extra sessions (m2, m13, and the two new-rig
+mice m14/m15, which are on record as diluting the headline).
+
+⚠ **If the reconstruction stands, the Fig 4 story changes.** The paper says "relative and
+absolute 2–4 Hz power carry the settled window (0.10→0.12 and 0.23→0.35)". On the defined
+11-session cohort, **absolute δ (0.219) outweighs relative δ (0.012) by ~18×** — and absolute
+δ is the power-confounded measure the paper explicitly declines to interpret. The claim that the
+irreducible settled error is carried by a *power-independent* state would not survive as written.
+
+⚠ **Two different "motion" states inside one figure.** `f4_row2_pool.m` uses the **plain mean**
+z-motion over −2→+3 s (user decision 2026-09-11, "NO rectification"); `f4_error_decomp.m` uses
+the **mean of squared** motion over the same window. Panels C and D therefore regress on different
+state variables under the same label. Pick one.
+
+⚠ The older `cl_rmse_factor_windows.m` / `f4_partB_panels.m` three-factor run reported
+613 CL trials / 11 sessions with init-dev 0.381→0.029, rel 0.089→0.122, full R² 0.407/0.132.
+Same pool as my reconstruction, different values — so that path and `f4_error_decomp.m` do not
+agree with each other either. Do not quote 613/11 numbers from it without re-deriving them.
+
+### 5.2 Panel D — state quartiles + session-aware LMM — ✅ **RESOLVED** (run 2026-10-01)
+
+Ran the production `utils/f4_row2_pool.m` over all 15 caches (`scratchpad/fig4_n_audit.m`).
+This **exactly reproduces the 2026-09-16 audit**, so these are the numbers:
+
+| factor | all trials | CL trials | sessions | mice | session list |
+|---|---|---|---|---|---|
+| initial deviation | **1670** | 852 | **15** | 4 | m1–m15 |
+| motion | **1190** | **613** | **11** | 4 | m2,m4,m5,m6,m9,m10,m11,m12,m13,m14,m15 |
+| relative 2–4 Hz | **1670** | 852 | **15** | 4 | m1–m15 |
+| absolute 2–4 Hz | **1670** | 852 | **15** | 4 | m1–m15 |
+
+🟥 **The Fig 4 caption is wrong on all four of its numbers.** It says "11 sessions
+(1240 trials; motion 7 sessions, 760 trials)". Correct: **15 sessions / 1670 trials** for
+initial deviation, relative δ and absolute δ; **11 sessions / 1190 trials** for motion.
+There is no 1240 and no 760 anywhere in the pool.
+
+✅ Where "613" came from: it is the **CL-only** trial count of the 11 motion sessions.
+✅ 1670 = every OL+CL trial across the 15 sessions — i.e. **this pool applies no trial-level
+exclusion at all.** ⚠ That contradicts the Methods, which states trials with z-motion > 1.5
+were excluded. Either the exclusion is not applied here, or the Methods overstates it.
+
+✅ Per-session OL/CL splits (needed for the Methods, and not previously written down):
+m1 56/64, m2 97/103, m3 101/99, m4 92/108, m5 36/24, m6 14/16, m7 46/54, m8 38/22,
+m9 50/50, m10 48/52, m11 50/50, m12 35/65, m13 55/45, m14 45/55, m15 55/45.
+Totals **758 OL / 852 CL = 1610**… plus the 60 trials of m1/m3/m7/m8 that carry no motion,
+summing to the declared 1670. Every session's OL+CL equals its declared trial count.
+
+✅ Motion trace confirmed present in **11 of 15**; absent (identically zero) in **m1, m3, m7, m8**,
+all AL_0033 — independently reproducing the 2026-09-15 `h5read` audit.
 
 LMM read-outs currently in the paper (all from `RMSE ~ cond*state + (1+cond|sess) + (1|mouse)`,
 state centred/scaled within session):
