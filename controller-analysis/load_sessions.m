@@ -190,8 +190,19 @@ for k = 1:length(fields)
                 mouse.(fields{k}).d.stimEnds   = mouse.(fields{k}).d.timeBlue(kk);
             end
 
+            % dF/F method. Mode 0 (raw frames, rolling 40 s baseline) for the
+            % thirteen original sessions; mode 2 (SVD reconstruction + the SAME
+            % rolling baseline) for new builds, which have no local raw frames.
+            % Was mode 1 until 2026-10-01 -- mode 1 is F/meanImage*100 with NO
+            % rolling baseline, so m14/m15 retained 2-10x more slow drift than
+            % the other thirteen (60 s drift 2.02/3.18 vs 0.27-1.11) and the
+            % figure pooled two different definitions of dF/F. Switching to
+            % mode 2 reduced their drift to 0.96/0.65 and, because the drift was
+            % a common term inflating error in BOTH conditions, widened the
+            % OL-CL RMSE gap (m14 +0.294 -> +0.405, m15 +0.191 -> +0.506).
+            % No sign changed; the OL/CL variance ratio moved < 2.5 %.
             mode = 0;  % from binary image
-            if isNew; mode = 1; end   % new build has no local raw frames -> SVD recon
+            if isNew; mode = 2; end   % SVD recon + matched rolling baseline
             r    = 1;  % use dFk cache
             mouse.(fields{k}).data = getpixel_dFoF(mouse.(fields{k}).d, mode, mouse.(fields{k}).d.params.pixel, r);
 
