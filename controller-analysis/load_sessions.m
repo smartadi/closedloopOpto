@@ -335,24 +335,38 @@ selField = 10;   % <-- change to target session index
 analysisPlots_combined(mouse.(fields{selField}).data, mouse.(fields{selField}).d);
 
 %% SVD frame -- single session  (3 cm by 3 cm, high-res PDF)
-d_sel        = mouse.(fields{selField}).d;
-svdData.U    = d_sel.svd.U;
-svdData.V    = d_sel.svd.V;
-svdData.mimg = d_sel.svd.mimg;
+% GUARDED 2026-10-02. The caches were slimmed earlier today (utils/slim_ctrl_cache.m drops
+% d.svd, 28.3 GB -> 0.69 GB), so `d_sel.svd.U` now throws on a slim cache. Unguarded, that
+% aborted THE WHOLE SCRIPT here -- which silently cost everything below this point,
+% including `Mean_var_wc/nc` and `tp` (lines ~361-363). `variance_mse.m` then failed with
+% "Unrecognized function or variable 'tp'", and the cause looked like a bug in variance_mse
+% rather than a dead stop 25 lines earlier in its prerequisite. Skip + warn instead: the SVD
+% frame is one Figure-1 panel and must not take the Figure-3 aggregates down with it.
+d_sel = mouse.(fields{selField}).d;
+if isfield(d_sel,'svd') && ~isempty(d_sel.svd) && isfield(d_sel.svd,'U')
+    svdData.U    = d_sel.svd.U;
+    svdData.V    = d_sel.svd.V;
+    svdData.mimg = d_sel.svd.mimg;
 
-displayFrame(mouse.(fields{selField}).mn, ...
-             mouse.(fields{selField}).td, ...
-             mouse.(fields{selField}).en, ...
-             d_sel, d_sel.params.pixels, svdData);
+    displayFrame(mouse.(fields{selField}).mn, ...
+                 mouse.(fields{selField}).td, ...
+                 mouse.(fields{selField}).en, ...
+                 d_sel, d_sel.params.pixels, svdData);
 
-fig_frame = gcf;
-ax_frame  = gca;
-colorbar('off');
-set(ax_frame, 'XTick',[], 'YTick',[], 'DataAspectRatio',[1 1 1], 'Position',[0 0 1 1]);
-set(fig_frame, 'Units','centimeters', 'Position',[0 0 3 3]);
-exportgraphics(fig_frame, ...
-    sprintf('paper/images/figure1/svd_frame_%s_%s.pdf', mouse.(fields{selField}).mn, mouse.(fields{selField}).td), ...
-    'ContentType','image', 'Resolution',600, 'Padding','tight');
+    fig_frame = gcf;
+    ax_frame  = gca;
+    colorbar('off');
+    set(ax_frame, 'XTick',[], 'YTick',[], 'DataAspectRatio',[1 1 1], 'Position',[0 0 1 1]);
+    set(fig_frame, 'Units','centimeters', 'Position',[0 0 3 3]);
+    exportgraphics(fig_frame, ...
+        sprintf('paper/images/figure1/svd_frame_%s_%s.pdf', mouse.(fields{selField}).mn, mouse.(fields{selField}).td), ...
+        'ContentType','image', 'Resolution',600, 'Padding','tight');
+else
+    warning('load_sessions:noSVD', ...
+        ['m%d (%s) has no d.svd -- the Figure-1 SVD frame is SKIPPED. The cache is slim; ' ...
+         'force a server reload for that session to rebuild this one panel. Everything ' ...
+         'below (Mean_var_*, tp) still runs.'], selField, mouse.(fields{selField}).mn);
+end
 
 %%
 
