@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig-4C diagnosed: the CODE is exonerated, the CACHES changed, and the fingerprint says dF/F
+**Changed/Found:** Chased the Fig-4C discrepancy (published `0.29/0.10/0.23` vs fresh `0.387/0.095/0.276`) to a conclusion by elimination. Four candidates are now EXCLUDED BY MEASUREMENT, not by argument:
+| candidate | test | result |
+|---|---|---|
+| motion statistic | mean(z) vs mean(z^2) | moves unique R^2 by <= 0.003 |
+| pre-buffer switch | `_l` (onset 106) vs long (onset 351) | byte-identical -2.000..3.000 s slice |
+| the two new sessions | drop m14 AL_0048 + m15 AL_0051 (613 -> 513 trials) | **WORSE**: dev 0.097 -> 0.112 |
+| today's dF/F recompute of m14/m15 | same test (they are the only recomputed ones) | excluded with the above |
+| **the code itself** | **ran `git show 91ad3dd:f4_error_decomp.m`, the pre-finalization version, on today's data** | **0.388/0.096/0.275 vs current 0.387/0.095/0.276 - IDENTICAL** |
+**So the published panel was computed on a CACHE STATE THAT NO LONGER EXISTS.** Same script, same trials (613 / 11 motion sessions both ways), different inputs.
+**The fingerprint points at dF/F, and it is specific.** Of the three factors, the two that moved are exactly the AMPLITUDE-SENSITIVE ones - init-dev `|dFk(onset) - ref|` (0.29 -> 0.387) and abs-delta `log10` absolute power (0.23 -> 0.276, 0.35 -> 0.441). The one that did NOT move is rel-delta (0.10 -> 0.095), which is a RATIO of band powers and therefore invariant to any rescaling of dF/F. A change in the dF/F definition is the one hypothesis that predicts that split; a change in trial selection, windows or bands would not spare the ratio.
+**Why this is not alarming for the science:** no claim in `results.tex` is reversed. The ordering is unchanged - init-dev owns the transient, abs-delta dominates the steady state, rel-delta is intermediate, motion is ~0 - and motion's "<0.01" is reproduced exactly. Only the three magnitudes quoted in the caption and at `:153-156` are low, all in the same direction (the current, unified dF/F yields LARGER unique R^2 for the amplitude-sensitive factors).
+**Why:** User asked for the next step; this was the top open correctness item, and leaving an unexplained gap on a main-text panel was not acceptable before assembly.
+**Next:** (a) **Renumber the caption from the current panel** rather than hunting the old cache - the present pipeline is the audited one (rolling 40 s baseline, verified to reproduce cached F to 0.000e+00) and the old cache state is not recoverable or defensible. New values: init-dev **0.39 -> 0.02**, rel **0.10 -> 0.13**, abs **0.28 -> 0.44**, motion `<0.01` unchanged. (b) Confirm the same amplitude fingerprint does not touch any OTHER published number built on absolute dF/F magnitude - Fig-2's abs-delta and pre-var are the obvious ones to check. (c) `slim_ctrl_cache.m` / any future cache rebuild should stamp a provenance field (dff_mode + date) into `d`, so "which cache state produced this panel" is answerable instead of inferred - none of the 15 caches currently carries `d.dff_mode`.
+
+
 ### 2026-10-02 - Fig 2G / Fig 4D state-quartile panels: pooled display vs session-level stats
 **Changed/Found:** `controller-analysis/f4_row2_quartiles.m` — the drawn quartile bars pool all trials (quartile edges from the pooled z-state, L147) with **trial-SEM** error bars (L151-152), but the panel star comes from the session-aware LMM and the session signed-rank, which use **per-session** quartile edges (L119). PAPER.md (2026-08-13 entry) says the bars carry SEM *across sessions*; the current code does not. `impulse-analysis/imp_state_trialvar_fig.m` (2G) does the same thing: a pooled curve with a trial-bootstrap CI next to an LMM (1|session) star and a "k/N sess" count. No code changed.
 **Why:** User flagged the mismatch between the pooled plots and the session-specific significance tests in Figs 2 and 4.
