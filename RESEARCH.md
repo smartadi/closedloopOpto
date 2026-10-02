@@ -16,6 +16,20 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-01 - Onset audit: the metadata-to-laser offset CHANGED across three rig eras; m1/m2 are 4.4 samples out
+**Changed/Found:** New `controller-analysis/onset_provenance_audit.m` (read-only) compares each session's in-use `stimStarts` against onsets reconstructed independently from the recorded analog light command (`inpVals > 0.1` on `inpTime`), the same signal `findStims` mode 0 uses. Ran on all 15. **The feared 40 s catastrophe did NOT occur** - `params.horizon = 1400` is genuinely present in all 13 legacy sessions, so the silent try/catch fallback never fired for them; it is nominally active only for m14/m15, whose onsets `load_sessions.m` overrides anyway.
+**But the offset is real and it changed over time, exactly as the user predicted.** Signed offsets (metadata minus laser, in 35 Hz samples), with IQR:
+  - **m1 (2025-01-20) -5.73, m2 (2025-02-12) -6.27, IQR 0.5** - tight and constant, but ~4.4 samples (126 ms) FURTHER out than every later session.
+  - m3-m8 (2025-02-24 .. 04-15): -1.52 to -2.23, IQR 1.1-2.2 (frame-quantisation jitter).
+  - m9-m13 (2025-04-19 .. 04-30): -1.86 to -1.89, **IQR 0.02** - deterministic.
+  - m15 (2026-07-29): -2.85, IQR 0.03 - deterministic, but a different constant again.
+  - **m14 (AL_0048 2026-07-29): no light command recorded at all (0 crossings), so its onsets cannot be verified by any independent clock.**
+**Interpretation.** A ~1.9-sample (54 ms) metadata-before-laser offset is physically expected: the metadata timestamps the controller's decision, the light command the laser actually firing, so the difference is loop latency plus frame quantisation. A deterministic IQR of 0.02 confirms it is a constant, not noise. **That makes m1 and m2 the anomaly** - same horizon, same mode, but an extra ~4.4 samples. This is the era-dependent Timeline offset the user warned about, caught.
+**Why it matters, quantitatively.** 4.4 samples is 4% of the 0-3 s RMSE window (tolerable), **13% of the 0-1 s transient window**, and a 126 ms error on *initial deviation*, which is read from a SINGLE SAMPLE at the onset column - so for m1 and m2 that factor is sampled from the wrong moment entirely. Initial deviation owns the transient-window claim (unique R^2 = 0.29).
+**Why:** User asked for the onset conventions to be audited and logged before the struct restructure, so a shifted onset is not baked permanently into rebuilt arrays.
+**Next:** The restructure should align every session to the **light-command onset**, not the metadata onset, and store the measured per-session offset as provenance rather than leaving it implicit - the laser is the event the neural response is locked to, so it is the correct zero. m14 has no light record and must be handled explicitly: either align it by the era constant from m15 (-2.85) with a flag, or exclude it from any analysis where a sub-100 ms error matters. Also re-check whether the ~1.9-sample figure reconciles the unresolved 47 ms vs 80 ms loop-latency conflict in the manuscript (1.88 samples = 53.7 ms, which sits between them). Before any of this changes a result, re-run the Fig-4 initial-deviation decomposition with m1/m2 corrected and see whether unique R^2 = 0.29 moves.
+
+
 ### 2026-10-01 - input_params column 2 has FOUR meanings across rig builds, and one fallback is silent
 **Changed/Found:** User reported that server-side metadata CSVs were written with a Timeline offset that changed over time. Confirmed, and the scale is larger than a single offset - `utils/findStims.m` carries **three incompatible readings of the same column**, and `controller-analysis/load_sessions.m:96` documents a fourth:
   - **mode 0** ignores `input_params` entirely and derives onsets by threshold-crossing the analog light command (`d.inpVals > 0.1` on `d.inpTime`). This is an INDEPENDENT hardware clock.
