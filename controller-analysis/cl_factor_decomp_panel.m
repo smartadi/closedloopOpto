@@ -49,6 +49,8 @@ FD_EXPORT_PDF = false;   % PNG by default -- flip only when this is confirmed as
 
 % ---- constants (identical to cl_rmse_factor_windows.m) ----
 Fs = 35; c0 = 36; c0_mot = 71; c0_l = 106;
+% MOTION STATISTIC, shared with Fig-4 Row 2 (user, 2026-10-02): 'mean' primary | 'sq' secondary.
+if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; end
 mot_pre = 2; spec_pre_s = 2; spec_post_s = 3;
 hi_bnd = [2 4]; tot_bnd = [0.4 10];
 eE = c0 : c0+round(1*Fs);                 % transient 0 -> 1 s
@@ -64,7 +66,9 @@ for k = 1:numel(fields)
     if isfield(s,'skip') && s.skip;                continue; end
     if ~isfield(s,'data') || isempty(s.data);      continue; end
     dk = s.data;
-    if ~isfield(dk,'wcDfk') || ~isfield(dk,'pwcDfk_l'); continue; end
+    % Was `|| ~isfield(dk,'pwcDfk_l')` -- which SILENTLY skipped every session on the
+    % current caches and drew an empty panel. pre_spec_buffer errors instead (2026-10-02).
+    if ~isfield(dk,'wcDfk'); continue; end
     ref = s.d.ref; dur = s.d.params.dur; nT = size(dk.wcDfk,1);
 
     x1 = abs(dk.wcDfk(:,c0) - ref);                              % initial deviation
@@ -74,13 +78,21 @@ for k = 1:numel(fields)
     if hasMot
         ws = max(1, c0_mot - round(mot_pre*Fs));
         we = min(size(dk.wcmotion,2), c0_mot + round(dur*Fs) - 1);
-        x2 = mean(dk.wcmotion(1:nT, ws:we).^2, 2);               % motion energy
+        % mean(z), via the SHARED utils/f4_motion_stat.m -- reconciled with Fig-4 Row 2
+        % (user, 2026-10-02). Was mean(z^2); the window already matched Row 2 (cols 1:175,
+        % -2.000 to +2.971 s, verified for all 15 sessions). F4_MOT_STAT='sq' for the secondary.
+        x2 = f4_motion_stat(dk.wcmotion(1:nT, ws:we), F4_MOT_STAT);
     end
 
+    % PRE-BUFFER: resolved per session (utils/pre_spec_buffer.m, 2026-10-02). No cache in
+    % data/ still carries a `_l` buffer, so the hardcoded pwcDfk_l made this script dead.
+    % c0_l now comes back as 106 or 351 to match whichever buffer exists; the window in
+    % SECONDS is unchanged either way.
+    [pbuf, c0_l] = pre_spec_buffer(dk, 'wc');
     sa = c0_l - round(spec_pre_s*Fs);  sb = c0_l + round(spec_post_s*Fs);
     xr = nan(nT,1);
     for t = 1:nT
-        seg   = double(dk.pwcDfk_l(t, sa:sb));
+        seg   = double(pbuf(t, sa:sb));
         xr(t) = fd_bp(seg,Fs,hi_bnd(1),hi_bnd(2)) / max(fd_bp(seg,Fs,tot_bnd(1),tot_bnd(2)), eps);
     end                                                          % relative 2-4 Hz
 

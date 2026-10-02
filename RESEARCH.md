@@ -16,6 +16,44 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig-4 Row 1 motion reconciled to mean(z); numerically harmless, but Fig-4C does NOT reproduce
+**Changed/Found:** User: "reconcile the figure 4 row 1 error decomposition stuff on motion to take mean(z) and same window as figure 4 row 2 state dependent analysis". Both halves checked before changing anything:
+- **The WINDOW already matched.** Row 1 computes `we` from each session's `params.dur`; Row 2 hardcodes `dur=3`. Verified session by session: **all 15 are dur=3 with 176 motion columns**, so both resolve to cols 1:175 = **-2.000 .. +2.971 s**. Nothing to change, and now recorded rather than assumed. (The stray `-1` that makes it +2.971 instead of +3.000 is a SEPARATE pending item, untouched here.)
+- **The STATISTIC differed** and is now unified. `utils/f4_motion_stat.m` takes one or two segments, so all five Row-1 sites (`f4_error_decomp.m`, `cl_rmse_factor_windows.m`, `cl_factor_decomp_panel.m`, `f4_state_exemplars.m`, `_supp.m`) and both Row-2 sites now read the same function and the same `F4_MOT_STAT` knob. Fig 4 no longer defines motion two ways.
+**The statistic change is numerically harmless to Row 1** (mode 'sep' unique R^2, 613 CL trials / 11 motion sessions, identical n both ways):
+| factor | mean(z) 0-1s / 1-3s | mean(z^2) 0-1s / 1-3s |
+|---|---|---|
+| init-dev | 0.387 / 0.020 | 0.388 / 0.020 |
+| **motion** | **0.000 / 0.000** | **0.001 / 0.000** |
+| rel 2-4 Hz | 0.095 / 0.134 | 0.096 / 0.137 |
+| abs delta | 0.276 / 0.441 | 0.275 / 0.444 |
+Motion's unique R^2 is ~0 under either statistic, so the published "motion contributed negligibly (unique $R^2 < 0.01$)" is unaffected - if anything cleaner. The other factors move by <= 0.003 only because motion is a co-regressor.
+**⚠ BUT the published Fig-4C numbers do NOT reproduce**, and this is unrelated to today's change:
+| factor | `results.tex:122/153-156` | fresh run |
+|---|---|---|
+| init-dev | 0.29 -> 0.004 | **0.387 -> 0.020** |
+| rel 2-4 Hz | 0.10 -> 0.12 | **0.095 -> 0.134** |
+| abs delta | 0.23 -> 0.35 | **0.276 -> 0.441** |
+| motion | < 0.01 | 0.000 (reproduced) |
+**Two candidate causes are already EXCLUDED by measurement:** the motion statistic (table above, <= 0.003) and the pre-buffer switch (both buffers give byte-identical -2.000..3.000 s slices of the same `dFk`). Remaining candidates, untested: the dF/F unification applied earlier today, and whether the published panel predates the AL_0048/AL_0051 sessions. **I am not attributing it without a test.** The QUALITATIVE claim is intact and unchanged in direction - init-dev owns the transient, abs and rel delta carry the steady state, motion neither - but the three magnitudes quoted in the caption and at `:153-156` are all low.
+**Why:** User instruction; the reconciliation itself, plus honest reporting of what running the scripts revealed.
+**Next:** (a) Diagnose Fig-4C by checking out the panel's last-generated state and bisecting against the dF/F change - do NOT edit the caption until the cause is known, since the right fix may be regeneration rather than renumbering. (b) `f4_error_decomp.m`'s header line F2 was corrected from "mean z-motion^2" to mean z. (c) The stray `-1` in the motion window end is still open.
+
+### 2026-10-02 - Fig-4 Row-1 scripts were ALL DEAD on the current caches; one failed SILENTLY
+**Changed/Found:** Reconciling Row-1 motion required running those scripts, and none of them could. Every Fig-4 Row-1 script hardcoded `pwcDfk_l` (onset col 106), and **no cache in `data/` still carries a `_l` buffer** - checked all 15, every one has `pwcDfk`/`pncDfk` at 561 columns, onset col 351.
+| script | behaviour before this fix |
+|---|---|
+| `f4_error_decomp.m` | error: Unrecognized field name "pwcDfk_l" |
+| `cl_rmse_factor_windows.m` | error, same |
+| `f4_state_exemplars.m` / `_supp.m` | error, same |
+| **`cl_factor_decomp_panel.m`** | **NO error - line 69 `continue`d past every session and drew an EMPTY panel** |
+The silent one is the dangerous one: `if ~isfield(dk,'wcDfk') || ~isfield(dk,'pwcDfk_l'); continue; end` turns a missing buffer into "this session has no data", so the script exits 0 and exports a figure. After the fix it pools **852 trials / 15 sessions** (613/11 for the motion model). It had been reporting nothing at all.
+**Fix:** new **`utils/pre_spec_buffer.m`** resolves the buffer and returns its ONSET COLUMN, so each caller keeps its own `c0 - round(pre*Fs) : c0 + round(post*Fs)` arithmetic and the window in SECONDS is identical whichever buffer exists. **Verified identical, not assumed:** long buffer slice 281:456 = -2.000..3.000 s; a `_l` buffer would slice 36:211 = -2.000..3.000 s. It **errors** when neither buffer is present rather than skipping or clamping, so this failure mode cannot recur quietly. All five scripts now run.
+**⚠ FIVE MORE SCRIPTS HAVE THE SAME DEAD DEPENDENCY and are NOT fixed here** (out of scope, needs its own pass, and two of them feed Figure 3): `step_response.m` (Fig-3 panel; slices `pncDfk_l(:,1:35*3)` etc., a different column scheme that needs care), `variance_mse.m:431-432`, `trial_state_mse.m:95-96,110-111`, `cl_mse_exemplars.m:149,164`, `f4_delta_candidates.m:24,84,89`.
+**Why:** The user asked to reconcile Row-1 motion with Row 2; that cannot be verified without running the scripts, and running them exposed this.
+**Next:** (a) Audit those five remaining files the same way - **check `step_response.m` first, it is a Fig-3 paper panel**. (b) Grep the repo for any other `isfield(...,'p*Dfk_l')` used as a data-presence test; that idiom converts a schema change into silent empty output. (c) Consider making `pre_spec_buffer` the only way any script reaches these buffers.
+
+
 ### 2026-10-02 - LEDGER AUDIT: two "published" numbers I was carrying are NOT in the manuscript
 **Changed/Found:** User asked whether confirmed values are being logged correctly. Checked every number this session claims to move against the live `Closedloop_edit/results.tex` rather than against my own notes, and found **two errors in my ledger, both in the same direction - I had been treating freshly COMPUTED values as if they were PUBLISHED ones:**
 1. **Fig-4 motion.** I recorded the published values as predictability `1.1e-5` and controllability `0.0098`. The manuscript says neither. `results.tex:123` and `:213` both say **predictability p = 5.1e-5, controllability p = 0.0144**. `1.1e-5`/`0.0098` were values *I computed this morning* under `mean(z^2)` after the dF/F fix - never in the paper. So "revert to mean(z) moves the published 1.1e-5" was wrong twice over: wrong baseline, and the real baseline predates both of today's changes.

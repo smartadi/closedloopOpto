@@ -10,6 +10,8 @@ root='C:\Users\aditya\Documents\projects\brain_paper';
 outsupp=fullfile(root,'paper','images','supplementary'); if ~exist(outsupp,'dir'); mkdir(outsupp); end
 outview=fullfile(root,'controller-analysis','_preview'); if ~exist(outview,'dir'); mkdir(outview); end
 Fs=35; c0=36; c0_mot=71; c0_l=106; c1=71; c2=141; mot_pre=2; spec_pre_s=2; spec_post_s=3;
+% MOTION STATISTIC, shared with Fig-4 Row 2 (user, 2026-10-02): 'mean' primary | 'sq' secondary.
+if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; end
 delta_bnd=[1 4]; hi_bnd=[2 4]; tot_bnd=[0.4 10];
 bp=@(seg,lo,hi) local_bandpow(seg,Fs,lo,hi);
 col=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];
@@ -25,11 +27,19 @@ for k=1:numel(fields)
     y=sqrt(mean((dk.wcDfk(:,c1:c2)-ref).^2,2));
     x1=abs(dk.wcDfk(:,c0)-ref);
     ws=max(1,c0_mot-round(mot_pre*Fs)); we=min(size(dk.wcmotion,2),c0_mot+round(dur*Fs)-1);
-    x2=mean(dk.wcmotion(1:nT,ws:we).^2,2);
+    % mean(z), via the SHARED utils/f4_motion_stat.m -- reconciled with Fig-4 Row 2
+    % (user, 2026-10-02). Was mean(z^2); the window already matched Row 2 (cols 1:175,
+    % -2.000 to +2.971 s, verified for all 15 sessions). F4_MOT_STAT='sq' for the secondary.
+    x2=f4_motion_stat(dk.wcmotion(1:nT,ws:we), F4_MOT_STAT);
+    % PRE-BUFFER: resolved per session (utils/pre_spec_buffer.m, 2026-10-02). No cache in
+    % data/ still carries a `_l` buffer, so the hardcoded pwcDfk_l made this script dead.
+    % c0_l now comes back as 106 or 351 to match whichever buffer exists; the window in
+    % SECONDS is unchanged either way.
+    [pbuf, c0_l] = pre_spec_buffer(dk, 'wc');
     sa=c0_l-round(spec_pre_s*Fs); sb=c0_l+round(spec_post_s*Fs);
     [xrel,xdel]=deal(nan(nT,1));
     for t=1:nT
-        seg=double(dk.pwcDfk_l(t,sa:sb));
+        seg=double(pbuf(t,sa:sb));
         xdel(t)=bp(seg,delta_bnd(1),delta_bnd(2));
         xrel(t)=bp(seg,hi_bnd(1),hi_bnd(2))/max(bp(seg,tot_bnd(1),tot_bnd(2)),eps);
     end
@@ -55,7 +65,8 @@ for r=1:nS
     dk=segs{r}; ref=-5; pk=picks{r};
     for j=1:4
         ax=nexttile(tl); tri=pk(j); hold(ax,'on');
-        seg=dk.pwcDfk_l(tri, c0_l-spec_pre_s*Fs : c0_l+spec_post_s*Fs);
+        [eb, ec] = pre_spec_buffer(dk, 'wc');
+        seg=eb(tri, ec-spec_pre_s*Fs : ec+spec_post_s*Fs);
         patch(ax,[0 3 3 0],[yl(1) yl(1) yl(2) yl(2)],[.9 .9 .9],'EdgeColor','none','FaceAlpha',.5,'HandleVisibility','off');
         plot(ax,tv([1 end]),[ref ref],'--','Color',[.3 .3 .3],'LineWidth',PS.lw_ref,'HandleVisibility','off');
         xline(ax,0,':','Color',[.6 .6 .6],'HandleVisibility','off');

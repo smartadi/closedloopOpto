@@ -6,7 +6,7 @@
 %
 % FOUR FACTORS (user 2026-09-15):
 %   F1 init-dev   = |dF/F(onset) - ref|
-%   F2 motion     = mean z-motion^2, -2 s -> stim end
+%   F2 motion     = mean z-motion, -2 s -> stim end (f4_motion_stat; was ^2 until 2026-10-02)
 %   F3 rel 2-4Hz  = bandpow(2-4)/bandpow(0.4-10), -2 s -> stim end   (power-independent)
 %   F4 abs delta  = log10 bandpow(1-4 Hz), -2 s -> stim end          (magnitude; confounded)
 %
@@ -32,6 +32,8 @@ if ~exist(outview,'dir'); mkdir(outview); end
 
 % ---- constants (match cl_rmse_factor_windows.m) ----
 Fs=35; c0=36; c0_mot=71; c0_l=106; mot_pre=2; spec_pre_s=2; spec_post_s=3;
+% MOTION STATISTIC, shared with Fig-4 Row 2 (user, 2026-10-02): 'mean' primary | 'sq' secondary.
+if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; end
 delta_bnd=[1 4]; hi_bnd=[2 4]; tot_bnd=[0.4 10];
 eE = c0 : c0+round(1*Fs);                 % 0 -> 1 s
 lL = c0+round(1*Fs)+1 : c0+round(3*Fs);   % 1 -> 3 s
@@ -48,11 +50,19 @@ for k=1:numel(fields)
     ref=s.d.ref; dur=s.d.params.dur; nT=size(dk.wcDfk,1);
     x1=abs(dk.wcDfk(:,c0)-ref);
     ws=max(1,c0_mot-round(mot_pre*Fs)); we=min(size(dk.wcmotion,2), c0_mot+round(dur*Fs)-1);
-    x2=mean(dk.wcmotion(1:nT,ws:we).^2,2);
+    % mean(z), via the SHARED utils/f4_motion_stat.m -- reconciled with Fig-4 Row 2
+    % (user, 2026-10-02). Was mean(z^2); the window already matched Row 2 (cols 1:175,
+    % -2.000 to +2.971 s, verified for all 15 sessions). F4_MOT_STAT='sq' for the secondary.
+    x2=f4_motion_stat(dk.wcmotion(1:nT,ws:we), F4_MOT_STAT);
+    % PRE-BUFFER: resolved per session (utils/pre_spec_buffer.m, 2026-10-02). No cache in
+    % data/ still carries a `_l` buffer, so the hardcoded pwcDfk_l made this script dead.
+    % c0_l now comes back as 106 or 351 to match whichever buffer exists; the window in
+    % SECONDS is unchanged either way.
+    [pbuf, c0_l] = pre_spec_buffer(dk, 'wc');
     sa=c0_l-round(spec_pre_s*Fs); sb=c0_l+round(spec_post_s*Fs);
     [xrel,xdel]=deal(nan(nT,1));
     for t=1:nT
-        seg=double(dk.pwcDfk_l(t,sa:sb));
+        seg=double(pbuf(t,sa:sb));
         xdel(t)=bandpow(seg,delta_bnd(1),delta_bnd(2));
         xrel(t)=bandpow(seg,hi_bnd(1),hi_bnd(2))/max(bandpow(seg,tot_bnd(1),tot_bnd(2)),eps);
     end

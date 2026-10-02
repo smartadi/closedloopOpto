@@ -40,6 +40,8 @@ end
 Fs      = 35;
 c0      = 36;    % onset col, wcDfk
 c0_mot  = 71;    % onset col, wcmotion
+% MOTION STATISTIC, shared with Fig-4 Row 2 (user, 2026-10-02): 'mean' primary | 'sq' secondary.
+if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; end
 c0_l    = 106;   % onset col, pwcDfk_l
 mot_pre = 2;
 spec_pre_s = 2; spec_post_s = 3;        % delta window: -2 -> stim end (dur=3)
@@ -74,9 +76,17 @@ for k = 1:numel(fields)
     % X2 motion energy, -2 -> stim end
     ws = max(1, c0_mot - round(mot_pre*Fs));
     we = min(size(dk.wcmotion,2), c0_mot + round(dur*Fs) - 1);
-    x2 = mean(dk.wcmotion(1:nT, ws:we).^2, 2);
+    % mean(z), via the SHARED utils/f4_motion_stat.m -- reconciled with Fig-4 Row 2
+    % (user, 2026-10-02). Was mean(z^2); the window already matched Row 2 (cols 1:175,
+    % -2.000 to +2.971 s, verified for all 15 sessions). F4_MOT_STAT='sq' for the secondary.
+    x2 = f4_motion_stat(dk.wcmotion(1:nT, ws:we), F4_MOT_STAT);
 
-    % spectral window on pwcDfk_l: -2 -> stim end
+    % PRE-BUFFER: resolved per session (utils/pre_spec_buffer.m, 2026-10-02). No cache in
+    % data/ still carries a `_l` buffer, so the hardcoded pwcDfk_l made this script dead.
+    % c0_l now comes back as 106 or 351 to match whichever buffer exists; the window in
+    % SECONDS is unchanged either way.
+    [pbuf, c0_l] = pre_spec_buffer(dk, 'wc');
+    % spectral window on the resolved pre-buffer: -2 -> stim end
     sa = c0_l - round(spec_pre_s*Fs);
     sb = c0_l + round(spec_post_s*Fs);
     pa = c0_l - round(spec_pre_s*Fs);      % pre-only end at onset
@@ -84,8 +94,8 @@ for k = 1:numel(fields)
 
     [xdel, xrel, xslow, xpre] = deal(nan(nT,1));
     for t = 1:nT
-        seg  = double(dk.pwcDfk_l(t, sa:sb));
-        pseg = double(dk.pwcDfk_l(t, pa:pb));
+        seg  = double(pbuf(t, sa:sb));
+        pseg = double(pbuf(t, pa:pb));
         pd = bandpow(seg, delta_bnd(1), delta_bnd(2));
         ps = bandpow(seg, slow_bnd(1),  slow_bnd(2));
         pt = bandpow(seg, tot_bnd(1),   tot_bnd(2));
@@ -206,7 +216,8 @@ ax=nexttile(tl); hold(ax,'on');
 for ii=1:2
     idx = [ex_slow ex_delt]; cc = [0.55 0.25 0.60; 0.35 0.45 0.70];
     dk=mouse.(fields{SESS(idx(ii))}).data;
-    seg=double(dk.pwcDfk_l(TRI(idx(ii)), c0_l-spec_pre_s*Fs : c0_l+spec_post_s*Fs));
+    [eb, ec] = pre_spec_buffer(dk, 'wc');
+    seg=double(eb(TRI(idx(ii)), ec-spec_pre_s*Fs : ec+spec_post_s*Fs));
     [Pxx,fx]=local_psd(seg,Fs);
     plot(ax, fx, 10*log10(Pxx+eps), '-', 'Color', cc(ii,:), 'LineWidth', PS.lw_mean);
 end
@@ -288,9 +299,13 @@ function [P,fr] = local_psd(seg, Fs)
     w = hannwin(N).'; P = abs(fft(seg.*w)).^2; P = P(1:floor(N/2)+1);
     fr = (0:floor(N/2))*Fs/N;
 end
-function plot_ex(ax, mouse, fields, SESS, TRI, t, c0_l, pre, post, Fs, cc, PS)
+function plot_ex(ax, mouse, fields, SESS, TRI, t, ~, pre, post, Fs, cc, PS)
+    % 7th arg was c0_l; the onset column is now resolved per session from the buffer that
+    % actually exists (2026-10-02), so the caller's value is ignored. Signature kept so the
+    % two call sites above do not have to change.
     dk=mouse.(fields{SESS(t)}).data; ref=mouse.(fields{SESS(t)}).d.ref;
-    tv=(-pre:1/Fs:post).'; seg=dk.pwcDfk_l(TRI(t), c0_l-pre*Fs : c0_l+post*Fs);
+    [pb_, c0_l] = pre_spec_buffer(dk, 'wc');
+    tv=(-pre:1/Fs:post).'; seg=pb_(TRI(t), c0_l-pre*Fs : c0_l+post*Fs);
     hold(ax,'on');
     patch(ax,[0 3 3 0],[-16 -16 10 10],[0.85 0.85 0.85],'EdgeColor','none','FaceAlpha',0.45);
     plot(ax,tv([1 end]),[ref ref],'--','Color',[0.3 0.3 0.3],'LineWidth',PS.lw_ref);
