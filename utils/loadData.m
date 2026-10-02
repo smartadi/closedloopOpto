@@ -39,12 +39,22 @@ end
 d.inpTime638 = tt638;
 d.inpVals638 = v638;
 
-% Legacy fields — use 594 if available, else 638
-if ~isempty(tt594)
-    d.inpTime = tt594;  d.inpVals = v594;  tt = tt594;
+% Laser-channel selection (2026-10-01). This used to prefer 594 whenever a 594
+% file existed, which is wrong for the dual-opsin mouse: AL_0048 was stimulated
+% at 638 nm and its 594 channel is recorded but flat (-0.046..0.016 V, zero
+% threshold crossings), so d.inpVals/d.lightRaw silently pointed at an empty
+% trace and the session looked as though it had no laser record at all.
+% AL_0051, same day, is the mirror case. Select by SIGNAL, not by preference:
+% count threshold crossings on each channel and take the one that fired. Both
+% per-wavelength fields are left untouched for anything that needs them.
+n594 = laser_crossings(v594);
+n638 = laser_crossings(v638);
+if n638 > n594
+    d.inpTime = tt638;  d.inpVals = v638;  tt = tt638;  d.laser_nm = 638;
 else
-    d.inpTime = tt638;  d.inpVals = v638;  tt = tt638;
+    d.inpTime = tt594;  d.inpVals = v594;  tt = tt594;  d.laser_nm = 594;
 end
+d.laser_crossings = [n594 n638];
 
 try
     d.lightRaw594 = readNPY(append(serverRoot,'/lightCommand594.raw.npy'));
@@ -60,8 +70,11 @@ catch
     d.lightRaw638 = []; d.lightTime638 = [];
 end
 
-% Legacy lightRaw/lightTime — prefer 594
-if ~isempty(d.lightRaw594)
+% lightRaw/lightTime — follow the same signal-based choice as inpVals above,
+% so the two can never disagree about which laser the session used.
+if d.laser_nm == 638 && ~isempty(d.lightRaw638)
+    d.lightRaw = d.lightRaw638;  d.lightTime = d.lightTime638;
+elseif ~isempty(d.lightRaw594)
     d.lightRaw = d.lightRaw594;  d.lightTime = d.lightTime594;
 else
     d.lightRaw = d.lightRaw638;  d.lightTime = d.lightTime638;
@@ -86,3 +99,12 @@ end
 
 end
 
+
+function n = laser_crossings(v)
+%LASER_CROSSINGS  Count rising threshold crossings on a light-command trace.
+% Returns 0 for an empty or flat channel, which is how a recorded-but-unused
+% laser presents itself.
+if isempty(v), n = 0; return; end
+v = double(v(:));
+n = sum(v(2:end) > 0.1 & v(1:end-1) <= 0.1);
+end
