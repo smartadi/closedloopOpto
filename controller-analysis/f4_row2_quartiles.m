@@ -11,7 +11,7 @@
 % STATES -- defined IDENTICALLY to row 1 (f4_partB_panels / cl_rmse_factor_windows),
 % on the OL (nc) and CL (wc) buffers:
 %   initdev = |dFk(onset) - ref|
-%   motion  = MEAN movement over -2 s -> stim end (plain mean, no rectify; unified w/ f4_row2_pool)
+%   motion  = MEAN SQUARE of z-motion over -2 s -> stim end (energy; unified w/ f4_row2_pool)
 %   delta   = cl_reldelta rel 2-4 Hz over -2 s -> stim end
 % Outcome = disturbance-rejection RMSE to ref over [+1,+3] s (settled window),
 % z-scored within session across the combined OL+CL trials (removes session
@@ -82,7 +82,13 @@ for k=1:numel(fields)
     if hasM
         wsO=max(1,c0_mot-round(2*Fs)); weO=min(size(d.ncmotion,2),c0_mot+round(dur*Fs)-1);
         wsC=max(1,c0_mot-round(2*Fs)); weC=min(size(d.wcmotion,2),c0_mot+round(dur*Fs)-1);
-        S.motion={mean(d.ncmotion(:,wsO:weO),2), mean(d.wcmotion(:,wsC:weC),2)};   % PLAIN mean (unified w/ f4_row2_pool)
+        % mean(z^2), matching utils/f4_row2_pool.m:47. These two blocks are
+        % duplicated pooling code and DIVERGED on 2026-10-01, when the pool was
+        % switched to the mean square but this copy was not: the panel then binned
+        % trials by PLAIN mean motion while the star printed above it came from the
+        % shared pool's SQUARED motion -- bars and p-value describing different
+        % orderings of the same trials. Fixed 2026-10-02.
+        S.motion={mean(d.ncmotion(:,wsO:weO).^2,2), mean(d.wcmotion(:,wsC:weC).^2,2)};
     else, S.motion={nan(nO,1),nan(nC,1)}; end
     if isfield(d,'pncDfk_l')&&~isempty(d.pncDfk_l)&&isfield(d,'pwcDfk_l')&&~isempty(d.pwcDfk_l)
         [rO,cO]=cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts);
