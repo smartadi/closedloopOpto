@@ -16,6 +16,13 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - First paper panels built end-to-end from raw camera frames, with no MATLAB cache in the chain
+**Changed/Found:** Fig-3 panels A-E now export from the server's raw data alone. The representative session is m10 (AL_0039 2025-04-19 e1), whose per-pixel trace was streamed out of `widefield.wfz` and verified to 1.3e-12 relative against MATLAB's `dFk` earlier today. **Proof that nothing MATLAB-side is involved:** re-ran with `BRAIN_PAPER_ROOT` pointed at a directory that does not exist (`__no_matlab_repo__`) and all five panels still exported. Everything the panels need - Timeline, `params`, `input_params.csv`, laser channel, `timeBlue`, motion, and the frames themselves - comes off the server; the only local artifact is the ~1 MB pixel trace.
+
+Raw-frame rebuild status at this point: **6 verified** (m3 65.3 min, m4 51.6, m5 25.4, m6, m10 25.8, m13 31.9; all 1e-12 relative or better), **1 failed** (m2, logged above), 4 streaming, 2 queued.
+**Why:** This is the claim the whole port rests on - that the figures are recomputed from primary data rather than re-plotted from caches - and until now it was an architectural intention rather than a demonstrated fact. Pointing the MATLAB root at a nonexistent path is the only test that actually proves it, because a silent cache fallback looks identical to success otherwise.
+**Next:** The cross-session panels (F-I) and the LMM still need all 13 mode-0 sessions, so they stay on `--source matlab` until the rebuild finishes. Figure 1's SVD frame also uses m10 but reads the 2.8 GB `U` - run it after the workers drain so it is not competing for server bandwidth.
+
 ### 2026-10-02 - RETRACTION: mean(z^2) is the WRONG motion statistic; z is already an energy
 **Changed/Found:** The user asked me to confirm, before applying `mean(z^2)` to Figure 2, that `z` is a z-score and not already a squared motion energy. It is already an energy, in BOTH analyses, verified against the raw files:
 - **Impulse (Fig 2):** `load_experiments.m:87` takes FaceMap's `motion_1` from `face_proc.mat`. Measured on AL_0041 2025-11-05/3: **min = 0, max = 107982, mean/median = 1.64, exactly 0.00 % of samples negative.** It is rectified. (The same file's `motSVD_1(:,1)` IS signed - min -152.7, 87 % negative - so FaceMap provides both and the code took the energy.)
