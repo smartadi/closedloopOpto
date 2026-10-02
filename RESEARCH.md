@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - DECISION (user): the two dF/F definitions stay separate and get reported
+**Changed/Found:** I raised the Fig-2 vs Fig-3/4 dF/F difference as a consistency problem. **It is not one - the user states both choices are purposeful**, and the reasoning is right:
+- **Impulse is not in feedback**, so there is no need to estimate the mean online and no causal constraint on the denominator. The constant mean-image divisor (`load_experiments.m:221`, `dF = F/mI(1)*100`) is simply the most stable choice available to an offline analysis.
+- **The controller needs an online mean estimate**, because the loop can only use past samples. Hence the trailing baseline.
+**Verified the controller side is even tighter than "a 40 s window":** `utils/getpixel_dFoF.m:120` takes `w = d.params.horizon`, and that is **1400 samples = exactly 40.0 s at 35 Hz, identical across all 15 sessions** (checked every cache). So the analysis baseline is **the controller's own horizon parameter** - not an analysis choice at all, but the window the hardware actually used.
+**This reframes the whole thing as a STRENGTH.** The controller's dF/F *is* the signal the loop fed back on. Re-deriving Figs 3-5 with a retrospective whole-session mean would characterise a signal the controller never saw, so matching the impulse definition would make the controller analysis LESS correct, not more. The apparent inconsistency is the two analyses each using the definition their causal structure permits.
+**It also explains cleanly why only Fig 4C moved** (see the two preceding entries): Fig-2's statistics are provably invariant to a constant rescale (rank quartile binning + z-scored DV, measured 0.00e+00 under x1.7), so the impulse choice cannot leak into its numbers. Fig 4C regresses raw amplitudes, so it tracks whatever dF/F is in force.
+**Logged as a LOCKED project decision in `CLAUDE.md`** under a new "ΔF/F — TWO definitions, deliberately" block, with an explicit "do not reconcile them" so a future session does not try to unify them as drift.
+**Why:** User decision, with the mechanism verified rather than taken on trust.
+**Next:** Methods needs a short paragraph stating both definitions and the causal reason for the difference - drafted and handed to the user as a chat snippet (the manuscript lives on Overleaf; the local `Closedloop_edit` repo is not touched). No code change follows from this: both pipelines already do the right thing.
+
+
 ### 2026-10-02 - Fig 2 is PROVABLY immune to the Fig-4C dF/F fingerprint; check withdrawn
 **Changed/Found:** I proposed checking whether the Fig-4C amplitude fingerprint also touches Fig-2's abs-delta (2.10) and pre-var (3.13), since those are amplitude-sensitive in the same way. **Tested it instead of assuming, and the answer is no - withdraw the check.** Scaling every trial's dF/F by 1.7 (exactly what a change in `mI(1)` does at `load_experiments.m:221`, `dF = F/mI(1)*100`) moves all four Fig-2 ratios by **0.00e+00**:
 | marker | x1 | x1.7 | diff |

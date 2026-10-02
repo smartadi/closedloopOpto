@@ -180,6 +180,26 @@ working dirs full of superseded/exploratory panels; never point the assembly at 
 
 These are final — do not question or re-derive unless the user explicitly reopens them.
 
+### ΔF/F — TWO definitions, deliberately (user, 2026-10-02)
+The impulse and controller analyses use **different ΔF/F definitions on purpose**. This is not
+drift to be "unified"; do not reconcile them.
+- **Impulse (Fig 2)** — `dF = F / mI(1) * 100`, a constant mean-image divisor
+  (`load_experiments.m:221`). Offline, open-loop analysis: nothing is in feedback, so there is
+  no causal constraint and the most stable denominator (the session mean image over the kernel
+  ROI) is the right one. No online mean estimate is needed, so none is imposed.
+- **Controller (Figs 3–5)** — `(F − F̄trailing) / F̄trailing * 100`, trailing window
+  `w = d.params.horizon` = **1400 samples = exactly 40.0 s at 35 Hz**, identical across all 15
+  sessions (`utils/dff_rolling.m`). The loop had to estimate the mean **online**, from past
+  samples only. This window is **the controller's own horizon parameter**, so the analysis
+  baseline is not an analysis choice at all — it is what the hardware actually used.
+- **Why this is a strength, not an inconsistency:** the controller's ΔF/F *is* the signal the
+  loop fed back on. Re-deriving it with a retrospective whole-session mean would characterise a
+  signal the controller never saw. Report both definitions in Methods and say why they differ.
+- Scale-invariance note: Fig-2's statistics are provably immune to a constant rescale (rank
+  quartile binning + within-amplitude z-scored DV → measured 0.00e+00 change under ×1.7), which
+  is why the two definitions can coexist without Fig 2 depending on the choice. Fig-4C is NOT
+  immune — it regresses raw amplitudes — which is why its magnitudes moved. See RESEARCH 2026-10-02.
+
 ### Data & sessions
 - Two mice: **AL_0033** (8 sessions), **AL_0039** (3 sessions), plus **AL_0041** for impulse experiments
 - 13 controller sessions total (m1–m13)
