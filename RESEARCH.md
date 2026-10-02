@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Regenerated the 4 final panels today's changes touched; collector confirms only 4
+**Changed/Found:** Rebuilt every panel in `paper/figures_final/MANIFEST.txt` affected by today's window/statistic changes, all under PRIMARY settings, then ran `collect_final_panels`. It reported **4 copied, 34 up-to-date, 0 deleted** - an independent confirmation that exactly four final panels moved and nothing else did.
+| panel | source | was | now |
+|---|---|---|---|
+| 2G state vs prediction | `figure2/imp_state_var_combined.pdf` | 09-30 12:31 | **10-02 12:41** |
+| 4A state exemplars | `figure4/f4_state_exemplars.pdf` | 10-02 12:00 | rebuilt on `mean` |
+| 4C unique R^2 | `figure4/f4_decomp_unique_sep.pdf` | 10-02 11:58 | rebuilt on `mean` |
+| 4D state quartiles | `figure4/f4_row2_quartiles.pdf` | 10-02 09:44 | **10-02 12:40** |
+**Two traps found while doing it, both of which would have shipped the WRONG panel:**
+1. **`f4_decomp_unique_sep.pdf` on disk was written by the `sq` comparison run**, not the primary - my `f4_row1_reconcile` driver ran `mean` first and `sq` second, so the last writer won. A timestamp check alone would have called it current. **Any script that sweeps a knob must re-run the primary LAST, or export to per-config filenames.**
+2. **2G was never being rebuilt at all.** `imp_state_var_combined.pdf` is gated behind `STVF_PAPER && strcmpi(STVF_UNITS,'norm')`, and both default to the non-paper values (`false`, `'sd'`). Every ordinary run of `imp_state_trialvar_fig` silently skips the one Fig-2 panel that is in the manifest, so it sat at 09-30 through all of today's Fig-2 work.
+**Also noted (minor, not fixed):** `f4_row2_quartiles.m:142` sets `outview = fullfile('_preview')`, a RELATIVE path, so run from the project root it writes `brain_paper/_preview/` instead of `controller-analysis/_preview/`. There are now two `_preview` dirs with different-vintage PNGs of the same panel - which is how the PNG looked stale while the PDF was current.
+**Why:** User asked for the updated final panels to review.
+**Next:** (a) Give `imp_state_trialvar_fig` a paper-panel default, or a loud warning when it skips the manifest panel - a figure the manifest depends on must not be behind two opt-in flags. (b) Make `outview` absolute off the project root in `f4_row2_quartiles.m` and delete the stray `_preview/`. (c) Export a PNG beside the combined 2G PDF; it is currently the only final panel with no raster preview, which is why it had to be rasterized by hand to be reviewed.
+
+
 ### 2026-10-02 - AUDIT: the `_l` buffer rot reaches FIGURE 3, and a SECOND script runs on zero sessions
 **Changed/Found:** Ran all five remaining `_l`-dependent scripts against the current caches instead of reasoning about them. Result, measured:
 | script | status | note |
