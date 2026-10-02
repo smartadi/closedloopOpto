@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - RETRACTION: mean(z^2) is the WRONG motion statistic; z is already an energy
+**Changed/Found:** The user asked me to confirm, before applying `mean(z^2)` to Figure 2, that `z` is a z-score and not already a squared motion energy. It is already an energy, in BOTH analyses, verified against the raw files:
+- **Impulse (Fig 2):** `load_experiments.m:87` takes FaceMap's `motion_1` from `face_proc.mat`. Measured on AL_0041 2025-11-05/3: **min = 0, max = 107982, mean/median = 1.64, exactly 0.00 % of samples negative.** It is rectified. (The same file's `motSVD_1(:,1)` IS signed - min -152.7, 87 % negative - so FaceMap provides both and the code took the energy.)
+- **Controller (Fig 4):** `initialize_data.m` builds `motEng(q) = sum(sum((thisFrame - lastFrame).^2))` - literally a sum of squares. Measured on AL_0033 2025-02-12/2 `motEngF.npy`: **min = 237,345, 0.00 % negative.**
+**So my 2026-10-01 justification for switching to the mean square was wrong, and the error is elementary.** I argued that "a plain mean is a SIGNED deviation ... quiet trials go negative and partly cancel the bouts". There is no cancellation: averaging z over a within-trial window gives
+`mean_window(z) = (mean_window(E) - mu_session) / sigma_session`
+which is **exactly monotone** in that trial's mean energy. Negative values simply mean "below session average", which is the correct and desired encoding.
+`mean(z^2)`, by contrast, is a second moment: it is **minimised when the trial sits AT the session mean** and therefore rises for unusually STILL trials as well as unusually active ones. Measured on m2's real trials, by decile of `mean(z)`: decile 1 (quietest, mean z = -0.211) has `mean(z^2)` = **0.045**, HIGHER than deciles 4-6 (0.023, 0.022, **0.021**). **Rank correlation between the two statistics is only 0.303** - they order trials very differently, which is also why 59.2 % of trials changed quartile when the Fig-4 panel was brought into line with the pool earlier today.
+**Why this matters beyond the statistic:** the Fig-4 motion result currently published (predictability p = 1.1e-5, controllability p = 0.0098) was computed on `mean(z^2)`. If `mean(z)` is adopted, Fig 4's motion numbers must be regenerated too - this is not confined to Figure 2.
+**Next:** User decision. Recommendation is `mean(z)` on the z-scored energy for both figures: monotone, standardised across sessions, and directly interpretable as "how much movement relative to this session's average". If the aim is specifically to emphasise large bouts over sustained low-level movement, the principled alternative is the mean of the RAW energy (`mean(E)`, then standardise once across trials), NOT the mean square of an already-standardised energy. Do not re-run Figure 2 until this is settled, since the choice determines the analysis.
+
+
 ### 2026-10-02 - Fig-2 published state window is 26 samples, not the 35 its header documents
 **Changed/Found:** User asked what window the Figure-2 motion-vs-prediction LMM actually used. Traced it to `impulse-analysis/imp_state_trialvar.m:182`, `mot = mean(imp.motTrace{a}(1:n, iState), 2, 'omitnan')`, with `STV_STATE_WIN` defaulting to `'pre'` (line 60), and resolved `iState` numerically.
 **The answer: columns 79:104 = -0.771 to -0.057 s, 26 samples, plain `mean(z)`.** Three discrepancies sit behind that number:
