@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig 2 is PROVABLY immune to the Fig-4C dF/F fingerprint; check withdrawn
+**Changed/Found:** I proposed checking whether the Fig-4C amplitude fingerprint also touches Fig-2's abs-delta (2.10) and pre-var (3.13), since those are amplitude-sensitive in the same way. **Tested it instead of assuming, and the answer is no - withdraw the check.** Scaling every trial's dF/F by 1.7 (exactly what a change in `mI(1)` does at `load_experiments.m:221`, `dF = F/mI(1)*100`) moves all four Fig-2 ratios by **0.00e+00**:
+| marker | x1 | x1.7 | diff |
+|---|---|---|---|
+| Motion | 0.7266 | 0.7266 | 0.00e+00 |
+| Pre-trial variance | 3.1305 | 3.1305 | 0.00e+00 |
+| Abs delta power | 2.0987 | 2.0987 | 0.00e+00 |
+| Rel delta | 1.0279 | 1.0279 | 0.00e+00 |
+**Two independent structural reasons, which is why it is exact and not approximate:** (1) trials are binned into **quartiles by RANK** of the marker, and a positive constant scale is monotone, so quartile membership cannot change; (2) the DV is **z-scored within amplitude**, so an SD ratio is scale-free. Fig 4C has neither protection - it regresses raw `|dFk(onset)-ref|` and raw `log10` power on raw RMSE, so absolute scale enters the fit directly. That is the real reason the two figures respond differently, not anything about the markers themselves.
+**The protection is specific to a CONSTANT rescale and would NOT survive a time-varying baseline.** A rolling-baseline dF/F is a per-timepoint, non-monotone transform; it reorders trials, so rank binning stops protecting. The impulse path has not changed - `load_experiments.m:221` is still the constant-divisor form and was untouched today.
+**The genuine issue this surfaces is a consistency one, not a numbers one:** Fig 2 (impulse) uses `dF = F/mI(1)*100`, a constant mean-image divisor, while Fig 3/4 (controller) now use the rolling 40 s trailing baseline `(F - Fkmean)/Fkmean*100` after today's unification. **Two figures in one paper define dF/F two different ways**, and Methods currently describes one.
+**Why:** The user asked what the proposed check meant; checking it was cheaper than explaining why it might matter, and it turned a speculation into a closed question.
+**Next:** (a) **Methods must state both dF/F definitions and why they differ**, or the impulse path moves onto the rolling baseline too - the latter is a real re-analysis (it would reorder impulse trials and is NOT protected by the rank/z-score argument above), so it is a decision, not a cleanup. (b) Do NOT spend time re-checking Fig-2 numbers against the Fig-4C cause; it is closed. (c) Fig-4C caption renumbering still stands.
+
+
 ### 2026-10-02 - Fig-4C diagnosed: the CODE is exonerated, the CACHES changed, and the fingerprint says dF/F
 **Changed/Found:** Chased the Fig-4C discrepancy (published `0.29/0.10/0.23` vs fresh `0.387/0.095/0.276`) to a conclusion by elimination. Four candidates are now EXCLUDED BY MEASUREMENT, not by argument:
 | candidate | test | result |
