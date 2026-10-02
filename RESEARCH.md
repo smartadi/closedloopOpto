@@ -16,6 +16,32 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-01 - stft_bands: base-MATLAB spectrogram, verified BIT-EXACT, unblocks cache rebuilds
+**Changed/Found:** Added `utils/stft_bands.m`, a base-MATLAB short-time Fourier transform returning absolute band power, and switched `utils/controllerData.m:32` to it. **No live Signal Processing Toolbox call remains anywhere in the cache-rebuild chain.**
+**The validation is unusually clean.** The cached `ncFreqPow`/`ncFreqSpec` arrays were produced by the real `spectrogram`, so they are a ground truth that needs no license. `stft_bands` reproduces them to **1.243e-07 relative** - and running the identical arithmetic in `single` rather than `double` reproduces that residual to **1.243e-07, the same number to four significant figures**. So the discrepancy is entirely single-vs-double precision (those caches store `dFk` as `single`) and the method is bit-exact. Convention confirmed: `spectrogram` returns the unnormalised one-sided STFT with segment-CENTRE times, `t = ((0:nSeg-1)*hop + nwin/2)/Fs`.
+**Why:** The licensing failure made `spectrogram` uncallable, which blocked every cache rebuild - including the m14/m15 rebuild the user had just authorised. Removing the dependency also means a reviewer without the toolbox can regenerate the spectral panels.
+**Next:** `initialize_data.m` still needs `downsample`/`medfilt1`/`butter`/`filtfilt`, but only for a FULL `d` reload (motion preprocessing); the per-session motion result is cached server-side as `motEngProc.npy`, so this is not on the critical path. Write base-MATLAB versions when a full `d` rebuild is actually needed.
+
+### 2026-10-01 - Discovered: only m14/m15 ever had the cached spectral arrays
+**Changed/Found:** While validating `stft_bands`, found that `ncFreqPow`/`ncFreqSpec`/`freqBandCtrs` exist **only on m14 and m15**. All thirteen original controller caches lack the fields entirely - their caches predate the spectral block in `controllerData.m` and were never rebuilt.
+**Checked the consequence, and the paper is clear.** Fig 4's spectral state variables do NOT read these arrays: `utils/f4_row2_pool.m:49-54` computes them on the fly via `cl_reldelta` from `pncDfk_l`, giving `delta` (relative 2-4 Hz ratio) and `absdelta` (log10 absolute 1-4 Hz power). So the locked project decision - absolute (dF/F)^2 Hz^-1, never normalised - holds for the published panels.
+**But three scripts silently degrade.** `controller-analysis/trial_state_mse.m:64-67`, `ctrl_distrej_statedep.m:45-57` and `ctrl_distrej_quartiles.m:53-57` all prefer absolute `ncFreqPow` and **fall back to the NORMALISED `ncFreqSpec`** when it is missing - and for the thirteen sessions *neither* exists. `ctrl_distrej_statedep.m:46` even documents the fallback ("these caches only carry the NORMALIZED ncFreqSpec ... a delta-ratio"). A power RATIO silently substituting for ABSOLUTE power is exactly the kind of substitution the locked decision forbids.
+**Why:** Found by asking why the validation could only use two sessions.
+**Next:** Those three scripts are exploratory, not paper panels, so nothing published is wrong - but the fallback should become an error rather than a silent substitution. The thirteen caches will acquire the spectral arrays whenever they are next rebuilt (now possible, since `stft_bands` removed the licensing blocker).
+
+### 2026-10-01 - m14/m15 controller caches rebuilt on corrected dF/F; Fig 3/4 stats re-run is BLOCKED
+**Changed/Found:** Re-ran `controllerData` for m14/m15 on the mode-2 dF/F and saved both controller caches (2.81 GB and 2.82 GB). It completed in **0.7 s each with no Signal Toolbox**, confirming the `stft_bands` unblock end to end, and rebuilt the spectral arrays for these sessions. Trial counts are unchanged (m14 45 OL / 55 CL, m15 55 / 45), so the split is preserved. `build_trials` self-checks against the NEW arrays at **0.000e+00**.
+Measured changes, matching the offline prediction exactly:
+| | m14 OL | m14 CL | m15 OL | m15 CL |
+|---|---|---|---|---|
+| RMSE | 3.588 -> 3.435 (-4.3 %) | 3.294 -> 3.031 (-8.0 %) | 3.018 -> 2.663 (-11.8 %) | 2.827 -> 2.157 (-23.7 %) |
+| variance | 8.234 -> 8.289 (+0.7 %) | 6.896 -> 6.974 (+1.1 %) | 2.367 -> 2.344 (-1.0 %) | 1.824 -> 1.778 (-2.5 %) |
+OL-CL RMSE gap: m14 **0.294 -> 0.405**, m15 **0.191 -> 0.506**. OL/CL variance ratio: m14 1.194 -> 1.189, m15 1.298 -> 1.319. Every effect keeps its sign and the error gap widens, because the removed drift had been inflating error in both conditions equally.
+**BLOCKED, and this is the honest status:** the Fig-3/Fig-4 p-values in the manuscript were computed from the OLD m14/m15 values and **cannot be regenerated right now** - `fitlme` has also lost its license checkout ("fitlme FAILED: MathWorks Licensing Error 15"), although the Fig-3/Fig-4 LMM runs completed successfully earlier the same day. Statistics Toolbox degraded mid-session.
+**Why:** Completing the user's authorised m14/m15 recompute.
+**Next:** Once the MathWorks Account authorization is restored (user action, GUI sign-in), re-run `cl_olcl_lmm` for the six Fig-3 metrics and `f4_row2_fit` for Fig 4, then update the p-values in `results.tex`. Expect the Fig-3 error effects to get *stronger*, not weaker; no sign or significance status is at risk from a 2/15-session change of this direction, but the exact values must be regenerated before submission. **Do not report the current p-values as final.**
+
+
 ### 2026-10-01 - Forced server reload of m14/m15: cached F reproduces EXACTLY, dF/F now matches the other 13
 **Changed/Found:** Did the real thing the user asked for - a full reload from the lab server, not a cache re-read. `getpixel_dFoF(d, 2, pixel, 0)` with `r = 0` re-downloaded `svdSpatialComponents.npy` (2.4 GB), `svdTemporalComponents.npy` (418 MB) and `meanImage.npy` for both new sessions and recomputed the pixel trace from scratch (~20 s each at 142 MB/s).
 **The independence result: `F` reproduces to EXACTLY 0.000e+00 on both sessions**, same length, same values. The cached pixel traces were fully reproducible from raw - so for these two sessions we are not fooling ourselves. The new mode-2 `dFk` also agrees with an independent offline recomputation (`dff_rolling` applied to `F + mI` outside the function) to 9.6e-10 / 5.2e-9.

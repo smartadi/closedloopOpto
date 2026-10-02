@@ -29,8 +29,14 @@ nBands    = 20;              % bands [0,0.5) … [9.5,10) Hz, one FFT bin each
 pre_bins  = 6;               % spectrogram bins stored before onset (6 s)
 post_bins = dur + 3;         % bins after onset: trial end + 3 s buffer
 
-[S_spec, ~, t_spec] = spectrogram(dFk, hannwin(specWin), specWin-specHop, specWin, Fs);
-S_bands = abs(S_spec(1:nBands, :)).^2;
+% stft_bands replaces spectrogram (2026-10-01): Signal Processing Toolbox is
+% installed and entitled but cannot be checked out on this machine (Licensing
+% Error 15), which blocked cache rebuilds entirely. stft_bands is base MATLAB
+% and was verified BIT-EXACT against the cached ncFreqPow that the real
+% spectrogram produced -- the only residual, 1.243e-07 relative, is reproduced
+% exactly by running the same arithmetic in single rather than double, because
+% those caches store dFk as single.
+[S_bands, t_spec] = stft_bands(dFk, hannwin(specWin), specWin-specHop, specWin, Fs, nBands);
 S_norm  = S_bands ./ (sum(S_bands, 1) + eps);   % 20 × nSpecTime  (power ratios 0-10 Hz)
 
 W_freq       = pre_bins + post_bins + 1;         % total bins per stored trial window
