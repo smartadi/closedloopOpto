@@ -16,6 +16,33 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Motion-statistic retraction CONFIRMED independently, and switching costs Fig 4 nothing
+**Changed/Found:** Re-checked this morning's `mean(z^2)` retraction from the Python port, on the full 1190-trial Fig-4 motion pool rather than one session - and it holds, more clearly than the single-session version did. By decile of `mean(z)`, `mean(z^2)` is **U-shaped, not monotone**:
+
+| decile of mean(z) | 1 (quietest) | 2 | 4 | 6 (min) | 8 | 10 (busiest) |
+|---|---|---|---|---|---|---|
+| mean(z) | -0.386 | -0.265 | -0.175 | -0.143 | -0.035 | +1.119 |
+| mean(z^2) | **0.222** | 0.104 | 0.051 | **0.037** | 0.189 | 7.717 |
+
+The quietest decile scores **six times** the sixth decile under `mean(z^2)`, so the statistic reads "unusually still" and "unusually active" as the same thing. Pooled Spearman rho between the two statistics is **0.219** (the m2-only estimate was 0.303). 81.2 % of z samples sit below zero, as expected for a heavy-tailed rectified energy that has been z-scored.
+
+**And the decision turns out to be cheap.** Fig-4's Row-2 model (`y ~ cond*xw + (1+cond|sess) + (1|mouse)`, REML + Satterthwaite) under both statistics, same 1190 trials / 11 sessions / 4 mice:
+
+| | `mean(z^2)` (published) | `mean(z)` |
+|---|---|---|
+| predictability (xw slope) | p 1.05e-05, beta +0.159 | p 7.3e-04, beta +0.140 |
+| controllability (cond:xw) | p 0.00978, beta -0.177 | **p 0.00147**, beta -0.197 |
+| OL-CL gap | p 3.75e-05 | p 3.73e-05 |
+| panel-C motion unique R^2 | 0.0012 / 0.0012 | 0.0010 / 0.0042 |
+
+**Both effects survive either way.** Predictability weakens by about an order of magnitude; controllability *strengthens* by 6.6x; the OL-CL gap does not move at all; motion stays the null factor in panel C. So no Fig-4 claim depends on the choice, and the principled statistic can be adopted without re-arguing any result.
+
+Incidentally this **validates the port**: `mean(z^2)` reproduces `NUMBERS.md`'s published 1.1e-5 and 0.0098 as 1.05e-5 and 0.00978, to three digits, through an independent implementation of the pool and the LMM.
+
+**Code:** the Python port now has one switch, `bpy.analysis.f4_pool.MOTION_STAT` (`"sq"` or `"mean"`), used by both `row2_pool` and `decomp_pool`, so the two can never drift apart again - which is exactly the failure mode that produced this morning's quartile-vs-star bug. Default left at `"sq"` deliberately: it matches the published MATLAB and I am not moving a published number without the user's say. `row2_fit` now also returns `slopeP`, the predictability p, which was being quoted in `NUMBERS.md` without the code reporting it.
+**Why:** The retraction correctly said "user decision", but a decision with no numbers attached stalls. The useful contribution was to measure what the switch actually costs - and it costs nothing - so the choice can be made on principle instead of on fear of moving a p-value.
+**Next:** Aditya's call: set `MOTION_STAT = "mean"` and change `utils/f4_row2_pool.m` + `utils/f4_error_decomp.m` to match (one line each), or keep the square and state in Methods that motion is a second moment about the session mean. My recommendation is `"mean"`. Whichever is chosen, `f4_row2_quartiles.m:85` and the pool must use the SAME one - the inline duplicate at line 85 is still a separate code path and is the standing hazard. Figure 2 (`imp_state_trialvar.m`) already uses `mean(z)` and would then need no change. Tools: `tools/motion_stat_check.py`, `tools/motion_both.py` (brain_paper_py).
+
 ### 2026-10-02 - First paper panels built end-to-end from raw camera frames, with no MATLAB cache in the chain
 **Changed/Found:** Fig-3 panels A-E now export from the server's raw data alone. The representative session is m10 (AL_0039 2025-04-19 e1), whose per-pixel trace was streamed out of `widefield.wfz` and verified to 1.3e-12 relative against MATLAB's `dFk` earlier today. **Proof that nothing MATLAB-side is involved:** re-ran with `BRAIN_PAPER_ROOT` pointed at a directory that does not exist (`__no_matlab_repo__`) and all five panels still exported. Everything the panels need - Timeline, `params`, `input_params.csv`, laser channel, `timeBlue`, motion, and the frames themselves - comes off the server; the only local artifact is the ~1 MB pixel trace.
 
