@@ -16,6 +16,29 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Measured where cache space actually goes: it is NOT the duplicated trial arrays
+**Changed/Found:** Before restructuring anything for "space", measured a controller cache properly. The duplication everyone (including me) assumed was the problem is **0.004 %** of the file:
+| component | size | share |
+|---|---|---|
+| `d.svd` | 2950 MB | **92 %** |
+| rest of `d` (ten 25 MB laser/time vectors) | 251 MB | 7.8 % |
+| `data` -- **every** per-trial array | 6.6 MB | 0.2 % |
+| the duplicated dFk views (`ncDfk`,`wcDfk`) | 0.14 MB | **0.004 %** |
+`d.svd.U` alone is 560x560x2000 single = 2.5 GB. **So collapsing the trial arrays is worth doing for CORRECTNESS, not for space** - and widening motion onto the shared -10..+6 grid actually makes it slightly bigger (176 -> 561 columns, +0.19 MB/session).
+Also corrected an earlier assumption of mine: **`pncDfk_l` is not stored in the cache at all.** `load_sessions.m:305` constructs it at load time, so there are three persisted views of dFk, not four.
+**Why:** The user asked whether the restructure was deduplicating arrays to save space. It would not have; claiming otherwise would have been a wrong justification for the right change.
+**Next:** Keep the trial-struct migration on its real footing (one onset, one grid, queryable in seconds). Space is a separate job, below.
+
+### 2026-10-02 - Slimmed the controller caches: 28.3 GB -> 0.69 GB, Fig-3 bit-identical
+**Changed/Found:** Added `utils/slim_ctrl_cache.m` and ran it over all fifteen controller caches. It drops `d.svd` (re-readable from the server in ~20 s/session) and `d.lightRaw594`/`d.lightRaw638` (**verified zero consumers** outside `loadData.m`). **Result: 28.3 GB -> 0.69 GB, 27.6 GB reclaimed**, per-session 3540 -> 82 MB, 2979 -> 41 MB, 2809 -> 50 MB and so on.
+**Deliberately KEPT** `d.inpVals` / `d.inpTime` / `d.lightRaw` even though each is a literal copy of a per-wavelength array, because they carry 61 / 59 / 4 call sites between them; 75 MB/session is not worth that blast radius next to the 2950 MB above.
+**Safety argument, which was checked rather than assumed:** six of the fifteen caches **never had an SVD** (12-46 MB on disk) and both Fig-3 and Fig-4 already ran across all fifteen, so the no-SVD path was the norm for 40 % of sessions. The one consumer, `controller-analysis/contra_prediction_controller.m:74`, already detects the absence and reloads via `initialize_data`.
+**The write is write-verify-then-rename:** each cache is rewritten to a temp, the temp is RELOADED and compared field-by-field against the in-memory `data` and every retained field of `d`, and only then does the original get replaced. **Proof it was lossless: re-running `fig3_olcl_stats` against the slimmed caches reproduced the pre-slim values to EXACTLY 0.000e+00 on all six metrics' p-values and gaps.**
+**Dead end worth recording:** the first attempt named the temp `<file>.mat.slim.tmp` and `load` refused it - `save` writes MAT format regardless of extension, but `load` guesses the format FROM the extension. The failure was harmless precisely because of the ordering (the original is untouched until verification passes); the temp is now `<file>.slim.mat`.
+**Why:** User approved "slim all 9, write-verify-replace" once shown that the SVD, not the trial arrays, is 92 % of the cache.
+**Next:** `contra_prediction_controller` will now re-download the SVD on first use for the nine slimmed sessions (~20 s each, one time per run). If that becomes annoying, the fix is a sidecar `data/<session>_svd.mat` rather than putting it back in the controller cache.
+
+
 ### 2026-10-02 - Fig-4 Row-2 pool reproduces EXACTLY, but the rel-delta decoupling p crosses 0.05
 **Changed/Found:** Ported `utils/f4_row2_pool.m` + `utils/cl_reldelta.m` + `utils/f4_row2_fit.m` (`brain_paper_py/bpy/analysis/f4_pool.py`) and ran them on the same MATLAB caches. The POOL is an exact reproduction: initdev/delta/absdelta 1670 trials (852 CL) / 15 sessions / 4 mice, motion 1190 (613 CL) / 11 sessions - identical to the 2026-09-16 and 2026-10-01 audits. The MODEL (`y ~ cond*xw + (1+cond|sess) + (1|mouse)`, REML + Satterthwaite via lme4/lmerTest, random slope converged for all four) gives cond x state decoupling p: initdev 0.743 (paper 0.394), motion 0.0098 (paper 0.0042), **rel 2-4 Hz 0.074 (paper 0.0182)**, absdelta 0.15 (paper 0.876). OL-CL gap p 1.4e-07 / 3.7e-05 / 8.7e-08 / 2.8e-08 (paper claims <= 1.6e-11 for all four).
 **Why:** Three of the four decoupling terms keep their conclusion (two n.s., motion significant). **Relative 2-4 Hz does not**: 0.0182 is a significant decoupling claim, 0.074 is not. The paper's rel-delta numbers may predate the 2026-09-11 canonical band change (2-4 / 0.4-10 Hz) or the 2026-10-01 switch of the motion state to mean-square, both of which post-date the recorded run. Also: NUMBERS.md's table calls the fourth state "absolute 2-4 Hz" but `f4_row2_pool.m` builds it from `comp.delta` = **1-4 Hz** absolute power.
