@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Migration 1/8: fig3_olcl_stats off hardcoded columns, bit-identical
+**Changed/Found:** First call-site migration of the restructure. `controller-analysis/fig3_olcl_stats.m` carried `c0 = 36; c1 = 71; c2 = 141` at line 28 and passed raw `(a,b)` bounds into its `re`/`vc`/`putvar` helpers. It now derives `dur` from the array width (`dfk` is `35*(dur+2)+1` columns, so this doubles as an assertion that the cache has the shape `trialwin` assumes) and resolves all three windows through `utils/trialwin`.
+**Verified bit-identical:** re-ran against the values computed immediately before the edit - worst |dp| = **0.000e+00**, worst |dgap| = **0.000e+00**, worst |d signrank| = **0.000e+00** across all six metrics. `trialwin` returns exactly the old literals: full 36:141, early 36:71, late 72:141.
+**The one subtlety that made this worth doing carefully:** `rmse_late` used `c1+1`, i.e. column 72, deliberately excluding the +1 s sample so that the early and late windows do not share it. A naive `trialwin('dfk',[1 3],dur)` returns 71:141 and would have silently shifted the window by one sample. The migration keeps the exclusion explicit (`iLate(1) = []`) with a comment saying why, rather than letting the next reader "simplify" it back.
+**Why:** User chose one-file-at-a-time with verification at each step. This is the pattern for the remaining seven.
+**Next:** `f4_row2_pool.m:22` is next and is the most delicate, because it is the file that holds `c0_mot = 71` - the motion onset - alongside `c0 = 36`, the two that are one second apart on arrays of identical width.
+
+### 2026-10-02 - Fig-3 and Fig-4 disagree by one sample about the "settled [+1,+3] s" window
+**Changed/Found:** Found while preparing migration 2. Both figures describe their steady-state outcome as the 1-3 s window, but they do not use the same columns:
+- `fig3_olcl_stats` `rmse_late` = columns **72:141** = 70 samples = 1.0286 to 3.0000 s (it excludes the +1 s sample so early and late do not overlap).
+- `f4_row2_pool` `yOL`/`yCL` = columns **71:141** = 71 samples = 1.0000 to 3.0000 s (it includes it).
+A 28.6 ms / 1.4 % difference in window length between two figures' "same" measurement. Numerically trivial - it will not move any conclusion - but it is a genuine one-quantity-two-definitions case, and the Methods describes a single 1-3 s settled window for both.
+**Why:** Exactly the class of defect the one-file-at-a-time migration is meant to surface: the literals hid it, because 71 and 72 look equally arbitrary until the windows are expressed in seconds.
+**Next:** Decide which is canonical and make both use it. Preference is the EXCLUSIVE form (72:141) wherever early and late windows are both reported from the same trace, since overlapping windows share variance; but Fig 4 reports only the settled window, so the inclusive form is defensible there. Either way, state ONE convention in the Methods. Do not change Fig-4's window silently - it would move the published Fig-4 numbers that were only just regenerated.
+
+
 ### 2026-10-02 - Measured where cache space actually goes: it is NOT the duplicated trial arrays
 **Changed/Found:** Before restructuring anything for "space", measured a controller cache properly. The duplication everyone (including me) assumed was the problem is **0.004 %** of the file:
 | component | size | share |

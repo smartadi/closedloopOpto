@@ -26,9 +26,18 @@ here    = fileparts(mfilename('fullpath'));
 dataDir = fullfile(here, '..', 'data');
 D = dir(fullfile(dataDir,'*ctrl*.mat')); nS = numel(D);
 
-c0 = 36; c1 = 71; c2 = 141; ref = -5;   % onset / +1s / +3s cols in ncDfk; reference %dF/F
-re  = @(M,a,b) sqrt(mean((M(:,a:b)-ref).^2, 2));                 % per-trial windowed RMSE
-vc  = @(M,a,b) mean((M(:,a:b)-mean(M(:,a:b),1)).^2, 2);          % per-trial variance contribution
+ref = -5;                               % reference %dF/F (project default, = d.ref)
+if isempty(which('trialwin')); addpath(genpath(fullfile(here,'..','utils'))); end
+
+% Windows are resolved per session from the array geometry (utils/trialwin),
+% replacing the literals c0 = 36 / c1 = 71 / c2 = 141 that used to sit here
+% (2026-10-02). Those were right only for dur = 3 AND only for the `dfk` array:
+% `motion` is also 176 columns at dur = 3 but its onset is 35 samples later, so
+% the same literals applied to it would have been one second wrong with nothing
+% to flag it. trialwin looks the onset up by array name and ERRORS rather than
+% clamping when a span does not fit.
+re  = @(M,ix) sqrt(mean((M(:,ix)-ref).^2, 2));                   % per-trial windowed RMSE
+vc  = @(M,ix) mean((M(:,ix)-mean(M(:,ix),1)).^2, 2);             % per-trial variance contribution
 
 % per-trial long records + per-session companions
 metrics = {'rmse_full','rmse_early','rmse_late','var_stim','var_early','var_late'};
@@ -42,15 +51,28 @@ for k = 1:nS
     mo = regexp(D(k).name,'AL_\d+','match','once'); mouseList{k} = mo;
     N = d.ncDfk; W = d.wcDfk;
 
+    % dfk is 35*(dur+2)+1 columns, so this derives dur AND asserts the array is
+    % the shape trialwin assumes -- a cache built with a different dur fails
+    % loudly here instead of being silently windowed as though it were dur = 3.
+    dur = (size(N,2)-1)/35 - 2;
+    assert(dur == fix(dur) && dur > 0, 'fig3_olcl_stats:shape', ...
+           '%s: ncDfk has %d columns, which is not 35*(dur+2)+1.', D(k).name, size(N,2));
+    iFull  = trialwin('dfk', [0 3], dur);     % 36:141 at dur = 3
+    iEarly = trialwin('dfk', [0 1], dur);     % 36:71
+    iLate  = trialwin('dfk', [1 3], dur);     % 71:141 ...
+    iLate(1) = [];                            % ... minus the +1 s sample, so that
+                                              % early and late do not share it
+                                              % (this reproduces the old c1+1).
+
     % ---- RMSE metrics ----
     put('rmse_full',  d.er_ncDfk(:),      d.er_wcDfk(:));       % cached [0,3]s RMSE
-    put('rmse_early', re(N,c0,c1),        re(W,c0,c1));         % [0,1]s
-    put('rmse_late',  re(N,c1+1,c2),      re(W,c1+1,c2));       % [1,3]s
+    put('rmse_early', re(N,iEarly),       re(W,iEarly));        % [0,1]s
+    put('rmse_late',  re(N,iLate),        re(W,iLate));         % (1,3]s
 
     % ---- variance metrics: per-trial contribution (LMM on log), across-trial var (signrank) ----
-    putvar('var_stim',  N,W, c0,   c2);
-    putvar('var_early', N,W, c0,   c1);
-    putvar('var_late',  N,W, c1+1, c2);
+    putvar('var_stim',  N,W, iFull);
+    putvar('var_early', N,W, iEarly);
+    putvar('var_late',  N,W, iLate);
 end
 
 % ---- fit LMM (primary) + signrank (companion) per metric ----
@@ -94,13 +116,13 @@ end
         L.(key) = addrows(L.(key), cl, 'CL', k, mo);
         sMed.(key).ol(k) = median(ol); sMed.(key).cl(k) = median(cl);
     end
-    function putvar(key, N, W, a, b)
-        vN = vc(N,a,b); vC = vc(W,a,b);
+    function putvar(key, N, W, ix)
+        vN = vc(N,ix); vC = vc(W,ix);
         L.(key) = addrows(L.(key), log(vN+eps), 'OL', k, mo);
         L.(key) = addrows(L.(key), log(vC+eps), 'CL', k, mo);
         % companion = classic per-session across-trial variance over the window
-        sMed.(key).ol(k) = mean(var(N(:,a:b),0,1));
-        sMed.(key).cl(k) = mean(var(W(:,a:b),0,1));
+        sMed.(key).ol(k) = mean(var(N(:,ix),0,1));
+        sMed.(key).cl(k) = mean(var(W(:,ix),0,1));
     end
 end
 
