@@ -3,7 +3,8 @@
 % Pooling + LMM come from the SHARED helpers f4_row2_pool / f4_row2_fit, so the decoupling
 % p reported here is IDENTICAL to the star printed on the panels (no drift possible).
 %   outcome = disturbance-rejection RMSE ||dFk-ref|| over [+1,+3]s (raw);
-%   states  = initdev, motion (MEAN z-motion over -2..+3s, no rectify), delta (rel 2-4Hz);
+%   states  = initdev, motion (MEAN z-motion over -2..+3s; F4_MOT_STAT='sq' for the
+%             mean-square secondary), delta (rel 2-4Hz);
 %   model   = RMSE ~ cond*state_wc + (1+cond|sess) + (1|mouse)  (state centered WITHIN session):
 %             cond:state_wc interaction = does CL change the within-session state-slope (DECOUPLING);
 %             cond main effect = OL-CL gap. Plus hierarchical bootstrap (mouse->session->trial)
@@ -12,10 +13,13 @@
 root='C:\Users\aditya\Documents\projects\brain_paper'; addpath(fullfile(root,'utils'));
 outview=fullfile(root,'paper','images','figure4');
 states={'initdev','motion','delta'};
-[POOL,~]=f4_row2_pool(mouse,fields);
+if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; end
+[POOL,~]=f4_row2_pool(mouse,fields,F4_MOT_STAT);
 
 fprintf('\n================ SESSION-AWARE OL/CL STATE-DEPENDENCE STATS ================\n');
-lab=struct('initdev','init-dev','motion','motion (mean, -2..+3s)','delta','rel 2-4Hz delta');
+lab=struct('initdev','init-dev', ...
+           'motion',sprintf('motion (%s, -2..+3s)',tern(strcmpi(F4_MOT_STAT,'sq'),'mean z^2','mean z')), ...
+           'delta','rel 2-4Hz delta');
 R=struct('name',{},'gap',{},'gapCI',{},'gapP',{},'dec',{},'decCI',{},'decP',{},'boot',{},'bootCI',{},'bootP',{});
 for s=states, nm=s{1}; T=POOL.(nm);
   if isempty(T), fprintf('\n[%s] no data\n',nm); continue; end

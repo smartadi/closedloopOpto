@@ -11,7 +11,8 @@
 % STATES -- defined IDENTICALLY to row 1 (f4_partB_panels / cl_rmse_factor_windows),
 % on the OL (nc) and CL (wc) buffers:
 %   initdev = |dFk(onset) - ref|
-%   motion  = MEAN SQUARE of z-motion over -2 s -> stim end (energy; unified w/ f4_row2_pool)
+%   motion  = MEAN z-motion over -2 s -> stim end (f4_motion_stat; set F4_MOT_STAT='sq'
+%             before running for the mean-square secondary)
 %   delta   = cl_reldelta rel 2-4 Hz over -2 s -> stim end
 % Outcome = disturbance-rejection RMSE to ref over [+1,+3] s (settled window),
 % z-scored within session across the combined OL+CL trials (removes session
@@ -59,7 +60,11 @@ fnout = {'f4_2A_initdev.pdf','f4_2B_motion.pdf','f4_2C_delta.pdf','f4_2D_absdelt
 
 % ---- session-aware LMM: SHARED with f4_row2_stats.m so the panel star == f4_2S_stats decoupling p.
 % Same pool (f4_row2_pool) + same model (f4_row2_fit): RMSE~cond*state_wc+(1+cond|sess)+(1|mouse).
-[POOLs,~] = f4_row2_pool(mouse,fields); FIT = struct();
+% MOTION STATISTIC: 'mean' (primary) | 'sq' (secondary). Set F4_MOT_STAT before running.
+% It must reach BOTH the pool below and the panel's own binning block, or the bars and the
+% star disagree -- which is exactly what happened on 2026-10-01.
+if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; end
+[POOLs,~] = f4_row2_pool(mouse,fields,F4_MOT_STAT); FIT = struct();
 for pn=preds; FIT.(pn{1}) = f4_row2_fit(POOLs.(pn{1})); end
 
 % ---- per-session z-scored state + z-scored RMSE, per condition -------------------------------
@@ -82,13 +87,11 @@ for k=1:numel(fields)
     if hasM
         wsO=max(1,c0_mot-round(2*Fs)); weO=min(size(d.ncmotion,2),c0_mot+round(dur*Fs)-1);
         wsC=max(1,c0_mot-round(2*Fs)); weC=min(size(d.wcmotion,2),c0_mot+round(dur*Fs)-1);
-        % mean(z^2), matching utils/f4_row2_pool.m:47. These two blocks are
-        % duplicated pooling code and DIVERGED on 2026-10-01, when the pool was
-        % switched to the mean square but this copy was not: the panel then binned
-        % trials by PLAIN mean motion while the star printed above it came from the
-        % shared pool's SQUARED motion -- bars and p-value describing different
-        % orderings of the same trials. Fixed 2026-10-02.
-        S.motion={mean(d.ncmotion(:,wsO:weO).^2,2), mean(d.wcmotion(:,wsC:weC).^2,2)};
+        % Same statistic as the pool, via the SHARED utils/f4_motion_stat.m. These two
+        % blocks are duplicated pooling code and DIVERGED on 2026-10-01 (pool switched to
+        % the mean square, this copy not), so the bars binned one ordering while the star
+        % above them tested another. One function now, so that cannot recur.
+        S.motion = f4_motion_stat(d.ncmotion(:,wsO:weO), d.wcmotion(:,wsC:weC), F4_MOT_STAT);
     else, S.motion={nan(nO,1),nan(nC,1)}; end
     if isfield(d,'pncDfk_l')&&~isempty(d.pncDfk_l)&&isfield(d,'pwcDfk_l')&&~isempty(d.pwcDfk_l)
         [rO,cO]=cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts);

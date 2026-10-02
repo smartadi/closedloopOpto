@@ -1,14 +1,18 @@
-function [POOL, meta] = f4_row2_pool(mouse, fields)
+function [POOL, meta] = f4_row2_pool(mouse, fields, motstat)
 % F4_ROW2_POOL  Canonical Fig-4 Row-2 state/outcome builder.
 % SINGLE SOURCE shared by f4_row2_stats.m (forest, f4_2S_stats) and
 % f4_row2_quartiles.m (panels f4_2A/2B/2C) so the two never drift.
 %
-%   [POOL, meta] = f4_row2_pool(mouse, fields)
+%   [POOL, meta] = f4_row2_pool(mouse, fields, motstat)
+%
+% motstat selects the motion statistic: 'mean' (DEFAULT, primary) or 'sq' (secondary).
+%   'mean' -> mean of the z-scored motion energy over the window
+%   'sq'   -> mean of its square
 %
 % Outcome  y = disturbance-rejection RMSE ||dFk-ref|| over [+1,+3] s (settled), RAW per trial.
 % States (RAW per trial), on the OL (nc) and CL (wc) buffers, both conditions:
 %   initdev = |dFk(onset) - ref|
-%   motion  = MEAN z-motion over the -2..+3 s window (PLAIN mean, NO rectification)  [user 2026-09-11]
+%   motion  = MEAN z-motion over the -2..+3 s window (PLAIN mean; see motstat)  [user 2026-10-02]
 %   delta   = cl_reldelta rel 2-4 Hz over -2 s -> stim end
 % A session/state contributes only if it has >= 8 finite trials in EACH condition.
 %
@@ -19,6 +23,8 @@ function [POOL, meta] = f4_row2_pool(mouse, fields)
 %   sess  (double)  session index k
 %   mouse (string)  mouse name
 % meta holds the constants used, for callers that need them.
+if nargin < 3 || isempty(motstat), motstat = 'mean'; end
+motstat = validatestring(lower(motstat), {'mean','sq'}, mfilename, 'motstat');
 Fs=35; ref=-5; c0=36; c1=71; c2=141; dur=3; c0_mot=71; c0_l=106; c0_p=351;
 relopts=struct('pre',2,'post',3);           % delta window -2 -> stim end (matches row 1)
 states={'initdev','motion','delta','absdelta'};   % absdelta = log10 abs 1-4 Hz power (same window as rel)
@@ -37,13 +43,10 @@ for k=1:numel(fields)
     if hasM
         wsO=max(1,c0_mot-round(2*Fs)); weO=min(size(d.ncmotion,2),c0_mot+round(dur*Fs)-1);
         wsC=max(1,c0_mot-round(2*Fs)); weC=min(size(d.wcmotion,2),c0_mot+round(dur*Fs)-1);
-        % mean(z^2), NOT mean(z) (2026-10-01, user). The motion trace is the
-        % z-scored FaceMap motSVD-1: session mean 0, SD 1, ~89%% of samples just
-        % below zero with rare large positive bouts. A plain mean is a SIGNED
-        % deviation from session-average motion (quiet trials go negative and
-        % partly cancel the bouts); the mean square is energy. Matches the
-        % definition f4_error_decomp.m:50 already used for Fig 4C.
-        S.motion={mean(d.ncmotion(:,wsO:weO).^2,2), mean(d.wcmotion(:,wsC:weC).^2,2)};
+        % PRIMARY = mean(z); 'sq' = mean(z^2), the secondary. The 2026-10-01 switch to
+        % the mean square is RETRACTED -- see utils/f4_motion_stat.m for why mean(z) is
+        % the monotone statistic, and why both callers must share one function.
+        S.motion = f4_motion_stat(d.ncmotion(:,wsO:weO), d.wcmotion(:,wsC:weC), motstat);
     else, S.motion={nan(numel(yOL),1),nan(numel(yCL),1)}; end
     if isfield(d,'pncDfk_l')&&~isempty(d.pncDfk_l)&&isfield(d,'pwcDfk_l')&&~isempty(d.pwcDfk_l)
         [rO,cO]=cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts);
@@ -67,5 +70,6 @@ for k=1:numel(fields)
         POOL.(nm)=[POOL.(nm); t];
     end
 end
-meta=struct('Fs',Fs,'ref',ref,'c0',c0,'c1',c1,'c2',c2,'dur',dur,'states',{states});
+meta=struct('Fs',Fs,'ref',ref,'c0',c0,'c1',c1,'c2',c2,'dur',dur, ...
+            'motstat',motstat,'states',{states});
 end

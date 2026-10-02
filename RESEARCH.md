@@ -16,6 +16,42 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig-4 motion reverted to mean(z); STRENGTHENS the claim the figure is about
+**Changed/Found:** Applied the user's "keep mean z for both" to Figure 4, completing the retraction of the 2026-10-01 `mean(z^2)` switch. New shared helper **`utils/f4_motion_stat.m`** is now the ONE definition; `utils/f4_row2_pool.m` takes a third arg `motstat` ('mean' default | 'sq') and `controller-analysis/f4_row2_quartiles.m` + `f4_row2_stats.m` both read one knob `F4_MOT_STAT` and pass it through. **This is the structural fix for yesterday's bug:** the panel file carries a DUPLICATED pooling block, the pool was switched to the mean square and that copy was not, so the bars binned one ordering of trials while the star above them tested another (59.2 % of trials changed quartile). The two blocks can no longer disagree about the statistic, because there is only one function.
+**Control: `initdev`, `delta` and `absdelta` are BIT-IDENTICAL between the two runs** (same gap, same CI, same p to all printed digits), proving only motion moved.
+**Fig-4 Row-2 motion, 1190 trials, 11 sessions:**
+| quantity | mean(z^2) (yesterday's) | **mean(z) (NEW PRIMARY)** | |
+|---|---|---|---|
+| state slope xw = PREDICTABILITY | b=+0.159 p=**1.05e-05** | b=+0.140 p=**7.33e-04** | weaker, still clear |
+| cond_CL:xw = CONTROLLABILITY | b=-0.177 p=**0.00977** | b=-0.197 p=**0.00146** | **6.7x STRONGER** |
+| OL-CL gap | -0.703 p=3.74e-05 | -0.705 p=3.73e-05 | unchanged |
+| per-session agreement | 10/11 | **11/11** | perfect |
+**It is a genuine trade-off, and it falls on the right side.** mean(z) costs ~70x on the predictability main effect (1.1e-05 -> 7.3e-04, still p < 0.001) and buys 6.7x on the **cond x state interaction - which IS the Row-2 claim** ("the closed-loop rejection benefit is state-dependent"). It also takes per-session agreement to 11/11. Same direction as Fig 2, where mean(z^2) was the one that dropped to 3/4 sessions. So the monotone statistic is better on the claim being made, in both figures, and nothing is lost that was significant before.
+**Why:** User decision 2026-10-02, "lets keep mean z for both but also run z^2 as secondary to see how things change", after I retracted the mean-square rationale as elementary-wrong (averaging an already-rectified energy's z-score is exactly monotone in trial energy; mean(z^2) is a second moment minimised AT the session mean).
+**Next:** Manuscript - Fig-4 motion **predictability 1.1e-5 -> 7.3e-4** and **controllability 0.0098 -> 0.0015**, in `results.tex:173-175` and the matching caption at `:123`. ⚠ **The remaining five Fig-4 ROW-1 sites still square** (`f4_error_decomp.m:51`, `cl_rmse_factor_windows.m:77`, `cl_factor_decomp_panel.m:77`, `f4_state_exemplars.m:31`, `_supp.m:28`). Those predate 2026-10-01 - squaring is their ORIGINAL definition, not something introduced yesterday - so flipping them would move published Row-1 variance-decomposition and exemplar numbers. NOT changed; needs an explicit decision, and until it is made Fig 4 Row 1 and Row 2 define motion differently.
+
+### 2026-10-02 - Fig-2 rel/abs delta + pre-var moved to [-1,0) too; sham moved EARLIER, not the window later
+**Changed/Found:** User: "rel delta and abs delta should also use the -1 to 0 window". `imp_state_trialvar.m` gains `STV_PWR_WIN` (`'paper'` default / `'legacy'`). Every Fig-2 state marker is now measured on one window, cols 71:105 = -1.000 to -0.029 s, 35 samples.
+**The sham constraint was dissolved, not overridden.** The power window could not previously reach -1.0 s because the matched sham was PINNED at -1.0 s and the state window was then pushed to start after it (2026-08-12), costing 7 of 34 samples. That dependency is now INVERTED: the state window is fixed at [-1,0) and the sham is placed to end one sample BEFORE it, at cols 64:70 = **-1.200 to -1.029 s**. The sham's actual requirement was only to sit outside the removed -0.5..0 s baseline (a sham inside it is constrained toward zero: var 8.0 inside vs 17.3 outside); it was never required to be at exactly -1.0 s. Both asserts - state/sham disjointness, and sham outside the baseline - are kept and both pass. **No samples are spent to buy the disjointness any more.**
+**Second, independent reason this was the right call - SPECTRAL RESOLUTION.** `local_delta` takes a bare FFT, so df = fs/n:
+| window | n | df | bins inside 2-4 Hz |
+|---|---|---|---|
+| legacy -0.8..-0.03 s | 26 | 1.346 Hz | **1**, at 2.69 Hz |
+| new -1.00..-0.03 s | 35 | **1.000 Hz** | **3**, at exactly 2, 3, 4 Hz |
+The published "2-4 Hz absolute power" was therefore **a single off-centre FFT bin** that represented neither 2 nor 4 Hz. At 35 samples the band is three bins on the integers. This is a correctness fix, not a preference.
+**Results - config A (legacy/legacy/mean) again reproduces the published numbers EXACTLY**, so every difference is attributable to the windows:
+| marker | legacy (published) | all [-1,0) (NEW) | direction |
+|---|---|---|---|
+| Motion | 0.71 [0.60-0.84] p=1.48e-07 4/4 | **0.73 [0.62-0.87] p=7.34e-07 4/4** | ~unchanged |
+| Pre-var | 3.21 [2.89-3.63] p=0 4/4 | **3.13 [2.79-3.64] p=0 4/4** | ~unchanged |
+| Abs delta | 1.99 [1.69-2.37] p=0 4/4, rho=+0.389 | **2.10 [1.77-2.57] p=0 4/4, rho=+0.414** | STRONGER |
+| Rel delta | 1.10 [0.94-1.27] p=0.00503 3/4, rho=+0.080 | **1.03 [0.89-1.20] p=0.00451 3/4, rho=+0.092** | SPLIT - see below |
+**Rel-delta splits and the manuscript must not paper over it.** Its continuous form gets STRONGER (rho +0.080 -> +0.092, p 7.8e-04 -> 1.0e-04; LME 0.00503 -> 0.00451) while its **SD RATIO collapses to 1.03 [0.89, 1.20]** - the point estimate is now essentially 1 and the CI straddles it. The CI already included 1 at 1.10, so the ratio was never a supportable claim; at 1.03 it is plainly null. **Rel-delta should be reported as a continuous/LME effect only, never as a Q4/Q1 variance ratio.**
+**A pre-existing weakness this surfaced, worth logging on its own:** the MOTION sham control is nominally significant and ALWAYS WAS - rho=-0.059 **p=0.0129 in the published config**. Moving the sham off -1.0 s improves it only to p=0.0407. So a stim-free window also shows a weak motion-variance relation, i.e. part of the motion effect is not stimulus-specific. (Pre-var and abs-delta shams are overwhelming, rho=+0.52/+0.38 p=0 - that is the already-retracted power confound. Rel-delta's sham is clean, p=0.74, which is exactly why rel-delta is the admissible marker.)
+**Why:** User instruction, plus the single-FFT-bin discovery above.
+**Next:** (a) Manuscript: abs-delta 1.99 [1.69, 2.37] -> **2.10 [1.77, 2.57]**; rel-delta ratio claim must be dropped or restated as continuous. (b) **Report the motion sham p=0.04 honestly or drop the motion-specificity claim** - a reviewer who asks for the control will find it. (c) Methods can now state one window, [-1, 0) s, for all four markers and a sham at -1.2..-1.03 s.
+
+
 ### 2026-10-02 - Fig-2 motion moved to the stated [-1, 0) s window; result is robust
 **Changed/Found:** Per the user, Figure 2's pre-stim motion window is now the `[-1, 0)` s the manuscript states. `impulse-analysis/imp_state_trialvar.m` gains a **decoupled motion window** `iMot = (iOn - round(1.0*fs)) : (iOn - 1)` = cols 71:105, 35 samples, plus two switches: `STV_MOT_WIN` (`'paper'` default / `'legacy'`) and `STV_MOT_STAT` (`'mean'` default / `'sq'`).
 **Why motion had to be decoupled rather than sharing `iState`:** the matched sham control occupies -1.000 to -0.829 s - the first fifth of `[-1, 0)` - and `iState` was deliberately pushed to start at -0.8 s so the POWER markers (PVv/DPa/DPr) are not built from the same samples as the control they are tested against. Both of those come from `df`. Motion comes from `imp.motTrace` (FaceMap), an independent channel, so an overlap with a df-derived sham carries no circularity. A single shared window would force either motion to lose the stated `[-1,0)` or the power markers to regain the circularity the 2026-08-12 fix removed.

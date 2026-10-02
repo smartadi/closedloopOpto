@@ -42,14 +42,17 @@
 % WINDOWS   All markers are strictly PRE-ONSET, so none overlaps the response window the DV is
 %           measured in -- but they are NOT the same window, and this block previously said they
 %           were (corrected 2026-10-02):
-%             MOTION           iMot   = [-1 s, -1/fs]      cols 71:105, 35 samples
-%             POWER (PVv/DPa/DPr) iState = [-0.8 s, -1/fs] cols 79:104, 26 samples
-%           The power markers start at -0.8 s because the matched sham control occupies -1.000 to
-%           -0.829 s and must not sit inside the window whose variance is the predictor. Motion is
-%           drawn from an independent channel (FaceMap) and carries no such circularity, so it uses
-%           the stated [-1, 0). RESEARCH A4 records that strictly-pre reproduces the 'peri'
-%           [-1,+0.5] s result. Set STV_STATE_WIN='peri' to compare, STV_MOT_STAT='sq' for the
-%           mean-square motion secondary.
+%             MOTION              iMot   = [-1 s, -1/fs]  cols 71:105, 35 samples
+%             POWER (PVv/DPa/DPr) iState = [-1 s, -1/fs]  cols 71:105, 35 samples
+%             SHAM control        iSham  = [-1.2, -1.03]s cols  64:70,  7 samples
+%           ONE window for every marker, as the manuscript states (user, 2026-10-02). Up to that
+%           date the power markers used -0.8..-0.03 s (26 samples) because the sham was pinned at
+%           -1.0 s and the state window was pushed to start after it; that dependency is now
+%           inverted -- state window fixed, sham placed before it. STV_PWR_WIN='legacy' restores
+%           the old geometry, STV_MOT_WIN='legacy' the old motion window, and both together
+%           reproduce the published numbers exactly. RESEARCH A4 records that strictly-pre
+%           reproduces the 'peri' [-1,+0.5] s result; STV_STATE_WIN='peri' to compare,
+%           STV_MOT_STAT='sq' for the mean-square motion secondary.
 %
 % RUN:  load_experiments;  imp_state_trialvar
 %       STV_NBIN = 5; imp_state_trialvar        % change the number of state bins
@@ -80,6 +83,20 @@ if ~exist('STV_MOT_STAT','var')  || isempty(STV_MOT_STAT),  STV_MOT_STAT = 'mean
 % 'legacy' = the pre-2026-10-02 behaviour, where motion shared iState (-0.8..-0.03 s).
 % Kept so the published numbers can be reproduced on demand rather than from memory.
 if ~exist('STV_MOT_WIN','var')   || isempty(STV_MOT_WIN),   STV_MOT_WIN = 'paper'; end
+% POWER-MARKER WINDOW (user, 2026-10-02): rel-delta and abs-delta -- and PVv, which is the same
+% window's variance -- now also use the [-1, 0) s the manuscript states, so EVERY Fig-2 state marker
+% is measured over one window. 'legacy' restores the -0.8..-0.03 s window used up to this date.
+% Two independent reasons, beyond matching the text:
+%  (a) SPECTRAL RESOLUTION. local_delta takes a bare FFT of the window, so df = fs/n. At the legacy
+%      26 samples df = 1.346 Hz and the 2-4 Hz numerator is ONE bin, at 2.69 Hz -- neither 2 nor 4 Hz
+%      is represented. At 35 samples df = 1.000 Hz exactly and the band is THREE bins, 2/3/4 Hz.
+%      The legacy "2-4 Hz power" was a single off-centre bin.
+%  (b) The sham no longer has to collide with it. The sham was pinned at -1.0 s and the state window
+%      was then pushed to START after it; here that dependency is INVERTED -- the state window is
+%      fixed at [-1,0) and the sham is placed to END one sample before it (cols 64:70, -1.200 to
+%      -1.029 s). Still outside the -0.5..0 s baseline dfImp has had removed, which was the sham's
+%      actual placement requirement, and the disjointness assert below is unchanged and still passes.
+if ~exist('STV_PWR_WIN','var')   || isempty(STV_PWR_WIN),   STV_PWR_WIN = 'paper'; end
 % STATE SCALING (user, 2026-08-12). Default RAW: the markers keep their physical units, so an axis
 % reads "motion z-score 2.5" or "pre-trial variance 20 (dF/F)^2" instead of a within-amp z that
 % cannot be related to anything. Cost of raw pooling: between-session and between-amplitude offsets
@@ -125,7 +142,8 @@ if ~exist(STV_FIGDIR,'dir'), mkdir(STV_FIGDIR); end
 
 fs   = STV_FS;
 tAxis = -3 : 1/fs : 3;                       % dfImp column timebase (matches load_experiments tWin=3)
-% NOTE: the state window's LOWER edge is set below, after the sham window, so the two are DISJOINT.
+% NOTE: the state and sham windows are DISJOINT. Which one is derived from the other depends on
+% STV_PWR_WIN -- see the block below. Default: state fixed at [-1,0), sham placed before it.
 switch lower(STV_STATE_WIN)
     case 'peri', stWin = [nan,  0.5];
     otherwise,   stWin = [nan, -1/fs];       % strictly pre-onset
@@ -142,14 +160,32 @@ end
 % DISJOINTNESS (2026-08-12, user asked what the windows were and the overlap surfaced): the sham must
 % NOT sit inside the state window. It did -- 7 of the 34 state samples WERE the sham -- which makes the
 % control for the power markers partly circular: the sham peak's deviation is built from the very
-% samples whose variance is the predictor. The state window therefore now STARTS one sample after the
-% sham ends. Costs 7 of 34 state samples; buys a control that is not self-referential.
+% samples whose variance is the predictor.
+% 2026-08-12 bought that disjointness by pushing the STATE window later (-0.8 s), costing 7 of 34
+% state samples. 2026-10-02 buys the SAME disjointness by moving the SHAM EARLIER instead, so the
+% state window keeps the full stated [-1, 0) and nothing is spent. The sham's real requirement was
+% only to sit outside the removed -0.5..0 s baseline, which -1.2..-1.03 s satisfies; it was never
+% required to be at exactly -1.0 s. Asserted below, both ways.
 iOn   = find(tAxis >= 0, 1);
 Lresp = numel(iOn+2 : iOn + round(0.22*fs));            % response-window length (7 samples)
-iSham = find(tAxis >= -1.0, 1) + (0:Lresp-1);           % matched length, outside the baseline
-stWin(1) = tAxis(iSham(end)) + 1/fs;                    % state window begins where the sham ends
-iState   = tAxis >= stWin(1) & tAxis <= stWin(2);
+if strcmpi(STV_PWR_WIN,'legacy')
+    % PRE-2026-10-02: sham pinned at -1.0 s, state window pushed to start after it.
+    iSham = find(tAxis >= -1.0, 1) + (0:Lresp-1);
+    stWin(1) = tAxis(iSham(end)) + 1/fs;
+    iState   = tAxis >= stWin(1) & tAxis <= stWin(2);   % float compare: silently yields 79:104
+else
+    % State window FIXED at [-1, 0); sham placed to end one sample before it. Integer column
+    % arithmetic, so no boundary sample is lost to a 1e-16 float comparison.
+    iEnd  = iOn - 1;                                    % strictly pre-onset
+    if strcmpi(STV_STATE_WIN,'peri'), iEnd = iOn + round(0.5*fs); end   % A4 comparison window
+    iPow  = (iOn - round(1.0*fs)) : iEnd;               % cols 71:105 (35 samples) when 'pre'
+    iSham = (iPow(1) - Lresp) : (iPow(1) - 1);          % cols 64:70, -1.200 to -1.029 s
+    assert(iSham(1) >= 1, '[STV] sham window runs off the start of the trace');
+    iState = false(size(tAxis));  iState(iPow) = true;
+    stWin  = [tAxis(iPow(1)), tAxis(iPow(end))];
+end
 assert(~any(ismember(find(iState), iSham)), '[STV] state and sham windows overlap');
+assert(tAxis(iSham(end)) < -0.5, '[STV] sham window has entered the removed -0.5..0 s baseline');
 
 % ---- MOTION WINDOW: decoupled from iState (user, 2026-10-02) -------------------------------------
 % Motion gets the [-1, 0) s window the manuscript actually states. It CANNOT share iState, because
@@ -192,6 +228,11 @@ fprintf('\n[STV] state window %s = [%.2f %.2f] s | %d bins | %d bootstrap\n', ..
         upper(STV_STATE_WIN), stWin(1), stWin(2), STV_NBIN, STV_NBOOT);
 fprintf('[STV] motion window %s = [%.2f %.2f] s (%d smp), stat = %s\n', upper(STV_MOT_WIN), ...
         tAxis(iMot(1)), tAxis(iMot(end)), numel(iMot), upper(STV_MOT_STAT));
+fprintf(['[STV] power  window %+0.3f .. %+0.3f s (%d samples, df = %.3f Hz, %d bins in 2-4 Hz)\n' ...
+         '[STV] sham   window %+0.3f .. %+0.3f s (%d samples)\n'], ...
+        stWin(1), stWin(2), nnz(iState), fs/nnz(iState), ...
+        nnz((0:nnz(iState)-1)*(fs/nnz(iState)) >= 2 & (0:nnz(iState)-1)*(fs/nnz(iState)) <= 4), ...
+        tAxis(iSham(1)), tAxis(iSham(end)), numel(iSham));
 
 for e = 1:nExp_s
     imp = allExperiments(e).imp;
