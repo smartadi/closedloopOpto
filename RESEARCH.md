@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig 2G / Fig 4D state-quartile panels: pooled display vs session-level stats
+**Changed/Found:** `controller-analysis/f4_row2_quartiles.m` — the drawn quartile bars pool all trials (quartile edges from the pooled z-state, L147) with **trial-SEM** error bars (L151-152), but the panel star comes from the session-aware LMM and the session signed-rank, which use **per-session** quartile edges (L119). PAPER.md (2026-08-13 entry) says the bars carry SEM *across sessions*; the current code does not. `impulse-analysis/imp_state_trialvar_fig.m` (2G) does the same thing: a pooled curve with a trial-bootstrap CI next to an LMM (1|session) star and a "k/N sess" count. No code changed.
+**Why:** User flagged the mismatch between the pooled plots and the session-specific significance tests in Figs 2 and 4.
+**Next:** DECIDED (user, same day): keep the pooled trial-level display and its trial-level error bars as they are. Add a caption sentence to Figs 2G and 4 (quartile row) saying the display is pooled over trials and the inference is session-level (mixed model + per-session agreement). Per-session-line redraw NOT done. Correct the stale PAPER.md 2026-08-13 claim ("SEM across sessions").
+
 ### 2026-10-02 - figures_v3: all 38 FINAL panels rebuilt in jn (rule-book) style
 **Changed/Found:** User asked for every finalized paper panel regenerated in jn style into a separate v3 folder. Built `paper/figures_v3/` = **35 of 38 panels regenerated + 3 Figure-1 panels copied**, with **zero non-final files**.
 **Mechanism - one hook, no 15-script refactor.** New `utils/paper_v3_mirror.m`, called from BOTH `paperExport` and `jnExport` (every producer funnels through one of them). With `global PAPER_V3 = true` it runs `jnAxesAll` (Arial, ticks 6 pt regular, axis labels + titles 7 pt bold, ticks out, box off, axis 0.5 pt - FIGURE_RULEBOOK §3) and writes an additive PDF+PNG under `figures_v3/`. `jnAxesAll` was written for exactly this: "rather than refactor every call site, this restyles the finished figure".
