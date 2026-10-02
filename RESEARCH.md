@@ -16,6 +16,23 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - LEDGER AUDIT: two "published" numbers I was carrying are NOT in the manuscript
+**Changed/Found:** User asked whether confirmed values are being logged correctly. Checked every number this session claims to move against the live `Closedloop_edit/results.tex` rather than against my own notes, and found **two errors in my ledger, both in the same direction - I had been treating freshly COMPUTED values as if they were PUBLISHED ones:**
+1. **Fig-4 motion.** I recorded the published values as predictability `1.1e-5` and controllability `0.0098`. The manuscript says neither. `results.tex:123` and `:213` both say **predictability p = 5.1e-5, controllability p = 0.0144**. `1.1e-5`/`0.0098` were values *I computed this morning* under `mean(z^2)` after the dF/F fix - never in the paper. So "revert to mean(z) moves the published 1.1e-5" was wrong twice over: wrong baseline, and the real baseline predates both of today's changes.
+2. **Fig-4 motion session count.** The stale commented block at `results.tex:212` records `n=11 (motion 7)`, i.e. the published motion result rests on **7 sessions**; the live text at `:213` says **11**. Today's run uses 11. So the published 5.1e-5/0.0144 and anything computed now are not the same analysis, and no clean old-vs-new comparison of those two p-values exists.
+**What this does NOT change:** no live manuscript statement is falsified. The two bound-style claims this session touched are CONSERVATIVE and still true - `:105` "all $p < 5\times10^{-4}$" against a measured worst of 2.02e-6, and `:171` "gap at mean state $p \le 1.7\times10^{-4}$" against a measured worst of 3.73e-05. Both can be tightened; neither is incorrect. The distinction matters: a loose-but-true bound is not an erratum.
+**Also measured, to finish the Fig-2G caption properly.** The caption quotes stim ratio AND matched-sham ratio for each marker, so updating only the stim side would half-break its argument. Legacy config reproduces **all six published caption numbers exactly** (0.71/0.79, 1.10/1.00, 1.99/2.10):
+| marker | legacy stim / sham (published) | new [-1,0) stim / sham |
+|---|---|---|
+| Motion | 0.71 / 0.79 | **0.73 / 0.80** |
+| Pre-var | 3.21 / 4.06 | **3.13 / 4.08** |
+| Abs delta | 1.99 / 2.10 | **2.10 / 2.25** |
+| Rel delta | 1.10 / 1.00 | **1.03 / 1.00** |
+**The caption's three-way dissociation survives for two of three legs.** Motion still falls below its control (0.73 vs 0.80) and abs-delta's control still rises at least as steeply (2.25 vs 2.10), so "abs-delta is ongoing-amplitude, not stimulus response" holds. But **rel-delta's margin over its control collapses from 1.10-vs-1.00 to 1.03-vs-1.00** - 0.03 on a ratio whose own CI is [0.89, 1.20]. The sentence at `:70` ("Elevated relative 2--4 Hz power raised prediction error modestly ... independent of signal power") can no longer lean on the ratio; only the continuous rho/LME form (rho +0.092, p = 1.0e-04, LME 0.0045, 3/4) supports it.
+**Why:** Logging integrity. A change log whose baselines are wrong is worse than none, because it manufactures confident deltas against values that were never published.
+**Next:** (a) Treat `results.tex` as the ONLY source for "what the paper currently says" - never a prior session's notes. (b) Rebuild the manuscript-delta table against the .tex before any text edit. (c) Decide whether Fig-4 motion is reported on 7 or 11 sessions, and state it; the published 5.1e-5/0.0144 cannot be compared to today's numbers until that is settled. (d) Rel-delta: drop the ratio framing in both the caption and `:70`.
+
+
 ### 2026-10-02 - Fig-4 motion reverted to mean(z); STRENGTHENS the claim the figure is about
 **Changed/Found:** Applied the user's "keep mean z for both" to Figure 4, completing the retraction of the 2026-10-01 `mean(z^2)` switch. New shared helper **`utils/f4_motion_stat.m`** is now the ONE definition; `utils/f4_row2_pool.m` takes a third arg `motstat` ('mean' default | 'sq') and `controller-analysis/f4_row2_quartiles.m` + `f4_row2_stats.m` both read one knob `F4_MOT_STAT` and pass it through. **This is the structural fix for yesterday's bug:** the panel file carries a DUPLICATED pooling block, the pool was switched to the mean square and that copy was not, so the bars binned one ordering of trials while the star above them tested another (59.2 % of trials changed quartile). The two blocks can no longer disagree about the statistic, because there is only one function.
 **Control: `initdev`, `delta` and `absdelta` are BIT-IDENTICAL between the two runs** (same gap, same CI, same p to all printed digits), proving only motion moved.
