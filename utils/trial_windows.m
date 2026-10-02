@@ -11,7 +11,7 @@ function W = trial_windows(dur, Fs)
 %   array     built in                    slice            onset col   span
 %   dfk       controllerData.m:110        i-35  : i+35*(dur+1)   36     -1 .. dur+1
 %   pdfk      controllerData.m:111        i-350 : i+35*(dur+3)  351    -10 .. dur+3
-%   pdfk_l    load_sessions.m:305         pdfk(:, 246:end)      106     -3 .. dur+3
+%   pdfk_l    load_sessions.m:259         dFk(i-105 : i+35*(dur+3)) 106   -3 .. dur+3
 %   motion    controllerData.m:114        i-70  : i+35*dur       71     -2 .. dur
 %
 % THE TRAP THIS CLOSES: dfk and motion are BOTH 176 columns when dur = 3, but
@@ -39,8 +39,14 @@ W.dfk    = mk(35,  35*(dur+1), Fs);
 W.pdfk   = mk(350, 35*(dur+3), Fs);
 W.motion = mk(70,  35*dur,     Fs);
 
-% pdfk_l is pdfk(:, 246:end): the same slice with 245 columns dropped from the
-% front, so its onset moves from 351 to 106 and its lead-in from 10 s to 3 s.
+% pdfk_l has TWO producers, which is why it is listed separately:
+%   - load_sessions.m:259 re-slices dFk directly at i-105, with its own
+%     min(abs(t - stimStarts)) index lookup -- it is NOT cropped from pdfk;
+%   - analysisPlots_paper.m:199-200 and analysisPlots_var.m:177-178 instead
+%     take pdfk(:, 246:end), which lands on the same 316 columns (351-245=106).
+% Verified 2026-10-01 on all 15 sessions: the two paths agree to EXACTLY 0,
+% so the duplication is currently harmless. It is still duplication, and the
+% restructure removes it by making pdfk_l a view rather than a stored array.
 W.pdfk_l = mk(350 - 245, 35*(dur+3), Fs);
 
 % every analysis array, so callers can iterate
