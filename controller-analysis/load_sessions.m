@@ -165,6 +165,8 @@ for k = 1:length(fields)
                 mouse.(fields{k}).d.ref = -5;
                 d    = mouse.(fields{k}).d;
                 data = mouse.(fields{k}).data;
+                d    = ctrl_cache_stamp(d, data, 're-saved to attach d');
+                mouse.(fields{k}).d = d;
                 save(pathCtrl, 'd', 'data', '-v7.3');
                 fprintf('Re-saved cache with d: %s\n', fields{k});
             end
@@ -212,6 +214,11 @@ for k = 1:length(fields)
 
             d    = mouse.(fields{k}).d;
             data = mouse.(fields{k}).data;
+            % Stamp HOW this cache was built (dF/F mode + baseline length + slim +
+            % commit). Added 2026-10-02: the Fig-4C discrepancy had to be diagnosed by
+            % five-way elimination purely because no cache records its own provenance.
+            d    = ctrl_cache_stamp(d, data, 'new build');
+            mouse.(fields{k}).d = d;
             if ~exist('data', 'dir'); mkdir('data'); end
             save(pathCtrl, 'd', 'data', '-v7.3');
             fprintf('Saved cache: %s\n', fields{k});

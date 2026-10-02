@@ -139,7 +139,12 @@ fprintf('state     nTrials nSess | session-aware LMM cond:state (PRIMARY star)  
 LME = struct();
 % ---- FOUR INDIVIDUAL PANELS (user 2026-09-28): one standalone PDF per state, sized to sit
 % side by side in a 17 cm row in Illustrator (4 x ~4.25 cm). NOT stitched into one figure. ----
-outview=fullfile('_preview'); if ~exist(outview,'dir'); mkdir(outview); end
+% ABSOLUTE, 2026-10-02. This was `fullfile('_preview')` -- relative, so it resolved against
+% whatever the cwd happened to be. Run from the project root it created a SECOND preview dir
+% at brain_paper/_preview/ while the PNGs everyone looks at live in controller-analysis/
+% _preview/, so the stitched panel's PNG read as hours stale while its PDF was current.
+outview=fullfile(fileparts(which('f4_row2_quartiles')),'_preview');
+if ~exist(outview,'dir'); mkdir(outview); end
 PQ=struct('qmO',{},'qmC',{},'qsO',{},'qsC',{},'predP',{},'predUp',{},'ctrlP',{},'ctrlUp',{});   % per-state quantities for the stitched figure
 for ip=1:numel(preds); nm=preds{ip};
     zx=Pl.(nm).zx; zy=Pl.(nm).zy; g=Pl.(nm).g;

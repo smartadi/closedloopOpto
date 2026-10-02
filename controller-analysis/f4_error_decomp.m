@@ -77,6 +77,8 @@ ok=all(isfinite([X1 X2 Xrel Xdel YE YL]),2)&Xdel>0; f=@(v)v(ok);
 Xall=[X1 X2 Xrel log10(Xdel)];                         % F1..F4 (abs delta as log10)
 fac_lbl={'init-dev','motion','rel 2-4Hz','abs \delta'};
 usess=unique(SESS); nS=numel(usess); n=numel(YE);
+assert_pooled(n,  'f4_error_decomp CL trials');
+assert_pooled(nS, 'f4_error_decomp motion sessions');
 fprintf('[f4_error_decomp] %d CL trials, %d motion sessions.\n', n, nS);
 
 %% ── R^2 machinery, run for THREE delta options ──────────────────────────────

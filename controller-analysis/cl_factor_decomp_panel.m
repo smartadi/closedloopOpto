@@ -108,6 +108,10 @@ okAll = all(isfinite([X1 Xr YE YL]),2);                 % 2-factor pool (every s
 okMot = okAll & MOT & isfinite(X2);                     % 3-factor pool (motion-complete)
 fprintf('\n[F4P1] pools: %d trials / %d sessions (2-factor, all)  |  %d trials / %d sessions (3-factor, motion)\n', ...
     nnz(okAll), numel(unique(SESS(okAll))), nnz(okMot), numel(unique(SESS(okMot))));
+% This is the loop that silently drew an EMPTY panel on 2026-10-02: line 69 skipped every
+% session on a missing pwcDfk_l and the script still exported, with no error.
+assert_pooled(nnz(okAll), 'cl_factor_decomp_panel 2-factor trials');
+assert_pooled(nnz(okMot), 'cl_factor_decomp_panel 3-factor (motion) trials');
 
 %% [F4P1-DECOMP] -------------------------------------------------------------------
 Z  = zscore([X1(okMot), X2(okMot), Xr(okMot)]);

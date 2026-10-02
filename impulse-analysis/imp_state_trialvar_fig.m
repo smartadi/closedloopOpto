@@ -39,6 +39,22 @@ if ~exist('STVF_PANELS','var') || isempty(STVF_PANELS), STVF_PANELS = 'quartile'
 % folder means the panel is locked and Illustrator-linked -- so this stays OFF by default and is
 % turned on deliberately, and the panels are registered in PAPER.md in the same commit.
 if ~exist('STVF_PAPER','var') || isempty(STVF_PAPER), STVF_PAPER = false; end
+% TWO-FLAG TRAP, removed 2026-10-02. The combined panel imp_state_var_combined.pdf is a
+% MANIFEST panel (Fig 2G) and used to require BOTH STVF_PAPER=true AND STVF_UNITS='norm',
+% each defaulting to the non-paper value. An ordinary run therefore skipped the one panel
+% the manifest depends on, in silence -- 2G sat at its 2026-09-30 build through an entire
+% day of Fig-2 work and was only noticed during a manifest coverage audit.
+% Now: STVF_PAPER=true is SUFFICIENT (it implies 'norm' unless units were set explicitly),
+% and when paper mode is off we say which manifest panel is being skipped and how to get it.
+STVF_UNITS_EXPLICIT = exist('STVF_UNITS','var') && ~isempty(STVF_UNITS);
+if STVF_PAPER && ~STVF_UNITS_EXPLICIT
+    STVF_UNITS = 'norm';
+    fprintf('[STVF] paper mode -> STVF_UNITS=''norm'' (required by the Fig-2G combined panel)\n');
+elseif ~STVF_PAPER
+    warning('STVF:noPaperPanel', ...
+        ['MANIFEST panel imp_state_var_combined.pdf (Fig 2G) is NOT being built. ' ...
+         'Set STVF_PAPER=true to export it.']);
+end
 % Overridable so a build can be staged somewhere writable: the real paper/images/figure2
 % PDFs are LOCKED whenever Illustrator or Acrobat has them open, and a half-written panel
 % set is worse than none.

@@ -119,6 +119,7 @@ for k = 1:numel(fields)
     SESS=[SESS;repmat(k,m,1)]; TRI=[TRI;(1:m)'];
 end
 
+assert_pooled(numel(YE), 'cl_rmse_factor_windows CL trials');
 ok = all(isfinite([X1 X2 Xdel Xrel Xpre Xslow YE YL YF]),2) & Xdel>0 & Xpre>0;
 f = @(v) v(ok);
 [X1,X2,Xdel,Xrel,Xpre,Xslow,YE,YL,YF,SESS,TRI] = ...

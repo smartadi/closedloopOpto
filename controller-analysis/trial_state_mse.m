@@ -125,10 +125,11 @@ for k = 1:nSess
     wc_mse   = [wc_mse;   data_k.er_wcDfk(wc_keep)];
 end
 
-if isempty(nc_spec) || isempty(freqCtrs)
-    warning('trial_state_mse: no valid sessions found.');
-    return;
-end
+% Was `warning(...); return;` -- a CLEAN EXIT, which on 2026-10-02 meant this script
+% reported success while its line-61 gate passed 0 of 15 sessions and nothing was computed.
+% A pooling loop that collected nothing is a bug, so it must stop the run.
+assert_pooled(numel(nc_spec),  'trial_state_mse sessions');
+assert_pooled(numel(freqCtrs), 'trial_state_mse spectral bins');
 
 fprintf('[state_mse] %d OL  /  %d CL  trials pooled (motion-clean).\n', ...
     size(nc_spec,1), size(wc_spec,1));

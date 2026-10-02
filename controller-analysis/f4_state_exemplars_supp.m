@@ -57,6 +57,7 @@ for k=1:numel(fields)
     sessMn{end+1}=tag; picks{end+1}=pk; segs{end+1}=dk; %#ok<SAGROW>
 end
 nS=numel(picks); fprintf('[f4_exemplars_supp] %d motion sessions.\n',nS);
+assert_pooled(nS, 'f4_state_exemplars_supp motion sessions');
 
 % ---- grid: rows = sessions, cols = 4 states ----
 fig=paperFig(16, 2.7*nS); tl=tiledlayout(fig,nS,4,'TileSpacing','compact','Padding','compact');
