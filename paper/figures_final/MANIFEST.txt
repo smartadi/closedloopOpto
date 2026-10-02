@@ -76,8 +76,8 @@ figure4/f4_cl_reject_RR.pdf
 figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf
 figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf
 figure5/sine_5D_trialavg_input_AL_0048_2026-07-14_1.pdf
-figure5/sine_5E_rmse_time_AL_0048_2026-07-14_1.pdf
-figure5/sine_5F_variance_AL_0048_2026-07-14_1.pdf
+figure5/sine_5E_variance_AL_0048_2026-07-14_1.pdf
+figure5/sine_5F_rmse_time_AL_0048_2026-07-14_1.pdf
 figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf
 figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf
 figure5/sine_combined_phase.pdf

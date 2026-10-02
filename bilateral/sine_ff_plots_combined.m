@@ -8,8 +8,8 @@
 %   paper/images/figure5/sine_5B_single_trial_<sfx>.pdf   – single trial     (12.5 x 3.5)
 %   paper/images/figure5/sine_5C_trialavg_<sfx>.pdf       – trials + average (12.5 x 3.5) +/-std
 %   paper/images/figure5/sine_5D_trialavg_input_<sfx>.pdf – avg 638 input mW (12.5 x 3.5) +/-std
-%   paper/images/figure5/sine_5E_rmse_time_<sfx>.pdf      – RMSE over time   (5.2 x 4)   +/-SEM
-%   paper/images/figure5/sine_5F_variance_<sfx>.pdf       – variance vs time (5.2 x 4)
+%   paper/images/figure5/sine_5F_rmse_time_<sfx>.pdf      – RMSE over time   (5.2 x 4)   +/-SEM
+%   paper/images/figure5/sine_5E_variance_<sfx>.pdf       – variance vs time (5.2 x 4)
 %   paper/images/figure5/sine_5G_rmse_violin_<sfx>.pdf    – trial RMSE violin(4.2 x 5.4)
 %   paper/images/figure5/sine_5H_phase_lag_<sfx>.pdf      – PHASE LAG (deg)  (4.2 x 5.4)
 %   (5A = system schematic, drawn in Illustrator — not produced here.)
@@ -254,8 +254,8 @@ for m = 1:nMode
     fprintf('   %-14s %6.3f -> %6.3f  (%+.3f)%s\n', MODE_LABELS{m}, rE, rL, rL-rE, ...
         repmat('  <- falls', 1, rL < rE));
 end
-if EXPORT; paperExport(fig_RM, fullfile(outDir, sprintf('sine_5E_rmse_time_%s.pdf', sfx)));
-    if EXPORT_PNG; paperExport(fig_RM, fullfile(pngDir, sprintf('sine_5E_rmse_time_%s.png', sfx))); end; end
+if EXPORT; paperExport(fig_RM, fullfile(outDir, sprintf('sine_5F_rmse_time_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_RM, fullfile(pngDir, sprintf('sine_5F_rmse_time_%s.png', sfx))); end; end
 prev(fig_RM, '5E');
 
 %% 5F: variance over time (row1) ------------------------------------------
@@ -277,8 +277,8 @@ uistack(findobj(ax_var,'Type','line'), 'top'); hold(ax_var,'off');
 paperAxes(ax_var, 'XLength',1, 'YLength',0, 'XLabel','1 s');
 text(ax_var, -0.12, 0.5, 'Variance across trials', 'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', 'Color','k', 'Clipping','off');
-if EXPORT; paperExport(fig_D, fullfile(outDir, sprintf('sine_5F_variance_%s.pdf', sfx)));
-    if EXPORT_PNG; paperExport(fig_D, fullfile(pngDir, sprintf('sine_5F_variance_%s.png', sfx))); end; end
+if EXPORT; paperExport(fig_D, fullfile(outDir, sprintf('sine_5E_variance_%s.pdf', sfx)));
+    if EXPORT_PNG; paperExport(fig_D, fullfile(pngDir, sprintf('sine_5E_variance_%s.png', sfx))); end; end
 prev(fig_D, '5F');
 
 %% 5G: trial RMSE distribution (col2 row1) --------------------------------
