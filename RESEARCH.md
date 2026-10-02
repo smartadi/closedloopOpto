@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig-3 LMM: two of the four p-values come from a BOUNDARY fit; their Satterthwaite df is not identified
+**Changed/Found:** Yesterday's port entry compared the Python/R fit against the **draft caption** (5.4e-9 / 2.5e-18), but `fig3_olcl_stats.m` had already been re-run on 2026-10-01 and no longer produces those numbers. Against the **current MATLAB fit** - identical data, identical formula `y ~ cond + (1+cond|sess) + (1|mouse)`, both REML + Satterthwaite - the two implementations still disagree, and by very different amounts:
+
+| metric | port (R lme4/lmerTest) | Satterthwaite df | MATLAB `fitlme` | ratio |
+|---|---|---|---|---|
+| rmse_early | 1.5e-08 | **71.0** | 1.8e-07 | 12x |
+| rmse_late | 1.3e-07 | 13.8 | 1.0e-06 | 8x |
+| var_early | 9.7e-07 | **84.6** | 4.7e-04 | **483x** |
+| var_late | 1.7e-06 | 14.0 | 4.1e-06 | 2.4x |
+
+**The df column explains the whole pattern.** The design is the same for all four metrics - 15 sessions, 4 mice, ~1660 trials - so the session-slope df should be ~14 every time, and it is for `rmse_late` and `var_late`, the two that agree with MATLAB to within 8x. For `rmse_early` and `var_early` lmerTest instead reports **71 and 85** df, and those are exactly the two with the largest MATLAB disagreement. Refitting them with an **uncorrelated** slope (`(1|sess) + (0+cond|sess)`) returns **sessSD = 0.0000** while p is unchanged to three digits - the intercept variance has collapsed into the slope. That is a **boundary fit**: the random-slope covariance is at the edge of the parameter space, the effective df is not identified, and p becomes an artifact of which optimiser stopped where. The correlation parameter itself is irrelevant (correlated and uncorrelated forms give the same p to 3 digits); only intercept-only-vs-slope matters, and that moves p by 1e5 to 1e29.
+
+**What is robust:** the effect size. Across all three random structures the CL-OL gap moves only in the third digit (rmse_early -0.464 to -0.491, var_late -0.485 to -0.524). Every structure and both implementations give p <= 5e-4 for all four metrics, so **no claim in Fig 3 changes** - but nothing finer than "p < 1e-4" is defensible for `rmse_early` and `var_early`.
+**Why:** A 483x implementation gap on a published p-value is the kind of thing a referee reproduces and asks about, and "both are REML + Satterthwaite" is not an answer. The df diagnostic turns it from an unexplained discrepancy into a known, statable property of the model: with 15 sessions a random OL->CL slope is weakly identified for the early-window metrics.
+**Next:** Decide with Aditya how the caption should read. My recommendation: quote **one significant figure** and the conservative (df ~= 14) scale for the two boundary metrics, i.e. all four as `p < 1e-4` with the gap and CI carrying the quantitative claim - the CIs are stable and are the better statistic here. If the random slope is kept, `utils/cl_olcl_lmm.m` should **report the Satterthwaite df alongside p** so a boundary fit is visible instead of silent; its `try/catch` only catches hard errors, so a boundary fit never triggers the intercept-only fallback. Probe: `scratchpad/fig3_lmm_probe.py` (brain_paper_py).
+
 ### 2026-10-02 - Fig-4C RESOLVED (2 of 3 gaps): the paper's "full model R^2" is the REL model, and init-dev was credited after rel
 **Changed/Found:** Two of the three remaining panel-C discrepancies were my own reporting definitions, not data problems. Both found in the Python port (`bpy/analysis/f4_pool.py`) and both apply to the MATLAB script's intent as well.
 
