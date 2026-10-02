@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig-4 panels regenerated; the delta "trend" is non-monotonic in BOTH versions
+**Changed/Found:** Re-ran `f4_row2_quartiles` on the corrected data (panels f4_2A/2B/2C/2D + the stitched `f4_row2_quartiles`, to `paper/images/figure4` and `_preview`). The Rel 2-4 Hz panel now prints "P n.s. / C n.s."; Motion keeps its ** star. Built a decision figure, `paper/images/figure4/delta_controllability_old_vs_new.png`, putting the old and corrected quartile curves side by side with all 15 per-session gap traces.
+**The important observation is not the p-value, it is the shape.** The OL-CL gap across Rel 2-4 Hz quartiles is:
+- OLD dF/F: 0.886, 0.658, 0.823, 0.600
+- CORRECTED: 0.877, 0.694, 0.910, 0.682
+**Both are non-monotonic** - Q2 dips, Q3 rises back above Q1-level, Q4 falls. There is no clean decline in either version; the model was fitting a linear interaction through a bumpy pattern, and the per-session traces span roughly -0.5 to +1.8 at every quartile. Net Q1->Q4 change is only -0.29 (old) and -0.20 (corrected). So the claim was **marginal and fragile before the correction**, not a solid effect that the correction destroyed: p = 0.0141 was already a weak linear fit over a non-monotonic pattern with large between-session spread, and a two-session change was enough to move it to 0.074.
+All three tests now agree it is not significant: LMM p = 0.0742, per-session signed-rank p = 0.107, pooled p = 0.0732.
+**Why:** The user declined to re-word the manuscript without seeing the figure and the trend first, which was the right call - the shape is more informative than the p-value and changes how the claim should be framed.
+**Next:** User decision on wording, deferred to them. Note for whatever they choose: Fig-4B/C unique-variance is independent evidence for the same conclusion (relative power carries the steady-state window, unique R^2 0.10 -> 0.12, where initial deviation collapses 0.29 -> 0.004), and does not depend on this interaction at all.
+
+### 2026-10-02 - Stale header in f4_row2_quartiles describes a model it does not use
+**Changed/Found:** `controller-analysis/f4_row2_quartiles.m` documents its panel star as coming from `zrmse ~ cond*state + (1|mouse) + (1|sess)` - z-scored outcome, random INTERCEPTS only. `f4_row2_stats.m` documents the opposite, that the star comes from the shared `f4_row2_fit` (`y ~ cond*xw + (1+cond|sess) + (1|mouse)`, raw outcome, random SLOPES). Running it settles it: the printed stars are 0.743 / 0.00978 / 0.0742 / 0.15, identical to `f4_row2_fit`, and the script's own footer prints "ROW 2 LME (session-aware, SHARED with f4_2S_stats)". **So the shared model is what runs and the quartiles header is stale documentation**, describing a superseded test.
+**Why:** Checked deliberately, because two headers describing different models for the same star is exactly the "one quantity, two paths" risk the code review is meant to catch. It turned out to be a documentation defect rather than a numerical one.
+**Next:** Delete the stale model description from the `f4_row2_quartiles.m` header (lines ~22-27) so it does not mislead the next reader into believing the panel star and the forest come from different models. No behaviour change.
+
+
 ### 2026-10-02 - Fig-3 re-run on corrected dF/F: every p-value STRONGER, nothing reversed
 **Changed/Found:** MATLAB was restarted overnight (clearing the workspace) and the licence is healthy again, so the blocked statistics could finally be regenerated. Re-ran `controller-analysis/fig3_olcl_stats` over all 15 controller caches (it globs `data/*ctrl*.mat`, so it picked up the rebuilt m14/m15 automatically; confirmed exactly 15 files, the two new ones dated 2026-10-01).
 | metric | p OLD | p NEW | gap OLD -> NEW |
