@@ -37,7 +37,13 @@ for k=1:numel(fields)
     if hasM
         wsO=max(1,c0_mot-round(2*Fs)); weO=min(size(d.ncmotion,2),c0_mot+round(dur*Fs)-1);
         wsC=max(1,c0_mot-round(2*Fs)); weC=min(size(d.wcmotion,2),c0_mot+round(dur*Fs)-1);
-        S.motion={mean(d.ncmotion(:,wsO:weO),2), mean(d.wcmotion(:,wsC:weC),2)};   % PLAIN mean, no rectify
+        % mean(z^2), NOT mean(z) (2026-10-01, user). The motion trace is the
+        % z-scored FaceMap motSVD-1: session mean 0, SD 1, ~89%% of samples just
+        % below zero with rare large positive bouts. A plain mean is a SIGNED
+        % deviation from session-average motion (quiet trials go negative and
+        % partly cancel the bouts); the mean square is energy. Matches the
+        % definition f4_error_decomp.m:50 already used for Fig 4C.
+        S.motion={mean(d.ncmotion(:,wsO:weO).^2,2), mean(d.wcmotion(:,wsC:weC).^2,2)};
     else, S.motion={nan(numel(yOL),1),nan(numel(yCL),1)}; end
     if isfield(d,'pncDfk_l')&&~isempty(d.pncDfk_l)&&isfield(d,'pwcDfk_l')&&~isempty(d.pwcDfk_l)
         [rO,cO]=cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts);

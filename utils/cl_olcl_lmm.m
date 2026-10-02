@@ -30,10 +30,15 @@ tb = table(y(:), categorical(cellstr(string(cond(:)))), ...
     'VariableNames', {'y','cond','sess','mouse'});
 tb.cond = reordercats(tb.cond, {'OL','CL'});   % cond_CL = CL - OL
 
-try   lme = fitlme(tb, 'y ~ cond + (1+cond|sess) + (1|mouse)'); rs = true;
-catch, lme = fitlme(tb, 'y ~ cond + (1|sess) + (1|mouse)');      rs = false; end
+% REML (not the fitlme ML default): with 4 mice / 15 sessions, ML biases the
+% variance components low, which shrinks the fixed-effect SEs. Satterthwaite DF
+% (not the RESIDUAL default) so the t-test is referenced against the effective
+% number of clusters rather than the trial count. Both set 2026-10-01.
+try   lme = fitlme(tb, 'y ~ cond + (1+cond|sess) + (1|mouse)', 'FitMethod','REML'); rs = true;
+catch, lme = fitlme(tb, 'y ~ cond + (1|sess) + (1|mouse)',      'FitMethod','REML'); rs = false; end
 
-C = lme.Coefficients; nm = cellstr(C.Name); gi = find(strcmp(nm,'cond_CL'),1);
+[~,~,C] = fixedEffects(lme, 'DFMethod','Satterthwaite');  C = dataset2table_safe(C);
+nm = cellstr(string(C.Name)); gi = find(strcmp(nm,'cond_CL'),1);
 
 % variance components (robust to the titled-dataset return shape)
 mouseSD = NaN; sessSD = NaN;
