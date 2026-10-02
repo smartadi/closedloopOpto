@@ -174,7 +174,7 @@ vd_preN = round(1*Fs);  vd_postN = round(0.5*Fs);
 gp = (ion-vd_preN):(ion+vd_postN);
 if gp(1) >= 1 && gp(end) <= D.nF
     sp = double(D.y_full(gp));
-    nW = numel(sp);  w = hann(nW);  W = sum(w.^2);
+    nW = numel(sp);  w = hannwin(nW);  W = sum(w.^2);
     nfft = 2^nextpow2(nW);  fr = (0:nfft-1)'/nfft*Fs;  nB = floor(nfft/2)+1;
     Xf = fft(sp(:).*w, nfft);  pw = abs(Xf(1:nB)).^2 * 2/(Fs*W);
     fb = fr(1:nB);  keep = fb <= 10;                 % canonical rel-delta denom is 0.4-10 Hz

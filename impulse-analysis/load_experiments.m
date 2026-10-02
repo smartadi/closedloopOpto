@@ -240,7 +240,7 @@ peak_mode = 3;
 specWin = 2 * fs;           % 70-sample Hann window â†’ Î”f = 0.5 Hz
 specHop = fs;               % 35-sample hop â†’ 1-s steps
 nBands  = 20;               % bands 0â€“10 Hz, one FFT bin each
-[S_spec, ~, t_spec] = spectrogram(dF, hann(specWin), specWin-specHop, specWin, fs);
+[S_spec, ~, t_spec] = spectrogram(dF, hannwin(specWin), specWin-specHop, specWin, fs);
 S_bands = abs(S_spec(1:nBands, :)).^2;   % absolute power, (\DeltaF/F)^2 Hz^-1
 S_norm  = S_bands ./ (sum(S_bands, 1) + eps);   % kept for reference, not used for freqSpec
 freqBandCtrs = (0:nBands-1)*0.5 + 0.25;          % 0.25, 0.75, â€¦, 9.75 Hz

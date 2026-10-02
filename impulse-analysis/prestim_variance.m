@@ -352,7 +352,7 @@ allAmpV_p     = [];   % amplitude in V per trial
 % Here we recompute from the raw pre-stim trace so spectrum and variance are aligned.
 nPre_smp = sum(preIdx_var);          % 35 samples = 1 s at fs=35 Hz
 nfft_pv  = 2 * fs;                   % 70-pt FFT → Δf = 0.5 Hz, matches freqBandCtrs bins
-W_hann   = sum(hann(nPre_smp).^2);  % Hann window normalisation factor
+W_hann   = sum(hannwin(nPre_smp).^2);  % Hann window normalisation factor
 
 for iAmp_pvh = 1:nAmp_pvh
     df_i  = imp_pvh.dfImp{iAmp_pvh};
@@ -376,7 +376,7 @@ for iAmp_pvh = 1:nAmp_pvh
     freq_k = nan(numel(keep), nBands);
     for jj = 1:numel(keep)
         xj           = df_k(jj, preIdx_var)';
-        Xj           = fft(xj .* hann(nPre_smp), nfft_pv);
+        Xj           = fft(xj .* hannwin(nPre_smp), nfft_pv);
         freq_k(jj,:) = abs(Xj(1:nBands)).^2 * 2 / (fs * W_hann);
     end
 

@@ -26,7 +26,7 @@ function band_ratio = compute_bandpower_sliding(x, Fs, win_len_sec)
     win_mat  = x(col_idx);                 % M x W signal windows
 
     % Hann taper to reduce spectral leakage (row broadcast)
-    win_mat = win_mat .* hann(W)';         % M x W
+    win_mat = win_mat .* hannwin(W)';         % M x W
 
     % Single batch FFT across all M windows simultaneously
     nfft  = W;

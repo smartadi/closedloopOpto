@@ -46,7 +46,7 @@ preCols      = find(tsec >= -0.2 & tsec < 0);          % matched pre-onset contr
 postCtrlCols = ((Wb-round(0.2*Fs)+1):Wb).';            % last 0.2 s = settled-tail control
 vd_preN  = round(1*Fs);    vd_postN  = round(0.5*Fs);  % var/delta window [-1,+0.5] s
 motPreN  = round(2*Fs);    motPostN  = round(0.5*Fs);  % motion window    [-2,+0.5] s
-nWvd   = vd_preN + vd_postN + 1;  win_r = hann(nWvd);  W_r = sum(win_r.^2);
+nWvd   = vd_preN + vd_postN + 1;  win_r = hannwin(nWvd);  W_r = sum(win_r.^2);
 nfft_r = 2^nextpow2(nWvd);  fr = (0:nfft_r-1)'/nfft_r*Fs;  nB_r = floor(nfft_r/2)+1;
 delta_r = fr(1:nB_r) >= 2   & fr(1:nB_r) <= 4;         % 2-4 Hz delta band (canonical CL band, 2026-09-08)
 tot_r   = fr(1:nB_r) >= 0.4 & fr(1:nB_r) <= 10;        % 0.4-10 Hz total, RELATIVE-delta ratio (matches Xrel)

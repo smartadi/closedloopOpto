@@ -1655,7 +1655,7 @@ STIMBLIND_NAIVE = struct('amps',amps,'refAmp',ampRef,'S_naive',S_naive,'refSweep
 tsec    = rel(:)/Fs;  preCols = find(tsec>=-0.2 & tsec<0);     % matched pre-onset control window (cols into peri-onset)
 vd_preN = round(1*Fs);  vd_postN = round(0.5*Fs);             % var/delta window [-1,+0.5]s (peri-stim, CP-RES)
 motPreN = round(2*Fs);  motPostN = round(0.5*Fs);            % motion window  [-2,+0.5]s
-nWvd = vd_preN+vd_postN+1;  win_r = hann(nWvd);  W_r = sum(win_r.^2);
+nWvd = vd_preN+vd_postN+1;  win_r = hannwin(nWvd);  W_r = sum(win_r.^2);
 nfft_r = 2^nextpow2(nWvd);  fr = (0:nfft_r-1)'/nfft_r*Fs;  nB_r = floor(nfft_r/2)+1;
 delta_r = fr(1:nB_r)>=1 & fr(1:nB_r)<=4;                       % 1-4 Hz delta band
 tot_r   = fr(1:nB_r)>=0.5 & fr(1:nB_r)<=30;                    % broadband for the RELATIVE-delta ratio

@@ -162,7 +162,7 @@ ampV = im.uAmp(a);  if iscell(ampV), ampV = ampV{1}; end;  ampV = double(ampV);
 end
 
 function [dpa, dpr] = local_delta_ste(seg, fs)
-n = size(seg,2);  w = hann(n).';
+n = size(seg,2);  w = hannwin(n).';
 x = seg - mean(seg, 2, 'omitnan');  x(~isfinite(x)) = 0;
 X = abs(fft(x .* w, [], 2)).^2;
 f = (0:n-1) * (fs/n);  half = 1:floor(n/2);  f = f(half);  X = X(:,half);

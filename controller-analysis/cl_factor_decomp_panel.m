@@ -174,6 +174,6 @@ fprintf('\n[F4P1] panel -> %s\n', fullfile(outdir,'f4p1_error_decomp.png'));
 %% ---- helpers ----
 function p = fd_bp(seg,Fs,lo,hi)
 seg = detrend(double(seg(:)).','linear'); N = numel(seg);
-w = hann(N).'; P = abs(fft(seg.*w)).^2; P = P(1:floor(N/2)+1);
+w = hannwin(N).'; P = abs(fft(seg.*w)).^2; P = P(1:floor(N/2)+1);
 fr = (0:floor(N/2))*Fs/N;  p = sum(P(fr>=lo & fr<hi));
 end

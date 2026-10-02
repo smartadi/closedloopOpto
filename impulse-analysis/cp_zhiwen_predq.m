@@ -69,7 +69,7 @@ y    = Yall(pStar,:);                                        % [1 x nSpan] actua
 yhat = (Xall*W(:,pStar))';                                   % [1 x nSpan] contra prediction
 
 %% ---- randomly sample 3-s windows from the held-out TEST block ----
-Lw=round(winSec*Fs);  win=hann(Lw); Wn=sum(win.^2); nfft=2^nextpow2(Lw);
+Lw=round(winSec*Fs);  win=hannwin(Lw); Wn=sum(win.^2); nfft=2^nextpow2(Lw);
 fr=(0:nfft-1)'/nfft*Fs; nB=floor(nfft/2)+1; dband=fr(1:nB)>=1 & fr(1:nB)<=4;
 rng(rngSeed);
 lo=te_idx(1); hi=te_idx(end)-Lw+1;  starts=lo+floor(rand(nWin,1)*(hi-lo+1));

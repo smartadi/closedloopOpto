@@ -697,7 +697,7 @@ function [dpa, dpr] = local_delta(seg, fs)
 % Fig-4 measure the SAME state. (Was 1-4 / 0.5-30 Hz before this date.)
 % Mean-removed + Hann so the DC term and edge leakage do not land in the delta band.
 n = size(seg,2);
-w = hann(n).';
+w = hannwin(n).';
 x = seg - mean(seg, 2, 'omitnan');
 x(~isfinite(x)) = 0;
 X = abs(fft(x .* w, [], 2)).^2;

@@ -106,6 +106,6 @@ paperExport(fig,fullfile(outview,'f4_state_exemplars.png'));
 fprintf('[f4_state_exemplars] wrote row-1 composite -> %s\n',outfig);
 
 function p=local_bandpow(seg,Fs,lo,hi)
-    seg=detrend(double(seg(:)).','linear'); N=numel(seg); w=hann(N).';
+    seg=detrend(double(seg(:)).','linear'); N=numel(seg); w=hannwin(N).';
     P=abs(fft(seg.*w)).^2; P=P(1:floor(N/2)+1); fr=(0:floor(N/2))*Fs/N; p=sum(P(fr>=lo&fr<hi));
 end

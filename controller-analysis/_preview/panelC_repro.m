@@ -89,6 +89,6 @@ fprintf('              over 397 CL trials / 7 sessions\n');
 function p=local_bp(seg,Fs,lo,hi)
 % VERBATIM copy of local_bandpow from controller-analysis/f4_error_decomp.m
     seg=detrend(double(seg(:)).','linear'); N=numel(seg);
-    w=hann(N).'; P=abs(fft(seg.*w)).^2; P=P(1:floor(N/2)+1);
+    w=hannwin(N).'; P=abs(fft(seg.*w)).^2; P=P(1:floor(N/2)+1);
     fr=(0:floor(N/2))*Fs/N; p=sum(P(fr>=lo & fr<hi));
 end

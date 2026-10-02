@@ -29,7 +29,7 @@ nBands    = 20;              % bands [0,0.5) … [9.5,10) Hz, one FFT bin each
 pre_bins  = 6;               % spectrogram bins stored before onset (6 s)
 post_bins = dur + 3;         % bins after onset: trial end + 3 s buffer
 
-[S_spec, ~, t_spec] = spectrogram(dFk, hann(specWin), specWin-specHop, specWin, Fs);
+[S_spec, ~, t_spec] = spectrogram(dFk, hannwin(specWin), specWin-specHop, specWin, Fs);
 S_bands = abs(S_spec(1:nBands, :)).^2;
 S_norm  = S_bands ./ (sum(S_bands, 1) + eps);   % 20 × nSpecTime  (power ratios 0-10 Hz)
 

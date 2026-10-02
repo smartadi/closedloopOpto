@@ -55,7 +55,7 @@ for o = P.onf(:)'
 end
 
 % --- window into contiguous non-stim segments; per-window metrics + state ---------
-Lw = round(winSec*Fs);  win = hann(Lw);  Wn = sum(win.^2);  nfft = 2^nextpow2(Lw);
+Lw = round(winSec*Fs);  win = hannwin(Lw);  Wn = sum(win.^2);  nfft = 2^nextpow2(Lw);
 fr = (0:nfft-1)'/nfft*Fs;  nB = floor(nfft/2)+1;  dband = fr(1:nB)>=1 & fr(1:nB)<=4;
 winIdx = {};  lr2=[]; rho=[]; motE=[]; pv=[]; dpow=[]; drel=[];  s = 1;  nDisc = 0;
 while s+Lw-1 <= nF

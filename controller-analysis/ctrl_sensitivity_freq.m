@@ -266,7 +266,7 @@ function [P, f] = sf_psd(M, idx, Fs)
 %SF_PSD  mean one-sided PSD across trials, linear-detrended + Hann. DC/drift removed by design.
 X = double(M(:, idx));
 X = detrend(X.', 'linear').';           % per trial
-N = size(X,2);  w = hann(N).';
+N = size(X,2);  w = hannwin(N).';
 X = X .* w;
 F = abs(fft(X, [], 2)).^2 / (Fs * sum(w.^2));
 nf = floor(N/2)+1;

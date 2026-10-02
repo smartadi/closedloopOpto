@@ -24,6 +24,8 @@ T.cond=reordercats(T.cond,{'OL','CL'});
 try   lme=fitlme(T,'y ~ cond*xw + (1+cond|sess) + (1|mouse)', 'FitMethod','REML'); rs=true;
 catch, lme=fitlme(T,'y ~ cond*xw + (1|sess) + (1|mouse)',      'FitMethod','REML'); rs=false; end
 [~,~,C]=fixedEffects(lme, 'DFMethod','Satterthwaite');  C=dataset2table_safe(C);
+assert(~isempty(C) && ismember('Name', C.Properties.VariableNames), ...
+    'f4_row2_fit:coefConv', 'Satterthwaite coefficient table did not convert.');
 nmc=cellstr(string(C.Name)); gc=@(w) find(strcmp(nmc,w),1);
 gi=gc('cond_CL'); si=gc('xw'); di=gc('cond_CL:xw');
 R=struct('gap',C.Estimate(gi),'gapCI',[C.Lower(gi) C.Upper(gi)],'gapP',C.pValue(gi), ...

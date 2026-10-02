@@ -126,7 +126,7 @@ gp = (ion-vd_preN):(ion+vd_postN);
 ax3 = subplot(2,2,4); hold(ax3,'on'); box(ax3,'on');
 if gp(1) >= 1 && gp(end) <= D.nF
     sp = double(D.y_full(gp));
-    nW = numel(sp);  w = hann(nW);  W = sum(w.^2);
+    nW = numel(sp);  w = hannwin(nW);  W = sum(w.^2);
     nfft = 2^nextpow2(nW);  fr = (0:nfft-1)'/nfft*Fs;  nB = floor(nfft/2)+1;
     X = fft(sp(:).*w, nfft);  pw = abs(X(1:nB)).^2 * 2/(Fs*W);
     fb = fr(1:nB);  keep = fb <= 30;

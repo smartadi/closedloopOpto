@@ -535,7 +535,7 @@ vd_preN = round(1*Fs);  vd_postN = round(0.5*Fs);
 motPreN = round(2*Fs);  motPostN = round(0.5*Fs);
 if strcmpi(state_win,'pre'), vd_postN = 0; motPostN = 0; end   % A4: strictly pre-onset (no onset span -> kills residual circularity)
 nWvd = vd_preN+vd_postN+1;
-win_r  = hann(nWvd); W_r = sum(win_r.^2);          % spectral setup sized to var/delta window
+win_r  = hannwin(nWvd); W_r = sum(win_r.^2);          % spectral setup sized to var/delta window
 nfft_r = 2^nextpow2(nWvd);
 fr     = (0:nfft_r-1)'/nfft_r * Fs; nB_r = floor(nfft_r/2)+1;
 delta_r = fr(1:nB_r) >= 1 & fr(1:nB_r) <= 4;

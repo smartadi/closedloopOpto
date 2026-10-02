@@ -38,6 +38,8 @@ try   lme = fitlme(tb, 'y ~ cond + (1+cond|sess) + (1|mouse)', 'FitMethod','REML
 catch, lme = fitlme(tb, 'y ~ cond + (1|sess) + (1|mouse)',      'FitMethod','REML'); rs = false; end
 
 [~,~,C] = fixedEffects(lme, 'DFMethod','Satterthwaite');  C = dataset2table_safe(C);
+assert(~isempty(C) && ismember('Name', C.Properties.VariableNames), ...
+    'cl_olcl_lmm:coefConv', 'Satterthwaite coefficient table did not convert.');
 nm = cellstr(string(C.Name)); gi = find(strcmp(nm,'cond_CL'),1);
 
 % variance components (robust to the titled-dataset return shape)
@@ -62,11 +64,4 @@ R = struct('gap',C.Estimate(gi), 'gapCI',[C.Lower(gi) C.Upper(gi)], 'gapP',C.pVa
     'lme',lme);
 end
 
-function T = dataset2table_safe(D)
-% covarianceParameters returns titled-datasets (not tables) in some releases.
-try
-    if istable(D), T = D; else, T = dataset2table(D); end
-catch
-    T = table();   % Group column absent -> caller skips
-end
-end
+% dataset2table_safe promoted to utils/dataset2table_safe.m (2026-10-01).
