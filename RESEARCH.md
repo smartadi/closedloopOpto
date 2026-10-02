@@ -16,6 +16,37 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig-3 re-run on corrected dF/F: every p-value STRONGER, nothing reversed
+**Changed/Found:** MATLAB was restarted overnight (clearing the workspace) and the licence is healthy again, so the blocked statistics could finally be regenerated. Re-ran `controller-analysis/fig3_olcl_stats` over all 15 controller caches (it globs `data/*ctrl*.mat`, so it picked up the rebuilt m14/m15 automatically; confirmed exactly 15 files, the two new ones dated 2026-10-01).
+| metric | p OLD | p NEW | gap OLD -> NEW |
+|---|---|---|---|
+| rmse_full | 5.79e-07 | **3.97e-08** | -0.612 -> -0.633 |
+| rmse_early | 1.80e-07 | **1.51e-08** | -0.442 -> -0.464 |
+| rmse_late | 1.03e-06 | **1.25e-07** | -0.722 -> -0.746 |
+| var_stim | 4.44e-06 | **2.02e-06** | -0.426 -> -0.435 |
+| var_early | 4.67e-04 | **9.74e-07** | -0.268 -> -0.275 |
+| var_late | 4.06e-06 | **1.71e-06** | -0.511 -> -0.524 |
+**Every p-value fell and every gap widened in magnitude. No sign flips, no significance changes.** `var_early` improved ~480x. n = 1670 trials / 15 sessions / 4 mice unchanged, random slope converged for all six metrics as before. Signed-rank companions also held or improved (worst 4.3e-4).
+**Manuscript consequence:** the largest Fig-3 p is now **2.02e-6**, so `results.tex:105` "all $p < 5\times10^{-4}$" is true but now very loose - it can be tightened to "all $p < 3\times10^{-6}$".
+**Why:** The m14/m15 dF/F correction changed two of fifteen sessions, so every pooled statistic had to be regenerated before the numbers could be quoted.
+**Next:** `data/fig3_olcl_lmm.mat` is rewritten, so `variance_mse.m` stars and `pooled_new_mice.m` titles will annotate from the new values automatically on next run. Panels still need regenerating.
+
+### 2026-10-02 - Fig-4 re-run: three of four claims strengthen, but the relative-2-4-Hz controllability claim LOSES significance
+**Changed/Found:** Re-ran the Fig-4 Row-2 LMMs (`f4_row2_pool` + `f4_row2_fit`, `y ~ cond*xw + (1+cond|sess) + (1|mouse)`) on the corrected data. Mapping to the manuscript's vocabulary: `cond_CL` = OL-CL gap at mean state, `xw` = *predictability*, `cond_CL:xw` = *controllability*.
+| state | gap p OLD -> NEW | predictability p OLD -> NEW | controllability p OLD -> NEW |
+|---|---|---|---|
+| initdev | 1.03e-06 -> **1.44e-07** | 8.87e-14 -> **2.07e-10** | 0.558 -> 0.743 (n.s. both) |
+| motion | 1.65e-04 -> **3.74e-05** | 5.12e-05 -> **1.05e-05** | 0.0144 -> **0.0098** |
+| delta (rel 2-4 Hz) | 7.61e-07 -> **8.69e-08** | 0.946 -> 0.403 (n.s. both) | **0.0141 -> 0.0742** |
+| absdelta | 2.26e-07 -> **2.82e-08** | 1.87e-27 -> **3.09e-33** | 0.387 -> 0.150 (n.s. both) |
+**The one regression: relative 2-4 Hz controllability, beta +0.1446 CI [+0.029,+0.260] p=0.0141 -> beta +0.0994 CI [-0.0097,+0.2085] p=0.0742.** The CI now includes zero. Direction is unchanged (positive interaction = the OL-CL gap narrows as relative delta rises = controllability falls), but it is a trend, not a significant effect.
+**THE CAUSE IS PROVEN, not assumed.** Ran a control that rebuilt m14/m15's trial arrays from the OLD mode-1 dF/F in the backed-up pixel caches and re-fitted: it reproduced the archived values to 3-4 significant figures (gap 1.026e-6 / 1.645e-4 / 7.605e-7 / 2.263e-7 vs archived 1.03e-6 / 1.65e-4 / 7.61e-7 / 2.26e-7; controllability 0.5582 / 0.01439 / 0.01407 / 0.3869 vs 0.558 / 0.0144 / 0.0141 / 0.387; and the paper's quoted motion predictability 5.1e-5 exactly). It also reproduced the old per-session RMSE for both sessions. So the shift is attributable **solely to the dF/F correction**, not to the lean `mouse` reconstruction used for the re-run.
+**Manuscript consequence - this one needs a decision, not just a number swap.** `results.tex:183` and the duplicate at `:213` assert "controllability fell ($p = 0.0141$), identifying the ongoing low-frequency fluctuation as **the one disturbance feedback cannot fully cancel**", and the Fig-4 caption at `:123` carries "Relative 2--4\,Hz: predictability unchanged, controllability$\downarrow$ ($p=0.0141$)". At p = 0.074 that sentence can no longer stand as written. The closing internal-model sentence ("steerable for the unanticipated motor disturbance but limited for the ongoing low-frequency brain state") leans on it too. Note the *motion* controllability claim - the positive half of the internal-model argument - **strengthened** to p = 0.0098, so the narrative survives on motion; it is the "delta is the uncancellable disturbance" half that becomes a trend.
+Also: the stale LaTeX comment at `results.tex:212` records an even older run (init 0.394, abs 0.876) that matches neither the archived .mat nor the new fit; it should be deleted rather than updated.
+**Why:** Completing the dF/F correction honestly means reporting the sub-claim it weakens, not only the five it strengthens.
+**Next:** User decision on wording - soften to an explicit trend with the CI, or drop the claim and rest the low-frequency argument on Fig-4B/C unique-variance instead. Either way the three numbers at `:123`, `:183`, `:213` must change, plus the Fig-3 bound at `:105`. **Do not quote 0.0141 anywhere again.**
+
+
 ### 2026-10-02 - TF order selection depends on the optimiser: a stronger search picks 5p3z for AL_0033, not 4p3z
 **Changed/Found:** Python port (`brain_paper_py/bpy/analysis/tf.py`) of `utils/imp_tf_fit_session.m`. At MATLAB's selected order the port lands on the SAME time constants (AL_0033 4p3z0d tau 0.3331/0.1499, e2 4p3z0d 0.5398/0.0930), so the fitter is right. But a multi-start search finds 5-pole optima that `tfest`'s single local search never reaches, with lower AIC (AL_0033 5p3z0d nAIC -8.26 vs 4p3z0d -8.08; taus 0.106/0.096 instead of 0.333/0.150). With a tfest-like single start + local refine the port matches MATLAB on e1 (3p1z0d) and e2 (4p3z0d) but still prefers 5p3z on AL_0033 and 4p3z (tau 0.201/0.115) over 4p2z on AL_0048.
 **Why:** The selected order - and therefore the Fig 2D tau forest - is partly a property of which local optimum tfest happens to find, not only of the data. A referee re-fitting with another toolbox could get different taus.
