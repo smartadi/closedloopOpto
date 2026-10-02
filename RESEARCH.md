@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - AUDIT: the `_l` buffer rot reaches FIGURE 3, and a SECOND script runs on zero sessions
+**Changed/Found:** Ran all five remaining `_l`-dependent scripts against the current caches instead of reasoning about them. Result, measured:
+| script | status | note |
+|---|---|---|
+| **`step_response.m`** | **FAILS, line 42, `pncDfk_l`** | ⚠ **FIGURE 3 PAPER PANEL** |
+| **`trial_state_mse.m`** | **"RAN OK" on ZERO sessions** | silent-skip, see below |
+| `cl_mse_exemplars.m` | FAILS, `pwcDfk_l` | |
+| `f4_delta_candidates.m` | FAILS, `pwcDfk_l` | |
+| `variance_mse.m` | FAILS, `Unrecognized variable 'tp'` | a DIFFERENT bug; `_l` reads at :431-432 not even reached yet |
+**`trial_state_mse.m:61` carries the exact idiom that made `cl_factor_decomp_panel.m` draw an empty panel:** `if ~isfield(data_k,'pncDfk_l') || isempty(data_k.pncDfk_l), continue; end`. Instrumented the gate directly: **0 of 15 sessions pass, so the loop body executes 0 times** and the script still exits clean. That is now **two** scripts found today that report success while processing nothing, from the same one-line pattern. The pattern is the bug, not the individual files - using a field's presence as a data-availability test converts a schema change into silent empty output.
+**`step_response.m` is the serious one:** it builds a Figure-3 panel and it cannot run at all. Its slicing is also NOT the simple onset-relative form the other scripts use - `pncDfk_l(:,1:35*3)`, `(:,35*6+1:end)` - so `pre_spec_buffer` cannot be dropped in mechanically; the column scheme has to be re-derived for a 561-column, onset-351 buffer. Do NOT patch it by search-and-replace.
+**Why:** The user asked what needs addressing. "Five more files have the same dependency" was a grep result, not a finding; running them turned it into one, and moved Figure 3 into scope.
+**Next, in this order:** (1) **`step_response.m`** - re-derive its column scheme for the long buffer, then confirm the Fig-3 panel it exports matches the published one. (2) `grep -rn "isfield(.*Dfk_l" ` and kill the presence-test idiom everywhere; prefer `pre_spec_buffer`, which errors. (3) `variance_mse.m`'s `tp` error first, since its `_l` reads are unreachable until that is fixed. (4) `cl_mse_exemplars.m`, `f4_delta_candidates.m`. (5) Re-check whether any OTHER figure script exits clean on zero sessions - a count assertion (`assert(nPass>0)`) in each pooling loop would have caught both of today's cases.
+
+
 ### 2026-10-02 - Fig-4 Row 1 motion reconciled to mean(z); numerically harmless, but Fig-4C does NOT reproduce
 **Changed/Found:** User: "reconcile the figure 4 row 1 error decomposition stuff on motion to take mean(z) and same window as figure 4 row 2 state dependent analysis". Both halves checked before changing anything:
 - **The WINDOW already matched.** Row 1 computes `we` from each session's `params.dur`; Row 2 hardcodes `dur=3`. Verified session by session: **all 15 are dur=3 with 176 motion columns**, so both resolve to cols 1:175 = **-2.000 .. +2.971 s**. Nothing to change, and now recorded rather than assumed. (The stray `-1` that makes it +2.971 instead of +3.000 is a SEPARATE pending item, untouched here.)
