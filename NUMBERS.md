@@ -251,6 +251,28 @@ state variables under the same label. Pick one.
 Same pool as my reconstruction, different values — so that path and `f4_error_decomp.m` do not
 agree with each other either. Do not quote 613/11 numbers from it without re-deriving them.
 
+✅ **RESOLVED 2026-10-02** (Python port, `bpy/analysis/f4_pool.py`; RESEARCH 2026-10-02). Two of
+the three gaps were bookkeeping in the decomposition, not data:
+
+1. **"Full model R²" is the REL model**, init-dev + motion + rel 2–4 Hz — not a four-predictor
+   fit. On the 613/11 pool it is **0.414 / 0.141** against the paper's 0.407 / 0.132. The
+   four-predictor fit (0.594 / 0.448) is identical to the *abs* model to three decimals: once
+   absolute δ is in, rel adds nothing.
+2. **init-dev was credited after rel.** Taking init's share from the rel model removes rel from
+   init while still removing init from rel. Credited hierarchically (base pair against each
+   other, then each δ over the base) it is **0.318 / 0.003** against the paper's 0.290 / 0.004.
+
+That leaves **only absolute δ**, which reaches 0.240 / 0.383 (vs 0.230 / 0.350) on the **2–4 Hz**
+band this file documents, while `f4_error_decomp.m` codes **1–4 Hz** — an open question for the
+user, not a reproduction failure.
+
+The **"397 CL trials / 7 sessions"** is **not** a subset of today's 613/11 pool: only two
+7-session subsets sum to 397 and both require m14/m15, which did not exist when the panel was
+made. It is an older pool, so the "7 sessions" was never an inclusion rule — the hypothesis
+above stands.
+
+When `f4_error_decomp.m` is re-run it needs both corrections (plus the line-55 fallback).
+
 ### 5.2 Panel D — state quartiles + session-aware LMM — ✅ **RESOLVED** (run 2026-10-01)
 
 Ran the production `utils/f4_row2_pool.m` over all 15 caches (`scratchpad/fig4_n_audit.m`).

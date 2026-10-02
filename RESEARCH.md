@@ -16,6 +16,35 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig-4C RESOLVED (2 of 3 gaps): the paper's "full model R^2" is the REL model, and init-dev was credited after rel
+**Changed/Found:** Two of the three remaining panel-C discrepancies were my own reporting definitions, not data problems. Both found in the Python port (`bpy/analysis/f4_pool.py`) and both apply to the MATLAB script's intent as well.
+
+**(1) Full-model R^2 - 0.594/0.448 vs the paper's 0.407/0.132.** The paper's number is the **three-factor REL model** (init-dev + motion + rel 2-4 Hz), not a four-predictor fit. Measured on the declared 613-CL-trial / 11-session pool:
+
+| model | 0-1 s | 1-3 s |
+|---|---|---|
+| init+motion+rel (**the paper's**) | **0.414** | **0.141** |
+| init+motion+abs | 0.594 | 0.448 |
+| init+motion+rel+abs | 0.594 | 0.448 |
+| paper-era three-factor run | 0.407 | 0.132 |
+
+0.414/0.141 vs 0.407/0.132 - a match to <0.01. The four-predictor fit is identical to the abs model to three decimals, i.e. **once absolute delta is in, rel adds nothing**; quoting 0.594/0.448 as "the full model" silently swapped in the abs model. Added `sep_full_r2()` returning both model R^2 and made `decomp_sep` report them.
+
+**(2) init-dev 0.388 vs the paper's 0.290.** `sep_unique` took init's and motion's share from the **rel 3-factor model** (`R2(init,mot,rel) - R2(mot,rel)`) while crediting rel and abs as increments over init+motion. That removes rel from init *and* init from rel - not a decomposition, and asymmetric. Credited hierarchically instead (base pair against each other, then each delta over the base):
+
+| factor | before | after | paper |
+|---|---|---|---|
+| init-dev | 0.388 / 0.020 | **0.318 / 0.003** | 0.290 / 0.004 |
+| motion | 0.001 / 0.000 | 0.001 / 0.001 | <0.01 |
+| rel 2-4 Hz | 0.096 / 0.137 | 0.096 / 0.137 (unchanged) | 0.100 / 0.120 |
+| abs delta | 0.275 / 0.444 | 0.275 / 0.444 (unchanged) | 0.230 / 0.350 |
+
+The settled window now matches exactly (0.003 vs 0.004) and early is within 0.028. The old behaviour is kept behind `sep_unique(..., legacy_base=True)` and pinned by a test, so the drift cannot return unnoticed.
+
+**Where that leaves panel C:** every manuscript number now reproduces within rounding **except absolute delta**, which lands on 0.240/0.383 (vs 0.230/0.350) only on the 2-4 Hz band `NUMBERS.md` documents - the open band question logged earlier today. Also checked and rejected: the published "397 CL trials / 7 sessions" is **not** a subset of today's 613/11 pool - only two 7-session subsets sum to 397 and both require m14/m15, which did not exist when the panel was made. It is an older pool, not an inclusion rule.
+**Why:** The full-model R^2 was 46%/240% above the paper and init-dev 34% above, which looked like a data or pool problem for two weeks. It was arithmetic bookkeeping in the decomposition - exactly the class of bug that survives review because every individual number is plausible.
+**Next:** Settle the abs-delta band (1-4 vs 2-4 Hz) with Aditya, then `f4_error_decomp.m` needs the same two corrections before it is re-run: report the rel-model R^2 as the full model, and credit init/motion over the base pair rather than over the rel model. Its line 55 (`dk.pwcDfk_l`, no fallback) still blocks execution. New tests: `tests/test_fig4_pool.py::test_decomp_matches_manuscript_panel_c` and `::test_sep_decomposition_credits_the_base_pair_before_the_deltas`.
+
 ### 2026-10-02 - Fig-4C abs-delta band: code uses 1-4 Hz, NUMBERS.md documents 2-4 Hz, and 2-4 Hz is closer to the paper
 **Changed/Found:** Chasing the residual Fig-4C gap (unique R^2 for abs-delta came out 0.275 / 0.444 against the paper's 0.230 / 0.350), I found the absolute-power band is **not** the band the manuscript documents. `f4_error_decomp.m` builds `absdelta` as `log10(bandpow(1,4))`, while `NUMBERS.md` describes the marker as "absolute 2-4 Hz". Re-running the decomposition with the documented band, everything else held fixed:
 
