@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig-4C abs-delta band: code uses 1-4 Hz, NUMBERS.md documents 2-4 Hz, and 2-4 Hz is closer to the paper
+**Changed/Found:** Chasing the residual Fig-4C gap (unique R^2 for abs-delta came out 0.275 / 0.444 against the paper's 0.230 / 0.350), I found the absolute-power band is **not** the band the manuscript documents. `f4_error_decomp.m` builds `absdelta` as `log10(bandpow(1,4))`, while `NUMBERS.md` describes the marker as "absolute 2-4 Hz". Re-running the decomposition with the documented band, everything else held fixed:
+
+| marker | code band (1-4 Hz) | documented band (2-4 Hz) | paper |
+|---|---|---|---|
+| init dev | 0.388 / 0.020 | 0.388 / 0.020 | 0.290 / 0.004 |
+| rel delta | 0.096 / 0.137 | 0.096 / 0.137 | 0.100 / 0.120 |
+| **abs delta** | **0.275 / 0.444** | **0.240 / 0.383** | **0.230 / 0.350** |
+| full-model R^2 | 0.594 / 0.448 | 0.565 / 0.406 | 0.407 / 0.132 |
+
+(each cell = 0-1 s window / 1-3 s window.)
+
+The documented band moves abs-delta from +0.045/+0.094 off the paper to +0.010/+0.033 - i.e. inside the rounding the paper reports. So the likely history is that the panel was generated on 2-4 Hz, the label in NUMBERS.md is right, and the lower edge in the script drifted to 1 Hz afterwards. The rel-delta marker already uses 2-4 Hz (`rel_delta` numerator), so 2-4 Hz is also the self-consistent choice within the figure.
+**Why:** This is the only one of the three markers whose band disagrees between code and documentation, and it is also the marker with the largest paper-vs-port gap - the two facts are almost certainly the same fact. Worth settling before the panel is re-exported, because the number is quoted in the Results text.
+**Next:** Do **not** silently change `f4_error_decomp.m` - ask Aditya which band the panel should ship with (1-4 Hz as coded, or 2-4 Hz as documented). Note that even on 2-4 Hz the **init-dev** marker (0.388 vs 0.290) and the **full-model R^2** (0.565/0.406 vs 0.407/0.132) remain off, so the band is not the whole story; those two are still open and are tracked separately. Also fix `f4_error_decomp.m:55` before any MATLAB re-run (it currently cannot execute).
+
 ### 2026-10-02 - BUG I INTRODUCED: Fig-4 motion panel binned on plain mean while its star tested the mean square
 **Changed/Found:** `controller-analysis/f4_row2_quartiles.m` has **two** pooling paths. Line 62 calls the shared `f4_row2_pool` + `f4_row2_fit`, which produce the **star** printed on the panel. Line 85 is a **duplicated inline copy** of the same pooling block that builds `S.motion`, consumed at line 100 to compute the **quartile bins and the bars**.
 On 2026-10-01 I switched motion to `mean(z^2)` per the user's instruction - **but only in `f4_row2_pool.m`**. The inline copy at line 85 kept `mean(z)` under a comment reading "PLAIN mean (unified w/ f4_row2_pool)", which the edit silently made false. From that point the motion panel **binned trials by plain-mean motion while the star above it came from squared motion**.
