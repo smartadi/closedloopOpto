@@ -39,10 +39,17 @@
 % spread of the response, the effect is about ongoing signal amplitude, NOT about how the stimulus
 % is processed. A claim survives only if STIM effect > PRE control.
 %
-% WINDOWS   strictly PRE-ONSET [-1, 0) s for every state marker, so no marker overlaps the response
-%           window the DV is measured in. RESEARCH A4 records that strictly-pre reproduces the
-%           'peri' [-1,+0.5] s result, so nothing is lost and the circularity objection is closed.
-%           Set STV_STATE_WIN='peri' to compare.
+% WINDOWS   All markers are strictly PRE-ONSET, so none overlaps the response window the DV is
+%           measured in -- but they are NOT the same window, and this block previously said they
+%           were (corrected 2026-10-02):
+%             MOTION           iMot   = [-1 s, -1/fs]      cols 71:105, 35 samples
+%             POWER (PVv/DPa/DPr) iState = [-0.8 s, -1/fs] cols 79:104, 26 samples
+%           The power markers start at -0.8 s because the matched sham control occupies -1.000 to
+%           -0.829 s and must not sit inside the window whose variance is the predictor. Motion is
+%           drawn from an independent channel (FaceMap) and carries no such circularity, so it uses
+%           the stated [-1, 0). RESEARCH A4 records that strictly-pre reproduces the 'peri'
+%           [-1,+0.5] s result. Set STV_STATE_WIN='peri' to compare, STV_MOT_STAT='sq' for the
+%           mean-square motion secondary.
 %
 % RUN:  load_experiments;  imp_state_trialvar
 %       STV_NBIN = 5; imp_state_trialvar        % change the number of state bins
@@ -59,6 +66,20 @@ assert(exist('allExperiments','var')==1 && ~isempty(allExperiments), ...
 if ~exist('STV_NBIN','var')      || isempty(STV_NBIN),      STV_NBIN = 4;        end
 if ~exist('STV_STATE_WIN','var') || isempty(STV_STATE_WIN), STV_STATE_WIN = 'pre'; end
 if ~exist('STV_NBOOT','var')     || isempty(STV_NBOOT),     STV_NBOOT = 2000;    end
+% MOTION STATISTIC (user, 2026-10-02). 'mean' = mean of the z-scored motion energy over the
+% motion window; 'sq' = mean of its square, run as a SECONDARY comparison only.
+% Why 'mean' is primary: FaceMap's motion_1 is ALREADY a rectified energy (verified on
+% AL_0041 2025-11-05/3: min = 0, 0.00 %% of samples negative), so squaring the z-score does
+% not turn it into an energy. Averaging z within a trial gives
+%     mean_window(z) = (mean_window(E) - mu_session) / sigma_session,
+% exactly MONOTONE in that trial's mean energy. mean(z^2) is a second moment, minimised when
+% the trial sits AT the session mean, so it scores unusually STILL trials as high as active
+% ones; the two rank trials at only rho = 0.303. See RESEARCH 2026-10-02.
+if ~exist('STV_MOT_STAT','var')  || isempty(STV_MOT_STAT),  STV_MOT_STAT = 'mean'; end
+% 'paper' = the [-1,0) s window the manuscript states (default, 2026-10-02).
+% 'legacy' = the pre-2026-10-02 behaviour, where motion shared iState (-0.8..-0.03 s).
+% Kept so the published numbers can be reproduced on demand rather than from memory.
+if ~exist('STV_MOT_WIN','var')   || isempty(STV_MOT_WIN),   STV_MOT_WIN = 'paper'; end
 % STATE SCALING (user, 2026-08-12). Default RAW: the markers keep their physical units, so an axis
 % reads "motion z-score 2.5" or "pre-trial variance 20 (dF/F)^2" instead of a within-amp z that
 % cannot be related to anything. Cost of raw pooling: between-session and between-amplitude offsets
@@ -130,7 +151,22 @@ stWin(1) = tAxis(iSham(end)) + 1/fs;                    % state window begins wh
 iState   = tAxis >= stWin(1) & tAxis <= stWin(2);
 assert(~any(ismember(find(iState), iSham)), '[STV] state and sham windows overlap');
 
-MK = { 'MOT','Motion',            true,  'motion z-score'
+% ---- MOTION WINDOW: decoupled from iState (user, 2026-10-02) -------------------------------------
+% Motion gets the [-1, 0) s window the manuscript actually states. It CANNOT share iState, because
+% iState was pushed to start at -0.8 s so it would not overlap the sham -- and the sham occupies
+% -1.000 to -0.829 s, i.e. the first fifth of [-1, 0). That disjointness exists to stop the POWER
+% markers (PVv/DPa/DPr) being built from the same samples as the control they are tested against;
+% both come from `df`. Motion does not: it comes from `imp.motTrace` (FaceMap), an independent
+% channel, so an overlap with a df-derived sham carries no circularity. Keeping one shared window
+% would mean either motion losing the stated [-1,0) or the power markers regaining the circularity.
+%
+% Integer column arithmetic, NOT `tAxis >= a & tAxis <= b`: the floating-point form silently drops
+% boundary samples (it costs iState 2 of its intended 28 -- tAxis(78) misses stWin(1) by 1e-16).
+iMot = (iOn - round(1.0*fs)) : (iOn - 1);        % [-1 s, -1/fs], 35 samples, strictly pre-onset
+if strcmpi(STV_MOT_WIN,'legacy'), iMot = find(iState); end   % reproduce the pre-2026-10-02 numbers
+assert(iMot(1) >= 1 && iMot(end) < iOn, '[STV] motion window outside the trace or not pre-onset');
+
+MK = { 'MOT','Motion',            true,  local_tern(strcmpi(STV_MOT_STAT,'sq'),'mean z^2 (motion)','motion z-score')
        'PVv','Pre-trial variance',false, '(\DeltaF/F)^2'
        'DPa','Abs \delta power',  false, '(\DeltaF/F)^2'
        'DPr','Rel \delta',        true,  '2-4 / 0.4-10 Hz' };
@@ -154,6 +190,8 @@ nExp_s = numel(allExperiments);
 labels = cell(nExp_s,1);
 fprintf('\n[STV] state window %s = [%.2f %.2f] s | %d bins | %d bootstrap\n', ...
         upper(STV_STATE_WIN), stWin(1), stWin(2), STV_NBIN, STV_NBOOT);
+fprintf('[STV] motion window %s = [%.2f %.2f] s (%d smp), stat = %s\n', upper(STV_MOT_WIN), ...
+        tAxis(iMot(1)), tAxis(iMot(end)), numel(iMot), upper(STV_MOT_STAT));
 
 for e = 1:nExp_s
     imp = allExperiments(e).imp;
@@ -179,7 +217,11 @@ for e = 1:nExp_s
 
         % --- state markers, all from the SAME pre-onset window -----------------------------------
         seg  = df(:, iState);
-        mot  = mean(imp.motTrace{a}(1:n, iState), 2, 'omitnan');
+        motSeg = imp.motTrace{a}(1:n, iMot);
+        switch lower(STV_MOT_STAT)
+            case 'sq', mot = mean(motSeg.^2, 2, 'omitnan');   % SECONDARY comparison
+            otherwise, mot = mean(motSeg,    2, 'omitnan');   % PRIMARY (monotone in trial energy)
+        end
         pvv  = var(seg, 0, 2, 'omitnan');
         [dpa, dpr] = local_delta(seg, fs);
 
@@ -623,9 +665,12 @@ if STV_PLOT
     else
         sgSub = 'Spread of the per-trial deviation from the amplitude mean.';
     end
+    % Motion and the power markers no longer share a window (2026-10-02), so the
+    % title must name both -- quoting only stWin would mislabel the Motion panel.
     sgtitle(f1, sprintf(['Trial-to-trial VARIABILITY of the impulse response vs brain state   ' ...
-        '(%d trials, %d sessions, state window [%.2f %.2f] s)\n' sgSub], ...
-        numel(T.dev), numel(uS), stWin(1), stWin(2)), 'FontWeight','bold','FontSize',10);
+        '(%d trials, %d sessions; motion [%.2f %.2f] s, power [%.2f %.2f] s)\n' sgSub], ...
+        numel(T.dev), numel(uS), tAxis(iMot(1)), tAxis(iMot(end)), stWin(1), stWin(2)), ...
+        'FontWeight','bold','FontSize',10);
 
     exportgraphics(f1, fullfile(STV_FIGDIR,'stv_claim.png'), 'Resolution',300);
 

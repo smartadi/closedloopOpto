@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 - Fig-2 motion moved to the stated [-1, 0) s window; result is robust
+**Changed/Found:** Per the user, Figure 2's pre-stim motion window is now the `[-1, 0)` s the manuscript states. `impulse-analysis/imp_state_trialvar.m` gains a **decoupled motion window** `iMot = (iOn - round(1.0*fs)) : (iOn - 1)` = cols 71:105, 35 samples, plus two switches: `STV_MOT_WIN` (`'paper'` default / `'legacy'`) and `STV_MOT_STAT` (`'mean'` default / `'sq'`).
+**Why motion had to be decoupled rather than sharing `iState`:** the matched sham control occupies -1.000 to -0.829 s - the first fifth of `[-1, 0)` - and `iState` was deliberately pushed to start at -0.8 s so the POWER markers (PVv/DPa/DPr) are not built from the same samples as the control they are tested against. Both of those come from `df`. Motion comes from `imp.motTrace` (FaceMap), an independent channel, so an overlap with a df-derived sham carries no circularity. A single shared window would force either motion to lose the stated `[-1,0)` or the power markers to regain the circularity the 2026-08-12 fix removed.
+Also used **integer column arithmetic** rather than `tAxis >= a & tAxis <= b`, which is what silently costs `iState` 2 of its intended 28 samples.
+**THE CONTROL REPRODUCES THE PAPER EXACTLY.** Running `STV_MOT_WIN='legacy'` gives ratio **0.71, CI [0.60-0.84], LME p = 1.48e-07, 4/4** against the published 0.71, [0.60, 0.84], 1.5e-7, 4/4. So the implementation is sound and every difference below is attributable to the window/statistic, not to the rerun.
+| config | rho | SDratio [CI95] | LME p | sessions |
+|---|---|---|---|---|
+| legacy / mean (= published) | -0.122 | 0.71 [0.60-0.84] | 1.48e-07 | 4/4 |
+| **paper / mean (NEW PRIMARY)** | **-0.122** | **0.73 [0.62-0.87]** | **7.34e-07** | **4/4** |
+| paper / sq (secondary) | -0.129 | 0.78 [0.68-0.91] | 2.83e-07 | **3/4** |
+**Conclusion: the effect is robust to the window.** Widening from 26 samples at -0.77 s to 35 samples at -1.00 s leaves rho identical (-0.122), moves the ratio 0.71 -> 0.73 and the LME p 1.5e-7 -> 7.3e-7, and keeps 4/4 sessions. The `mean(z^2)` secondary is slightly WORSE on the measure that matters for replication: it reports a weaker effect (ratio 0.78) and **drops to 3/4 sessions agreeing**, consistent with it being non-monotone in trial motion.
+**Unchanged, as expected:** Rel delta 1.10 [0.94-1.27] p = 0.00503 3/4, Abs delta 1.99 [1.69-2.37], Pre-var 3.21 - only motion's window was touched.
+**Why:** User instruction, after confirming that both motion sources are already rectified energies.
+**Next:** Manuscript - `results.tex:70` currently reads "ratio $0.71$, 95\% CI $[0.60, 0.84]$; session-aware mixed model $p = 1.5\times10^{-7}$, 4/4 sessions"; it becomes **0.73, [0.62, 0.87], p = 7.3e-7, 4/4**. The stale commented duplicate at `:67` carries the same numbers and should be deleted rather than updated. The Methods can now honestly say motion is measured over [-1, 0) s, which it could not before. Figure 4's motion statistic still needs reverting from `mean(z^2)` to `mean(z)` under the same decision - not yet done.
+
+
 ### 2026-10-02 - Motion-statistic retraction CONFIRMED independently, and switching costs Fig 4 nothing
 **Changed/Found:** Re-checked this morning's `mean(z^2)` retraction from the Python port, on the full 1190-trial Fig-4 motion pool rather than one session - and it holds, more clearly than the single-session version did. By decile of `mean(z)`, `mean(z^2)` is **U-shaped, not monotone**:
 
