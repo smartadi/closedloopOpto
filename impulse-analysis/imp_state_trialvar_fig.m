@@ -432,7 +432,7 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
         end
         linkaxes(axc, 'y');  ylim(axc(1), yLimC);
         ylabel(axc(1), {'Prediction error','(session-normalized)'}, 'FontSize', PS.fs, 'FontWeight', PS.fw);
-        pdfDir = fullfile(paperRoot,'figures_v2','figure2');
+        pdfDir = fullfile(paperRoot,'images','figure2');
         if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
         jnAxesAll(fC);   % rule-book font/axis pass
         paperExport(fC, fullfile(pdfDir, 'imp_state_var_combined.pdf'));

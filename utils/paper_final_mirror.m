@@ -28,7 +28,7 @@ function paper_final_mirror(fig, path)
 % checked, not assumed. Typography was the real divergence.
 %
 % A 300-dpi PNG preview is written beside each PDF. The caller has already written its own
-% images/figures_v2 original, so this is purely additive. Failures NEVER propagate: losing a
+% images/ working copy, so this is purely additive. Failures NEVER propagate: losing a
 % mirror must not abort a producer mid-figure.
 global PAPER_FINAL PAPER_FINAL_LOG                                  %#ok<GVMIS>
 if isempty(PAPER_FINAL) || ~PAPER_FINAL, return; end

@@ -46,9 +46,10 @@ SESS_MARK   = 'o';                % same marker for every session (aligned verti
 nS = numel(SESS_TAGS); nMode = numel(MODE_CODES);
 
 PS = paperStyle(); setPaperDefaults();
-if exist(fullfile('paper','figures_v2','figure5'),'dir'); outDir=fullfile('paper','figures_v2','figure5');
-elseif exist(fullfile('..','paper','figures_v2','figure5'),'dir'); outDir=fullfile('..','paper','figures_v2','figure5');
-else; outDir='.'; end
+% Working copy -> paper/images/figure5 (figures_v2 retired 2026-10-03); final panels are
+% mirrored into paper/figures_final/panels/ by paperExport -> paper_final_mirror.
+outDir = fullfile(fileparts(fileparts(mfilename('fullpath'))),'paper','images','figure5');
+if ~exist(outDir,'dir'), mkdir(outDir); end
 
 %% ---- Gather per-(session,mode) metrics, with drowsy-trial exclusion -----
 RMSE = nan(nS,nMode); VARr = nan(nS,nMode); LAG = nan(nS,nMode); NT = nan(nS,nMode);

@@ -12,7 +12,7 @@
 clc; close all;
 PS=paperStyle(); setPaperDefaults();
 root='C:\Users\aditya\Documents\projects\brain_paper';
-outfig=fullfile(root,'paper','figures_v2','figure4');   % jn* v2 output
+outfig=fullfile(root,'paper','images','figure4');   % working copy; final panel via paper_final_mirror
 outview=fullfile(root,'controller-analysis','_preview'); if ~exist(outview,'dir'); mkdir(outview); end
 Fs=35; c0=36; c0_mot=71; c0_l=106; c1=71; c2=141; mot_pre=2; spec_pre_s=2; spec_post_s=3;
 % MOTION STATISTIC, shared with Fig-4 Row 2 (user, 2026-10-02): 'mean' primary | 'sq' secondary.

@@ -165,7 +165,8 @@ it holds the locked set and nothing else. The scattered `paper/images/figureN/` 
 working dirs full of superseded/exploratory panels; never point the assembly at them.
 
 **ONE folder, and it is written by the producers** (consolidated 2026-10-02). `paper/figures_v3/`
-is deleted — there is no second "final" folder. Panels land in `panels/<section>/` in
+is deleted and `paper/figures_v2/` is **retired** (2026-10-03, archived to `paper/_retired/`) —
+there is no second "final" folder. Producers write their working copy to `paper/images/<figN>/`. Panels land in `panels/<section>/` in
 JNeurosci house style via `utils/paper_final_mirror.m`, which both `paperExport.m` and
 `jnExport.m` call. To rebuild: `global PAPER_FINAL; PAPER_FINAL = true;` then run the producer.
 The mirror writes a panel ONLY if its basename is in `MANIFEST.txt`.
@@ -174,7 +175,7 @@ The mirror writes a panel ONLY if its basename is in `MANIFEST.txt`.
   then re-run its producer with `PAPER_FINAL` on.
 - **When a panel is retired/superseded:** delete its line and run `collect_final_panels`.
 - The collector now **verifies and prunes only** — it names anything missing and deletes
-  anything unlisted. It must NEVER copy from `images`/`figures_v2`: those sources are
+  anything unlisted. It must NEVER copy from `images`: those sources are
   pre-jn-style and copying them would silently undo the restyle.
   `collect_final_panels('dry')` previews without deleting anything.
 - Keep `MANIFEST.txt` in sync with PAPER.md's "Paper panels in use" registry (same set).

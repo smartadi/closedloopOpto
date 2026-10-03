@@ -43,7 +43,7 @@ if exist(fullfile('paper','images'),'dir');            paper_root = 'paper';
 elseif exist(fullfile('..','paper','images'),'dir');   paper_root = fullfile('..','paper');
 else;  paper_root = 'paper'; warning('[F4R2] cannot locate paper/.'); end
 outdir = fullfile(paper_root,'images','figure4');
-outdir2 = fullfile(paper_root,'figures_v2','figure4');   % jn* v2 output (stitched main panel)
+outdir2 = fullfile(paper_root,'images','figure4');   % working copy (stitched main panel); final via paper_final_mirror
 if ~exist(outdir,'dir'); mkdir(outdir); end
 if ~exist(outdir2,'dir'); mkdir(outdir2); end
 

@@ -63,7 +63,7 @@ elseif exist(fullfile('..','paper','images'), 'dir')
 else
     paper_root = 'paper';
 end
-outDir = fullfile(paper_root, 'figures_v2', 'figure5');
+outDir = fullfile(paper_root, 'images', 'figure5');
 if EXPORT && ~exist(outDir,'dir'); mkdir(outDir); end
 pngDir = fullfile(outDir, 'png');
 if EXPORT && EXPORT_PNG && ~exist(pngDir,'dir'); mkdir(pngDir); end

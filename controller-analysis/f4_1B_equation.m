@@ -10,7 +10,7 @@
 clc; close all;
 root = 'C:\Users\aditya\Documents\projects\brain_paper'; addpath(fullfile(root,'utils'));
 PS = paperStyle();
-outfig  = fullfile(root,'paper','figures_v2','figure4');   % jn* v2 output
+outfig  = fullfile(root,'paper','images','figure4');   % working copy; final panel via paper_final_mirror
 outview = fullfile(root,'controller-analysis','_preview'); if ~exist(outview,'dir'); mkdir(outview); end
 
 % ---- canonical 4-state palette (SAME as f4_state_exemplars / f4_error_decomp) ----

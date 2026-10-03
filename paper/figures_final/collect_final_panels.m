@@ -5,7 +5,7 @@ function collect_final_panels(varargin)
 %   collect_final_panels('dry')   % report only, delete nothing
 %
 % ---- WHAT CHANGED 2026-10-02 (user: "only maintain one single folder") -------------------
-% This used to COPY each manifest source out of paper/figures_v2 or paper/images into
+% This used to COPY each manifest source out of paper/figures_v2 (retired 2026-10-03) or paper/images into
 % panels/. It must not any more. Panels are now written directly into
 % panels/<section>/ by utils/paper_final_mirror.m, which applies the jn rule-book
 % typography pass (labels 7 pt bold / ticks 6 pt regular) on the way out. Copying from the
@@ -17,9 +17,10 @@ function collect_final_panels(varargin)
 %   utils/paper_final_mirror.m  WRITES panels/   (gated on this manifest, jn styling applied)
 %   this function              CHECKS panels/   (prunes unlisted, names anything missing)
 %
-% panels/<section>/ is the ONE folder to pull into Illustrator. paper/images/figureN and
-% paper/figures_v2/figureN remain working dirs full of superseded and exploratory panels --
-% never point the assembly at them. paper/figures_v3 is deleted; it no longer exists.
+% panels/<section>/ is the ONE folder to pull into Illustrator. paper/images/figureN is the
+% producers' working dir, full of superseded and exploratory panels -- never point the
+% assembly at it. paper/figures_v3 is deleted; paper/figures_v2 was retired 2026-10-03
+% (archived to paper/_retired/figures_v2_2026-10-03, nothing writes there).
 %
 % To REGENERATE the panels, run the producers with the mirror on:
 %   global PAPER_FINAL; PAPER_FINAL = true;   then run the producer scripts.

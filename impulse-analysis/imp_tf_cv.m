@@ -55,12 +55,11 @@ if ~exist('CV_SINGLE_NAMP','var') || isempty(CV_SINGLE_NAMP), CV_SINGLE_NAMP = 3
 % in-sample tf_shape_across_sessions (2C-i, written by imp_tf_run) so neither overwrites the other.
 if ~exist('CV_OUTDIR','var') || isempty(CV_OUTDIR)
     % Candidates (shape / endlabels / heldout_r2 / r2_trial) stay in the WORKING
-    % dir. Only the two chosen Fig-2 panels go to figures_v2 via CV_PANELDIR.
+    % dir. The two chosen Fig-2 panels reach paper/figures_final via paper_final_mirror.
     CV_OUTDIR = fullfile(root,'paper','images','figure2');
 end
 if CV_EXPORT && ~exist(CV_OUTDIR,'dir'), mkdir(CV_OUTDIR); end
-CV_PANELDIR = fullfile(root,'paper','figures_v2','figure2');   % locked Fig-2 panels C and D
-if CV_EXPORT && ~exist(CV_PANELDIR,'dir'), mkdir(CV_PANELDIR); end
+CV_PANELDIR = CV_OUTDIR;   % figures_v2 retired 2026-10-03; locked panels C/D mirror to figures_final
 
 %% ---- (1) full-data fits: reuse the cache if present, else fit fresh (no bootstrap) ----------
 fitFile = fullfile(here,'data','imp_tf_fits.mat');

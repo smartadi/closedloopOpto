@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-03 — Retired paper/figures_v2; producers now write working copies to paper/images
+**Changed/Found:** Every producer that exported into `paper/figures_v2/<figN>/` now writes its
+working copy to `paper/images/<figN>/`: sine_ff_across_sessions (outDir now from mfilename, was a
+cwd-dependent exist() chain falling back to '.'), sine_ff_plots_combined, f4_1B_equation,
+f4_cl_reject_panel, f4_contra_model, f4_error_decomp, f4_kernel_map, f4_row2_quartiles,
+f4_state_exemplars, step_response, variance_mse (3 exports), dose_response, trace_overlay,
+imp_state_trialvar_fig, imp_tf_run, imp_tf_cv (CV_PANELDIR = CV_OUTDIR), imp_tf_figs (removed the
+copy-into-figures_v2 block; E/F reach figures_final via the mirror), analysisPlots_combined (5),
+jnExport doc example, paper_final_mirror comment. Final panels are unaffected: the mirror takes the
+destination from the MANIFEST section, never from the source path. Docs: CLAUDE.md, PAPER.md (33
+registry paths -> paper/figures_final/panels/), FIGURE_RULEBOOK.md, figures_final README/MANIFEST/
+collector comments. Folder MOVED (not deleted) to `paper/_retired/figures_v2_2026-10-03/` (gitignored).
+PROVENANCE.md and the RESEARCH archives keep their historical figures_v2 mentions.
+**Why:** User: "retire figures_v2 thats not where we are putting plots anymore".
+**Next:** next PAPER_FINAL rebuild of any figure confirms the mirror still lands every panel.
+
 ### 2026-10-03 — REJECTED: 1.0 s TF fit window (tried to fix the censored Fig-2F tau CIs)
 **Changed/Found:** Ran `impulse-analysis/imp_tf_run.m` with `RUN_TFIT = 1.0` (all else default:
 5p/4z/3d sweep, AIC + R2h escalation, 300-draw bootstrap, 4 sessions). Result is WORSE on every axis:

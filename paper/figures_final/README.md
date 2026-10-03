@@ -1,8 +1,9 @@
 # figures_final — the locked paper panels (Illustrator pull-folder)
 
 **This is the ONE folder. Pull every panel into Illustrator from `panels/<figure>/`.**
-Not `paper/images/figureN/`, not `paper/figures_v2/` — those are working dirs full of
-superseded and exploratory panels. `paper/figures_v3/` is **deleted**; it was a second
+Not `paper/images/figureN/` — that is the producers' working dir, full of
+superseded and exploratory panels. `paper/figures_v2/` is **retired** (2026-10-03, archived
+to `paper/_retired/`; nothing writes there) and `paper/figures_v3/` is **deleted**; it was a second
 folder claiming to be "the final one", which is exactly the ambiguity this consolidation
 (user, 2026-10-02) removes.
 
@@ -15,7 +16,7 @@ line. Panel letters are added in Illustrator, not by the scripts.
 | | what it does |
 |---|---|
 | `utils/paper_final_mirror.m` | **WRITES** `panels/<section>/`. Called from both `paperExport.m` and `jnExport.m`, so a panel lands whichever exporter its producer uses. Applies the jn typography pass on the way out. Writes a panel **only if its basename is listed in `MANIFEST.txt`** — a producer exports many exploratory views and we do not want them here. |
-| `collect_final_panels.m` | **CHECKS** `panels/`. Names anything the manifest lists but is missing, and deletes anything present but unlisted. `collect_final_panels('dry')` reports without deleting. It does **not** copy from `images`/`figures_v2` any more — doing so would overwrite the jn panels with their non-jn originals. |
+| `collect_final_panels.m` | **CHECKS** `panels/`. Names anything the manifest lists but is missing, and deletes anything present but unlisted. `collect_final_panels('dry')` reports without deleting. It does **not** copy from `images` any more — doing so would overwrite the jn panels with their non-jn originals. |
 
 ### To rebuild panels
 

@@ -6,7 +6,7 @@ function f4_cl_reject_panel()
 % Non-reachers (settled |mean A_CL-ref|>1.5) excluded. Run f4_cl_reject_lmm.m first.
 here = fileparts(mfilename('fullpath'));
 if isempty(here); here = fullfile(pwd,'controller-analysis'); end
-dataDir = fullfile(here,'data');  figDir = fullfile(here,'..','paper','figures_v2','figure4');  % jn* v2 output
+dataDir = fullfile(here,'data');  figDir = fullfile(here,'..','paper','images','figure4');  % working copy; final panel via paper_final_mirror
 if ~exist(figDir,'dir'); mkdir(figDir); end
 addpath(fullfile(here,'..','utils'));
 PS = paperStyle(); S = jnStyle();

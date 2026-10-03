@@ -75,48 +75,48 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 |-------|-----|-----------|--------------|--------|---------|--------|
 | 1A | Fig1 | paper/images/wfpath.pdf | — | — | — | external image |
 | 1B | Fig1 | paper/images/schematic_optoephyswf (1).pdf | — | — | — | external image |
-| 1C | Fig1 | paper/images/figure1/svd_frame_AL_0039_2025-04-19.pdf | — | vector | — | **no figures_v2/figure1 dir** — Fig 1 panels still come from `images/` |
+| 1C | Fig1 | paper/images/figure1/svd_frame_AL_0039_2025-04-19.pdf | — | vector | — | Fig 1 panels still come from `images/` |
 | 1D | Fig1 | *(interface diagram — illustrator)* | — | — | — | external |
 | 1E | Fig1 | *(control system — illustrator)* | — | — | — | external |
 | 1F | Fig1 | *(latency image)* | — | — | — | **no generator in repo** — the 47 ms vs 80 ms conflict cannot be settled from here |
 
-| 2A | Fig2 | paper/figures_v2/figure2/imp_response.pdf | 5 × 4 | vector | SEM | dose-response; `dose_response.m` |
-| 2B | Fig2 | paper/figures_v2/figure2/imp_single_AL_0041_2025-12-02_en2.pdf | 5 × 4 | vector | ±1 SD | **Mouse 1b (AL_0041 e2)** — registry previously named the AL_0033 file, which is no longer this panel |
-| 2C | Fig2 | paper/figures_v2/figure2/tf_cv_single_AL_0033.pdf | 5 × 4 | vector | — | held-out LTI fit, Mouse 2; `imp_tf_cv.m` CV_SINGLE. **Was filed as supplementary** |
-| 2D | Fig2 | paper/figures_v2/figure2/tf_cv_2D_sidebar.pdf | 4.2 × 3.6 | vector | IQR | within-session generalization + held-out R² sidebar. **Supersedes `tf_cv_heldout_r2.pdf`**, which the registry still named |
-| 2E | Fig2 | paper/figures_v2/figure2/tf_model_swap.pdf | 4.5 × 4 | vector | — | cross-session model-swap R² matrix |
-| 2F | Fig2 | paper/figures_v2/figure2/tf_tau_forest.pdf | 5 × 4 | vector | 95% CI | response timescales, slow + fast τ |
-| 2G | Fig2 | paper/figures_v2/figure2/imp_state_var_combined.pdf | 8.6 × 3.6 | vector | 95% CI band | 3 tiles, shared axis: motion / rel 2–4 Hz / abs δ. **Supersedes the separate 2G scatter, 2J and 2K rows** (retired below) |
+| 2A | Fig2 | paper/figures_final/panels/figure2/imp_response.pdf | 5 × 4 | vector | SEM | dose-response; `dose_response.m` |
+| 2B | Fig2 | paper/figures_final/panels/figure2/imp_single_AL_0041_2025-12-02_en2.pdf | 5 × 4 | vector | ±1 SD | **Mouse 1b (AL_0041 e2)** — registry previously named the AL_0033 file, which is no longer this panel |
+| 2C | Fig2 | paper/figures_final/panels/figure2/tf_cv_single_AL_0033.pdf | 5 × 4 | vector | — | held-out LTI fit, Mouse 2; `imp_tf_cv.m` CV_SINGLE. **Was filed as supplementary** |
+| 2D | Fig2 | paper/figures_final/panels/figure2/tf_cv_2D_sidebar.pdf | 4.2 × 3.6 | vector | IQR | within-session generalization + held-out R² sidebar. **Supersedes `tf_cv_heldout_r2.pdf`**, which the registry still named |
+| 2E | Fig2 | paper/figures_final/panels/figure2/tf_model_swap.pdf | 4.5 × 4 | vector | — | cross-session model-swap R² matrix |
+| 2F | Fig2 | paper/figures_final/panels/figure2/tf_tau_forest.pdf | 5 × 4 | vector | 95% CI | response timescales, slow + fast τ |
+| 2G | Fig2 | paper/figures_final/panels/figure2/imp_state_var_combined.pdf | 8.6 × 3.6 | vector | 95% CI band | 3 tiles, shared axis: motion / rel 2–4 Hz / abs δ. **Supersedes the separate 2G scatter, 2J and 2K rows** (retired below) |
 
-| 3A | Fig3 | paper/figures_v2/figure3/panel_A.pdf | 8.9 × 3.4 | vector | — | single trial OL\|CL; `analysisPlots_combined.m` |
-| 3B | Fig3 | paper/figures_v2/figure3/panel_B.pdf | 8.9 × 3.4 | vector | ±1 SD | trial-averaged response OL\|CL, titled 2026-09-30. ⚠ **the assembled Figure3.pdf appears to carry panel_A here instead** |
-| 3C | Fig3 | paper/figures_v2/figure3/panel_C.pdf | 8.9 × 3.0 | vector | ±1 SD | trial-averaged stimulation (grey); titled 2026-09-30 |
-| 3D | Fig3 | paper/figures_v2/figure3/panel_D.pdf | 3.4 × 3.4 | vector | — | **single-session** variance across trials; y-axis matched to 3F 2026-09-30 |
-| 3E | Fig3 | paper/figures_v2/figure3/panel_E.pdf | 3.4 × 3.4 | vector | — | per-trial RMSE half-violin, single session |
-| 3F | Fig3 | paper/figures_v2/figure3/all_variance_sessions.pdf | 3.4 × 3.4 | vector | — | **cross-session** average variance; `variance_mse.m` fig_F. Title cut to 'Average across sessions' 2026-09-30 |
-| 3G | Fig3 | paper/figures_v2/figure3/all_average_sessions.pdf | 3.4 × 3.4 | vector | — | cross-session RMSE over time; `step_response.m` fig_H. **Legend removed 2026-09-30** |
-| 3H | Fig3 | paper/figures_v2/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | OL/CL **variance** ratio, 4 windows; `variance_mse.m` fig_Fr. **Was 3I** |
-| 3I | Fig3 | paper/figures_v2/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | OL/CL **RMSE** ratio, 4 windows; `variance_mse.m` fig_G2r. **Was 3J**; filename still says MSE |
+| 3A | Fig3 | paper/figures_final/panels/figure3/panel_A.pdf | 8.9 × 3.4 | vector | — | single trial OL\|CL; `analysisPlots_combined.m` |
+| 3B | Fig3 | paper/figures_final/panels/figure3/panel_B.pdf | 8.9 × 3.4 | vector | ±1 SD | trial-averaged response OL\|CL, titled 2026-09-30. ⚠ **the assembled Figure3.pdf appears to carry panel_A here instead** |
+| 3C | Fig3 | paper/figures_final/panels/figure3/panel_C.pdf | 8.9 × 3.0 | vector | ±1 SD | trial-averaged stimulation (grey); titled 2026-09-30 |
+| 3D | Fig3 | paper/figures_final/panels/figure3/panel_D.pdf | 3.4 × 3.4 | vector | — | **single-session** variance across trials; y-axis matched to 3F 2026-09-30 |
+| 3E | Fig3 | paper/figures_final/panels/figure3/panel_E.pdf | 3.4 × 3.4 | vector | — | per-trial RMSE half-violin, single session |
+| 3F | Fig3 | paper/figures_final/panels/figure3/all_variance_sessions.pdf | 3.4 × 3.4 | vector | — | **cross-session** average variance; `variance_mse.m` fig_F. Title cut to 'Average across sessions' 2026-09-30 |
+| 3G | Fig3 | paper/figures_final/panels/figure3/all_average_sessions.pdf | 3.4 × 3.4 | vector | — | cross-session RMSE over time; `step_response.m` fig_H. **Legend removed 2026-09-30** |
+| 3H | Fig3 | paper/figures_final/panels/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | OL/CL **variance** ratio, 4 windows; `variance_mse.m` fig_Fr. **Was 3I** |
+| 3I | Fig3 | paper/figures_final/panels/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | OL/CL **RMSE** ratio, 4 windows; `variance_mse.m` fig_G2r. **Was 3J**; filename still says MSE |
 
-| 4A | Fig4 | paper/figures_v2/figure4/f4_state_exemplars.pdf | 7.5 × 4.6 | vector | — | one CL trial per pre-stim state |
-| 4B | Fig4 | paper/figures_v2/figure4/f4_1B_equation.pdf | 3.0 × 4.6 | vector | — | error-decomposition model |
-| 4C | Fig4 | paper/figures_v2/figure4/f4_decomp_unique_sep.pdf | 6.5 × 4.6 | vector | — | unique R² per factor, by window ('sep' mode) |
-| 4D | Fig4 | paper/figures_v2/figure4/f4_row2_quartiles.pdf | 18 × 4.6 | vector | — | OL/CL/gap vs quartile, 1×4 tiled row. **Supersedes the four standalone `f4_2A`–`f4_2D` panels** |
-| 4E | Fig4 | paper/figures_v2/figure4/f4_kernel_map.pdf | 5.0 × 4.6 | vector | — | contra→ipsi ridge kernel |
-| 4F | Fig4 | paper/figures_v2/figure4/f4_agl.pdf | 5.0 × 4.6 | vector | — | A = G + L decomposition |
-| 4G | Fig4 | paper/figures_v2/figure4/f4_cl_reject_RR.pdf | 7.0 × 4.6 | vector | — | closed-loop disturbance rejection |
+| 4A | Fig4 | paper/figures_final/panels/figure4/f4_state_exemplars.pdf | 7.5 × 4.6 | vector | — | one CL trial per pre-stim state |
+| 4B | Fig4 | paper/figures_final/panels/figure4/f4_1B_equation.pdf | 3.0 × 4.6 | vector | — | error-decomposition model |
+| 4C | Fig4 | paper/figures_final/panels/figure4/f4_decomp_unique_sep.pdf | 6.5 × 4.6 | vector | — | unique R² per factor, by window ('sep' mode) |
+| 4D | Fig4 | paper/figures_final/panels/figure4/f4_row2_quartiles.pdf | 18 × 4.6 | vector | — | OL/CL/gap vs quartile, 1×4 tiled row. **Supersedes the four standalone `f4_2A`–`f4_2D` panels** |
+| 4E | Fig4 | paper/figures_final/panels/figure4/f4_kernel_map.pdf | 5.0 × 4.6 | vector | — | contra→ipsi ridge kernel |
+| 4F | Fig4 | paper/figures_final/panels/figure4/f4_agl.pdf | 5.0 × 4.6 | vector | — | A = G + L decomposition |
+| 4G | Fig4 | paper/figures_final/panels/figure4/f4_cl_reject_RR.pdf | 7.0 × 4.6 | vector | — | closed-loop disturbance rejection |
 
 | 5A | Fig5 | *(feedforward control system — illustrator)* | 6 × 4 | — | — | external; physical row 1 |
-| 5B | Fig5 | paper/figures_v2/figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | — | one representative trial per mode |
-| 5C | Fig5 | paper/figures_v2/figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SD | trial average |
-| 5D | Fig5 | paper/figures_v2/figure5/sine_5D_trialavg_input_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SD | trial-average laser command |
-| 5E | Fig5 | paper/figures_v2/figure5/sine_5F_variance_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | — | across-trial variance. ⚠ letter ≠ filename |
-| 5F | Fig5 | paper/figures_v2/figure5/sine_5E_rmse_time_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | ±SEM | RMSE over time. ⚠ letter ≠ filename |
-| 5G | Fig5 | paper/figures_v2/figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf | 4.2 × 5.4 | vector | — | per-trial RMSE by mode |
-| 5H | Fig5 | paper/figures_v2/figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf | 4.2 × 5.4 | vector | — | 1 Hz phase lag |
-| 5I | Fig5 | paper/figures_v2/figure5/sine_combined_rmse.pdf | 5.5 × 4.5 | vector | — | across-session RMSE; caption entry **I** of the combined `	extbf{I--K:}` block |
-| 5J | Fig5 | paper/figures_v2/figure5/sine_combined_phase.pdf | 5.5 × 4.5 | vector | — | across-session phase lag; caption entry **J** of the combined `	extbf{I--K:}` block |
-| 5K | Fig5 | paper/figures_v2/figure5/sine_combined_variance.pdf | 5.5 × 4.5 | vector | — | across-session variance; caption entry **K** of the combined `	extbf{I--K:}` block |
+| 5B | Fig5 | paper/figures_final/panels/figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | — | one representative trial per mode |
+| 5C | Fig5 | paper/figures_final/panels/figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SD | trial average |
+| 5D | Fig5 | paper/figures_final/panels/figure5/sine_5D_trialavg_input_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | ±SD | trial-average laser command |
+| 5E | Fig5 | paper/figures_final/panels/figure5/sine_5F_variance_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | — | across-trial variance. ⚠ letter ≠ filename |
+| 5F | Fig5 | paper/figures_final/panels/figure5/sine_5E_rmse_time_AL_0048_2026-07-14_1.pdf | 5.2 × 4 | vector | ±SEM | RMSE over time. ⚠ letter ≠ filename |
+| 5G | Fig5 | paper/figures_final/panels/figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf | 4.2 × 5.4 | vector | — | per-trial RMSE by mode |
+| 5H | Fig5 | paper/figures_final/panels/figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf | 4.2 × 5.4 | vector | — | 1 Hz phase lag |
+| 5I | Fig5 | paper/figures_final/panels/figure5/sine_combined_rmse.pdf | 5.5 × 4.5 | vector | — | across-session RMSE; caption entry **I** of the combined `	extbf{I--K:}` block |
+| 5J | Fig5 | paper/figures_final/panels/figure5/sine_combined_phase.pdf | 5.5 × 4.5 | vector | — | across-session phase lag; caption entry **J** of the combined `	extbf{I--K:}` block |
+| 5K | Fig5 | paper/figures_final/panels/figure5/sine_combined_variance.pdf | 5.5 × 4.5 | vector | — | across-session variance; caption entry **K** of the combined `	extbf{I--K:}` block |
 
 **Retired / superseded — kept for provenance, in no assembled figure:**
 

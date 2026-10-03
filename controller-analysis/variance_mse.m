@@ -56,7 +56,7 @@ text(ax_var, -0.20, 0.5, 'Variance across trials', ...
 title(ax_var, 'Average across sessions', ...
     'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');
 
-paperExport(fig_F, fullfile(paper_root, 'figures_v2', 'figure3', 'all_variance_sessions.pdf'));
+paperExport(fig_F, fullfile(paper_root, 'images', 'figure3', 'all_variance_sessions.pdf'));
 
 
 %% Fr: Cross-session OL/CL variance ratio -- pre / 0-1 s / 1-3 s / post windows
@@ -129,7 +129,7 @@ title(ax_fr, sprintf('CL reduces trial variance %s', stars_fr(pStim_fr)), ...
 % Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
 mark_stim_span(ax_fr);
 
-paperExport(fig_Fr, fullfile(paper_root, 'figures_v2', 'figure3', 'variance_ratio_by_window.pdf'));
+paperExport(fig_Fr, fullfile(paper_root, 'images', 'figure3', 'variance_ratio_by_window.pdf'));
 
 %% Variance slope test -- OL: linear trend in variance across pre / stim / post windows
 % Three windows: pre (-3 to 0 s), stim (0 to dur s), post (dur to dur+3 s).
@@ -502,7 +502,7 @@ end
 % Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
 mark_stim_span(ax_g2r);
 
-paperExport(fig_G2r, fullfile(paper_root, 'figures_v2', 'figure3', 'MSE_ratio_by_window.pdf'));
+paperExport(fig_G2r, fullfile(paper_root, 'images', 'figure3', 'MSE_ratio_by_window.pdf'));
 
 
 %% G2v: Windowed MSE violin -- Option B (grouped per session, both windows)

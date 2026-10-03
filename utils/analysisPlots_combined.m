@@ -115,7 +115,7 @@ text(ax_B, 3*dur/4, 7, 'CL Stim', 'Color', colInpCL, ...
     'HorizontalAlignment','center', 'Clipping','off');
 
 linkaxes([ax_A ax_B], 'x');
-paperExport(fig_A, 'paper/figures_v2/figure3/panel_A.pdf');
+paperExport(fig_A, 'paper/images/figure3/panel_A.pdf');
 
 %% B: all trials + average -----------------------------------------------
 PH_B = 3.4;   % jn* resize: unify row height
@@ -163,7 +163,7 @@ hold(ax_D, 'off');
 paperAxes(ax_D);
 
 linkaxes([ax_C ax_D], 'x');
-paperExport(fig_B, 'paper/figures_v2/figure3/panel_B.pdf');
+paperExport(fig_B, 'paper/images/figure3/panel_B.pdf');
 
 %% C: average inputs -----------------------------------------------------
 PH_C = 3;
@@ -211,7 +211,7 @@ hold(ax_F, 'off');
 paperAxes(ax_F);
 
 linkaxes([ax_E ax_F], 'x');
-paperExport(fig_C, 'paper/figures_v2/figure3/panel_C.pdf');
+paperExport(fig_C, 'paper/images/figure3/panel_C.pdf');
 
 %% D: variance over time -------------------------------------------------
 PH_D = 3.4;   % jn* resize: unify row height
@@ -242,7 +242,7 @@ text(ax_var, -0.20, 0.5, 'Variance across trials', ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'Color','k', 'Clipping','off');
 
-paperExport(fig_D, 'paper/figures_v2/figure3/panel_D.pdf');
+paperExport(fig_D, 'paper/images/figure3/panel_D.pdf');
 
 %% E: MSE half-violin ----------------------------------------------------
 PH_E = 3.4;   % jn* resize: unify row height
@@ -278,7 +278,7 @@ text(ax_mse, -0.12, 0.5, 'Trial RMSE', ...
     'Color','k', 'Clipping','off');
 paperAxes(ax_mse);
 
-paperExport(fig_E, 'paper/figures_v2/figure3/panel_E.pdf');
+paperExport(fig_E, 'paper/images/figure3/panel_E.pdf');
 
 end
 

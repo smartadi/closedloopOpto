@@ -13,14 +13,14 @@
 #                               then run the producer script.
 #   collect_final_panels.m      CHECKS panels/ against this list — names anything
 #                               missing and deletes anything unlisted. It no longer
-#                               copies from figures_v2/images: that would overwrite the
+#                               copies from images/: that would overwrite the
 #                               jn panels with their non-jn originals.
 #
 # THE RULE: a panel is "final" iff it is listed here. When you lock a panel, add its
 # line here and re-run its producer with PAPER_FINAL on; when you retire one, delete
 # its line and run collect_final_panels to prune it. Never point Illustrator at
-# paper/images/figureN/ or paper/figures_v2/ (working dirs, full of superseded
-# panels) — always pull from figures_final/panels/.
+# paper/images/figureN/ (working dirs, full of superseded panels; figures_v2 was
+# retired 2026-10-03) — always pull from figures_final/panels/.
 # Keep this list in sync with PAPER.md's "Paper panels in use" registry.
 # ===========================================================================
 
@@ -31,7 +31,7 @@ figure1/svd_frame_AL_0039_2025-04-19.pdf  # 3.10 x 3.10 cm
 
 [figure2]
 # Lettering LOCKED 2026-10-02 (user: "fig 2 caption panel is correct, change the manifest").
-# Follows the results.tex caption. Sources in paper/figures_v2/figure2.
+# Follows the results.tex caption.
 #   A dose-response       -> imp_response.pdf
 #   B single-session      -> imp_single_AL_0041_2025-12-02_en2.pdf  (session 2)
 #   C LTI fit, 1 session  -> tf_cv_single_AL_0033.pdf
@@ -95,7 +95,7 @@ figure5/sine_combined_variance.pdf  # 5.04 x 2.93 cm
 [supplementary]
 # tf_cv_2D_sidebar.pdf removed 2026-09-30: it is Figure 2E, so listing it here as well
 # had the collector place one panel into two pull-folders.
-# Neither file below has a figures_v2 export; both resolve from images/. Regenerate
-# them into figures_v2 or retire them.
+# Neither file below has a current producer run; both resolve from images/. Regenerate
+# them with PAPER_FINAL on, or retire them.
 figure2/tf_cv_2D_endlabels.pdf  # 3.25 x 3.28 cm
 figure2/tf_cv_shape_across_sessions.pdf  # 3.46 x 3.28 cm

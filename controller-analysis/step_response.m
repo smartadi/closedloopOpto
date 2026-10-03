@@ -69,7 +69,7 @@ hold(ax_H, 'off');
 paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','RMSE dF/F');
 title(ax_H, {'Average of Session'; 'Tracking error'}, ...
     'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');    % user, 2026-08-26
-paperExport(fig_H, fullfile(paper_root, 'figures_v2', 'figure3', 'all_average_sessions.pdf'));
+paperExport(fig_H, fullfile(paper_root, 'images', 'figure3', 'all_average_sessions.pdf'));
 
 
 

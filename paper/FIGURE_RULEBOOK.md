@@ -69,7 +69,7 @@ Keep these identical across every panel — mismatched weights are a common revi
 Panels are placed at **100%** on a **17.6 cm** (double-column) artboard with **~0.25 cm** gaps;
 each row stays inside 17.6 with ≥1 cm clearance. Sizes are the real PDF MediaBox.
 
-| Fig | Panel | file (paper/figures_v2/…) | W × H (cm) |
+| Fig | Panel | file (paper/figures_final/panels/…) | W × H (cm) |
 |-----|-------|---------------------------|------------|
 | 4 | A exemplars | figure4/f4_state_exemplars.pdf | 7.83 × 3.60 |
 | 4 | B model eqn | figure4/f4_1B_equation.pdf | 3.14 × 1.87 |
@@ -137,6 +137,5 @@ Row layout: R1 = A+B+C ≈ 16.5; R2 = D 16.58; R3 = E+F+G ≈ 14.0 (all + 0.25 g
 - `jnAxes(ax)` — apply the axis/font/line style to one axes (call after drawing).
 - `jnExport(fig, 'path/panel.pdf')` — vector PDF + 300-dpi PNG.
 
-New panels built with this system go to a **separate finalized folder**
-(`paper/figures_v2/`) — the existing `figures_final/` set is left untouched until the
-new look is approved.
+Panels built with this system land in `paper/figures_final/panels/` via the mirror.
+(`paper/figures_v2/`, the interim staging folder, was retired 2026-10-03.)

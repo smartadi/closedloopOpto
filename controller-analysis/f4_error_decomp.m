@@ -22,7 +22,7 @@ clc; close all;
 PS = paperStyle(); setPaperDefaults();
 root = 'C:\Users\aditya\Documents\projects\brain_paper';
 outfig  = fullfile(root,'paper','images','figure4');
-outfig2 = fullfile(root,'paper','figures_v2','figure4');      % jn* v2 output (main-text sep panel)
+outfig2 = fullfile(root,'paper','images','figure4');      % working copy (main-text sep panel); final via paper_final_mirror
 outsupp = fullfile(root,'paper','images','supplementary');   % non-main decomp panels (user 2026-09-28)
 outview = fullfile(root,'controller-analysis','_preview');
 if ~exist(outfig,'dir');  mkdir(outfig);  end
