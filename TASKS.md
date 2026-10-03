@@ -293,6 +293,15 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 
 ## 🟢 Deferred / waiting
 
+- [ ] **Fig 2G stim-free control — rebuild on REAL catch trials, then revisit the overlay** (tabled by user 2026-10-03).
+  Today's control is a within-trial pre-stimulus surrogate (`iSham`, −1.200 to −1.029 s), not an unstimulated
+  trial. The 0 V events in `uAmp` are NOT usable as catch trials — they are gap-fill placeholders for events the
+  detector missed (`load_experiments.m:153`), so their amplitude is unknown, not zero. Real catch trials have no
+  laser onset and must be recovered from Block via the Block↔Timeline clock offset — same mechanism as the open
+  bilateral item. Do this together with the `Lresp` 7-vs-8 length fix (`imp_state_trialvar.m:170`, see RESEARCH
+  2026-10-03). Preview of both overlay framings already built: `impulse-analysis/_preview/stv_2g_ctrl_preview.m`
+  (`PV_MODE` = 'shape' reproduces the caption's 0.80/1.00/2.25 exactly; 'magnitude' does not).
+
 - [ ] **[TABLED 2026-08-12, user] Fig-5 spectral / tracking-fidelity panel.** Analysis is done and parked in `bilateral/sine_ff_error_decomp.m` (runs, reproduces the numbers, nothing registered). Three sections: error-power decomposition (offset / at-f0 / broadband, exact via Parseval), per-trial `|1−T|` at the drive frequency, and the trade-off plane. **If picked up: promote the trade-off plane** — it is the only version that supports "CL+preview is best" honestly (it dominates plain CL on both axes, 3/3 sessions), and 5H's 4.2 × 5.4 slot is free. Do **not** re-run the shape-similarity family: eight framings tested, all name OL+preview, for the structural reason that shape normalises out the offset term where CL+preview wins. RESEARCH 2026-08-12.
 - [ ] **Controller analysis result caching** — avoid recomputing ARX fits, TF fits, and cross-session pooled arrays on every run. Proposed structure: `data/<session>wb_model.mat` (ARX `beta_m`, `pY/pX/grid_rows/grid_cols`, R²_train/test, TF fit object + time constants), `data/<session>wb_pred.mat` (pink/orange/red trial predictions + R²s + WB-5 MSEs), `cross_session_cache.mat` (motion quartile arrays, pre-stim dev/MSE, spectral aggregations, contributing sessions list). Each section checks whether cached params match current params before recomputing. See RESEARCH.md 2026-05-27 for full struct design.
 - [ ] Post-hoc optimal laser sequence (MPC motivation) — depends on three-layer model — see FINDINGS.md
