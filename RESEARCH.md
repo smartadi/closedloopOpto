@@ -16,6 +16,23 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-03 — REJECTED: 1.0 s TF fit window (tried to fix the censored Fig-2F tau CIs)
+**Changed/Found:** Ran `impulse-analysis/imp_tf_run.m` with `RUN_TFIT = 1.0` (all else default:
+5p/4z/3d sweep, AIC + R2h escalation, 300-draw bootstrap, 4 sessions). Result is WORSE on every axis:
+every session hits the 5-pole cap (5p4z/5p4z/5p3z/5p4z, was 3p1z/4p3z/4p3z/4p2z); fast tau
+collapses to 44/17/45/134 ms (was 148/93/150/142 — the "~0.14 s shared fast constant" claim would
+die); slow tau 1829/427/441/379 ms; bootstrap discard (tau > 1.0 s) still 68/55/36/32 %; pooled R2
+0.66/0.32/0.81/0.84 (was 0.74/0.52/0.87/0.94); sdBetween/sdWithin 0.707/0.222. Cause: 0.5-1.0 s
+contains the post-dip REBOUND (mostly gone by ~770 ms), which a low-order decaying model cannot
+represent, so AIC spends poles on it and the poles become non-identifiable.
+RESTORED: 1.0 s fits kept as `data/imp_tf_fits_tfit1p0_2026-10-02.mat`; `data/imp_tf_fits.mat` is
+the 0.5 s cache again (backup `imp_tf_fits_tfit0p5_2026-09-29.mat`); panels tf_model_swap +
+tf_tau_forest (final), tf_shape_across_sessions + tf_pole_spectrum (working) redrawn from it via
+`imp_tf_figs`. Panels 2C/2D and all manuscript text were never touched.
+**Why:** User chose "lengthen the fit window to about 1.0 s" to make the slow tau identifiable.
+**Next:** USER DECISION on 2F: (a) per-pole censoring + CI on fast tau only, slow tau as bare
+point (recommended), or (b) bare points throughout (bareA). Window stays 0.5 s.
+
 ### 2026-10-02 — Methods: dropped the per-session TF-fit table (tab:tf_fig2)
 **Changed/Found:** `Closedloop_edit/methods_rewrite.tex` — removed Table tab:tf_fig2 (4-session
 orders, tau, R2_h, bootstrap discard fraction) and its reference; text now just says the discarded
