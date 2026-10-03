@@ -16,6 +16,19 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 — Figures 2–5 re-assembled and synced into the manuscript
+**Changed/Found:** User re-assembled Figs 2–5 in Illustrator (20:34–20:45) from the rebuilt
+`figures_final/panels/` set; copied the four `FigureN.pdf` into `Closedloop_edit/images/` and
+recompiled. `Figure1.pdf` was NOT copied — the local assembly is byte-identical to the
+manuscript's copy (md5 75ba35c5, 205015 B), so there was nothing to sync. Compile: latexmk
+exit 0, **0 errors, 0 undefined references, 0 missing figure files, 35 pages**. Pushed to
+`draft` as 13a3df7.
+**Why:** The manuscript still carried the 2026-09-30 assemblies, built from panels that the
+clean rebuild has since shown to differ from current code output.
+**Next:** Supplementary figures are the next target — the manuscript's supplementary includes
+live in `methods_edit.tex` and point at `images/supplementary/`, which is NOT covered by
+MANIFEST.txt beyond two tf_cv panels. Audit that set the same way.
+
 ### 2026-10-02 — Full clean rebuild of all 38 final panels; every single one changed
 **Changed/Found:** Regenerated the whole manifest set from a cleared MATLAB state
 (`clear all; clear functions; rehash`, data reloaded from the verified cache) with
