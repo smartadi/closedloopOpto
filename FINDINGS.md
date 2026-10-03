@@ -8,6 +8,26 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
+## Finding: Brain state shapes OL error; feedback decouples motion but not relative 2–4 Hz power (Fig 4)
+**Question:** Which brain-state factors account for tracking error, and does closed-loop control remove their effect?
+**Analysis:** `controller-analysis/f4_row2_quartiles.m` + `utils/f4_row2_pool.m` / `f4_row2_fit.m` (LMM `RMSE ~ cond*state + (1+cond|sess) + (1|mouse)`, REML + Satterthwaite); `f4_error_decomp.m` (unique R², 'sep' mode); `f4_state_exemplars.m`. States over ONE window [−2, +3) s (`utils/f4_state_window.m` 'peri'), band power grid-independent (`utils/f4_bandpow.m` 'continuous'), motion = mean z (`f4_motion_stat.m`). Final 2026-10-02.
+**Result:** Initial deviation: predictability p = 2.1e-10, controllability n.s. (0.74). Motion: predictability p = 7.3e-4, controllability p = 0.0015 (feedback removes it; OL slope +0.13 p = 0.002, CL −0.05 p = 0.47, 11/11 sessions). Rel 2–4 Hz: predictability n.s. (0.34), controllability β = +0.12 [+0.01, +0.23] p = 0.032 (CL error climbs; per-session signrank 0.083). Abs 1–4 Hz: predictability p = 3.8e-34, controllability n.s. (0.23). OL–CL gap at mean state p ≤ 3.7e-5 for all four. Decomposition (613 CL trials, 11 sessions), unique R² 0–1 s → 1–3 s: init 0.41 → 0.03, motion ~0, rel 0.15 → 0.19, abs 0.28 → 0.44.
+**Paper claim:** Initial deviation owns the transient; low-frequency power carries the steady state; feedback decouples motion-driven error but not error tied to relative 2–4 Hz power.
+**Figure:** Fig 4A–E (`paper/figures_final/panels/figure4/`), supp S3/S4.
+**Status:** IN PAPER (results.tex Fig-4 section, 2026-10-02). Rel-δ controllability was band-edge fragile under the old bin estimator (p 0.009 ↔ 0.074 with a one-sample window change); the continuous estimator fixes it (p 0.031–0.034). See RESEARCH 2026-10-02.
+
+---
+
+## Finding: Feedback removes variability, preview removes lag, in sinusoidal tracking (Fig 5)
+**Question:** Do feedback and preview correct different failures when tracking a 1 Hz sinusoidal reference?
+**Analysis:** `bilateral/sine_ff_plots_combined.m`, `sine_ff_across_sessions.m`, `sine_ff_error_decomp.m`; AL_0048, 3 sessions, 4 randomly interleaved modes (OL, OL+p, CL, CL+p); preview = pure 5-sample lookahead (K_vel = K_acc = 0, K_preview = 1).
+**Result:** CL < OL RMSE in 3/3 sessions (rep. session median 3.82 → 2.80; pooled 4.58 ± 1.77 → 3.83 ± 1.94); preview cancels the lag in 3/3 (OL 60° → 5°, CL 36° → −9°); preview cuts the drive-frequency error (3.5-fold OL, 1.5-fold CL), feedback the broadband error.
+**Paper claim:** Descriptive only — n = 3 sessions in one mouse is too few for significance tests (user 2026-10-02).
+**Figure:** Fig 5B–K.
+**Status:** IN PAPER, descriptive (stats removed 2026-10-02; 5G brackets off via SINE_SHOW_STATS).
+
+---
+
 ## Finding: Contra→ipsi predictor validated on Ye/Zhiwen data — our 0.925 ceiling is a DATA limit, not code/method
 **Question:** Our CP-HEMI whole-hemisphere contra→ipsi pooled R² on AL_0033 plateaus at ~0.925 @rank10, ~0.065 below Ye et al. 2023's ~0.99. Is that gap in our CODE (ported primitives), our METHOD (whole-hemi split vs his Allen sensory-area restriction), or intrinsic to our DATA?
 **Analysis:** `impulse-analysis/cp_zhiwen_validate.m` — positive control running OUR vendored `redoSVD`/`CanonCor2`/`sseExplainedCal` (K=50, train 1:40000/test 40001:60000, rank sweep, pooled `sseExplainedCal` over predicted-hemi pixels×test-time) on Zhiwen's own spontaneous session `AB_0004_20210330_1` (35.1 Hz, 82 min, hemo-corrected SVD, figshare). Two arms on the SAME data: **Arm A** = his exact atlas-registered sensory-area split (faithful port of `getReducedRankRegressionHEMI.m`, using his `tform`+Allen atlas); **Arm B** = whole-cortex hemisphere midline split (analogue of our AL_0033 CP-HEMI).
@@ -93,6 +113,7 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Paper claim:** Low-order TF (n poles, n zeros, transport delay) fits amplitude-normalised response with R²=X on held-out 20%. Supports LTI assumption for controller design.
 **Figure:** `paper/images/figure2/tf_data_vs_model_AL_0033_2025-01-29_en1.pdf` (panel 2C), `paper/images/figure2/tf_loao_*.pdf`
 **Status:** CROSS-SESSION DONE (2026-09-24, `imp_tf_xsess.m` on all 4 impulse sessions: AL_0041 e1/e2, AL_0033, AL_0048). Answer to "do the time constants agree across sessions?": **YES on the matched amplitude range** (common 0.8–1.6 V window, apples-to-apples). Slowest τ₁ = 160 / 72 / 185 ms (AL_0041 e1 / AL_0033 / AL_0048; AL_0041 e2 skipped, <2 amps in range) → mean **139 ms**, range 72–185, between-session SD **59 ms** < within-session bootstrap SD **95 ms** (ratio 0.62) ⇒ consistent with ONE shared time constant; pairwise bootstrap P(τᵢ>τⱼ) = 0.38–0.67 (indistinguishable). The FULL-range picture looks divergent (τ 196/4448/248/183 ms, CV 1.67) ONLY because AL_0041 e2's fit is **non-identifiable** (86% of bootstrap refits push τ past the 0.51 s window — flagged and dropped from the CI). LTI otherwise holds: gain proportionality ~flat (`gRatio`), shape agreement (`rho`) high at moderate–high amps, small LOAO gaps (AL_0033 0.017, AL_0048 0.036); mild saturation departures only above ~2 V (AL_0041 e2) / ~1 V (AL_0048). Result in the `TFX` struct; PNG `paper/images/figure2/tfx_lti_across_sessions.png` (NOT a paper panel — supplementary/robustness). RECONCILIATION with Fig-2F forest (`imp_tf_fits.mat`, plotted taus): the forest uses HIGHER-order fits (3–4 poles) and its per-session SLOW tau = 176/540/333/302 ms (mean 338 ms — the source of the old "~0.3 s" paper claim), but that slow pole is POORLY IDENTIFIED (bootstrap rejection 38/57/1/43% — robust only in AL_0033). The forest FAST tau = 148/93/150/142 ms (~0.14 s) IS the tight, consistent one and equals the xsess matched-range dominant tau (139 ms). ⇒ the defensible cross-session claim is the FAST/dominant ~0.14 s timescale (shared), NOT the slow ~0.3 s (variable + weakly identified). Paper adjusted 2026-09-24: Fig-2F sentence now leads with the ~0.14 s fast constant (tight across sessions) and treats ~0.2–0.3 s slow as variable/reliably-identified-only-in-AL_0033. Reconciles with model-swap 2E: whole models session-specific, dominant timescale shared. Still OPEN (minor): relax delay τ, report held-out 20% R² per Nick 2026-05-08 — largely covered by the pooled/LOAO R² here.
+**Update 2026-10-03 — fit window / pole cap explored, 0.5 s / ≤5 poles stays.** Tried to make the slow τ identifiable (Fig-2F intervals are censored: 42–50 % of bootstrap draws discarded in 3/4 sessions). 1.0 s / ≤5p: all sessions hit 5 poles, fast τ collapses (17–134 ms). 1.0 s / ≤4p: CV R² 0.75, Mouse 1a slow pole unstable. 1.0 s / ≤2p: CV R² 0.63, no session meets R²h 0.98. 3.0 s / ≤2p: CV R² ≈ 0. Longer windows pull in the post-dip rebound, which low-order models cannot represent. Current 0.5 s fit: CV R² 0.86, fast τ ~0.14 s. Fig-2F display fix still a USER DECISION. See RESEARCH 2026-10-03.
 
 ---
 
@@ -112,7 +133,7 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Result:** OL slope positive (higher pre-stim variance → higher MSE). CL slope near-flat. Motion-clean version (K2m) shows same pattern.
 **Paper claim:** Pre-stimulus neural variance predicts trial outcome in open-loop but not closed-loop, indicating that feedback control decouples initial brain state from performance.
 **Figure:** `paper/prestimvar_mse.pdf` (panel K2), `paper/prestimvar_mse_motclean.pdf` (K2m)
-**Status:** Analysis done. NOT yet in manuscript. Add as new paragraph in results — this is the mechanistic argument for CL value.
+**Status:** SUPERSEDED — `prestim_variance.m` is retired; pre-stim variance is a signal-power confound. The state question is answered by the Fig-4 finding above (motion, rel/abs δ, initial deviation).
 
 ---
 

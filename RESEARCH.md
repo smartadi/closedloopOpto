@@ -65,6 +65,22 @@ tf_tau_forest (final), tf_shape_across_sessions + tf_pole_spectrum (working) red
 **Next:** USER DECISION on 2F: (a) per-pole censoring + CI on fast tau only, slow tau as bare
 point (recommended), or (b) bare points throughout (bareA). Window stays 0.5 s.
 
+### 2026-10-02 — Supplementary S3/S4 panels synced to the manuscript
+**Changed/Found:** Copied the four regenerated supplementary PDFs (f4_exemplars_sessions,
+f4_decomp_unique_{both,rel,abs}; built 21:31 on the final window + continuous estimator) from
+`paper/images/supplementary/` into `Closedloop_edit/images/supplementary/` (draft 30eb736).
+**Why:** S3/S4 in the manuscript still showed the legacy-estimator panels.
+**Next:** none.
+
+### 2026-10-02 — DECISION locked in CLAUDE.md: state windows + band-power estimator
+**Changed/Found:** `CLAUDE.md` Locked-in decisions gained "State windows + band-power estimator —
+FINAL": Fig 2 = [−1, 0) s for motion / rel δ / abs δ (2–4 Hz, bin estimator); Fig 4 = [−2, +3) s
+for all three (abs δ = log10 1–4 Hz), `f4_bandpow` 'continuous', motion = mean z. Never −1..+3 or
+pre-only for Fig 4. FINDINGS.md updated the same session (new Fig-4 and Fig-5 findings; K2
+pre-stim-variance finding marked SUPERSEDED; TF finding gained the window/pole exploration).
+**Why:** User: "ok lets finalize -2 to +3 forever"; future sessions must not re-derive it.
+**Next:** none.
+
 ### 2026-10-02 — Methods: dropped the per-session TF-fit table (tab:tf_fig2)
 **Changed/Found:** `Closedloop_edit/methods_rewrite.tex` — removed Table tab:tf_fig2 (4-session
 orders, tau, R2_h, bootstrap discard fraction) and its reference; text now just says the discarded
