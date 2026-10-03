@@ -187,7 +187,7 @@ if DR_YAXIS
     % name the units on the axis label, since there is now an axis to put them on
     % Two lines (2026-09-30): at the rule-book 7 pt this label is longer than a 3.3 cm
     % panel is tall, so as one line it overflowed the plot box and sat on the ticks.
-    ylabTxt = {'Evoked suppression', '(% \DeltaF/F, 29-200 ms)'};
+    ylabTxt = {'Evoked suppression', '(% \DeltaF/F, 0-200 ms)'};
 end
 % Drop the built-in ylabel set further up ('dF/F %'): the rotated text below IS the y label.
 % Leaving both drew a stray 'dF/F %' ~0.75 cm to the LEFT of the real one (MATLAB pushes the
