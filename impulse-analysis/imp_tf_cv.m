@@ -283,8 +283,14 @@ if CV_SINGLE
             hL(i) = plot(axS, t, S1.amp.meas(a,:), '-',  'Color', c, 'LineWidth', PS.lw_mean);
             hD(i) = plot(axS, t, S1.amp.pred(a,:), '--', 'Color', c, 'LineWidth', PS.lw_fit);
             % mW, not the raw command volts (user 2026-09-30): panels A and B are both in
-            % mW, and uA/3 is the project's V->mW conversion (see trace_overlay.m).
-            lgS{i} = sprintf('%.2f mW  R^2=%.2f', S1.amp.uA(a)/3, S1.amp.R2(a));
+            % mW. CALIBRATION FIXED 2026-10-03: this read uA/3 (= 0.3333), which is not the
+            % project's conversion and did not come from trace_overlay.m -- that file defines
+            % no conversion at all, so the citation was wrong too. The canonical factor is
+            % 1.8/4.9 = 0.36735 mW/V (0 V = 0 mW, 4.9 V = 1.8 mW), used by prestim_variance.m,
+            % spatial_spread.m and presentation/export_ampmaps.m. Every mW label on this panel
+            % was therefore ~9.4% low.
+            vToMW  = 1.8 / 4.9;
+            lgS{i} = sprintf('%.2f mW  R^2=%.2f', S1.amp.uA(a)*vToMW, S1.amp.R2(a));
         end
         yline(axS, 0, '-', 'Color', [.6 .6 .6], 'LineWidth', PS.lw_zero);
         xlim(axS, [0 0.5]);  xticks(axS, [0 0.2 0.4]);

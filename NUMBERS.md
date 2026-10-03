@@ -139,7 +139,11 @@ Definition (`eq:inhib_energy`): mean ΔF/F over `W = {t_on … t_on+6}`, **7 sam
 | Slow time constant | ~0.2–0.3 s, more variable | ✅ draft |
 | Settling time | "~200 ms" | 🟥 inconsistent with τ = 0.14 s (4τ ≈ 0.56 s). Define the criterion or drop the consistency claim |
 | Plant order | **two real poles** | 🟥 Discussion calls it "lightly damped second-order, resonant near 2.2 Hz" and builds the ~2.6 Hz bandwidth argument on that resonance. Resolve against `tab:tf_sessions` |
-| Cross-session model swap (2E) | diagonal high / off-diagonal lower | ⬜ **no numbers anywhere** — print diagonal vs off-diagonal medians |
+| Cross-session model swap (2E) | **self R² = 0.991, cross-session 0.714** (drop 0.277) | ✅ resolved 2026-10-03 from `imp_tf_run`; now quoted in `results.tex` as 0.99 vs 0.71 |
+| Tau forest (2F) — slow τ | **0.176 / 0.540 / 0.333 / 0.302 s**; mean 0.338, between-SD 0.151, within-SD 0.097, ratio 1.55 | ✅ measured 2026-10-03. 🟥 Results says "~0.2–0.3 s" — WRONG, range is 0.18–0.54 s. Tabled by user |
+| Tau forest (2F) — fast τ | **0.148 / 0.093 / 0.150 / 0.143 s** | ✅ supports the "~0.14 s in three of four" claim |
+| Tau forest (2F) — bootstrap discard | **42% / 50% / 2% / 50%** beyond the 0.51 s fit window | ✅ measured 2026-10-03; CIs are right-censored, not usable intervals |
+| Model order across sessions | np = [3 4 4 4], modes [2 2 2 3] | ✅ NOT shared — do not write "the same model", write the range |
 
 ### Fig 2G — state dependence (quartile ratios, top vs bottom)
 Re-verified 2026-10-03 live from `STV.R` after the evoked window became a true 0–200 ms
@@ -445,12 +449,15 @@ delete the sentence.
 3. Gain and phase margin from the fitted plant + 47 ms delay + the gains.
 4. Re-print the three contra-predictor R² values and the two nested nulls.
 5. Fig 2G pool size (1767 vs 1516).
-6. Fig 2E diagonal vs off-diagonal R² medians.
+6. ✅ DONE 2026-10-03 — Fig 2E self 0.991 vs cross 0.714.
 7. All six exclusion counts in §8.
 8. RR on open-loop trials (not a consolidation item — a new control, but same code path).
 
 **🟥 Fix in code, then re-export:**
-9. `imp_tf_cv.m` V→mW factor `/3` → `1.8/4.9`; re-export Fig 2C.
+9. ✅ **FIXED 2026-10-03** — `imp_tf_cv.m:287` now uses `vToMW = 1.8/4.9` (was `/3`, labels ~9.4% low).
+   ⚠ **Fig 2C NOT yet re-exported** — `imp_tf_cv.m` is a separate script and was not run; the locked
+   panel still carries the old labels. Run with `PAPER_FINAL` on, then re-place 2C in Illustrator.
+   No text change needed: nothing in Results or Methods quotes these mW values.
 
 **👤 Only Aditya has these:** animal sex / indicator / titre / age / housing, the second
 opsin and the 638-vs-594 nm reason, water-restriction coverage, the amplifier gain, the
