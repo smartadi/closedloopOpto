@@ -142,15 +142,23 @@ Definition (`eq:inhib_energy`): mean ΔF/F over `W = {t_on … t_on+6}`, **7 sam
 | Cross-session model swap (2E) | diagonal high / off-diagonal lower | ⬜ **no numbers anywhere** — print diagonal vs off-diagonal medians |
 
 ### Fig 2G — state dependence (quartile ratios, top vs bottom)
-| state | ratio | CI | p | sessions | control ratio |
-|---|---|---|---|---|---|
-| motion | 0.71 | [0.60, 0.84] | 1.5e-7 | 4/4 | 0.79 |
-| relative 2–4 Hz | 1.10 | [0.94, 1.27] | 0.005 | **3/4** | 1.00 (ρ=+0.001, p=0.96) |
-| absolute 2–4 Hz | 1.99 | [1.69, 2.37] | <1e-16 | 4/4 | 2.10 (ρ=+0.37) |
+Re-verified 2026-10-03 live from `STV.R` after the evoked window became a true 0–200 ms
+(`imp_state_trialvar.m` → `imp_state_trialvar_fig.m`). Values below are ✅ the generator's.
+
+| state | ratio | CI95 | ρ (p) | LME p | sessions | control ratio (ρ, p) |
+|---|---|---|---|---|---|---|
+| motion | 0.729 | [0.618, 0.876] | −0.1228 (2.3e−7) | 7.31e−7 | 4/4 | 0.795 (ρ=−0.049, p=0.041) |
+| relative 2–4 Hz | 1.022 | [0.878, 1.191] | +0.0933 (8.6e−5) | 0.00518 | **3/4** | 0.998 (ρ=+0.008, p=0.74) |
+| absolute 2–4 Hz | 2.092 | [1.762, 2.572] | +0.4161 (<1e−16) | <1e−16 | 4/4 | 2.245 (ρ=+0.377) |
+
+Paper (`results.tex`, updated to match 2026-10-03): 0.73 / 1.02 / 2.09, controls 0.80 / 1.00 / 2.25.
+The window change moved only last digits — no claim, star or session count moves. The superseded
+2026-09 table read 0.71 [0.60,0.84] / 1.10 [0.94,1.27] / 1.99 [1.69,2.37], controls 0.79 / 1.00 / 2.10;
+that set predates both the pseudoreplication fix and the window fix — do not quote it.
 
 - 🟥 **Pool size 1767 trials** — see §1.2.
-- 🟥 The dissenting rel-δ session is **AL_0048** (within-session ρ = **−0.062**, n = 300) vs
-  +0.115 / +0.192 / +0.086 for the others; stratified ρ = +0.081. **Not named in the paper.**
+- 🟥 The dissenting rel-δ session is **AL_0048** (within-session ρ = **−0.060**, n = 300) vs
+  +0.116 / +0.195 / +0.110 for the others; stratified ρ = +0.0947. **Not named in the paper.**
 - 🟥 rel-δ **reverses sign on the independent Ye/Zhiwen dataset** (ρ = −0.25; robust median
   −0.33, 99 % of 150 pixels negative) vs our +0.29 — FINDINGS §state-dependence. Unreported.
 - ⚠ rel-δ also weakened ~6× under the pseudoreplication fix. Motion is 4/4 and robust; rel-δ
