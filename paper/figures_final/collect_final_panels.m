@@ -41,7 +41,12 @@ for i = 1:numel(txt)
         continue;
     end
     if isempty(cur), continue; end
-    [~,nm,ex] = fileparts(ln);            % whole line is the path; it may contain spaces
+    % path, optionally followed by a '# w x h cm' recorded-size note -- strip the note.
+    % Split on '#' only: the path itself may contain spaces.
+    hh = strfind(ln, '#');
+    if ~isempty(hh), ln = strtrim(ln(1:hh(1)-1)); end
+    if isempty(ln), continue; end
+    [~,nm,ex] = fileparts(ln);
     want(cur) = [want(cur), {[nm ex]}];
 end
 

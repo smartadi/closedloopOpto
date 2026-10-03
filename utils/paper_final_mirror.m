@@ -46,9 +46,64 @@ try
     jnAxesAll(fig);                                                 % rule-book typography pass
     exportgraphics(fig, out, 'ContentType','vector');
     exportgraphics(fig, regexprep(out,'\.(pdf|svg|eps)$','.png'), 'Resolution',300);
-    fprintf('   [final+jn] panels%s%s%s%s\n', filesep, sec, filesep, [base ext]);
+
+    % ---- SIZE GUARD (user, 2026-10-02: "must not be oversized") -----------------------
+    % The vector export tight-crops to CONTENT, so the page that lands in Illustrator can be
+    % bigger than the canvas we designed. Measure what actually got written and complain if
+    % it overhangs; silence here is how an oversized panel reaches the assembly unnoticed.
+    pu = fig.Units; fig.Units = 'centimeters'; cv = fig.Position(3:4); fig.Units = pu;
+    [pw, ph] = pdf_page_cm(out);
+    tol  = 0.15;                                 % cm; ~1.5 mm of honest antialias/linewidth
+    over = [pw - cv(1), ph - cv(2)];
+
+    % Oversized -> try pulling the content inside the canvas and export again. Done ONLY on
+    % panels that actually overflow, so the ones that already fit keep their exact layout.
+    %
+    % KEEP-BEST-OF-TWO: the refit is a heuristic and it can make a panel WORSE (tf_cv_single
+    % went 5.93 -> 6.35 cm when the axes shrank but a clipping-off scale bar did not follow).
+    % So the refit is exported to a scratch file, measured, and adopted only if it genuinely
+    % reduces the overflow. An automatic fixer that is allowed to degrade a paper panel is
+    % worse than no fixer at all.
+    if ~isnan(pw) && any(over > tol)
+        try
+            tmp = [tempname '.pdf'];
+            jn_fit_canvas(fig);
+            exportgraphics(fig, tmp, 'ContentType','vector');
+            [pw2, ph2] = pdf_page_cm(tmp);
+            best0 = max(over);
+            best1 = max([pw2 - cv(1), ph2 - cv(2)]);
+            if ~isnan(pw2) && best1 < best0 - 0.01
+                copyfile(tmp, out);
+                exportgraphics(fig, regexprep(out,'\.(pdf|svg|eps)$','.png'), 'Resolution',300);
+                fprintf('   [fit] %-40s %5.2f x %5.2f  ->  %5.2f x %5.2f cm\n', ...
+                        [base ext], pw, ph, pw2, ph2);
+                pw = pw2; ph = ph2; over = [pw - cv(1), ph - cv(2)];
+            else
+                fprintf('   [fit] %-40s refit REJECTED (%.2f x %.2f would not improve)\n', ...
+                        [base ext], pw2, ph2);
+            end
+            if isfile(tmp), delete(tmp); end
+        catch
+            % refit failed outright -- keep the original export
+        end
+    end
+
+    if ~isnan(pw) && any(over > tol)
+        warning('paper_final_mirror:oversized', ...
+            ['%s is OVERSIZED: page %.2f x %.2f cm vs canvas %.2f x %.2f cm ' ...
+             '(+%.2f, +%.2f). Content is overhanging the canvas — shrink the axes or pull ' ...
+             'the legend/labels inside; do NOT just scale it in Illustrator.'], ...
+            [base ext], pw, ph, cv(1), cv(2), over(1), over(2));
+        tag = sprintf(' OVERSIZE +%.2f/+%.2f', over(1), over(2));
+    else
+        tag = '';
+    end
+    fprintf('   [final+jn] panels%s%s%s%-46s %5.2f x %5.2f cm%s\n', ...
+            filesep, sec, filesep, [base ext], pw, ph, tag);
+
     if isempty(PAPER_FINAL_LOG); PAPER_FINAL_LOG = {}; end
-    PAPER_FINAL_LOG{end+1} = out;
+    PAPER_FINAL_LOG{end+1} = struct('file',out, 'sec',sec, 'name',[base ext], ...
+                                    'page_cm',[pw ph], 'canvas_cm',cv, 'over_cm',over);
 catch ME
     if strcmp(ME.identifier,'MATLAB:print:CannotCreateOutputFile') || ...
        contains(lower(ME.message),'permission')
@@ -85,7 +140,12 @@ if isempty(MAP)
             cur = ln(2:end-1); continue;
         end
         if isempty(cur), continue; end
-        % the WHOLE line is the path (it may contain spaces); we key on its basename
+        % The line is the path, optionally followed by a '# w x h cm' size note (recorded by
+        % the size audit so Illustrator placement is deterministic). Strip the note; the path
+        % itself may contain spaces, so split on '#' only, never on whitespace.
+        hh = strfind(ln, '#');
+        if ~isempty(hh), ln = strtrim(ln(1:hh(1)-1)); end
+        if isempty(ln), continue; end
         [~, nm, ex] = fileparts(ln);
         MAP([nm ex]) = cur;
     end

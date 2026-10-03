@@ -189,6 +189,13 @@ if DR_YAXIS
     % panel is tall, so as one line it overflowed the plot box and sat on the ticks.
     ylabTxt = {'Inhibition energy', '(% \DeltaF/F, 0-200 ms)'};
 end
+% Drop the built-in ylabel set further up ('dF/F %'): the rotated text below IS the y label.
+% Leaving both drew a stray 'dF/F %' ~0.75 cm to the LEFT of the real one (MATLAB pushes the
+% built-in label outward to clear the manual text), which was invisible on screen but present
+% in the vector export -- and, being the leftmost object, it set the crop. That is what made
+% imp_response.pdf land 3.85 cm wide against a 3.40 cm canvas. Found 2026-10-02 by the
+% paper_final_mirror size guard.
+ylabel(ax, '');
 text(ax, -0.32, 0.5, ylabTxt, ...
     'Units','normalized', 'Rotation',90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...

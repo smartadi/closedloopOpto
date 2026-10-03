@@ -25,9 +25,9 @@
 # ===========================================================================
 
 [figure1]
-wfpath.pdf
-schematic_optoephyswf (1).pdf
-figure1/svd_frame_AL_0039_2025-04-19.pdf
+wfpath.pdf  # 21.01 x 29.70 cm
+schematic_optoephyswf (1).pdf  # 12.70 x 12.70 cm
+figure1/svd_frame_AL_0039_2025-04-19.pdf  # 3.10 x 3.10 cm
 
 [figure2]
 # Lettering LOCKED 2026-09-30 (user). Sources in paper/figures_v2/figure2.
@@ -40,24 +40,24 @@ figure1/svd_frame_AL_0039_2025-04-19.pdf
 #   G state vs prediction -> imp_state_var_combined.pdf
 # Row 1 (17.58 cm): A B C D | Row 2 (17.02 cm): E F G.
 # F moved to row 2 on 2026-09-30 so its cell numbers could be made legible.
-figure2/imp_response.pdf
-figure2/imp_single_AL_0041_2025-12-02_en2.pdf
-figure2/tf_cv_single_AL_0033.pdf
-figure2/tf_tau_forest.pdf
-figure2/tf_cv_2D_sidebar.pdf
-figure2/tf_model_swap.pdf
-figure2/imp_state_var_combined.pdf
+figure2/imp_response.pdf  # 2.89 x 3.10 cm
+figure2/imp_single_AL_0041_2025-12-02_en2.pdf  # 3.03 x 3.00 cm
+figure2/tf_cv_single_AL_0033.pdf  # 5.36 x 3.21 cm
+figure2/tf_tau_forest.pdf  # 3.21 x 3.28 cm
+figure2/tf_cv_2D_sidebar.pdf  # 3.99 x 3.35 cm
+figure2/tf_model_swap.pdf  # 4.73 x 3.32 cm
+figure2/imp_state_var_combined.pdf  # 6.53 x 3.46 cm
 
 [figure3]
-figure3/panel_A.pdf
-figure3/panel_B.pdf
-figure3/panel_C.pdf
-figure3/panel_D.pdf
-figure3/panel_E.pdf
-figure3/all_variance_sessions.pdf
-figure3/all_average_sessions.pdf
-figure3/variance_ratio_by_window.pdf
-figure3/MSE_ratio_by_window.pdf
+figure3/panel_A.pdf  # 8.43 x 3.28 cm
+figure3/panel_B.pdf  # 8.43 x 3.00 cm
+figure3/panel_C.pdf  # 8.40 x 2.61 cm
+figure3/panel_D.pdf  # 3.21 x 3.07 cm
+figure3/panel_E.pdf  # 3.35 x 2.29 cm
+figure3/all_variance_sessions.pdf  # 3.46 x 2.89 cm
+figure3/all_average_sessions.pdf  # 2.96 x 3.17 cm
+figure3/variance_ratio_by_window.pdf  # 4.30 x 3.28 cm
+figure3/MSE_ratio_by_window.pdf  # 4.48 x 3.28 cm
 
 # Figure 4 -- lettering A-G, matching the caption in results.tex. Letters in Illustrator.
 #   A state exemplars        -> f4_state_exemplars.pdf
@@ -71,30 +71,30 @@ figure3/MSE_ratio_by_window.pdf
 # standalone f4_2A..f4_2D quartile panels and a composite f4_contra_model.pdf, none of
 # which are exported any more -- it contradicted the file list directly below it.
 [figure4]
-figure4/f4_state_exemplars.pdf
-figure4/f4_1B_equation.pdf
-figure4/f4_decomp_unique_sep.pdf
-figure4/f4_row2_quartiles.pdf
-figure4/f4_kernel_map.pdf
-figure4/f4_agl.pdf
-figure4/f4_cl_reject_RR.pdf
+figure4/f4_state_exemplars.pdf  # 7.83 x 3.56 cm
+figure4/f4_1B_equation.pdf  # 3.14 x 1.87 cm
+figure4/f4_decomp_unique_sep.pdf  # 5.04 x 3.32 cm
+figure4/f4_row2_quartiles.pdf  # 16.58 x 3.39 cm
+figure4/f4_kernel_map.pdf  # 3.85 x 2.68 cm
+figure4/f4_agl.pdf  # 4.80 x 3.35 cm
+figure4/f4_cl_reject_RR.pdf  # 5.08 x 3.28 cm
 
 [figure5]
-figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf
-figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf
-figure5/sine_5D_trialavg_input_AL_0048_2026-07-14_1.pdf
-figure5/sine_5E_variance_AL_0048_2026-07-14_1.pdf
-figure5/sine_5F_rmse_time_AL_0048_2026-07-14_1.pdf
-figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf
-figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf
-figure5/sine_combined_phase.pdf
-figure5/sine_combined_rmse.pdf
-figure5/sine_combined_variance.pdf
+figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf  # 12.10 x 3.00 cm
+figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf  # 12.10 x 3.25 cm
+figure5/sine_5D_trialavg_input_AL_0048_2026-07-14_1.pdf  # 12.10 x 2.96 cm
+figure5/sine_5E_variance_AL_0048_2026-07-14_1.pdf  # 5.01 x 3.07 cm
+figure5/sine_5F_rmse_time_AL_0048_2026-07-14_1.pdf  # 4.83 x 2.86 cm
+figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf  # 3.74 x 3.03 cm
+figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf  # 3.67 x 3.25 cm
+figure5/sine_combined_phase.pdf  # 5.33 x 2.93 cm
+figure5/sine_combined_rmse.pdf  # 5.04 x 2.93 cm
+figure5/sine_combined_variance.pdf  # 5.04 x 2.93 cm
 
 [supplementary]
 # tf_cv_2D_sidebar.pdf removed 2026-09-30: it is Figure 2E, so listing it here as well
 # had the collector place one panel into two pull-folders.
 # Neither file below has a figures_v2 export; both resolve from images/. Regenerate
 # them into figures_v2 or retire them.
-figure2/tf_cv_2D_endlabels.pdf
-figure2/tf_cv_shape_across_sessions.pdf
+figure2/tf_cv_2D_endlabels.pdf  # 3.25 x 3.28 cm
+figure2/tf_cv_shape_across_sessions.pdf  # 3.46 x 3.28 cm

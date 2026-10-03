@@ -16,6 +16,89 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 — Full clean rebuild of all 38 final panels; every single one changed
+**Changed/Found:** Regenerated the whole manifest set from a cleared MATLAB state
+(`clear all; clear functions; rehash`, data reloaded from the verified cache) with
+`PAPER_FINAL=true`. Audited by md5 against a pre-rebuild baseline: **35/35 producer panels
+REBUILT — not one hash matched.** So the panels sitting in `panels/` before today's rebuild
+were NOT what the current reviewed code produces; they were mirrored across a 14:12–14:45
+window, several of them before the last round of fixes landed. Verified on the way through
+that the clean run reproduces the corrected numbers: Fig-2 motion 0.73 [0.62–0.87] p=2.43e-07
+4/4 on the [-1.00,-0.03] s window with 3 bins in 2–4 Hz; Fig-4 rel-δ controllability p=0.0742,
+motion p=0.00147; RR=0.58 [0.48,0.71] p=2.1e-08. All paper-config knobs (`STV_MOT_STAT='mean'`,
+`STV_MOT_WIN='paper'`, `STV_PWR_WIN='paper'`) are the script defaults and no caller passes
+`'sq'`, so a clean workspace cannot silently select a secondary config.
+**Why:** User did not trust that the panels in the folder came from the reviewed code rather
+than a pre-fix run — "i am not sure if you made the new figures in the first place". Inspection
+cannot answer that; only a rebuild from a cleared state can, and the all-changed hash audit
+shows the doubt was justified.
+**Next:** `svd_frame_AL_0039_2025-04-19.pdf` (Fig 1) could NOT be rebuilt — m10's cache is slim
+(no `d.svd`), so `load_sessions` skips that panel. It is the one stale producer-made panel in
+the folder; force a server reload for m10 to regenerate it.
+
+### 2026-10-02 — Size guard: panels were importing into Illustrator larger than their canvas
+**Changed/Found:** New `utils/pdf_page_cm.m` (reads /MediaBox → cm) and `utils/jn_fit_canvas.m`;
+`paper_final_mirror.m` now measures every exported panel against its figure canvas and, if it
+overflows, retries with the content pulled inside — **keeping the refit only if it actually
+reduces the overflow**. Root cause: `exportgraphics(...,'ContentType','vector')` crops to the
+CONTENT box, not the canvas, so anything overhanging enlarges the page. 5 of 35 panels were
+oversized; 4 are now fixed (`imp_response` 3.85→2.89, `tf_cv_2D_endlabels` 4.48→3.25,
+`tf_cv_single_AL_0033` 5.93→5.36, `tf_cv_2D_sidebar` 4.73×3.77→3.99×3.35).
+**Why:** User: "the figures that land in the folder must not be oversized". An oversized panel
+forces a manual scale in Illustrator, which silently breaks the rule-book type sizes.
+**Next:** `f4_state_exemplars.pdf` is STILL oversized (7.83 × 3.56 vs 7.50 × 3.30 canvas,
++0.33/+0.26) — the automatic fit cannot improve it and was correctly rejected rather than
+allowed to make it worse. It needs a hand layout change in `f4_state_exemplars.m`; that is a
+visual decision on a paper panel, so ask before changing it.
+
+### 2026-10-02 — MATLAB's PositionConstraint does NOT fix export overflow (rejected approach)
+**Changed/Found:** First version of `jn_fit_canvas` set `PositionConstraint='outerposition'`
+on every axes, the documented way to make decorations fit. It moved `imp_response` by exactly
+0.00 cm. Reason: that constraint only accounts for decorations MATLAB owns (ticks, xlabel,
+ylabel, title) — it ignores free-standing `text()` objects, and our panels draw the y label as
+a manual rotated text at axes-normalized x ≈ −0.32, which lands ~0.7 cm outside a 3.4 cm
+canvas. Replaced with an explicit measure-and-inset loop over text extents, `TightInset`
+(tick labels are ruler-drawn, not text objects — missing this hid 0.47 cm of vertical
+overflow on `tf_cv_2D_sidebar`) and legend/colorbar positions.
+**Why:** Worth recording so the obvious one-line "fix" is not tried again.
+**Next:** none.
+
+### 2026-10-02 — dose_response drew a stray 'dF/F %' label outside the panel
+**Changed/Found:** `impulse-analysis/dose_response.m` — line 111 sets `ylabel('dF/F %')`, but
+line ~192 draws the REAL y label as a manual rotated text. Both were being rendered: MATLAB
+pushes the built-in label further out to clear the manual one, so a stray `dF/F %` sat ~0.75 cm
+to the LEFT of the real label. Invisible at screen size, present in the vector export, and —
+being the leftmost object — it set the crop. Added `ylabel(ax,'')` before the manual text.
+**Why:** Found by the new size guard, not by eye. It is a visible defect on a paper panel, not
+just a sizing nuisance.
+**Next:** Other panels use the same manual-rotated-label idiom; grep for `Rotation',90` if
+another panel shows an unexplained left overhang.
+
+### 2026-10-02 — load_bilateral's `clear all` silently disarms the panel mirror
+**Changed/Found:** `bilateral/load_bilateral.m:15` runs `clc; close all; clear all;`. `clear all`
+clears GLOBALS, so `PAPER_FINAL` went false mid-rebuild and the entire Figure-5 block exported
+to `figures_v2` while mirroring **nothing** — with no error and no warning. Caught only because
+`PAPER_FINAL_LOG` read 0 after the run. Re-armed and re-ran; all 10 Fig-5 panels then mirrored.
+Did NOT edit `load_bilateral` (its `clear all` is deliberate — it rebuilds the session structs
+from scratch); the rebuild driver re-arms after it instead.
+**Why:** This is the exact failure mode that makes a folder look rebuilt when it is not, so it
+belongs in the log rather than in a fix that hides it.
+**Next:** Any future batch that runs `load_bilateral` partway through must re-arm `PAPER_FINAL`
+afterwards. Consider having the mirror warn once per session if it is called with the global
+unset while a MANIFEST panel is being written.
+
+### 2026-10-02 — MANIFEST now records each panel's true import size
+**Changed/Found:** Every panel line in `paper/figures_final/MANIFEST.txt` now carries a
+`# W x H cm` note measured from the exported PDF's MediaBox — the size the panel actually
+lands at in Illustrator, which is NOT the MATLAB canvas size because the vector export
+tight-crops. Both parsers (`paper_final_mirror.m`, `collect_final_panels.m`) strip a trailing
+`#` note before taking the basename, splitting on `#` only so paths with spaces
+(`schematic_optoephyswf (1).pdf`) still resolve. Verified: 38 present, 0 missing, 0 pruned.
+**Why:** User: "figures imported into illustrator should be same size used in manifest".
+Recording the measured size makes placement deterministic and makes future size drift show up
+in a diff instead of being discovered on the page.
+**Next:** Re-run the audit after any panel is re-exported, so the recorded sizes stay true.
+
 ### 2026-10-02 — Consolidate to ONE final-panel folder: paper/figures_final
 **Changed/Found:** Deleted `utils/paper_v3_mirror.m` and the whole `paper/figures_v3/` tree;
 added `utils/paper_final_mirror.m`, which writes the jn-style copy straight into
