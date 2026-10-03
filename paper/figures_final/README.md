@@ -55,11 +55,29 @@ themselves are local-only and are rebuilt from the producers.
 A 300-dpi PNG preview sits beside each PDF for quick eyeballing; `figure1/` has none
 because those three are hand-made assets, not script output.
 
-## Placement check (2026-10-02)
+## Size contract (2026-10-02)
 
-36 of 38 panels are drop-in replacements for what is already in the Illustrator files
-(size change ≤ 0.11 cm). Two moved enough to need re-placing:
-`all_variance_sessions` (+0.25 cm) and `f4_kernel_map` (+0.18 cm).
+**Every panel line in `MANIFEST.txt` carries its measured import size** (`# W x H cm`), read
+from the exported PDF's MediaBox. That is the size the panel lands at in Illustrator — it is
+**not** the MATLAB canvas size, because `exportgraphics(...,'ContentType','vector')`
+tight-crops the page to the content. Place at 100%; never scale a panel on the page, because
+scaling silently breaks the rule-book type sizes.
+
+The mirror enforces this: it measures each panel against its canvas and, if the content
+overhangs, retries with the content pulled inside — keeping the retry **only if it actually
+reduces the overflow**, so the fixer can never make a panel worse. Re-run the audit after
+re-exporting anything, so the recorded sizes stay true.
+
+Known exception: **`f4_state_exemplars.pdf` is 7.83 × 3.56 cm against a 7.50 × 3.30 canvas**
+(+0.33/+0.26). The automatic fit cannot improve it; it needs a hand layout change in
+`f4_state_exemplars.m`.
+
+## Rebuild provenance
+
+All 35 producer-made panels were regenerated from a cleared MATLAB state on 2026-10-02 and
+**every one changed hash**, so anything dated before that rebuild is superseded.
+`svd_frame_AL_0039_2025-04-19.pdf` is the one exception — it could not be rebuilt because
+m10's cache is slim (no `d.svd`); force a server reload for that session to regenerate it.
 
 ## Assembled figures
 
