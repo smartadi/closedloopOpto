@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-03 — TF variants: 1.0 s window with pole cap 4 and cap 2 (neither beats the current 0.5 s fit)
+**Changed/Found:** `imp_tf_run.m` with RUN_TFIT = 1.0 and RUN_MAXPOLES = 4 (maxZeros 3) and = 2
+(maxZeros 1); 300-draw bootstrap; CV via `imp_tf_cv.m`; panels drawn with `imp_tf_figs.m`
+(PAPER_FINAL off). Scratch: `scratchpad/tf_variants/` + comparison sheet
+`fig2_tf_variants_comparison.png`. Fits: `impulse-analysis/data/imp_tf_fits_tfit1p0_{4p,2p}_2026-10-0{3}.mat`.
+- 1.0 s / 4p: orders 4p2z1d, 4p3z, 4p3z, 4p3z. Fast tau 65/65/100/100 ms (current 148/93/150/142).
+  AL_0041 e1 slow pole UNSTABLE (tau = 7.5e12 s), 76 % resamples discarded; others 24/4/21 %.
+  Pooled CV R2 0.748 (current 0.86). Swap: M1a column/row fails (negative R2).
+- 1.0 s / 2p: every session misses R2h 0.98 (0.13/0.86/0.79/0.93); AL_0041 e1 degenerates to 1 pole
+  (R2h 0.127, held-out R2 < 0). One tau per session (complex pair): 720/384/243/147 ms; discard
+  0 % in 3 of 4 (47 % e1). Pooled CV R2 0.627. Held-out fit misses the rebound and the onset.
+- 0.5 s / 5p (current): pooled CV R2 0.86, swap diagonal 0.97-1.00, fast tau ~0.14 s in 3/4.
+**Why:** User asked for 1.0 s with a 4-pole cap plus a 2-pole variant, figures reported.
+**Next:** USER DECISION on Fig 2 fit settings; nothing in the paper changed (0.5 s cache restored,
+finals untouched).
+
 ### 2026-10-03 — Retired paper/figures_v2; producers now write working copies to paper/images
 **Changed/Found:** Every producer that exported into `paper/figures_v2/<figN>/` now writes its
 working copy to `paper/images/<figN>/`: sine_ff_across_sessions (outDir now from mfilename, was a
