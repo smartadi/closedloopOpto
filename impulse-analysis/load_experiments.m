@@ -340,9 +340,17 @@ for i = 1:length(uAmp)
             p_imp    = min(df_imp(:, srch), [], 2);
 
         else  % peak_mode == 3
-            % Option 3: mean dF/F over 0â€“200 ms post-onset.
-            % Integrates total inhibition energy; insensitive to peak timing.
-            win3     = post_start : min(size(df_imp,2), winSamp + round(0.22*fs));
+            % Option 3: mean dF/F over 0-200 ms post-onset, INCLUDING the onset
+            % sample (winSamp+1 is t = 0 by construction). 8 samples at 35 Hz,
+            % spanning exactly 0.0-200.0 ms. Integrates total inhibition energy;
+            % insensitive to peak timing.
+            % CHANGED 2026-10-03 (user): the window used to start at post_start
+            % (= onset+1, i.e. 28.6 ms) and run to winSamp+round(0.22*fs), so it
+            % was really 29-200 ms over 7 samples while the panel, the caption and
+            % the Methods all said "0-200 ms". post_start is deliberately NOT used
+            % here any more -- it still excludes the onset sample for the
+            % peak_mode 1/2 trough search above, which is correct for a trough.
+            win3     = (winSamp + 1) : min(size(df_imp,2), winSamp + 1 + round(0.2*fs));
             p_imp    = mean(df_imp(:, win3), 2);
         end
     else

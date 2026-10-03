@@ -207,7 +207,11 @@ for sI = sIlist
 
     % --- per-amp trial structure (imp), matching the load_experiments contract -----
     winS = round(BLI.win_s*Fs_b);  relW = -winS:winS;
-    dipC = winS + (round(BLI.dip_win(1)*Fs_b)+1 : round(BLI.dip_win(2)*Fs_b)) + 1;
+    % 0-200 ms INCLUSIVE of the onset sample (winS+1 is t = 0), 8 samples at 35 Hz.
+    % CHANGED 2026-10-03 (user) to match load_experiments.m peak_mode==3: the "+1"
+    % on the lower edge made this onset+1..onset+7 (29-200 ms, 7 samples), so the
+    % bilateral session used a different window from the other three in Fig 2A.
+    dipC = winS + (round(BLI.dip_win(1)*Fs_b) : round(BLI.dip_win(2)*Fs_b)) + 1;
     imp = struct();
     imp.uAmp = num2cell(uA(:));
     [imp.Peak_imp, imp.Peak_imp_dev, imp.mot, imp.freqSpec, imp.dfImp, imp.motTrace, ...

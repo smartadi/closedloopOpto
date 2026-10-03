@@ -150,7 +150,7 @@ switch lower(STV_STATE_WIN)
 end
 
 % ---- THE STIM-FREE CONTROL WINDOW (rebuilt 2026-08-12, user) -----------------------------------
-% Peak_imp under peak_mode=3 is the MEAN over 0-220 ms, i.e. an L-sample window mean. A control for
+% Peak_imp under peak_mode=3 is the MEAN over 0-200 ms, i.e. an L-sample window mean. A control for
 % it must be the SAME STATISTIC over the SAME NUMBER OF SAMPLES. The first version of this script
 % averaged the whole ~34-sample pre window, which is quieter by construction and therefore not a
 % control at all -- it understated the ongoing contribution and made the comparison meaningless.

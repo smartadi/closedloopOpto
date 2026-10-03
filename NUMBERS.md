@@ -56,10 +56,18 @@ Source: `impulse-analysis/f2_slope_ci.m` run of 2026-08-30 (RESEARCH 2026-08-30)
 
 | Fig 2A label | session | slope | R² | trials |
 |---|---|---|---|---|
-| Mouse 1a | AL_0041 e1 | −0.34 | 0.97 | 208 |
-| Mouse 1b | AL_0041 e2 | −0.57 | 0.51 | 260 |
-| Mouse 2 | AL_0033 2025-01-29 e1 | −0.59 | 0.92 | 748 |
-| Mouse 3 | AL_0048 (right hemisphere) | −0.96 | 0.91 | 300 |
+| Mouse 1a | AL_0041 e1 | −0.30 | 0.97 | 208 |
+| Mouse 1b | AL_0041 e2 | −0.50 | 0.51 | 260 |
+| Mouse 2 | AL_0033 2025-01-29 e1 | −0.52 | 0.92 | 748 |
+| Mouse 3 | AL_0048 (right hemisphere) | −0.81 | 0.92 | 300 |
+
+⚠ **Slopes changed 2026-10-03** when the evoked-suppression window was corrected from
+29–200 ms (7 samples, onset excluded) to a true **0–200 ms (8 samples, onset included)**,
+on the user's instruction. Previous values were −0.34 / −0.57 / −0.59 / −0.96 with
+R² 0.97 / 0.51 / 0.92 / 0.91. For AL_0041 and AL_0033 the change is an exact ×7/8 rescale
+(the onset sample is identically zero there, so R² is unchanged); AL_0048 moved by ×0.846
+and its R² by +0.006, because it comes through `load_bilateral_impulse.m` where the onset
+sample is not identically zero.
 
 **Totals: 4 sessions / 3 mice**, Σ = 1516 trials. "Mouse 1a/1b are two sessions of one
 animal" = AL_0041 e1/e2. Fig 2B shows **Mouse 1b**; Fig 2C shows **Mouse 2**.
