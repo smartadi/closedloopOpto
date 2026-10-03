@@ -207,6 +207,19 @@ drift to be "unified"; do not reconcile them.
   is why the two definitions can coexist without Fig 2 depending on the choice. Fig-4C is NOT
   immune — it regresses raw amplitudes — which is why its magnitudes moved. See RESEARCH 2026-10-02.
 
+### State windows + band-power estimator — FINAL (user, 2026-10-02: "finalize -2 to +3 forever")
+- **Fig 2 (impulse):** motion, rel δ (2–4 / 0.4–10 Hz) and abs δ (**2–4 Hz**) all over **[−1, 0) s**
+  (35 samples, strictly pre-stim). An impulse is one instant; the question is the state it arrives in.
+  Bin estimator (1 Hz grid, edges inclusive) in `imp_state_trialvar.m`.
+- **Fig 4 (controller):** motion, rel δ (2–4 / 0.4–10 Hz) and abs δ (**log10 1–4 Hz**) all over
+  **[−2, +3) s** (175 samples) via `utils/f4_state_window.m` ('peri'). Performance under state depends on
+  activity before onset AND during stim to +3 s. Initial deviation = |ΔF/F(onset) − ref|.
+  **Never use −1..+3 or a pre-only window for Fig 4** (pre-only kills the motion result — tested).
+- **Fig 4 band power = `utils/f4_bandpow.m` 'continuous'** (zero-padded PSD, trapezoid between exact
+  band edges). Native-bin summing made band edges depend on N: a one-sample window change moved the
+  rel-δ controllability p 0.074 ↔ 0.009. Do not revert to 'bins' for Fig 4.
+- Motion statistic = **mean of z-scored motion energy** (`utils/f4_motion_stat.m` 'mean'), not mean(z²).
+
 ### Data & sessions
 - Two mice: **AL_0033** (8 sessions), **AL_0039** (3 sessions), plus **AL_0041** for impulse experiments
 - 13 controller sessions total (m1–m13)
