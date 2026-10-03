@@ -1,9 +1,9 @@
-function [POOL, meta] = f4_row2_pool(mouse, fields, motstat)
+function [POOL, meta] = f4_row2_pool(mouse, fields, motstat, statewin)
 % F4_ROW2_POOL  Canonical Fig-4 Row-2 state/outcome builder.
 % SINGLE SOURCE shared by f4_row2_stats.m (forest, f4_2S_stats) and
 % f4_row2_quartiles.m (panels f4_2A/2B/2C) so the two never drift.
 %
-%   [POOL, meta] = f4_row2_pool(mouse, fields, motstat)
+%   [POOL, meta] = f4_row2_pool(mouse, fields, motstat, statewin)
 %
 % motstat selects the motion statistic: 'mean' (DEFAULT, primary) or 'sq' (secondary).
 %   'mean' -> mean of the z-scored motion energy over the window
@@ -24,9 +24,12 @@ function [POOL, meta] = f4_row2_pool(mouse, fields, motstat)
 %   mouse (string)  mouse name
 % meta holds the constants used, for callers that need them.
 if nargin < 3 || isempty(motstat), motstat = 'mean'; end
+% statewin: 'peri' (DEFAULT, published -2..+3 s) | 'pre2' | 'pre1' -- see f4_state_window.m
+if nargin < 4 || isempty(statewin), statewin = 'peri'; end
+W = f4_state_window(statewin);
 motstat = validatestring(lower(motstat), {'mean','sq'}, mfilename, 'motstat');
 Fs=35; ref=-5; c0=36; c1=71; c2=141; dur=3; c0_mot=71; c0_l=106; c0_p=351;
-relopts=struct('pre',2,'post',3);           % delta window -2 -> stim end (matches row 1)
+relopts=struct('pre',2,'post',3,'rel_idx',W.spec,'bandpow',W.bandpow);   % window from f4_state_window (default = legacy -2..+3 s)
 states={'initdev','motion','delta','absdelta'};   % absdelta = log10 abs 1-4 Hz power (same window as rel)
 POOL=struct(); for s=states, POOL.(s{1})=table(); end
 adlog=@(v) reshape(log10(max(double(v(:)),eps)),[],1);
@@ -41,12 +44,12 @@ for k=1:numel(fields)
     S.initdev={abs(d.ncDfk(:,c0)-ref), abs(d.wcDfk(:,c0)-ref)};
     hasM = isfield(M,'has_motion')&&M.has_motion&&isfield(d,'ncmotion')&&any(d.ncmotion(:))&&isfield(d,'wcmotion');
     if hasM
-        wsO=max(1,c0_mot-round(2*Fs)); weO=min(size(d.ncmotion,2),c0_mot+round(dur*Fs)-1);
-        wsC=max(1,c0_mot-round(2*Fs)); weC=min(size(d.wcmotion,2),c0_mot+round(dur*Fs)-1);
+        mcO = c0_mot + W.mot;  mcO = mcO(mcO>=1 & mcO<=size(d.ncmotion,2));   % 'peri' == legacy 1:175
+        mcC = c0_mot + W.mot;  mcC = mcC(mcC>=1 & mcC<=size(d.wcmotion,2));
         % PRIMARY = mean(z); 'sq' = mean(z^2), the secondary. The 2026-10-01 switch to
         % the mean square is RETRACTED -- see utils/f4_motion_stat.m for why mean(z) is
         % the monotone statistic, and why both callers must share one function.
-        S.motion = f4_motion_stat(d.ncmotion(:,wsO:weO), d.wcmotion(:,wsC:weC), motstat);
+        S.motion = f4_motion_stat(d.ncmotion(:,mcO), d.wcmotion(:,mcC), motstat);
     else, S.motion={nan(numel(yOL),1),nan(numel(yCL),1)}; end
     if isfield(d,'pncDfk_l')&&~isempty(d.pncDfk_l)&&isfield(d,'pwcDfk_l')&&~isempty(d.pwcDfk_l)
         [rO,cO]=cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts);
@@ -54,7 +57,7 @@ for k=1:numel(fields)
         [rO,cO]=cl_reldelta(d.pncDfk,c0_p,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk,c0_p,Fs,relopts);
     else, rO=nan(numel(yOL),1); rC=nan(numel(yCL),1); cO.delta=rO; cC.delta=rC; end
     S.delta={rO,rC};
-    S.absdelta={adlog(cO.delta), adlog(cC.delta)};   % same [-2,+3]s window, abs 1-4 Hz power (log10)
+    S.absdelta={adlog(cO.delta), adlog(cC.delta)};   % same window as rel (W.spec), abs 1-4 Hz power (log10)
 
     for s=states, nm=s{1};
         xO=S.(nm){1}; xC=S.(nm){2};
@@ -71,5 +74,5 @@ for k=1:numel(fields)
     end
 end
 meta=struct('Fs',Fs,'ref',ref,'c0',c0,'c1',c1,'c2',c2,'dur',dur, ...
-            'motstat',motstat,'states',{states});
+            'motstat',motstat,'statewin',W.name,'statewin_label',W.label,'states',{states});
 end

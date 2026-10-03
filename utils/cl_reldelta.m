@@ -41,6 +41,8 @@ if ~isfield(opts,'pre'),  opts.pre  = 2;        end
 if ~isfield(opts,'post'), opts.post = 3;        end
 if ~isfield(opts,'hi'),   opts.hi   = [2 4];    end
 if ~isfield(opts,'tot'),  opts.tot  = [0.4 10]; end
+% estimator: 'bins' (default, legacy) | 'continuous' (Fig 4) -- see utils/f4_bandpow.m
+if ~isfield(opts,'bandpow') || isempty(opts.bandpow), opts.bandpow = 'bins'; end
 delta_bnd = [1 4]; slow_bnd = [0.4 1];   % secondary definitions
 
 nT = size(P_l,1);
@@ -55,14 +57,24 @@ if sa < 1 || sb > size(P_l,2)
     sa = max(1,sa); sb = min(size(P_l,2),sb);
 end
 
+% Optional explicit window: opts.rel_idx = sample offsets relative to onsetCol (see
+% utils/f4_state_window.m). When absent, the legacy inclusive [-pre, +post] range above is
+% used unchanged, so every existing caller is bit-identical.
+cols = sa:sb;
+if isfield(opts,'rel_idx') && ~isempty(opts.rel_idx)
+    cols = onsetCol + opts.rel_idx(:)';
+    assert(cols(1) >= 1 && cols(end) <= size(P_l,2), 'cl_reldelta:rel_idx', ...
+        'rel_idx window [%d,%d] falls outside the trace [1,%d].', cols(1), cols(end), size(P_l,2));
+end
+
 for t = 1:nT
-    seg = double(P_l(t, sa:sb));
+    seg = double(P_l(t, cols));
     if all(isnan(seg)) || numel(seg) < 8, continue; end
-    tot = bp(seg, Fs, opts.tot(1), opts.tot(2));
-    hipow(t)  = bp(seg, Fs, opts.hi(1),  opts.hi(2));
+    tot = f4_bandpow(seg, Fs, opts.tot(1), opts.tot(2), opts.bandpow);
+    hipow(t)  = f4_bandpow(seg, Fs, opts.hi(1),  opts.hi(2), opts.bandpow);
     totpow(t) = tot;
-    dpow(t)   = bp(seg, Fs, delta_bnd(1), delta_bnd(2));
-    spow(t)   = bp(seg, Fs, slow_bnd(1),  slow_bnd(2));
+    dpow(t)   = f4_bandpow(seg, Fs, delta_bnd(1), delta_bnd(2), opts.bandpow);
+    spow(t)   = f4_bandpow(seg, Fs, slow_bnd(1),  slow_bnd(2), opts.bandpow);
     rel(t)    = hipow(t) / max(tot, eps);
 end
 

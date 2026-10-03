@@ -348,7 +348,13 @@ for k = 1:size(pPairs,1)
         median(rmseV{pPairs{k,1}(1)}), median(rmseV{pPairs{k,1}(2)}));
 end
 % Significance brackets, drawn only where p<0.05 -- stacked above the data.
+% OFF for the paper (user, 2026-10-02): Fig 5 rests on n = 3 sessions, too few for a
+% session-level test, and these trial-level rank-sums treat trials from one session as
+% independent. The paper reports direction and cross-session consistency instead. The
+% p-values above are still printed for inspection; set SINE_SHOW_STATS=true to draw them.
+if ~exist('SINE_SHOW_STATS','var') || isempty(SINE_SHOW_STATS), SINE_SHOW_STATS = false; end
 sigK = find(pv < 0.05);
+if ~SINE_SHOW_STATS, sigK = []; end
 yTop = max(allRmse);
 for ii = 1:numel(sigK)
     k = sigK(ii); a = pPairs{k,1}(1); b = pPairs{k,1}(2);

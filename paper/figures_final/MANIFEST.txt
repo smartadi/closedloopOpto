@@ -85,7 +85,7 @@ figure5/sine_5C_trialavg_AL_0048_2026-07-14_1.pdf  # 12.10 x 3.25 cm
 figure5/sine_5D_trialavg_input_AL_0048_2026-07-14_1.pdf  # 12.10 x 2.96 cm
 figure5/sine_5E_variance_AL_0048_2026-07-14_1.pdf  # 5.01 x 3.07 cm
 figure5/sine_5F_rmse_time_AL_0048_2026-07-14_1.pdf  # 4.83 x 2.86 cm
-figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf  # 3.74 x 3.03 cm
+figure5/sine_5G_rmse_violin_AL_0048_2026-07-14_1.pdf  # 3.74 x 2.89 cm
 figure5/sine_5H_phase_lag_AL_0048_2026-07-14_1.pdf  # 3.67 x 3.25 cm
 figure5/sine_combined_phase.pdf  # 5.33 x 2.93 cm
 figure5/sine_combined_rmse.pdf  # 5.04 x 2.93 cm

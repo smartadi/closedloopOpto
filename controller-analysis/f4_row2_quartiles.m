@@ -51,7 +51,13 @@ Fs=35; ref=-5; c0=36; c1=71; c2=141; dur=3; c0_mot=71; c0_l=106; c0_p=351;
 % c0_p = onset col in pncDfk/pwcDfk (controllerData buffers dFk(i-350:i+..), 350-sample
 % pre => onset at col 351). Current caches store pncDfk/pwcDfk, NOT the older _l variants
 % (onset col 106); the delta path falls back to these so rel-delta needs no cache rebuild.
-relopts = struct('pre',2,'post',3);            % delta window -2 -> stim end (matches row 1)
+% STATE WINDOW (2026-10-02): 'peri' (published, -2..+3 s) | 'pre2' | 'pre1'. ONE definition,
+% utils/f4_state_window.m, shared with f4_row2_pool / f4_error_decomp / f4_state_exemplars.
+% It must reach BOTH the pool (the star) and the inline block below (the bars).
+if ~exist('F4_STATE_WIN','var') || isempty(F4_STATE_WIN), F4_STATE_WIN = 'peri'; end
+W_state = f4_state_window(F4_STATE_WIN);
+fprintf('[F4R2] state window: %s\n', W_state.label);
+relopts = struct('pre',2,'post',3,'rel_idx',W_state.spec,'bandpow',W_state.bandpow);   % window from f4_state_window
 colOL = PS.col_ol; colCL = PS.col_cl;
 preds = {'initdev','motion','delta','absdelta'};
 titR2 = {'Initial deviation','Motion','Rel 2-4 Hz','Abs \delta'};
@@ -64,7 +70,7 @@ fnout = {'f4_2A_initdev.pdf','f4_2B_motion.pdf','f4_2C_delta.pdf','f4_2D_absdelt
 % It must reach BOTH the pool below and the panel's own binning block, or the bars and the
 % star disagree -- which is exactly what happened on 2026-10-01.
 if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; end
-[POOLs,~] = f4_row2_pool(mouse,fields,F4_MOT_STAT); FIT = struct();
+[POOLs,~] = f4_row2_pool(mouse,fields,F4_MOT_STAT,F4_STATE_WIN); FIT = struct();
 for pn=preds; FIT.(pn{1}) = f4_row2_fit(POOLs.(pn{1})); end
 
 % ---- per-session z-scored state + z-scored RMSE, per condition -------------------------------
@@ -85,13 +91,13 @@ for k=1:numel(fields)
     S.initdev={abs(d.ncDfk(:,c0)-ref), abs(d.wcDfk(:,c0)-ref)};
     hasM = isfield(M,'has_motion')&&M.has_motion&&isfield(d,'ncmotion')&&any(d.ncmotion(:))&&isfield(d,'wcmotion');
     if hasM
-        wsO=max(1,c0_mot-round(2*Fs)); weO=min(size(d.ncmotion,2),c0_mot+round(dur*Fs)-1);
-        wsC=max(1,c0_mot-round(2*Fs)); weC=min(size(d.wcmotion,2),c0_mot+round(dur*Fs)-1);
+        mcO = c0_mot + W_state.mot;  mcO = mcO(mcO>=1 & mcO<=size(d.ncmotion,2));
+        mcC = c0_mot + W_state.mot;  mcC = mcC(mcC>=1 & mcC<=size(d.wcmotion,2));
         % Same statistic as the pool, via the SHARED utils/f4_motion_stat.m. These two
         % blocks are duplicated pooling code and DIVERGED on 2026-10-01 (pool switched to
         % the mean square, this copy not), so the bars binned one ordering while the star
         % above them tested another. One function now, so that cannot recur.
-        S.motion = f4_motion_stat(d.ncmotion(:,wsO:weO), d.wcmotion(:,wsC:weC), F4_MOT_STAT);
+        S.motion = f4_motion_stat(d.ncmotion(:,mcO), d.wcmotion(:,mcC), F4_MOT_STAT);
     else, S.motion={nan(nO,1),nan(nC,1)}; end
     if isfield(d,'pncDfk_l')&&~isempty(d.pncDfk_l)&&isfield(d,'pwcDfk_l')&&~isempty(d.pwcDfk_l)
         [rO,cO]=cl_reldelta(d.pncDfk_l,c0_l,Fs,relopts); [rC,cC]=cl_reldelta(d.pwcDfk_l,c0_l,Fs,relopts);

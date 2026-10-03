@@ -34,10 +34,15 @@ if ~exist(outview,'dir'); mkdir(outview); end
 Fs=35; c0=36; c0_mot=71; c0_l=106; mot_pre=2; spec_pre_s=2; spec_post_s=3;
 % MOTION STATISTIC, shared with Fig-4 Row 2 (user, 2026-10-02): 'mean' primary | 'sq' secondary.
 if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; end
+% STATE WINDOW, shared with Fig-4 Row 2 via utils/f4_state_window.m (2026-10-02):
+% 'peri' (published, -2..+3 s) | 'pre2' (-2 s..onset) | 'pre1' (-1 s..onset).
+if ~exist('F4_STATE_WIN','var') || isempty(F4_STATE_WIN), F4_STATE_WIN = 'peri'; end
+W_state = f4_state_window(F4_STATE_WIN);
+fprintf('[f4_error_decomp] state window: %s\n', W_state.label);
 delta_bnd=[1 4]; hi_bnd=[2 4]; tot_bnd=[0.4 10];
 eE = c0 : c0+round(1*Fs);                 % 0 -> 1 s
 lL = c0+round(1*Fs)+1 : c0+round(3*Fs);   % 1 -> 3 s
-bandpow = @(seg, lo, hi) local_bandpow(seg, Fs, lo, hi);
+bandpow = @(seg, lo, hi) f4_bandpow(seg, Fs, lo, hi, W_state.bandpow);   % shared estimator
 fitR2 = @(Xp, yp) 1 - sum((yp - [ones(size(Xp,1),1), Xp]*([ones(size(Xp,1),1), Xp]\yp)).^2) / ...
                       max(sum((yp - mean(yp)).^2), eps);
 
@@ -49,20 +54,22 @@ for k=1:numel(fields)
     dk=s.data; if ~isfield(dk,'wcmotion'); continue; end
     ref=s.d.ref; dur=s.d.params.dur; nT=size(dk.wcDfk,1);
     x1=abs(dk.wcDfk(:,c0)-ref);
-    ws=max(1,c0_mot-round(mot_pre*Fs)); we=min(size(dk.wcmotion,2), c0_mot+round(dur*Fs)-1);
+    assert(dur == 3, 'f4_error_decomp:dur', 'f4_state_window assumes dur = 3 s (got %g)', dur);
+    mc = c0_mot + W_state.mot;  mc = mc(mc>=1 & mc<=size(dk.wcmotion,2));   % 'peri' == legacy 1:175
     % mean(z), via the SHARED utils/f4_motion_stat.m -- reconciled with Fig-4 Row 2
     % (user, 2026-10-02). Was mean(z^2); the window already matched Row 2 (cols 1:175,
     % -2.000 to +2.971 s, verified for all 15 sessions). F4_MOT_STAT='sq' for the secondary.
-    x2=f4_motion_stat(dk.wcmotion(1:nT,ws:we), F4_MOT_STAT);
+    x2=f4_motion_stat(dk.wcmotion(1:nT,mc), F4_MOT_STAT);
     % PRE-BUFFER: resolved per session (utils/pre_spec_buffer.m, 2026-10-02). No cache in
     % data/ still carries a `_l` buffer, so the hardcoded pwcDfk_l made this script dead.
     % c0_l now comes back as 106 or 351 to match whichever buffer exists; the window in
     % SECONDS is unchanged either way.
     [pbuf, c0_l] = pre_spec_buffer(dk, 'wc');
-    sa=c0_l-round(spec_pre_s*Fs); sb=c0_l+round(spec_post_s*Fs);
+    sc = c0_l + W_state.spec;                % 'peri' == legacy c0_l-70 : c0_l+105
+    assert(sc(1) >= 1 && sc(end) <= size(pbuf,2), 'f4_error_decomp:win', 'state window off the buffer');
     [xrel,xdel]=deal(nan(nT,1));
     for t=1:nT
-        seg=double(pbuf(t,sa:sb));
+        seg=double(pbuf(t,sc));
         xdel(t)=bandpow(seg,delta_bnd(1),delta_bnd(2));
         xrel(t)=bandpow(seg,hi_bnd(1),hi_bnd(2))/max(bandpow(seg,tot_bnd(1),tot_bnd(2)),eps);
     end
