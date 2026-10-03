@@ -53,9 +53,8 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ### Manuscript text
 - [ ] **Fig 2F τ intervals are censored (USER DECISION).** 42–50 % of bootstrap resamples discarded in 3/4 sessions; Mouse 1b CI [155,502] excludes its 540 ms estimate. Either draw 2F as bare points (`imp_tf_robust_fig` opts.bareA) + quote discard fraction, or caveat the CIs. Also fix results "slower constant ~0.2–0.3 s" (slow τ = 176/540/333/302 ms).
-- [ ] **Reconcile Fig-2 panel letters**: MANIFEST locks D=τ forest, E=CV sidebar, F=model swap; results.tex caption has D=validation, E=swap, F=timescales (Methods now follows the caption).
-- [ ] Methods FILLs added 2026-10-02: K_r/K_p/K_i per sine session (§Sinusoidal reference and preview); provenance of old `tab:tf_sessions` (CHECK — is it the controller-design fit?); readout kernel size on rig.
-- [ ] Re-place in Illustrator: Fig 4 A/C/D (final window + continuous estimator) and Fig 5G (no stars, now 3.74 × 2.89 cm); then re-export Figure4.pdf / Figure5.pdf to Overleaf.
+- [ ] Methods FILLs added 2026-10-02: K_r/K_p/K_i per sine session (§Sinusoidal reference and preview); provenance of old `tab:tf_sessions` (CHECK — is it the controller-design fit?; the new 4-session table was dropped 2026-10-02); readout kernel size on rig.
+- [ ] (LATER, user) Re-place in Illustrator: Fig 2 in caption letter order, Fig 4 A/C/D (final window + continuous estimator) and Fig 5G (no stars, now 3.74 × 2.89 cm); then re-export Figure4.pdf / Figure5.pdf to Overleaf.
 > NOTE: primary results file is now `results.tex` (the old `results_edit.tex` name is retired). Most manuscript-text 🔴 items verified done 2026-06-29 → see ✅ Recently done.
 - [ ] Step-response paragraph (`results.tex` L59): rewritten + integral-term motivation present, but does NOT explicitly state the 3 s window is too short to observe steady state. Confirm whether that caveat is still wanted; add one sentence if so.
 - [ ] Fill in author names and affiliations — `main.tex` L62 (blocked on AL input)

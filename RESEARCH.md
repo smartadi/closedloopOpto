@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 — Methods: dropped the per-session TF-fit table (tab:tf_fig2)
+**Changed/Found:** `Closedloop_edit/methods_rewrite.tex` — removed Table tab:tf_fig2 (4-session
+orders, tau, R2_h, bootstrap discard fraction) and its reference; text now just says the discarded
+fraction is reported. Old tab:tf_sessions (cited by Discussion 2.2 Hz + Methods settling time) kept.
+**Why:** User: "remove the tf fit table not needed".
+**Next:** the discard fraction must then appear wherever 2F is described (caption) once the 2F
+error-bar fix is chosen.
+
+### 2026-10-02 — Fig-2 panel letters: MANIFEST now follows the caption
+**Changed/Found:** `paper/figures_final/MANIFEST.txt` — lettering comment + line order changed to
+D = tf_cv_2D_sidebar (validation), E = tf_model_swap, F = tf_tau_forest (was D = tau, E = CV,
+F = swap). `impulse-analysis/imp_tf_figs.m` comments/printout: tau forest is panel F. PAPER.md
+already matched the caption. Panel files unchanged.
+**Why:** User: "fig 2 caption panel is correct change the manifest".
+**Next:** re-place Fig 2 in Illustrator in caption order (user: later).
+
 ### 2026-10-02 — Sine s3 logged params come from the stationary block, not the sine block
 **Changed/Found:** `sessions.s3.d.params` reads previewT_steps 0, traj_freq_hz 0, traj_amp 0,
 dur 3 — the values of the merged stationary iteration (ff_cond −1), not the sine block (1 Hz,

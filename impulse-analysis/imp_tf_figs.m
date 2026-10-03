@@ -118,7 +118,7 @@ if want('poles')
     FIGS.poles = imp_tf_poles_fig(Sfit, outDir, struct('tag','','export',FIG_EXPORT));
 end
 
-% Only tf_tau_forest is a locked Fig-2 panel (E). imp_tf_robust_fig writes all
+% Only tf_tau_forest is a locked Fig-2 panel (F; lettering per caption, 2026-10-02). imp_tf_robust_fig writes all
 % four of its panels to one dir, so lift the chosen one out rather than letting
 % the other three land in figures_v2 (user 2026-09-30).
 panelDir = fullfile(root,'paper','figures_v2','figure2');
@@ -126,7 +126,7 @@ if FIG_EXPORT && isfield(FIGS,'robust')
     if ~exist(panelDir,'dir'), mkdir(panelDir); end
     src = fullfile(outDir,'tf_tau_forest.pdf');
     if exist(src,'file'), copyfile(src, fullfile(panelDir,'tf_tau_forest.pdf'));
-        fprintf('[TFFIGS] panel E -> %s\n', fullfile(panelDir,'tf_tau_forest.pdf')); end
+        fprintf('[TFFIGS] panel F -> %s\n', fullfile(panelDir,'tf_tau_forest.pdf')); end
     % The model-swap grid is a panel too (user 2026-09-30: 'thats completely gone') --
     % it was only ever written to the candidates dir.
     src = fullfile(outDir,'tf_model_swap.pdf');
