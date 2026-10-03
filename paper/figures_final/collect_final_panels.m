@@ -1,101 +1,97 @@
 function collect_final_panels(varargin)
-% collect_final_panels  Sync figures_final/panels/ to MANIFEST.txt EXACTLY.
+%COLLECT_FINAL_PANELS  Verify (and prune) the Illustrator pull-folder against MANIFEST.txt.
 %
-%   Reads MANIFEST.txt (next to this script). For every [section] it makes
-%   panels/<section>/ contain exactly the listed source panels: copies each
-%   listed source in from paper/images/, and DELETES any *.pdf already in the
-%   folder that is not on the list. That is what keeps the Illustrator pull-
-%   folder free of retired/exploratory panels.
+%   collect_final_panels          % report + prune anything the manifest does not list
+%   collect_final_panels('dry')   % report only, delete nothing
 %
-%   collect_final_panels           % apply changes
-%   collect_final_panels('dry')    % report only, delete/copy nothing
+% ---- WHAT CHANGED 2026-10-02 (user: "only maintain one single folder") -------------------
+% This used to COPY each manifest source out of paper/figures_v2 or paper/images into
+% panels/. It must not any more. Panels are now written directly into
+% panels/<section>/ by utils/paper_final_mirror.m, which applies the jn rule-book
+% typography pass (labels 7 pt bold / ticks 6 pt regular) on the way out. Copying from the
+% v2/images working dirs would overwrite those jn panels with their NON-jn originals and
+% silently undo the restyle -- the exact kind of last-writer-wins trap that put a secondary
+% statistic into a published panel earlier the same day.
 %
-% THE RULE: a panel is "final" iff it is listed in MANIFEST.txt. Lock a panel ->
-% add its line + re-run; retire one -> delete its line + re-run. Never pull
-% Illustrator art from paper/images/figureN/ (working dirs) -- pull from
-% figures_final/panels/ only.
+% So the roles are now clean:
+%   utils/paper_final_mirror.m  WRITES panels/   (gated on this manifest, jn styling applied)
+%   this function              CHECKS panels/   (prunes unlisted, names anything missing)
+%
+% panels/<section>/ is the ONE folder to pull into Illustrator. paper/images/figureN and
+% paper/figures_v2/figureN remain working dirs full of superseded and exploratory panels --
+% never point the assembly at them. paper/figures_v3 is deleted; it no longer exists.
+%
+% To REGENERATE the panels, run the producers with the mirror on:
+%   global PAPER_FINAL; PAPER_FINAL = true;   then run the producer scripts.
+here = fileparts(mfilename('fullpath'));
+dry  = ~isempty(varargin) && any(strcmpi(varargin{1},{'dry','dryrun','-n'}));
 
-dry = ~isempty(varargin) && any(strcmpi(varargin{1},{'dry','dryrun','-n'}));
-here     = fileparts(mfilename('fullpath'));
-% Sources are resolved against figures_v2 FIRST (the live export target of every
-% generator since the v2 switch), then images/ as a fallback for panels with no
-% generator -- Fig 1 art and a few supplementary leftovers. Before 2026-09-30 this
-% read images/ only, so every regenerated panel was invisible to the pull-folder.
-v2root   = fullfile(here,'..','figures_v2');
-imgroot  = fullfile(here,'..','images');
-manifest = fullfile(here,'MANIFEST.txt');
-assert(isfile(manifest),'MANIFEST.txt not found next to collect_final_panels.m');
+man = fullfile(here,'MANIFEST.txt');
+assert(isfile(man), 'MANIFEST.txt not found at %s', man);
+txt = strsplit(fileread(man), newline);
 
-% ---- parse MANIFEST into sec.<name> = {relpaths} ----------------------------
-lines = string(splitlines(fileread(manifest)));
-sec = struct(); cur = '';
-for i = 1:numel(lines)
-    ln = strip(lines(i));
-    if ln=="" || startsWith(ln,'#'); continue; end
+want = containers.Map('KeyType','char','ValueType','any');   % section -> {basenames}
+cur  = '';
+for i = 1:numel(txt)
+    ln = strtrim(txt{i});
+    if isempty(ln) || startsWith(ln,'#'), continue; end
     if startsWith(ln,'[') && endsWith(ln,']')
-        cur = char(extractBetween(ln,'[',']'));
-        if ~isfield(sec,cur); sec.(cur) = strings(0,1); end
+        cur = ln(2:end-1);
+        if ~isKey(want,cur); want(cur) = {}; end
         continue;
     end
-    if isempty(cur); warning('line before any [section]: %s',ln); continue; end
-    sec.(cur)(end+1,1) = ln; %#ok<AGROW>
+    if isempty(cur), continue; end
+    [~,nm,ex] = fileparts(ln);            % whole line is the path; it may contain spaces
+    want(cur) = [want(cur), {[nm ex]}];
 end
 
-figs = fieldnames(sec);
-nCopy=0; nDel=0; nMiss=0; nKeep=0; nLock=0;
-fprintf('\n=== collect_final_panels %s ===\n', ternary(dry,'(DRY RUN)',''));
-for f = 1:numel(figs)
-    fn = figs{f}; destdir = fullfile(here,'panels',fn);
-    if ~isfolder(destdir)
-        if ~dry; mkdir(destdir); end
-        fprintf('[%s] created panels/%s/\n', fn, fn);
+fprintf('\n=== collect_final_panels %s ===\n', local_tern(dry,'(DRY RUN)',''));
+nOK = 0; nMiss = 0; nPrune = 0; missing = {};
+for s = keys(want)
+    sec     = s{1};
+    destdir = fullfile(here,'panels',sec);
+    listed  = want(sec);
+    if ~exist(destdir,'dir')
+        fprintf('  [%s] folder does not exist -- %d panel(s) missing\n', sec, numel(listed));
+        nMiss = nMiss + numel(listed);
+        missing = [missing, strcat(sec,'/',listed)];                       %#ok<AGROW>
+        continue;
     end
-    want = sec.(fn); wantBase = strings(0,1);
-    % ---- copy listed sources in ----
-    for k = 1:numel(want)
-        src = fullfile(v2root, char(want(k)));
-        if ~isfile(src); src = fullfile(imgroot, char(want(k))); end
-        [~,b,e] = fileparts(char(want(k))); base = [b e];
-        wantBase(end+1,1) = string(base); %#ok<AGROW>
-        dest = fullfile(destdir, base);
-        if ~isfile(src)
-            fprintf('  MISSING  %-40s (source not found: %s)\n', base, want(k));
-            nMiss = nMiss+1; continue;
-        end
-        needcopy = ~isfile(dest) || dir(src).datenum > dir(dest).datenum;
-        if needcopy
-            okc = true;
-            if ~dry
-                try, copyfile(src,dest);
-                catch, okc=false; nLock=nLock+1;
-                    fprintf('  LOCKED   %s  (close it in Illustrator/Acrobat, then re-run)\n', base);
-                end
-            end
-            if okc; fprintf('  copy     %s\n', base); nCopy = nCopy+1; end
+    for k = 1:numel(listed)
+        if isfile(fullfile(destdir,listed{k}))
+            nOK = nOK + 1;
         else
-            nKeep = nKeep+1;
+            fprintf('  MISSING  %-46s [%s]\n', listed{k}, sec);
+            nMiss = nMiss + 1;
+            missing{end+1} = [sec '/' listed{k}];                          %#ok<AGROW>
         end
     end
-    % ---- delete anything in the folder not on the list ----
-    existing = dir(fullfile(destdir,'*.pdf'));
-    for k = 1:numel(existing)
-        if ~any(wantBase == string(existing(k).name))
-            okd = true;
-            if ~dry
-                try, delete(fullfile(destdir,existing(k).name));
-                catch, okd=false; nLock=nLock+1;
-                    fprintf('  LOCKED   %s  (open elsewhere; not deleted)\n', existing(k).name);
-                end
-            end
-            if okd; fprintf('  DELETE   %s  (not in manifest)\n', existing(k).name); nDel = nDel+1; end
+    % prune anything present but not listed (PNG previews are matched to their PDF)
+    present = dir(fullfile(destdir,'*.*'));
+    for k = 1:numel(present)
+        f = present(k).name;
+        if present(k).isdir || strcmpi(f,'README.txt'), continue; end
+        [~,nm,ex] = fileparts(f);
+        key = [nm '.pdf'];                      % a .png is kept iff its .pdf is listed
+        if strcmpi(ex,'.pdf'), key = f; end
+        if ~any(strcmpi(key, listed))
+            fprintf('  PRUNE    %-46s [%s]\n', f, sec);
+            if ~dry, delete(fullfile(destdir,f)); end
+            nPrune = nPrune + 1;
         end
     end
-end
-fprintf('--- %d copied, %d up-to-date, %d deleted, %d missing sources, %d locked ---\n', ...
-    nCopy, nKeep, nDel, nMiss, nLock);
-if nMiss>0; fprintf('  (missing = listed in MANIFEST but not yet exported to paper/images/)\n'); end
-if nLock>0; fprintf('  (locked = open in another app; close them and re-run to finish the sync)\n'); end
-if dry; fprintf('  DRY RUN: nothing was changed.\n'); end
 end
 
-function o=ternary(c,a,b); if c; o=a; else; o=b; end; end
+fprintf('--- %d present, %d missing, %d %s ---\n', nOK, nMiss, nPrune, ...
+        local_tern(dry,'would be pruned','pruned'));
+if nMiss > 0
+    fprintf(['\nTo rebuild the missing panels:\n' ...
+             '    global PAPER_FINAL; PAPER_FINAL = true;\n' ...
+             '    <run the producer script for each>\n' ...
+             'Figure-1 panels have no producer (hand-made assets) -- see panels/figure1/README.txt.\n']);
+end
+end
+
+function out = local_tern(c,a,b)
+if c, out = a; else, out = b; end
+end

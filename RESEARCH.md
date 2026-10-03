@@ -16,6 +16,39 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-02 — Consolidate to ONE final-panel folder: paper/figures_final
+**Changed/Found:** Deleted `utils/paper_v3_mirror.m` and the whole `paper/figures_v3/` tree;
+added `utils/paper_final_mirror.m`, which writes the jn-style copy straight into
+`paper/figures_final/panels/<section>/` (global renamed `PAPER_V3` → `PAPER_FINAL`,
+`PAPER_V3_LOG` → `PAPER_FINAL_LOG`, plus a locked-file warning branch for panels open in
+Illustrator). Repointed `utils/paperExport.m` and `utils/jnExport.m` at it. Moved the 71 jn
+files (38 PDFs + PNGs) from figures_v3 into `panels/`. **Rewrote
+`paper/figures_final/collect_final_panels.m`:** it used to `copyfile` each manifest source
+out of `figures_v2`/`images` into `panels/`, which would have overwritten every jn panel with
+its pre-restyle original — its job is now verify + prune only. Updated `MANIFEST.txt`'s header,
+`figures_final/README.md` (it still described an 8-panel Fig 2 and the retired f4_2A..f4_2D
+set) and the CLAUDE.md "Finalized-panels rule". `collect_final_panels('dry')` → **38 present,
+0 missing, 0 to prune.**
+**Why:** User: "only maintain one single folder for jn style final paper panels ill go there
+and pull them into illustrator". Two folders both claiming to hold the final set is how a
+superseded panel reaches Illustrator; and the collector's copy step was a live last-writer-wins
+trap pointing at the non-jn sources.
+**Next:** Re-place the 4 changed panels (Fig 2G, Fig 4A/C/D) in Illustrator — only
+`all_variance_sessions` (+0.25 cm) and `f4_kernel_map` (+0.18 cm) need resizing; the other 36
+are drop-in. `wfpath.pdf` is still a full A4 page and needs cropping.
+
+### 2026-10-02 — Delete stale commented-out prose from results.tex
+**Changed/Found:** Removed 28 lines from `Closedloop_edit/results.tex` (290 → 262): line 67, a
+commented duplicate of the Fig-2 state-dependence paragraph carrying the superseded 0.71/1.10/1.99
+ratios, and lines 191–214, commented draft prose plus per-panel stat notes with the now-wrong
+`motion p=0.014423`, `rel p=0.01412`, `n=11 (motion 7)`. Deliberately KEPT the `% ---` rules at
+218/220/258/260 (they bracket live `\subsection*` headers) and the figure-provenance notes at
+111–117/129–134 that record which MANIFEST entry each `\includegraphics` comes from. Recompiled:
+`latexmk` exit 0, 0 undefined references, PDF byte-identical at 5,980,646 bytes.
+**Why:** User: "delete the stale commented block". Dead comments holding pre-correction numbers
+are the most likely way a wrong value gets resurrected into the live text months later.
+**Next:** none — the live text already carries the corrected values.
+
 ### 2026-10-02 - Hardening pass: four failure modes that did not look like failures
 **Changed/Found:** Fixed the four things that cost time today, each of which let a script succeed while doing the wrong thing. All verified by test, not by inspection.
 **1. `imp_state_trialvar_fig.m` - a manifest panel behind TWO opt-in flags.** `imp_state_var_combined.pdf` (Fig 2G) required `STVF_PAPER=true` AND `STVF_UNITS='norm'`, defaulting `false` and `'sd'`. An ordinary run skipped it in silence, which is why 2G sat at its 2026-09-30 build through a full day of Fig-2 work and surfaced only in a coverage audit. Now `STVF_PAPER=true` is SUFFICIENT (implies `'norm'` unless units were set explicitly), and with paper mode off it warns **by panel name**. Tested both: auto-switch fires and builds 2G; the off path raises `STVF:noPaperPanel`.

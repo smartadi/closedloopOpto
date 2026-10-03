@@ -12,5 +12,5 @@ exportgraphics(fig, pdfpath, 'ContentType','vector', 'BackgroundColor','white');
 pngpath = regexprep(pdfpath, '\.pdf$', '.png');
 exportgraphics(fig, pngpath, 'Resolution',dpi, 'BackgroundColor','white');
 fprintf('[jnExport] %s  [canvas %.2f × %.2f cm; PDF cropped to content]\n', pdfpath, sz(1), sz(2));
-paper_v3_mirror(fig, pdfpath);   % additive jn-style copy under figures_v3 (no-op unless PAPER_V3)
+paper_final_mirror(fig, pdfpath);   % jn-style copy into figures_final/panels (no-op unless PAPER_FINAL)
 end

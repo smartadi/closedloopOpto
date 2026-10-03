@@ -41,3 +41,11 @@ talk/_cache/
 
 # Manuscript figure/design panels — large binaries, not synced via git
 manuscriptPanels/
+
+# Illustrator assembly files + the final-panel pull-folder — local-only binaries.
+# The TRACKED record of the final panel set is paper/figures_final/MANIFEST.txt,
+# collect_final_panels.m, README.md and utils/paper_final_mirror.m; the panels
+# themselves are rebuilt from the producers (PAPER_FINAL=true).
+*.ai
+paper/figures_final/panels/
+paper/*.zip

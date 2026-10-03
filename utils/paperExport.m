@@ -6,11 +6,11 @@ function paperExport(fig, path)
 % Usage:  paperExport(fig, fullfile(outDir, 'panel_A.pdf'));
 %         paperExport(fig, fullfile(outDir, 'heatmap.png'));
 %
-% ---- V3 / jn-STYLE MIRROR (user, 2026-10-02) ---------------------------------------------
-% Set the global PAPER_V3 to true and every vector panel is ALSO written under
-% paper/figures_v3/, after a jnAxesAll() rule-book pass (Arial, tick labels 6 pt regular,
+% ---- FINAL / jn-STYLE MIRROR (user, 2026-10-02) ---------------------------------------------
+% Set the global PAPER_FINAL to true and every MANIFEST-listed vector panel is ALSO
+% written into paper/figures_final/panels/<section>/, after a jnAxesAll() rule-book pass (Arial, tick labels 6 pt regular,
 % axis labels + title 7 pt bold, ticks out, box off, axis 0.5 pt — FIGURE_RULEBOOK §3/§4).
-%   global PAPER_V3; PAPER_V3 = true;    % then run any producer script
+%   global PAPER_FINAL; PAPER_FINAL = true;    % then run any producer script
 % Done HERE rather than in each producer because all ~15 of them already funnel through
 % this one function; jnAxesAll was written for exactly this ("rather than refactor every
 % call site, this restyles the finished figure"). The v2/images original is still written
@@ -44,5 +44,5 @@ end
 [~, fname, fext] = fileparts(path);
 fprintf('Exported: %s%s  [canvas %.2f × %.2f cm; PDF cropped to content]\n', fname, fext, sz(1), sz(2));
 
-paper_v3_mirror(fig, path);   % additive jn-style copy under figures_v3 (no-op unless PAPER_V3)
+paper_final_mirror(fig, path);   % jn-style copy into figures_final/panels (no-op unless PAPER_FINAL)
 end

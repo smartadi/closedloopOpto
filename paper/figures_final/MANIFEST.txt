@@ -1,19 +1,26 @@
 # MANIFEST — the locked paper panels, and NOTHING else.
 # ---------------------------------------------------------------------------
 # This file is the single source of truth for what lives in figures_final/panels/.
-# Each [section] is a destination folder panels/<section>/. Every line under it is
-# ONE source panel path, resolved against paper/figures_v2/ first and
-# paper/images/ as a fallback (paths may contain spaces —
-# the whole line is the path, do not split on spaces). '#' starts a comment.
+# Each [section] is a destination folder panels/<section>/. Only the BASENAME of each
+# line is used — the leading figureN/ is kept purely to say where the panel came from
+# (paths may contain spaces — the whole line is the path, do not split on spaces).
+# '#' starts a comment.
 #
-# Run  collect_final_panels.m  to make panels/<section>/ hold EXACTLY these files:
-# it copies each listed source in and DELETES any panel PDF not listed. That is
-# what keeps Illustrator's pull-folder free of retired/exploratory panels.
+# HOW PANELS GET HERE (changed 2026-10-02 — one folder only):
+#   utils/paper_final_mirror.m  WRITES panels/<section>/ directly, in jn house style,
+#                               and only for a basename listed below. Turn it on with
+#                                   global PAPER_FINAL; PAPER_FINAL = true;
+#                               then run the producer script.
+#   collect_final_panels.m      CHECKS panels/ against this list — names anything
+#                               missing and deletes anything unlisted. It no longer
+#                               copies from figures_v2/images: that would overwrite the
+#                               jn panels with their non-jn originals.
 #
-# THE RULE: a panel is "final" iff it is listed here. When you lock a panel, add
-# its source line here and re-run the collector; when you retire one, delete its
-# line and re-run. Never point Illustrator at paper/images/figureN/ (working dirs,
-# full of superseded panels) — always pull from figures_final/panels/.
+# THE RULE: a panel is "final" iff it is listed here. When you lock a panel, add its
+# line here and re-run its producer with PAPER_FINAL on; when you retire one, delete
+# its line and run collect_final_panels to prune it. Never point Illustrator at
+# paper/images/figureN/ or paper/figures_v2/ (working dirs, full of superseded
+# panels) — always pull from figures_final/panels/.
 # Keep this list in sync with PAPER.md's "Paper panels in use" registry.
 # ===========================================================================
 

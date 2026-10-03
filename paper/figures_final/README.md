@@ -1,52 +1,70 @@
 # figures_final — the locked paper panels (Illustrator pull-folder)
 
-**Pull every panel into Illustrator from `panels/<figure>/` — never from
-`paper/images/figureN/`** (those are working dirs full of superseded panels).
+**This is the ONE folder. Pull every panel into Illustrator from `panels/<figure>/`.**
+Not `paper/images/figureN/`, not `paper/figures_v2/` — those are working dirs full of
+superseded and exploratory panels. `paper/figures_v3/` is **deleted**; it was a second
+folder claiming to be "the final one", which is exactly the ambiguity this consolidation
+(user, 2026-10-02) removes.
 
-`panels/<figure>/` holds EXACTLY the locked set and nothing else. The list is
-`MANIFEST.txt`; the sync is `collect_final_panels.m`:
+Everything in `panels/` is in **JNeurosci house style** (`../FIGURE_RULEBOOK.md`): Arial,
+tick labels 6 pt regular, axis labels and titles 7 pt bold, ticks out, box off, 0.5 pt axis
+line. Panel letters are added in Illustrator, not by the scripts.
 
-- **Lock a panel** → add its source line under the right `[section]` of `MANIFEST.txt`,
-  then run `collect_final_panels` (from MATLAB, in this folder).
-- **Retire a panel** → delete its line, re-run. The collector copies listed sources in
-  and **deletes any panel PDF not in the manifest**, so the folder never accumulates
-  unused panels. `collect_final_panels('dry')` previews without changing anything.
-- Keep `MANIFEST.txt` = PAPER.md's "Paper panels in use" registry.
+## The two halves of the workflow
 
-`paper/` is gitignored, so the tracked record is **MANIFEST.txt + collect_final_panels.m +
-this README**; the panel PDFs themselves are local-only.
+| | what it does |
+|---|---|
+| `utils/paper_final_mirror.m` | **WRITES** `panels/<section>/`. Called from both `paperExport.m` and `jnExport.m`, so a panel lands whichever exporter its producer uses. Applies the jn typography pass on the way out. Writes a panel **only if its basename is listed in `MANIFEST.txt`** — a producer exports many exploratory views and we do not want them here. |
+| `collect_final_panels.m` | **CHECKS** `panels/`. Names anything the manifest lists but is missing, and deletes anything present but unlisted. `collect_final_panels('dry')` reports without deleting. It does **not** copy from `images`/`figures_v2` any more — doing so would overwrite the jn panels with their non-jn originals. |
 
-The top-level `FigureN.pdf` below are the assembled figures (Illustrator output); refresh
-by re-copying after re-assembling.
+### To rebuild panels
 
-| File | Source | Source date | Status |
-|------|--------|-------------|--------|
-| Figure1.pdf | `paper/images/Figure1.pdf` | 2026-05-11 | stable (older; only copy) |
-| Figure2.pdf | `paper/images/figure2/Figure2.pdf` | 2026-09-11 | current (residual row cut; 3 rows) |
-| Figure3.pdf | `paper/images/Figure3.pdf` | 2026-09-08 | current |
-| Figure4.pdf | `paper/images/figure4/Figure4.pdf` | 2026-09-11 | ⚠ IN PROGRESS — Row-2 session-level stats + SR rejection metric being finalized; re-assemble after Row-2/Row-3 panel updates |
-| Figure5.pdf | `paper/images/figure5/Figure5.pdf` | 2026-08-12 | stable |
+```matlab
+global PAPER_FINAL; PAPER_FINAL = true;   % mirror ON
+<run the producer script>                 % e.g. f4_row2_quartiles
+collect_final_panels('dry')               % confirm the set is complete
+```
 
-## panels/ — individual source panels per figure
-`panels/figureN/` holds the individual panel PDFs that compose each assembled
-figure, taken from PAPER.md's "Paper panels in use" registry (retired/superseded
-panels excluded). Copy by PATH: for Fig 5 the assembled-figure letters do NOT
-match the filenames (E=variance, F=RMSE, J=phase, K=variance) — read the path.
+Each mirrored file prints `[final+jn] panels\<section>\<name>.pdf`, and the session's
+writes accumulate in the global `PAPER_FINAL_LOG`. If a panel is open in Illustrator or
+Acrobat the write fails — the mirror **warns** (`paper_final_mirror:locked`) rather than
+dying mid-figure, so close the file and re-run.
 
-| Figure | panels copied | notes |
-|--------|---------------|-------|
-| figure1 | 3 | only the raster/vector panels; 1D/1E/1F are Illustrator-native (no PDF) |
-| figure2 | 8 | A imp_response, B imp_single, C tf_cv_single (from supplementary/), **D tf_cv_heldout_r2** (2026-09-13: held-out R² per session + IQR, pooled median 0.86; the shape overlays tf_cv_shape_across / _2D_sidebar / _2D_endlabels moved to panels/supplementary/), E tf_model_swap, F tf_tau_forest, G imp_state_var_motion, H imp_state_var_reldelta |
-| figure3 | 10 | verified against assembled Figure3.pdf (A–J). 3K (pooled_ol_cl_rmse_15sess) is NOT in this assembly — it's pending re-assembly per PAPER.md; the manuscript includes Figure3_extra.pdf, which may differ |
-| figure4 | 7 | 2026-09-21 user spec: exemplars (f4_state_exemplars); error decomp init/motion/rel-2-4/abs-δ each δ own model (f4_decomp_unique_sep); quartile OL−CL gap vs pred error init/motion/rel-2-4/abs-δ w/ session-aware LMM star (f4_2A_initdev, f4_2B_motion, f4_2C_delta, f4_2D_absdelta); contra-model setup letter-free (f4_contra_model). Letters added in Illustrator. Old contra-level Panel A (ctrl_state_xsess) DROPPED |
-| figure5 | 10 | verified against assembled Figure5.pdf (B–K; A is the Illustrator control diagram, no PDF). s2 primary session + 3 across-session combined panels |
+### To lock or retire a panel
 
-## Caveats
-- The manuscript (`../../Closedloop_edit/images/`) currently includes **stale**
-  copies for Figs 2 & 3 (`Figure2_extra.pdf`, `Figure3_extra.pdf`, both June) —
-  sync the files above into the manuscript's `images/` before the next compile.
-- No `Figure4.pdf` is included in the manuscript yet (Fig 4 still being finalized).
-- Fig 4 here is the pre-2026-09-12 assembly; it does NOT yet reflect the
-  regenerated Row-2 panels (session-level star) or the SR rejection metric.
+- **Lock** → add its line under the right `[section]` in `MANIFEST.txt`, then re-run its
+  producer with `PAPER_FINAL` on.
+- **Retire** → delete its line, then run `collect_final_panels` to prune it.
+- Keep `MANIFEST.txt` in sync with PAPER.md's "Paper panels in use" registry (same set).
 
-_Last refreshed: 2026-09-21 (manifest-driven via collect_final_panels.m)._
+`paper/` is gitignored, so the **tracked** record is `MANIFEST.txt` +
+`collect_final_panels.m` + `utils/paper_final_mirror.m` + this README. The panel PDFs
+themselves are local-only and are rebuilt from the producers.
+
+## Current contents (verified 2026-10-02 — 38 present, 0 missing)
+
+| section | panels | notes |
+|---------|--------|-------|
+| figure1 | 3 | hand-made / non-producer assets, copied in by hand — see `panels/figure1/README.txt`. `wfpath.pdf` is a full A4 page (21.01 × 29.70 cm) and needs cropping on import. |
+| figure2 | 7 | A dose-response, B single session, C LTI fit, D timescales, E LTI validation, F model swap, G state-vs-prediction. Lettering locked 2026-09-30. |
+| figure3 | 9 | |
+| figure4 | 7 | A exemplars, B error-decomp model, C unique R², D state-quartile row (1×4 tiled), E contra→ipsi kernel, F A = G + L, G disturbance rejection. |
+| figure5 | 10 | the assembled-figure letters do **not** match the filenames — read the path, not the letter. |
+| supplementary | 2 | |
+
+A 300-dpi PNG preview sits beside each PDF for quick eyeballing; `figure1/` has none
+because those three are hand-made assets, not script output.
+
+## Placement check (2026-10-02)
+
+36 of 38 panels are drop-in replacements for what is already in the Illustrator files
+(size change ≤ 0.11 cm). Two moved enough to need re-placing:
+`all_variance_sessions` (+0.25 cm) and `f4_kernel_map` (+0.18 cm).
+
+## Assembled figures
+
+The top-level `FigureN.pdf` / `FigureN.ai` are the Illustrator output. Re-copy after
+re-assembling. Fig 2G and Fig 4A/C/D changed content on 2026-10-02 (state-window and
+motion-statistic corrections) and need re-placing before the next compile.
+
+_Last refreshed: 2026-10-02 (single-folder consolidation; panels written by paper_final_mirror)._
