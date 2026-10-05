@@ -120,6 +120,15 @@ PaperFig/paperStyle, 6 pt bold; PNG until a panel is promoted in PAPER.md.
 3. `gain_grid.m`  — consumes G. Fig1 = cost surface (1D fallback if one gain fixed); Fig2 = per-node
    mean±std traces. Knob `SEL`. (Unaffected by the rewire — same G schema.)
 4. `auto_tune.m`  — consumes A. Kp/Ki trajectory + cost + running-best vs iteration. Knob `SEL`.
+   ⚠ EXPLORATORY ONLY: plots `input_params`, which logs every applied candidate **including
+   rejected/reverted probes**. Not the figure source (see `tune_supp_panels.m`).
+5. `tune_supp_panels.m` — ⭐ **the S3 paper producer** (2026-10-05). Consumes G + A; writes
+   INDIVIDUAL jn-style panels (cost surface / accepted gain path / online cost vs iteration
+   per mouse, plus one panel per grid node) to `paper/images/tuning/` and, with
+   `PAPER_FINAL` on, into `figures_final/panels/supp_tuning/`. Reads the accepted path from
+   **`Kdata.npy`/`Kval.npy`**, not input_params. No mouse names or dates on the panel face.
+   ⚠ `gain_grid.m` and `auto_tune.m` still build `out_dir` relative to the CURRENT folder, so
+   under `run()` they write to the stray `controller-tuning/paper/images/tuning/` tree.
 - `compare_tuning.m` — (future) grid-optimal vs auto-tuned vs hand-picked gains.
 Outputs → `paper/images/tuning/`.
 
