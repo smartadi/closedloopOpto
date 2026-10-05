@@ -1,4 +1,4 @@
-function paper_final_mirror(fig, path)
+function paper_final_mirror(fig, path, dpi)
 % PAPER_FINAL_MIRROR  Write the jn-style (rule-book) copy of a FINAL panel straight into
 % the Illustrator pull-folder, paper/figures_final/panels/<section>/.
 %
@@ -30,10 +30,24 @@ function paper_final_mirror(fig, path)
 % A 300-dpi PNG preview is written beside each PDF. The caller has already written its own
 % images/ working copy, so this is purely additive. Failures NEVER propagate: losing a
 % mirror must not abort a producer mid-figure.
+%
+% ---- RASTER PANELS ARE ALLOWED (user, 2026-10-05) -------------------------------------
+% This used to mirror vector panels only. That silently excluded the one class of panel
+% that CANNOT be vector: a brain heat map. Worse, forcing such a panel through the PDF
+% path actively damaged it -- exportgraphics' vector writer re-encodes every embedded
+% raster as a JPEG sampled at the figure's ON-SCREEN pixel size, so a 1.6 cm map panel
+% came out as a lossy 64 x 63 image (~135 dpi) no matter what resolution the producer
+% drew at, and 'Resolution' is accepted-but-ignored alongside 'ContentType','vector'.
+% A .png panel at an explicit dpi is therefore the HIGHER-fidelity route for image
+% content, not a fallback. The PDF size guard below is skipped for these -- there is no
+% page box to measure -- and the printed size comes from pixels/dpi instead.
 global PAPER_FINAL PAPER_FINAL_LOG                                  %#ok<GVMIS>
 if isempty(PAPER_FINAL) || ~PAPER_FINAL, return; end
+if nargin < 3 || isempty(dpi), dpi = 300; end
 [~, base, ext] = fileparts(char(path));
-if ~any(strcmpi(ext, {'.pdf','.svg','.eps'})), return; end          % vector panels only
+isVec = any(strcmpi(ext, {'.pdf','.svg','.eps'}));
+isImg = any(strcmpi(ext, {'.png','.tif','.tiff'}));
+if ~isVec && ~isImg, return; end
 
 sec = local_manifest_section([base ext]);
 if isempty(sec), return; end                                        % not a FINAL panel -> skip
@@ -44,6 +58,17 @@ try
     d    = fileparts(out);
     if ~exist(d,'dir'); mkdir(d); end
     jnAxesAll(fig);                                                 % rule-book typography pass
+    if isImg
+        exportgraphics(fig, out, 'Resolution', dpi);
+        [pw, ph] = local_img_page_cm(out, dpi);
+        pu = fig.Units; fig.Units = 'centimeters'; cv = fig.Position(3:4); fig.Units = pu;
+        fprintf(['   [final+jn] panels%s%s%s%-46s %5.2f x %5.2f cm  @%d dpi' newline], ...
+                filesep, sec, filesep, [base ext], pw, ph, dpi);
+        if isempty(PAPER_FINAL_LOG); PAPER_FINAL_LOG = {}; end
+        PAPER_FINAL_LOG{end+1} = struct('file',out, 'sec',sec, 'name',[base ext], ...
+                                        'page_cm',[pw ph], 'canvas_cm',cv, 'over_cm',[0 0]);
+        return
+    end
     exportgraphics(fig, out, 'ContentType','vector');
     exportgraphics(fig, regexprep(out,'\.(pdf|svg|eps)$','.png'), 'Resolution',300);
 
@@ -113,6 +138,19 @@ catch ME
     else
         warning('paper_final_mirror:failed', 'mirror failed for %s (%s)', char(path), ME.message);
     end
+end
+end
+
+% -----------------------------------------------------------------------------------------
+function [w_cm, h_cm] = local_img_page_cm(f, dpi)
+% Printed size of a raster panel: pixels / dpi. There is no page box to parse, so this is
+% the only honest statement of how big the file lands when placed at 100%.
+try
+    info = imfinfo(f);
+    w_cm = info(1).Width  / dpi * 2.54;
+    h_cm = info(1).Height / dpi * 2.54;
+catch
+    w_cm = NaN; h_cm = NaN;
 end
 end
 

@@ -102,21 +102,32 @@ figure5/sine_combined_variance.pdf  # 5.04 x 2.93 cm
 
 [supp_spatial]
 # NEW S1 (user 2026-10-05) = spatial spread + step-response spontaneous variance
-# + stationarity, assembled under 8 cm wide x 5 cm high. Five of the nine amplitude
-# maps are pulled at ~1.3 cm (nine at 2.1 cm would blow the height budget on their
-# own); all nine still render to the working contact sheet.
+# + stationarity, assembled under 8 cm wide x 5 cm high.
+# ALL NINE amplitude maps are pulled (user 2026-10-05: "i want all 9 maps ill place
+# it as 3 by 3"), at ~1.6 cm -> a 4.8 x 4.8 cm block, leaving ~3 cm of width for the
+# colourbar and the stacked area / variance / stationarity column.
 # Source: impulse-analysis/imp_spatial_panels.m.
-# One panel per laser amplitude, plus a STANDALONE colourbar: in the old montage
-# the bar was welded to the tiled layout (Layout.Tile='east'), which is meaningless
-# once the tiles are separate files. Place the bar once during assembly.
+# Each map carries its own amplitude label, and the 1 mm scale bar is EMBEDDED on
+# map_01 -- there is no standalone scale-bar panel any more.
+# THE MAPS ARE .png ON PURPOSE (2026-10-05). exportgraphics' vector PDF writer
+# re-encodes embedded rasters as JPEG resampled to the figure's on-screen pixel size,
+# so these 1.6 cm panels were shipping as lossy 64 x 63 images (~135 dpi, below the
+# native resolution of the data) and 'Resolution' is ignored on that path. A 1200 dpi
+# PNG is the higher-fidelity panel here, not a fallback.
+# The colourbar IS still standalone: in the old montage it was welded to the tiled
+# layout (Layout.Tile='east'), meaningless once the tiles are separate files. Place
+# the bar once during assembly.
 supplementary/imp_spatial_area.pdf
 supplementary/supp_spatial_cbar.pdf
-supplementary/supp_spatial_scalebar.pdf
-supplementary/supp_spatial_map_01.pdf
-supplementary/supp_spatial_map_02.pdf
-supplementary/supp_spatial_map_03.pdf
-supplementary/supp_spatial_map_04.pdf
-supplementary/supp_spatial_map_05.pdf
+supplementary/supp_spatial_map_01.png
+supplementary/supp_spatial_map_02.png
+supplementary/supp_spatial_map_03.png
+supplementary/supp_spatial_map_04.png
+supplementary/supp_spatial_map_05.png
+supplementary/supp_spatial_map_06.png
+supplementary/supp_spatial_map_07.png
+supplementary/supp_spatial_map_08.png
+supplementary/supp_spatial_map_09.png
 
 [supplementary]
 # tf_cv_2D_sidebar.pdf removed 2026-09-30: it is Figure 2E, so listing it here as well
@@ -125,3 +136,42 @@ supplementary/supp_spatial_map_05.pdf
 # them with PAPER_FINAL on, or retire them.
 figure2/tf_cv_2D_endlabels.pdf  # 3.25 x 3.28 cm
 figure2/tf_cv_shape_across_sessions.pdf  # 3.46 x 3.28 cm
+
+[supp_tuning]
+# S3 = controller gain tuning. Source: controller-tuning/tune_supp_panels.m.
+# Run load_grid.m first, then that script with PAPER_FINAL on.
+#
+# REGENERATED 2026-10-05, not re-exported. The three images the LaTeX used
+# (grid_cost_surface_AL_0033_0305.pdf, grid_cost_surface_AL_0034_1017.pdf,
+# autotune_convergence_both.pdf) were June 2026 files whose producers have since
+# been renamed -- gain_grid.m now writes gain_cost_surface_*, and nothing in the
+# repo produces autotune_convergence_both at all. They could not be made smaller;
+# they had to be rebuilt.
+#
+# Individual panels, axis gridlines off, and the per-node trace montage split into
+# one panel per node -- both readings of the user's "remove grids" (2026-10-05).
+# _m1 / _m2 are neutral tags: internal mouse names and dates must not appear in the
+# paper, so the panel faces carry no subject identifier. The producer prints the
+# mapping each run; caption from that, not from the filenames.
+#
+# Layout budget (two mice side by side, assembled in Illustrator):
+#   surface 3.4 x 2.9 | path 2.9 x 2.6 | cost 2.9 x 2.2   -> ~9.2 x 2.9 cm per mouse
+#   ten node panels at 1.9 x 1.6                          -> 5 x 2 block, ~9.5 x 3.2 cm
+# Node panels carry NO axis titles on purpose (identical crop so the matrix aligns);
+# set "time (s)" and dF/F (%) once on the edge panels.
+supplementary/supp_tune_surface_m1.pdf
+supplementary/supp_tune_path_m1.pdf
+supplementary/supp_tune_cost_m1.pdf
+supplementary/supp_tune_surface_m2.pdf
+supplementary/supp_tune_path_m2.pdf
+supplementary/supp_tune_cost_m2.pdf
+supplementary/supp_tune_node_m1_01.pdf
+supplementary/supp_tune_node_m1_02.pdf
+supplementary/supp_tune_node_m1_03.pdf
+supplementary/supp_tune_node_m1_04.pdf
+supplementary/supp_tune_node_m1_05.pdf
+supplementary/supp_tune_node_m1_06.pdf
+supplementary/supp_tune_node_m1_07.pdf
+supplementary/supp_tune_node_m1_08.pdf
+supplementary/supp_tune_node_m1_09.pdf
+supplementary/supp_tune_node_m1_10.pdf

@@ -72,15 +72,23 @@ for s = keys(want)
             missing{end+1} = [sec '/' listed{k}];                          %#ok<AGROW>
         end
     end
-    % prune anything present but not listed (PNG previews are matched to their PDF)
+    % Prune anything present but not listed.
+    % Two kinds of .png live here and they must not be confused:
+    %   (a) the 300-dpi PREVIEW the mirror writes beside every vector panel -- kept iff
+    %       its own .pdf is listed, since it is not a panel in its own right;
+    %   (b) a .png that IS the panel (the spatial maps, 2026-10-05) -- listed by its own
+    %       name, because raster content cannot survive the vector PDF path.
+    % Checking the file's own name FIRST is what keeps case (b) from being pruned.
     present = dir(fullfile(destdir,'*.*'));
     for k = 1:numel(present)
         f = present(k).name;
         if present(k).isdir || strcmpi(f,'README.txt'), continue; end
         [~,nm,ex] = fileparts(f);
-        key = [nm '.pdf'];                      % a .png is kept iff its .pdf is listed
-        if strcmpi(ex,'.pdf'), key = f; end
-        if ~any(strcmpi(key, listed))
+        keep = any(strcmpi(f, listed));                     % listed as a panel itself
+        if ~keep && ~strcmpi(ex,'.pdf')
+            keep = any(strcmpi([nm '.pdf'], listed));       % preview of a listed panel
+        end
+        if ~keep
             fprintf('  PRUNE    %-46s [%s]\n', f, sec);
             if ~dry, delete(fullfile(destdir,f)); end
             nPrune = nPrune + 1;

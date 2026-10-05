@@ -1,10 +1,17 @@
-function paperExport(fig, path)
+function paperExport(fig, path, dpi)
 % PAPEREXPORT  Smart figure export — infers format from file extension.
 %   .pdf / .svg / .eps  →  exportgraphics ContentType='vector'
-%   .png / .jpg / .tif  →  exportgraphics Resolution=300
+%   .png / .jpg / .tif  →  exportgraphics Resolution=dpi (default 300)
 %
 % Usage:  paperExport(fig, fullfile(outDir, 'panel_A.pdf'));
 %         paperExport(fig, fullfile(outDir, 'heatmap.png'));
+%         paperExport(fig, fullfile(outDir, 'brain_map.png'), 1200);
+%
+% ---- WHY A dpi ARGUMENT EXISTS (2026-10-05) -------------------------------------------------
+% 300 dpi is the right default for a heat map that fills a 6 cm panel. It is NOT enough for a
+% 1.2 cm one: 300 dpi over 1.2 cm is 142 px, below even the native resolution of the data.
+% Small raster panels therefore pass an explicit dpi rather than silently exporting soft.
+% See the spatial-map panels in impulse-analysis/imp_spatial_panels.m.
 %
 % ---- FINAL / jn-STYLE MIRROR (user, 2026-10-02) ---------------------------------------------
 % Set the global PAPER_FINAL to true and every MANIFEST-listed vector panel is ALSO
@@ -19,6 +26,8 @@ function paperExport(fig, path)
 % Line weights are NOT touched: paperStyle's lw_* constants were already moved onto the
 % rule-book values, so only typography differed between the two styles. Colours are
 % identical in both (col_ol [1 0 0], col_cl [0 0.40 0.85]) — verified, not assumed.
+if nargin < 3 || isempty(dpi), dpi = 300; end
+
 % Read figure size before export (Units may be anything — convert to cm)
 prevUnits = fig.Units;
 fig.Units = 'centimeters';
@@ -36,7 +45,7 @@ switch lower(ext)
         % bbox (may differ by a few mm from the nominal jnFig size); measure it from the PDF.
         exportgraphics(fig, path, 'ContentType', 'vector');
     case {'.png', '.jpg', '.tif', '.tiff'}
-        exportgraphics(fig, path, 'Resolution', 300);
+        exportgraphics(fig, path, 'Resolution', dpi);
     otherwise
         warning('paperExport: unknown extension ''%s'' — defaulting to vector.', ext);
         exportgraphics(fig, path, 'ContentType', 'vector');
@@ -44,5 +53,5 @@ end
 [~, fname, fext] = fileparts(path);
 fprintf('Exported: %s%s  [canvas %.2f × %.2f cm; PDF cropped to content]\n', fname, fext, sz(1), sz(2));
 
-paper_final_mirror(fig, path);   % jn-style copy into figures_final/panels (no-op unless PAPER_FINAL)
+paper_final_mirror(fig, path, dpi);   % jn-style copy into figures_final/panels (no-op unless PAPER_FINAL)
 end

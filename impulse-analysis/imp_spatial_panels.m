@@ -190,68 +190,86 @@ paperExport(figM, fullfile(outDir, 'imp_spatial_maps.pdf'));
 %   1. THE COLOURBAR MUST BECOME ITS OWN PANEL. Above it is welded to the layout
 %      (cb.Layout.Tile = 'east'), which has no meaning once the tiles are separate
 %      files. It is exported standalone below so it can be placed once.
-%   2. THE SCALE BAR SHOULD APPEAR ONCE. It is drawn only on panel 01, as in the
-%      montage; if the assembly reorders the panels, move it in Illustrator rather
-%      than re-exporting.
+%   2. THE SCALE BAR SHOULD APPEAR ONCE. It is EMBEDDED on panel 01 (user,
+%      2026-10-05: "i also want one of them to have the 1mm label embedded instead
+%      of separate loading"), so there is no standalone scale-bar file to place.
+%      If the assembly reorders the panels, move panel 01 rather than re-exporting.
 % The shared colour axis `clim` is reused unchanged, so the panels remain directly
 % comparable to each other and to the contact sheet.
-% SIZE BUDGET (user, 2026-10-05): the assembled supplementary figure must come in
-% under 8 cm wide x 5 cm high, and it now also has to carry the step-response
-% spontaneous variance and the stationarity panels. Nine maps at 2.1 cm would be
-% 6.4 x 6.4 cm on their own -- over the height budget before anything else is
-% placed. So we export a SUBSET at 1.5 cm:
-%     top row     5 maps @ ~1.3 cm + colourbar ~0.9 cm   ~= 7.4 x 1.3 cm
-%     bottom row  area + spont variance + stationarity   ~= 7.4 x 3.2 cm
-%                                                  total ~= 7.4 x 4.6 cm
-% SP_MAP_SUBSET picks which amplitudes appear; the default spans the full range
-% (lowest, three intermediate, highest). All nine still render into the contact
-% sheet above, so nothing is lost -- this only chooses what gets pulled.
-if ~exist('SP_PANEL_TEXT','var') || isempty(SP_PANEL_TEXT), SP_PANEL_TEXT = false; end
-if ~exist('SP_MAP_SUBSET','var') || isempty(SP_MAP_SUBSET)
-    SP_MAP_SUBSET = unique(round(linspace(1, nV, 5)));
-end
-for ii = 1:numel(SP_MAP_SUBSET)
-    k   = SP_MAP_SUBSET(ii);
-    fK  = paperFig(1.5, 1.5);
+% SIZE BUDGET, REPLANNED 2026-10-05 for a 3 x 3 arrangement (user: "i want all 9
+% maps ill place it as 3 by 3"). All nine amplitudes are exported; the earlier
+% 5-panel subset is retired.
+%     maps      3 x 3 @ ~1.6 cm                    ~= 4.8 x 4.8 cm
+%     colourbar beside them                        ~= 0.6 x 4.8 cm
+%     right col area / spont var / stationarity    ~= 2.6 x 1.6 cm each, stacked
+%                                            total ~= 8.0 x 4.8 cm   (budget 8 x 5)
+%
+% ---- THESE NINE PANELS ARE PNG, NOT PDF, AND THAT IS DELIBERATE ------------------
+% The user reported the exported panels would not load properly. Inspecting the
+% emitted files showed the real defect, and it is worse than a loading nuisance:
+%
+%   exportgraphics(fig, '*.pdf', 'ContentType','vector') re-encodes every embedded
+%   raster as a JPEG RESAMPLED TO THE FIGURE'S ON-SCREEN PIXEL SIZE.
+%
+% A 1.6 cm canvas is ~60 screen px, so each brain map was landing in the PDF as a
+% LOSSY 64 x 63 JPEG -- about 135 dpi, and below even the 103 x 121 native
+% resolution of the cropped data. Passing 'Resolution' alongside 'ContentType',
+% 'vector' is accepted and then silently ignored (verified: byte-identical output),
+% so there is no way to fix this on the PDF path.
+%
+% A soft mask (/SMask) was the first suspect and it was WRONG: every MATLAB-exported
+% panel in figures_final carries one, including all the ones that assemble fine.
+% Noted here so it is not re-investigated.
+%
+% PNG at SP_MAP_DPI therefore gives a strictly better panel than PDF for this one
+% panel class -- the full data, no JPEG, and crisp 6 pt type -- and it matches the
+% project's own rule ("300 dpi PNG for heatmaps"), raised here because 300 dpi over
+% 1.2 cm would be only 142 px. The colourbar and the area plot stay vector PDFs:
+% they are line art, which is what the vector path is actually good at.
+%
+% Rendering stays NEAREST-NEIGHBOUR (no interpolation): these are real measurement
+% pixels and smoothing them would invent spatial detail the widefield data does not
+% have. The contact sheet above renders the same way, so the two agree.
+%
+% Labels are burned in (user: "all spatial map panels should have amps written on
+% it"), and the 1 mm scale bar is embedded on the first panel rather than shipped as
+% a separate file.
+if ~exist('SP_MAP_DPI','var') || isempty(SP_MAP_DPI), SP_MAP_DPI = 1200; end
+global PAPER_FINAL                                                   %#ok<GVMIS>
+PAPER_FINAL_ON = ~isempty(PAPER_FINAL) && PAPER_FINAL;
+for k = 1:nV
+    fK  = paperFig(1.6, 1.6);
     axK = axes(fK); %#ok<LAXES>
     img = maps(:, :, k);
     imK = imagesc(axK, img, clim);
-    imK.AlphaData = ~isnan(img);
+    imK.AlphaData = ~isnan(img);        % white outside the hand-drawn cortex mask
     colormap(axK, cmapBWR);
     axis(axK, 'image', 'off');
     hold(axK, 'on');
+
     rectangle(axK, 'Position', [pcc-ROI_HALF, prc-ROI_HALF, 2*ROI_HALF, 2*ROI_HALF], ...
         'EdgeColor', [0 0 0], 'LineWidth', 0.6);
-    % NO BURNED-IN TEXT BY DEFAULT (user 2026-10-05, after reviewing the 1.3 cm
-    % panels). At this size 6 pt type is ~20% of the panel height and the "1 mm"
-    % scale label collided with its own bar and the panel edge. In a 5-map row the
-    % amplitude labels belong ABOVE the row, set once in Illustrator, not stamped
-    % on top of each brain. The amplitude -> filename mapping is printed below so
-    % the labels can be placed without guesswork. Set SP_PANEL_TEXT = true to get
-    % the old self-labelling panels back.
-    if SP_PANEL_TEXT
-        text(axK, 0.03, 0.97, sprintf('%.2f mW', uA(validIdx(k)) * V_TO_MW), ...
-            'Units','normalized', 'VerticalAlignment','top', ...
+
+    text(axK, 0.03, 0.97, sprintf('%.2f mW', uA(validIdx(k)) * V_TO_MW), ...
+        'Units','normalized', 'VerticalAlignment','top', ...
+        'HorizontalAlignment','left', 'FontSize', 6, 'FontWeight','bold');
+
+    % 1 mm scale bar EMBEDDED on the first panel (user 2026-10-05: "i also want one
+    % of them to have the 1mm label embedded instead of separate loading"). Bottom
+    % left, so it cannot collide with the amplitude label in the top left.
+    if k == 1
+        barPx = 1 / PX_MM;
+        xl = xlim(axK); yl = ylim(axK);
+        x0 = xl(1) + 0.06*diff(xl);  y0 = yl(2) - 0.10*diff(yl);
+        plot(axK, [x0, x0+barPx], [y0, y0], 'k-', 'LineWidth', 1.2);
+        text(axK, x0 + barPx/2, y0 - 0.025*diff(yl), '1 mm', ...
+            'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
             'FontSize', 6, 'FontWeight','bold');
     end
     hold(axK, 'off');
-    paperExport(fK, fullfile(outDir, sprintf('supp_spatial_map_%02d.pdf', ii)));
-    fprintf('    map_%02d  <-  %.2f mW\n', ii, uA(validIdx(k)) * V_TO_MW);
+    paperExport(fK, fullfile(outDir, sprintf('supp_spatial_map_%02d.png', k)), SP_MAP_DPI);
+    fprintf('    map_%02d  <-  %.2f mW\n', k, uA(validIdx(k)) * V_TO_MW);
 end
-
-% Standalone scale bar, so it is placed once instead of crowding a 1.3 cm map.
-% Drawn at the same pixel scale as the maps: 1 mm = 1/PX_MM px on the map axes,
-% reproduced here on an axis of the same pixel width so the bar is physically
-% comparable when both are placed at 100%.
-fSB  = paperFig(1.5, 0.45);
-axSB = axes(fSB); %#ok<LAXES>
-mapWpx = size(maps, 2);
-plot(axSB, [0, 1/PX_MM], [1 1], 'k-', 'LineWidth', 1.2);
-xlim(axSB, [0 mapWpx]);  ylim(axSB, [0.6 1.6]);
-axis(axSB, 'off');
-text(axSB, (1/PX_MM)/2, 0.75, '1 mm', 'HorizontalAlignment','center', ...
-     'FontSize', 6, 'FontWeight','bold');
-paperExport(fSB, fullfile(outDir, 'supp_spatial_scalebar.pdf'));
 
 % Standalone colourbar, same clim as every map panel.
 fCB  = paperFig(1.0, 1.5);
@@ -272,6 +290,26 @@ cbS.Label.FontSize   = 6;
 cbS.Label.FontWeight = 'bold';
 set(cbS, 'FontWeight', 'bold', 'Box', 'off', 'TickDirection', 'out');
 paperExport(fCB, fullfile(outDir, 'supp_spatial_cbar.pdf'));
+
+% ---- PAD THE NINE MAPS TO A COMMON CANVAS ----------------------------------
+% exportgraphics tight-crops to CONTENT, so panel 01 came out 1.22 x 0.95 cm while
+% the rest were 1.07 x 0.97 -- its embedded scale bar and "1 mm" label push the
+% bounding box out. Nine panels of eight different sizes cannot be dropped into a
+% 3 x 3 grid without nudging each one by hand, and any nudge silently breaks the
+% "place at 100%" rule the panels are sized for.
+%
+% So every map is padded with white to the largest box in the set, centred. Padding
+% adds blank margin only -- no pixel of data is scaled, cropped or moved relative to
+% any other -- so the nine stay directly comparable AND become a drop-in grid.
+mapFiles = arrayfun(@(k) fullfile(outDir, sprintf('supp_spatial_map_%02d.png', k)), ...
+                    1:nV, 'uni', 0);
+if PAPER_FINAL_ON
+    finDir = fullfile(fileparts(fileparts(mfilename('fullpath'))), ...
+                      'paper', 'figures_final', 'panels', 'supp_spatial');
+    mapFiles = [mapFiles, arrayfun(@(k) fullfile(finDir, ...
+        sprintf('supp_spatial_map_%02d.png', k)), 1:nV, 'uni', 0)];
+end
+pad_png_to_common_canvas(mapFiles);
 
 fprintf('[SPATIAL] %d individual map panels + colourbar -> %s\n', nV, outDir);
 
@@ -313,3 +351,50 @@ for k = 1:nV
     fprintf('  %.2f mW   area %.3f mm2\n', uA(validIdx(k)) * V_TO_MW, area_mm2(k));
 end
 fprintf('[SPATIAL] exported imp_spatial_maps.pdf + imp_spatial_area.pdf -> %s\n', outDir);
+
+
+% =============================================================================
+function pad_png_to_common_canvas(files)
+% Pad each PNG with white until every file shares the largest canvas in the set,
+% keeping the existing content centred. Missing or unreadable files are skipped
+% rather than aborting -- a padding failure must never cost a producer its export.
+files = files(cellfun(@(f) exist(f,'file') == 2, files));
+if isempty(files), return; end
+sz = nan(numel(files), 2);
+for i = 1:numel(files)
+    try
+        info = imfinfo(files{i});
+        sz(i,:) = [info(1).Height, info(1).Width];
+    catch
+    end
+end
+ok = all(~isnan(sz), 2);
+if ~any(ok), return; end
+tgt = max(sz(ok,:), [], 1);
+nPad = 0;
+for i = find(ok(:))'
+    if isequal(sz(i,:), tgt), continue; end
+    try
+        [A, map, alpha] = imread(files{i});
+        if ~isempty(map), A = ind2rgb(A, map); end
+        if size(A,3) == 1, A = repmat(A, 1, 1, 3); end
+        padT = floor((tgt(1) - sz(i,1)) / 2);  padB = tgt(1) - sz(i,1) - padT;
+        padL = floor((tgt(2) - sz(i,2)) / 2);  padR = tgt(2) - sz(i,2) - padL;
+        white = ones(1, 1, 'like', A);
+        if isinteger(A), white = intmax(class(A)); end
+        B = repmat(white, tgt(1), tgt(2), size(A,3));
+        B(padT+1:padT+sz(i,1), padL+1:padL+sz(i,2), :) = A;
+        if isempty(alpha)
+            imwrite(B, files{i});
+        else
+            Aa = zeros(tgt, 'like', alpha);
+            Aa(padT+1:padT+sz(i,1), padL+1:padL+sz(i,2)) = alpha;
+            imwrite(B, files{i}, 'Alpha', Aa);
+        end
+        nPad = nPad + 1;
+    catch
+    end
+end
+fprintf('[SPATIAL] padded %d/%d map panels to a common %d x %d px canvas\n', ...
+        nPad, numel(files), tgt(2), tgt(1));
+end
