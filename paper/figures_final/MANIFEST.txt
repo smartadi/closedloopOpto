@@ -141,6 +141,13 @@ figure2/tf_cv_shape_across_sessions.pdf  # 3.46 x 3.28 cm
 # S3 = controller gain tuning. Source: controller-tuning/tune_supp_panels.m.
 # Run load_grid.m first, then that script with PAPER_FINAL on.
 #
+# ONE MOUSE (user, 2026-10-05): AL_0033 grid 2025-03-05 e1 + AL_0033 auto-tune
+# 2025-03-17 e3. The former second row (AL_0034) was dropped -- it WAS within-mouse,
+# but its grid ran on the older 7-column rig build with a 4 s stim scored over [0,4]
+# while its own auto-tune partner ran the 8-column build at 3 s over [0,3], and
+# AL_0034 appears nowhere else in the paper. Panels are therefore unsuffixed; a
+# second mouse would reintroduce _m1/_m2 tags. Full check: RESEARCH 2026-10-05.
+#
 # REGENERATED 2026-10-05, not re-exported. The three images the LaTeX used
 # (grid_cost_surface_AL_0033_0305.pdf, grid_cost_surface_AL_0034_1017.pdf,
 # autotune_convergence_both.pdf) were June 2026 files whose producers have since
@@ -150,28 +157,28 @@ figure2/tf_cv_shape_across_sessions.pdf  # 3.46 x 3.28 cm
 #
 # Individual panels, axis gridlines off, and the per-node trace montage split into
 # one panel per node -- both readings of the user's "remove grids" (2026-10-05).
-# _m1 / _m2 are neutral tags: internal mouse names and dates must not appear in the
-# paper, so the panel faces carry no subject identifier. The producer prints the
-# mapping each run; caption from that, not from the filenames.
+# No internal mouse name or date appears on any panel face; the producer prints the
+# session mapping each run, and the caption comes from that.
 #
-# Layout budget (two mice side by side, assembled in Illustrator):
-#   surface 3.4 x 2.9 | path 2.9 x 2.6 | cost 2.9 x 2.2   -> ~9.2 x 2.9 cm per mouse
-#   ten node panels at 1.9 x 1.6                          -> 5 x 2 block, ~9.5 x 3.2 cm
+# The surface's "offline cost J" and the convergence panel's "online cost (rig)" are
+# DIFFERENT metrics and are labelled as such -- J is recomputed offline by
+# ct_process_set, the staircase is what the rig logged while tuning.
+#
+# Layout budget (assembled in Illustrator):
+#   surface 3.3 x 3.0 | path 3.1 x 2.6 | cost 2.9 x 2.2   -> ~9.3 x 3.0 cm
+#   ten node panels at 2.9 x 1.6                          -> 5 x 2 block, ~14.5 x 3.2 cm
 # Node panels carry NO axis titles on purpose (identical crop so the matrix aligns);
 # set "time (s)" and dF/F (%) once on the edge panels.
-supplementary/supp_tune_surface_m1.pdf
-supplementary/supp_tune_path_m1.pdf
-supplementary/supp_tune_cost_m1.pdf
-supplementary/supp_tune_surface_m2.pdf
-supplementary/supp_tune_path_m2.pdf
-supplementary/supp_tune_cost_m2.pdf
-supplementary/supp_tune_node_m1_01.pdf
-supplementary/supp_tune_node_m1_02.pdf
-supplementary/supp_tune_node_m1_03.pdf
-supplementary/supp_tune_node_m1_04.pdf
-supplementary/supp_tune_node_m1_05.pdf
-supplementary/supp_tune_node_m1_06.pdf
-supplementary/supp_tune_node_m1_07.pdf
-supplementary/supp_tune_node_m1_08.pdf
-supplementary/supp_tune_node_m1_09.pdf
-supplementary/supp_tune_node_m1_10.pdf
+supplementary/supp_tune_surface.pdf
+supplementary/supp_tune_path.pdf
+supplementary/supp_tune_cost.pdf
+supplementary/supp_tune_node_01.pdf
+supplementary/supp_tune_node_02.pdf
+supplementary/supp_tune_node_03.pdf
+supplementary/supp_tune_node_04.pdf
+supplementary/supp_tune_node_05.pdf
+supplementary/supp_tune_node_06.pdf
+supplementary/supp_tune_node_07.pdf
+supplementary/supp_tune_node_08.pdf
+supplementary/supp_tune_node_09.pdf
+supplementary/supp_tune_node_10.pdf

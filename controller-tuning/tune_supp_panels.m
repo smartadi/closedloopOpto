@@ -65,11 +65,34 @@ if ~isfolder(out_dir); mkdir(out_dir); end
 % the only two auto-tune sessions with a live online cost: the other two logged
 % Kval == 0 throughout (dead online error -> the "trajectory" is a random walk) and
 % must not appear in a convergence figure.
+% ONE MOUSE ONLY (user, 2026-10-05). The second row -- AL_0034 grid 2024-10-17 e30
+% + AL_0034 auto-tune 2024-10-25 e1 -- WAS within-mouse, so the same-mouse rule was
+% never broken. It was dropped because putting it in visual parallel with this row
+% asserted an equivalence that does not hold:
+%   * its grid ran on the OLDER 7-column rig build (no onset column; onsets had to be
+%     reconstructed from Timeline) while its own auto-tune partner ran on the 8-column
+%     build, so the pair straddles a rig change that this row does not;
+%   * its grid ran dur = 4 s and was scored over [0,4] while its partner ran 3 s over
+%     [0,3]. J is an un-normalised norm(y-ref), so 140 samples against 105 inflates it
+%     ~1.15x before any difference in control quality enters;
+%   * its best node held only -3.65 against ref -5 (~1.35% steady-state error) from a
+%     +1.42 baseline, where this row's best node holds -5.18 from -0.05;
+%   * AL_0034 appears NOWHERE ELSE in the paper (the controller sessions are AL_0033,
+%     AL_0039, AL_0048, AL_0050, AL_0051), so it introduced a subject the reader has
+%     never met, for a weaker demonstration.
+% FINDINGS.md already recorded that the two rows are not equivalent -- auto-tuning
+% "settles into the grid's low-cost basin (clearest in AL_0033 03-17)" but "explores
+% rather than pinpoints when the basin is broad/flat (AL_0034)", and "the flat basin
+% makes a strong convergence claim unsupported here". The 3 x 2 layout contradicted
+% that. Full check: RESEARCH 2026-10-05.
+%
+% Restoring the second mouse is a one-line change: add tag/gi/ai/nodes back below.
+% Keep the same-mouse rule when doing so (controller-tuning/CLAUDE.md).
 PAIRS = struct( ...
-    'tag',  {'m1', 'm2'}, ...
-    'gi',   { 3,    4 }, ...      % index into G: AL_0033 2025-03-05, AL_0034 2024-10-17
-    'ai',   { 4,    1 }, ...      % index into A: AL_0033 2025-03-17, AL_0034 2024-10-25 e1
-    'nodes',{ true,  false });    % export per-node trace panels for this mouse?
+    'tag',  {''}, ...             % empty -> unsuffixed filenames; a 2nd entry needs tags
+    'gi',   { 3 }, ...            % index into G: AL_0033 2025-03-05
+    'ai',   { 4 }, ...            % index into A: AL_0033 2025-03-17
+    'nodes',{ true });            % export per-node trace panels for this mouse?
 
 fprintf('\n=== S3 tuning panels ===\n');
 
@@ -77,13 +100,17 @@ for p = 1:numel(PAIRS)
     g = G(PAIRS(p).gi);
     a = A(PAIRS(p).ai);
     tg = PAIRS(p).tag;
+    % With one mouse the panels are unsuffixed (supp_tune_surface.pdf); with two or
+    % more each needs its tag back, so the suffix is derived rather than hard-coded.
+    sfx = ''; if ~isempty(tg), sfx = ['_' tg]; end
+    lbl = tg;  if isempty(lbl), lbl = 'single'; end
     fprintf('\n[%s]  grid %s %s e%d  <->  auto-tune %s %s e%d\n', ...
-        tg, g.mn, g.td, g.en, a.mn, a.td, a.en);
+        lbl, g.mn, g.td, g.en, a.mn, a.td, a.en);
 
     % ---- accepted auto-tune path ---------------------------------------------
     [Kacc, Jacc] = local_accepted_path(a);
     if isempty(Kacc)
-        warning('tune_supp_panels:noPath', '[%s] no accepted path -- skipping.', tg);
+        warning('tune_supp_panels:noPath', '[%s] no accepted path -- skipping.', lbl);
         continue
     end
     kEnd = Kacc(end,:);
@@ -108,7 +135,7 @@ for p = 1:numel(PAIRS)
         F  = scatteredInterpolant(Kp, Ki, J, 'natural', 'none');
         contourf(ax, GX, GY, F(GX, GY), 12, 'LineColor', 'none');
     catch ME
-        warning('tune_supp_panels:interp', '[%s] surface interp failed (%s).', tg, ME.message);
+        warning('tune_supp_panels:interp', '[%s] surface interp failed (%s).', lbl, ME.message);
     end
     scatter(ax, Kp, Ki, 10, J, 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 0.25);
 
@@ -134,11 +161,15 @@ for p = 1:numel(PAIRS)
     % 1.5 cm axis at 6 pt, where the labels touch and read as one number.
     local_three_ticks(ax);
     colormap(ax, parula);
-    cb = colorbar(ax); cb.Label.String = 'cost J';
+    % OFFLINE vs ONLINE must be distinguishable. The surface is J recomputed
+    % offline by ct_process_set; the convergence panel is the rig's own online
+    % cost. They are different quantities (final-online / min-offline = 0.76
+    % here), so labelling both 'cost' invited reading one scale across both.
+    cb = colorbar(ax); cb.Label.String = 'offline cost J';
     cb.FontSize = PS.fs; cb.Label.FontSize = PS.fs; cb.Label.FontWeight = PS.fw;
     set(cb, 'Box', 'off', 'TickDirection', 'out');
     fprintf('   grid: %d nodes | min J=%.3g at (Kp=%g, Ki=%g)\n', numel(J), Jmin, Kp(im), Ki(im));
-    paperExport(f1, fullfile(out_dir, sprintf('supp_tune_surface_%s.pdf', tg)));
+    paperExport(f1, fullfile(out_dir, sprintf('supp_tune_surface%s.pdf', sfx)));
 
     % ===================== PANEL: accepted gain path ==========================
     f2 = paperFig(2.9, 2.6);
@@ -159,7 +190,7 @@ for p = 1:numel(PAIRS)
     xlim(ax2, xl + [-1 1]*0.10*max(eps, diff(xl)));
     ylim(ax2, yl + [-0.10 0.22]*max(eps, diff(yl)));
     local_three_ticks(ax2);
-    paperExport(f2, fullfile(out_dir, sprintf('supp_tune_path_%s.pdf', tg)));
+    paperExport(f2, fullfile(out_dir, sprintf('supp_tune_path%s.pdf', sfx)));
 
     % ===================== PANEL: cost vs iteration ===========================
     % Greedy accept-if-lowered, so this is a staircase by construction -- it can only
@@ -174,8 +205,8 @@ for p = 1:numel(PAIRS)
     yline(ax3, Jacc(end), ':', 'Color', PS.col_zero, 'LineWidth', PS.lw_ref);
     xlim(ax3, [1 numel(Jacc)]);
     ylim(ax3, [0 max(Jacc)*1.08]);
-    xlabel(ax3, 'tuning iteration'); ylabel(ax3, 'online cost');
-    paperExport(f3, fullfile(out_dir, sprintf('supp_tune_cost_%s.pdf', tg)));
+    xlabel(ax3, 'tuning iteration'); ylabel(ax3, 'online cost (rig)');
+    paperExport(f3, fullfile(out_dir, sprintf('supp_tune_cost%s.pdf', sfx)));
 
     % ===================== PANELS: one per grid node ==========================
     if PAIRS(p).nodes
@@ -220,7 +251,7 @@ for p = 1:numel(PAIRS)
             % Every panel now crops to the same size and is placed on a plain grid;
             % "time (s)" and "\DeltaF/F (%)" are set once, in Illustrator, on the
             % edge panels. Tick labels stay on all ten so each reads standalone.
-            paperExport(fN, fullfile(out_dir, sprintf('supp_tune_node_%s_%02d.pdf', tg, k)));
+            paperExport(fN, fullfile(out_dir, sprintf('supp_tune_node%s_%02d.pdf', sfx, k)));
             fprintf('     node %02d  (Kp=%.3g, Ki=%.3g)  J=%.3g\n', k, g.C(k,1), g.C(k,2), g.J(k));
         end
     end
