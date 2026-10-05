@@ -43,12 +43,68 @@ bmask = ae.brainMask;
 validIdx = find(uA > 0);
 nV       = numel(validIdx);
 
-% ---- stack response maps into full frames (NaN outside the brain) ----------
+% ---- CORTEX DISPLAY MASK (added 2026-10-05, user: "the brain images need a mask,
+%      they are covering a lot of area outside the cortex") ------------------
+% `ae.brainMask` is NOT a cortex outline. Measured on AL_0033 2025-01-29 it is TRUE
+% over 75% of the frame (234414 / 313600 px, 70.2 mm^2): it includes the dark
+% surround at the top corners AND it EXCLUDES a large block of posterior cortex.
+% Plotting through it put diffuse signal well outside the brain and dropped real
+% cortex, so every spatial map was misleading about where the effect reached.
+%
+% We cannot simply replace it: `imp.resp_map` is indexed BY `bmask`, so the unpack
+% below must keep using it. Instead we derive a display mask from the mean image
+% and NaN the maps outside it, leaving the indexing untouched.
+%
+% THE MASK IS DRAWN BY HAND, ONCE, AND CACHED (user, 2026-10-05). An automatic
+% threshold was tried first and rejected: it split the hemispheres down the
+% sagittal sinus (dark vessel -> below threshold) and trimmed the dim posterior
+% taper, both of which are anatomical calls rather than intensity calls. Draw it
+% once per session; every later run loads the cache.
+%
+% ORIENTATION TRAP. The maps are permuted to display orientation LATER (anterior
+% up, hemispheres side by side). This mask is applied BEFORE that, so it must live
+% in the raw (nr x nc) array frame. We therefore draw on the TRANSPOSED mean image
+% -- the orientation you actually want to look at -- and transpose the result back
+% before storing. Do not "simplify" this by dropping either transpose.
+% `here` is not defined in this script; anchor the cache on load_experiments.m,
+% the same way paperRoot above is anchored.
+ctxDir   = fullfile(fileparts(which('load_experiments')), 'data');
+ctxCache = fullfile(ctxDir, sprintf('cortex_mask_%s_%s_e%d.mat', ae.mn, ae.td, ae.en));
+if ~exist('CTX_REDRAW','var') || isempty(CTX_REDRAW), CTX_REDRAW = false; end
+if exist(ctxCache, 'file') && ~CTX_REDRAW
+    S_ctx   = load(ctxCache, 'ctxMask');
+    ctxMask = S_ctx.ctxMask;
+    fprintf('[SPATIAL] cortex mask: CACHED (%s)\n', ctxCache);
+else
+    fh = figure('Color','w','Name','Draw the cortex mask','NumberTitle','off');
+    imagesc(mimg'); axis image off; colormap(gray);
+    title({'Draw the cortex outline (anterior up).', ...
+           'Click to place vertices, double-click or close the shape to finish.'}, ...
+          'FontWeight','bold');
+    roi = drawpolygon('Color', [0.9 0.2 0.2], 'LineWidth', 1.2);
+    wait(roi);
+    maskDisp = createMask(roi);          % in DISPLAY (transposed) orientation
+    ctxMask  = maskDisp';                % back to the raw (nr x nc) array frame
+    close(fh);
+    if ~exist(fileparts(ctxCache), 'dir'), mkdir(fileparts(ctxCache)); end
+    save(ctxCache, 'ctxMask');
+    fprintf('[SPATIAL] cortex mask: DRAWN and cached -> %s\n', ctxCache);
+end
+assert(isequal(size(ctxMask), [nr nc]), ...
+       '[SPATIAL] cortex mask is %s, expected %s -- orientation bug', ...
+       mat2str(size(ctxMask)), mat2str([nr nc]));
+fprintf('[SPATIAL] cortex mask %d px (%.1f mm^2, %.0f%% of frame); ae.brainMask was %.0f%%\n', ...
+        nnz(ctxMask), nnz(ctxMask)*PX_MM^2, 100*nnz(ctxMask)/(nr*nc), ...
+        100*nnz(bmask)/(nr*nc));
+
+% ---- stack response maps into full frames (NaN outside the cortex) --------
 maps = nan(nr, nc, nV);
 for k = 1:nV
     f = nan(nr * nc, 1);
     f(bmask(:)) = imp.resp_map{validIdx(k)};
-    maps(:, :, k) = reshape(f, nr, nc);
+    fm = reshape(f, nr, nc);
+    fm(~ctxMask) = NaN;                 % display mask, applied after unpacking
+    maps(:, :, k) = fm;
 end
 
 % ---- peak of the strongest amplitude --------------------------------------
@@ -103,7 +159,7 @@ for k = 1:nV
         'FontSize', 6, 'FontWeight','bold');
 
     % scale bar on the first tile only: 1 mm
-    if k == 1
+    if ii == 1
         barPx = 1 / PX_MM;
         xl = xlim(ax); yl = ylim(ax);
         x0 = xl(1) + 0.06*diff(xl);  y0 = yl(2) - 0.08*diff(yl);
@@ -139,8 +195,23 @@ paperExport(figM, fullfile(outDir, 'imp_spatial_maps.pdf'));
 %      than re-exporting.
 % The shared colour axis `clim` is reused unchanged, so the panels remain directly
 % comparable to each other and to the contact sheet.
-for k = 1:nV
-    fK  = paperFig(2.6, 2.6);
+% SIZE BUDGET (user, 2026-10-05): the assembled supplementary figure must come in
+% under 8 cm wide x 5 cm high, and it now also has to carry the step-response
+% spontaneous variance and the stationarity panels. Nine maps at 2.1 cm would be
+% 6.4 x 6.4 cm on their own -- over the height budget before anything else is
+% placed. So we export a SUBSET at 1.5 cm:
+%     top row     5 maps @ ~1.3 cm + colourbar ~0.9 cm   ~= 7.4 x 1.3 cm
+%     bottom row  area + spont variance + stationarity   ~= 7.4 x 3.2 cm
+%                                                  total ~= 7.4 x 4.6 cm
+% SP_MAP_SUBSET picks which amplitudes appear; the default spans the full range
+% (lowest, three intermediate, highest). All nine still render into the contact
+% sheet above, so nothing is lost -- this only chooses what gets pulled.
+if ~exist('SP_MAP_SUBSET','var') || isempty(SP_MAP_SUBSET)
+    SP_MAP_SUBSET = unique(round(linspace(1, nV, 5)));
+end
+for ii = 1:numel(SP_MAP_SUBSET)
+    k   = SP_MAP_SUBSET(ii);
+    fK  = paperFig(1.5, 1.5);
     axK = axes(fK); %#ok<LAXES>
     img = maps(:, :, k);
     imK = imagesc(axK, img, clim);
@@ -153,7 +224,7 @@ for k = 1:nV
     text(axK, 0.03, 0.97, sprintf('%.2f mW', uA(validIdx(k)) * V_TO_MW), ...
         'Units','normalized', 'VerticalAlignment','top', ...
         'FontSize', 6, 'FontWeight','bold');
-    if k == 1
+    if ii == 1
         barPx = 1 / PX_MM;
         xl = xlim(axK); yl = ylim(axK);
         x0 = xl(1) + 0.06*diff(xl);  y0 = yl(2) - 0.08*diff(yl);
@@ -162,11 +233,11 @@ for k = 1:nV
             'HorizontalAlignment','center', 'FontSize', 6, 'FontWeight','bold');
     end
     hold(axK, 'off');
-    paperExport(fK, fullfile(outDir, sprintf('supp_spatial_map_%02d.pdf', k)));
+    paperExport(fK, fullfile(outDir, sprintf('supp_spatial_map_%02d.pdf', ii)));
 end
 
 % Standalone colourbar, same clim as every map panel.
-fCB  = paperFig(1.6, 2.6);
+fCB  = paperFig(1.0, 1.5);
 axCB = axes(fCB); %#ok<LAXES>
 colormap(axCB, cmapBWR);
 caxis(axCB, clim);

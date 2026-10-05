@@ -100,7 +100,11 @@ figure5/sine_combined_variance.pdf  # 5.04 x 2.93 cm
 # ---------------------------------------------------------------------------
 
 [supp_spatial]
-# S1 spread + S2 maps, from impulse-analysis/imp_spatial_panels.m.
+# NEW S1 (user 2026-10-05) = spatial spread + step-response spontaneous variance
+# + stationarity, assembled under 8 cm wide x 5 cm high. Five of the nine amplitude
+# maps are pulled at ~1.3 cm (nine at 2.1 cm would blow the height budget on their
+# own); all nine still render to the working contact sheet.
+# Source: impulse-analysis/imp_spatial_panels.m.
 # One panel per laser amplitude, plus a STANDALONE colourbar: in the old montage
 # the bar was welded to the tiled layout (Layout.Tile='east'), which is meaningless
 # once the tiles are separate files. Place the bar once during assembly.
@@ -111,10 +115,6 @@ supplementary/supp_spatial_map_02.pdf
 supplementary/supp_spatial_map_03.pdf
 supplementary/supp_spatial_map_04.pdf
 supplementary/supp_spatial_map_05.pdf
-supplementary/supp_spatial_map_06.pdf
-supplementary/supp_spatial_map_07.pdf
-supplementary/supp_spatial_map_08.pdf
-supplementary/supp_spatial_map_09.pdf
 
 [supplementary]
 # tf_cv_2D_sidebar.pdf removed 2026-09-30: it is Figure 2E, so listing it here as well
