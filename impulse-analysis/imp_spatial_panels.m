@@ -124,6 +124,69 @@ set(cb, 'FontWeight', 'bold', 'Box', 'off', 'TickDirection', 'out');
 
 paperExport(figM, fullfile(outDir, 'imp_spatial_maps.pdf'));
 
+% ===================== PANELS: ONE MAP PER AMPLITUDE ========================
+% Supplementary figures are assembled in Illustrator from individual panels, not
+% stitched in LaTeX or montaged here (user, 2026-10-05). The montage above is kept
+% as a working-dir contact sheet; THESE are the panels that get pulled.
+%
+% Two things change when a tiled montage becomes separate panels, and both are
+% easy to get wrong:
+%   1. THE COLOURBAR MUST BECOME ITS OWN PANEL. Above it is welded to the layout
+%      (cb.Layout.Tile = 'east'), which has no meaning once the tiles are separate
+%      files. It is exported standalone below so it can be placed once.
+%   2. THE SCALE BAR SHOULD APPEAR ONCE. It is drawn only on panel 01, as in the
+%      montage; if the assembly reorders the panels, move it in Illustrator rather
+%      than re-exporting.
+% The shared colour axis `clim` is reused unchanged, so the panels remain directly
+% comparable to each other and to the contact sheet.
+for k = 1:nV
+    fK  = paperFig(2.6, 2.6);
+    axK = axes(fK); %#ok<LAXES>
+    img = maps(:, :, k);
+    imK = imagesc(axK, img, clim);
+    imK.AlphaData = ~isnan(img);
+    colormap(axK, cmapBWR);
+    axis(axK, 'image', 'off');
+    hold(axK, 'on');
+    rectangle(axK, 'Position', [pcc-ROI_HALF, prc-ROI_HALF, 2*ROI_HALF, 2*ROI_HALF], ...
+        'EdgeColor', [0 0 0], 'LineWidth', 0.6);
+    text(axK, 0.03, 0.97, sprintf('%.2f mW', uA(validIdx(k)) * V_TO_MW), ...
+        'Units','normalized', 'VerticalAlignment','top', ...
+        'FontSize', 6, 'FontWeight','bold');
+    if k == 1
+        barPx = 1 / PX_MM;
+        xl = xlim(axK); yl = ylim(axK);
+        x0 = xl(1) + 0.06*diff(xl);  y0 = yl(2) - 0.08*diff(yl);
+        plot(axK, [x0, x0+barPx], [y0, y0], 'k-', 'LineWidth', 1.2);
+        text(axK, x0 + barPx/2, y0 - 0.045*diff(yl), '1 mm', ...
+            'HorizontalAlignment','center', 'FontSize', 6, 'FontWeight','bold');
+    end
+    hold(axK, 'off');
+    paperExport(fK, fullfile(outDir, sprintf('supp_spatial_map_%02d.pdf', k)));
+end
+
+% Standalone colourbar, same clim as every map panel.
+fCB  = paperFig(1.6, 2.6);
+axCB = axes(fCB); %#ok<LAXES>
+colormap(axCB, cmapBWR);
+caxis(axCB, clim);
+axis(axCB, 'off');
+cbS = colorbar(axCB, 'Location', 'west');
+% Force the bar to span the canvas. Left to itself it fills only the axes' own
+% height and crops to ~1.8 cm against 2.12 cm map panels; the assembler would then
+% have to scale it in Illustrator, which rescales the tick text and breaks the
+% 6 pt rule. Exporting it at map height keeps every panel placeable at 100%.
+cbS.Units    = 'normalized';
+cbS.Position = [0.30 0.04 0.18 0.92];
+cbS.Label.String     = '\DeltaF/F (%)';
+cbS.FontSize         = 6;
+cbS.Label.FontSize   = 6;
+cbS.Label.FontWeight = 'bold';
+set(cbS, 'FontWeight', 'bold', 'Box', 'off', 'TickDirection', 'out');
+paperExport(fCB, fullfile(outDir, 'supp_spatial_cbar.pdf'));
+
+fprintf('[SPATIAL] %d individual map panels + colourbar -> %s\n', nV, outDir);
+
 % ============================== PANEL: AREA =================================
 % Background offset per amplitude from an annulus 0.6-0.9 mm from the peak;
 % threshold = 50% of the median response within 0.2 mm of the peak at the

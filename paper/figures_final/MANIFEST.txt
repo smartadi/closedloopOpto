@@ -92,6 +92,30 @@ figure5/sine_combined_phase.pdf  # 5.33 x 2.93 cm
 figure5/sine_combined_rmse.pdf  # 5.04 x 2.93 cm
 figure5/sine_combined_variance.pdf  # 5.04 x 2.93 cm
 
+# ---------------------------------------------------------------------------
+# SUPPLEMENTARY FIGURES (added 2026-10-05). The paper gained a real supplementary
+# section after the references on 2026-10-05; these render as S1, S2, ...
+# Each supplementary figure is assembled in Illustrator from the individual panels
+# below -- never stitched with \hfill in LaTeX and never montaged in MATLAB.
+# ---------------------------------------------------------------------------
+
+[supp_spatial]
+# S1 spread + S2 maps, from impulse-analysis/imp_spatial_panels.m.
+# One panel per laser amplitude, plus a STANDALONE colourbar: in the old montage
+# the bar was welded to the tiled layout (Layout.Tile='east'), which is meaningless
+# once the tiles are separate files. Place the bar once during assembly.
+supplementary/imp_spatial_area.pdf
+supplementary/supp_spatial_cbar.pdf
+supplementary/supp_spatial_map_01.pdf
+supplementary/supp_spatial_map_02.pdf
+supplementary/supp_spatial_map_03.pdf
+supplementary/supp_spatial_map_04.pdf
+supplementary/supp_spatial_map_05.pdf
+supplementary/supp_spatial_map_06.pdf
+supplementary/supp_spatial_map_07.pdf
+supplementary/supp_spatial_map_08.pdf
+supplementary/supp_spatial_map_09.pdf
+
 [supplementary]
 # tf_cv_2D_sidebar.pdf removed 2026-09-30: it is Figure 2E, so listing it here as well
 # had the collector place one panel into two pull-folders.
