@@ -28,6 +28,7 @@
 wfpath.pdf  # 21.01 x 29.70 cm
 schematic_optoephyswf (1).pdf  # 12.70 x 12.70 cm
 figure1/svd_frame_AL_0039_2025-04-19.pdf  # 3.10 x 3.10 cm
+figure1/latency_histogram.pdf  # loop-latency distribution, Fig 1F
 
 [figure2]
 # Lettering LOCKED 2026-10-02 (user: "fig 2 caption panel is correct, change the manifest").
@@ -110,6 +111,7 @@ figure5/sine_combined_variance.pdf  # 5.04 x 2.93 cm
 # once the tiles are separate files. Place the bar once during assembly.
 supplementary/imp_spatial_area.pdf
 supplementary/supp_spatial_cbar.pdf
+supplementary/supp_spatial_scalebar.pdf
 supplementary/supp_spatial_map_01.pdf
 supplementary/supp_spatial_map_02.pdf
 supplementary/supp_spatial_map_03.pdf

@@ -206,6 +206,7 @@ paperExport(figM, fullfile(outDir, 'imp_spatial_maps.pdf'));
 % SP_MAP_SUBSET picks which amplitudes appear; the default spans the full range
 % (lowest, three intermediate, highest). All nine still render into the contact
 % sheet above, so nothing is lost -- this only chooses what gets pulled.
+if ~exist('SP_PANEL_TEXT','var') || isempty(SP_PANEL_TEXT), SP_PANEL_TEXT = false; end
 if ~exist('SP_MAP_SUBSET','var') || isempty(SP_MAP_SUBSET)
     SP_MAP_SUBSET = unique(round(linspace(1, nV, 5)));
 end
@@ -221,20 +222,36 @@ for ii = 1:numel(SP_MAP_SUBSET)
     hold(axK, 'on');
     rectangle(axK, 'Position', [pcc-ROI_HALF, prc-ROI_HALF, 2*ROI_HALF, 2*ROI_HALF], ...
         'EdgeColor', [0 0 0], 'LineWidth', 0.6);
-    text(axK, 0.03, 0.97, sprintf('%.2f mW', uA(validIdx(k)) * V_TO_MW), ...
-        'Units','normalized', 'VerticalAlignment','top', ...
-        'FontSize', 6, 'FontWeight','bold');
-    if ii == 1
-        barPx = 1 / PX_MM;
-        xl = xlim(axK); yl = ylim(axK);
-        x0 = xl(1) + 0.06*diff(xl);  y0 = yl(2) - 0.08*diff(yl);
-        plot(axK, [x0, x0+barPx], [y0, y0], 'k-', 'LineWidth', 1.2);
-        text(axK, x0 + barPx/2, y0 - 0.045*diff(yl), '1 mm', ...
-            'HorizontalAlignment','center', 'FontSize', 6, 'FontWeight','bold');
+    % NO BURNED-IN TEXT BY DEFAULT (user 2026-10-05, after reviewing the 1.3 cm
+    % panels). At this size 6 pt type is ~20% of the panel height and the "1 mm"
+    % scale label collided with its own bar and the panel edge. In a 5-map row the
+    % amplitude labels belong ABOVE the row, set once in Illustrator, not stamped
+    % on top of each brain. The amplitude -> filename mapping is printed below so
+    % the labels can be placed without guesswork. Set SP_PANEL_TEXT = true to get
+    % the old self-labelling panels back.
+    if SP_PANEL_TEXT
+        text(axK, 0.03, 0.97, sprintf('%.2f mW', uA(validIdx(k)) * V_TO_MW), ...
+            'Units','normalized', 'VerticalAlignment','top', ...
+            'FontSize', 6, 'FontWeight','bold');
     end
     hold(axK, 'off');
     paperExport(fK, fullfile(outDir, sprintf('supp_spatial_map_%02d.pdf', ii)));
+    fprintf('    map_%02d  <-  %.2f mW\n', ii, uA(validIdx(k)) * V_TO_MW);
 end
+
+% Standalone scale bar, so it is placed once instead of crowding a 1.3 cm map.
+% Drawn at the same pixel scale as the maps: 1 mm = 1/PX_MM px on the map axes,
+% reproduced here on an axis of the same pixel width so the bar is physically
+% comparable when both are placed at 100%.
+fSB  = paperFig(1.5, 0.45);
+axSB = axes(fSB); %#ok<LAXES>
+mapWpx = size(maps, 2);
+plot(axSB, [0, 1/PX_MM], [1 1], 'k-', 'LineWidth', 1.2);
+xlim(axSB, [0 mapWpx]);  ylim(axSB, [0.6 1.6]);
+axis(axSB, 'off');
+text(axSB, (1/PX_MM)/2, 0.75, '1 mm', 'HorizontalAlignment','center', ...
+     'FontSize', 6, 'FontWeight','bold');
+paperExport(fSB, fullfile(outDir, 'supp_spatial_scalebar.pdf'));
 
 % Standalone colourbar, same clim as every map panel.
 fCB  = paperFig(1.0, 1.5);
@@ -278,7 +295,10 @@ for k = 1:nV
     area_mm2(k) = sum((m(:) - bg) < thr & ~isnan(m(:))) * PX_MM^2;
 end
 
-figA = paperFig(4.2, 3.2);
+% Narrowed 4.2 -> 2.8 cm (user size budget, 2026-10-05). The bottom row carries
+% three panels -- area, spontaneous variance, stationarity -- inside an 8 cm width,
+% so each gets ~2.6 cm after cropping. At 4.2 this one panel took half the row.
+figA = paperFig(2.8, 3.2);
 axA  = axes(figA);
 plot(axA, uA(validIdx) * V_TO_MW, area_mm2, 'o-', ...
     'Color', [0.15 0.35 0.8], 'MarkerFaceColor', [0.15 0.35 0.8], ...
