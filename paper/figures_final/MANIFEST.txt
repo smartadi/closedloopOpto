@@ -119,6 +119,20 @@ figure5/sine_combined_variance.pdf  # 5.04 x 2.93 cm
 # the bar once during assembly.
 supplementary/imp_spatial_area.pdf
 supplementary/supp_spatial_cbar.pdf
+# Added to the assembled S1, 2026-10-05.
+# supp_s1_batch_variance.pdf  (controller-analysis/step_response.m) -- the batch
+#   bootstrap, redrawn. It is SELF-CONTAINED in that script on purpose: the working
+#   view's spont_variance.pdf is NOT reproducible, because line ~146 overwrites
+#   custom_idx with randperm(numel(fields),3), so it plots three randomly chosen
+#   sessions, different on every run, with an unseeded bootstrap. The panel pins the
+#   set to the step-response sessions and seeds the draws. It also normalises by each
+#   session's own MEAN rather than min-max: min-max stretches a ~1% ripple across the
+#   full panel height and makes bootstrap noise look like a batch-size effect.
+# supp_s1_ol_variance_evolution.pdf  (controller-analysis/variance_mse.m) -- redraw of
+#   onset_variance_slope.pdf, whose three slope annotations all sat at the same y and
+#   overprinted into one unreadable string. Each slope is now on its own fit line.
+supplementary/supp_s1_batch_variance.pdf
+supplementary/supp_s1_ol_variance_evolution.pdf
 supplementary/supp_spatial_map_01.png
 supplementary/supp_spatial_map_02.png
 supplementary/supp_spatial_map_03.png

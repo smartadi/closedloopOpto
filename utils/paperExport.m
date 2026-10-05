@@ -34,6 +34,14 @@ fig.Units = 'centimeters';
 sz = fig.Position(3:4);   % [w h] in cm
 fig.Units = prevUnits;
 
+% ---- A LOCKED WORKING FILE MUST NOT KILL THE RUN (2026-10-05) ----------------
+% If a panel is open in Illustrator or Acrobat, exportgraphics throws a permission
+% error. Uncaught, that aborts the whole producer -- so one PDF left open in another
+% window costs every panel the script had not written yet, including panels nowhere
+% near the locked file. paper_final_mirror already degraded this to a warning; the
+% working-copy export did not. Now both do: the file is skipped, named as STALE, and
+% the producer carries on.
+try
 [~, ~, ext] = fileparts(path);
 switch lower(ext)
     case {'.pdf', '.svg', '.eps'}
@@ -49,6 +57,16 @@ switch lower(ext)
     otherwise
         warning('paperExport: unknown extension ''%s'' — defaulting to vector.', ext);
         exportgraphics(fig, path, 'ContentType', 'vector');
+end
+catch ME
+    if strcmp(ME.identifier,'MATLAB:print:CannotCreateOutputFile') || ...
+       contains(lower(ME.message),'permission')
+        warning('paperExport:locked', ...
+            ['%s is LOCKED (open in Illustrator/Acrobat?) -- NOT updated, so the ' ...
+             'copy on disk is now STALE. Close it and re-run this producer.'], path);
+    else
+        rethrow(ME);
+    end
 end
 [~, fname, fext] = fileparts(path);
 fprintf('Exported: %s%s  [canvas %.2f × %.2f cm; PDF cropped to content]\n', fname, fext, sz(1), sz(2));

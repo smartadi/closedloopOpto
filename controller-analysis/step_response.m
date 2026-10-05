@@ -257,6 +257,96 @@ supp_dir = fullfile(paper_root, 'images', 'supplementary');
 if ~isfolder(supp_dir), mkdir(supp_dir); end
 paperExport(fig, fullfile(supp_dir, 'spont_variance.pdf'));
 
+% ============ SUPPLEMENTARY S1 PANEL: BATCH VARIANCE (2026-10-05) ============
+% SELF-CONTAINED ON PURPOSE: this block re-runs its own bootstrap on a FIXED session
+% set with a FIXED seed, instead of reusing the working view's arrays above.
+%
+% REPRODUCIBILITY DEFECT IN THE WORKING VIEW (found 2026-10-05). Line ~146 does
+%     custom_idx = randperm(numel(fields), n_sample);
+% which CLOBBERS the step-response set (custom_idx = [4 9 11]) with three RANDOM
+% sessions, drawn fresh on every run, and the bootstrap itself is unseeded. So the
+% published spont_variance.pdf plots three sessions nobody can identify, its
+% "Session 1/2/3" legend names different animals each time the script is run, and
+% the curves cannot be regenerated. That is fine for the exploratory check it was --
+% "does convergence hold for arbitrary sessions" -- and not fine for a figure.
+% This panel therefore pins the set to the step-response sessions, which is what the
+% rest of the figure already shows, and seeds the draws.
+%
+% PRESENTATION ALSO CHANGED, because the working view hides the result:
+% the measured finding is that mean total variance is FLAT in batch size (it moves
+% ~1-2% of its own mean from 10 to 100 trials) while its SEM falls roughly as
+% 1/sqrt(n) -- i.e. the estimate is unbiased and its uncertainty shrinks. That lives
+% entirely in the error bars. The working view min-max normalises each curve, which
+% maps its own min to 0 and max to 1 and so STRETCHES A 1% RIPPLE ACROSS THE FULL
+% PANEL HEIGHT; what you then see is bootstrap noise at full amplitude, reading as
+% "variance wanders with batch size" -- the opposite of the finding. Normalising by
+% each session's own MEAN instead puts every session at 1.0 and leaves the error
+% bars as the thing the reader watches shrink.
+%
+% DEGENERATE POINTS DROPPED. The draw is randperm(n_trials, min(n, n_trials)), so
+% once the batch size reaches a session's trial count every repeat returns the SAME
+% full set and the SEM is exactly 0 -- by construction, not because the estimate
+% became perfect. Those points are excluded rather than plotted as perfect
+% convergence.
+if ~exist('SR_SUPP_PANEL','var') || isempty(SR_SUPP_PANEL), SR_SUPP_PANEL = true; end
+if SR_SUPP_PANEL
+    BV_SESS    = [4 9 11];            % step-response sessions -- fixed, not sampled
+    BV_BATCH   = 10:10:100;
+    BV_REPEATS = 500;
+    bvRng = RandStream('mt19937ar', 'Seed', 20261005);   % local; does not disturb global RNG
+
+    % 3.0 cm tall, not 2.6: the legend band below the data pushed the content to
+    % 3.00 cm and the size guard correctly flagged the panel as overhanging its
+    % canvas. Declare the size the panel actually is.
+    fBV = paperFig(3.4, 3.0);
+    axBV = axes(fBV); hold(axBV,'on'); grid(axBV,'off'); %#ok<LAXES>
+    bvCol = lines(numel(BV_SESS));
+    hBV = gobjects(numel(BV_SESS),1);
+    fprintf('\n[step_response] S1 batch variance (fixed sessions, seeded):\n');
+    for i = 1:numel(BV_SESS)
+        sd  = mouse.(fields{BV_SESS(i)}).data.spont_dFk;
+        nTr = size(sd, 1);
+        keep = BV_BATCH < nTr;                 % drop the whole-set draws
+        bs  = BV_BATCH(keep);
+        mv = nan(1,numel(bs)); sv = nan(1,numel(bs));
+        for bi = 1:numel(bs)
+            v = zeros(BV_REPEATS,1);
+            for r = 1:BV_REPEATS
+                v(r) = sum(var(sd(randperm(bvRng, nTr, bs(bi)), :)));
+            end
+            mv(bi) = mean(v); sv(bi) = std(v)/sqrt(BV_REPEATS);
+        end
+        mu0 = mean(mv); yv = mv/mu0; ev = sv/mu0;
+        errorbar(axBV, bs, yv, ev, '-o', 'Color', bvCol(i,:), ...
+            'LineWidth', PS.lw_mean, 'MarkerSize', 2, 'MarkerFaceColor', bvCol(i,:), ...
+            'MarkerEdgeColor', 'none', 'CapSize', 2, 'HandleVisibility','off');
+        hBV(i) = plot(axBV, nan, nan, '-', 'Color', bvCol(i,:), 'LineWidth', PS.lw_mean);
+        fprintf(['   sess %d (%s, %d trials): spread %.2f%% of mean | ' ...
+                 'SEM %.2f%% -> %.2f%% of mean (x%.2f over n=%d->%d)\n'], ...
+                 i, fields{BV_SESS(i)}, nTr, 100*(max(yv)-min(yv)), ...
+                 100*ev(1), 100*ev(end), ev(end)/ev(1), bs(1), bs(end));
+    end
+    yline(axBV, 1, ':', 'Color', [.45 .45 .45], 'LineWidth', PS.lw_ref);
+    xlim(axBV, [min(BV_BATCH)-6, max(BV_BATCH)+6]);
+    % Clear band below the data for the legend. Every curve sits on 1.0 by
+    % construction, so without this there is no empty corner anywhere in the panel
+    % and the legend lands on a trace wherever it is placed.
+    ybv = ylim(axBV);
+    ylim(axBV, [ybv(1) - 0.45*diff(ybv), ybv(2)]);
+    xticks(axBV, [20 60 100]);
+    xlabel(axBV, 'batch size (trials)');
+    ylabel(axBV, 'variance / session mean');
+    % Legend at southeast: at northeast it printed across the curves, and with every
+    % session pinned to 1.0 the top of the panel is never free.
+    lgBV = legend(axBV, hBV, arrayfun(@(i) sprintf('session %d',i), ...
+        1:numel(BV_SESS), 'uni', 0), 'Box','off', 'Location','southeast');
+    lgBV.ItemTokenSize = PS.lgd_token;
+    hold(axBV,'off');
+    paperExport(fBV, fullfile(supp_dir, 'supp_s1_batch_variance.pdf'));
+    fprintf('[step_response] S1 batch-variance panel -> %s\n', supp_dir);
+end
+
+
 
 
 

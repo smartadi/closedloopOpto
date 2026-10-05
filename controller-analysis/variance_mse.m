@@ -244,6 +244,71 @@ paperAxes(ax_ov, 'XLength',1, 'YLength',0.01, 'XLabel','1 s', 'YLabel',' ');
 paperExport(fig_ov, fullfile(paper_root, 'images', 'figure2', 'onset_variance_slope.pdf'));
 fprintf('Variance slope figure ready\n');
 
+% ======= SUPPLEMENTARY S1 PANEL: OL VARIANCE EVOLUTION (2026-10-05) ==========
+% Redraw of onset_variance_slope.pdf for the assembled S1 (user: "the session OL
+% open loop variance evolution figure ... but redrawn properly").
+%
+% WHAT WAS WRONG with the working version, visible in the exported file:
+%   * the three slope annotations were all placed at the SAME y, at the bottom of
+%     the axes, and each read "slope=-0.21". At 6 pt in a 3.4 cm panel the three
+%     strings overlapped into "slope=-0.2lope=-0.5lope=+0.21" -- unreadable, and
+%     the figure's only quantitative content;
+%   * the rotated two-line y label "Variance across trials for all sessions" ate
+%     the left third of the panel;
+%   * the "OL mean" legend spent a corner saying what the one bold trace obviously
+%     is, on a panel with no second condition.
+% Fixed by putting each slope value ON its own dashed fit line, inside its own
+% epoch, with the epochs named; dropping the legend; and shortening the y label.
+% Nothing is recomputed -- the traces, the fits and the slopes are the same arrays.
+if ~exist('VM_SUPP_PANEL','var') || isempty(VM_SUPP_PANEL), VM_SUPP_PANEL = true; end
+if VM_SUPP_PANEL
+    fVE = paperFig(3.8, 2.8);
+    axVE = axes(fVE); hold(axVE,'on'); grid(axVE,'off'); %#ok<LAXES>
+    for s2 = 1:nV_ov
+        plot(axVE, tp_all_sl, Mvarnc_v(s2, idx_all_sl), ...
+            'Color',[col_ol_ov, 0.22], 'LineWidth',PS.lw_trial, 'HandleVisibility','off');
+    end
+    fill(axVE, [tp_all_sl, fliplr(tp_all_sl)], ...
+        [mu_all_sl+sem_all_sl, fliplr(mu_all_sl-sem_all_sl)], ...
+        col_ol_ov, 'FaceAlpha',PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
+    plot(axVE, tp_all_sl, mu_all_sl, 'Color',col_ol_ov, 'LineWidth',PS.lw_mean);
+    pS = {p_mean_pre_sl, p_mean_stim_sl, p_mean_post_sl};
+    tS = {tp_pre_sl,     tp_stim_sl,     tp_post_sl};
+    for q = 1:3
+        plot(axVE, tS{q}, polyval(pS{q}, tS{q}), 'k--', 'LineWidth',PS.lw_fit);
+    end
+    xlim(axVE, [-3 dur+3]);
+    ylv = ylim(axVE);
+    ylim(axVE, [ylv(1), ylv(2) + 0.18*diff(ylv)]);   % headroom for the slope labels
+    ylv = ylim(axVE);
+    pz = patch(axVE, [0 dur dur 0], [ylv(1) ylv(1) ylv(2) ylv(2)], ...
+        [0.85 0.85 0.85], 'FaceAlpha',0.5, 'EdgeColor','none');
+    uistack(pz, 'bottom');
+    % Each slope ON its own fit line, in its own epoch -- the three values are what
+    % the panel exists to report, and at the old shared y they printed over
+    % each other.
+    for q = 1:3
+        xm = mean(tS{q}([1 end]));
+        ym = polyval(pS{q}, xm);
+        text(axVE, xm, ym + 0.055*diff(ylv), sprintf('%+.2f', pS{q}(1)), ...
+            'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
+            'FontSize',PS.fs, 'FontWeight',PS.fw, 'Color','k');
+    end
+    text(axVE, -1.5, ylv(2), 'pre', 'HorizontalAlignment','center', ...
+        'VerticalAlignment','top', 'FontSize',PS.fs, 'FontWeight',PS.fw);
+    text(axVE, dur/2, ylv(2), 'stim', 'HorizontalAlignment','center', ...
+        'VerticalAlignment','top', 'FontSize',PS.fs, 'FontWeight',PS.fw);
+    text(axVE, dur+1.5, ylv(2), 'post', 'HorizontalAlignment','center', ...
+        'VerticalAlignment','top', 'FontSize',PS.fs, 'FontWeight',PS.fw);
+    xlabel(axVE, 'time from stim onset (s)');
+    ylabel(axVE, 'variance across trials');
+    hold(axVE,'off');
+    paperExport(fVE, fullfile(paper_root, 'images', 'supplementary', ...
+        'supp_s1_ol_variance_evolution.pdf'));
+    fprintf('[variance_mse] S1 OL variance-evolution panel exported\n');
+end
+
+
 %% G: Cross-session MSE violin  (7.0" wide -- fills full page width)
 fig_G = paperFig(7.8, 4);
 

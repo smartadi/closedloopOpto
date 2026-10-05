@@ -16,6 +16,26 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 - spont_variance.pdf is NOT REPRODUCIBLE: it plots three random sessions
+**Changed/Found:** `controller-analysis/step_response.m` line ~146 does `custom_idx = randperm(numel(fields), n_sample)`, which **overwrites** the step-response set (`custom_idx = [4 9 11]`, line 84) with three RANDOMLY CHOSEN sessions, drawn fresh on every run, and the bootstrap itself is unseeded. So the published `spont_variance.pdf` - supplementary S4 in the current build - plots three sessions nobody can identify, its "Session 1/2/3" legend names different animals every time the script runs, and the curves cannot be regenerated. Confirmed by running it twice: the first pass drew m2/m8/m14 (200/60/100 trials), the second drew m10/m13/m8 (100/100/60).
+**Why:** Found while building the S1 batch-variance panel. The random sample is a fine exploratory check ("does convergence hold for arbitrary sessions") and is not fine for a figure in the paper.
+**Next:** The new S1 panel pins the set to `[4 9 11]` and seeds the draws, so it is self-contained. The WORKING view and the `spont_variance.pdf` the manuscript still includes are untouched and still unreproducible - decide whether to retire that file with the rest of the stitched supplement, or fix line 146 too.
+
+### 2026-10-05 - Batch-variance panel: min-max normalisation was showing noise as signal
+**Changed/Found:** New self-contained S1 panel `supp_s1_batch_variance.pdf` (3.21 x 3.10 cm) in `step_response.m`. **What the bootstrap actually says:** mean total variance is FLAT in batch size - it moves 1.0-2.0% of its own mean from 10 to 100 trials across the three sessions, i.e. the estimate is unbiased - while its SEM falls roughly as 1/sqrt(n) (session 1: 1.74% -> 0.38% of the mean, x0.22 over n=10->100, against the 1/sqrt(10)=0.32 ideal; sessions 2 and 3 x0.11 over 10->90). The convergence claim lives entirely in the ERROR BARS. The working view min-max normalises each session's curve, mapping its own min to 0 and max to 1, which **stretches that ~1% ripple across the full panel height** - what the reader sees is bootstrap noise at full amplitude, reading as "variance wanders with batch size", the opposite of the finding. The panel now normalises by each session's own MEAN: every session sits at 1.0 and the shrinking error bars are the visible result. Also DROPS degenerate points: the draw is `randperm(n_trials, min(n, n_trials))`, so once the batch size reaches a session's trial count every repeat returns the same full set and the SEM is exactly 0 by construction - those would have plotted as perfect convergence.
+**Why:** User, 2026-10-05: "need to add batch variance figure to S1".
+**Next:** Caption must say the y axis is per-session normalised and that the claim is the error bars, not the curve. If a stronger version is wanted, all 15 sessions pooled (normalised then averaged) would be one curve instead of three and fully reproducible.
+
+### 2026-10-05 - OL variance-evolution panel redrawn for S1
+**Changed/Found:** New `supp_s1_ol_variance_evolution.pdf` (3.60 x 2.93 cm) in `controller-analysis/variance_mse.m`, a redraw of `onset_variance_slope.pdf`. In the working version the three slope annotations were all placed at the SAME y at the bottom of the axes; at 6 pt in a 3.4 cm panel the three "slope=%+.2f" strings overlapped into `slope=-0.2lope=-0.5lope=+0.21` - unreadable, and the only quantitative content the figure has. Each slope value now sits ON its own dashed fit line inside its own epoch, the epochs are named pre / stim / post, the single-entry "OL mean" legend is dropped, and the two-line rotated y label is shortened. Values unchanged: pre -0.21, stim -0.52, post +0.21. Nothing is recomputed - same traces, fits and slopes.
+**Why:** User, 2026-10-05: "the session OL open loop variance eveolution figure (the onset variance slope figure here: paper/images/figure2, but redrawn properly)".
+**Next:** none.
+
+### 2026-10-05 - A locked output file no longer aborts a producer
+**Changed/Found:** `utils/paperExport.m` wraps the export in try/catch: a permission error on the destination now warns (`paperExport:locked`, naming the file and saying its copy on disk is STALE) and the producer continues. Previously it threw, and one PDF left open in Illustrator killed the whole script - `onset_variance_slope.pdf` being open aborted `variance_mse.m` before it reached the new S1 panel, which is nowhere near that file.
+**Why:** `paper_final_mirror` already degraded this to a warning; the working-copy export did not, so the two halves of the same operation disagreed.
+**Next:** `paper/images/figure2/onset_variance_slope.pdf` is currently stale (locked through every run today). It is superseded by the S1 panel anyway, but re-run `variance_mse.m` once it is closed if the working copy matters.
+
 ### 2026-10-05 - Ticked off all grant action items in MEETINGS.md
 **Changed/Found:** `MEETINGS.md` — 15 grant items marked DONE: 09-24.1/.2/.3/.6, 09-23.2/.3/.4/.6, Nick's 09-24.4/.5 + 09-23.5, and older carried 09-15.8, 08-24.2, 08-24.3, 08-10.6.
 **Why:** User confirmed the Azadeh grant is done ("grant items are all done").
