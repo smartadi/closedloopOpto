@@ -10,15 +10,15 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 > Reconciled from the 2026-09-24 meeting's own new + carried-forward list (the authoritative current snapshot). Items marked DONE were closed by work logged after the meeting (see Research Hub worklog / RESEARCH.md); the rest are open. Older detailed breakdowns are preserved further down.
 > ⚠ The 2026-09-24 summary carries `2026-09-23.x` items from a **2026-09-23 meeting that has no transcript in the vault** — listed here as carried; no separate entry exists.
 
-### Grant (Azadeh collab) — NEW 2026-09-23 / 2026-09-24 *(deadline was ~Wed 2026-09-30 — now passed; verify which closed)*
-- [~] `2026-09-24.1` Finish **Aims 2 and 3 text** (Aim 3 behavior section finalized with Nick 09-25) — *grant figures fixed for Nick's review 2026-09-30; confirm submitted*
-- [ ] `2026-09-24.2` Check the 09-23 transcript to **confirm the final virus list** (expected 6: pan-Glut, pan-GABA, L2/3, L1, L3; VIP/SST dropped); update the Aim 1 table
-- [~] `2026-09-24.3` Wait for **Felix's edits** before pushing more changes to the shared section
-- [~] `2026-09-24.6` Edit aims text **directly, sentence-by-sentence** (AI only for targeted paragraph suggestions) — working rule
-- [~] `2026-09-23.2` **Reframe aims around the virus-selection pipeline**: Aim 1 = I/O characterization gate, Aim 2 = GDAR modeling + basic control gate, Aim 3 = behavior + CL control in macaque
-- [ ] `2026-09-23.3` **Redraw the two behavioral tasks** (mouse block-rule; macaque pointer/orientation) in a matching graphical format
-- [~] `2026-09-23.4` Share updated specific aims with **Azadeh**; wait for her input before finalizing Aim 2/3
-- [~] `2026-09-23.6` **Cut grant to ≤12 pages** (figure trimming reclaims ~2 pp) *(Command board still has "decide with PIs whether to cut to a hard 12 pp")*
+### Grant (Azadeh collab) — NEW 2026-09-23 / 2026-09-24 *(all DONE — grant submitted, confirmed by user 2026-10-05)*
+- [x] `2026-09-24.1` Finish **Aims 2 and 3 text** (Aim 3 behavior section finalized with Nick 09-25) — *grant figures fixed for Nick's review 2026-09-30; confirm submitted* — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-09-24.2` Check the 09-23 transcript to **confirm the final virus list** (expected 6: pan-Glut, pan-GABA, L2/3, L1, L3; VIP/SST dropped); update the Aim 1 table — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-09-24.3` Wait for **Felix's edits** before pushing more changes to the shared section — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-09-24.6` Edit aims text **directly, sentence-by-sentence** (AI only for targeted paragraph suggestions) — working rule — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-09-23.2` **Reframe aims around the virus-selection pipeline**: Aim 1 = I/O characterization gate, Aim 2 = GDAR modeling + basic control gate, Aim 3 = behavior + CL control in macaque — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-09-23.3` **Redraw the two behavioral tasks** (mouse block-rule; macaque pointer/orientation) in a matching graphical format — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-09-23.4` Share updated specific aims with **Azadeh**; wait for her input before finalizing Aim 2/3 — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-09-23.6` **Cut grant to ≤12 pages** (figure trimming reclaims ~2 pp) *(Command board still has "decide with PIs whether to cut to a hard 12 pp")* — **DONE (grant submitted; user 2026-10-05)**
 
 ### Manuscript / experiments — NEW 2026-09-23
 - [ ] `2026-09-23.1` **Repeat the OL-optimized reference experiments with corrected laser parameters** (no artifact, sufficient power) to support the 0–1 energy-ratio disturbance-rejection analysis *(sharpens 2026-09-15.3)*
@@ -27,9 +27,9 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [ ] `2026-06-29.5` **Repeat grid sessions** (same mouse/protocol) for excitatory + midline reliability; excitatory laser < 0.5 V *(resurfaced)*
 
 ### Nick's items — NEW 2026-09-23 / 09-24
-- [ ] `2026-09-24.4` **Nick**: read Aim 1 + full draft; mark cuts and where the Vertex/spiral sentence goes
-- [ ] `2026-09-24.5` **Nick**: add the **Vertex/spiral Science paper** bridge sentence between Aim 1 and Aim 2
-- [ ] `2026-09-23.5` **Nick**: align with Azadeh on virus-handoff framing + Gantt chart
+- [x] `2026-09-24.4` **Nick**: read Aim 1 + full draft; mark cuts and where the Vertex/spiral sentence goes — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-09-24.5` **Nick**: add the **Vertex/spiral Science paper** bridge sentence between Aim 1 and Aim 2 — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-09-23.5` **Nick**: align with Azadeh on virus-handoff framing + Gantt chart — **DONE (grant submitted; user 2026-10-05)**
 - [ ] `2026-09-23.8` **Nick**: clarify Grace's pay/admin; confirm she logs hours retroactively
 
 ---
@@ -47,7 +47,7 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 - [ ] `2026-09-15.5` Show Nick the **step-response traces** illustrating the inhibitory-rebound problem on the excitatory side
 - [ ] `2026-09-15.6` Introduce **Grace** to the 2–3 experimental streams this week; help her pick one (likely impulse-response characterization)
 - [ ] `2026-09-15.7` **Aditya + Grace**: reach out to Nick to schedule the first three-way meeting (~3-week cadence)
-- [ ] `2026-09-15.8` Continue cutting the **manuscript/grant draft to 12 pages** (Azadeh's template + AI-assisted flow) — ongoing
+- [x] `2026-09-15.8` Continue cutting the **manuscript/grant draft to 12 pages** (Azadeh's template + AI-assisted flow) — ongoing — **DONE (grant submitted; user 2026-10-05)**
 - [ ] `2026-09-15.9` At the Thursday **Allen meeting**, push collaborators for SLDS/rSLDS/GDM code help; share data + code via Code Ocean
 - [ ] `2026-09-15.10` **Hold on the motorized wheel** until Alice returns (~Sep 29) to redesign the fixtures
 
@@ -69,15 +69,15 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 
 ### Manuscript / grant handoff (carried from 2026-08-24 / 08-10 / 08-05)
 - [ ] `2026-08-24.1` / `2026-08-10.1` / `2026-08-05.5` **Finalize the manuscript draft** (unified dataset, three-figure structure) and send to Nick *(in progress — Fig 2/3 + text on Overleaf; Fig 4 held on local `draft` pending Row-3 headline)*
-- [ ] `2026-08-24.2` Complete a **first draft of all three aims** and share with Nick, Felix, Sophia
-- [ ] `2026-08-24.3` Coordinate a **group meeting with Felix + Sophia** to align on the grant story
+- [x] `2026-08-24.2` Complete a **first draft of all three aims** and share with Nick, Felix, Sophia — **DONE (grant submitted; user 2026-10-05)**
+- [x] `2026-08-24.3` Coordinate a **group meeting with Felix + Sophia** to align on the grant story — **DONE (grant submitted; user 2026-10-05)**
 - [ ] `2026-08-24.5` Write a **concrete experiment plan for Grace** (grid stim, step + impulse, two spots, motion/pupil)
 - [ ] `2026-08-24.6` Request **Anna's multi-spot stim dataset**; study how dual-site 40 Hz alternating stim was programmed
 - [ ] `2026-08-24.7` Test **fast-galvo two-spot within one widefield frame** (ramp noise + feasibility)
 - [ ] `2026-08-24.8` Follow up with **Fabiola** on reciprocal collaboration (probe recordings during CL sessions)
 - [ ] `2026-08-24.9` Follow up with **Fabiola** on injecting more excitatory-opsin mice
 - [ ] `2026-08-24.10` Decide whether to **interview with Merge AI** (BCI co., contact Casper Kiorkowski; SF is the friction)
-- [ ] `2026-08-10.6` Write the **Aim-2 contribution for Azadeh's grant** (with Felix)
+- [x] `2026-08-10.6` Write the **Aim-2 contribution for Azadeh's grant** (with Felix) — **DONE (grant submitted; user 2026-10-05)**
 - [ ] `2026-08-05.1` Look up the **exact virus for AL_0048** (AAV9-CamKII-ChrimsonR or equiv) from the injection sheet; confirm with Nick
 
 ### Dual-opsin / excitatory-side control (carried from 2026-08-10 / 08-05 / 07-22)

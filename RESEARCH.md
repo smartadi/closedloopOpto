@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 - Ticked off all grant action items in MEETINGS.md
+**Changed/Found:** `MEETINGS.md` — 15 grant items marked DONE: 09-24.1/.2/.3/.6, 09-23.2/.3/.4/.6, Nick's 09-24.4/.5 + 09-23.5, and older carried 09-15.8, 08-24.2, 08-24.3, 08-10.6.
+**Why:** User confirmed the Azadeh grant is done ("grant items are all done").
+**Next:** The Command board's Grant (R01) lane still has 3 open lines; that's the user's to tick.
+
 ### 2026-10-05 - S6 window widened to show the stimulus release; S7 bars take the state colours
 **Changed/Found:** `controller-analysis/f4_state_exemplars_supp.m` - strip display window is now **t = -2 to +5 s**, i.e. 2 s either side of the 0-3 s stimulus. The old -2 to +3 ended EXACTLY at stimulus offset, so the strips showed the controller holding the reference and then simply stopped; the release back toward baseline was never on screen. The buffer carries 6 s post-onset, so +5 is real data. This is a DISPLAY window only - the state-measure window stays the locked [-2,+3) s and the exemplar picking is untouched. The standalone scale panel is gone; the 1 s x 5% corner bar is now drawn on **S11's initial-deviation cell**, below the data box with clipping off. `controller-analysis/f4_error_decomp.m` - the bare unique-R^2 trio now passes `FCfac(cols,:)`, so each bar carries its **state exemplar colour** (init-dev blue, motion orange, rel 2-4 Hz green, abs delta purple); `FCfac` moved above the mode loop.
 **Why:** User, 2026-10-05: "put the short corner axis on s11 initial dev plot so it seems like it carries over to others, show stim -2 to stim +2 for al plots, for error comp plots re draw with the corrsponding state exemlar colors". ASSUMPTION STATED: "stim -2 to stim +2" read as 2 s either side of the stimulus **period**, not of its onset - onset-relative would have cut the 3 s stimulus in half, and the defect being fixed is precisely that the old window stopped at offset.
