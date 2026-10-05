@@ -5,13 +5,43 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 
 ---
 
-## Open Action Items — as of 2026-09-15
+## Open Action Items — as of 2026-09-24
 
-> Reconciled from the 2026-09-15 meeting's own new + carried-forward list (the authoritative current snapshot). Items marked DONE were closed by work logged after the meeting (see Research Hub worklog / RESEARCH.md); the rest are open. Older detailed breakdowns are preserved further down.
+> Reconciled from the 2026-09-24 meeting's own new + carried-forward list (the authoritative current snapshot). Items marked DONE were closed by work logged after the meeting (see Research Hub worklog / RESEARCH.md); the rest are open. Older detailed breakdowns are preserved further down.
+> ⚠ The 2026-09-24 summary carries `2026-09-23.x` items from a **2026-09-23 meeting that has no transcript in the vault** — listed here as carried; no separate entry exists.
+
+### Grant (Azadeh collab) — NEW 2026-09-23 / 2026-09-24 *(deadline was ~Wed 2026-09-30 — now passed; verify which closed)*
+- [~] `2026-09-24.1` Finish **Aims 2 and 3 text** (Aim 3 behavior section finalized with Nick 09-25) — *grant figures fixed for Nick's review 2026-09-30; confirm submitted*
+- [ ] `2026-09-24.2` Check the 09-23 transcript to **confirm the final virus list** (expected 6: pan-Glut, pan-GABA, L2/3, L1, L3; VIP/SST dropped); update the Aim 1 table
+- [~] `2026-09-24.3` Wait for **Felix's edits** before pushing more changes to the shared section
+- [~] `2026-09-24.6` Edit aims text **directly, sentence-by-sentence** (AI only for targeted paragraph suggestions) — working rule
+- [~] `2026-09-23.2` **Reframe aims around the virus-selection pipeline**: Aim 1 = I/O characterization gate, Aim 2 = GDAR modeling + basic control gate, Aim 3 = behavior + CL control in macaque
+- [ ] `2026-09-23.3` **Redraw the two behavioral tasks** (mouse block-rule; macaque pointer/orientation) in a matching graphical format
+- [~] `2026-09-23.4` Share updated specific aims with **Azadeh**; wait for her input before finalizing Aim 2/3
+- [~] `2026-09-23.6` **Cut grant to ≤12 pages** (figure trimming reclaims ~2 pp) *(Command board still has "decide with PIs whether to cut to a hard 12 pp")*
+
+### Manuscript / experiments — NEW 2026-09-23
+- [ ] `2026-09-23.1` **Repeat the OL-optimized reference experiments with corrected laser parameters** (no artifact, sufficient power) to support the 0–1 energy-ratio disturbance-rejection analysis *(sharpens 2026-09-15.3)*
+- [ ] `2026-09-23.7` **Meet Grace**; introduce her to the rig, start onboarding to 2–3 streams *(same as 2026-09-15.6)*
+- [ ] `2026-08-10.4` Draft an experiment plan for **real-time slow-oscillation phase detection + sine feedforward cancellation** to push state toward desynchrony *(resurfaced in the 09-24 carry list)*
+- [ ] `2026-06-29.5` **Repeat grid sessions** (same mouse/protocol) for excitatory + midline reliability; excitatory laser < 0.5 V *(resurfaced)*
+
+### Nick's items — NEW 2026-09-23 / 09-24
+- [ ] `2026-09-24.4` **Nick**: read Aim 1 + full draft; mark cuts and where the Vertex/spiral sentence goes
+- [ ] `2026-09-24.5` **Nick**: add the **Vertex/spiral Science paper** bridge sentence between Aim 1 and Aim 2
+- [ ] `2026-09-23.5` **Nick**: align with Azadeh on virus-handoff framing + Gantt chart
+- [ ] `2026-09-23.8` **Nick**: clarify Grace's pay/admin; confirm she logs hours retroactively
+
+---
+
+## Open Action Items — 2026-09-15 snapshot (still carried unless noted)
+
+> Reconciled from the 2026-09-15 meeting's own new + carried-forward list. Items marked DONE were closed by work logged after the meeting (see Research Hub worklog / RESEARCH.md); the rest are open. Older detailed breakdowns are preserved further down.
 
 ### Manuscript — critical path to bioRxiv (NEW 2026-09-15)
 - [ ] `2026-09-15.1` **Run Ziyu's predictor model on the contra (CL) dataset** and add the resulting **σ operating point** to the MPC performance-vs-σ curve *(THE decision item — supersedes 2026-09-11.4; ARIMA + patch-LSTM σ from literature already placed on the curve)*
 - [x] `2026-09-15.2` Finalize the statistical section; **session-level Wilcoxon Q1/Q4 tests done for all three claims** (initial-deviation, motion, rel-delta) and all three hold — **DONE**, bring the figures to next meeting for review
+  - ⚠ *2026-10-02 re-run after the ΔF/F fix: the rel-δ (2–4 Hz) controllability claim weakened (Hub worklog 2026-10-02) — re-check before showing Nick*
 - [ ] `2026-09-15.3` **Add the open-loop-optimized reference trace** to the disturbance-rejection analysis, and run **two additional control experiments** to support it *(merges 2026-07-22.3)*
 - [ ] `2026-09-15.4` Chat with **Fabiola + Anna Lee** about additional excitatory-opsin mice (PHP-serotype retro-orbital or equiv); bring a concrete acquisition plan to next meeting
 - [ ] `2026-09-15.5` Show Nick the **step-response traces** illustrating the inhibitory-rebound problem on the excitatory side
@@ -179,6 +209,23 @@ Add a new entry here after each meeting. Parse with: give Claude the transcript 
 ---
 
 ## Meeting Entries
+
+---
+
+### 2026-09-24
+**Source:** `C:\Users\aditya\OneDrive\Notes\Meetings\Adick meetings\2026-09-24_Aditya_Summary.md` *(also carries items from an untranscribed 2026-09-23 meeting)*
+
+**Overview:** Grant-only sprint (Azadeh collaboration, deadline ~Wed 2026-09-30). Specific-aims text reviewed live: PI-vs-MPC "reactive" wording replaced with a **"feedback plus feedforward"** framing. **Vertex** (recent spiral-activity Science paper) to be cited at the Aim 1 → Aim 2 transition, before the GDAR/MPC block (Nick adds the sentence). Aim 1 virus list to be confirmed as **six** (VIP/SST dropped). AI-generated prose judged too formulaic → **edit directly, piece by piece**, no more full AI revision passes. Division of labor: Aditya writes Aims 2 + 3; Nick reads Aim 1 + full draft; Aim 3 behavior (macaque) finalized the next day. Wait for Felix's edits on the shared section. No manuscript decisions this meeting; the 09-23 carry list adds **repeat the OL-optimized reference experiments with a clean laser**.
+
+**Key decisions:**
+- Aims framed as a **virus-selection pipeline**: Aim 1 I/O characterization gate → Aim 2 GDAR modeling + basic control gate → Aim 3 behavior + CL control in macaque
+- "Feedback plus feedforward" terminology for PI vs MPC
+- VIP/SST dropped from the Aim 1 virus list
+- Direct sentence-level editing over AI full-pass rewrites
+
+**AI analysis flags (from transcript):**
+- **Virus-list ambiguity (6 vs 8) on a hard deadline** — confirm from the 09-23 transcript before Nick's read-through
+- **Deadline buffer thin** — Azadeh alignment still pending, Aim 3 behavior deferred a day
 
 ---
 

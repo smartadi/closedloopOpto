@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 - Parsed the 2026-09-24 Nick meeting into MEETINGS.md
+**Changed/Found:** `MEETINGS.md` — new `### 2026-09-24` entry + snapshot refreshed to "as of 2026-09-24" (grant section, new 09-23 manuscript items, Nick's items); old 09-15 snapshot kept below it. The meeting was grant-only (Azadeh aims sprint). It carries `2026-09-23.x` items from a 09-23 meeting with **no transcript in the vault**. Flagged on `2026-09-15.2` that the 2026-10-02 re-run weakened the rel-δ controllability claim, so the "all three hold" stats are not what to show Nick as-is.
+**Why:** User asked for the open work from the Nick meetings; standing rule is to parse every transcript newer than the last MEETINGS entry (was 09-15).
+**Next:** Confirm which grant items closed at the ~09-30 deadline; find/record the 09-23 meeting if it exists.
+
 ### 2026-10-05 - Hand-drawn cortex mask; S1 spatial panels sized to the 8x5 cm budget
 **Changed/Found:** `ae.brainMask` is **not a cortex outline** - on AL_0033 2025-01-29 it is TRUE over **75% of the frame** (70.2 mm2), including the dark surround at the top corners, while EXCLUDING a large block of posterior cortex. Every spatial map published through it showed diffuse signal outside the brain and dropped real cortex. An automatic threshold was tried and REJECTED: it split the hemispheres down the sagittal sinus (dark vessel falls below threshold) and trimmed the dim posterior taper - both anatomical calls, not intensity calls. The user drew the mask by hand instead; cached at `impulse-analysis/data/cortex_mask_AL_0033_2025-01-29_e1.mat`, **189374 px / 56.7 mm2 / 60% of frame**. It is applied as a DISPLAY mask after unpacking, because `imp.resp_map` is indexed by `bmask` and that indexing cannot change. Panels re-exported for the new S1 (spatial spread + spont variance + stationarity, under 8 cm x 5 cm): five of nine amplitudes at **1.13 cm**, standalone scalebar 0.64 x 0.28, colourbar 1.31 x 1.52, area narrowed 4.2 -> 2.8 cm canvas (**2.93 x 3.32**).
 **Why:** User: "the brain images need a mask to be drawn they are covering a lot of area outside the cortex"; and the assembled figure must come in under 8 x 5 cm.
