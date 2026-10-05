@@ -182,3 +182,47 @@ supplementary/supp_tune_node_07.pdf
 supplementary/supp_tune_node_08.pdf
 supplementary/supp_tune_node_09.pdf
 supplementary/supp_tune_node_10.pdf
+
+[supp_f4]
+# S6 + S7 COMBINED into one supplementary figure (user, 2026-10-05: "figure 11, 12
+# can be put together but we need smaller panels and better assembly").
+# Sources: controller-analysis/f4_state_exemplars_supp.m (strips + scale bar),
+#          controller-analysis/f4_error_decomp.m (unique-R^2 trio + legend).
+# Run load_sessions.m first, then both with PAPER_FINAL on.
+#
+# EXEMPLARS -- one strip PER SESSION, not per cell. The four cells in a row share a
+# session, a y-scale and a scale bar; splitting them would make the assembler redo by
+# hand an alignment the figure already has, 44 times, and the session is the axis
+# along which you would actually reorder or drop something. 11 strips at 11.2 x 0.71 cm
+# stack to ~11.2 x 7.8 cm -- the old contact sheet was 16 x 29.7 cm, a full page before
+# S7 was placed.
+# Strips carry NO column titles and NO scale bar: content on the first strip only would
+# change its crop and the stack would stop aligning. Set the four state labels once
+# above the stack (colours are also the key: init-dev blue 0.20/0.40/0.75, motion
+# orange 0.75/0.40/0.10, rel 2-4 Hz green 0.35/0.55/0.30, abs delta purple
+# 0.55/0.25/0.60) and place supp_f4_exemplar_scale.pdf once.
+# Strips are labelled S01..S11 -- no internal mouse names or dates on any panel face.
+# The producer prints the S-number -> session mapping each run; caption from that.
+#
+# UNIQUE R^2 trio -- bare (no title text inside, no legend, no y-label) so the three
+# crop comparably; the key is supp_f4_unique_legend.pdf, placed once. Panel widths
+# differ (4.7 vs 4.0 cm) because 'rel + abs' has four factors and the other two have
+# three: the bar width is constant, which is the thing that must match.
+# The wide titled f4_decomp_unique_{both,rel,abs}.pdf are still produced and still what
+# the current LaTeX includes; retire them once this assembly replaces fig:f4_unique.
+supplementary/supp_f4_exemplar_scale.pdf
+supplementary/supp_f4_unique_both.pdf
+supplementary/supp_f4_unique_rel.pdf
+supplementary/supp_f4_unique_abs.pdf
+supplementary/supp_f4_unique_legend.pdf
+supplementary/supp_f4_exemplar_01.pdf
+supplementary/supp_f4_exemplar_02.pdf
+supplementary/supp_f4_exemplar_03.pdf
+supplementary/supp_f4_exemplar_04.pdf
+supplementary/supp_f4_exemplar_05.pdf
+supplementary/supp_f4_exemplar_06.pdf
+supplementary/supp_f4_exemplar_07.pdf
+supplementary/supp_f4_exemplar_08.pdf
+supplementary/supp_f4_exemplar_09.pdf
+supplementary/supp_f4_exemplar_10.pdf
+supplementary/supp_f4_exemplar_11.pdf

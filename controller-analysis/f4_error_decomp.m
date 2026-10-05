@@ -135,6 +135,18 @@ for mi=1:numel(modes)
         sprintf('Unique R^2 [\\delta: %s] (n=%d, %d sess)',mo,n,nSok), PS, ...
         fullfile(outsupp,sprintf('f4_decomp_unique_%s.pdf',mo)), ...
         fullfile(outview,sprintf('f4_decomp_unique_%s.png',mo)));
+    % SUPPLEMENTARY PANEL (2026-10-05): the same numbers, bare and narrow, for the
+    % combined S6+S7 figure assembled in Illustrator. The wide titled version above
+    % is kept because the current LaTeX still includes it; retire it once the
+    % assembly replaces fig:f4_unique.
+    % Width scales with the factor count so the BARS are the same size in all three
+    % panels -- the panels themselves differ in width because 'both' has four factors
+    % and the other two have three, which is the content, not an inconsistency.
+    modeTag = {'rel + abs', 'rel only', 'abs only'};
+    draw_grouped(Up, Us(:,:,okS), fl, {col_e,col_l}, win_lbl, 'unique R^2', '', PS, ...
+        fullfile(outsupp,sprintf('supp_f4_unique_%s.pdf',mo)), ...
+        fullfile(outview,sprintf('supp_f4_unique_%s.png',mo)), [], 1.05*nF+1.1, ...
+        struct('bare',true,'tag',modeTag{mi},'hCm',2.8));
     draw_grouped(Cp, Cs(:,:,okS), grpL, {col_e,col_l}, win_lbl, 'combined R^2', ...
         sprintf('Combined R^2 [\\delta: %s]',mo), PS, ...
         fullfile(outsupp,sprintf('f4_decomp_combined_%s.pdf',mo)), ...
@@ -172,17 +184,41 @@ DEC.sep=struct('Up',Usep,'Us',UsepS,'okS',okSsep,'fac',{fac_lbl},'nSok',nSsep);
 
 save(fullfile(root,'controller-analysis','data','f4_error_decomp.mat'), ...
     'DEC','usess','win_lbl','n','nS','minTr','fac_lbl');
+% ---- standalone legend for the bare supplementary trio ----------------------
+% The three panels above carry no legend so their crops stay comparable; the key is
+% exported once and placed once. Grey swatches, because in these panels the bar
+% COLOUR encodes the factor (x axis) and only the light/dark split encodes the window.
+fLg = jnFig(3.0, 0.9); axLg = axes(fLg); hold(axLg,'on'); axis(axLg,'off');
+h1 = patch(axLg, nan, nan, [.72 .72 .72], 'EdgeColor','none');
+h2 = patch(axLg, nan, nan, [.35 .35 .35], 'EdgeColor','none');
+lgS = legend([h1 h2], win_lbl, 'FontSize', PS.fs, 'Box','off', 'Location','west');
+lgS.ItemTokenSize = [6 6];
+paperExport(fLg, fullfile(outsupp,'supp_f4_unique_legend.pdf'));
+fprintf('[f4_error_decomp] bare S7 trio + legend -> %s\n', outsupp);
+
 fprintf('\n[f4_error_decomp] wrote unique+combined panels for %d delta modes -> %s\n', numel(modes), outfig);
 
 %% ---- helpers ----
-function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, faceRGB, wCm)
+function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, faceRGB, wCm, opt)
     % P: nItem x 2(win) pooled ; Ps: nItem x 2 x nSess per-session
     % faceRGB (optional): nItem x 3 base colours -> 0-1 s bar = lighter, 1-3 s = darker.
     % wCm (optional): figure width (cm).
+    % opt (optional): .bare   - no title, no legend, no ylabel (supplementary panels
+    %                           that are assembled side by side: three copies of the
+    %                           same legend and y-label is noise, and a legend on one
+    %                           panel only would change that panel's crop so the row
+    %                           would no longer align. Set them once in Illustrator;
+    %                           supp_f4_unique_legend.pdf carries the key.)
+    %                 .tag    - short string burned in at the top-left, so a bare
+    %                           panel can still be told from its siblings.
+    %                 .hCm    - figure height (cm).
     if nargin<11, faceRGB=[]; end
+    if nargin<13 || isempty(opt), opt=struct(); end
+    bare = isfield(opt,'bare') && opt.bare;
     nI=size(P,1);
     if nargin<12 || isempty(wCm), wCm=max(6,1.7*nI+2); end
-    f=jnFig(wCm,3.3); ax=axes(f); hold(ax,'on');   % jn* v2 sizing
+    hCm=3.3; if isfield(opt,'hCm') && ~isempty(opt.hCm), hCm=opt.hCm; end
+    f=jnFig(wCm,hCm); ax=axes(f); hold(ax,'on');   % jn* v2 sizing
     yline(ax,0,'-','Color',[.6 .6 .6],'LineWidth',0.5,'HandleVisibility','off');
     hb=bar(ax,P,'grouped','EdgeColor','none');
     if ~isempty(faceRGB)
@@ -205,7 +241,16 @@ function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, 
     end
     set(ax,'XTick',1:nI,'XTickLabel',xlbl,'Box','off','TickDir','out', ...
         'FontSize',PS.fs,'FontWeight',PS.fw,'TickLabelInterpreter','tex'); xtickangle(ax,18);
-    ylabel(ax,ylab,'FontSize',PS.fs,'FontWeight',PS.fw);
+    if ~bare, ylabel(ax,ylab,'FontSize',PS.fs,'FontWeight',PS.fw); end
+    if bare
+        if isfield(opt,'tag') && ~isempty(opt.tag)
+            % A SHORT TITLE, not text inside the axes. Burned in at the top-left it
+            % landed on the y-axis and the first bar. All three panels get one, so
+            % equal-height titles do not disturb their relative crops.
+            title(ax,opt.tag,'FontSize',PS.fs,'FontWeight',PS.fw);
+        end
+        hold(ax,'off'); jnAxes(ax); paperExport(f,pdfpath); paperExport(f,pngpath); return
+    end
     if ~isempty(faceRGB)   % neutral light/dark swatches for the window legend (bars are per-factor)
         h1=patch(ax,nan,nan,[.72 .72 .72],'EdgeColor','none'); h2=patch(ax,nan,nan,[.35 .35 .35],'EdgeColor','none');
         lg=legend([h1 h2],wlbl,'FontSize',PS.fs,'Box','off','Location','northeast');

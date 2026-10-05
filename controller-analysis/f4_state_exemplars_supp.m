@@ -92,6 +92,93 @@ exportgraphics(fig,fullfile(outsupp,'f4_exemplars_sessions.pdf'),'ContentType','
 exportgraphics(fig,fullfile(outview,'f4_exemplars_sessions.png'),'Resolution',180);
 fprintf('[f4_exemplars_supp] wrote %d-session exemplar grid -> %s\n',nS,outsupp);
 
+% ================== SUPPLEMENTARY PANELS: ONE STRIP PER SESSION ==============
+% S6 and S7 become ONE supplementary figure assembled in Illustrator (user,
+% 2026-10-05: "figure 11, 12 can be put together but we need smaller panels and
+% better assembly"). The grid above stays as the working contact sheet; THESE are
+% the files that get pulled.
+%
+% WHY A STRIP PER SESSION, NOT A PANEL PER CELL. The four cells in a row share a
+% session, a y-scale and a scale bar; splitting them would make the assembler
+% re-establish by hand an alignment the figure already has, 44 times. The session
+% is also the axis along which you would actually reorder or drop something. So the
+% unit is the row: 11 files, stacked.
+%
+% SIZE. The contact sheet is 16 x 29.7 cm -- a full page before S7 is placed. At
+% 1.3 cm per strip the stack is 12 x 14.3 cm, leaving room for the S7 trio beneath.
+%
+% NO TITLES ON ANY STRIP. Putting the four state labels on the first strip alone
+% would make its crop taller than the other ten and the stack would not align (the
+% same trap the S3 node panels hit). The column labels are set once, in Illustrator,
+% above the stack; the traces are colour-coded by state as well, so the mapping is
+% recoverable from the panel itself. The console prints label + colour below.
+%
+% NO INTERNAL MOUSE NAMES (user, 2026-10-05). The strips are labelled "Session k",
+% burned in at the top-left of the first cell so it cannot change the crop. The
+% k -> mouse/session mapping is printed, for the caption.
+if ~exist('F4_SUPP_STRIPS','var') || isempty(F4_SUPP_STRIPS), F4_SUPP_STRIPS = true; end
+if F4_SUPP_STRIPS
+    fprintf('\n[f4_exemplars_supp] --- supplementary strips ---\n');
+    fprintf('  column order / colour:\n');
+    for j = 1:4
+        fprintf('    %d  %-26s rgb(%.2f %.2f %.2f)\n', j, lbl{j}, col(j,:));
+    end
+    % Pad the y-limits 4%. The tight crop was landing on 18 pt for some strips and
+    % 19 pt for others -- a 0.35 mm jitter that accumulates down an 11-strip stack --
+    % because in the strips whose trace runs to the clip boundary the stroke reaches
+    % the box edge and the content bbox rounds up a point. A little headroom keeps
+    % every strip's extent set by the stimulus patch alone, so all eleven crop alike.
+    % The scale panel below uses the SAME limits, so 5% stays 5%.
+    ylS = yl + [-1 1]*0.04*diff(yl);
+    for r = 1:nS
+        fS = paperFig(12, 1.3);
+        tS = tiledlayout(fS, 1, 4, 'TileSpacing','compact', 'Padding','compact');
+        dk = segs{r}; ref = -5; pk = picks{r};
+        for j = 1:4
+            ax = nexttile(tS); hold(ax,'on');
+            [eb, ec] = pre_spec_buffer(dk, 'wc');
+            seg = eb(pk(j), ec-spec_pre_s*Fs : ec+spec_post_s*Fs);
+            patch(ax, [0 3 3 0], [ylS(1) ylS(1) ylS(2) ylS(2)], [.9 .9 .9], ...
+                'EdgeColor','none', 'FaceAlpha',.5, 'HandleVisibility','off');
+            plot(ax, tv([1 end]), [ref ref], '--', 'Color',[.3 .3 .3], ...
+                'LineWidth',PS.lw_ref, 'HandleVisibility','off');
+            xline(ax, 0, ':', 'Color',[.6 .6 .6], 'HandleVisibility','off');
+            plot(ax, tv, seg, '-', 'Color', col(j,:), 'LineWidth', PS.lw_mean);
+            xlim(ax, [-spec_pre_s spec_post_s]); ylim(ax, ylS);
+            axis(ax, 'off');
+            if j == 1
+                % Label OUTSIDE the axes, on the left. Inside, at 1.3 cm tall, it
+                % printed straight across the trace. Every strip gets one, so the
+                % crops stay equal -- the S3 node panels showed what happens when
+                % only the first panel of a stack carries extra content. S%02d
+                % rather than "Session %d" so the string width is constant too.
+                text(ax, -0.04, 0.5, sprintf('S%02d', r), 'Units','normalized', ...
+                    'VerticalAlignment','middle', 'HorizontalAlignment','right', ...
+                    'FontSize', PS.fs, 'FontWeight', PS.fw);
+            end
+        end
+        paperExport(fS, fullfile(outsupp, sprintf('supp_f4_exemplar_%02d.pdf', r)));
+        fprintf('  S%02d  <-  %s\n', r, sessMn{r});
+    end
+
+    % ---- standalone scale bar ----------------------------------------------
+    % Drawn once instead of on every strip. In-strip it collided with the trace:
+    % at 1.3 cm the "5%" and "1 s" labels sit exactly where the first cell's data
+    % runs, and moving them inside the band would have put them on the stimulus
+    % patch instead. Exported on an axes of the SAME height and the SAME y-limits
+    % as a strip cell, so the bar is physically correct when placed at 100%.
+    fSc = paperFig(3, 1.3);
+    axSc = axes(fSc); %#ok<LAXES>
+    xlim(axSc, [-spec_pre_s spec_post_s]); ylim(axSc, ylS); axis(axSc, 'off');
+    shortCornerAxes_plot(axSc, 'Corner','bl', 'XLength',1, 'YLength',5, ...
+        'XLabel','1 s', 'YLabel','5%', 'LineWidth',PS.sca_lw, ...
+        'LabelGap',PS.sca_gap, 'FontSize',PS.fs, 'FontWeight',PS.fw);
+    paperExport(fSc, fullfile(outsupp, 'supp_f4_exemplar_scale.pdf'));
+
+    fprintf('[f4_exemplars_supp] %d session strips + scale bar -> %s\n', nS, outsupp);
+end
+
+
 function p=local_bandpow(seg,Fs,lo,hi)
     seg=detrend(double(seg(:)).','linear'); N=numel(seg); w=hannwin(N).';
     P=abs(fft(seg.*w)).^2; P=P(1:floor(N/2)+1); fr=(0:floor(N/2))*Fs/N; p=sum(P(fr>=lo&fr<hi));
