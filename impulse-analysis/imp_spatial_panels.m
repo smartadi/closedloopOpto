@@ -159,7 +159,7 @@ for k = 1:nV
         'FontSize', 6, 'FontWeight','bold');
 
     % scale bar on the first tile only: 1 mm
-    if ii == 1
+    if k == 1
         barPx = 1 / PX_MM;
         xl = xlim(ax); yl = ylim(ax);
         x0 = xl(1) + 0.06*diff(xl);  y0 = yl(2) - 0.08*diff(yl);
