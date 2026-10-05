@@ -163,6 +163,24 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 
 ---
 
+### Supplementary figures in use (2026-10-05)
+
+S1-S3 are single Illustrator assemblies, same rule as Figure1-5: assemble from the
+panels in `paper/figures_final/panels/`, never stitch `\includegraphics` in LaTeX.
+Source of truth for the panel set is `paper/figures_final/MANIFEST.txt`.
+
+| Supp | Assembly | Panels | Producer |
+|------|----------|--------|----------|
+| S1 | `figures_final/S1.pdf` (17.6 x 3.65 cm) | A suppressed area; B nine spatial maps + cbar; C batch variance; D OL variance evolution | `imp_spatial_panels.m`; `step_response.m`; `variance_mse.m` |
+| S2 | `figures_final/S2.pdf` (17.6 x 3.89 cm) | A cost surface; B accepted gain path; C online cost; D per-node trial averages | `controller-tuning/tune_supp_panels.m` |
+| S3 | `figures_final/S3.pdf` (17.6 x 8.41 cm) | A session exemplars (11 x 4); B rel+abs; C abs only; D rel only | `f4_state_exemplars_supp.m`; `f4_error_decomp.m` |
+| S4 | `images/supplementary/batch_mean_stationarity.pdf` | single grid, no panels | `step_response.m` |
+
+S4 is the last supplementary figure NOT in house style (own title, internal `m1..m15`
+labels, non-jn axes). S2 is deliberately ONE mouse (AL_0033): grid 2025-03-05,
+auto-tune 2025-03-17 - different sessions, same animal, which is what makes the
+agreement a cross-check. The AL_0034 grid panel was cut (see RESEARCH 2026-10-05).
+
 ### 🔍 Figure 2 reconciliation (2026-08-12) — registry vs disk vs current science
 
 The Fig-2 story (line 61) has three blocks. Their panel coverage is **very uneven**, and the
