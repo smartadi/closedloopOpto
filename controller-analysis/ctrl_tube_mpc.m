@@ -1,4 +1,7 @@
 function ctrl_tube_mpc(varargin)
+% ⚠ SUPERSEDED 2026-10-05 by ctrl_mpc_realtrial.m. sig_nat below is the std of the TRIAL-MEAN
+%   disturbance (0.15 %dF/F on m4); real single-trial departures have sd 2.7, so every number this
+%   script produces is on a ~17x-too-small disturbance. Kept for history only. See RESEARCH 2026-10-05.
 %CTRL_TUBE_MPC  STAGE 4c: disturbance-preview tube-MPC vs the PI controller --
 %               swept over forecast uncertainty and disturbance-preview length, with the actuator-gain
 %               uncertainty MEASURED from open-loop trials, and a real forecaster (Lu et al.

@@ -200,10 +200,10 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
-## OPEN: Post-hoc optimal laser sequence (MPC motivation)
-**Question:** How close is the PI controller to the theoretically optimal controller for a given trial?
-**Analysis:** Using the red contralateral model (once validated): compute MPC-optimal laser sequence for representative trials; quantify gap vs actual PI controller
-**Result:** PENDING
-**Paper claim:** PENDING — frames MPC as next step, justifies current PI as practical baseline
-**Figure:** PENDING
-**Status:** Depends on three-layer model being validated first.
+## ANSWERED (2026-10-05): How much would MPC beat PI, with a forecast we can actually make?
+**Question:** How close is the PI controller to the optimal controller, and does a realistic disturbance forecast close the gap?
+**Analysis:** `ctrl_mpc_forecast_sigma.m` + `ctrl_mpc_realtrial.m` on m4 (AL_0033 2025-02-26). The 108 recorded single-trial contra-predicted disturbances (sd 2.7 %ΔF/F) drive a tuned PI and a receding-horizon MPC (1 s horizon, input bounds, nominal-model planning) on the identified plant, with the measured 40% trial-to-trial actuator-gain spread. Forecasters are 5-fold cross-validated across trials. Metric = per-trial RMSE over +1..+3 s vs −5.
+**Result:** Forecastability is the limit. AR forecast error is already 0.77 of no-forecast at the 86 ms plant delay and 0.98 by 1 s. MPC median RMSE relative to tuned PI (1.42): clairvoyant **0.45×** (beats PI on 101/108 trials); half the AR forecast error 0.77×; real AR forecast **1.19×**; no-preview offset-free MPC 1.03×. With a perfect actuator: clairvoyant 0.14×, real AR 0.95×. The measured gain spread hurts MPC (it contaminates the online disturbance estimate the forecaster extrapolates) but not PI (its integral absorbs it).
+**Paper claim:** A predictive controller has real headroom (about 2× lower error with perfect foresight). With forecasts we can make today it does no better than our PI, and with realistic actuator variability it does worse. So PI is the right controller for now, and the MPC route needs (i) forecasts with about half the current error past the loop delay and (ii) online actuator-gain estimation. Discussion + supplementary figure.
+**Figure:** `paper/images/supp_mpc/mpc_{A,B,C}*.png` (working; not yet locked)
+**Status:** Single session (n=1 mouse); trial counts descriptive. Supersedes the `ctrl_tube_mpc.m` "actuator gain dominates / forecast quality second-order" result, which used a 17×-too-small disturbance.

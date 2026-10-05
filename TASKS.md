@@ -9,6 +9,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-10-05 — **MPC finished as a supplement:** forecast σ measured with our own CV forecasters (in place of Ziyu's model); MPC rebuilt on the 108 real single-trial disturbances (old tube-MPC was 17× under-scaled); 3-panel supp figure. Resolves `2026-09-11.3/.4` and the placement decision. See RESEARCH 2026-10-05.
 - [x] 2026-10-02 — **Methods synced to the code behind every figure** (`methods_rewrite.tex`): state windows Fig 2 [−1,0) / Fig 4 [−2,+3) + continuous band power, Fig-4 exemplars + unique-R² decomposition, Fig-2G variability pipeline, Fig-2 TF/CV/swap/τ bootstrap (+ new Table tab:tf_fig2), preview controller + Fig-5 metrics, two ΔF/F normalizations, 40 s baseline. Fig-5 Results made descriptive (no tests). See RESEARCH 2026-10-02.
 - [x] 2026-10-02 — Methods paragraph for the Fig-4 Row-2 session-aware LMM: covered by Statistics (cond × state model, predictability/controllability, hierarchical bootstrap) + "Brain-state measures" (motion = mean z over −2..+3 s).
 - [x] 2026-08-12 — **Fig-4 beat 3+4 code built (all UNRUN, blocked on the Stage-2 rebuild).** (a) R² floor 0.85 now gates all three cross-session controller scripts identically (user decision); (b) `f4_reject_panels.m` = paper panels for cross-session disturbance rejection, read-only off the batch struct, ER as primary metric, with the T1 gain-vs-R² control as panel D; (c) `ctrl_optimal_xsess.m` + shared `utils/ctrl_opt_solve.m`/`ctrl_plant_markov.m` = the MPC beat across sessions, with the disturbance computed BOTH as the post-hoc residual and as the contra-predicted Global (the version a real controller could use). See RESEARCH 2026-08-12 ×3.
@@ -18,7 +19,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [x] 2026-06-29 — Manuscript: variance-convergence paragraph now shows per-trial mean stationarity, not just shrinking variance (`results.tex` L61)
 - [x] 2026-06-29 — Manuscript: linearity claim softened to "well approximated by a linear relationship" (`results.tex` L57)
 - [x] 2026-06-29 — Manuscript: broken cross-refs `(??)`/`(Section )`/`Algorithm ??` all resolved (grep-clean)
-- [x] 2026-06-15 — Set up JOURNAL.md diary layer + Recently-done section (project-management refactor)
 
 ---
 
@@ -82,18 +82,16 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] (if a variance panel is still wanted) Re-run `trial_state_mse.m` with `varWinMode='pre2trial'` — restores window-disjointness; the current `'trial'` setting makes x and y the same statistic of the same samples. Also note this figure has **no `paperExport` call**.
 - [ ] Sweep the other sub-area CLAUDE.md files for the same doc rot found in `controller-analysis/CLAUDE.md` (script names that no longer resolve): `git log --diff-filter=D --name-only` → grep the deleted names.
 
-### 🆕 MPC extension — main-vs-supplementary decision (Nick 2026-09-11)
-> **Split out of Fig 4 per user 2026-09-11.** MPC is its OWN thread now, NOT a Fig-4 blocker.
-> Nick questioned whether the MPC simulation earns a main-figure slot vs supplemental. The whole
-> section's justification hinges on ONE number (the achievable σ of real predictors, tracked in the
-> Ziyu supplementary block below). Do NOT let this block the Fig-4 SR + session-stat finalization.
-> Code: `controller-analysis/ctrl_tube_mpc.m` (untracked working-tree file).
-- [ ] **[BLOCKING for MPC panel] Resolve the MPC metric discrepancy** (`2026-09-11.3`): clairvoyant MPC (σ=0) reports ~38% improvement yet its trace sits nearly on ref, while σ=0.3 reports ~36% yet visibly misses ref — two near-equal numbers for visibly different tracking is a bug, not a result. Likely a **normalization mismatch or misaligned integration window across conditions** (see "explain 3" analysis, RESEARCH 2026-09-11): the σ=0 case must integrate to ~0 tracking error on a linear plant, so 38% signals the denominator (disturbance energy vs reference-relative baseline) or the control window differs between σ conditions. Fix before the panel supports any claim.
-- [ ] **[GATES main-vs-supp] Decide MPC placement** (`2026-09-11.5`, with Nick) — pending the σ number from the Ziyu block. If real-predictor σ lands in the flat/high-σ regime, MPC WEAKENS the story → supplementary or cut; if near the useful knee (σ~0.3), it earns a main slot.
-
-#### Supplementary — Ziyu model prediction-uncertainty σ (gates the MPC decision)
-> This is the evidence the MPC section stands or falls on. Supplementary track feeding the decision above.
-- [ ] **Extract per-timestep prediction uncertainty σ from Ziyu's model** on the closed-loop dataset (`2026-09-11.4`); then **locate that σ on the MPC performance-vs-σ curve** to decide whether existing predictors are already useful (σ~0.3) or not (σ~1.6+). This single number gates whether MPC is worth pursuing experimentally AND whether it belongs in the paper. Needs the perf-vs-σ curve from `ctrl_tube_mpc.m` (post metric-fix) + Ziyu's model outputs on the CL sessions.
+### MPC: discussion paragraph + one supplementary figure (user 2026-10-05)
+> **Placement decided 2026-10-05: discussion + supp figure.** Code: `ctrl_mpc_forecast_sigma.m` →
+> `ctrl_mpc_realtrial.m` (×2 runs, see header) → `ctrl_mpc_supp_fig.m`. `ctrl_tube_mpc.m` is SUPERSEDED
+> (its disturbance was 17× too small; RESEARCH 2026-10-05). Its 09-11.3 metric item was resolved 09-15.
+> Headline: a clairvoyant forecast would give 0.45× PI error; real AR forecasters give 1.19× (and 0.95× with a perfect actuator).
+- [ ] Paste the MPC discussion paragraph (chat snippet 2026-10-05) into `discussion.tex` on Overleaf; replace the "Future directions" MPC sentences.
+- [ ] Write the supp-figure caption + a short Methods paragraph (sim setup, tuned-PI baseline, CV forecasters, λ tuning). Lock the panels: MANIFEST + PAPER.md, add a .pdf export, `PAPER_FINAL` rerun.
+- [ ] Optional robustness: repeat `ctrl_mpc_realtrial` on a second session (m9/m11, AL_0039) so the claim isn't n=1.
+- [ ] Ziyu's model (`2026-09-11.4`), if it becomes available: score its error relative to AR (`ctrl_mpc_forecast_sigma`) and mark it on panel B's x-axis. No longer gating.
+- [ ] Tell Nick (`2026-09-11.5`): MPC → supplementary. Real forecasters sit at PI parity; the headroom needs ~2× better forecasts plus online gain adaptation.
 
 ---
 
