@@ -104,6 +104,14 @@ modeGrp  = {{[1 2],[3 4],[1 2 3 4]}, {[1 2],[1 2 3]}, {[1 2],[1 2 3]}};
 modeGrpL = {{'init+motion','rel+abs \delta','all four'}, ...
             {'init+motion','all three'}, {'init+motion','all three'}};
 
+% STATE COLOURS, shared with the exemplar strips (user, 2026-10-05: "for error comp
+% plots re draw with the corrsponding state exemlar colors"). Same four RGBs as
+% f4_state_exemplars_supp.m: init-dev, motion, rel 2-4 Hz, abs delta. Each bar then
+% names its factor by colour as well as by tick label, so a reader can carry the
+% identity straight across from the exemplar rows above it in the assembled figure.
+% Moved ABOVE the mode loop (it used to be defined just before the 'sep' panel).
+FCfac=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];
+
 DEC = struct();   % stash per-mode results for the comparison + cache
 for mi=1:numel(modes)
     mo=modes{mi}; cols=modeCols{mi}; fl=modeFac{mi}; nF=numel(cols);
@@ -145,7 +153,7 @@ for mi=1:numel(modes)
     modeTag = {'rel + abs', 'rel only', 'abs only'};
     draw_grouped(Up, Us(:,:,okS), fl, {col_e,col_l}, win_lbl, 'unique R^2', '', PS, ...
         fullfile(outsupp,sprintf('supp_f4_unique_%s.pdf',mo)), ...
-        fullfile(outview,sprintf('supp_f4_unique_%s.png',mo)), [], 1.05*nF+1.1, ...
+        fullfile(outview,sprintf('supp_f4_unique_%s.png',mo)), FCfac(cols,:), 1.05*nF+1.1, ...
         struct('bare',true,'tag',modeTag{mi},'hCm',2.8));
     draw_grouped(Cp, Cs(:,:,okS), grpL, {col_e,col_l}, win_lbl, 'combined R^2', ...
         sprintf('Combined R^2 [\\delta: %s]',mo), PS, ...
@@ -176,7 +184,6 @@ end
 nSsep=nnz(okSsep);
 fprintf('\n==== MODE ''sep'' (each delta in its own init+motion+d model) | UNIQUE R^2 (0-1 / 1-3) ====\n');
 for j=1:4, fprintf('  %-11s %6.3f %6.3f\n',fac_lbl{j},Usep(j,1),Usep(j,2)); end
-FCfac=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];  % init,motion,rel,abs (match exemplars)
 draw_grouped(Usep, UsepS(:,:,okSsep), fac_lbl, {col_e,col_l}, win_lbl, 'unique R^2', ...
     sprintf('Unique R^2 (n=%d, %d sess)',n,nSsep), PS, ...
     fullfile(outfig2,'f4_decomp_unique_sep.pdf'), fullfile(outview,'f4_decomp_unique_sep.png'), FCfac, 5.5);

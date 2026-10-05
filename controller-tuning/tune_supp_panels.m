@@ -210,9 +210,18 @@ for p = 1:numel(PAIRS)
 
     % ===================== PANELS: one per grid node ==========================
     if PAIRS(p).nodes
+        % NODE PANELS: corner axes, no tick furniture, smaller (user, 2026-10-05).
+        % These are paper panels, so they follow the house minimalist style -- a
+        % short scale bar in one corner instead of a boxed, ticked axis. With the
+        % ticks and their labels gone the panel also stops being padded out to
+        % ~2.9 cm by the tick text, which is what was keeping it from shrinking.
+        % The bar is drawn on the FIRST node only and reads for the whole matrix,
+        % the same convention as the S6 strip stack; a reserved band at the bottom
+        % of every panel keeps node 01's crop equal to the rest.
         nN = size(g.C, 1);
+        ylN = [-11.5 7.5];           % data band -8..+4 plus room for the bar below
         for k = 1:nN
-            fN = paperFig(1.9, 1.6);
+            fN = paperFig(1.6, 1.3);
             axN = axes(fN); hold(axN,'on'); grid(axN,'off'); %#ok<LAXES>
             mu = g.nodeMean(k,:); sd = g.nodeStd(k,:);
             good = ~isnan(mu);
@@ -229,28 +238,50 @@ for p = 1:numel(PAIRS)
             % lines ran the full panel height and the gain/J labels printed straight
             % across them; a band sits behind the trace and collides with nothing.
             % Ticks stop at +4 so the headroom does not read as plotted range.
-            ylim(axN, [-8 7.5]); yticks(axN, [-8 -4 0 4]);
-            pb = patch(axN, 'XData', [0 g.cwin(2) g.cwin(2) 0], 'YData', [-8 -8 4 4], ...
+            ylim(axN, ylN);
+            pb = patch(axN, 'XData', [0 g.cwin(2) g.cwin(2) 0], ...
+                'YData', [ylN(1) ylN(1) ylN(2) ylN(2)], ...
                 'FaceColor', [0 0 0], 'FaceAlpha', 0.06, 'EdgeColor', 'none');
             uistack(pb, 'bottom');
+            axis(axN, 'off');
+            if k == 1
+                % House corner-axis form, drawn by hand and clipped off so it sits
+                % BELOW the data box rather than a fraction inside it -- the helper
+                % places the bar inside, which at this size lands on the trace.
+                % Both labels are kept to the RIGHT of the vertical arm so the bar
+                % adds NO width: node 01 stays 2.54 cm wide like the other nine and
+                % is only taller, which is harmless because it is the (0,0)
+                % no-control reference and sits apart from the 3 x 3 matrix.
+                xb = g.tt(1) + 0.12;
+                yb = ylN(1) + 0.02*diff(ylN);
+                plot(axN, [xb xb+1], [yb yb], '-', 'Color','k', 'LineWidth',PS.sca_lw, ...
+                    'Clipping','off', 'HandleVisibility','off');
+                plot(axN, [xb xb], [yb yb+5], '-', 'Color','k', 'LineWidth',PS.sca_lw, ...
+                    'Clipping','off', 'HandleVisibility','off');
+                text(axN, xb+0.5, yb - 0.04*diff(ylN), '1 s', 'Clipping','off', ...
+                    'HorizontalAlignment','center', 'VerticalAlignment','top', ...
+                    'FontSize',PS.fs, 'FontWeight',PS.fw);
+                text(axN, xb+0.10, yb+2.5, '5%', 'Clipping','off', ...
+                    'HorizontalAlignment','left', 'VerticalAlignment','middle', ...
+                    'FontSize',PS.fs, 'FontWeight',PS.fw);
+            end
             % Gains and cost go ON the panel: once the montage is gone, a bare trace
             % cannot be matched back to its node during assembly.
             % TOP of the panel, not the bottom: the regulated trace sits at the
             % reference (-5 %) and the bottom third is where it and its std band live,
             % so a label there overprints the data. Above 0 the panel is empty.
-            text(axN, 0.02, 0.99, sprintf('%.2g, %.2g', g.C(k,1), g.C(k,2)), ...
+            % NAME THE GAINS (user, 2026-10-05). "0.05, 0.1" does not say which
+            % number is which, and the two are not interchangeable -- the whole
+            % point of the matrix is that Kp and Ki do different things to the
+            % trace. Written out as K_p / K_i, which TeX renders as subscripts.
+            text(axN, 0.02, 0.99, sprintf('K_p %.2g  K_i %.2g', g.C(k,1), g.C(k,2)), ...
                 'Units','normalized', 'VerticalAlignment','top', ...
-                'FontSize', PS.fs, 'FontWeight', PS.fw);
+                'Interpreter','tex', 'FontSize', PS.fs, 'FontWeight', PS.fw);
             text(axN, 0.98, 0.99, sprintf('J=%.3g', g.J(k)), ...
                 'Units','normalized', 'VerticalAlignment','top', ...
                 'HorizontalAlignment','right', 'FontSize', PS.fs, 'FontWeight', PS.fw);
-            % NO axis titles on node panels, not even the first. Putting them on
-            % panel 01 alone made its plot box visibly smaller than the other nine
-            % (the tight crop is shared, so the titles eat into the axes), and a
-            % matrix of nine identical boxes plus one short one cannot be aligned.
-            % Every panel now crops to the same size and is placed on a plain grid;
-            % "time (s)" and "\DeltaF/F (%)" are set once, in Illustrator, on the
-            % edge panels. Tick labels stay on all ten so each reads standalone.
+            % No axis titles and no tick labels: the corner bar on node 01 carries
+            % both scales for the matrix.
             paperExport(fN, fullfile(out_dir, sprintf('supp_tune_node%s_%02d.pdf', sfx, k)));
             fprintf('     node %02d  (Kp=%.3g, Ki=%.3g)  J=%.3g\n', k, g.C(k,1), g.C(k,2), g.J(k));
         end

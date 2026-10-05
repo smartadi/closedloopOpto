@@ -165,10 +165,17 @@ figure2/tf_cv_shape_across_sessions.pdf  # 3.46 x 3.28 cm
 # ct_process_set, the staircase is what the rig logged while tuning.
 #
 # Layout budget (assembled in Illustrator):
-#   surface 3.3 x 3.0 | path 3.1 x 2.6 | cost 2.9 x 2.2   -> ~9.3 x 3.0 cm
-#   ten node panels at 2.9 x 1.6                          -> 5 x 2 block, ~14.5 x 3.2 cm
-# Node panels carry NO axis titles on purpose (identical crop so the matrix aligns);
-# set "time (s)" and dF/F (%) once on the edge panels.
+#   surface 3.3 x 2.9 | path 2.9 x 2.6 | cost 2.9 x 2.3   -> ~9.1 x 2.9 cm
+#   ten node panels at 2.47 x 0.92                        -> 3 x 3 + 1, ~7.4 x 2.8 cm
+# NODE PANELS (user, 2026-10-05): minimalist corner axes, no ticks or tick labels,
+# and the gains written out as K_p / K_i -- "0.05, 0.1" did not say which was which,
+# and the two are not interchangeable. Dropping the tick furniture is also what let
+# them shrink: the tick text was padding the page out to 2.9 x 1.6.
+# The 1 s x 5% corner bar is on NODE 01 only and reads for the whole matrix. Both of
+# its labels sit to the right of the vertical arm so it adds no width -- node 01 is
+# 2.47 x 1.13 against 2.47 x 0.92 for the other nine, taller only. That is fine
+# because node 01 is the (0,0) no-control reference and is placed APART from the
+# 3 x 3; nodes 02-10 tile the cost surface's own Kp x Ki axes.
 supplementary/supp_tune_surface.pdf
 supplementary/supp_tune_path.pdf
 supplementary/supp_tune_cost.pdf
@@ -196,11 +203,16 @@ supplementary/supp_tune_node_10.pdf
 # along which you would actually reorder or drop something. 11 strips at 11.2 x 0.71 cm
 # stack to ~11.2 x 7.8 cm -- the old contact sheet was 16 x 29.7 cm, a full page before
 # S7 was placed.
-# Strips carry NO column titles and NO scale bar: content on the first strip only would
-# change its crop and the stack would stop aligning. Set the four state labels once
-# above the stack (colours are also the key: init-dev blue 0.20/0.40/0.75, motion
-# orange 0.75/0.40/0.10, rel 2-4 Hz green 0.35/0.55/0.30, abs delta purple
-# 0.55/0.25/0.60) and place supp_f4_exemplar_scale.pdf once.
+# Strips carry NO column titles. Set the four state labels once above the stack
+# (colours are also the key, and the unique-R^2 bars below reuse them: init-dev blue
+# 0.20/0.40/0.75, motion orange 0.75/0.40/0.10, rel 2-4 Hz green 0.35/0.55/0.30,
+# abs delta purple 0.55/0.25/0.60).
+# THE SCALE BAR IS ON S11, below its first cell (user, 2026-10-05), so it reads as
+# the scale for the stack the way a corner axis on a bottom-left panel does. S11 is
+# therefore 0.99 cm tall against 0.71 for the other ten -- that extra margin hangs
+# off the BOTTOM of the stack and disturbs nothing. Align the strips from the top.
+# All eleven share y-limits exactly, which is what makes one bar legitimate.
+# Window is -2 to +5 s: 2 s either side of the 0-3 s stimulus.
 # Strips are labelled S01..S11 -- no internal mouse names or dates on any panel face.
 # The producer prints the S-number -> session mapping each run; caption from that.
 #
@@ -210,7 +222,6 @@ supplementary/supp_tune_node_10.pdf
 # three: the bar width is constant, which is the thing that must match.
 # The wide titled f4_decomp_unique_{both,rel,abs}.pdf are still produced and still what
 # the current LaTeX includes; retire them once this assembly replaces fig:f4_unique.
-supplementary/supp_f4_exemplar_scale.pdf
 supplementary/supp_f4_unique_both.pdf
 supplementary/supp_f4_unique_rel.pdf
 supplementary/supp_f4_unique_abs.pdf

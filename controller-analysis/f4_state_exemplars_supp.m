@@ -129,7 +129,28 @@ if F4_SUPP_STRIPS
     % the box edge and the content bbox rounds up a point. A little headroom keeps
     % every strip's extent set by the stimulus patch alone, so all eleven crop alike.
     % The scale panel below uses the SAME limits, so 5% stays 5%.
+    % Identical y-limits on all eleven strips -- this is what makes one scale bar
+    % legitimate for the whole stack. A 4% pad keeps traces off the clip boundary,
+    % which is what was making the tight crop round to 18 pt on some strips and
+    % 19 pt on others.
+    %
+    % The reserved-band idea (a taller ylS with the bar drawn inside it) was tried
+    % and dropped: it cost ~40% of every strip's height to serve one panel, and the
+    % bar's labels still fell outside the band. The bar is drawn BELOW the axes
+    % instead -- see the S11 block -- which lengthens only the LAST strip's page,
+    % downward. That is harmless: strips are stacked and aligned from the top, so
+    % extra margin hanging off the bottom of the bottom panel disturbs nothing.
     ylS = yl + [-1 1]*0.04*diff(yl);
+    % WINDOW: 2 s before the stimulus and 2 s after it (user, 2026-10-05: "show
+    % stim -2 to stim +2"). The stimulus runs 0-3 s, so that is t = -2 to +5 s.
+    % The old -2 to +3 ended EXACTLY at stimulus offset, so the strips showed the
+    % controller holding the reference and then stopped -- the release back toward
+    % baseline, which is half of what makes a trial readable, was never on screen.
+    % The buffer carries 6 s post-onset, so +5 is real data, not padding.
+    % NOTE this is a DISPLAY window only. The state-measure window stays [-2,+3) s
+    % (locked decision), and the exemplar PICKING above is untouched.
+    post_sS = 5;
+    tvS = (-spec_pre_s:1/Fs:post_sS).';
     for r = 1:nS
         fS = paperFig(12, 1.3);
         tS = tiledlayout(fS, 1, 4, 'TileSpacing','compact', 'Padding','compact');
@@ -137,14 +158,14 @@ if F4_SUPP_STRIPS
         for j = 1:4
             ax = nexttile(tS); hold(ax,'on');
             [eb, ec] = pre_spec_buffer(dk, 'wc');
-            seg = eb(pk(j), ec-spec_pre_s*Fs : ec+spec_post_s*Fs);
+            seg = eb(pk(j), ec-spec_pre_s*Fs : ec+post_sS*Fs);
             patch(ax, [0 3 3 0], [ylS(1) ylS(1) ylS(2) ylS(2)], [.9 .9 .9], ...
                 'EdgeColor','none', 'FaceAlpha',.5, 'HandleVisibility','off');
-            plot(ax, tv([1 end]), [ref ref], '--', 'Color',[.3 .3 .3], ...
+            plot(ax, tvS([1 end]), [ref ref], '--', 'Color',[.3 .3 .3], ...
                 'LineWidth',PS.lw_ref, 'HandleVisibility','off');
             xline(ax, 0, ':', 'Color',[.6 .6 .6], 'HandleVisibility','off');
-            plot(ax, tv, seg, '-', 'Color', col(j,:), 'LineWidth', PS.lw_mean);
-            xlim(ax, [-spec_pre_s spec_post_s]); ylim(ax, ylS);
+            plot(ax, tvS, seg, '-', 'Color', col(j,:), 'LineWidth', PS.lw_mean);
+            xlim(ax, [-spec_pre_s post_sS]); ylim(ax, ylS);
             axis(ax, 'off');
             if j == 1
                 % Label OUTSIDE the axes, on the left. Inside, at 1.3 cm tall, it
@@ -152,30 +173,46 @@ if F4_SUPP_STRIPS
                 % crops stay equal -- the S3 node panels showed what happens when
                 % only the first panel of a stack carries extra content. S%02d
                 % rather than "Session %d" so the string width is constant too.
-                text(ax, -0.04, 0.5, sprintf('S%02d', r), 'Units','normalized', ...
+                text(ax, -0.075, 0.5, sprintf('S%02d', r), 'Units','normalized', ...
                     'VerticalAlignment','middle', 'HorizontalAlignment','right', ...
                     'FontSize', PS.fs, 'FontWeight', PS.fw);
+                % SCALE BAR ON THE BOTTOM-LEFT PANEL OF THE WHOLE STACK (user,
+                % 2026-10-05: "put the short corner axis on s11 initial dev plot so
+                % it seems like it carries over to others"). One bar under the last
+                % strip reads as the scale for the column -- and for the stack,
+                % since every strip shares these limits -- the way a corner axis on
+                % the bottom-left panel of any multi-panel figure does.
+                % It sits in the reserved band added to ylS below, so S11's content
+                % box is the same as every other strip's and the stack still aligns.
+                if r == nS
+                    % House corner-axis form (1 s x 5% L, labels outside the arms),
+                    % drawn by hand rather than via shortCornerAxes_plot because it
+                    % has to sit BELOW the data box: the helper places the bar a
+                    % fraction INSIDE the axes, which at 1.3 cm puts it straight on
+                    % the trace and the reference line. Clipping is off so the arms
+                    % and labels survive outside ylim. It is still in DATA units, so
+                    % 1 s and 5% are exactly 1 s and 5% of these axes.
+                    xb = -spec_pre_s + 0.10;              % just inside the left edge
+                    yb = ylS(1) - 0.10*diff(ylS);         % one step below the box
+                    plot(ax, [xb xb+1], [yb yb], '-', 'Color','k', ...
+                        'LineWidth', PS.sca_lw, 'Clipping','off', 'HandleVisibility','off');
+                    plot(ax, [xb xb], [yb yb+5], '-', 'Color','k', ...
+                        'LineWidth', PS.sca_lw, 'Clipping','off', 'HandleVisibility','off');
+                    text(ax, xb+0.5, yb - 0.06*diff(ylS), '1 s', 'Clipping','off', ...
+                        'HorizontalAlignment','center', 'VerticalAlignment','top', ...
+                        'FontSize', PS.fs, 'FontWeight', PS.fw);
+                    text(ax, xb - 0.12, yb + 2.5, '5%', 'Clipping','off', ...
+                        'HorizontalAlignment','right', 'VerticalAlignment','middle', ...
+                        'FontSize', PS.fs, 'FontWeight', PS.fw);
+                end
             end
         end
         paperExport(fS, fullfile(outsupp, sprintf('supp_f4_exemplar_%02d.pdf', r)));
         fprintf('  S%02d  <-  %s\n', r, sessMn{r});
     end
 
-    % ---- standalone scale bar ----------------------------------------------
-    % Drawn once instead of on every strip. In-strip it collided with the trace:
-    % at 1.3 cm the "5%" and "1 s" labels sit exactly where the first cell's data
-    % runs, and moving them inside the band would have put them on the stimulus
-    % patch instead. Exported on an axes of the SAME height and the SAME y-limits
-    % as a strip cell, so the bar is physically correct when placed at 100%.
-    fSc = paperFig(3, 1.3);
-    axSc = axes(fSc); %#ok<LAXES>
-    xlim(axSc, [-spec_pre_s spec_post_s]); ylim(axSc, ylS); axis(axSc, 'off');
-    shortCornerAxes_plot(axSc, 'Corner','bl', 'XLength',1, 'YLength',5, ...
-        'XLabel','1 s', 'YLabel','5%', 'LineWidth',PS.sca_lw, ...
-        'LabelGap',PS.sca_gap, 'FontSize',PS.fs, 'FontWeight',PS.fw);
-    paperExport(fSc, fullfile(outsupp, 'supp_f4_exemplar_scale.pdf'));
 
-    fprintf('[f4_exemplars_supp] %d session strips + scale bar -> %s\n', nS, outsupp);
+    fprintf('[f4_exemplars_supp] %d session strips -> %s\n', nS, outsupp);
 end
 
 
