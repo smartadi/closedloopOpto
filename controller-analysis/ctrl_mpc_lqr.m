@@ -35,6 +35,8 @@ P.rd     = 1;                    % penalty on input moves (Delta u)^2. User choi
                                  % ~2x rougher than PI's; Fig-3 replay perfect preview 0.14x vs 0.38x at 10).
                                  % 10 = PI-matched smoothness; 0 chatters. See ctrl_mpc_smooth_tradeoff.m                 % input weight (aggressive), in (%dF/F)^2 per (cmd unit)^2
 P.nFold  = 5;   P.p = 19;   P.qb = 1;   % AR order; Kalman bias variance (x AR innovation var)
+P.fcst   = 'ar';                 % forecaster: 'ar' | 'shrink' | 'lp' (see [LQR] forecaster variants)
+P.lpHz   = 3;                    % 'lp' cutoff (Hz)
 P.xGrid  = [0 0.25 0.5 0.75 1 1.25 1.5];
 P.sigU   = 'auto';  P.seed = 7;  P.nUse = inf;  P.tag = '';
 P.frame  = 'svd';                % 'svd' = contra-Global disturbance (Aabs frame); 'fig3' = replay each
@@ -114,8 +116,16 @@ if ischar(P.sigU)
 end
 rng(P.seed); sl = sqrt(log(1+P.sigU^2)); g = exp(sl*randn(nT,1) - 0.5*sl^2);
 rng(P.seed); fold = mod(randperm(nT), P.nFold) + 1;
-arA = cell(1,P.nFold); arS2 = nan(1,P.nFold);
-for f = 1:P.nFold, [arA{f}, arS2(f)] = fitAR(DEP(fold~=f,:), P.p); end
+% forecaster variants (P.fcst): 'ar' plain iterated AR; 'shrink' AR fluctuation forecast x alpha(lead),
+% alpha = cov(f,d)/var(f) on training trials (never worse than "no change"); 'lp' AR fitted/run on the
+% causally low-passed (P.lpHz) departure, so only the slow component is forecast.
+[blp, alp] = butter(2, P.lpHz/(P.Fs/2));
+arA = cell(1,P.nFold); arS2 = nan(1,P.nFold); alph = ones(P.Hp, P.nFold);
+for f = 1:P.nFold
+    Xtr = DEP(fold~=f,:); if strcmp(P.fcst,'lp'), Xtr = filter(blp, alp, Xtr, [], 2); end
+    [arA{f}, arS2(f)] = fitAR(Xtr, P.p);
+    if strcmp(P.fcst,'shrink'), alph(:,f) = fitShrink(Xtr, arA{f}, P.Hp); end
+end
 
 % prediction matrices: Y(t+1..t+Hp) = Phi*x(t) + Gam*U(t..t+Hp-1)  (delay states carry the latency)
 Phi = zeros(P.Hp,nx); Gam = zeros(P.Hp); Ak = eye(nx); CA = zeros(P.Hp+1,nx);
@@ -170,12 +180,17 @@ save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struc
         np = numel(aK); Fz = blkdiag(1, [aK.'; eye(np-1) zeros(np-1,1)]); Hz = [1 1 zeros(1,np-1)];
         Qz = zeros(np+1); Qz(1,1) = P.qb*s2; Qz(2,2) = s2; Rz = 1e-6*s2;
         z = zeros(np+1,1); Pz = blkdiag(0, var(dep(1:pre))*eye(np));
-        for j = 1:pre, [z,Pz] = kf(z,Pz,dep(j)); end              % laser off: dep observed exactly
+        isLP = strcmp(P.fcst,'lp'); al_k = alph(:,fold(k));
+        if isLP, [dpre, zf] = filter(blp, alp, dep(1:pre)); else, dpre = dep(1:pre); end
+        for j = 1:pre, [z,Pz] = kf(z,Pz,dpre(j)); end             % laser off: dep observed exactly
         y = zeros(N,1); u = zeros(N,1); x = x0; xn = x0;
         for t = 1:N
             y(t) = C*x + dk(t);
             dh = y(t) - C*xn - dbar(t);                          % departure estimate (incl. gain offset)
-            if t > 1, [z,Pz] = kf(z,Pz,dh); end
+            if t > 1
+                if isLP, [dhf, zf] = filter(blp, alp, dh, zf); else, dhf = dh; end
+                [z,Pz] = kf(z,Pz,dhf);
+            end
             p = min(P.Hp, N-t);
             if p < 1, u(t) = u(t-1); break; end
             off = dh - dep(pre+t);
@@ -184,7 +199,7 @@ save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struc
                 otherwise
                     xb = sscanf(mode,'x%f'); fCl = dep(pre+t+1:pre+t+p) + off;
                     if xb == 0, fc = fCl;
-                    else, fK = zeros(p,1); zz = z; for j=1:p, zz = Fz*zz; fK(j) = Hz*zz; end
+                    else, fK = zeros(p,1); zz = z; for j=1:p, zz = Fz*zz; fK(j) = zz(1) + al_k(j)*zz(2); end
                           fc = fCl + xb*(fK - fCl); end
             end
             % preview window: only the first Lp forecast samples are used; beyond, the last previewed
@@ -219,4 +234,22 @@ for k = 1:size(X,1)
     y(idx) = x(p+1:n); r = idx(end);
 end
 a = (Z.'*Z + 1e-6*eye(p)) \ (Z.'*y); s2 = mean((y - Z*a).^2);
+end
+
+
+function al = fitShrink(X, a, Hp)
+% per-lead shrinkage alpha_L = <f,d>/<f,f> of the iterated AR forecast, over all origins of all trials
+p = numel(a); [nTr, n] = size(X); Fs_ = []; Ts_ = [];
+for k = 1:nTr
+    x = X(k,:).'; org = p:n-1; Hm = zeros(numel(org), p);
+    for j = 1:p, Hm(:,j) = x(org-j+1); end
+    Fk = nan(numel(org), Hp); Tk = nan(numel(org), Hp);
+    for L = 1:Hp
+        nx = Hm*a; Fk(:,L) = nx; Hm = [nx Hm(:,1:end-1)];
+        ok = org+L <= n; Tk(ok,L) = x(org(ok)+L);
+    end
+    Fs_ = [Fs_; Fk]; Ts_ = [Ts_; Tk]; %#ok<AGROW>
+end
+m = ~isnan(Ts_); Fs_(~m) = 0; Ts_(~m) = 0;
+al = min(max(sum(Fs_.*Ts_,1) ./ max(sum(Fs_.^2,1), eps), 0), 1).';
 end
