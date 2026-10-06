@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 — Smoothness (Δu) cost tradeoff plot: perfect preview trades error for command roughness; AR preview is flat
+**Changed/Found:** New `controller-analysis/ctrl_mpc_smooth_tradeoff.m` → `paper/images/supp_mpc/mpc_F_smooth_tradeoff.png`. Fig-3-frame replay of the 108 recorded CL trials with λ_Δu (`rd`) ∈ {0, 0.1, 1, 10, 100, 1000}; roughness = median per-trial total variation of the command over 0–3 s. Error/tuned-PI:
+- perfect preview 0.07 / 0.08 / 0.14 / 0.38 / 0.61 / 0.79 at roughness 21 / 21 / 18 / 8.7 / 3.7 / 1.4
+- AR preview 1.00 / 1.00 / 0.99 / 0.97 / 0.98 / 1.00 at 21 / 20 / 18 / 11 / 5.2 / 2.3
+- tuned PI: roughness 8.6; recorded rig command: 11.8 (error 1.11× tuned PI)
+
+User agrees the smoothness/R term belongs in the cost. At rd = 10 the MPC command is as smooth as the PI's (8.7 vs 8.6), so that's the like-for-like comparison: perfect preview 0.38×, AR 0.97×. Allowing ~2× rougher commands (rd = 1) would take perfect preview to 0.14× but buys nothing with the AR forecast. The roughness the AR controller can use is wasted on unpredictable fluctuations. The first draw had overlapping labels; the legend was moved outside (panel widened to 8.9 cm).
+**Why:** User asked to show the plot behind the "smoothness penalty limits perfect cancellation" statement.
+**Next:** Keep rd = 10 (PI-matched smoothness) as the reported setting.
+
 ### 2026-10-05 — CORRECTION: the "40% trial-to-trial actuator-gain spread" is mostly spontaneous disturbance, not gain
 **Changed/Found:** The σ_u = 0.40 used since 2026-09-15 (`ctrl_tube_mpc.m`, `ctrl_mpc_realtrial.m`, `ctrl_mpc_lqr.m` 'auto') regresses each OL trial onto the OL trial-average shape. Null test: projecting the laser-free contra-Global departures onto the same shape gives an apparent gain sd of **0.32**, so at most √(0.40²−0.32²) ≈ **0.24** could be real gain variability. With a per-trial offset term, the gain is unidentifiable: CV 0.77 vs a null of 0.80; Fig-3 frame 0.39 / 0.83. The OL step is ~a constant level, so gain and offset are confounded. The 2026-09-15 entry's "noise contribution negligible" was wrong. In the svd-frame simulations the variability was double-counted (real disturbance realizations + a 40% gain draw). So "the laser range and the gain variability each roughly halve what a perfect preview achieves" (said to the user today) overstated the gain part. In the Fig-3 replay (no gain draw; each trial's real mismatch is inside its d_k), perfect preview is 0.38× tuned-PI with the laser bounded and 0.33× unbounded, so the laser range costs little there too. The remaining gap to 0 is the Δu smoothness penalty (rd=10): PI-smooth commands can't cancel the fast part of the disturbance. With rd=0 + unbounded + no gain error, the svd diagnostic reached 0.00×.
 **Why:** User asked why gain variability was cited as a limit.
