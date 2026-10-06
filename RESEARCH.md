@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 — Why the AR preview barely helps: band decomposition of the replayed CL-trial disturbance
+**Changed/Found:** Ad-hoc analysis (MATLAB session, not a script) on the Fig-3 replay disturbances d_k = recorded CL − model(recorded command), 108 trials, 1–3 s, AR(12), 5-fold CV across trials. AR error / sd(d) by lead: 29 ms 0.32 · 57 ms 0.55 · **86 ms 0.70** · 114 ms 0.77 · 200 ms 0.84 · 486 ms 0.96 · 1 s 0.98. By band (share of d variance | fraction PI leaves | fraction the AR forecast error at 86 ms leaves):
+- 0–1 Hz: 36% | 48% | 11%
+- 1–3 Hz: 38% | 99% | 62%
+- 3–6 Hz: 18% | 150% | 129%
+- 6–17.5 Hz: 7% | 113% | 211%
+
+Reading: the slow band, which AR predicts well, is partly handled by feedback already. The 1–3 Hz band (the largest share, = the Fig-4 delta rhythm) is untouched by PI, but AR predicts only ~40% of it 86 ms ahead. Above 3 Hz the AR forecast error *exceeds* the signal (129–211%), so an un-shrunk forecast injects noise there. The partial gains below 3 Hz and the injected noise above 3 Hz roughly cancel, which is why MPC-AR ≈ PI (0.99×).
+**Why:** User asked why the AR preview is so bad.
+**Next:** Cheap test: low-pass or shrink the forecast above ~3 Hz (or use the conditional mean, which shrinks automatically, i.e. a properly regularized/shrunk forecaster) so the preview stops adding noise. The real target is a better 1–3 Hz forecaster ~100 ms ahead (phase-tracking of the delta rhythm, contra-hemisphere spatial inputs). If kept, promote this analysis into a script.
+
 ### 2026-10-05 — λ_Δu set to 1 (user); Fig-3 CL-trial replay rerun
 **Changed/Found:** `ctrl_mpc_lqr.m` default `P.rd` 10 → **1** (user choice; the command roughness is ~2× PI's, 17.5–17.9 vs 8.6; the recorded rig command is 11.8). Fig-3-frame replay (`_fig3`) and `ctrl_mpc_fig3style.m` panels were regenerated. 0–3 s RMSE medians: OL 2.25 · recorded CL 2.02 · **CL+MPC (AR) 1.66** (lower on 97/108, p=9e-17) · **CL+MPC* (perfect) 1.10** (108/108). Ratios vs recorded CL, 0–1 / 1–3 s: variance MPC 0.86/0.85, MPC* 0.35/0.28; RMSE MPC 0.89/0.88, MPC* 0.71/**0.12**. Versus the tuned-PI replay (+1..+3 s window): perfect 0.14×, half-AR-error 0.56×, AR 0.99×, hold 1.06×. The ratio-panel legend was moved to the lower left (the perfect point now sits at 0.12 and stretched the log axis).
 **Why:** User decision after the smoothness tradeoff plot.
