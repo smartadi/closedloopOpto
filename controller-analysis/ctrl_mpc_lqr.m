@@ -30,7 +30,10 @@ function R = ctrl_mpc_lqr(varargin)
 P.sess   = 'AL_0033_0226_e2';
 P.Fs     = 35;  P.Hp = 35;  P.ref = -5;  P.rmseWin = [1 3];  P.M = 105;
 P.delay  = 2;                    % input delay (samples): measured 47 ms loop latency -> 2 samples (57 ms)
-P.r      = 1e-3;                 % input weight (aggressive), in (%dF/F)^2 per (cmd unit)^2
+P.r      = 1e-3;
+P.rd     = 10;                   % penalty on input moves (Delta u)^2. 10 = laser command as smooth as
+                                 % the tuned PI's (total variation ~4-8 vs PI 5.4); 0 chatters (TV ~20)
+                                 % with the same RMSE, so the benefit is not from exploiting the fast zero                 % input weight (aggressive), in (%dF/F)^2 per (cmd unit)^2
 P.nFold  = 5;   P.p = 19;   P.qb = 1;   % AR order; Kalman bias variance (x AR innovation var)
 P.xGrid  = [0 0.25 0.5 0.75 1 1.25 1.5];
 P.sigU   = 'auto';  P.seed = 7;  P.nUse = inf;  P.tag = '';
@@ -151,7 +154,11 @@ save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struc
             end
             dfc = dbar(t+1:t+p) + fc;
             G = Gam(1:p,1:p); free = Phi(1:p,:)*xn + dfc - P.ref;
-            Hq = 2*(G.'*G + P.r*eye(p)); fq = 2*(G.'*free - P.r*uss*ones(p,1));
+            % + rd*||Delta u||^2: suppresses sample-to-sample chatter that exploits the model's fast
+            %   zero, a path the ramped OL step cannot validate
+            Dm = eye(p) - diag(ones(p-1,1),-1); if t == 1, up = uss; else, up = u(t-1); end
+            Hq = 2*(G.'*G + P.r*eye(p) + P.rd*(Dm.'*Dm));
+            fq = 2*(G.'*free - P.r*uss*ones(p,1) - P.rd*Dm.'*[up; zeros(p-1,1)]);
             uo = -Hq\fq;
             if any(uo < 0 | uo > u_max), uo = quadprog((Hq+Hq.')/2, fq, [],[],[],[], zeros(p,1), u_max*ones(p,1), [], qopt); end
             u(t) = uo(1);

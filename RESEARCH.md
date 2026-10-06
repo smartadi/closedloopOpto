@@ -16,6 +16,15 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 — Preview-LQR chattered; Δu penalty (rd=10) makes it PI-smooth with the same benefit; supp figure rebuilt
+**Changed/Found:** `controller-analysis/ctrl_mpc_lqr.m` — with only a level penalty the LQR laser command chattered sample-to-sample for every preview: median total variation 18–24 per trial over +1..+3 s vs 5.4 for PI. It exploits the model's fast zero (b = [−1.58, +0.943]), which the ramped OL step cannot validate. Raising r (1e-2…1) did not help. Added `P.rd`·‖Δu‖², default rd = 10 → total variation 4.4–7.9 (PI-like). RMSE barely changes, so the benefit was never from the chatter. Final (108 trials, median ratio to tuned PI Kp 0.15/Ki 0.50, PI RMSE 1.35):
+- measured σ_u = 0.40: perfect preview **0.52×** (107/108) · half AR error 0.68× · AR **0.97×** (69/108) · hold 1.00×
+- perfect actuator: 0.44× · 0.67× · 0.94× · 0.99×
+
+With smooth commands **the gain spread costs little** (perfect preview 0.44 → 0.52×). This supersedes the earlier "gain spread costs about half the benefit" (0.21 vs 0.53×), which came from the chattering controller. `ctrl_mpc_supp_fig.m` was rewritten on `ctrl_mpc_lqr` output: A plant fit (OL trial-average vs 2-state + 57 ms model), B forecast skill vs lead, C error/PI vs forecast error (both actuator cases, PI = 1), D representative trial (#82: PI 1.29, MPC-AR 1.29, MPC-perfect 0.75). Old realtrial-based PNGs were deleted.
+**Why:** The chattering command would not be credible on the rig, and the comparison should give both controllers equally smooth inputs.
+**Next:** The limit is forecast quality alone, so the LPV/state-gain extension is a minor lever here. Discussion paragraph; panel D's traces overlap visually because fast disturbance wiggles pass through every controller (consider showing the laser command or a smoothed trace).
+
 ### 2026-10-05 — LQR plant (m4) is minimal: fully controllable + observable, but effectively 1st-order
 **Changed/Found:** `ctrl_mpc_lqr.m` [LQR-SYSID] plant (no edit; checked in MATLAB) — G(z) = −1.577(z−0.598) / (z³(z−0.861)), 4 states after the 2-sample delay is folded in. On the balanced realization, ctrb and obsv both have rank 4 (cond 5.3), so there is no uncontrollable or unobservable subspace and no pole-zero cancellation (closest |p−z| = 0.26). Hankel SVs [2.81 1.47 1.37 0.24]. The fitted 2nd pole goes to 0 and joins the delay's poles at 0 as a nilpotent chain z⁻³, i.e. a finite input memory, not a dynamic mode. balred to 1 state changes the 3-s step response by only 2.5% NRMSE. The raw absorbDelay realization is badly scaled (entries ~2048), which makes PBH/rank tests on it misleading; use balreal.
 **Why:** User asked about the controllable and observable subspaces of the preview-LQR plant.

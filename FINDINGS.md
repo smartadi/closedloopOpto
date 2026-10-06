@@ -200,7 +200,7 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
-> ⚠ **SUPERSEDED same day (2026-10-05, later):** the numbers below came from an MPC design that was handicapped under gain error. Redone in `ctrl_mpc_lqr.m` (scalar OL-identified plant, preview LQR): AR preview 0.94× PI, perfect preview 0.65×, MPC ≥ PI everywhere. Still provisional: the loop delay is not yet modelled. See RESEARCH 2026-10-05.
+> ⚠ **SUPERSEDED same day (2026-10-05, final):** the numbers below came from an MPC design that was handicapped under gain error. Final version, `ctrl_mpc_lqr.m`: OL-identified 2-state + 57 ms delay plant (one identifiable τ ≈ 190 ms, fit 88.7%), receding-horizon preview LQR with a 1-s preview, laser bounds and PI-smooth commands. Tuned PI lands at the deployed Kp 0.15. Median error relative to PI (measured 40% gain spread): **perfect preview 0.52×** (107/108 trials), half the AR forecast error 0.68×, **today's AR forecast 0.97×**, no preview 1.00×. The gain spread costs little (0.44× with a perfect actuator). **Claim:** the payoff of predictive control is set by how well spontaneous activity can be forecast past the loop delay; a better forecaster plugs in as an exogenous preview and the problem stays a convex QP. See RESEARCH 2026-10-05; figure `paper/images/supp_mpc/mpc_{A..D}*.png`.
 
 ## ANSWERED (2026-10-05): How much would MPC beat PI, with a forecast we can actually make?
 **Question:** How close is the PI controller to the optimal controller, and does a realistic disturbance forecast close the gap?
