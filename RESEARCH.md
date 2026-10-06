@@ -16,6 +16,33 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 — Grid LDS: bleed-free check (amp ≤ 1.1 V) is underpowered, not a pass; impulse DC gain is unreliable
+**Changed/Found:** `impulse-analysis/imp_lds_grid.m` (`LG.ampMax = 1.1`) — with only the 0.5/1.1 V pulses, even the model-free train→test unit-IR ceiling is negative (all points −0.18, site 0.05), so the low-amplitude response cannot be estimated and the bleed question stays open for this analysis. Separately, the impulse model's DC gain at the site comes out POSITIVE (+1.58 %ΔF/F per V). The ~1 s post-dip rebound plus the slow tail outweigh the dip, whereas the OL step shows sustained inhibition. So steady-state quantities extrapolated from impulse data are not trustworthy. Collateral is therefore defined as the LS gain of each point's 0–1 s laser response on the target's (bootstrap |r| 0.99; the DC-ratio version had 0.74).
+**Why:** Bleed is present at ≥1.6 V, and the reachable footprint has a brain-wide component that could be bleed. The DC ratio was the first collateral definition tried.
+**Next:** Test the global component of the footprint against bleed another way, e.g. compare its timing (bleed = same frame) or run on AL_0041. Do not quote impulse-derived steady-state gains.
+
+### 2026-10-05 — Grid LDS dead ends: DMDc, single CVA, Wo-eigenvector maps, observer "hidden collateral"
+**Changed/Found:** `impulse-analysis/imp_lds_grid.m`, four rejected versions:
+(1) **DMDc** (state = top PCs of y). B is set by the one-frame jump, which is ~0 because the site response ramps from lag 1 to lag 5. So B → 0, and the CV evoked R² was ≈ 0 at every n.
+(2) **One CVA model on everything.** The data are so smooth that ~40 canonical correlations are > 0.95, and the laser accounts for 0.16% of variance, so no state was spent on the input (CV IR R² ≈ 0).
+(3) **Maps from eigenvectors of W_o.** These are dual (left-eigenvector) directions: salt-and-pepper maps, bootstrap |r| 0.11.
+(4) **Observer-based "hidden collateral" ≈ 100%.** This treats the laser as unknown, but a controller knows its own command. The ~100% only reflects SNR (laser/spontaneous variance at the site = 0.006).
+**Why:** Each failed for the reason given. Fixes: a separate laser-driven block (ERA on the unit IR); observer-based observable maps (stable, |r| 1.00); collateral as a regression gain.
+**Next:** none.
+
+### 2026-10-05 — Add imp_lds_grid.m: 100-point bilateral LDS + controllability/observability for one target
+**Changed/Found:** New `impulse-analysis/imp_lds_grid.m`, run on AL_0033 0129 e1 impulse (hemo-corrected).
+- **Setup:** 100-point grid (50 ipsi k-means points plus their midline mirrors; site = #83). %ΔF/F uses the impulse definition per point. Model x(t+1) = A x + B u, y = C x, D = 0 (no added delay).
+- **Laser-driven block:** ERA on the unit IR, nD = 6. Blocked 5-fold CV unit-IR R² 0.51 vs model-free ceiling 0.52 (site 0.80 vs 0.83).
+- **Spontaneous block:** subspace ID on the residual, nS = 25. 10-step CV R² 0.37 vs persistence 0.16.
+- **Combined model:** A = blkdiag, n = 31, C orthonormalized so maps are physical.
+- **Reachable patterns:** reachable map 1 (89%) = local site dip plus a weak brain-wide negative component. The reachable output subspace (2 maps) holds 81% of spontaneous variance (2% by chance), because it overlaps the global mode.
+- **What one pixel reveals:** the target's last 1 s reveals 74% (site) / 77% (contra mirror) / 56% (anterior-medial #51) of brain-wide spontaneous variance. Mostly this is the global mode; the site is blind to an anterior–posterior gradient.
+- **Collateral (0–1 s):** moving the contra mirror moves the site 2.1×, and moving #51 moves it 3.9×. Holding the site moves its neighbours ≤ 0.89×.
+- Modal "seen but undriven" classes are uncontrollable BY CONSTRUCTION (B_S = 0); the shared-mode table compares patterns (|corr| ≈ 0.93, dominated by the global pattern) but the time constants differ (80–979 vs 700 ms).
+**Why:** User asked for a multi-output A,B,C with dim x < dim y, plus controllable/observable subspace analysis for one target pixel, shown on the brain, using the impulse dataset (no delay).
+**Next:** Replicate on AL_0041 e1/e2. Fit the spontaneous block with a shared A (not block-diagonal) so laser-reachability of spontaneous modes becomes testable. Apply the collateral map to the controller sessions (predicted off-target pattern under CL vs the observed CL−OL difference).
+
 ### 2026-10-05 — CL-trial MPC replay in the Fig-3 frame (fixes the simulated-OL mistake) + why MPC-with-AR is only modestly better
 **Changed/Found:** User correction: OL is always a separate set of trials and must not be simulated on CL disturbances; the intended comparison is a recorded CL trial vs MPC put on that same trial. `ctrl_mpc_lqr.m` gains `P.frame='fig3'` (+ `P.rawFile`): the rig's online ΔF/F `data.dFk` (verified identical to Fig-3 `wcDfk`, max diff 0, onset = col 36) and each trial's recorded command (`cp_laser_amplitude`, 2 kHz → frame times). The plant is refit on the Fig-3 OL trial average (2-state + 57 ms: τ 159 ms, DC −3.37, fit 82.1%). Per-CL-trial disturbance d_k = recorded output − model(recorded command), replayed under MPC; σ_u = 0 in this frame (each trial's gain error is already inside its d_k). `ctrl_mpc_fig3style.m` was rewritten: OL = recorded OL trials (ranksum, unpaired; absent from the single-trial panel); CL = recorded CL; CL+MPC / CL+MPC* = replays (signrank, paired); the bootstrap resamples OL independently and MPC paired. Results, 0–3 s RMSE medians: OL 2.25 · CL 2.02 (OL vs CL p=0.017) · tuned-PI replay 1.79 · **CL+MPC (AR) 1.66** (lower on 100/108, p=7e-18) · **CL+MPC* 1.18** (108/108). Ratios vs CL, 0–1 / 1–3 s: variance MPC 0.85/0.86, MPC* 0.39/0.32; RMSE MPC 0.88/0.87, MPC* 0.74/0.34. Part of MPC's gain over the *recorded* CL is the rig PI's steady offset (the recorded CL average sits at ≈ −4.3, short of −5, consistent with the boxcar "integral" having no true integrator, cf. `ctrl_margins.m`). Against the tuned-PI replay on the same trials, MPC-AR is 0.97× (paired).
 **Diagnostic, "why barely better?"** (svd frame, 108 trials, error/PI): perfect preview 0.52× default → 0.53× with an aggressive cost (rd=0, r=1e-6) → 0.21× with a perfect actuator → 0.21× with an unbounded two-sided laser → **0.00×** with both (exact cancellation; sanity check passes). AR preview: 0.93–0.98× in every configuration. Cost aggressiveness is not the lever. Perfect-preview cancellation is limited by the inhibition-only laser range and the gain spread; realistic MPC is limited by forecast quality. `P.unbounded` was added for this diagnostic.
