@@ -45,7 +45,8 @@ P.sess   = 'AL_0033_0226_e2';   % m4 (best-transfer deploy session; holds -5 wit
 P.Fs     = 35;
 P.Hp     = 35;
 P.ref    = -5;
-P.lamGrid= [1e-3 1e-2 0.1 1 10];   % MPC penalty on (u - uff)^2, tuned per forecaster like the PI gains
+P.lamGrid= [1e-3 1e-2 0.1 1 10];   % MPC penalty on input moves ||Delta u||^2, tuned per forecaster like the PI gains
+P.qbGrid = [1e-3 1e-2 0.1 1];      % Kalman bias random-walk variance, in units of the AR innovation variance
 P.rmseWin= [1 3];
 P.M      = 105;                 % PI boxcar length (3 s), as on the rig
 P.nFold  = 5;
@@ -88,8 +89,9 @@ rng(P.seed); sl = sqrt(log(1+P.sigU^2)); g = exp(sl*randn(nT,1) - 0.5*sl^2);
 rng(P.seed); fold = mod(randperm(nT), P.nFold) + 1;
 
 % AR per fold (trained on the other folds only)
-arA = cell(1,P.nFold); ariA = cell(1,P.nFold);
-for f = 1:P.nFold, arA{f} = fitAR(DEP(fold~=f,:), P.p); ariA{f} = fitAR(diff(DEP(fold~=f,:),1,2), P.p); end
+arA = cell(1,P.nFold); arS2 = nan(1,P.nFold);
+for f = 1:P.nFold, [arA{f}, arS2(f)] = fitAR(DEP(fold~=f,:), P.p); end
+Fcomp = @(a) [a.'; eye(numel(a)-1) zeros(numel(a)-1,1)];   % AR companion matrix
 
 % constant QP pieces
 Obs = zeros(P.Hp, nx); Ai = eye(nx); for i=1:P.Hp, Obs(i,:) = C*Ai; Ai = Ai*A; end
@@ -111,26 +113,32 @@ rPI = arrayfun(@(k) rmse(yPI(:,k)), 1:nT).';
 fprintf('[MRT] PI tuned: Kp=%.2f Ki=%.2f | sim PI RMSE median %.2f (real CL %.2f)\n', KpB, KiB, median(rPI), median(realCL));
 
 %% [MRT-MPC] -----------------------------------------------------------------------
-modes = [{'hold','ari'},arrayfun(@(x) sprintf('x%.2f',x), P.xGrid, 'uni', 0)];
-rM = nan(nT, numel(modes)); Y = cell(1,numel(modes)); lamB = nan(1,numel(modes));
+% Every MPC variant is tuned like the PI: lam (Delta-u penalty) on a grid; the AR (x=1) variant also
+% tunes qb, the bias random-walk variance of its Kalman disturbance model, which the blends reuse.
+modes = [{'hold','x1.00'}, arrayfun(@(x) sprintf('x%.2f',x), setdiff(P.xGrid,1,'stable'), 'uni', 0)];
+rM = nan(nT, numel(modes)); Y = cell(1,numel(modes)); lamB = nan(1,numel(modes)); qbB = P.qbGrid(1);
 for im = 1:numel(modes)
     bestM = inf;
-    for lam = P.lamGrid
-        rr = nan(nT,1); yy = zeros(N,nT);
-        for k = 1:nT, yy(:,k) = runMPC(k, modes{im}, g(k), lam); rr(k) = rmse(yy(:,k)); end
-        if median(rr) < bestM, bestM = median(rr); rM(:,im) = rr; lamB(im) = lam; Y{im} = yy; end
+    if strcmp(modes{im},'x1.00'), qbs = P.qbGrid; else, qbs = qbB; end
+    for qb = qbs
+        for lam = P.lamGrid
+            rr = nan(nT,1); yy = zeros(N,nT);
+            for k = 1:nT, yy(:,k) = runMPC(k, modes{im}, g(k), lam, qb); rr(k) = rmse(yy(:,k)); end
+            if median(rr) < bestM, bestM = median(rr); rM(:,im) = rr; lamB(im) = lam; Y{im} = yy; qbSel = qb; end
+        end
     end
-    fprintf('[MRT] MPC %-6s lam=%-6g RMSE median %.2f [%.2f %.2f] | paired ratio to PI median %.2f | beats PI on %d/%d trials\n', ...
-        modes{im}, lamB(im), median(rM(:,im)), prctile(rM(:,im),25), prctile(rM(:,im),75), median(rM(:,im)./rPI), sum(rM(:,im)<rPI), nT);
+    if strcmp(modes{im},'x1.00'), qbB = qbSel; end
+    fprintf('[MRT] MPC %-6s lam=%-6g qb=%-6g RMSE median %.2f [%.2f %.2f] | paired ratio to PI median %.2f | beats PI on %d/%d trials\n', ...
+        modes{im}, lamB(im), qbSel, median(rM(:,im)), prctile(rM(:,im),25), prctile(rM(:,im),75), median(rM(:,im)./rPI), sum(rM(:,im)<rPI), nT);
 end
 % perfect actuator (g=1): how much of the clairvoyant / hold residual is the actuator-gain spread
 iC = strcmp(modes,'x0.00'); rIdeal = nan(nT,2);
 for k=1:nT
-    rIdeal(k,1) = rmse(runMPC(k,'x0.00',1,lamB(iC))); rIdeal(k,2) = rmse(runMPC(k,'hold',1,lamB(1)));
+    rIdeal(k,1) = rmse(runMPC(k,'x0.00',1,lamB(iC),qbB)); rIdeal(k,2) = rmse(runMPC(k,'hold',1,lamB(1),qbB));
 end
 fprintf('[MRT] perfect actuator (g=1): clair %.2f | hold %.2f\n', median(rIdeal(:,1)), median(rIdeal(:,2)));
 
-R = struct('P',P,'modes',{modes},'rM',rM,'rPI',rPI,'realCL',realCL,'rIdeal',rIdeal,'Kp',KpB,'Ki',KiB,'lamB',lamB, ...
+R = struct('P',P,'modes',{modes},'rM',rM,'rPI',rPI,'realCL',realCL,'rIdeal',rIdeal,'Kp',KpB,'Ki',KiB,'lamB',lamB,'qbB',qbB, ...
     'uff0',uff0,'g',g,'yPI',yPI,'Y',{Y},'dbar',dbar,'tt',tt,'wmask',wmask);
 save(fullfile(dataDir, sprintf('ctrl_mpc_realtrial_%s%s.mat', P.sess, P.tag)), '-struct','R');
 
@@ -147,46 +155,60 @@ save(fullfile(dataDir, sprintf('ctrl_mpc_realtrial_%s%s.mat', P.sess, P.tag)), '
     end
 
 % ---- nested: MPC on trial k ------------------------------------------------------
-    function [y, u] = runMPC(k, mode, gk, lam)
+    function [y, u] = runMPC(k, mode, gk, lam, qb)
         dtrue = dbar + DEP(k, pre+1:pre+N).';
-        depAll = DEP(k,:).'; aK = arA{fold(k)}; aI = ariA{fold(k)};
+        depAll = DEP(k,:).'; aK = arA{fold(k)}; s2 = arS2(fold(k));
+        % Kalman disturbance model: estimated departure = bias b (random walk, var qb*s2 per step;
+        % absorbs the actuator-gain mismatch) + AR(p) fluctuation. Forecast = b held + AR forecast.
+        np = numel(aK); Fz = blkdiag(1, Fcomp(aK)); Hz = [1 1 zeros(1,np-1)];
+        Qz = zeros(np+1); Qz(1,1) = qb*s2; Qz(2,2) = s2; Rz = 1e-6*s2;
+        z = zeros(np+1,1); Pz = blkdiag(0, var(depAll(1:pre))*eye(np));
+        for j = 1:pre, [z,Pz] = kfStep(z,Pz,depAll(j)); end            % pre-stim: laser off, exact
         hist = depAll(1:pre);                 % estimated departure history (exact pre-stim)
         y = zeros(N,1); u = zeros(N,1); xt = zeros(nx,1); xn = zeros(nx,1);
         for t = 1:N
             p = min(P.Hp, N-t+1);
             % disturbance estimate up to t-1 (pre-stim value at t=1)
-            if t == 1, dh = dbar(1) + hist(end); else, dh = y(t-1) - C*xnPrev - D*u(t-1); hist(end+1,1) = dh - dbar(t-1); end %#ok<AGROW>
+            if t > 1
+                dh = y(t-1) - C*xnPrev - D*u(t-1); hist(end+1,1) = dh - dbar(t-1); %#ok<AGROW>
+                [z,Pz] = kfStep(z,Pz,hist(end));
+            end
             off = hist(end) - depAll(pre+t-1);                   % current estimate - truth (gain mismatch)
             if strcmp(mode,'hold')
                 fc = hist(end)*ones(p,1);
-            elseif strcmp(mode,'ar')
-                fc = arIter(hist, aK, p);
-            elseif strcmp(mode,'ari')
-                fc = hist(end) + cumsum(arIter(diff(hist), aI, p));
             else
                 x = sscanf(mode,'x%f');
                 fClair = depAll(pre+t:pre+t+p-1) + off;
                 if x == 0, fc = fClair;
                 else
-                    fAR = arIter(hist, aK, p);          % the AR forecaster scored in ctrl_mpc_forecast_sigma
-                    fc  = fClair + x*(fAR - fClair);
+                    fKF = zeros(p,1); zz = z;
+                    for j = 1:p, zz = Fz*zz; fKF(j) = Hz*zz; end   % bias held + AR forecast
+                    fc  = fClair + x*(fKF - fClair);
                 end
             end
             dfc = dbar(t:t+p-1) + fc;
             Hk = H(1:p,1:p); Psi = Obs(1:p,:)*xn;
-            Qk = 2*(Hk.'*Hk + lam*eye(p)); Qk = (Qk+Qk.')/2;
-            fk = 2*Hk.'*(Psi + dfc - P.ref) - 2*lam*uff0*ones(p,1);   % penalty on (u - uff0)^2
+            % penalty on input MOVES lam*||Delta u||^2 (does not anchor the steady state, so a gain
+            % mismatch can be fully corrected, as the PI integral does)
+            Dm = eye(p) - diag(ones(p-1,1),-1); if t == 1, uprev = uff0; else, uprev = u(t-1); end
+            Qk = 2*(Hk.'*Hk + lam*(Dm.'*Dm)); Qk = (Qk+Qk.')/2;
+            fk = 2*Hk.'*(Psi + dfc - P.ref) - 2*lam*Dm.'*[uprev; zeros(p-1,1)];
             uk = quadprog(Qk, fk, [],[],[],[], zeros(p,1), u_max*ones(p,1), [], qopt);
             u(t) = uk(1);
             y(t) = C*xt + gk*D*u(t) + dtrue(t);
             xt = A*xt + gk*B*u(t);
             xnPrev = xn; xn = A*xn + B*u(t);
         end
+        function [z,Pz] = kfStep(z,Pz,obs)
+            z = Fz*z; Pz = Fz*Pz*Fz.' + Qz;                         % predict
+            S = Hz*Pz*Hz.' + Rz; K = Pz*Hz.'/S;
+            z = z + K*(obs - Hz*z); Pz = (eye(np+1) - K*Hz)*Pz;     % update
+        end
     end
 end
 
 % ---- helpers ------------------------------------------------------------------------
-function a = fitAR(X, p)
+function [a, s2] = fitAR(X, p)
 n = size(X,2); Z = zeros(size(X,1)*(n-p), p); y = zeros(size(Z,1),1); r = 0;
 for k = 1:size(X,1)
     x = X(k,:).'; idx = r + (1:n-p);
@@ -194,6 +216,7 @@ for k = 1:size(X,1)
     y(idx) = x(p+1:n); r = idx(end);
 end
 a = (Z.'*Z + 1e-6*eye(p)) \ (Z.'*y);
+s2 = mean((y - Z*a).^2);                % one-step innovation variance
 end
 
 function f = arIter(hist, a, L)

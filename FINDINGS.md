@@ -200,6 +200,8 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
+> ⚠ **SUPERSEDED same day (2026-10-05, later):** the numbers below came from an MPC design that was handicapped under gain error. Redone in `ctrl_mpc_lqr.m` (scalar OL-identified plant, preview LQR): AR preview 0.94× PI, perfect preview 0.65×, MPC ≥ PI everywhere. Still provisional: the loop delay is not yet modelled. See RESEARCH 2026-10-05.
+
 ## ANSWERED (2026-10-05): How much would MPC beat PI, with a forecast we can actually make?
 **Question:** How close is the PI controller to the optimal controller, and does a realistic disturbance forecast close the gap?
 **Analysis:** `ctrl_mpc_forecast_sigma.m` + `ctrl_mpc_realtrial.m` on m4 (AL_0033 2025-02-26). The 108 recorded single-trial contra-predicted disturbances (sd 2.7 %ΔF/F) drive a tuned PI and a receding-horizon MPC (1 s horizon, input bounds, nominal-model planning) on the identified plant, with the measured 40% trial-to-trial actuator-gain spread. Forecasters are 5-fold cross-validated across trials. Metric = per-trial RMSE over +1..+3 s vs −5.
