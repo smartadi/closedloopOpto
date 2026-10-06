@@ -104,7 +104,8 @@ for Kp = P.KpGrid, for Ki = P.KiGrid
     rr = arrayfun(@(k) rmse(runPI(k,Kp,Ki,g(k))), 1:nT);
     if median(rr) < best, best = median(rr); KpB = Kp; KiB = Ki; end
 end, end
-yPI = zeros(N,nT); for k=1:nT, yPI(:,k) = runPI(k,KpB,KiB,g(k)); end
+yPI = zeros(N,nT); uPI = yPI; yOL = yPI; uOL = yPI;
+for k=1:nT, [yPI(:,k), uPI(:,k)] = runPI(k,KpB,KiB,g(k)); [yOL(:,k), uOL(:,k)] = runPI(k,0,0,g(k)); end
 rPI = arrayfun(@(k) rmse(yPI(:,k)), 1:nT).';
 fprintf('[LQR] PI tuned Kp=%.2f Ki=%.2f | RMSE median %.2f\n', KpB, KiB, median(rPI));
 
@@ -118,16 +119,16 @@ for im = 1:numel(modes)
         median(rM(:,im)), prctile(rM(:,im),25), prctile(rM(:,im),75), median(rM(:,im)./rPI), sum(rM(:,im)<rPI), nT);
 end
 R = struct('P',P,'poles',pol,'bnum',bnum,'A',A,'B',B,'C',C,'dcg',dcg,'fitOL',fitOL,'modes',{modes},'rM',rM,'rPI',rPI,'realCL',realCL,'Kp',KpB,'Ki',KiB, ...
-    'g',g,'yPI',yPI,'Y',{Y},'U',{U},'dbar',dbar,'tt',tt,'wmask',wmask,'uss',uss);
+    'g',g,'yPI',yPI,'uPI',uPI,'yOL',yOL,'uOL',uOL,'Y',{Y},'U',{U},'dbar',dbar,'tt',tt,'wmask',wmask,'uss',uss);
 save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struct','R');
 
 % ---- nested ------------------------------------------------------------------------
-    function y = runPI(k, Kp, Ki, gk)
-        dk = dbar + DEP(k,pre+1:pre+N).'; y = zeros(N,1); e = zeros(N,1); x = x0; s = 0;
+    function [y, u] = runPI(k, Kp, Ki, gk)          % Kp = Ki = 0 -> OL (feedforward uss only)
+        dk = dbar + DEP(k,pre+1:pre+N).'; y = zeros(N,1); u = zeros(N,1); e = zeros(N,1); x = x0; s = 0;
         for t = 1:N
             y(t) = C*x + dk(t); e(t) = y(t) - P.ref; s = s + e(t); if t > P.M, s = s - e(t-P.M); end
-            u = min(max(uss + Kp*e(t) + Ki/P.Fs*s, 0), u_max);
-            x = A*x + gk*B*u;
+            u(t) = min(max(uss + Kp*e(t) + Ki/P.Fs*s, 0), u_max);
+            x = A*x + gk*B*u(t);
         end
     end
 

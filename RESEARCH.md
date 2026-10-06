@@ -16,6 +16,15 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 — Fig-3-style single-session comparison: OL vs CL (PI) vs CL+MPC on all 108 simulated trials
+**Changed/Found:** `ctrl_mpc_lqr.m` now also simulates OL (feedforward only, u = uss) and saves PI/OL commands (`yOL/uOL/uPI`). New `controller-analysis/ctrl_mpc_fig3style.m` → `paper/images/supp_mpc/f3s_{A..G}*.png`, mirroring Fig 3 A–E + the ratio panels: single trial, trial average ±SD, stimulation, across-trial variance vs time, per-trial RMSE half-violins with paired signrank, and variance/RMSE ratios vs CL by window with bootstrap 95% CIs. Conditions are OL, CL, CL+MPC (AR preview) and CL+MPC* (perfect preview). Per-trial RMSE over 0–3 s, medians: **OL 3.03 → CL 2.01 → CL+MPC 1.92 → CL+MPC* 1.63**. CL beats OL on 101/108 trials (p=1e-18); CL+MPC beats CL on 85/108 (p=3e-13); CL+MPC* beats CL on 104/108 (p=3e-19). Ratios vs CL, 0–1 s / 1–3 s:
+- variance: OL 1.74 / 2.24 · CL+MPC 0.86 / 0.91 · CL+MPC* 0.57 / 0.46
+- RMSE: OL 1.15 / 1.53 · CL+MPC 0.98 / 0.97 · CL+MPC* 0.90 / 0.52
+
+Sanity check: the simulated OL/CL variance ratio (1.7–2.2) is in the range of the real Fig-3 OL/CL effect. Trial-level p-values come from one simulated session, so they are descriptive. The ratio-panel legend first overlapped the OL point, so a log-axis headroom fix and explicit ticks were added.
+**Why:** User asked to run all CL trials of the session and compare OL / CL / CL+MPC Fig-3 style.
+**Next:** User review. A realistic forecast gives a small but very consistent gain (variance −9–14%); a perfect preview halves the 1–3 s error. A second session would turn this into a cross-session comparison.
+
 ### 2026-10-05 — Preview window vs MPC performance: the whole benefit arrives by ~100 ms (just past the loop delay)
 **Changed/Found:** `ctrl_mpc_lqr.m` gains `P.Lp` (preview window inside the fixed 1-s horizon; beyond it the last previewed value is held; Lp = 0 = no preview). New `controller-analysis/ctrl_mpc_preview_sweep.m` sweeps Lp = 0…35 samples (0–1 s), with PI fixed at the tuned gains and measured σ_u, → `paper/images/supp_mpc/mpc_E_preview_window.png`. Median error relative to PI at Lp = 0 / 29 / 57 / 86 / 114 / 143 ms / 1 s:
 - perfect forecast: 1.00 / 0.92 / 0.78 / 0.57 / 0.53 / 0.51 / 0.52
