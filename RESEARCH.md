@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 — λ_Δu set to 1 (user); Fig-3 CL-trial replay rerun
+**Changed/Found:** `ctrl_mpc_lqr.m` default `P.rd` 10 → **1** (user choice; the command roughness is ~2× PI's, 17.5–17.9 vs 8.6; the recorded rig command is 11.8). Fig-3-frame replay (`_fig3`) and `ctrl_mpc_fig3style.m` panels were regenerated. 0–3 s RMSE medians: OL 2.25 · recorded CL 2.02 · **CL+MPC (AR) 1.66** (lower on 97/108, p=9e-17) · **CL+MPC* (perfect) 1.10** (108/108). Ratios vs recorded CL, 0–1 / 1–3 s: variance MPC 0.86/0.85, MPC* 0.35/0.28; RMSE MPC 0.89/0.88, MPC* 0.71/**0.12**. Versus the tuned-PI replay (+1..+3 s window): perfect 0.14×, half-AR-error 0.56×, AR 0.99×, hold 1.06×. The ratio-panel legend was moved to the lower left (the perfect point now sits at 0.12 and stretched the log axis).
+**Why:** User decision after the smoothness tradeoff plot.
+**Next:** Panels A–E of the older supp figure (`ctrl_mpc_supp_fig.m`, preview sweep) still come from the svd-frame run with rd = 10 and the double-counted σ_u = 0.40 → regenerate them in the Fig-3 frame with rd = 1 before they are used.
+
 ### 2026-10-05 — Smoothness (Δu) cost tradeoff plot: perfect preview trades error for command roughness; AR preview is flat
 **Changed/Found:** New `controller-analysis/ctrl_mpc_smooth_tradeoff.m` → `paper/images/supp_mpc/mpc_F_smooth_tradeoff.png`. Fig-3-frame replay of the 108 recorded CL trials with λ_Δu (`rd`) ∈ {0, 0.1, 1, 10, 100, 1000}; roughness = median per-trial total variation of the command over 0–3 s. Error/tuned-PI:
 - perfect preview 0.07 / 0.08 / 0.14 / 0.38 / 0.61 / 0.79 at roughness 21 / 21 / 18 / 8.7 / 3.7 / 1.4

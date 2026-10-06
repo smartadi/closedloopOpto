@@ -31,9 +31,9 @@ P.sess   = 'AL_0033_0226_e2';
 P.Fs     = 35;  P.Hp = 35;  P.ref = -5;  P.rmseWin = [1 3];  P.M = 105;
 P.delay  = 2;                    % input delay (samples): measured 47 ms loop latency -> 2 samples (57 ms)
 P.r      = 1e-3;
-P.rd     = 10;                   % penalty on input moves (Delta u)^2. 10 = laser command as smooth as
-                                 % the tuned PI's (total variation ~4-8 vs PI 5.4); 0 chatters (TV ~20)
-                                 % with the same RMSE, so the benefit is not from exploiting the fast zero                 % input weight (aggressive), in (%dF/F)^2 per (cmd unit)^2
+P.rd     = 1;                    % penalty on input moves (Delta u)^2. User choice 2026-10-05: 1 (command
+                                 % ~2x rougher than PI's; Fig-3 replay perfect preview 0.14x vs 0.38x at 10).
+                                 % 10 = PI-matched smoothness; 0 chatters. See ctrl_mpc_smooth_tradeoff.m                 % input weight (aggressive), in (%dF/F)^2 per (cmd unit)^2
 P.nFold  = 5;   P.p = 19;   P.qb = 1;   % AR order; Kalman bias variance (x AR innovation var)
 P.xGrid  = [0 0.25 0.5 0.75 1 1.25 1.5];
 P.sigU   = 'auto';  P.seed = 7;  P.nUse = inf;  P.tag = '';

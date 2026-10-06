@@ -125,7 +125,7 @@ fprintf('[F3S] panels -> %s\n', figDir);
         yl2 = [min(X(:))*0.85, max(X(:))*2.4]; ylim(a, yl2);          % headroom on top for the legend
         tk = [0.25 0.5 0.75 1 1.5 2 3 4]; set(a,'YTick',tk(tk>=yl2(1) & tk<=yl2(2)),'YTickLabel',compose('%g',tk(tk>=yl2(1) & tk<=yl2(2))));
         ylabel(a, yl); text(a, 2.45, 1, 'CL', 'HorizontalAlignment','right','VerticalAlignment','bottom','FontSize',S.fs_annot,'Color',PS.col_cl);
-        lg2 = legend(a, hh, nm(comp), 'Box','off','Location','northeast','FontSize',S.fs_annot); lg2.ItemTokenSize = S.itemtoken;
+        lg2 = legend(a, hh, nm(comp), 'Box','off','Location','southwest','FontSize',S.fs_annot); lg2.ItemTokenSize = S.itemtoken;
         jnAxes(a); paperExport(f, fullfile(figDir, fn));
     end
 end
