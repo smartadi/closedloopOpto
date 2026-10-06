@@ -16,6 +16,14 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 — Preview-LQR plant → 2-state + 2-sample (57 ms) input delay; PI now realistic (Kp 0.15 = deployed range)
+**Changed/Found:** `controller-analysis/ctrl_mpc_lqr.m` [LQR-SYSID] — per user: 2-dimensional model plus the measured 47 ms loop latency, rounded to d = 2 samples (57 ms at 35 Hz). Output-error fit of y(t)=a1y(t−1)+a2y(t−2)+b1u(t−1−d)+b2u(t−2−d) on u_OL vs trial-averaged y_OL, realized as ss with the delay absorbed (4 states). **Identifiability:** an unconstrained fit gives an unstable pole at d=0 and a negative-real pole (−0.41 at d=2, sample-to-sample ringing) at d≥1. With both poles constrained real in (0,1), the 2nd pole collapses to ~0 at every d (d=1/2/3: τ 183/191/204 ms, fits 88.8/88.7/88.4%). So the ramped OL step identifies only one time constant plus delay plus a fast zero (b = [−1.58 0.943]); DC −4.55. Results (108 trials, median RMSE ratio to tuned PI):
+- PI re-tunes to **Kp = 0.15, Ki = 0.50** (interior of the grid; Kp is inside m4's deployed range 0.10–0.20). Sim PI 1.35 vs recorded CL 1.80 (no-delay scalar model: 1.08 with Kp pinned at the grid edge)
+- measured σ_u = 0.40: hold 1.01× · AR preview **0.98×** (56/108) · half AR error 0.60× · perfect preview **0.53×** (106/108)
+- perfect actuator (PI 1.22): hold 1.00× · AR 0.95× (71/108) · half error 0.55× · perfect 0.21× (108/108)
+**Why:** User direction 2026-10-05. Without the delay, feedback was unrealistically strong (see entry below).
+**Next:** The preview's value is now set almost entirely by forecast quality. Today's AR barely beats hold; halving its error is worth ~40%. Discuss with the user how to predict the disturbance (signal, inputs, model class). Then rebuild `ctrl_mpc_supp_fig.m` on `ctrl_mpc_lqr` output; r is still fixed at 1e-3.
+
 ### 2026-10-05 — Intro literature review: verified reference map; novelty claim checked; 5 bib errors found
 **Changed/Found:** new `paper-writing/INTRO_LITREVIEW.md` — ~60 refs verified against Crossref/Europe PMC across brain state, closed-loop control, linear models. No published closed-loop optogenetic control of a widefield/mesoscale calcium signal (closest: Gupta & Murphy 2026 eLife widefield neurofeedback, reward actuator; Matveev 2024 platform leaves closed loop to future work). No prior test of mesoscale optogenetic dose-response linearity. Shimaoka 2019 eLife already shows contra hemisphere predicts trial variability → precedent for our contra-disturbance claim. Bib errors: `Zaaimi2022` is 2023; Ye spirals now Science 2026 (10.1126/science.adx1369); Ritt & Ching is ACC 2015 proceedings; O'Shea/Shenoy perturbation is bioRxiv 2022 only; Matveev2024 is bioRxiv, not closed-loop.
 **Why:** user asked for intro critique + lit review grounded in current claims; bib previously held 4 fabricated refs, so every citation was source-verified.

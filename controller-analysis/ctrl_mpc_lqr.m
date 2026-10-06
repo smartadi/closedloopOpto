@@ -2,9 +2,11 @@ function R = ctrl_mpc_lqr(varargin)
 %CTRL_MPC_LQR  Preview finite-horizon LQR (receding horizon, input-constrained) vs PI, on a scalar
 %              plant identified from the open-loop step (user spec 2026-10-05).
 %
-% PLANT. x(t+1) = a*x(t) + b*u(t), least squares on the fixed OL step command u_OL and the
-%   trial-averaged OL response y_OL (ctrl_lti_<sess>.mat). m4: a=0.879, b=-0.549, tau 222 ms,
-%   DC -4.54, free-run fit 88.4% (same as the 2-state + delay model). Output y = x + d.
+% PLANT (user 2026-10-05: 2-state + measured 47 ms latency). x(t+1) = A x(t) + B u(t-d), y = C x + dist,
+%   d = P.delay = 2 samples, 2 poles constrained real in (0,1), output-error fit on the fixed OL step
+%   command u_OL vs the trial-averaged OL response y_OL. m4: the data support ONE time constant
+%   (~190 ms); the 2nd pole goes to ~0 (a one-sample input memory = fast zero), fit 88.7%.
+%   (First version 2026-10-05 was scalar, no delay: a=0.879, b=-0.549, fit 88.4%.)
 %   Realized plant on trial k uses g_k*b, g_k lognormal with the CV measured from the OL trials;
 %   both controllers plan/act with the nominal b. Same g_k and same d_k for both (paired).
 %
@@ -27,6 +29,7 @@ function R = ctrl_mpc_lqr(varargin)
 
 P.sess   = 'AL_0033_0226_e2';
 P.Fs     = 35;  P.Hp = 35;  P.ref = -5;  P.rmseWin = [1 3];  P.M = 105;
+P.delay  = 2;                    % input delay (samples): measured 47 ms loop latency -> 2 samples (57 ms)
 P.r      = 1e-3;                 % input weight (aggressive), in (%dF/F)^2 per (cmd unit)^2
 P.nFold  = 5;   P.p = 19;   P.qb = 1;   % AR order; Kalman bias variance (x AR innovation var)
 P.xGrid  = [0 0.25 0.5 0.75 1 1.25 1.5];
@@ -39,15 +42,28 @@ L  = load(fullfile(dataDir, sprintf('ctrl_lti_%s.mat', P.sess)));
 S3 = load(fullfile(dataDir, sprintf('ctrl_ols_cl_deploy_%s.mat', P.sess)));
 pre = S3.pre; N = round(S3.dur*P.Fs); u_max = L.uMaxCL;
 
-%% [LQR-SYSID] scalar plant from the OL step ----------------------------------------
-uo = L.u_OL(:); yo = L.y_OL(:); n = numel(yo);
-th = [yo(1:n-1) uo(1:n-1)] \ yo(2:n); a = th(1); b = th(2);
-xs = zeros(n,1); xs(1) = yo(1); for t=1:n-1, xs(t+1) = a*xs(t) + b*uo(t); end
-fitOL = 100*(1 - norm(yo-xs)/norm(yo-mean(yo)));
+%% [LQR-SYSID] 2-state plant + input delay from the OL step --------------------------
+% y(t) = a1 y(t-1) + a2 y(t-2) + b1 u(t-1-d) + b2 u(t-2-d): output-error fit (free-run sim error)
+% on the fixed OL command u_OL vs the trial-averaged OL response y_OL, with both poles constrained
+% real in (0,1) (an unconstrained fit puts one pole on the negative axis = sample-to-sample ringing).
+uo = L.u_OL(:); yo = L.y_OL(:);
+sg = @(v) 1./(1+exp(-v)); d = P.delay;
+simp = @(q) filter([zeros(1,1+d) q(3:4)], conv([1 -sg(q(1))],[1 -sg(q(2))]), uo);
+best = inf; fopt = optimset('MaxFunEvals',4e4,'MaxIter',4e4,'TolX',1e-10,'TolFun',1e-10);
+for s0 = [0.5 0.95; 0.3 0.9; 0.7 0.9; 0.1 0.88].'
+    q = fminsearch(@(q) norm(yo - simp(q)), [log(s0.'./(1-s0.')) -0.3 -0.2], fopt);
+    if norm(yo - simp(q)) < best, best = norm(yo - simp(q)); qB = q; end
+end
+pol = sort(sg(qB(1:2)),'descend'); bnum = qB(3:4);
+fitOL = 100*(1 - norm(yo-simp(qB))/norm(yo-mean(yo)));
+md = ss(tf([0 bnum], poly(pol), 1/P.Fs, 'InputDelay', d));     % 2 states, then
+md = absorbDelay(md); [A,B,C,Dd] = ssdata(md); nx = size(A,1);  % delay folded in -> 2+d states
+assert(Dd == 0);
+dcg = sum(bnum)/prod(1-pol);
 
 %% [LQR-DIST] -----------------------------------------------------------------------
 uCL = L.u_CL(:); yCLm = S3.AaAbs(:);
-xm = zeros(numel(uCL),1); for t=1:numel(uCL)-1, xm(t+1) = a*xm(t) + b*uCL(t); end
+xm  = lsim(md, uCL);
 dPI  = yCLm(pre+1:pre+N) - xm(pre+1:pre+N);
 Gc   = mean(S3.Gabs,1);
 dbar = (Gc(pre+1:pre+N).' - mean(Gc(pre+1:pre+N))) + mean(dPI);
@@ -55,8 +71,8 @@ DEP  = S3.Gabs - Gc; nT = min(size(DEP,1), P.nUse); DEP = DEP(1:nT,:);
 tt = (1:N).'/P.Fs; wmask = tt>=P.rmseWin(1) & tt<=P.rmseWin(2);
 rmse = @(y) sqrt(mean((y(wmask) - P.ref).^2));
 realCL = sqrt(mean((S3.Aabs(1:nT,pre+find(wmask)) - P.ref).^2, 2));
-x0 = xm(pre+1);                                   % state at onset (pre-stim command ~0 -> ~0)
-uss = (P.ref - mean(dbar)) * (1-a) / b;           % steady command for the mean disturbance
+x0 = zeros(nx,1);                                 % pre-stim command ~0 -> state ~0 at onset
+uss = (P.ref - mean(dbar)) / dcg;                 % steady command for the mean disturbance
 
 if ischar(P.sigU)
     O = load(fullfile(dataDir, sprintf('ctrl_ols_ol_stimblind_%s.mat', P.sess)));
@@ -68,11 +84,14 @@ rng(P.seed); fold = mod(randperm(nT), P.nFold) + 1;
 arA = cell(1,P.nFold); arS2 = nan(1,P.nFold);
 for f = 1:P.nFold, [arA{f}, arS2(f)] = fitAR(DEP(fold~=f,:), P.p); end
 
-% prediction matrices: X(t+1..t+Hp) = Phi*x(t) + Gam*U(t..t+Hp-1)
-Phi = a.^(1:P.Hp).'; Gam = zeros(P.Hp); for j=1:P.Hp, for i=1:j, Gam(j,i) = a^(j-i)*b; end, end
+% prediction matrices: Y(t+1..t+Hp) = Phi*x(t) + Gam*U(t..t+Hp-1)  (delay states carry the latency)
+Phi = zeros(P.Hp,nx); Gam = zeros(P.Hp); Ak = eye(nx); CA = zeros(P.Hp+1,nx);
+for j = 0:P.Hp, CA(j+1,:) = C*Ak; Ak = Ak*A; end
+for j = 1:P.Hp, Phi(j,:) = CA(j+1,:); for i = 1:j, Gam(j,i) = CA(j-i+1,:)*B; end, end
 qopt = optimoptions('quadprog','Display','off');
-fprintf(['[LQR] %s | a=%.4f b=%.4f (tau %.0f ms, DC %.2f, OL fit %.1f%%) | %d trials | sigma_u=%.2f\n' ...
-         '      sd(dep)=%.2f | real CL RMSE median %.2f | r=%g\n'], P.sess, a, b, -1000/P.Fs/log(a), b/(1-a), fitOL, ...
+fprintf(['[LQR] %s | 2-state + %d-sample delay (%.0f ms): poles %s (tau %s ms), b %s, DC %.2f, OL fit %.1f%%\n' ...
+         '      %d trials | sigma_u=%.2f | sd(dep)=%.2f | real CL RMSE median %.2f | r=%g\n'], P.sess, d, 1000*d/P.Fs, ...
+         mat2str(pol,3), mat2str(round(-1000/P.Fs./log(max(pol,eps)))), mat2str(bnum,3), dcg, fitOL, ...
          nT, P.sigU, std(reshape(DEP(:,pre+find(wmask)),[],1)), median(realCL), P.r);
 
 %% [LQR-PI] --------------------------------------------------------------------------
@@ -94,33 +113,33 @@ for im = 1:numel(modes)
     fprintf('[LQR] %-6s RMSE median %.2f [%.2f %.2f] | paired ratio to PI %.2f | beats PI %d/%d\n', modes{im}, ...
         median(rM(:,im)), prctile(rM(:,im),25), prctile(rM(:,im),75), median(rM(:,im)./rPI), sum(rM(:,im)<rPI), nT);
 end
-R = struct('P',P,'a',a,'b',b,'fitOL',fitOL,'modes',{modes},'rM',rM,'rPI',rPI,'realCL',realCL,'Kp',KpB,'Ki',KiB, ...
+R = struct('P',P,'poles',pol,'bnum',bnum,'A',A,'B',B,'C',C,'dcg',dcg,'fitOL',fitOL,'modes',{modes},'rM',rM,'rPI',rPI,'realCL',realCL,'Kp',KpB,'Ki',KiB, ...
     'g',g,'yPI',yPI,'Y',{Y},'U',{U},'dbar',dbar,'tt',tt,'wmask',wmask,'uss',uss);
 save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struct','R');
 
 % ---- nested ------------------------------------------------------------------------
     function y = runPI(k, Kp, Ki, gk)
-        d = dbar + DEP(k,pre+1:pre+N).'; y = zeros(N,1); e = zeros(N,1); x = x0; s = 0;
+        dk = dbar + DEP(k,pre+1:pre+N).'; y = zeros(N,1); e = zeros(N,1); x = x0; s = 0;
         for t = 1:N
-            y(t) = x + d(t); e(t) = y(t) - P.ref; s = s + e(t); if t > P.M, s = s - e(t-P.M); end
+            y(t) = C*x + dk(t); e(t) = y(t) - P.ref; s = s + e(t); if t > P.M, s = s - e(t-P.M); end
             u = min(max(uss + Kp*e(t) + Ki/P.Fs*s, 0), u_max);
-            x = a*x + gk*b*u;
+            x = A*x + gk*B*u;
         end
     end
 
     function [y, u] = runLQR(k, mode, gk)
-        dep = DEP(k,:).'; d = dbar + dep(pre+1:pre+N); aK = arA{fold(k)}; s2 = arS2(fold(k));
+        dep = DEP(k,:).'; dk = dbar + dep(pre+1:pre+N); aK = arA{fold(k)}; s2 = arS2(fold(k));
         np = numel(aK); Fz = blkdiag(1, [aK.'; eye(np-1) zeros(np-1,1)]); Hz = [1 1 zeros(1,np-1)];
         Qz = zeros(np+1); Qz(1,1) = P.qb*s2; Qz(2,2) = s2; Rz = 1e-6*s2;
         z = zeros(np+1,1); Pz = blkdiag(0, var(dep(1:pre))*eye(np));
         for j = 1:pre, [z,Pz] = kf(z,Pz,dep(j)); end              % laser off: dep observed exactly
         y = zeros(N,1); u = zeros(N,1); x = x0; xn = x0;
         for t = 1:N
-            y(t) = x + d(t);
-            dh = y(t) - xn - dbar(t);                            % departure estimate (incl. gain offset)
+            y(t) = C*x + dk(t);
+            dh = y(t) - C*xn - dbar(t);                          % departure estimate (incl. gain offset)
             if t > 1, [z,Pz] = kf(z,Pz,dh); end
             p = min(P.Hp, N-t);
-            if p < 1, u(t) = u(t-1); x = a*x + gk*b*u(t); break; end
+            if p < 1, u(t) = u(t-1); break; end
             off = dh - dep(pre+t);
             switch mode
                 case 'hold', fc = dh*ones(p,1);
@@ -131,13 +150,13 @@ save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struc
                           fc = fCl + xb*(fK - fCl); end
             end
             dfc = dbar(t+1:t+p) + fc;
-            G = Gam(1:p,1:p); free = Phi(1:p)*xn + dfc - P.ref;
+            G = Gam(1:p,1:p); free = Phi(1:p,:)*xn + dfc - P.ref;
             Hq = 2*(G.'*G + P.r*eye(p)); fq = 2*(G.'*free - P.r*uss*ones(p,1));
             uo = -Hq\fq;
             if any(uo < 0 | uo > u_max), uo = quadprog((Hq+Hq.')/2, fq, [],[],[],[], zeros(p,1), u_max*ones(p,1), [], qopt); end
             u(t) = uo(1);
-            x  = a*x  + gk*b*u(t);                              % true plant
-            xn = a*xn + b*u(t);                                  % controller's nominal model
+            x  = A*x  + gk*B*u(t);                              % true plant
+            xn = A*xn + B*u(t);                                  % controller's nominal model
         end
         function [z,Pz] = kf(z,Pz,obs)
             z = Fz*z; Pz = Fz*Pz*Fz.' + Qz; K = Pz*Hz.'/(Hz*Pz*Hz.' + Rz);
