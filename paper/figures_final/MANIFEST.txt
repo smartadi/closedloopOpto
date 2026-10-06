@@ -101,11 +101,12 @@ figure5/sine_combined_variance.pdf  # 5.04 x 2.93 cm
 # ---------------------------------------------------------------------------
 
 [supp_spatial]
-# NEW S1 (user 2026-10-05) = spatial spread + step-response spontaneous variance
-# + stationarity, assembled under 8 cm wide x 5 cm high.
+# S1 (user 2026-10-05) = spatial spread + nine amplitude maps + batch variance
+# + OL variance evolution. Assembled at 17.6 x 3.65 cm (full page width, one row).
+# NOT stationarity -- that panel was dropped from the paper on 2026-10-05.
 # ALL NINE amplitude maps are pulled (user 2026-10-05: "i want all 9 maps ill place
 # it as 3 by 3"), at ~1.6 cm -> a 4.8 x 4.8 cm block, leaving ~3 cm of width for the
-# colourbar and the stacked area / variance / stationarity column.
+# colourbar and the two variance panels.
 # Source: impulse-analysis/imp_spatial_panels.m.
 # Each map carries its own amplitude label, and the 1 mm scale bar is EMBEDDED on
 # map_01 -- there is no standalone scale-bar panel any more.
