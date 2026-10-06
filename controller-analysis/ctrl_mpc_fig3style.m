@@ -1,35 +1,40 @@
 function ctrl_mpc_fig3style(sess)
-%CTRL_MPC_FIG3STYLE  Figure-3-style single-session comparison of OL vs CL (PI) vs CL+MPC, simulated on
-%   all 108 recorded CL-trial disturbances of the session (ctrl_mpc_lqr output, measured gain spread).
-%   OL = feedforward only (steady command uss); CL = tuned PI (Kp 0.15, Ki 0.50); CL+MPC = preview LQR
-%   with the cross-validated AR forecast (realistic); CL+MPC* = perfect preview (upper bound, faint).
-%   Panels mirror Fig 3 A-E + the ratio panels H/I:
-%     A single trial · B trial average +/-1 SD · C trial-average stimulation +/-1 SD
-%     D variance across trials vs time · E per-trial RMSE (0-3 s) half-violins + paired signrank
-%     F variance ratio and G RMSE ratio vs CL, windows 0-1 s / 1-3 s (bootstrap 95% CI over trials)
-%   Stats are trial-level within ONE simulated session -> descriptive (no session-aware model).
+%CTRL_MPC_FIG3STYLE  Figure-3-style single-session comparison in the Fig-3 frame (rig online dF/F):
+%   OL  = the RECORDED open-loop trials (separate trials; unpaired comparisons only)
+%   CL  = the RECORDED closed-loop trials
+%   CL+MPC  = the same CL trials replayed with preview-LQR in place of the PI (AR forecast, realistic)
+%   CL+MPC* = same with a perfect preview (upper bound, faint)
+%   Source: ctrl_mpc_lqr('frame','fig3','tag','_fig3',...) -- each CL trial's disturbance is its
+%   recorded output minus the plant model's response to its recorded laser command.
+%   Panels mirror Fig 3 A-E + ratio panels:
+%     A single CL trial (recorded vs MPC replays) · B trial average +/-1 SD · C stimulation +/-1 SD
+%     D variance across trials vs time · E per-trial RMSE (0-3 s): OL vs CL ranksum (unpaired),
+%       CL vs CL+MPC(*) signrank (paired) · F/G variance and RMSE ratios vs CL by window, bootstrap CI
+%       (OL resampled independently of CL; MPC resampled paired with CL)
+%   One session -> trial-level stats are descriptive.
 % OUT  paper/images/supp_mpc/f3s_*.png (working copies)
 if nargin < 1, sess = 'AL_0033_0226_e2'; end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data');
 figDir = fullfile(here,'..','paper','images','supp_mpc'); addpath(fullfile(here,'..','utils'));
-R = load(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s.mat', sess)));
+R = load(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s_fig3.mat', sess)));
 PS = paperStyle(); S = jnStyle(); rng(1);
 iA = strcmp(R.modes,'x1.00'); iC = strcmp(R.modes,'x0.00');
-Ys = {R.yOL, R.yPI, R.Y{iA}, R.Y{iC}};  Us = {R.uOL, R.uPI, R.U{iA}, R.U{iC}};
+Ys = {R.recOL, R.recCL, R.Y{iA}, R.Y{iC}};  Us = {R.recUOL, R.recUCL, R.U{iA}, R.U{iC}};
 nm = {'OL','CL','CL+MPC','CL+MPC*'};
 col = {PS.col_ol, PS.col_cl, [0.45 0.20 0.60], [0.80 0.65 0.90]};
 tt = R.tt; ref = R.P.ref; nT = size(R.yPI,2); Wbig = 8.9; Wsm = 3.4; H = 3.4;
 rm = @(Y, m) sqrt(mean((Y(m,:) - ref).^2, 1)).';     % per-trial RMSE over mask m
 w03 = tt>=0 & tt<=3; w01 = tt>=0 & tt<1; w13 = tt>=1 & tt<=3;
-RM = cellfun(@(Y) rm(Y,w03), Ys, 'uni', 0); RM = [RM{:}];
+RMc = cellfun(@(Y) rm(Y,w03), Ys, 'uni', 0);          % {OL (nOL), CL, MPC, MPC*} (CL-paired = 2..4)
+RMp = [RMc{2:4}];
 
-%% A single trial (jointly nearest each condition's median RMSE) -------------------------
-[~,k] = min(sum(abs(log(RM ./ median(RM))), 2));
+%% A single CL trial: recorded vs MPC replays (OL is a separate trial -> not shown) ----------
+[~,k] = min(sum(abs(log(RMp ./ median(RMp))), 2));
 fig = jnFig(Wbig, H); ax = axes(fig); hold(ax,'on');
 plot(ax,[0 3],[ref ref],'--k','LineWidth',S.lw_ref);
-h = gobjects(1,4); for c = [4 1 2 3], h(c) = plot(ax,tt,Ys{c}(:,k),'-','Color',col{c},'LineWidth',S.lw_mean); end
-finish(ax,'\DeltaF/F (%)'); title(ax, sprintf('single trial (#%d)', k));
-lg = legend(ax,h,nm,'Box','off','Location','northeast','NumColumns',4,'FontSize',S.fs_annot); lg.ItemTokenSize = S.itemtoken;
+h = gobjects(1,4); for c = [4 2 3], h(c) = plot(ax,tt,Ys{c}(:,k),'-','Color',col{c},'LineWidth',S.lw_mean); end
+finish(ax,'\DeltaF/F (%)'); title(ax, sprintf('CL trial #%d: recorded vs MPC replay', k));
+lg = legend(ax,h(2:4),nm(2:4),'Box','off','Location','northeast','NumColumns',3,'FontSize',S.fs_annot); lg.ItemTokenSize = S.itemtoken;
 paperExport(fig, fullfile(figDir,'f3s_A_single_trial.png'));
 
 %% B trial average +/- 1 SD ----------------------------------------------------------------
@@ -57,18 +62,19 @@ paperExport(fig, fullfile(figDir,'f3s_D_variance.png'));
 %% E per-trial RMSE half-violins + paired tests ---------------------------------------------
 fig = jnFig(Wsm+1.6, H); ax = axes(fig); hold(ax,'on');
 for c = 1:4
-    v = RM(:,c); [f, yi] = ksdensity(v, 'Support','positive'); f = 0.38*f/max(f);
+    v = RMc{c}; [f, yi] = ksdensity(v, 'Support','positive'); f = 0.38*f/max(f);
     fill(ax, c - [f fliplr(0*f)], [yi fliplr(yi)], col{c}, 'FaceAlpha',0.5,'EdgeColor','none');
-    scatter(ax, c + 0.08 + 0.18*rand(nT,1), v, 3, col{c}, 'filled','MarkerFaceAlpha',0.5);
+    scatter(ax, c + 0.08 + 0.18*rand(numel(v),1), v, 3, col{c}, 'filled','MarkerFaceAlpha',0.5);
     plot(ax, c + [-0.3 0.3], median(v)*[1 1], '-k', 'LineWidth', 0.75);
 end
-pr = [1 2; 2 3; 2 4]; yt = max(RM(:))*[1.05 1.17 1.29];
+pr = [1 2; 2 3; 2 4]; yt = max(cellfun(@max,RMc))*[1.05 1.17 1.29];
 for i = 1:size(pr,1)
-    p = signrank(RM(:,pr(i,1)), RM(:,pr(i,2)));
+    a1 = RMc{pr(i,1)}; a2 = RMc{pr(i,2)};
+    if pr(i,1) == 1, p = ranksum(a1, a2); tst = 'ranksum (separate trials)';
+    else, p = signrank(a1, a2); tst = sprintf('signrank (paired), lower on %d/%d trials', sum(a2 < a1), nT); end
     plot(ax, pr(i,:), yt(i)*[1 1], '-k', 'LineWidth', 0.5);
     text(ax, mean(pr(i,:)), yt(i), stars(p), 'HorizontalAlignment','center','VerticalAlignment','bottom','FontSize',S.fs_annot);
-    fprintf('[F3S] RMSE %s vs %s: median %.2f vs %.2f | signrank p=%.2g | %s lower on %d/%d trials\n', nm{pr(i,1)}, nm{pr(i,2)}, ...
-        median(RM(:,pr(i,1))), median(RM(:,pr(i,2))), p, nm{pr(i,2)}, sum(RM(:,pr(i,2)) < RM(:,pr(i,1))), nT);
+    fprintf('[F3S] RMSE %s vs %s: median %.2f vs %.2f | p=%.2g %s\n', nm{pr(i,1)}, nm{pr(i,2)}, median(a1), median(a2), p, tst);
 end
 set(ax,'XTick',1:4,'XTickLabel',nm,'XTickLabelRotation',30); xlim(ax,[0.4 4.6]); ylim(ax,[0 yt(3)*1.12]);
 ylabel(ax,'RMSE (%\DeltaF/F), 0-3 s'); jnAxes(ax);
@@ -78,13 +84,21 @@ paperExport(fig, fullfile(figDir,'f3s_E_rmse_violin.png'));
 wins = {w01, w13}; wl = {'0-1 s','1-3 s'}; nB = 2000; comp = [1 3 4];
 VR = nan(3,2,3); RR = VR;                                      % comp x window x [est lo hi]
 for iw = 1:2
-    m = wins{iw}; bi = randi(nT, nT, nB);
+    m = wins{iw}; bi = randi(nT, nT, nB); nO = size(Ys{1},2); bo = randi(nO, nO, nB);
     for ic = 1:3
         c = comp(ic);
-        vr = @(ix) mean(var(Ys{c}(m,ix),0,2)) / mean(var(Ys{2}(m,ix),0,2));
-        rr = @(ix) median(rm(Ys{c}(:,ix),m) ./ rm(Ys{2}(:,ix),m));
-        bv = arrayfun(@(b) vr(bi(:,b)), 1:nB); br = arrayfun(@(b) rr(bi(:,b)), 1:nB);
-        VR(ic,iw,:) = [vr(1:nT) prctile(bv,[2.5 97.5])]; RR(ic,iw,:) = [rr(1:nT) prctile(br,[2.5 97.5])];
+        if c == 1   % OL: separate trials -> resample independently; RMSE ratio = ratio of medians
+            vr = @(io,ix) mean(var(Ys{1}(m,io),0,2)) / mean(var(Ys{2}(m,ix),0,2));
+            rr = @(io,ix) median(rm(Ys{1}(:,io),m)) / median(rm(Ys{2}(:,ix),m));
+            e0 = {1:nO, 1:nT}; bsel = @(b) {bo(:,b), bi(:,b)};
+        else        % MPC replays: paired with CL -> same indices; RMSE ratio = median paired ratio
+            vr = @(~,ix) mean(var(Ys{c}(m,ix),0,2)) / mean(var(Ys{2}(m,ix),0,2));
+            rr = @(~,ix) median(rm(Ys{c}(:,ix),m) ./ rm(Ys{2}(:,ix),m));
+            e0 = {[], 1:nT}; bsel = @(b) {[], bi(:,b)};
+        end
+        bv = zeros(1,nB); br = bv;
+        for b = 1:nB, s2 = bsel(b); bv(b) = vr(s2{:}); br(b) = rr(s2{:}); end
+        VR(ic,iw,:) = [vr(e0{:}) prctile(bv,[2.5 97.5])]; RR(ic,iw,:) = [rr(e0{:}) prctile(br,[2.5 97.5])];
         fprintf('[F3S] %-7s/CL %s: variance ratio %.2f [%.2f %.2f] | RMSE ratio %.2f [%.2f %.2f]\n', nm{c}, wl{iw}, VR(ic,iw,:), RR(ic,iw,:));
     end
 end

@@ -37,14 +37,35 @@ P.rd     = 10;                   % penalty on input moves (Delta u)^2. 10 = lase
 P.nFold  = 5;   P.p = 19;   P.qb = 1;   % AR order; Kalman bias variance (x AR innovation var)
 P.xGrid  = [0 0.25 0.5 0.75 1 1.25 1.5];
 P.sigU   = 'auto';  P.seed = 7;  P.nUse = inf;  P.tag = '';
-P.Lp     = inf;                  % preview window (samples) inside the fixed Hp horizon; inf = full 1 s
+P.frame  = 'svd';                % 'svd' = contra-Global disturbance (Aabs frame); 'fig3' = replay each
+                                 %   recorded CL trial in the rig's online dF/F (Fig-3 frame)
+P.rawFile = 'AL_0033ctrl02262.mat';   % fig3 frame: session cache under brain_paper/data
+P.unbounded = false;            % diagnostic: drop the MPC laser bounds (two-sided, unlimited)
+P.Lp     = inf;                 % preview window (samples) inside the fixed Hp horizon; inf = full 1 s
 P.KpGrid = 0:0.04:0.60;  P.KiGrid = 0:0.25:3.0;
 for i=1:2:numel(varargin); P.(varargin{i})=varargin{i+1}; end
 
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data');
-L  = load(fullfile(dataDir, sprintf('ctrl_lti_%s.mat', P.sess)));
-S3 = load(fullfile(dataDir, sprintf('ctrl_ols_cl_deploy_%s.mat', P.sess)));
-pre = S3.pre; N = round(S3.dur*P.Fs); u_max = L.uMaxCL;
+addpath(genpath(fullfile(here,'..','utils')));
+if strcmp(P.frame,'fig3')
+    % [LQR-FIG3] Fig-3 frame: the rig's online dF/F (data.dFk, = Fig-3 ncDfk/wcDfk exactly) and each
+    % trial's recorded laser command (cp_laser_amplitude at 2 kHz, sampled at the frame times).
+    Z = load(fullfile(here,'..','data',P.rawFile)); dz = Z.d; Dz = Z.data;
+    [uAmp, ~] = cp_laser_amplitude(dz.inpVals, dz.inpTime);
+    tb = dz.timeBlue(:); yfull = Dz.dFk(:); pre = 35; N = 105; rel = -pre:N;
+    on = arrayfun(@(t) find(tb >= t, 1), dz.stimStarts(:));
+    grab = @(idx) deal(cell2mat(arrayfun(@(i) yfull(on(i)+rel).', idx(:), 'uni', 0)), ...
+                       cell2mat(arrayfun(@(i) interp1(dz.inpTime, uAmp, tb(on(i)+rel), 'linear', 0).', idx(:), 'uni', 0)));
+    [Yol, Uol] = grab(Dz.nc);  [Ycl, Ucl] = grab(Dz.wc);
+    L = struct('u_OL', mean(Uol,1).' - mean(mean(Uol(:,1:pre))), 'y_OL', mean(Yol,1).' - mean(mean(Yol(:,1:pre))));
+    u_max = max(Ucl(:));
+    if ischar(P.sigU), P.sigU = 0; end            % the trial's own gain error is inside its replayed d
+else
+    L  = load(fullfile(dataDir, sprintf('ctrl_lti_%s.mat', P.sess)));
+    S3 = load(fullfile(dataDir, sprintf('ctrl_ols_cl_deploy_%s.mat', P.sess)));
+    pre = S3.pre; N = round(S3.dur*P.Fs); u_max = L.uMaxCL;
+end
+uLo = 0; uHi = u_max; if P.unbounded, uLo = -inf; uHi = inf; end   % MPC bounds (diagnostic switch)
 
 %% [LQR-SYSID] 2-state plant + input delay from the OL step --------------------------
 % y(t) = a1 y(t-1) + a2 y(t-2) + b1 u(t-1-d) + b2 u(t-2-d): output-error fit (free-run sim error)
@@ -66,15 +87,23 @@ assert(Dd == 0);
 dcg = sum(bnum)/prod(1-pol);
 
 %% [LQR-DIST] -----------------------------------------------------------------------
-uCL = L.u_CL(:); yCLm = S3.AaAbs(:);
-xm  = lsim(md, uCL);
-dPI  = yCLm(pre+1:pre+N) - xm(pre+1:pre+N);
-Gc   = mean(S3.Gabs,1);
-dbar = (Gc(pre+1:pre+N).' - mean(Gc(pre+1:pre+N))) + mean(dPI);
-DEP  = S3.Gabs - Gc; nT = min(size(DEP,1), P.nUse); DEP = DEP(1:nT,:);
 tt = (1:N).'/P.Fs; wmask = tt>=P.rmseWin(1) & tt<=P.rmseWin(2);
 rmse = @(y) sqrt(mean((y(wmask) - P.ref).^2));
-realCL = sqrt(mean((S3.Aabs(1:nT,pre+find(wmask)) - P.ref).^2, 2));
+if strcmp(P.frame,'fig3')
+    % replay: d_k = recorded CL output - model response to that trial's recorded command (from -1 s)
+    nT = min(size(Ycl,1), P.nUse); Ycl = Ycl(1:nT,:); Ucl = Ucl(1:nT,:);
+    Dk = zeros(nT, numel(rel)); for k = 1:nT, Dk(k,:) = Ycl(k,:) - lsim(md, Ucl(k,:).').'; end
+    dmean = mean(Dk,1); dbar = dmean(pre+1:pre+N).'; DEP = Dk - dmean;
+    realCL = sqrt(mean((Ycl(:,pre+find(wmask)) - P.ref).^2, 2));
+else
+    uCL = L.u_CL(:); yCLm = S3.AaAbs(:);
+    xm  = lsim(md, uCL);
+    dPI  = yCLm(pre+1:pre+N) - xm(pre+1:pre+N);
+    Gc   = mean(S3.Gabs,1);
+    dbar = (Gc(pre+1:pre+N).' - mean(Gc(pre+1:pre+N))) + mean(dPI);
+    DEP  = S3.Gabs - Gc; nT = min(size(DEP,1), P.nUse); DEP = DEP(1:nT,:);
+    realCL = sqrt(mean((S3.Aabs(1:nT,pre+find(wmask)) - P.ref).^2, 2));
+end
 x0 = zeros(nx,1);                                 % pre-stim command ~0 -> state ~0 at onset
 uss = (P.ref - mean(dbar)) / dcg;                 % steady command for the mean disturbance
 
@@ -120,6 +149,10 @@ for im = 1:numel(modes)
 end
 R = struct('P',P,'poles',pol,'bnum',bnum,'A',A,'B',B,'C',C,'dcg',dcg,'fitOL',fitOL,'modes',{modes},'rM',rM,'rPI',rPI,'realCL',realCL,'Kp',KpB,'Ki',KiB, ...
     'g',g,'yPI',yPI,'uPI',uPI,'yOL',yOL,'uOL',uOL,'Y',{Y},'U',{U},'dbar',dbar,'tt',tt,'wmask',wmask,'uss',uss);
+if strcmp(P.frame,'fig3')   % recorded Fig-3 trials (stim window), for the CL-trial comparison figure
+    R.recOL = Yol(:,pre+1:pre+N).'; R.recCL = Ycl(:,pre+1:pre+N).';
+    R.recUOL = Uol(:,pre+1:pre+N).'; R.recUCL = Ucl(:,pre+1:pre+N).';
+end
 save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struct','R');
 
 % ---- nested ------------------------------------------------------------------------
@@ -166,7 +199,7 @@ save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struc
             Hq = 2*(G.'*G + P.r*eye(p) + P.rd*(Dm.'*Dm));
             fq = 2*(G.'*free - P.r*uss*ones(p,1) - P.rd*Dm.'*[up; zeros(p-1,1)]);
             uo = -Hq\fq;
-            if any(uo < 0 | uo > u_max), uo = quadprog((Hq+Hq.')/2, fq, [],[],[],[], zeros(p,1), u_max*ones(p,1), [], qopt); end
+            if any(uo < uLo | uo > uHi), uo = quadprog((Hq+Hq.')/2, fq, [],[],[],[], uLo*ones(p,1), uHi*ones(p,1), [], qopt); end
             u(t) = uo(1);
             x  = A*x  + gk*B*u(t);                              % true plant
             xn = A*xn + B*u(t);                                  % controller's nominal model
