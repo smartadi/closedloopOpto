@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 — LQR plant (m4) is minimal: fully controllable + observable, but effectively 1st-order
+**Changed/Found:** `ctrl_mpc_lqr.m` [LQR-SYSID] plant (no edit; checked in MATLAB) — G(z) = −1.577(z−0.598) / (z³(z−0.861)), 4 states after the 2-sample delay is folded in. On the balanced realization, ctrb and obsv both have rank 4 (cond 5.3), so there is no uncontrollable or unobservable subspace and no pole-zero cancellation (closest |p−z| = 0.26). Hankel SVs [2.81 1.47 1.37 0.24]. The fitted 2nd pole goes to 0 and joins the delay's poles at 0 as a nilpotent chain z⁻³, i.e. a finite input memory, not a dynamic mode. balred to 1 state changes the 3-s step response by only 2.5% NRMSE. The raw absorbDelay realization is badly scaled (entries ~2048), which makes PBH/rank tests on it misleading; use balreal.
+**Why:** User asked about the controllable and observable subspaces of the preview-LQR plant.
+**Next:** none. Optionally note in Methods that the plant is minimal (no hidden modes the LQR could miss).
+
 ### 2026-10-05 — Preview-LQR plant → 2-state + 2-sample (57 ms) input delay; PI now realistic (Kp 0.15 = deployed range)
 **Changed/Found:** `controller-analysis/ctrl_mpc_lqr.m` [LQR-SYSID] — per user: 2-dimensional model plus the measured 47 ms loop latency, rounded to d = 2 samples (57 ms at 35 Hz). Output-error fit of y(t)=a1y(t−1)+a2y(t−2)+b1u(t−1−d)+b2u(t−2−d) on u_OL vs trial-averaged y_OL, realized as ss with the delay absorbed (4 states). **Identifiability:** an unconstrained fit gives an unstable pole at d=0 and a negative-real pole (−0.41 at d=2, sample-to-sample ringing) at d≥1. With both poles constrained real in (0,1), the 2nd pole collapses to ~0 at every d (d=1/2/3: τ 183/191/204 ms, fits 88.8/88.7/88.4%). So the ramped OL step identifies only one time constant plus delay plus a fast zero (b = [−1.58 0.943]); DC −4.55. Results (108 trials, median RMSE ratio to tuned PI):
 - PI re-tunes to **Kp = 0.15, Ki = 0.50** (interior of the grid; Kp is inside m4's deployed range 0.10–0.20). Sim PI 1.35 vs recorded CL 1.80 (no-delay scalar model: 1.08 with Kp pinned at the grid edge)
