@@ -34,9 +34,13 @@ P.r      = 1e-3;
 P.rd     = 1;                    % penalty on input moves (Delta u)^2. User choice 2026-10-05: 1 (command
                                  % ~2x rougher than PI's; Fig-3 replay perfect preview 0.14x vs 0.38x at 10).
                                  % 10 = PI-matched smoothness; 0 chatters. See ctrl_mpc_smooth_tradeoff.m                 % input weight (aggressive), in (%dF/F)^2 per (cmd unit)^2
-P.nFold  = 5;   P.p = 19;   P.qb = 1;   % AR order; Kalman bias variance (x AR innovation var)
+P.nFold  = 5;   P.p = 19;   P.qb = 1e-3; % AR order; Kalman bias random-walk variance (x AR innovation var).
+                                          % Was 1: the bias soaked up each step's fluctuation and held it flat
+                                          % over the horizon = injected noise (fig3: 0.988x PI -> 0.942x at 1e-3)
 P.fcst   = 'ar';                 % forecaster: 'ar' | 'shrink' | 'lp' (see [LQR] forecaster variants)
 P.lpHz   = 3;                    % 'lp' cutoff (Hz)
+P.fcstModel = '';                % fig3 frame: use a precomputed forecaster from ctrl_mpc_forecasters
+                                 %   (naive|average|ar|arma|theta|dlinear|mlp|lstm); '' = built-in Kalman-AR
 P.xGrid  = [0 0.25 0.5 0.75 1 1.25 1.5];
 P.sigU   = 'auto';  P.seed = 7;  P.nUse = inf;  P.tag = '';
 P.frame  = 'svd';                % 'svd' = contra-Global disturbance (Aabs frame); 'fig3' = replay each
@@ -120,6 +124,13 @@ rng(P.seed); fold = mod(randperm(nT), P.nFold) + 1;
 % alpha = cov(f,d)/var(f) on training trials (never worse than "no change"); 'lp' AR fitted/run on the
 % causally low-passed (P.lpHz) departure, so only the slow component is forecast.
 [blp, alp] = butter(2, P.lpHz/(P.Fs/2));
+FCm = [];
+if ~isempty(P.fcstModel)
+    assert(strcmp(P.frame,'fig3'), 'precomputed forecasters exist for the fig3 frame only');
+    FCf = load(fullfile(dataDir, sprintf('ctrl_mpc_forecasters_%s.mat', P.sess)), 'F', 'fold');
+    FCm = FCf.F.(P.fcstModel);
+    fold = FCf.fold;                  % same trial folds as the forecasts were cross-validated on
+end
 arA = cell(1,P.nFold); arS2 = nan(1,P.nFold); alph = ones(P.Hp, P.nFold);
 for f = 1:P.nFold
     Xtr = DEP(fold~=f,:); if strcmp(P.fcst,'lp'), Xtr = filter(blp, alp, Xtr, [], 2); end
@@ -199,8 +210,14 @@ save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struc
                 otherwise
                     xb = sscanf(mode,'x%f'); fCl = dep(pre+t+1:pre+t+p) + off;
                     if xb == 0, fc = fCl;
-                    else, fK = zeros(p,1); zz = z; for j=1:p, zz = Fz*zz; fK(j) = zz(1) + al_k(j)*zz(2); end
-                          fc = fCl + xb*(fK - fCl); end
+                    else
+                        if ~isempty(P.fcstModel)          % precomputed forecaster (ctrl_mpc_forecasters)
+                            fK = squeeze(FCm(t, 1:p, k)).'; fK(isnan(fK)) = 0;
+                        else
+                            fK = zeros(p,1); zz = z; for j=1:p, zz = Fz*zz; fK(j) = zz(1) + al_k(j)*zz(2); end
+                        end
+                        fc = fCl + xb*(fK - fCl);
+                    end
             end
             % preview window: only the first Lp forecast samples are used; beyond, the last previewed
             % value is held (Lp = 0 -> the current estimate dh is held = 'hold')
