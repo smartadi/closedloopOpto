@@ -86,7 +86,9 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 > **Placement decided 2026-10-05: discussion + supp figure.** Code: `ctrl_mpc_forecast_sigma.m` →
 > `ctrl_mpc_realtrial.m` (×2 runs, see header) → `ctrl_mpc_supp_fig.m`. `ctrl_tube_mpc.m` is SUPERSEDED
 > (its disturbance was 17× too small; RESEARCH 2026-10-05). Its 09-11.3 metric item was resolved 09-15.
-> Headline: a clairvoyant forecast would give 0.45× PI error; real AR forecasters give 1.19× (and 0.95× with a perfect actuator).
+> **FINAL code = `ctrl_mpc_lqr.m`** (2-state + 57 ms OL-identified plant, preview LQR, rd=10) → `ctrl_mpc_supp_fig.m`.
+> `ctrl_mpc_realtrial.m` is superseded. Headline: perfect preview 0.52× PI, half AR error 0.68×, AR 0.97×.
+> Framing (user 2026-10-05): linear validated plant + forecaster as exogenous preview (convex QP); LPV/state-gain as the extension.
 - [ ] Paste the MPC discussion paragraph (chat snippet 2026-10-05) into `discussion.tex` on Overleaf; replace the "Future directions" MPC sentences.
 - [ ] Write the supp-figure caption + a short Methods paragraph (sim setup, tuned-PI baseline, CV forecasters, λ tuning). Lock the panels: MANIFEST + PAPER.md, add a .pdf export, `PAPER_FINAL` rerun.
 - [ ] Optional robustness: repeat `ctrl_mpc_realtrial` on a second session (m9/m11, AL_0039) so the claim isn't n=1.
