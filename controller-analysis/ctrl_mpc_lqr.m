@@ -37,6 +37,7 @@ P.rd     = 10;                   % penalty on input moves (Delta u)^2. 10 = lase
 P.nFold  = 5;   P.p = 19;   P.qb = 1;   % AR order; Kalman bias variance (x AR innovation var)
 P.xGrid  = [0 0.25 0.5 0.75 1 1.25 1.5];
 P.sigU   = 'auto';  P.seed = 7;  P.nUse = inf;  P.tag = '';
+P.Lp     = inf;                  % preview window (samples) inside the fixed Hp horizon; inf = full 1 s
 P.KpGrid = 0:0.04:0.60;  P.KiGrid = 0:0.25:3.0;
 for i=1:2:numel(varargin); P.(varargin{i})=varargin{i+1}; end
 
@@ -152,6 +153,10 @@ save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struc
                     else, fK = zeros(p,1); zz = z; for j=1:p, zz = Fz*zz; fK(j) = Hz*zz; end
                           fc = fCl + xb*(fK - fCl); end
             end
+            % preview window: only the first Lp forecast samples are used; beyond, the last previewed
+            % value is held (Lp = 0 -> the current estimate dh is held = 'hold')
+            Lp = min(P.Lp, p);
+            if Lp == 0, fc(:) = dh; elseif Lp < p, fc(Lp+1:end) = fc(Lp); end
             dfc = dbar(t+1:t+p) + fc;
             G = Gam(1:p,1:p); free = Phi(1:p,:)*xn + dfc - P.ref;
             % + rd*||Delta u||^2: suppresses sample-to-sample chatter that exploits the model's fast

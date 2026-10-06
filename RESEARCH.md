@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-05 — Preview window vs MPC performance: the whole benefit arrives by ~100 ms (just past the loop delay)
+**Changed/Found:** `ctrl_mpc_lqr.m` gains `P.Lp` (preview window inside the fixed 1-s horizon; beyond it the last previewed value is held; Lp = 0 = no preview). New `controller-analysis/ctrl_mpc_preview_sweep.m` sweeps Lp = 0…35 samples (0–1 s), with PI fixed at the tuned gains and measured σ_u, → `paper/images/supp_mpc/mpc_E_preview_window.png`. Median error relative to PI at Lp = 0 / 29 / 57 / 86 / 114 / 143 ms / 1 s:
+- perfect forecast: 1.00 / 0.92 / 0.78 / 0.57 / 0.53 / 0.51 / 0.52
+- half AR error: 1.00 / 0.96 / 0.86 / 0.73 / 0.67 / 0.66 / 0.68
+- AR forecast: 1.00 / 1.00 / 0.98 / 0.97 / 0.97 / 0.96 / 0.97
+
+The benefit saturates at 3–4 samples (86–114 ms), i.e. 1–2 samples past the 57 ms model delay. Previewing further adds nothing, because the receding horizon applies only the first move and the plant's ~190 ms time constant makes far-future disturbance irrelevant to it.
+**Why:** The user asked for preview allowed vs performance.
+**Next:** Implication for forecasting: only a ~100–150 ms horizon matters. At those leads the AR error is 0.77–0.85 of no-forecast, so a better forecaster needs to win at short lead, not at 1 s. That's the target for the disturbance-prediction discussion. The sweep took ~2.7 min; the first legend draft overlapped the curves and was replaced with direct labels.
+
 ### 2026-10-05 — Preview-LQR chattered; Δu penalty (rd=10) makes it PI-smooth with the same benefit; supp figure rebuilt
 **Changed/Found:** `controller-analysis/ctrl_mpc_lqr.m` — with only a level penalty the LQR laser command chattered sample-to-sample for every preview: median total variation 18–24 per trial over +1..+3 s vs 5.4 for PI. It exploits the model's fast zero (b = [−1.58, +0.943]), which the ramped OL step cannot validate. Raising r (1e-2…1) did not help. Added `P.rd`·‖Δu‖², default rd = 10 → total variation 4.4–7.9 (PI-like). RMSE barely changes, so the benefit was never from the chatter. Final (108 trials, median ratio to tuned PI Kp 0.15/Ki 0.50, PI RMSE 1.35):
 - measured σ_u = 0.40: perfect preview **0.52×** (107/108) · half AR error 0.68× · AR **0.97×** (69/108) · hold 1.00×
