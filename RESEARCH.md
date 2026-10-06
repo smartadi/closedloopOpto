@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-06 — MPC supp: removed all stats/stars (simulation), descriptive point estimates only
+**Changed/Found:** `controller-analysis/ctrl_mpc_fig3style.m` — removed the ranksum/signrank brackets and stars from E. Replaced the bootstrap CIs in F/G with point estimates only, and deleted the `stars()` helper. Regenerated the f3s panels; medians are unchanged (OL 2.25, CL 2.02, CL+MPC 1.68, CL+MPC* 1.10). Also dropped the bootstrap from `ctrl_mpc_uncertainty_sweep.m`.
+**Why:** User: "this is a sim so no point making stats claims and putting stars". The MPC rows are model replays, so a p-value would test the simulator, not the brain.
+**Next:** Keep every MPC panel and text descriptive (medians, ratios, n trials lower). No significance language in the caption or Discussion.
+
+### 2026-10-06 — Effect of λ (input-smoothness weight) as forecast uncertainty shrinks
+**Changed/Found:** `controller-analysis/ctrl_mpc_lambda_uncertainty.m` (new) — AR forecaster, 200 ms preview, λ ∈ {0, 0.1, 1, 10, 100} × forecast error kept ∈ {100…0%}. Outputs: mpc_M_lambda_error.png and mpc_N_lambda_roughness.png; data in data/ctrl_mpc_lambda_uncertainty_AL_0033_0226_e2.mat. With the real AR forecast (100% error kept), λ barely matters: 0.93–0.98× PI for every λ, with the best at λ=10 (0.933). With a perfect preview, λ is what limits performance: 0.075 (λ=0), 0.14 (λ=1), 0.38 (λ=10), 0.60 (λ=100). Command roughness relative to PI is ~2.5 at λ=0, 2.0 at λ=1, 1.0 at λ=10 and 0.4 at λ=100. Roughness is U-shaped in forecast error.
+**Why:** The user asked for the effect of the smoothing operator λ alongside the uncertainty sweep. Reading: under realistic forecast uncertainty the smoothness cost is nearly free. λ=10 matches PI's smoothness at 0.93× PI error. The penalty only bites once the preview becomes accurate.
+**Next:** Decide whether the paper uses λ=1 (current) or λ=10 (PI-matched smoothness, marginally better with the real forecast).
+
+### 2026-10-06 — Uncertainty sweep: each forecaster with its error shrunk toward 0 (200 ms preview)
+**Changed/Found:** `controller-analysis/ctrl_mpc_uncertainty_sweep.m` (new) — preview = truth + x·(model forecast − truth), x ∈ {1, 0.8, …, 0}, for all 8 bake-off models; λ=1, PI fixed at Kp=0.10, Ki=1.5. Outputs: mpc_K_uncertainty_sweep.png and mpc_L_uncertainty_common_axis.png. Every model falls roughly linearly from its as-is ratio (0.94–1.22) to 0.138 at a perfect preview. Plotted against the remaining 200 ms forecast error, all 8 models collapse onto one line.
+**Why:** The user asked to see model performance with less and less uncertainty at 200 ms. The collapse shows that MPC performance is set by the forecast error at short lead, whatever the model; the model family adds nothing beyond that.
+**Next:** none
+
 ### 2026-10-06 — MPC supp panels H/I/J: forecaster skill, MPC-by-forecaster, Kalman bias-noise sweep
 **Changed/Found:** `controller-analysis/ctrl_mpc_forecaster_fig.m` (new) — draws three panels into paper/images/supp_mpc/: mpc_H_forecast_skill_models (error/climatology vs lead for 8 models), mpc_I_mpc_by_forecaster (MPC/PI ratio and trials beating PI), and mpc_J_kalman_bias_noise (MPC/PI vs qb). Panel J uses hard-coded values from the 2026-10-05 qb runs (0.988/0.956/0.939/0.942/0.942) because that sweep was never saved to a .mat.
 **Why:** The user asked for plots of the bake-off and the noise fix. What they show: every model that beats the naive forecast at ~86 ms (AR, ARMA, DLinear, MLP, LSTM) lands at 0.94–0.96× PI, so the choice of forecaster is not the bottleneck. Forecast skill at the lead that matters is the bottleneck.

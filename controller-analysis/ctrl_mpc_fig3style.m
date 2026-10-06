@@ -8,10 +8,9 @@ function ctrl_mpc_fig3style(sess)
 %   recorded output minus the plant model's response to its recorded laser command.
 %   Panels mirror Fig 3 A-E + ratio panels:
 %     A single CL trial (recorded vs MPC replays) · B trial average +/-1 SD · C stimulation +/-1 SD
-%     D variance across trials vs time · E per-trial RMSE (0-3 s): OL vs CL ranksum (unpaired),
-%       CL vs CL+MPC(*) signrank (paired) · F/G variance and RMSE ratios vs CL by window, bootstrap CI
-%       (OL resampled independently of CL; MPC resampled paired with CL)
-%   One session -> trial-level stats are descriptive.
+%     D variance across trials vs time · E per-trial RMSE (0-3 s) half-violins + medians
+%     F/G variance and RMSE ratios vs CL by window (point estimates)
+%   MPC rows are SIMULATION (model replay) -> no significance tests, stars or CIs anywhere (user 2026-10-06).
 % OUT  paper/images/supp_mpc/f3s_*.png (working copies)
 if nargin < 1, sess = 'AL_0033_0226_e2'; end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data');
@@ -67,39 +66,23 @@ for c = 1:4
     scatter(ax, c + 0.08 + 0.18*rand(numel(v),1), v, 3, col{c}, 'filled','MarkerFaceAlpha',0.5);
     plot(ax, c + [-0.3 0.3], median(v)*[1 1], '-k', 'LineWidth', 0.75);
 end
-pr = [1 2; 2 3; 2 4]; yt = max(cellfun(@max,RMc))*[1.05 1.17 1.29];
-for i = 1:size(pr,1)
-    a1 = RMc{pr(i,1)}; a2 = RMc{pr(i,2)};
-    if pr(i,1) == 1, p = ranksum(a1, a2); tst = 'ranksum (separate trials)';
-    else, p = signrank(a1, a2); tst = sprintf('signrank (paired), lower on %d/%d trials', sum(a2 < a1), nT); end
-    plot(ax, pr(i,:), yt(i)*[1 1], '-k', 'LineWidth', 0.5);
-    text(ax, mean(pr(i,:)), yt(i), stars(p), 'HorizontalAlignment','center','VerticalAlignment','bottom','FontSize',S.fs_annot);
-    fprintf('[F3S] RMSE %s vs %s: median %.2f vs %.2f | p=%.2g %s\n', nm{pr(i,1)}, nm{pr(i,2)}, median(a1), median(a2), p, tst);
-end
-set(ax,'XTick',1:4,'XTickLabel',nm,'XTickLabelRotation',30); xlim(ax,[0.4 4.6]); ylim(ax,[0 yt(3)*1.12]);
+% simulation (MPC replays are model output) -> descriptive only: medians, no tests / stars
+for c = 1:4, fprintf('[F3S] RMSE %-7s median %.2f\n', nm{c}, median(RMc{c})); end
+set(ax,'XTick',1:4,'XTickLabel',nm,'XTickLabelRotation',30); xlim(ax,[0.4 4.6]); ylim(ax,[0 max(cellfun(@max,RMc))*1.05]);
 ylabel(ax,'RMSE (%\DeltaF/F), 0-3 s'); jnAxes(ax);
 paperExport(fig, fullfile(figDir,'f3s_E_rmse_violin.png'));
 
-%% F/G ratios vs CL by window (bootstrap 95% CI over trials) --------------------------------
-wins = {w01, w13}; wl = {'0-1 s','1-3 s'}; nB = 2000; comp = [1 3 4];
-VR = nan(3,2,3); RR = VR;                                      % comp x window x [est lo hi]
+%% F/G ratios vs CL by window (point estimates; descriptive) ---------------------------------
+wins = {w01, w13}; wl = {'0-1 s','1-3 s'}; comp = [1 3 4];
+VR = nan(3,2); RR = VR;                                        % comp x window
 for iw = 1:2
-    m = wins{iw}; bi = randi(nT, nT, nB); nO = size(Ys{1},2); bo = randi(nO, nO, nB);
+    m = wins{iw};
     for ic = 1:3
         c = comp(ic);
-        if c == 1   % OL: separate trials -> resample independently; RMSE ratio = ratio of medians
-            vr = @(io,ix) mean(var(Ys{1}(m,io),0,2)) / mean(var(Ys{2}(m,ix),0,2));
-            rr = @(io,ix) median(rm(Ys{1}(:,io),m)) / median(rm(Ys{2}(:,ix),m));
-            e0 = {1:nO, 1:nT}; bsel = @(b) {bo(:,b), bi(:,b)};
-        else        % MPC replays: paired with CL -> same indices; RMSE ratio = median paired ratio
-            vr = @(~,ix) mean(var(Ys{c}(m,ix),0,2)) / mean(var(Ys{2}(m,ix),0,2));
-            rr = @(~,ix) median(rm(Ys{c}(:,ix),m) ./ rm(Ys{2}(:,ix),m));
-            e0 = {[], 1:nT}; bsel = @(b) {[], bi(:,b)};
-        end
-        bv = zeros(1,nB); br = bv;
-        for b = 1:nB, s2 = bsel(b); bv(b) = vr(s2{:}); br(b) = rr(s2{:}); end
-        VR(ic,iw,:) = [vr(e0{:}) prctile(bv,[2.5 97.5])]; RR(ic,iw,:) = [rr(e0{:}) prctile(br,[2.5 97.5])];
-        fprintf('[F3S] %-7s/CL %s: variance ratio %.2f [%.2f %.2f] | RMSE ratio %.2f [%.2f %.2f]\n', nm{c}, wl{iw}, VR(ic,iw,:), RR(ic,iw,:));
+        VR(ic,iw) = mean(var(Ys{c}(m,:),0,2)) / mean(var(Ys{2}(m,:),0,2));
+        if c == 1, RR(ic,iw) = median(rm(Ys{1},m)) / median(rm(Ys{2},m));     % OL: separate trials
+        else,      RR(ic,iw) = median(rm(Ys{c},m) ./ rm(Ys{2},m)); end          % MPC: replay of the same trial
+        fprintf('[F3S] %-7s/CL %s: variance ratio %.2f | RMSE ratio %.2f\n', nm{c}, wl{iw}, VR(ic,iw), RR(ic,iw));
     end
 end
 ratioPanel(VR, 'variance / CL variance', 'f3s_F_variance_ratio.png');
@@ -116,10 +99,7 @@ fprintf('[F3S] panels -> %s\n', figDir);
         off = [-0.22 0 0.22]; hh = gobjects(1,3);
         for j = 1:3
             c = comp(j);
-            for iw2 = 1:2
-                plot(a, iw2+off(j)*[1 1], squeeze(X(j,iw2,2:3)), '-', 'Color', col{c}, 'LineWidth', S.lw_err+0.3);
-            end
-            hh(j) = plot(a, (1:2)+off(j), X(j,:,1), 'o', 'Color', col{c}, 'MarkerFaceColor', col{c}, 'MarkerSize', S.marker+1, 'LineStyle','none');
+            hh(j) = plot(a, (1:2)+off(j), X(j,:), 'o', 'Color', col{c}, 'MarkerFaceColor', col{c}, 'MarkerSize', S.marker+1, 'LineStyle','none');
         end
         set(a,'XTick',1:2,'XTickLabel',wl,'YScale','log'); xlim(a,[0.5 2.5]);
         yl2 = [min(X(:))*0.85, max(X(:))*2.4]; ylim(a, yl2);          % headroom on top for the legend
@@ -135,6 +115,3 @@ mu = mean(Y,2); sd = std(Y,0,2);
 fill(ax, [t; flipud(t)], [mu-sd; flipud(mu+sd)], c, 'FaceAlpha', fa, 'EdgeColor','none');
 end
 
-function s = stars(p)
-if p < 1e-3, s = '***'; elseif p < 1e-2, s = '**'; elseif p < 0.05, s = '*'; else, s = 'n.s.'; end
-end
