@@ -41,6 +41,8 @@ P.fcst   = 'ar';                 % forecaster: 'ar' | 'shrink' | 'lp' (see [LQR]
 P.lpHz   = 3;                    % 'lp' cutoff (Hz)
 P.fcstModel = '';                % fig3 frame: use a precomputed forecaster from ctrl_mpc_forecasters
                                  %   (naive|average|ar|arma|theta|dlinear|mlp|lstm); '' = built-in Kalman-AR
+P.fcstFile  = 'ctrl_mpc_forecasters_%s.mat';  % file holding F.<fcstModel>; the Python Lu et al. AR/ARX
+                                 %   (mpc_arx_forecaster.py) is 'ctrl_mpc_arx_out_%s.mat' with pyar|pyarx
 P.xGrid  = [0 0.25 0.5 0.75 1 1.25 1.5];
 P.sigU   = 'auto';  P.seed = 7;  P.nUse = inf;  P.tag = '';
 P.frame  = 'svd';                % 'svd' = contra-Global disturbance (Aabs frame); 'fig3' = replay each
@@ -127,9 +129,9 @@ rng(P.seed); fold = mod(randperm(nT), P.nFold) + 1;
 FCm = [];
 if ~isempty(P.fcstModel)
     assert(strcmp(P.frame,'fig3'), 'precomputed forecasters exist for the fig3 frame only');
-    FCf = load(fullfile(dataDir, sprintf('ctrl_mpc_forecasters_%s.mat', P.sess)), 'F', 'fold');
-    FCm = FCf.F.(P.fcstModel);
-    fold = FCf.fold;                  % same trial folds as the forecasts were cross-validated on
+    FCf = load(fullfile(dataDir, sprintf(P.fcstFile, P.sess)), 'F', 'fold');
+    FCm = double(FCf.F.(P.fcstModel));
+    fold = double(FCf.fold(:)).';     % same trial folds as the forecasts were cross-validated on
 end
 arA = cell(1,P.nFold); arS2 = nan(1,P.nFold); alph = ones(P.Hp, P.nFold);
 for f = 1:P.nFold
