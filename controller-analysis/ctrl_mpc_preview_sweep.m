@@ -43,7 +43,7 @@ for j = 1:numel(xG)
     text(ax, 0.3, rat(end,j)-0.04, labs{j}, 'VerticalAlignment','top','FontSize',St.fs_annot,'Color',cols(j,:));
 end
 jnAxes(ax);
-paperExport(fig, fullfile(figDir,'mpc_E_preview_window.png'));
+ctrl_mpc_export(fig, fullfile(figDir,'mpc_E_preview_window.png'));
 fprintf('[PREVIEW] Lp(s): %s\n', mat2str(S.Lp_s,2));
 for j=1:numel(xG), fprintf('[PREVIEW] x=%.2f: %s\n', xG(j), mat2str(rat(:,j).',2)); end
 end

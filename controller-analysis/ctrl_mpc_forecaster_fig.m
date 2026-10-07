@@ -32,7 +32,7 @@ set(ax,'XScale','log','XTick',[30 60 100 200 500 1000]); xlim(ax,[25 1100]); yli
 xlabel(ax,'forecast lead (ms)'); ylabel(ax,'forecast error / climatology');
 lg = legend(ax, h, cellfun(@(s) lbl(s), K.names, 'uni', 0), 'Box','off','Location','eastoutside','FontSize',St.fs_annot);
 lg.ItemTokenSize = [10 6];
-jnAxes(ax); paperExport(fig, fullfile(figDir,'mpc_H_forecast_skill_models.png'));
+jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir,'mpc_H_forecast_skill_models.png'));
 
 %% I MPC by forecaster -----------------------------------------------------------------------
 [r, o] = sort(M.res(:,2)); mods = M.mods(o); nb = M.res(o,3);
@@ -47,7 +47,7 @@ text(ax, 0.6, 1.27, '— tuned PI (= 1)', 'VerticalAlignment','middle','FontSize
 set(ax,'XTick',1:numel(mods),'XTickLabel',cellfun(@(s) lbl(s), mods, 'uni', 0),'XTickLabelRotation',35);
 xlim(ax,[0.4 numel(mods)+0.6]); ylim(ax,[0.8 1.32]);
 ylabel(ax,'MPC error / PI error'); title(ax,'0.2 s preview  (numbers = trials beating PI, of 108)');
-jnAxes(ax); paperExport(fig, fullfile(figDir,'mpc_I_mpc_by_forecaster.png'));
+jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir,'mpc_I_mpc_by_forecaster.png'));
 
 %% J Kalman bias-noise sweep (AR forecaster) — values from the 2026-10-05 qb runs (RESEARCH.md)
 qb = [1 0.1 0.01 1e-3 0]; rq = [0.988 0.956 0.939 0.942 0.942]; bq = [59 79 81 83 83];
@@ -60,5 +60,5 @@ for i = 1:5, text(ax, xq(i), rq(i)+0.008, sprintf('%d', bq(i)), 'HorizontalAlign
 set(ax,'XTick',xq,'XTickLabel',{'1','0.1','0.01','10^{-3}','0'}); xlim(ax,[0.6 5.4]); ylim(ax,[0.92 1.01]);
 xlabel(ax,'bias random-walk variance q_b'); ylabel(ax,'MPC error / PI error');
 title(ax,'AR forecast, 0.2 s preview');
-jnAxes(ax); paperExport(fig, fullfile(figDir,'mpc_J_kalman_bias_noise.png'));
+jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir,'mpc_J_kalman_bias_noise.png'));
 end

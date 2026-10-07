@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-07 — Supp MPC panels locked into figures_final/panels/supp_mpc (15 PDFs)
+**Changed/Found:** Added a `[supp_mpc]` section (15 panels, lettering a–o) to `paper/figures_final/MANIFEST.txt`, plus a matching row in `PAPER.md` "Supplementary figures in use". New `controller-analysis/ctrl_mpc_export.m` writes the PNG, and with PAPER_FINAL on it also writes the vector PDF, which `paper_final_mirror` drops into the final folder. All 8 MPC producers now export through it. Re-ran every producer with PAPER_FINAL on, and all 15 PDFs landed. `ctrl_mpc_equation_panel.m`: canvas widened 8.9→9.4 cm because the PDF overhung by 0.27 cm (now 9.17×3.74). `git rm controller-analysis/ctrl_mpc_supp_fig.m`: it was obsolete, svd-frame, and also wrote mpc_A_plant_fit.png, which would have clobbered the new panel. Held panels (F, N, J) are not listed.
+**Why:** User: "put plots in supplementary panel folder".
+**Next:** Assemble S-MPC in Illustrator. Paste the caption and Discussion/Methods snippets (2026-10-07 chat) into Overleaf. Held panels stay working copies only.
+
 ### 2026-10-07 — Supp MPC figure: panel selection, equation panel, draft layout
 **Changed/Found:** New `controller-analysis/ctrl_mpc_equation_panel.m` → mpc_0_problem.png (the QP solved every frame, with its parameters). New `controller-analysis/ctrl_mpc_supp_montage.m` → _draft_supp_mpc_layout.png, a 15-panel review mock-up (a–o). The user selected: equation, plant fit, f3s A–G, preview window, forecast skill, MPC-by-forecaster, uncertainty sweep (both x-axes), λ vs error. HELD (not in the figure): mpc_F_smooth_tradeoff (roughness vs error), mpc_N_lambda_roughness, mpc_J_kalman_bias_noise.
 **Why:** The user asked to construct the supp figure and its story from the current panels.

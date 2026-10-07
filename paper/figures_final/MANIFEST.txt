@@ -252,3 +252,35 @@ supplementary/supp_f4_exemplar_08.pdf
 supplementary/supp_f4_exemplar_09.pdf
 supplementary/supp_f4_exemplar_10.pdf
 supplementary/supp_f4_exemplar_11.pdf
+
+[supp_mpc]
+# S-MPC = preview model-predictive control replayed on recorded CL trials (user 2026-10-07:
+# "put plots in supplementary panel folder"). Single session AL_0033 2025-02-26 e2, 108 CL /
+# 92 OL trials. MPC rows are SIMULATION -> descriptive only, no stars/tests/CIs on any panel.
+# Lettering follows the draft layout (paper/images/supp_mpc/_draft_supp_mpc_layout.png):
+#   a problem (QP)          -> mpc_0_problem.pdf             ctrl_mpc_equation_panel.m
+#   b plant fit             -> mpc_A_plant_fit.pdf           ctrl_mpc_plant_fig.m
+#   c-i CL replay (Fig-3)   -> f3s_A..G                      ctrl_mpc_fig3style.m
+#   j preview window        -> mpc_E_preview_window.pdf      ctrl_mpc_preview_sweep.m
+#   k forecast skill        -> mpc_H_forecast_skill_models   ctrl_mpc_forecaster_fig.m
+#   l MPC by forecaster     -> mpc_I_mpc_by_forecaster       ctrl_mpc_forecaster_fig.m
+#   m,n uncertainty sweep   -> mpc_K / mpc_L                 ctrl_mpc_uncertainty_sweep.m
+#   o lambda vs error       -> mpc_M_lambda_error            ctrl_mpc_lambda_uncertainty.m
+# HELD (user 2026-10-07, not listed): mpc_F_smooth_tradeoff, mpc_N_lambda_roughness,
+# mpc_J_kalman_bias_noise. Producers export through ctrl_mpc_export.m (PNG always; PDF
+# + mirror when PAPER_FINAL is on).
+supp_mpc/mpc_0_problem.pdf
+supp_mpc/mpc_A_plant_fit.pdf
+supp_mpc/f3s_A_single_trial.pdf
+supp_mpc/f3s_B_trial_average.pdf
+supp_mpc/f3s_C_stimulation.pdf
+supp_mpc/f3s_D_variance.pdf
+supp_mpc/f3s_E_rmse_violin.pdf
+supp_mpc/f3s_F_variance_ratio.pdf
+supp_mpc/f3s_G_rmse_ratio.pdf
+supp_mpc/mpc_E_preview_window.pdf
+supp_mpc/mpc_H_forecast_skill_models.pdf
+supp_mpc/mpc_I_mpc_by_forecaster.pdf
+supp_mpc/mpc_K_uncertainty_sweep.pdf
+supp_mpc/mpc_L_uncertainty_common_axis.pdf
+supp_mpc/mpc_M_lambda_error.pdf

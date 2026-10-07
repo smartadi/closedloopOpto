@@ -29,6 +29,6 @@ xlim(ax,[-0.5 3]); xlabel(ax,'time from onset (s)'); ylabel(ax,'\DeltaF/F (%)');
 lg = legend(ax,[hD hF],{sprintf('OL trial average (n = %d)', numel(nc)), ...
     sprintf('model: \\tau = %.0f ms, %.0f ms delay (fit %.0f%%)', max(tau), 1000*R.P.delay/Fs, R.fitOL)}, ...
     'Box','off','Location','northoutside','FontSize',St.fs_annot); lg.ItemTokenSize = St.itemtoken;
-jnAxes(ax); paperExport(fig, fullfile(figDir,'mpc_A_plant_fit.png'));
+jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir,'mpc_A_plant_fit.png'));
 fprintf('[PLANT] poles %s | tau %s ms | fit %.0f%% | n OL %d\n', mat2str(R.poles,3), mat2str(round(tau)), R.fitOL, numel(nc));
 end

@@ -34,7 +34,7 @@ plot(ax,[0 3],[ref ref],'--k','LineWidth',S.lw_ref);
 h = gobjects(1,4); for c = [4 2 3], h(c) = plot(ax,tt,Ys{c}(:,k),'-','Color',col{c},'LineWidth',S.lw_mean); end
 finish(ax,'\DeltaF/F (%)'); title(ax, sprintf('CL trial #%d: recorded vs MPC replay', k));
 lg = legend(ax,h(2:4),nm(2:4),'Box','off','Location','northeast','NumColumns',3,'FontSize',S.fs_annot); lg.ItemTokenSize = S.itemtoken;
-paperExport(fig, fullfile(figDir,'f3s_A_single_trial.png'));
+ctrl_mpc_export(fig, fullfile(figDir,'f3s_A_single_trial.png'));
 
 %% B trial average +/- 1 SD ----------------------------------------------------------------
 fig = jnFig(Wbig, H); ax = axes(fig); hold(ax,'on');
@@ -43,20 +43,20 @@ for c = 1:3, band(ax, tt, Ys{c}, col{c}, PS.fa); end
 for c = [4 1 2 3], h(c) = plot(ax,tt,mean(Ys{c},2),'-','Color',col{c},'LineWidth',S.lw_mean); end
 finish(ax,'\DeltaF/F (%)'); title(ax,'trial average \pm1 SD');
 lg = legend(ax,h,nm,'Box','off','Location','northeast','NumColumns',4,'FontSize',S.fs_annot); lg.ItemTokenSize = S.itemtoken;
-paperExport(fig, fullfile(figDir,'f3s_B_trial_average.png'));
+ctrl_mpc_export(fig, fullfile(figDir,'f3s_B_trial_average.png'));
 
 %% C trial-average stimulation +/- 1 SD -------------------------------------------------------
 fig = jnFig(Wbig, 3.0); ax = axes(fig); hold(ax,'on');
 for c = 1:3, band(ax, tt, Us{c}, col{c}, PS.fa); end
 for c = [4 1 2 3], plot(ax,tt,mean(Us{c},2),'-','Color',col{c},'LineWidth',PS.lw_inp); end
 finish(ax,'laser command (a.u.)'); title(ax,'stimulation');
-paperExport(fig, fullfile(figDir,'f3s_C_stimulation.png'));
+ctrl_mpc_export(fig, fullfile(figDir,'f3s_C_stimulation.png'));
 
 %% D variance across trials vs time --------------------------------------------------------
 fig = jnFig(Wsm, H); ax = axes(fig); hold(ax,'on');
 for c = [4 1 2 3], plot(ax,tt,var(Ys{c},0,2),'-','Color',col{c},'LineWidth',S.lw_mean); end
 finish(ax,'variance (%\DeltaF/F)^2'); title(ax,'across-trial variance');
-paperExport(fig, fullfile(figDir,'f3s_D_variance.png'));
+ctrl_mpc_export(fig, fullfile(figDir,'f3s_D_variance.png'));
 
 %% E per-trial RMSE half-violins + paired tests ---------------------------------------------
 fig = jnFig(Wsm+1.6, H); ax = axes(fig); hold(ax,'on');
@@ -70,7 +70,7 @@ end
 for c = 1:4, fprintf('[F3S] RMSE %-7s median %.2f\n', nm{c}, median(RMc{c})); end
 set(ax,'XTick',1:4,'XTickLabel',nm,'XTickLabelRotation',30); xlim(ax,[0.4 4.6]); ylim(ax,[0 max(cellfun(@max,RMc))*1.05]);
 ylabel(ax,'RMSE (%\DeltaF/F), 0-3 s'); jnAxes(ax);
-paperExport(fig, fullfile(figDir,'f3s_E_rmse_violin.png'));
+ctrl_mpc_export(fig, fullfile(figDir,'f3s_E_rmse_violin.png'));
 
 %% F/G ratios vs CL by window (point estimates; descriptive) ---------------------------------
 wins = {w01, w13}; wl = {'0-1 s','1-3 s'}; comp = [1 3 4];
@@ -106,7 +106,7 @@ fprintf('[F3S] panels -> %s\n', figDir);
         tk = [0.25 0.5 0.75 1 1.5 2 3 4]; set(a,'YTick',tk(tk>=yl2(1) & tk<=yl2(2)),'YTickLabel',compose('%g',tk(tk>=yl2(1) & tk<=yl2(2))));
         ylabel(a, yl); text(a, 2.45, 1, 'CL', 'HorizontalAlignment','right','VerticalAlignment','bottom','FontSize',S.fs_annot,'Color',PS.col_cl);
         lg2 = legend(a, hh, nm(comp), 'Box','off','Location','southwest','FontSize',S.fs_annot); lg2.ItemTokenSize = S.itemtoken;
-        jnAxes(a); paperExport(f, fullfile(figDir, fn));
+        jnAxes(a); ctrl_mpc_export(f, fullfile(figDir, fn));
     end
 end
 

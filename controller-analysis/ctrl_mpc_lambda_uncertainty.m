@@ -50,6 +50,6 @@ for v = 1:2
     title(ax, sprintf('AR forecast, %.0f ms preview', S.Lp_ms));
     lg = legend(ax, h, compose('\\lambda = %g', S.lam), 'Box','off','Location','eastoutside','FontSize',St.fs_annot);
     lg.ItemTokenSize = [10 6];
-    jnAxes(ax); paperExport(fig, fullfile(figDir, fn{v}));
+    jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir, fn{v}));
 end
 end

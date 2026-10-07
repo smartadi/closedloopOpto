@@ -37,7 +37,7 @@ lg = legend(ax, [hP hA hPI hR], {'MPC, perfect preview','MPC, AR preview','tuned
     'Box','off','Location','eastoutside','FontSize',St.fs_annot); lg.ItemTokenSize = St.itemtoken;
 xlabel(ax,'laser command roughness (total variation, 0-3 s)'); ylabel(ax,'error / PI error');
 jnAxes(ax);
-paperExport(fig, fullfile(figDir,'mpc_F_smooth_tradeoff.png'));
+ctrl_mpc_export(fig, fullfile(figDir,'mpc_F_smooth_tradeoff.png'));
 fprintf('[SMOOTH] rd      %s\n[SMOOTH] perf e %s tv %s\n[SMOOTH] AR   e %s tv %s\n[SMOOTH] PI tv %.1f | recorded CL tv %.1f e %.2f\n', ...
     mat2str(rdG), mat2str(eP,2), mat2str(tP,2), mat2str(eA,2), mat2str(tA,2), tvPI, tvRec, eRec);
 end

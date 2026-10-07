@@ -61,6 +61,6 @@ for v = 1:2
     title(ax, sprintf('%.0f ms preview', S.Lp_ms));
     lg = legend(ax, h, cellfun(@(s) lbl(s), S.mods, 'uni', 0), 'Box','off','Location','eastoutside','FontSize',St.fs_annot);
     lg.ItemTokenSize = [10 6];
-    jnAxes(ax); paperExport(fig, fullfile(figDir, fn));
+    jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir, fn));
 end
 end
