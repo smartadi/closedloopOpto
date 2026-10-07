@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-07 — Supp MPC figure: panel selection, equation panel, draft layout
+**Changed/Found:** New `controller-analysis/ctrl_mpc_equation_panel.m` → mpc_0_problem.png (the QP solved every frame, with its parameters). New `controller-analysis/ctrl_mpc_supp_montage.m` → _draft_supp_mpc_layout.png, a 15-panel review mock-up (a–o). The user selected: equation, plant fit, f3s A–G, preview window, forecast skill, MPC-by-forecaster, uncertainty sweep (both x-axes), λ vs error. HELD (not in the figure): mpc_F_smooth_tradeoff (roughness vs error), mpc_N_lambda_roughness, mpc_J_kalman_bias_noise.
+**Why:** The user asked to construct the supp figure and its story from the current panels.
+**Next:** Get the user's sign-off on the story, caption and Methods text. Then add the panels to MANIFEST.txt/PAPER.md and export as PDF with PAPER_FINAL.
+
 ### 2026-10-07 — MPC panels A/E/F regenerated in the Fig-3 frame; svd-frame B/C/D retired
 **Changed/Found:** New `controller-analysis/ctrl_mpc_plant_fig.m` redraws panel A (plant fit) from the Fig-3-frame identification: recorded OL trial average (n=92) vs the model (τ=159 ms, 57 ms delay, fit 82%). `ctrl_mpc_preview_sweep.m` now runs in the fig3 frame with the replay PI (Kp 0.10, Ki 1.5). Result: a perfect preview saturates exactly at 86 ms, i.e. the loop delay plus one sample (1.1 → 0.12× PI). The AR forecast gives 0.94× from 114 ms on, and half the AR error gives 0.53×. `ctrl_mpc_smooth_tradeoff.m` was rerun with the qb fix: AR 0.95/0.94/0.93/0.98× PI at λ=0/1/10/100, with roughness 21/17/9.2/3.6 (PI 8.6, recorded CL 11.8). Fixed label overlaps in both. Moved the svd-frame mpc_B/C/D into paper/images/supp_mpc/_stale_svd_frame/; they are superseded by H, K/L and f3s_A.
 **Why:** The user asked for all panels to pick from for the supp figure. A–F were stale (wrong frame, rd=10, qb=1, double-counted gain spread).
