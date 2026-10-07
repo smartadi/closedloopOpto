@@ -2,7 +2,8 @@ function S = ctrl_mpc_preview_sweep(sess)
 %CTRL_MPC_PREVIEW_SWEEP  Preview window allowed (0..1 s) vs preview-LQR performance (user 2026-10-05).
 %   Control horizon fixed at 1 s (ctrl_mpc_lqr P.Hp); only the first Lp samples of the disturbance
 %   forecast are used, the last previewed value is held beyond. Lp = 0 = no preview. Forecasts:
-%   perfect, half the AR error, AR. PI fixed at the tuned gains (Kp 0.15, Ki 0.50), measured gain spread.
+%   perfect, half the AR error, AR. Fig-3 frame (replayed CL trials, 2026-10-07; was svd frame).
+%   PI fixed at the tuned replay gains (Kp 0.10, Ki 1.5). Band = IQR across trials (descriptive).
 %   Same trials / gain draws / PI as the main ctrl_mpc_lqr run (paired).
 % OUT  data/ctrl_mpc_preview_sweep_<sess>.mat, paper/images/supp_mpc/mpc_E_preview_window.png
 if nargin < 1, sess = 'AL_0033_0226_e2'; end
@@ -13,7 +14,7 @@ LpS = [0 1 2 3 4 5 7 10 14 17];                      % samples, capped at 500 ms
 xG  = [0 0.5 1];
 rat = nan(numel(LpS), numel(xG)); q1 = rat; q3 = rat;
 for i = 1:numel(LpS)
-    T = ctrl_mpc_lqr('Lp',LpS(i),'xGrid',xG,'KpGrid',0.15,'KiGrid',0.5,'tag','_Lp');
+    T = ctrl_mpc_lqr('frame','fig3','Lp',LpS(i),'xGrid',xG,'KpGrid',0.10,'KiGrid',1.5,'tag','_Lp');
     for j = 1:numel(xG)
         r = T.rM(:, strcmp(T.modes, sprintf('x%.2f',xG(j)))) ./ T.rPI;
         rat(i,j) = median(r); q1(i,j) = prctile(r,25); q3(i,j) = prctile(r,75);
@@ -34,7 +35,7 @@ for j = 1:numel(xG)
     h(j) = plot(ax,S.Lp_s,rat(:,j),'-o','Color',cols(j,:),'MarkerFaceColor',cols(j,:),'MarkerSize',St.marker,'LineWidth',St.lw_mean);
 end
 text(ax,0.49,1.03,'tuned PI','HorizontalAlignment','right','VerticalAlignment','bottom','FontSize',St.fs_annot,'Color',PS.col_cl);
-text(ax,2/35+0.015,0.08,'loop delay','FontSize',St.fs_annot,'Color',[.55 .55 .55]);
+text(ax,2/35+0.008,1.22,'loop delay','FontSize',St.fs_annot,'Color',[.55 .55 .55]);
 xlim(ax,[0 0.5]); ylim(ax,[0 1.3]);
 xlabel(ax,'preview window (s)'); ylabel(ax,'error / PI error');
 labs = {'perfect forecast','half AR error','AR forecast'};       % direct labels under each curve

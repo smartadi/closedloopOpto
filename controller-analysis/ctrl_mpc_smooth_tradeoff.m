@@ -26,7 +26,7 @@ fig = jnFig(8.9, St.rowH+0.4); ax = axes(fig); hold(ax,'on');
 hP = plot(ax, tP, eP, '-o', 'Color', cP, 'MarkerFaceColor', cP, 'MarkerSize', St.marker, 'LineWidth', St.lw_mean);
 hA = plot(ax, tA, eA, '-o', 'Color', cA, 'MarkerFaceColor', cA, 'MarkerSize', St.marker, 'LineWidth', St.lw_mean);
 for i = 1:numel(rdG)       % rd value next to each perfect-preview point (skip the overlapping 0 / 0.1 pair)
-    if rdG(i) == 0, continue; end
+    if rdG(i) == 0.1, continue; end
     text(ax, tP(i), eP(i)-0.04, sprintf('%g', rdG(i)), 'FontSize', St.fs_min, 'Color', cP*0.75, 'VerticalAlignment','top','HorizontalAlignment','center');
 end
 hPI = plot(ax, tvPI, 1, 's', 'Color', PS.col_cl, 'MarkerFaceColor', PS.col_cl, 'MarkerSize', St.marker+1);
