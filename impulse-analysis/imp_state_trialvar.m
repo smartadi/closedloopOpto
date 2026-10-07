@@ -374,12 +374,19 @@ for k = 1:nMK
     % deviation, so its MEAN across state is a Levene-style SCALE test; clustering on session with
     % a random intercept gives a p that respects the 4-session / 3-mouse structure. Random slope
     % is not identifiable from 4 clusters, so intercept only; mouse noted in the caption.
-    pLME = NaN; bLME = NaN;
+    pLME = NaN; pLMEsat = NaN; bLME = NaN; tLME = NaN; dfLME = NaN; ciLME = [NaN NaN];
     try
         tlme = table(abs(y), x, categorical(T.sess(ok)), 'VariableNames', {'adev','state','sess'});
-        lme  = fitlme(tlme, 'adev ~ state + (1|sess)');
-        ixb  = strcmp(lme.Coefficients.Name, 'state');
-        bLME = lme.Coefficients.Estimate(ixb);  pLME = lme.Coefficients.pValue(ixb);
+        % REML + Satterthwaite (2026-10-07), matching utils/cl_olcl_lmm.m and the Methods.
+        % NB: with an intercept-only session term the state slope is a WITHIN-session
+        % contrast, so its Satterthwaite df stay near the trial count; the session-level
+        % evidence is the n-of-4 sign agreement (nSessAgree), reported alongside.
+        lme  = fitlme(tlme, 'adev ~ state + (1|sess)', 'FitMethod','REML');
+        [~,~,Cl] = fixedEffects(lme, 'DFMethod','Satterthwaite'); Cl = dataset2table_safe(Cl);
+        Cl   = lmm_cluster_df(Cl, numel(unique(T.sess(ok))));   % df <= nSess-1, shared rule
+        ixb  = strcmp(cellstr(string(Cl.Name)), 'state');
+        bLME = Cl.Estimate(ixb);  pLME = Cl.pValueC(ixb);  pLMEsat = Cl.pValue(ixb);
+        tLME = Cl.tStat(ixb);     dfLME = Cl.DFc(ixb);  ciLME = [Cl.LowerC(ixb) Cl.UpperC(ixb)];
     catch MEl
         fprintf('   [STV] LME failed for %s: %s\n', MK{k,2}, MEl.message);
     end
@@ -502,7 +509,7 @@ for k = 1:nMK
     R(k).trend=trend; R(k).trendP=trendP; R(k).ratio=rat; R(k).ci=ci;
     R(k).verdict=verdict; R(k).x=x; R(k).y=y; R(k).n=nnz(ok);
     R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;
-    R(k).pLME=pLME; R(k).bLME=bLME; R(k).nSess=numel(rs);   % session-clustered scale test
+    R(k).pLME=pLME; R(k).bLME=bLME; R(k).tLME=tLME; R(k).pLMEsat=pLMEsat; R(k).dfLME=dfLME; R(k).ciLME=ciLME; R(k).nSess=numel(rs);   % session-clustered scale test
     R(k).rhoPow=rhoPow; R(k).pPow=pPow; R(k).rhoPowC=rhoPowC; R(k).pPowC=pPowC;
     R(k).binMed = arrayfun(@(b) median(x(g==b),'omitnan'), 1:STV_NBIN);   % raw value per bin
     R(k).gbin   = g;    % bin index per trial -- so imp_state_trialvar_fig can bootstrap per-bin CIs

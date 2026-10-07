@@ -49,17 +49,38 @@ end
 T = table(log(rr), categorical(sess), categorical(mn), 'VariableNames',{'logRR','sess','mouse'});
 nMouse = numel(unique(mn)); nSess = numel(unique(sess));
 fprintf('\nLMM on %d trials, %d sessions, %d mice (reachers only)\n', height(T), nSess, nMouse);
-lme = fitlme(T, 'logRR ~ 1 + (1|mouse) + (1|mouse:sess)');
-C = lme.Coefficients;
-est=C.Estimate(1); se=C.SE(1); tv=C.tStat(1); df=C.DF(1); p2=C.pValue(1);
-p1 = p2/2 * (est<0) + (1-p2/2)*(est>=0);                     % one-sided: intercept<0 => RR<1
-ci = [est-1.96*se, est+1.96*se];
+% REML + Satterthwaite (2026-10-07), matching utils/cl_olcl_lmm.m and the Methods. Until
+% then this fit used the fitlme defaults -- ML and RESIDUAL df (t(594) = trial count) with a
+% normal 1.96*SE interval -- so the intercept was referenced against trials, not clusters.
+lme = fitlme(T, 'logRR ~ 1 + (1|mouse) + (1|mouse:sess)', 'FitMethod','REML');
+[~,~,C] = fixedEffects(lme, 'DFMethod','Satterthwaite'); C = dataset2table_safe(C);
+C = lmm_cluster_df(C, nSess);                                % df <= nSess-1
+est=C.Estimate(1); se=C.SE(1); tv=C.tStat(1); df=C.DFc(1); p2=C.pValueC(1); dfSat=C.DF(1);
+p1 = tcdf(tv, df);                                           % one-sided: H1 intercept<0 => RR<1
+ci = [C.LowerC(1) C.UpperC(1)];                              % t-based
+fprintf('      Satterthwaite df %.2f, used df %.2f\n', dfSat, df);
 fprintf('\n[LMM] log(RR) intercept = %.3f  (SE %.3f, t(%.0f)=%.2f)\n', est, se, df, tv);
 fprintf('      geometric-mean RR = exp(intercept) = %.2f   95%% CI [%.2f, %.2f]\n', exp(est), exp(ci(1)), exp(ci(2)));
 fprintf('      H0: intercept>=0 (RR>=1) vs H1: RR<1  -> one-sided p = %.3g   (two-sided %.3g)\n', p1, p2);
 sessMed = [keptsess([keptsess.reach]).medRR];
 fprintf('      [ref] session-level signrank of median RR vs 1: p=%.3g (n=%d)\n', signrank(sessMed,1), numel(sessMed));
 
-save(fullfile(dataDir,'f4_cl_reject_lmm.mat'),'T','keptsess','est','se','p1','p2','lme');
+srSess = signrank(sessMed,1);
+[srSess1,~,srSt] = signrank(log(sessMed),0,'tail','left'); srV = srSt.signedrank;   % one-sided, RR<1
+
+% ---- SESSION-CLUSTERED model (2026-10-07) ----------------------------------------------
+% The nested model above tests a between-MOUSE quantity (the intercept) with 4 mice, two of
+% which contribute one session each, so its Satterthwaite df are ~2.5 and mouse and session
+% variance cannot be separated. The session-clustered model asks the question the panel
+% shows -- do sessions reject? -- with df ~ nSess-1. BOTH are saved and BOTH are reported:
+% the session model as the test, the nested model as the mouse-level caveat.
+lmeS = fitlme(T, 'logRR ~ 1 + (1|sess)', 'FitMethod','REML');
+[~,~,CS] = fixedEffects(lmeS, 'DFMethod','Satterthwaite'); CS = lmm_cluster_df(dataset2table_safe(CS), nSess);
+sessM = struct('est',CS.Estimate(1),'se',CS.SE(1),'t',CS.tStat(1),'df',CS.DFc(1), ...
+    'p1',tcdf(CS.tStat(1),CS.DFc(1)),'ci',[CS.LowerC(1) CS.UpperC(1)]);
+fprintf('[LMM-sess] logRR ~ 1+(1|sess): GM RR %.2f [%.2f, %.2f], t(%.1f)=%.2f, one-sided p=%.3g\n', ...
+    exp(sessM.est), exp(sessM.ci), sessM.df, sessM.t, sessM.p1);
+fprintf('[sess medians] %d/%d < 1, signrank V=%d one-sided p=%.3g\n', sum(sessMed<1), numel(sessMed), srV, srSess1);
+save(fullfile(dataDir,'f4_cl_reject_lmm.mat'),'T','keptsess','est','se','tv','df','dfSat','ci','p1','p2','srSess','srSess1','srV','sessM','lme','lmeS');
 fprintf('  saved data/f4_cl_reject_lmm.mat\n');
 end

@@ -2,7 +2,7 @@ function f4_cl_reject_panel()
 % F4_CL_REJECT_PANEL  Fig-4 4H: CL disturbance rejection, EVERY reacher session.
 % Per session: geometric mean RR +/- 1 SD (log) of per-trial RR = ||A-r||^2/||D||^2
 % (settled 1-3 s, leak-corrected D). RR<1 = rejection. Stat = session-aware LMM
-% (log(RR) ~ 1 + (1|mouse)+(1|mouse:session)); band = LMM geomean RR + 95% CI.
+% (log(RR) ~ 1 + (1|sess), df <= nSess-1); band = its geomean RR + 95% CI.
 % Non-reachers (settled |mean A_CL-ref|>1.5) excluded. Run f4_cl_reject_lmm.m first.
 here = fileparts(mfilename('fullpath'));
 if isempty(here); here = fullfile(pwd,'controller-analysis'); end
@@ -11,7 +11,10 @@ if ~exist(figDir,'dir'); mkdir(figDir); end
 addpath(fullfile(here,'..','utils'));
 PS = paperStyle(); S = jnStyle();
 L = load(fullfile(dataDir,'f4_cl_reject_lmm.mat'));   % T (logRR,sess,mouse), est, se, p1
-T = L.T;  gmLMM = exp(L.est);  ciLMM = exp([L.est-1.96*L.se, L.est+1.96*L.se]);
+% Band + star = SESSION-clustered model logRR ~ 1+(1|sess), t-based CI on nSess-1 df
+% (2026-10-07). The nested mouse model has ~2.5 df with 4 mice and is reported in the
+% caption as the mouse-level caveat, not drawn. Was: nested model, normal 1.96*SE band.
+T = L.T;  gmLMM = exp(L.sessM.est);  ciLMM = exp(L.sessM.ci);  pStar = L.sessM.p1;
 
 u = unique(cellstr(T.sess),'stable');  nS = numel(u);
 gm=nan(nS,1); lo=nan(nS,1); hi=nan(nS,1); nt=nan(nS,1);
@@ -49,12 +52,12 @@ set(ax,'YScale','log','XTick',1:nS,'XTickLabel',cellstr(lab),'XTickLabelRotation
 xlim(ax,[0.3 nS+0.7]); ylim(ax,[0.22 2.9]);
 ylabel(ax,'rejection ratio (RR)','FontSize',PS.fs,'FontWeight',PS.fw);   % self-explanatory words; RR=||A-r||^2/||D||^2 defined in caption
 % title states the claim; a single significance star marks the LMM one-sided RR<1 test.
-star = repmat('*',1,(L.p1<0.05)+(L.p1<0.01)+(L.p1<0.001)); if isempty(star), star='n.s.'; end
+star = repmat('*',1,(pStar<0.05)+(pStar<0.01)+(pStar<0.001)); if isempty(star), star='n.s.'; end
 title(ax,sprintf('CL rejects disturbances %s',star));
 
 jnAxes(ax);
 paperExport(fig, fullfile(figDir,'f4_cl_reject_RR.pdf'));   % exact-page vector (Option 2)
 paperExport(fig, fullfile(figDir,'f4_cl_reject_RR.png'));
 fprintf('[f4-CL-REJECT] %d sessions, LMM geomean RR=%.2f [%.2f,%.2f], p=%.2g; per-session geomean range %.2f-%.2f\n', ...
-    nS, gmLMM, ciLMM(1), ciLMM(2), L.p1, min(gm), max(gm));
+    nS, gmLMM, ciLMM(1), ciLMM(2), pStar, min(gm), max(gm));
 end

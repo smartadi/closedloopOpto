@@ -15,6 +15,7 @@ function R = cl_olcl_lmm(y, cond, sess, mouse)
 %
 % Returns R with:
 %   gap / gapCI / gapP   cond_CL fixed effect (CL - OL; <0 = CL lower)
+%   gapT / gapDF         its t statistic and Satterthwaite df (JNeurosci: report t(df) with p)
 %   mouseSD              between-mouse random-intercept SD (~0 => not mouse-driven)
 %   sessSD               session random-intercept SD
 %   randslope            true if the random-slope model was used
@@ -41,6 +42,7 @@ catch, lme = fitlme(tb, 'y ~ cond + (1|sess) + (1|mouse)',      'FitMethod','REM
 assert(~isempty(C) && ismember('Name', C.Properties.VariableNames), ...
     'cl_olcl_lmm:coefConv', 'Satterthwaite coefficient table did not convert.');
 nm = cellstr(string(C.Name)); gi = find(strcmp(nm,'cond_CL'),1);
+C = lmm_cluster_df(C, numel(categories(tb.sess)));   % df <= nSess-1 (2026-10-07)
 
 % variance components (robust to the titled-dataset return shape)
 mouseSD = NaN; sessSD = NaN;
@@ -58,7 +60,8 @@ try
 catch
 end
 
-R = struct('gap',C.Estimate(gi), 'gapCI',[C.Lower(gi) C.Upper(gi)], 'gapP',C.pValue(gi), ...
+R = struct('gap',C.Estimate(gi), 'gapCI',[C.LowerC(gi) C.UpperC(gi)], 'gapP',C.pValueC(gi), ...
+    'gapT',C.tStat(gi), 'gapDF',C.DFc(gi), 'gapDFsat',C.DF(gi), 'gapPsat',C.pValue(gi), ...
     'mouseSD',mouseSD, 'sessSD',sessSD, 'randslope',rs, ...
     'n',height(tb), 'nSess',numel(categories(tb.sess)), 'nMouse',numel(categories(tb.mouse)), ...
     'lme',lme);

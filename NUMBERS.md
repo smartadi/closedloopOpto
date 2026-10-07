@@ -7,6 +7,8 @@ number-consolidation pass.
 **Rule:** the manuscript quotes this file; this file quotes code or a verified run. If a
 number is not here, it does not go in the paper.
 
+**2026-10-07: every STATISTICAL TEST now lives in `paper-writing/STATS_TABLE.csv`** (built by `paper-writing/paper_stats_table.m` from the saved producer outputs; df capped at nSessions-1). Where a p-value, CI or df below disagrees with that CSV, the CSV wins - the tables here predate the df fix (Fig 4D, Fig 4G and Fig 2G p-values all moved; Fig 4G pool is now 12 sessions / 640 trials / 4 mice).
+
 **Status flags**
 - ✅ **VERIFIED** — traced to code or an independent run; safe to quote.
 - 🟨 **DERIVED** — follows from a verified number but has not itself been printed by a run.

@@ -184,7 +184,8 @@ for ip=1:numel(preds); nm=preds{ip};
     Rf=FIT.(nm); pC=Rf.decP; bC=Rf.dec;
     LME.(nm)=struct('nTr',height(POOLs.(nm)),'nSes',numel(unique(POOLs.(nm).sess)), ...
         'nMse',numel(unique(POOLs.(nm).mouse)),'dec_beta',bC,'dec_p',pC,'dec_ci',Rf.decCI, ...
-        'gap_beta',Rf.gap,'gap_p',Rf.gapP,'gap_ci',Rf.gapCI,'randslope',Rf.randslope);
+        'gap_beta',Rf.gap,'gap_p',Rf.gapP,'gap_ci',Rf.gapCI,'randslope',Rf.randslope, ...
+        'Rf',rmfield(Rf,'lme'));
     fprintf(['%-9s  %6d  %3d | LMM cond:state beta %+.3f p=%.3g%s' ...
              '   || sess signrank p=%.3g  pooled p=%.3g\n'], ...
              nm,nTr,LME.(nm).nSes,bC,pC,tern(Rf.randslope,'',' (rand-int)'), pSess,pGap);
@@ -192,8 +193,8 @@ for ip=1:numel(preds); nm=preds{ip};
     % ---- two-concept annotation stats (from the SAME LMM) ----
     % Predictability = trend of OPEN-LOOP outcome (xw main effect, OL ref). OL error UP -> predictability DOWN.
     % Controllability = trend of REJECTION FRACTION (-dec). gap widens (dec<0) -> controllability UP.
-    Cc=Rf.lme.Coefficients; nc=cellstr(Cc.Name); iOL=strcmp(nc,'xw');
-    bOL=Cc.Estimate(iOL); predP=Cc.pValue(iOL); predUp = bOL<0;   % predictability arrow up iff OL improves
+    % Satterthwaite p from f4_row2_fit (2026-10-07). Was lme.Coefficients = residual df.
+    bOL=Rf.slope; predP=Rf.slopeP; predUp = bOL<0;                 % predictability arrow up iff OL improves
     ctrlP=Rf.decP; ctrlUp = Rf.dec<0;                              % controllability arrow up iff gap widens
     fprintf('           predictability %s (OL beta %+.3f p=%.2g) | controllability %s (dec %+.3f p=%.2g)\n', ...
         tern(predUp,'UP','DOWN'),bOL,predP, tern(ctrlUp,'UP','DOWN'),Rf.dec,ctrlP);
@@ -276,7 +277,19 @@ for ip=1:numel(preds); nm=preds{ip};
     fprintf('%-9s %6d %5d %5d | beta %+.3f [%+.3f,%+.3f] p=%.3g | beta %+.3f [%+.3f,%+.3f] p=%.3g\n', ...
         nm,E.nTr,E.nSes,E.nMse, E.dec_beta,E.dec_ci(1),E.dec_ci(2),E.dec_p, E.gap_beta,E.gap_ci(1),E.gap_ci(2),E.gap_p);
 end
-try, save(fullfile('data','f4_row2_lme.mat'),'LME'); fprintf('[F4R2-LME] -> data/f4_row2_lme.mat\n'); catch ME; warning('[F4R2-LME] save skipped (%s)',ME.message); end
+% ---- within-session motion slopes, OL vs CL (Results text, 2026-10-07) -------------------
+% Per session, RMSE and motion are z-scored within session AND condition, then regressed
+% per condition; slopes compared across the 11 motion sessions by signed-rank. Reproduces the
+% quoted +0.13 / -0.05 / 11-of-11 exactly; moved here from a console run so it is rebuildable.
+Tm=POOLs.motion; usm=unique(Tm.sess); zsf=@(v)(v-mean(v))/std(v); sO=nan(numel(usm),1); sC=sO;
+for i=1:numel(usm), mm=Tm.sess==usm(i); yv=Tm.y(mm); xv=Tm.x(mm); oo=Tm.cond(mm)=='OL'; ll=~oo;
+    bb=polyfit(zsf(xv(oo)),zsf(yv(oo)),1); sO(i)=bb(1); bb=polyfit(zsf(xv(ll)),zsf(yv(ll)),1); sC(i)=bb(1); end
+[pO,~,sto]=signrank(sO); [pC,~,stc]=signrank(sC); [pD,~,std_]=signrank(sO,sC);
+MOTSLOPE=struct('sO',sO,'sC',sC,'n',numel(usm),'medOL',median(sO),'medCL',median(sC), ...
+    'VOL',sto.signedrank,'pOL',pO,'VCL',stc.signedrank,'pCL',pC,'VD',std_.signedrank,'pD',pD,'nOLgtCL',sum(sO>sC));
+bpRoot=fileparts(fileparts(mfilename('fullpath')));   % absolute: run() changes the CWD
+try, save(fullfile(bpRoot,'data','f4_motion_slopes.mat'),'MOTSLOPE'); catch, end
+try, save(fullfile(bpRoot,'data','f4_row2_lme.mat'),'LME'); fprintf('[F4R2-LME] -> data/f4_row2_lme.mat\n'); catch ME; warning('[F4R2-LME] save skipped (%s)',ME.message); end
 
 function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, showLegend, predP,predUp,ctrlP,ctrlUp)
 % One OL/CL-by-quartile panel. Colored title; optional y-axis + legend.

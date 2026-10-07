@@ -87,6 +87,17 @@ p_fr_pre   = signrank(varnc_pre_f,   varwc_pre_f);
 p_fr_early = signrank(varnc_early_f, varwc_early_f);
 p_fr_late  = signrank(varnc_late_f,  varwc_late_f);
 p_fr_post  = signrank(varnc_post_f,  varwc_post_f);
+% Save the full test (V, n, median ratio) for paper_stats_table.m (2026-10-07) -- these
+% caption numbers were previously typed by hand from the console.
+F3H = struct();
+fr_win = {'pre',varnc_pre_f,varwc_pre_f; 'early',varnc_early_f,varwc_early_f; ...
+          'late',varnc_late_f,varwc_late_f; 'post',varnc_post_f,varwc_post_f};
+for iw = 1:size(fr_win,1)
+    [pw,~,sw] = signrank(fr_win{iw,2}, fr_win{iw,3});
+    F3H.(fr_win{iw,1}) = struct('n',numel(fr_win{iw,2}), 'medRatio',median(fr_win{iw,2}./fr_win{iw,3}), ...
+                               'V',sw.signedrank, 'p',pw);
+end
+try, save(fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','fig3h_ratio_signrank.mat'),'F3H'); catch, end
 
 stars_fr = @(p) repmat('*', 1, (p < 0.001)*3 + (p >= 0.001 && p < 0.01)*2 + (p >= 0.01 && p < 0.05)*1);
 
