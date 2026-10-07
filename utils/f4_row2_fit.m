@@ -12,7 +12,10 @@ function [R, T] = f4_row2_fit(T)
 % Returns R with:
 %   gap/gapCI/gapP   cond_CL main effect  (OL-CL gap at mean state; <0 = CL lower RMSE)
 %   slope/slopeCI/slopeP  xw main effect  (OL state slope, per SD = PREDICTABILITY term)
-%   *T / *DF         t statistic and Satterthwaite df for gap, slope and dec
+%   *T / *DF         t statistic and df (<= nSess-1) for every term
+%   reg/regCI/regP   CL slope on state (REGULARIZABILITY), raw RMSE per SD of state
+%   att/attCI/attP   cond x state on LOG RMSE = slope of log(CL/OL) (ATTENUATION)
+%   dec (interaction on raw RMSE) is the GAP TREND -- Discussion only, not a panel property
 %   dec/decCI/decP   cond_CL:xw interaction (DECOUPLING; <0 = CL flattens state slope)
 %   randslope        true if the random-slope model was used
 %   lme              the fitted model object
@@ -41,5 +44,33 @@ R=struct('gap',C.Estimate(gi),'gapCI',[C.LowerC(gi) C.UpperC(gi)],'gapP',C.pValu
     'dec',C.Estimate(di),'decCI',[C.LowerC(di) C.UpperC(di)],'decP',C.pValueC(di), ...
     'decT',C.tStat(di),'decDF',C.DFc(di), ...
     'sat',C(:,{'Name','DF','pValue'}), ...
+    'reg',NaN,'regCI',[NaN NaN],'regP',NaN,'regT',NaN,'regDF',NaN, ...
+    'att',NaN,'attCI',[NaN NaN],'attP',NaN,'attT',NaN,'attDF',NaN, ...
     'randslope',rs,'lme',lme);
+% ---- REGULARIZABILITY + ATTENUATION (2026-10-07) ------------------------------------------
+% The cond x xw interaction (GAP TREND) cannot tell "OL worsens, CL holds" from "CL worsens".
+% REGULARIZABILITY = the CL slope on state: does the loop keep the output at the reference as
+%   the state changes? Same model, CL as the reference level, so xw is the CL slope (raw RMSE,
+%   %dF/F per within-session SD of state). ~0 = regulated; >0 = the loop loses the output.
+% ATTENUATION = the gap trend on LOG RMSE: cond_CL:xw is then the slope of log(CL/OL), i.e. how
+%   the closed-loop sensitivity |S| = CL/OL changes with state. <0 = attenuates a larger share.
+nS = numel(unique(T.sess));
+try
+    T2 = T; T2.cond = reordercats(T2.cond,{'CL','OL'});
+    try   l2=fitlme(T2,'y ~ cond*xw + (1+cond|sess) + (1|mouse)','FitMethod','REML');
+    catch, l2=fitlme(T2,'y ~ cond*xw + (1|sess) + (1|mouse)','FitMethod','REML'); end
+    [~,~,C2]=fixedEffects(l2,'DFMethod','Satterthwaite'); C2=lmm_cluster_df(dataset2table_safe(C2),nS);
+    k=find(strcmp(cellstr(string(C2.Name)),'xw'),1);
+    R.reg=C2.Estimate(k); R.regCI=[C2.LowerC(k) C2.UpperC(k)]; R.regP=C2.pValueC(k);
+    R.regT=C2.tStat(k); R.regDF=C2.DFc(k);
+catch ME, warning('f4_row2_fit:reg','regularizability fit failed: %s',ME.message); end
+try
+    T3 = T; ok = T3.y > 0; T3 = T3(ok,:); T3.y = log(T3.y);
+    try   l3=fitlme(T3,'y ~ cond*xw + (1+cond|sess) + (1|mouse)','FitMethod','REML');
+    catch, l3=fitlme(T3,'y ~ cond*xw + (1|sess) + (1|mouse)','FitMethod','REML'); end
+    [~,~,C3]=fixedEffects(l3,'DFMethod','Satterthwaite'); C3=lmm_cluster_df(dataset2table_safe(C3),nS);
+    k=find(strcmp(cellstr(string(C3.Name)),'cond_CL:xw'),1);
+    R.att=C3.Estimate(k); R.attCI=[C3.LowerC(k) C3.UpperC(k)]; R.attP=C3.pValueC(k);
+    R.attT=C3.tStat(k); R.attDF=C3.DFc(k);
+catch ME, warning('f4_row2_fit:att','attenuation fit failed: %s',ME.message); end
 end

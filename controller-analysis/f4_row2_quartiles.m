@@ -195,9 +195,12 @@ for ip=1:numel(preds); nm=preds{ip};
     % Controllability = trend of REJECTION FRACTION (-dec). gap widens (dec<0) -> controllability UP.
     % Satterthwaite p from f4_row2_fit (2026-10-07). Was lme.Coefficients = residual df.
     bOL=Rf.slope; predP=Rf.slopeP; predUp = bOL<0;                 % predictability arrow up iff OL improves
-    ctrlP=Rf.decP; ctrlUp = Rf.dec<0;                              % controllability arrow up iff gap widens
-    fprintf('           predictability %s (OL beta %+.3f p=%.2g) | controllability %s (dec %+.3f p=%.2g)\n', ...
-        tern(predUp,'UP','DOWN'),bOL,predP, tern(ctrlUp,'UP','DOWN'),Rf.dec,ctrlP);
+    % Second property is REGULARIZABILITY (CL slope on state), not the gap trend (2026-10-07):
+    % the gap trend cannot tell "OL worsens while CL holds" from "CL worsens". The variables
+    % keep their old ctrl* names so the draw/stash code below is unchanged.
+    ctrlP=Rf.regP; ctrlUp = Rf.reg<0;                              % regularizability arrow up iff CL error FALLS
+    fprintf('           predictability %s (OL slope %+.3f p=%.2g) | regularizability %s (CL slope %+.3f p=%.2g) | attenuation %+.3f p=%.2g | gap trend %+.3f p=%.2g\n', ...
+        tern(predUp,'UP','DOWN'),bOL,predP, tern(ctrlUp,'UP','DOWN'),Rf.reg,ctrlP, Rf.att,Rf.attP, Rf.dec,Rf.decP);
 
     % stash per-state quantities so the stitched paper figure reuses them (no recompute)
     PQ(ip)=struct('qmO',qmO,'qmC',qmC,'qsO',qsO,'qsC',qsC, ...
@@ -293,8 +296,8 @@ try, save(fullfile(bpRoot,'data','f4_row2_lme.mat'),'LME'); fprintf('[F4R2-LME] 
 
 function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, showLegend, predP,predUp,ctrlP,ctrlUp)
 % One OL/CL-by-quartile panel. Colored title; optional y-axis + legend.
-% Two-concept annotation (top-right): Predictability + Controllability, each an up/down arrow
-% with significance stars (n.s. if p>=0.05). Predictability from OL-slope, Controllability from -dec.
+% Two-concept annotation (top-right): Predictability + Regularizability, each an up/down arrow
+% with significance stars (n.s. if p>=0.05). Predictability = OL slope, Regularizability = CL slope.
     hold(ax,'on');
     yline(ax,0,'-','Color',[0.6 0.6 0.6],'LineWidth',0.5);
     xq=1:4; w=0.36;
@@ -302,16 +305,15 @@ function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, 
     bar(ax,xq+w/2,qmC,w,'FaceColor',colCL,'EdgeColor','none');
     errorbar(ax,xq-w/2,qmO,qsO,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
     errorbar(ax,xq+w/2,qmC,qsC,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
-    gapq=qmO-qmC;   % OL-CL gap trend (descriptive)
-    plot(ax,xq,gapq,'-o','Color',[0.15 0.15 0.15],'MarkerFaceColor',[0.15 0.15 0.15], ...
-        'MarkerSize',2.5,'LineWidth',0.9);
+    % OL-CL gap line REMOVED 2026-10-07 (user): the gap trend is a Discussion quantity now,
+    % and drawing it invited reading it as the panel's second property.
     set(ax,'XTick',1:4,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out', ...
         'FontSize',PS.fs,'FontWeight','bold');
     xlim(ax,[0.35 4.65]); ylim(ax,[-0.65 1.40]); yl=ylim(ax);
     title(ax,ttl,'FontSize',PS.fs,'FontWeight','bold','Color',titleCol);   % colored to match state exemplars
     % ---- two-concept annotation (top-center, black): predictability + controllability, arrow + stars ----
     % First/leftmost panel spells the names out; the rest abbreviate to P / C.
-    if showLegend, pN='Predictability'; cN='Controllability'; else, pN='P'; cN='C'; end
+    if showLegend, pN='Predictability'; cN='Regularizability'; else, pN='P'; cN='R'; end
     yA=yl(2)-0.02*range(yl); dyA=0.085*range(yl);
     text(ax,2.5,yA,     [pN ' ' arrowstars(predP,predUp)],'Interpreter','tex','HorizontalAlignment','center', ...
         'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
@@ -328,8 +330,6 @@ function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, 
         text(ax,xL+0.14,yTop,'OL','FontSize',5,'FontWeight','bold','Color',colOL,'VerticalAlignment','middle');
         plot(ax,xL,yTop-dh,'s','MarkerFaceColor',colCL,'MarkerEdgeColor','none','MarkerSize',5);
         text(ax,xL+0.14,yTop-dh,'CL','FontSize',5,'FontWeight','bold','Color',colCL,'VerticalAlignment','middle');
-        plot(ax,xL,yTop-2*dh,'o','MarkerFaceColor',[0.15 0.15 0.15],'MarkerEdgeColor','none','MarkerSize',3);
-        text(ax,xL+0.14,yTop-2*dh,'gap','FontSize',5,'FontWeight','bold','Color',[0.15 0.15 0.15],'VerticalAlignment','middle');
     end
     hold(ax,'off');
     jnAxes(ax);   % jn* v2: Arial, regular ticks, bold labels/title, TickDir out
