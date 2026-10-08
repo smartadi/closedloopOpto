@@ -73,6 +73,20 @@ def forecast(d, u, origins, a, b, c, H):
     return out
 
 
+def forecast_known_u(d, u, origins, a, b, c, H):
+    """As forecast(), but with the TRUE future command (open loop: the stim is pre-scheduled)."""
+    p, q = a.size, b.size
+    hist = d[origins[:, None] - np.arange(p)[None, :]]
+    out = np.empty((origins.size, H))
+    for j in range(H):
+        nxt = hist @ a + c
+        if q:
+            nxt = nxt + u[origins[:, None] + j - np.arange(q)[None, :]] @ b
+        out[:, j] = nxt
+        hist = np.column_stack([nxt, hist[:, :-1]])
+    return out
+
+
 def psi_sd(a, s2, H):
     """Forecast sd per lead from the AR part's MA(inf) weights (u treated as known)."""
     p = a.size
@@ -93,8 +107,13 @@ def mwql(y, mu, sd):
     return tot / QS.size
 
 
-def select_and_fit(d, u, ok, H, use_u):
-    """AR(valQL) order selection on the chronologically last 20 % of the usable frames, then refit."""
+def select_and_fit(d, u, ok, H, use_u, known_u=False):
+    """AR(valQL) order selection on the chronologically last 20 % of the usable frames, then refit.
+    known_u: validate with the true future command (OL reconstruction) instead of holding the last
+    one, and search the AR order WITH the longest u-lag window in place (when the signal contains stim
+    responses, an order searched without the input would be spent modelling them)."""
+    fc_fn = forecast_known_u if known_u else forecast
+    q_search = max(Q_GRID) if (use_u and known_u) else 0
     T = d.size
     idx = np.flatnonzero(ok)
     cut = idx[int((1 - VAL_FRAC) * idx.size)]
@@ -115,11 +134,11 @@ def select_and_fit(d, u, ok, H, use_u):
 
     def score(p, q):
         a, b, c, s2 = fit(d, u, tr, p, q)
-        return mwql(yv, forecast(d, u, vo, a, b, c, H), psi_sd(a, s2, H)[None, :])
+        return mwql(yv, fc_fn(d, u, vo, a, b, c, H), psi_sd(a, s2, H)[None, :])
 
     best_p, best, stall, p = 1, np.inf, 0, 1
     while p <= P_MAX and stall < PATIENCE:
-        s = score(p, 0)
+        s = score(p, q_search)
         if s < best - 1e-9:
             best, best_p, stall = s, p, 0
         else:
