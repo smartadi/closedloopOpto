@@ -37,6 +37,12 @@ QS = np.arange(0.1, 0.91, 0.1)
 P_MAX, PATIENCE = 150, 10            # lag search cap (4.3 s) and the paper's 10-order patience
 Q_GRID = [2, 5, 10, 20, 35]          # laser-command lags tried for the ARX variant
 VAL_FRAC = 0.2
+SEL_H = 7                            # leads scored for order selection (200 ms = the MPC preview; paper used 35)
+SEL_METRIC = "mse"                   # 'mwql' = the paper's criterion. DEVIATION (2026-10-07): MWQL also
+                                     # scores interval calibration, and on clean data it prefers a wide-band
+                                     # AR(1) whose point forecast is worse (lead-1 RMSE 0.67 vs 0.55 at p=10).
+                                     # The MPC consumes only the point forecast (certainty equivalence) -> MSE.
+FULL_SCAN = True                    # scan all orders instead of the paper's patience stop (see select_and_fit)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -130,20 +136,32 @@ def select_and_fit(d, u, ok, H, use_u, known_u=False):
     # validation origins: every H frames (non-overlapping targets), history + targets all usable
     vo = np.arange(cut + P_MAX + max(Q_GRID), T - H, H)
     vo = vo[[(vo_i - prev_bad[vo_i] > P_MAX + max(Q_GRID)) and ok[vo_i:vo_i + H + 1].all() for vo_i in vo]]
-    yv = d[vo[:, None] + np.arange(1, H + 1)[None, :]]
+    yv = d[vo[:, None] + np.arange(1, SEL_H + 1)[None, :]]
 
     def score(p, q):
         a, b, c, s2 = fit(d, u, tr, p, q)
-        return mwql(yv, fc_fn(d, u, vo, a, b, c, H), psi_sd(a, s2, H)[None, :])
+        fc = fc_fn(d, u, vo, a, b, c, SEL_H)
+        if SEL_METRIC == "mse":
+            return np.mean((yv - fc) ** 2)
+        return mwql(yv, fc, psi_sd(a, s2, SEL_H)[None, :])
 
-    best_p, best, stall, p = 1, np.inf, 0, 1
-    while p <= P_MAX and stall < PATIENCE:
-        s = score(p, q_search)
-        if s < best - 1e-9:
-            best, best_p, stall = s, p, 0
-        else:
-            stall += 1
-        p += 1
+    # The paper's rule stops after PATIENCE non-improving orders. On clean data (warm-up excluded,
+    # 2026-10-07) validation MWQL does not fall over p = 2..11, so that rule stops at p = 1 -- an AR(1)
+    # no better than persistence at short leads. DEVIATION: scan every order up to P_MAX on a coarse
+    # grid and take the true minimum (FULL_SCAN). Set FULL_SCAN = False to reproduce the paper's rule.
+    if FULL_SCAN:
+        grid = sorted(set(list(range(1, 21)) + list(range(25, P_MAX + 1, 5))))
+        sc = {p: score(p, q_search) for p in grid}
+        best_p = min(sc, key=sc.get); best = sc[best_p]
+    else:
+        best_p, best, stall, p = 1, np.inf, 0, 1
+        while p <= P_MAX and stall < PATIENCE:
+            s = score(p, q_search)
+            if s < best - 1e-9:
+                best, best_p, stall = s, p, 0
+            else:
+                stall += 1
+            p += 1
     best_q = 0
     if use_u:
         sq = {q: score(best_p, q) for q in Q_GRID}
@@ -167,9 +185,10 @@ def main(sess="AL_0033_0226_e2"):
 
     F = {m: np.full((N, H, nT), np.nan) for m in ("pyar", "pyarx")}
     orders = {m: [] for m in F}
+    valid = M["valid"].astype(bool)                                # rolling-baseline warm-up excluded
     for f in np.unique(fold):
         te = np.flatnonzero(fold == f)
-        ok = np.ones(T, bool)
+        ok = valid.copy()
         for k in te:                                               # test windows (+ horizon + lags)
             ok[max(0, on[k] - pre): min(T, on[k] + N + H + pad + 1)] = False
         for m, use_u in (("pyar", False), ("pyarx", True)):

@@ -29,7 +29,13 @@ fprintf('[ARX-EXP] %d frames (%.1f min) | %d CL / %d OL trials | DEP check max|d
 % Not exact (measured 0.032 vs sd(DEP) ~2.7): the trial version starts lsim from zero state at -1 s,
 % the continuous one carries the previous stimulus's tail through the ITI. Negligible; gate on 0.1.
 assert(chk < 0.1, 'continuous d does not reproduce the trial DEP used by ctrl_mpc_lqr');
-S = struct('d',d,'u',u,'y',y,'onCL',onCL,'onOL',onOL,'fold',FC.fold(:),'Dmean',Dmean(:), ...
+% The rig's online dF/F uses a trailing baseline of `horizon` frames (1400 = 40 s): the first
+% horizon-1 frames are warm-up garbage (up to 5.8e4 %dF/F on this session). Found 2026-10-07 after it
+% had contaminated the first Python AR/ARX fits. Every consumer must AND this into its usable mask.
+valid = (1:numel(y)).' >= double(dz.params.horizon) & isfinite(y);
+fprintf('[ARX-EXP] warm-up: first %d frames invalid (first trial onset at frame %d)\n', ...
+    find(valid,1)-1, min([onCL; onOL]));
+S = struct('d',d,'u',u,'y',y,'valid',double(valid),'onCL',onCL,'onOL',onOL,'fold',FC.fold(:),'Dmean',Dmean(:), ...
            'pre',pre,'N',N,'Hp',Hp,'Fs',F3.P.Fs,'sess',sess);
 save(fullfile(dataDir, sprintf('ctrl_mpc_arx_in_%s.mat', sess)), '-struct','S', '-v7');
 end

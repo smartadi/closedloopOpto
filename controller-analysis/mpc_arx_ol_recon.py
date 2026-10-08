@@ -69,6 +69,7 @@ def main(sess="AL_0033_0226_e2"):
             m[max(0, o + lo): min(T, o + hi + extra + 1)] = True
         return m
 
+    valid = B["valid"].astype(bool)                               # rolling-baseline warm-up (40 s)
     inOL, inCL = win_mask(onOL), win_mask(onCL)
     spont = ~(inOL | inCL)
     rng = np.random.default_rng(7)
@@ -84,8 +85,8 @@ def main(sess="AL_0033_0226_e2"):
         te = np.flatnonzero(fold == f)
         tr_ol = np.flatnonzero(fold != f)
         test_block = win_mask(onOL[te], extra=pad)
-        ok_base = (spont | win_mask(onOL[tr_ol])) & ~test_block
-        ok_cl = (ok_base | inCL) & ~test_block
+        ok_base = (spont | win_mask(onOL[tr_ol])) & ~test_block & valid
+        ok_cl = (ok_base | inCL) & ~test_block & valid
         # template baseline: training-fold OL stim-locked mean, rel 0..140
         tmpl = np.mean([y[o:o + SIM_H] for o in onOL[tr_ol]], axis=0)
         SIM["template"][te] = tmpl
@@ -93,7 +94,7 @@ def main(sess="AL_0033_0226_e2"):
             R = M.select_and_fit(y, u, ok, H, use_u, known_u=True)
             orders[m].append((f, R["p"], R["q"], R["val_mwql"]))
             steps[m].append(step_response(R["a"], R["b"]))
-            print(f"[OLREC] fold {f} {m:7s} p={R['p']:3d} q={R['q']:2d} valMWQL={R['val_mwql']:.4f}", flush=True)
+            print(f"[OLREC] fold {f} {m:7s} p={R['p']:3d} q={R['q']:2d} val score={R['val_mwql']:.4f}", flush=True)
             org = onOL[te] - 1                                    # last observed = rel -1
             SIM[m][te] = forecast_known_u(y, u, org, R["a"], R["b"], R["c"], SIM_H)
             for k in te:
