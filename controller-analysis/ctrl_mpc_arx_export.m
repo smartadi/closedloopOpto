@@ -35,7 +35,8 @@ assert(chk < 0.1, 'continuous d does not reproduce the trial DEP used by ctrl_mp
 valid = (1:numel(y)).' >= double(dz.params.horizon) & isfinite(y);
 fprintf('[ARX-EXP] warm-up: first %d frames invalid (first trial onset at frame %d)\n', ...
     find(valid,1)-1, min([onCL; onOL]));
-S = struct('d',d,'u',u,'y',y,'valid',double(valid),'onCL',onCL,'onOL',onOL,'fold',FC.fold(:),'Dmean',Dmean(:), ...
+mot = zeros(size(y)); if isfield(dz,'motion') && numel(dz.motion) == numel(y), mot = double(dz.motion(:)); end
+S = struct('d',d,'u',u,'y',y,'motion',mot,'valid',double(valid),'onCL',onCL,'onOL',onOL,'fold',FC.fold(:),'Dmean',Dmean(:), ...
            'pre',pre,'N',N,'Hp',Hp,'Fs',F3.P.Fs,'sess',sess);
 save(fullfile(dataDir, sprintf('ctrl_mpc_arx_in_%s.mat', sess)), '-struct','S', '-v7');
 end
