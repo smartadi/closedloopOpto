@@ -362,8 +362,9 @@ OL–CL gap at mean state: p ≤ 1.6e-11 for all four.
 - ⚠ Panel shows median 0.72 while the text leads with geomean 0.58. Both are correct; the
   caption should name which is which (decision on record: LMM geomean is the headline, session
   median is the dot summary).
-- ⚠ **No open-loop comparator.** RR is CL-only. Computing RR on the OL trials of the same 11
-  sessions is the obvious control and is nearly free — see the review's item D23.
+- ✅ **Open-loop comparator DONE 2026-10-07** (`f4_rr_denominator_check.m`): median RR 1.25 OL vs
+  0.72 CL, CL lower in 11/11 analysed sessions (V = 66, p = 4.9e-4). The gap is mostly the standing
+  offset (41% of the OL residual vs 8% CL); the fluctuation term moves 0.66 → 0.54. In Results.
 
 ### 5.4 Contra→ipsi predictor R² — 🟥 CONFLICT (three sets, two sharing a value)
 | where | claim |

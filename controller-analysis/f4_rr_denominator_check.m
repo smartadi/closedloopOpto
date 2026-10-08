@@ -40,8 +40,8 @@ bpData = fullfile(fileparts(here),'data');
 CFG.nSV_load=500; CFG.Fs=35; CFG.pre_s=1.0; CFG.resp_s=3.0; REF=-5; REACH_TOL=1.5;
 
 RRD = struct('tag',{},'mn',{},'nOL',{},'nCL',{},'R2te',{},'Aset',{},'reach',{}, ...
-    'msD_cl',{},'msD_ol',{},'msErr_cl',{},'msErr_ol',{},'bias2_cl',{},'fluct_cl',{}, ...
-    'RR_cl',{},'RR_ol',{},'RRfluct_cl',{},'Doffset',{});
+    'msD_cl',{},'msD_ol',{},'msErr_cl',{},'msErr_ol',{},'bias2_cl',{},'fluct_cl',{},'bias2_ol',{},'fluct_ol',{}, ...
+    'RR_cl',{},'RR_ol',{},'RRfluct_cl',{},'RRfluct_ol',{},'Doffset',{});
 
 for s = 1:numel(fields)
     fld = fields{s}; M = mouse.(fld); freeAfter=false;
@@ -75,7 +75,7 @@ for s = 1:numel(fields)
 
     % --- numerator, split into standing offset and fluctuation --------------
     [msE_cl, b2_cl, fl_cl] = err_split(S.Acl(:,wr), ref);
-    msE_ol = err_split(S.Aol(:,wr), ref);
+    [msE_ol, b2_ol, fl_ol] = err_split(S.Aol(:,wr), ref);
 
     ok_cl = isfinite(msE_cl) & isfinite(msD_cl) & msD_cl>0;
     ok_ol = isfinite(msE_ol) & isfinite(msD_ol) & msD_ol>0;
@@ -86,22 +86,24 @@ for s = 1:numel(fields)
         'msD_cl',median(msD_cl(ok_cl)),'msD_ol',median(msD_ol(ok_ol)), ...
         'msErr_cl',median(msE_cl(ok_cl)),'msErr_ol',median(msE_ol(ok_ol)), ...
         'bias2_cl',median(b2_cl(ok_cl)),'fluct_cl',median(fl_cl(ok_cl)), ...
+        'bias2_ol',median(b2_ol(ok_ol)),'fluct_ol',median(fl_ol(ok_ol)), ...
         'RR_cl',median(msE_cl(ok_cl)./msD_cl(ok_cl)), ...
         'RR_ol',median(msE_ol(ok_ol)./msD_ol(ok_ol)), ...
         'RRfluct_cl',median(fl_cl(ok_cl)./msD_cl(ok_cl)), ...
+        'RRfluct_ol',median(fl_ol(ok_ol)./msD_ol(ok_ol)), ...
         'Doffset',mean(mean(D_cl(:,wr),2))); %#ok<AGROW>
 end
 
 % ------------------------------- report ----------------------------------
 fprintf('\n===== RR diagnostics, settled 1-3 s (medians over trials) =====\n');
-fprintf('%-22s %5s %6s %7s %8s %8s %8s %8s %7s %7s %8s\n', ...
-    'session','R2te','Aset','msD_CL','msD_OL','msErr_CL','bias2_CL','fluct_CL','RR_CL','RR_OL','RRfl_CL');
+fprintf('%-22s %5s %6s %7s %8s %8s %8s %7s %7s %8s %8s\n', ...
+    'session','R2te','Aset','msD_CL','msErr_CL','bias2_CL','fluct_CL','RR_CL','RR_OL','RRfl_CL','RRfl_OL');
 [~,ord] = sort([RRD.RR_cl]);
 for i = ord
     r = RRD(i);
-    fprintf('%-22s %5.2f %6.2f %7.3f %8.3f %8.3f %8.3f %8.3f %7.2f %7.2f %8.2f%s\n', ...
-        r.tag, r.R2te, r.Aset, r.msD_cl, r.msD_ol, r.msErr_cl, r.bias2_cl, r.fluct_cl, ...
-        r.RR_cl, r.RR_ol, r.RRfluct_cl, tern(r.reach,'',' [no reach]'));
+    fprintf('%-22s %5.2f %6.2f %7.3f %8.3f %8.3f %8.3f %7.2f %7.2f %8.2f %8.2f\n', ...
+        r.tag, r.R2te, r.Aset, r.msD_cl, r.msErr_cl, r.bias2_cl, r.fluct_cl, ...
+        r.RR_cl, r.RR_ol, r.RRfluct_cl, r.RRfluct_ol);
 end
 
 rr=[RRD.RR_cl].'; msd=[RRD.msD_cl].'; r2=[RRD.R2te].'; rrol=[RRD.RR_ol].';
@@ -128,6 +130,12 @@ for i = 1:numel(RRD)
         fprintf('   RR with the offset removed: %.2f\n', r.RRfluct_cl);
     end
 end
+
+fl_ol=[RRD.RRfluct_ol].'; fl_cl=[RRD.RRfluct_cl].';
+fprintf('\nMECHANISM -- fluctuation energy as a fraction of the disturbance it faces:\n');
+fprintf('  open loop  median %.2f (passes the disturbance through if ~1)\n', median(fl_ol));
+fprintf('  closed loop median %.2f, lower in %d of %d sessions, signrank p=%.3g\n', ...
+    median(fl_cl), sum(fl_cl<fl_ol), numel(fl_cl), signrank(log(fl_ol),log(fl_cl),'tail','right'));
 
 save(fullfile(dataDir,'f4_rr_denominator_check.mat'),'RRD');
 fprintf('\nsaved -> %s\n', fullfile(dataDir,'f4_rr_denominator_check.mat'));
