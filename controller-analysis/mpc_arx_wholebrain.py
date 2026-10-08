@@ -211,21 +211,31 @@ def main(sess="AL_0033_0226_e2", spots="100,200"):     # file tags = requested c
     a.set_title("forecast from -1 frame with the known stim: trial average", fontsize=9)
     fig.savefig(FIG / f"wb_arx_{sess}.png", dpi=200)
 
-    rmse_b = np.sqrt(np.mean((free[mBig][:, w03] - REC[:, w03]) ** 2, 1))
-    ex = np.argsort(rmse_b)[[nO // 4, nO // 2, 3 * nO // 4]]
-    fig2, ax2 = plt.subplots(1, 3, figsize=(15, 3.6), constrained_layout=True)
-    t86 = np.arange(N) / Fs + 2 / Fs                                # target time of the lead-3 forecast
+    # 86 ms-ahead forecast on held-out OL trials: 6 trials spanning the per-trial R2 range
+    m1 = f"+ {WB[min(WB)]['X'].shape[1]} spots"
+    yy = REC[:, 2:N + 2]                                           # targets rel 2..N+1 of origins rel -1..N-1
+    f_roi, f_wb = FC["ROI only"][:, :N, 2], FC[m1][:, :N, 2]
+    r2t = np.array([r2(yy[k], f_wb[k]) for k in range(nO)])
+    ex = np.argsort(r2t)[np.round(np.linspace(0.1, 0.9, 6) * (nO - 1)).astype(int)]
+    fig2, ax2 = plt.subplots(2, 3, figsize=(15, 6.4), constrained_layout=True, sharex=True)
+    t86 = (np.arange(N) + 2) / Fs                                 # target time (s from onset)
     for i, k in enumerate(ex):
-        a = ax2[i]
-        a.plot(tt, np.concatenate([PRE[k], REC[k]]), "k", lw=1.1, label="recorded")
-        for m in ("ROI only", mBig):
-            a.plot(t86, FC[m][k, :N, 2], color=pal[m], lw=1, label=f"86 ms ahead, {m}")
-        a.axvline(0, color="0.7", lw=0.6); a.axvline(3, color="0.7", lw=0.6)
-        a.set_title(f"held-out OL trial {k + 1} (fold {fold[k]})", fontsize=9); a.set_xlabel("time from onset (s)")
+        a = ax2.flat[i]
+        a.axvspan(0, 3, color="0.93", zorder=0)
+        a.plot(tt, np.concatenate([PRE[k], REC[k]]), "k", lw=1.2, label="recorded")
+        a.plot(t86, f_roi[k], color=pal["ROI only"], lw=1, label="86 ms ahead: ROI only")
+        a.plot(t86, f_wb[k], color=pal[m1], lw=1, label=f"86 ms ahead: {m1}")
+        a.set_title(f"held-out OL trial {k + 1} (fold {fold[k]}) | R² ROI {r2(yy[k], f_roi[k]):.2f}, "
+                    f"+brain {r2t[k]:.2f}", fontsize=8.5)
+        if i % 3 == 0:
+            a.set_ylabel("dF/F (%)")
+        if i >= 3:
+            a.set_xlabel("time from onset (s)")
         if i == 0:
-            a.set_ylabel("dF/F (%)"); a.legend(fontsize=7, frameon=False)
+            a.legend(fontsize=7, frameon=False, loc="lower left")
+    fig2.suptitle(f"86 ms-ahead forecasts on held-out open-loop trials (forecast plotted at its target time; "
+                  f"pooled R² ROI {R2['ROI only'][2]:.2f}, +brain {R2[m1][2]:.2f})", fontsize=10)
     fig2.savefig(FIG / f"wb_arx_examples_{sess}.png", dpi=200)
-
     key = lambda m: m.replace(" ", "_").replace("+", "wb").replace("-", "_")
     savemat(DATA / f"mpc_arx_wholebrain_{sess}.mat", {
         "R2": {key(m): v for m, v in R2.items()}, "R2dev": {key(m): v for m, v in R2dev.items()},
