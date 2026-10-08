@@ -6,7 +6,7 @@ function ctrl_mpc_wb_export(sess, nSpot, nSV)
 %   in the session's cached display orientation (cp_orient). Spots: square grid, spacing chosen so
 %   ~nSpot grid nodes fall inside the mask; each spot = mean over a 5x5 px box. Signal per spot =
 %   (U_box * V) / mimg_box * 100 (mean-image dF/F; SVD V is already mean-subtracted).
-% OUT  data/ctrl_mpc_wb_in_<sess>.mat (v7): X [T x nSpot] on timeBlue, rc [nSpot x 2] (native row,col),
+% OUT  data/ctrl_mpc_wb_in_<sess>_n<nSpot>.mat (v7): X [T x nSpot] on timeBlue, rc [nSpot x 2] (native row,col),
 %      mask, mimg, site_rc (laser), dist_mm-free distance in px from the laser site.
 if nargin < 1, sess = 'AL_0033_0226_e2'; end
 if nargin < 2, nSpot = 100; end
@@ -52,5 +52,5 @@ fprintf('[WB-EXP] frame-clock offset: svd %d vs timeBlue %d frames; median |dt| 
     numel(tsvd), numel(tb), 1000*median(abs(diff(tsvd(1:min(end,1000))))));
 S = struct('X', Xt, 'rc', rc, 'mask', mask, 'mimg', mimg, 'site_rc', site, 'dist_px', dist_px, ...
            'spacing_px', sp, 'nSV', size(U,3), 'sess', sess);
-save(fullfile(dataDir, sprintf('ctrl_mpc_wb_in_%s.mat', sess)), '-struct', 'S', '-v7');
+save(fullfile(dataDir, sprintf('ctrl_mpc_wb_in_%s_n%d.mat', sess, nSpot)), '-struct', 'S', '-v7');
 end
