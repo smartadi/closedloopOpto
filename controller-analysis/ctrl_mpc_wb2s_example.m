@@ -1,14 +1,16 @@
-function ctrl_mpc_wb2s_example(sess, trials)
+function ctrl_mpc_wb2s_example(sess, trials, extra, suffix)
 %CTRL_MPC_WB2S_EXAMPLE  Example CL trials: recorded CL (PI on the rig), PI replay, MPC with the AR forecast
 %   (our earlier MPC), MPC with the whole-brain forecast (wbbest, mpc_arx_wb2s.py), perfect preview.
 %   Rows: (1) dF/F with the -5 reference, (2) laser command, (3) the 86 ms-ahead disturbance forecasts
 %   fed to the MPC vs the disturbance that actually came. Default trials: the 25th / 50th / 75th
 %   percentile of the per-trial MPC improvement (whole-brain vs AR). Simulation -> descriptive.
 % OUT  paper/images/mpc_arx/wb2s_mpc_example_<sess>.png
-if nargin < 1, sess = 'AL_0033_0226_e2'; end
+if nargin < 1 || isempty(sess), sess = 'AL_0033_0226_e2'; end
+if nargin < 3, extra = {}; end            % extra ctrl_mpc_lqr args, e.g. {'rd',0,'r',1e-6} (aggressive)
+if nargin < 4, suffix = ''; end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data'); addpath(genpath(fullfile(here,'..','utils')));
 figDir = fullfile(here,'..','paper','images','mpc_arx');
-args = {'frame','fig3','Lp',7,'xGrid',[1 0],'KpGrid',0.10,'KiGrid',1.5,'tag','_ex'};
+args = [{'frame','fig3','Lp',7,'xGrid',[1 0],'KpGrid',0.10,'KiGrid',1.5,'tag','_ex'}, extra];
 evalc('Ta = ctrl_mpc_lqr(args{:}, ''fcstModel'',''ar'', ''fcstFile'',''ctrl_mpc_forecasters_%s.mat'');');
 evalc('Tw = ctrl_mpc_lqr(args{:}, ''fcstModel'',''wbbest'', ''fcstFile'',''ctrl_mpc_wb2s_out_%s.mat'');');
 delete(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s_ex.mat', sess)));
@@ -56,8 +58,8 @@ for c = 1:numel(trials)
             'Box','off','FontSize',7,'Location','southeast');
     end
 end
-sgtitle(fig, sprintf(['MPC replay on recorded CL trials (25th / 50th / 75th pct of whole-brain vs AR gain); ' ...
+sgtitle(fig, sprintf([strrep(suffix,'_','') ' MPC replay on recorded CL trials (25th / 50th / 75th pct of whole-brain vs AR gain); ' ...
     'session median MPC/PI: AR %.3f, whole brain %.3f'], median(Ta.rM(:,i1)./Ta.rPI), median(Tw.rM(:,i1)./Tw.rPI)), 'FontSize', 10);
-exportgraphics(fig, fullfile(figDir, sprintf('wb2s_mpc_example_%s.png', sess)), 'Resolution', 170);
+exportgraphics(fig, fullfile(figDir, sprintf('wb2s_mpc_example_%s%s.png', sess, suffix)), 'Resolution', 170);
 fprintf('[WB2S-EX] trials %s | per-trial RMSE gain (brain - AR) %s\n', mat2str(trials), mat2str(round(gain(trials).',3)));
 end
