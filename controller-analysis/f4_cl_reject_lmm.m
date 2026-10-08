@@ -2,16 +2,30 @@ function f4_cl_reject_lmm()
 % F4_CL_REJECT_LMM  Session-aware LMM for the CL-only disturbance-rejection panel.
 % Per-trial RR = ||A-r||^2/||D||^2 (settled 1-3 s, leak-corrected D). Test whether
 % RR<1 (rejection) with log(RR) ~ 1 + (1|mouse) + (1|mouse:session); the fixed
-% intercept <0 <=> RR<1. Reach gate: keep sessions whose settled mean A_CL is
-% within 1.5 %dF/F of ref (excludes tracking failures AL_0033_0212, AL_0051).
+% intercept <0 <=> RR<1.
+%
+% OFFSET GATE (2026-10-07, replaces the reach gate). RR is meant to measure how much
+% of the disturbance the loop rejects, but its numerator ||A-r||^2 also contains any
+% STANDING setpoint offset, which is a different failure (a bias the integrator never
+% removed, not a failure to reject). Per trial that numerator splits exactly:
+%     mean((A-r)^2) = (mean(A)-r)^2 + var(A)   =   bias^2 + fluctuation
+% so a session is excluded when the session's standing offset supplies more than a
+% third of its settled residual energy, biasFrac = (Aset-ref)^2 / mean msErr > 1/3.
+% That is the direct form of the rule the Methods already state (the residual is
+% "dominated by a standing setpoint error rather than by disturbance rejection").
+% It excludes AL_0051 (73%) and AL_0033_0212 (47%) and keeps AL_0048 (17%), which the
+% old gate could not: in %dF/F those sessions sit 1.44 and 1.33 from the reference, so
+% no threshold on the settled mean separates them. AL_0048 has a large offset but an
+% even larger disturbance, so its RR is a genuine rejection measurement.
+% Diagnostics behind the threshold: controller-analysis/f4_rr_denominator_check.m.
 % Requires load_sessions.m first (mouse/fields in the workspace).
 assert(evalin('base','exist(''mouse'',''var'') && exist(''fields'',''var'')'), 'run load_sessions.m first');
 mouse  = evalin('base','mouse');  fields = evalin('base','fields');
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data');
 bpData = fullfile(fileparts(here),'data');
-CFG.nSV_load=500; CFG.Fs=35; CFG.pre_s=1.0; CFG.resp_s=3.0; REF=-5; REACH_TOL=1.5;
+CFG.nSV_load=500; CFG.Fs=35; CFG.pre_s=1.0; CFG.resp_s=3.0; REF=-5; BIAS_MAX=1/3;
 
-rr=[]; sess={}; mn={}; keptsess=struct('tag',{},'mnn',{},'nTr',{},'Aset',{},'medRR',{},'reach',{});
+rr=[]; sess={}; mn={}; keptsess=struct('tag',{},'mnn',{},'nTr',{},'Aset',{},'medRR',{},'biasFrac',{},'keep',{});
 for s = 1:numel(fields)
     fld = fields{s}; M = mouse.(fld); freeAfter=false;
     if ~isfield(M,'d') || isempty(M.d)
@@ -30,25 +44,27 @@ for s = 1:numel(fields)
     Gr_cl=S.Gcl-mean(S.Gcl(:,bwin),2); D=Gr_cl-gdipOL;
     rr_tr = sum((S.Acl(:,wr)-ref).^2,2) ./ sum(D(:,wr).^2,2);
     Aset  = mean(mean(S.Acl(:,wr),2));                       % session settled mean A_CL
-    reach = abs(Aset-REF) <= REACH_TOL;
+    msErr = mean(mean((S.Acl(:,wr)-ref).^2, 2));             % mean settled residual energy
+    biasFrac = (Aset-REF)^2 / msErr;                         % standing offset's share of it
+    keep  = biasFrac <= BIAS_MAX;
     ok = isfinite(rr_tr) & rr_tr>0;
     keptsess(end+1)=struct('tag',S.sess_tag,'mnn',S.mn,'nTr',nnz(ok),'Aset',Aset, ...
-        'medRR',median(rr_tr(ok)),'reach',reach); %#ok<AGROW>
-    if ~reach; continue; end                                 % REACH GATE
+        'medRR',median(rr_tr(ok)),'biasFrac',biasFrac,'keep',keep); %#ok<AGROW>
+    if ~keep; continue; end                                  % OFFSET GATE
     rr   = [rr; rr_tr(ok)]; %#ok<AGROW>
     sess = [sess; repmat({S.sess_tag},nnz(ok),1)]; %#ok<AGROW>
     mn   = [mn;   repmat({S.mn},nnz(ok),1)]; %#ok<AGROW>
 end
 
-fprintf('\n== reach gate (settled |mean A_CL - ref| <= %.1f) ==\n', REACH_TOL);
+fprintf('\n== offset gate (standing offset <= %.0f%% of settled residual energy) ==\n', 100*BIAS_MAX);
 for i=1:numel(keptsess)
-    fprintf('  %-22s  A=%.2f  medRR=%.2f  %s\n', keptsess(i).tag, keptsess(i).Aset, ...
-        keptsess(i).medRR, string(keptsess(i).reach));
+    fprintf('  %-22s  A=%5.2f  bias=%3.0f%%  medRR=%.2f  %s\n', keptsess(i).tag, keptsess(i).Aset, ...
+        100*keptsess(i).biasFrac, keptsess(i).medRR, string(keptsess(i).keep));
 end
 
 T = table(log(rr), categorical(sess), categorical(mn), 'VariableNames',{'logRR','sess','mouse'});
 nMouse = numel(unique(mn)); nSess = numel(unique(sess));
-fprintf('\nLMM on %d trials, %d sessions, %d mice (reachers only)\n', height(T), nSess, nMouse);
+fprintf('\nLMM on %d trials, %d sessions, %d mice (after the offset gate)\n', height(T), nSess, nMouse);
 % REML + Satterthwaite (2026-10-07), matching utils/cl_olcl_lmm.m and the Methods. Until
 % then this fit used the fitlme defaults -- ML and RESIDUAL df (t(594) = trial count) with a
 % normal 1.96*SE interval -- so the intercept was referenced against trials, not clusters.
@@ -62,7 +78,7 @@ fprintf('      Satterthwaite df %.2f, used df %.2f\n', dfSat, df);
 fprintf('\n[LMM] log(RR) intercept = %.3f  (SE %.3f, t(%.0f)=%.2f)\n', est, se, df, tv);
 fprintf('      geometric-mean RR = exp(intercept) = %.2f   95%% CI [%.2f, %.2f]\n', exp(est), exp(ci(1)), exp(ci(2)));
 fprintf('      H0: intercept>=0 (RR>=1) vs H1: RR<1  -> one-sided p = %.3g   (two-sided %.3g)\n', p1, p2);
-sessMed = [keptsess([keptsess.reach]).medRR];
+sessMed = [keptsess([keptsess.keep]).medRR];
 fprintf('      [ref] session-level signrank of median RR vs 1: p=%.3g (n=%d)\n', signrank(sessMed,1), numel(sessMed));
 
 srSess = signrank(sessMed,1);

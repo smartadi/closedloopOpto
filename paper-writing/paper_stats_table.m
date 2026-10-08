@@ -84,7 +84,7 @@ add('4G_sess','4G',sprintf('geometric-mean RR, session-clustered (%d trials, %d 
     'LMM logRR~1+(1|sess)','t',sm.t,sm.df,sm.p1,'1',nS,'sessions','f4_cl_reject_lmm');
 add('4G_nested','4G','geometric-mean RR, mouse-nested',exp(S.est),'RR',exp(S.ci), ...
     'LMM logRR~1+(1|mouse)+(1|mouse:sess)','t',S.tv,S.df,S.p1,'1',nM,'mice','f4_cl_reject_lmm');
-ks = S.keptsess([S.keptsess.reach]); med = [ks.medRR];
+ks = S.keptsess([S.keptsess.keep]); med = [ks.medRR];
 add('4G_sessmed','4G',sprintf('session median RR < 1 in %d/%d sessions',sum(med<1),numel(med)),median(med),'median RR',[NaN NaN], ...
     'Wilcoxon signed-rank on log median RR','V',S.srV,NaN,S.srSess1,'1',numel(med),'sessions','f4_cl_reject_lmm');
 

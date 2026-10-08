@@ -50,6 +50,6 @@ id,figure,claim,effect,unit,ci_lo,ci_hi,test,stat_name,stat,df,p,sided,n,n_unit,
 4_motslope_OL,4,"within-session OL slope, RMSE on motion",0.1287279,median z/z,NaN,NaN,"Wilcoxon signed-rank vs 0",V,65,NaN,0.001953125,2,11,sessions,f4_row2_quartiles
 4_motslope_CL,4,"within-session CL slope, RMSE on motion",-0.05373005,median z/z,NaN,NaN,"Wilcoxon signed-rank vs 0",V,24,NaN,0.4648438,2,11,sessions,f4_row2_quartiles
 4_motslope_diff,4,"OL vs CL slope (11/11 sessions OL>CL)",0.2248378,median diff,NaN,NaN,"Wilcoxon signed-rank",V,66,NaN,0.0009765625,2,11,sessions,f4_row2_quartiles
-4G_sess,4G,"geometric-mean RR, session-clustered (640 trials, 4 mice)",0.6286292,RR,0.4764302,0.8294492,"LMM logRR~1+(1|sess)",t,-3.69447048434194,10.78800751073,0.001825689,1,12,sessions,f4_cl_reject_lmm
-4G_nested,4G,"geometric-mean RR, mouse-nested",0.7255735,RR,0.2884876,1.824886,"LMM logRR~1+(1|mouse)+(1|mouse:sess)",t,-1.24274941304488,2.50159481519084,0.1588701,1,4,mice,f4_cl_reject_lmm
-4G_sessmed,4G,"session median RR < 1 in 11/12 sessions",0.7187927,median RR,NaN,NaN,"Wilcoxon signed-rank on log median RR",V,10,NaN,0.01049805,1,12,sessions,f4_cl_reject_lmm
+4G_sess,4G,"geometric-mean RR, session-clustered (595 trials, 3 mice)",0.575914,RR,0.4629516,0.7164397,"LMM logRR~1+(1|sess)",t,-5.68567662733171,9.3385750903328,0.0001306336,1,11,sessions,f4_cl_reject_lmm
+4G_nested,4G,"geometric-mean RR, mouse-nested",0.5710682,RR,0.2171553,1.501777,"LMM logRR~1+(1|mouse)+(1|mouse:sess)",t,-4.65496422201052,1.24949486657232,0.04865324,1,3,mice,f4_cl_reject_lmm
+4G_sessmed,4G,"session median RR < 1 in 11/11 sessions",0.7179168,median RR,NaN,NaN,"Wilcoxon signed-rank on log median RR",V,0,NaN,0.0004882812,1,11,sessions,f4_cl_reject_lmm
