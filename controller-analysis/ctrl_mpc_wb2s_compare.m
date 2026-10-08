@@ -10,19 +10,23 @@ figDir = fullfile(here,'..','paper','images','mpc_arx');
 FF = load(fullfile(dataDir, sprintf('ctrl_mpc_forecasters_%s.mat', sess)), 'F','DEP','fold');
 FA = load(fullfile(dataDir, sprintf('ctrl_mpc_arx_out_%s.mat', sess)), 'F','fold');
 FW = load(fullfile(dataDir, sprintf('ctrl_mpc_wb2s_out_%s.mat', sess)), 'F','fold');
-assert(isequal(double(FF.fold(:)), double(FA.fold(:)), double(FW.fold(:))), 'folds differ');
+FV = load(fullfile(dataDir, sprintf('ctrl_mpc_varx_out_%s.mat', sess)), 'F','fold');     % mpc_varx_cl.py (2026-10-08)
+assert(isequal(double(FF.fold(:)), double(FA.fold(:)), double(FW.fold(:)), double(FV.fold(:))), 'folds differ');
 M = { 'ar',    'ctrl_mpc_forecasters_%s.mat', 'AR (trial-trained, MATLAB)';
       'dlinear','ctrl_mpc_forecasters_%s.mat', 'DLinear (trial-trained)';
       'pyarx', 'ctrl_mpc_arx_out_%s.mat',      'ARX + laser (session, Lu et al. recipe)';
       'roi2s', 'ctrl_mpc_wb2s_out_%s.mat',     'ROI + laser, 2-s history (direct)';
       'wbbest','ctrl_mpc_wb2s_out_%s.mat',     'ROI + laser + 100 spots, tuned (spots 286 ms)';
-      'wb2s',  'ctrl_mpc_wb2s_out_%s.mat',     'ROI + laser + 100 brain spots, 2-s history'};
+      'wb2s',  'ctrl_mpc_wb2s_out_%s.mat',     'ROI + laser + 100 brain spots, 2-s history';
+      'varx',  'ctrl_mpc_varx_out_%s.mat',     'VARX: d + 100 spots + laser, delay-embedded (L10)';
+      'varx_svd','ctrl_mpc_varx_out_%s.mat',   'VARX: d + 50 SVD comps + laser (L5)'};
 DEP = FF.DEP; pre = 35; N = 105; leads = [1 2 3 5 7];
 nM = size(M,1); R2 = nan(nM, numel(leads)); sk7 = nan(nM,1);
 for i = 1:nM
     switch M{i,2}
         case 'ctrl_mpc_forecasters_%s.mat', Fm = double(FF.F.(M{i,1}));
         case 'ctrl_mpc_arx_out_%s.mat',     Fm = double(FA.F.(M{i,1}));
+        case 'ctrl_mpc_varx_out_%s.mat',    Fm = double(FV.F.(M{i,1}));
         otherwise,                           Fm = double(FW.F.(M{i,1}));
     end
     for il = 1:numel(leads)
@@ -47,7 +51,7 @@ fprintf('[WB2S-MPC] perfect preview %.3f x PI | PI replay median RMSE %.2f\n', p
 
 % ---- figure ---------------------------------------------------------------------------------------
 U = load(fullfile(dataDir, sprintf('ctrl_mpc_uncertainty_sweep_%s.mat', sess)));
-cols = [0.20 0.45 0.75; 0.35 0.60 0.85; 0.15 0.60 0.30; 0.36 0.17 0.53; 0.91 0.48 0.37; 0.82 0.29 0.36];
+cols = [0.20 0.45 0.75; 0.35 0.60 0.85; 0.15 0.60 0.30; 0.36 0.17 0.53; 0.91 0.48 0.37; 0.82 0.29 0.36; 0.10 0.10 0.10; 0.55 0.55 0.55];
 fig = figure('Color','w','Position',[80 80 1500 420]);
 ax = subplot(1,3,1); hold(ax,'on');
 for i = 1:nM, plot(ax, leads*1000/35, R2(i,:), '-o', 'Color', cols(i,:), 'MarkerFaceColor', cols(i,:), 'LineWidth', 1.3); end
