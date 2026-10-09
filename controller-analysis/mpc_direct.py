@@ -18,8 +18,9 @@ COMPARE PI in the same world (gains re-tuned there by grid, best median -> conse
         RMSE over 1-3 s (ctrl_mpc_lqr rmseWin), ref -5. Simulation -> descriptive only.
 
 Usage:  .venv\\Scripts\\python.exe controller-analysis\\mpc_direct.py [sess]
-OUT     data/mpc_direct_<sess>.mat, paper/images/mpc_arx/mpc_direct_<sess>.png, mpc_direct_examples_<sess>.png
+OUT     data/mpc_direct_<sess><MPCD_TAG>.mat, paper/images/mpc_arx/mpc_direct_<sess><MPCD_TAG>.png, mpc_direct_examples_...
 """
+import os
 import sys
 from pathlib import Path
 
@@ -37,7 +38,8 @@ HERE = Path(__file__).resolve().parent
 DATA, FIG = HERE / "data", HERE.parent / "paper" / "images" / "mpc_arx"
 CFG = dict(L=10, lam=100.0, Q=35)
 HP, REF, R_U, HIST = 35, -5.0, 1e-3, 70
-RD_GRID = (0.1, 1.0, 10.0)
+REF_RD = os.environ.get("MPCD_REF", "MPC rd=1")   # the MPC row shown in the example-trial figure
+RD_GRID = tuple(float(x) for x in os.environ.get("MPCD_RD", "0.1,1,10").split(","))   # override: MPCD_RD=0,0.01,...
 
 
 class VX:
@@ -70,7 +72,7 @@ class VX:
 
 
 def mpc_solve(m, f, u_prev, uss, umax, rd):
-    D = np.eye(HP) - np.eye(HP, k=-1)
+    D = np.eye(HP) - np.eye(HP, k=-1)   # rd = 0 allowed (pure tracking + tiny r)
     Aq = np.vstack([m.G, np.sqrt(R_U) * np.eye(HP), np.sqrt(rd) * D])
     e0 = np.zeros(HP); e0[0] = u_prev
     bq = np.concatenate([REF - f, np.sqrt(R_U) * uss * np.ones(HP), np.sqrt(rd) * e0])
@@ -203,9 +205,9 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
     a.set_xlabel("median RMSE / PI RMSE (1-3 s), 108 CL trials")
     a.set_title(f"direct-prediction MPC in the VARX world | PI re-tuned (Kp {Kp}, Ki {Ki})\n"
                 f"model R² of y on CL trials: 86 ms {r2[3]:.2f}, 200 ms {r2[7]:.2f}", fontsize=9)
-    fig.savefig(FIG / f"mpc_direct_{sess}.png", dpi=170)
+    fig.savefig(FIG / f"mpc_direct_{sess}{os.environ.get('MPCD_TAG', '')}.png", dpi=170)
 
-    gain = res["MPC rd=1"][1] - rPI; srt = np.argsort(gain); ex = srt[np.round(np.array([0.25, 0.5, 0.75]) * (nT - 1)).astype(int)]
+    gain = res[REF_RD][1] - rPI; srt = np.argsort(gain); ex = srt[np.round(np.array([0.25, 0.5, 0.75]) * (nT - 1)).astype(int)]
     tt = np.arange(N) / Fs
     fig, ax = plt.subplots(2, 3, figsize=(16, 7), constrained_layout=True, sharex=True)
     for j, k in enumerate(ex):
@@ -213,17 +215,17 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
         a = ax[0, j]
         a.plot(tt, yr[o:o + N], color="0.6", lw=1, label=f"recorded rig CL ({rec[k]:.2f})")
         a.plot(tt, PI[k][0], color="#1f77b4", lw=1.2, label=f"PI in world ({rPI[k]:.2f})")
-        a.plot(tt, res["MPC rd=1"][0][k][0], color="#d62828", lw=1.4, label=f"MPC, VARX direct ({res['MPC rd=1'][1][k]:.2f})")
+        a.plot(tt, res[REF_RD][0][k][0], color="#d62828", lw=1.4, label=f"{REF_RD}, VARX direct ({res[REF_RD][1][k]:.2f})")
         a.plot(tt, res["ORACLE MPC rd=1"][0][k][0], color="#c77dff", lw=1, label=f"oracle MPC ({res['ORACLE MPC rd=1'][1][k]:.2f})")
         a.axhline(REF, color="k", ls="--", lw=0.8); a.axvspan(0, 1, color="0.92", zorder=0)
         a.set_title(f"CL trial {k + 1} (RMSE 1-3 s in legend)", fontsize=9); a.set_ylabel("ΔF/F (%)"); a.legend(fontsize=6.5, frameon=False)
         a = ax[1, j]
         a.plot(tt, ur[o:o + N], color="0.6", lw=1); a.plot(tt, PI[k][1], color="#1f77b4", lw=1.1)
-        a.plot(tt, res["MPC rd=1"][0][k][1], color="#d62828", lw=1.3); a.plot(tt, res["ORACLE MPC rd=1"][0][k][1], color="#c77dff", lw=1)
+        a.plot(tt, res[REF_RD][0][k][1], color="#d62828", lw=1.3); a.plot(tt, res["ORACLE MPC rd=1"][0][k][1], color="#c77dff", lw=1)
         a.set_xlabel("time from onset (s)"); a.set_ylabel("laser command")
     fig.suptitle("direct-prediction MPC (no disturbance proxy): 25th / 50th / 75th pct trials of MPC − PI", fontsize=10)
-    fig.savefig(FIG / f"mpc_direct_examples_{sess}.png", dpi=170)
-    savemat(DATA / f"mpc_direct_{sess}.mat", {"names": np.array(names, dtype=object),
+    fig.savefig(FIG / f"mpc_direct_examples_{sess}{os.environ.get('MPCD_TAG', '')}.png", dpi=170)
+    savemat(DATA / f"mpc_direct_{sess}{os.environ.get('MPCD_TAG', '')}.mat", {"names": np.array(names, dtype=object),
             "rmse": np.column_stack([res[n][1] for n in names]), "rec": rec, "Kp": Kp, "Ki": Ki,
             "G": world.G, "r2_86": r2[3], "r2_200": r2[7], "examples": ex + 1})
 
