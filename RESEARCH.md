@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-09 — Example CL trials: MPC with VARX vs AR forecasts
+**Changed/Found:** `controller-analysis/ctrl_mpc_wb2s_example.m` — new 5th arg `mdl = {fcstModel, fcstFile, label}` (default wbbest, unchanged behaviour); run with `{'varx','ctrl_mpc_varx_out_%s.mat','VARX'}` → `paper/images/mpc_arx/wb2s_mpc_example_AL_0033_0226_e2_varx.png`. Trials 16/99/85 (25th/50th/75th pct of VARX−AR per-trial gain): RMSE PI 1.99/0.54/1.83, MPC-AR 1.82/0.62/1.62, MPC-VARX 1.67/0.56/1.63 (gain −0.148/−0.069/+0.005). VARX's 86 ms forecasts track the fast disturbance swings (e.g. trial 85 at 1.2–1.5 s, trial 16 at 2.5–3 s) that the AR forecast smooths over; laser commands are otherwise similar.
+**Why:** user: "show example trials with VARX". Simulation → descriptive.
+**Next:** none unless VARX replaces wbbest in the supp figure.
+
 ### 2026-10-08 — Delay-embedded VARX as the MPC disturbance forecaster: ties the best (0.897× PI, 85/108)
 **Changed/Found:** new `controller-analysis/mpc_varx_cl.py` → `data/ctrl_mpc_varx_out_<sess>.mat` (F.varx = d + 100 spots + laser, L10/λ100; F.varx_svd = d + 50 SVD comps + laser, L5/λ1e3; iterated 35 leads; future laser HELD at its origin value since it is the MPC's decision; same 5 CL folds, paired). `controller-analysis/ctrl_mpc_wb2s_compare.m` now includes both. MPC replay (Fig-3 frame, Lp 7 = 200 ms, λ=1, 108 CL trials), median MPC/PI: AR 0.942 (83/108), pyarx 0.969, roi2s 0.961, wb2s 0.933, wbbest 0.896 (84), **VARX 0.897 (85)**, VARX-SVD 0.904 (85); perfect preview 0.138. Disturbance R² at 29/57/86/143/200 ms: VARX .933/.760/.571/.449/.364 (wbbest .931/.758/.579/.455/.365; AR .876/.663/.494/.372/.301).
 **Why:** user: "use our VARX in the MPC and compare". One iterated VARX (one model for all leads) does as well as the 35 per-lead direct ridges (wbbest); both whole-brain forecasters sit at the same point on the forecast-uncertainty line. Simulation → descriptive only (no stats).
