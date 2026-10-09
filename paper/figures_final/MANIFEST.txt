@@ -100,6 +100,30 @@ figure5/sine_combined_variance.pdf  # 5.04 x 2.93 cm
 # below -- never stitched with \hfill in LaTeX and never montaged in MATLAB.
 # ---------------------------------------------------------------------------
 
+[supp_reject]
+# S4 (user 2026-10-09) = single trials behind the Fig-4G rejection ratio, so the
+# Discussion can point at what a ratio of energies actually looks like.
+# Source: controller-analysis/f4_supp_reject_trials.m.
+# Four panels, one per session: three from the analysed pool (one per mouse) and
+# AL_0051, which the standing-offset criterion excludes -- shown so the exclusion
+# can be demonstrated rather than asserted.
+# Each panel is 2 rows (open loop, closed loop) x 3 trials drawn at RR percentiles
+# 10/50/90, on ONE shared y-range per panel: per-tile limits put the reference dash
+# at a different height in every tile and made incomparable tiles look comparable.
+# RR is computed EXACTLY as in f4_cl_reject_lmm.m (settled 1-3 s, D referenced to
+# its own pre-stimulus baseline and leak-corrected), and the per-session medians
+# reproduce the production values 0.72 / 0.74 / 0.75 / 1.94. Note the baseline for D
+# is the last 1 s before onset even though 3 s are drawn -- the producer draws more
+# context than it measures, and widening the baseline to match the display silently
+# moved every RR (AL_0048 0.75 -> 1.04).
+# Do NOT reuse ctrl_reject_trial_gallery.m for this: its ER is a different quantity
+# (||A-ref||^2/||G-ref||^2 over 0-3 s, no leak correction). That script stays an
+# exploratory PNG tool.
+supplementary/s4_reject_trials_AL_0033_0226_e2.pdf  # 11.15 x 5.33 cm
+supplementary/s4_reject_trials_AL_0039_0420_e1.pdf  # 11.15 x 5.33 cm
+supplementary/s4_reject_trials_AL_0048_0729_e2.pdf  # 11.15 x 5.33 cm
+supplementary/s4_reject_trials_AL_0051_0729_e2.pdf  # 11.15 x 5.33 cm
+
 [supp_spatial]
 # S1 (user 2026-10-05) = spatial spread + nine amplitude maps + batch variance
 # + OL variance evolution. Assembled at 17.6 x 3.65 cm (full page width, one row).

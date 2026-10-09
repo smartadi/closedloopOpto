@@ -174,6 +174,7 @@ Source of truth for the panel set is `paper/figures_final/MANIFEST.txt`.
 | S1 | `figures_final/S1.pdf` (17.6 x 3.65 cm) | A suppressed area; B nine spatial maps + cbar; C batch variance; D OL variance evolution | `imp_spatial_panels.m`; `step_response.m`; `variance_mse.m` |
 | S2 | `figures_final/S2.pdf` (17.6 x 3.89 cm) | A cost surface; B accepted gain path; C online cost; D per-node trial averages | `controller-tuning/tune_supp_panels.m` |
 | S3 | `figures_final/S3.pdf` (17.6 x 8.41 cm) | A session exemplars (11 x 4); B rel+abs; C abs only; D rel only | `f4_state_exemplars_supp.m`; `f4_error_decomp.m` |
+| S4 (2026-10-09) | not assembled yet; panels in `panels/supp_reject/` (4 x 11.15 x 5.33 cm) | A-C one analysed session per mouse (AL_0033 0226, AL_0039 0420, AL_0048 0729); D AL_0051 0729, excluded by the standing-offset rule. Each: 2 rows OL/CL x 3 trials at RR percentiles 10/50/90 | `controller-analysis/f4_supp_reject_trials.m` |
 | S-MPC (2026-10-07) | not assembled yet; panels in `panels/supp_mpc/` | a QP; b plant fit; c-i CL replay (single trial, avg, command, variance, RMSE violin, variance/RMSE ratios); j preview window; k forecast skill; l MPC by forecaster; m,n uncertainty sweep; o λ vs error. Held: smooth tradeoff, λ roughness, qb sweep | `controller-analysis/ctrl_mpc_{equation_panel,plant_fig,fig3style,preview_sweep,forecaster_fig,uncertainty_sweep,lambda_uncertainty}.m` (simulation → descriptive only) |
 
 S4 was DROPPED (user, 2026-10-05: "s4 and its content not needed") -- the batch-mean
