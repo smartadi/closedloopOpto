@@ -7,7 +7,7 @@ function S = imp_build_session(mouse, fields, selField, dataDir, cfg)
 %   Stream 1: internal_model_principle.m (single session, rich analysis)
 %   Stream 2: imp_reject_across_sessions.m (batch, headline stat only)
 %
-% cfg fields: .nSV_load .Fs .pre_s .resp_s
+% cfg fields: .nSV_load .Fs .pre_s .resp_s  [.post_extra_s = extra s after stim end, default 0]
 % Returns S with .ok=true and Aol/Gol/Acl/Gcl [ntrial x nRel], nOL/nCL, pre, Fs,
 % dur, ref, tt, R2_te, sess_tag, mn/td/en/selField. On any missing/incompatible
 % prerequisite S.ok=false and S.msg says why (batch skips + logs, never crashes).
@@ -51,6 +51,10 @@ Xg   = double(Uflat(gridIdx,:))*V_cp;
 Gall = muY + (((Xg(Su,:)-mu)./sd).')*b;                     % stim-blind Global, all frames
 
 Fs=cfg.Fs; pre=round(cfg.pre_s*Fs); post=round(dur*Fs); rel=-pre:post;
+% optional display-only tail past stimulation end (S4); default 0 keeps every caller unchanged
+if isfield(cfg,'post_extra_s') && cfg.post_extra_s>0
+    post = post + round(cfg.post_extra_s*Fs); rel = -pre:post;
+end
 dfk = data.dFk(:);
 % data.dFk can trail the SVD by a frame or two (different readers of the same acquisition);
 % clamp for a rounding-scale shortfall, skip only for a real mismatch.

@@ -3,13 +3,16 @@ function RT = f4_supp_reject_trials(mouse, fields)
 %   RT = f4_supp_reject_trials(mouse, fields)   % after load_sessions.m
 %
 % Fig.~4G reduces every trial to one number, RR = ||A-r||^2/||D||^2, and a ratio hides what the
-% two traces look like. Each tile here is ONE trial, drawn in absolute %dF/F:
-%   grey    G, the stimulation-blind contralateral prediction. BEFORE onset it is a prediction of
-%           the ipsilateral site (A and G should lie on top of each other -- that overlap, on a
-%           single trial with no averaging, is what makes the disturbance estimate credible);
-%           AFTER onset it is the counterfactual, i.e. the DISTURBANCE the controller faces.
-%   colour  A, the measured response (red open loop, blue closed loop).
-%   dashed  the reference, r = -5 %dF/F.
+% two traces look like. Each tile here is ONE trial and draws EXACTLY the two traces that ratio
+% compares (user 2026-10-09), so both live on one zero baseline:
+%   colour  A - r, the tracking error (red open loop, blue closed loop). 0 = on the reference.
+%   grey    D, the disturbance: the stimulation-blind contralateral prediction G referenced to its
+%           own 1 s pre-onset baseline, minus the session-mean open-loop laser leak. The leak term
+%           is subtracted only while the laser is on (0..dur); outside stimulation D is just the
+%           baseline-referenced prediction, because there is no laser to leak.
+% Full strength inside the RR window [+1,+3] s (grey band) -- the only samples the ratio uses.
+% Everything else, from 3 s before onset to 2 s after stimulation ends, is drawn in a light tint
+% for context only.
 %
 % RR IS COMPUTED EXACTLY AS IN f4_cl_reject_lmm.m -- settled window [+1,+3] s, D referenced to its
 % own pre-stimulus baseline and leak-corrected by the session-mean open-loop dip -- so a tile
@@ -39,7 +42,9 @@ PS = paperStyle();
 
 % pre_s = 3 s of context so the pre-onset overlap of A and G is visible; RR itself is unaffected,
 % because its window is defined relative to the onset sample, not to the start of the trace.
-CFG = struct('nSV_load',500, 'Fs',35, 'pre_s',3.0, 'resp_s',3.0);
+CFG = struct('nSV_load',500, 'Fs',35, 'pre_s',3.0, 'resp_s',3.0, 'post_extra_s',2.0);
+% post_extra_s only lengthens the drawn trace; wr/bwin below are indexed from onset, so RR is
+% untouched (verified: session medians still reproduce production).
 REF = -5;  PCT = [10 50 90];
 
 % One session per mouse from the analysed pool, then the excluded one. Chosen for median RR near
@@ -89,24 +94,27 @@ for s = 1:numel(fields)
     excluded = biasFrac > 1/3;
 
     % ---------------------------- draw ------------------------------------------
-    % ONE y-range for all six tiles. Per-tile limits put the reference dash at a different
-    % height in every tile, which makes a row of tiles look comparable when it is not.
-    sel = [B.Aol(iOL,:); B.Gol(iOL,:); B.Acl(iCL,:); B.Gcl(iCL,:)];
-    lo = min([sel(:); ref]); hi = max([sel(:); ref]); pad = 0.08*max(hi-lo, eps);
+    % Leak correction applies only while the laser is on; elsewhere D = baseline-referenced G.
+    onMask = B.tt >= 0 & B.tt <= B.dur;
+    Dt_ol = Gr_ol - gdipOL*onMask;   Dt_cl = Gr_cl - gdipOL*onMask;
+    assert(isequal(Dt_cl(:,wr), D_cl(:,wr)) && isequal(Dt_ol(:,wr), D_ol(:,wr)));
+    Eol = B.Aol - ref;  Ecl = B.Acl - ref;
+    % ONE y-range for all six tiles, so a row of tiles is actually comparable.
+    sel = [Eol(iOL,:); Dt_ol(iOL,:); Ecl(iCL,:); Dt_cl(iCL,:)];
+    lo = min([sel(:); 0]); hi = max([sel(:); 0]); pad = 0.08*max(hi-lo, eps);
     ylc = [lo-pad, hi+pad];
+    win = [1 CFG.resp_s];
 
     fig = jnFig(11.0, 5.2);
     tl  = tiledlayout(fig, 2, numel(PCT), 'TileSpacing','compact','Padding','tight');
     for c = 1:numel(PCT)
-        tile(nexttile(tl,c), B.tt, B.Aol(iOL(c),:), B.Gol(iOL(c),:), ref, PS.col_ol, ...
-            CFG.resp_s, sprintf('RR %.2f', rr_ol(iOL(c))), c==1, PS, ylc, ...
-            tern(c==1,'open loop',''));
-        tile(nexttile(tl,numel(PCT)+c), B.tt, B.Acl(iCL(c),:), B.Gcl(iCL(c),:), ref, PS.col_cl, ...
-            CFG.resp_s, sprintf('RR %.2f', rr_cl(iCL(c))), c==1, PS, ylc, ...
-            tern(c==1,'closed loop',''));
+        tile(nexttile(tl,c), B.tt, Eol(iOL(c),:), Dt_ol(iOL(c),:), PS.col_ol, B.dur, win, ...
+            sprintf('RR %.2f', rr_ol(iOL(c))), c==1, PS, ylc, tern(c==1,'open loop',''));
+        tile(nexttile(tl,numel(PCT)+c), B.tt, Ecl(iCL(c),:), Dt_cl(iCL(c),:), PS.col_cl, B.dur, win, ...
+            sprintf('RR %.2f', rr_cl(iCL(c))), c==1, PS, ylc, tern(c==1,'closed loop',''));
     end
     xlabel(tl,'time from laser onset (s)','FontSize',PS.fs,'FontWeight','bold');
-    ylabel(tl,'\DeltaF/F (%)','FontSize',PS.fs,'FontWeight','bold');
+    ylabel(tl,'A-r and D (%\DeltaF/F)','FontSize',PS.fs,'FontWeight','bold');
     title(tl, sprintf('%s%s', strrep(tg,'_','\_'), tern(excluded,' -- excluded','')), ...
         'FontSize',PS.fs,'FontWeight','bold');
 
@@ -131,21 +139,29 @@ function i = nearest_ok(v, ok, target)
 v(~ok) = NaN;  [~,i] = min(abs(v - target));
 end
 
-function tile(ax, tt, A, G, ref, cA, dur, ttl, showY, PS, yl, rowlab)
+function tile(ax, tt, E, D, cA, dur, win, ttl, showY, PS, yl, rowlab)
 hold(ax,'on');
-% Draw the laser patch to the SHARED limits passed in; a patch with hardcoded corners would
-% hijack the axis and flatten the data.
-patch(ax, [0 dur dur 0], yl([1 1 2 2]), [0.90 0.93 1.00], 'EdgeColor','none','FaceAlpha',0.55);
-yline(ax, ref, '--', 'Color',[0.25 0.25 0.25], 'LineWidth',PS.lw_ref);
-plot(ax, tt, G, '-', 'Color',[0.45 0.45 0.45], 'LineWidth',0.6);
-plot(ax, tt, A, '-', 'Color',cA, 'LineWidth',1.0);
+% RR window shaded; laser-on period marked by a bar along the top edge.
+patch(ax, win([1 2 2 1]), yl([1 1 2 2]), [0.90 0.90 0.90], 'EdgeColor','none');
+plot(ax, [0 dur], yl([2 2]) - 0.01*diff(yl), '-', 'Color',[0.55 0.70 1.00], 'LineWidth',2.0);
+yline(ax, 0, '--', 'Color',[0.25 0.25 0.25], 'LineWidth',PS.lw_ref);
+lite = @(c) c + 0.65*(1-c);                       % tint toward white for out-of-window context
+cD = [0.35 0.35 0.35];
+in = tt >= win(1) & tt <= win(2);
+Do = D; Do(in & [in(2:end) false] & [false in(1:end-1)]) = NaN;   % keep window edges so lines join
+Eo = E; Eo(isnan(Do)) = NaN;
+Di = D; Di(~in) = NaN;  Ei = E; Ei(~in) = NaN;
+plot(ax, tt, Do, '-', 'Color',lite(cD), 'LineWidth',0.6);
+plot(ax, tt, Eo, '-', 'Color',lite(cA), 'LineWidth',0.8);
+plot(ax, tt, Di, '-', 'Color',cD, 'LineWidth',0.8);
+plot(ax, tt, Ei, '-', 'Color',cA, 'LineWidth',1.2);
 ylim(ax, yl); xlim(ax, [tt(1) tt(end)]);
 title(ax, ttl, 'FontSize',PS.fs, 'FontWeight','bold');
-set(ax,'Box','off','TickDir','out','FontSize',PS.fs,'FontWeight',PS.fw);
+set(ax,'Box','off','TickDir','out','FontSize',PS.fs,'FontWeight',PS.fw,'Layer','top');
 jnAxes(ax);
 if ~showY; set(ax,'YTickLabel',[]); end
 if ~isempty(rowlab)
-    text(ax, tt(1)+0.15, yl(2)-0.06*diff(yl), rowlab, 'Color',cA, 'FontSize',PS.fs, ...
+    text(ax, tt(1)+0.15, yl(2)-0.08*diff(yl), rowlab, 'Color',cA, 'FontSize',PS.fs, ...
         'FontWeight','bold', 'VerticalAlignment','top');
 end
 end
