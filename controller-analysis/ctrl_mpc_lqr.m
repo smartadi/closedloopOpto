@@ -41,6 +41,10 @@ P.fcst   = 'ar';                 % forecaster: 'ar' | 'shrink' | 'lp' (see [LQR]
 P.lpHz   = 3;                    % 'lp' cutoff (Hz)
 P.fcstModel = '';                % fig3 frame: use a precomputed forecaster from ctrl_mpc_forecasters
                                  %   (naive|average|ar|arma|theta|dlinear|mlp|lstm); '' = built-in Kalman-AR
+P.fcstOff   = false;            % 2026-10-09: add the measured offset off = dh - dep(t) to a PRECOMPUTED forecast
+                                 % (as the perfect-preview arm already does). Without it the forecast predicts the
+                                 % RECORDED disturbance, not the replayed one (per-trial laser-gain error g), and
+                                 % the MPC has no integral action to remove the resulting constant preview bias.
 P.fcstFile  = 'ctrl_mpc_forecasters_%s.mat';  % file holding F.<fcstModel>; the Python Lu et al. AR/ARX
                                  %   (mpc_arx_forecaster.py) is 'ctrl_mpc_arx_out_%s.mat' with pyar|pyarx
 P.xGrid  = [0 0.25 0.5 0.75 1 1.25 1.5];
@@ -215,6 +219,7 @@ save(fullfile(dataDir, sprintf('ctrl_mpc_lqr_%s%s.mat', P.sess, P.tag)), '-struc
                     else
                         if ~isempty(P.fcstModel)          % precomputed forecaster (ctrl_mpc_forecasters)
                             fK = squeeze(FCm(t, 1:p, k)).'; fK(isnan(fK)) = 0;
+                            if P.fcstOff, fK = fK + off; end
                         else
                             fK = zeros(p,1); zz = z; for j=1:p, zz = Fz*zz; fK(j) = zz(1) + al_k(j)*zz(2); end
                         end
