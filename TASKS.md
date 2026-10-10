@@ -24,18 +24,22 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ## 🔴 Blocking submission
 
-### arXiv blockers (plan: `paper-writing/arxiv_jneurosci_plan_2026-10-10.md` §A)
-- [ ] Review language pass (`draft` e47efb2, diff html) -> fast-forward `main`, push, Overleaf pull.
-- [ ] Fix author/affiliation block (`main.tex` L71-78 renders "Department of ,").
-- [ ] Results L18: stimulation spot both "adjacent to" and "overlapping" the kernel -- pick one.
+### arXiv blockers (plan: `paper-writing/arxiv_jneurosci_plan_2026-10-10.md`; RESEARCH 2026-10-10)
+- [ ] (user) Author/affiliation block (`main.tex` L71-78 renders "Department of ,") -- editing on Overleaf.
+- [ ] (user) **Laser power setting on 2025-12-02 (AL_0041) and 2026-07-15 (AL_0048 impulse).** If 100%, Fig 2 mW values and the Mouse 1a/1b/3 per-mW slopes are ~5x off.
+- [ ] (user, Illustrator) **Figure4.pdf panels C and G are stale** -> re-place `figures_final/panels/figure4/f4_decomp_unique_sep.pdf` + `f4_cl_reject_RR.pdf` (text quotes 0.41/0.03, 0.15/0.19; panel shows 0.39/0.10).
+- [ ] **Mislabeled power scale bars** -> fix code, re-export, re-place: 2A legend (`trace_overlay.m:53` uses /3; use plateau V x 1.8/4.9), 2B bar ('0.25 mW' spans 1 V = 0.37 mW, `dose_response.m:136,149`), 3A/3C '1 mW' bars are 0.15-0.24 mW (`analysisPlots_combined.m:72,81-82,97,200,208,216`), S-MPC '1 mW' on command volts (`ctrl_mpc_direct_panels.m:91,129`).
+- [ ] **Circularity caveat (decide):** Fig 4 band-power states share samples with the error window and the loop amplifies 2-4 Hz (S(f) 1.089). Add a limitation sentence, or run the stim-blind check (rel/abs delta on contra-predicted G, same window, refit f4_row2_fit). Abstract still states the 2-4 Hz result without caveat.
+- [ ] AL_0041 e2: raw trace has five levels (1.93 V split into 1.9/2.0 bins by 0.1 V rounding) -> rebin; affects Fig 2B points and Mouse 1b TF fit.
+- [ ] Save OL settled offsets (`Aset_ol`) in `f4_rr_denominator_check.m` so the 2.6/1.9 in Results/Methods sit in a saved output.
+- [ ] Methods tuning: re-read end gains for AL_0034 10-25 e1 and AL_0033 12-19 from Kdata.npy and the iteration count; remove the `%% CHECK`.
+- [ ] Fig 4D session-level redesign (recommended design A; RESEARCH 2026-10-10) -- user decision.
 
 ### From the critical review (2026-10-10, RESEARCH 2026-10-10)
-- [ ] **Fig 4 state measures are circular**: δ power and motion-linked state come from the controlled signal itself, during the trial. Run a stim-blind state check (contralateral δ) and show |S(jω)| at 2–4 Hz for Fig 4D.
-- [ ] **Fig 4G exclusion wording**: the offset gate was chosen post hoc, but Methods says exclusions were pre-specified. Say so plainly and report the all-13-session result beside the gated one.
+- [ ] **Fig 4G exclusion**: Methods now says the threshold was chosen after inspection (2026-10-10). Still to do: report the all-13-session result beside the gated one.
 - [ ] **Fig 4G leak correction**: check per trial that subtracting the OL dip does not bias RR toward CL.
-- [ ] **Units and cohort**: reconcile stimulation units/amplitudes across Results, Methods and supplement; add the AL_0048 impulse session and the sine sessions to the cohort table.
+- [ ] **Cohort table**: add the AL_0048 impulse session and the sine sessions (units done 2026-10-10 except the laser-setting blocker above).
 - [ ] **Overclaims**: "The linear relationship guarantees the stability of a linear feedback controller" (`results.tex` ~L69, user's wording — flagged, not changed); difference-in-significance arguments in 2G-vs-control and 4D motion.
-- [ ] `methods_rewrite.tex` ~L777 "Time constants": switch slow/fast to dip/rebound to match Results + caption 2F.
 - [ ] (user, Illustrator) Fig 2D right-axis label reads "he ld-out".
 - [ ] **Fig 2G: test response vs stimulus-free control directly** (review 2026-10-10, item 5). Text says movement alters the evoked response itself because the response ratio (0.73, CI [0.62, 0.88]) is below the control ratio (0.80), but that difference was never tested and the CIs overlap. Need a test of response ratio vs control ratio (e.g. paired bootstrap of the ratio difference, or |z| ~ state × {response, control} + (1|session) interaction) in `impulse-analysis/imp_state_trialvar.m`. If n.s., soften `results.tex` to "consistent with" and drop "movement alters the evoked response itself".
 
@@ -46,7 +50,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] **Confirm two Methods sentences** marked `%% CHECK` in `methods_rewrite.tex` (Experimental Design): no power analysis predetermined n; analyses not blinded.
 - [ ] **DECIDE the status of relative 2-4 Hz power.** Fig 2G n.s. (p=0.068) and reverses sign on the Ye dataset, but in Fig 4D its REGULARIZABILITY effect is strong (CL error rises, p=8.6e-4, clears Bonferroni) - so it is a weak predictor of the impulse response but a clear limit on closed-loop regulation. Decide whether Fig 2's framing of it should change to match. Also decide whether to state in Methods that regularizability replaced the gap trend after the fact (RESEARCH 2026-10-07).
 - [ ] **`ctrl_reject_trial_gallery.m`: fix or retire.** Its ER is not the paper's RR (0-3 s, no leak correction) and its header wrongly claims it comes from the headline function. Exploratory-only today, but it is a quotable wrong number. See RESEARCH 2026-10-09.
-- [ ] Fill in author names and affiliations — `main.tex` L62 (blocked on AL input)
 - [ ] Three remaining content `\todo` gaps in `results.tex`: §pre-stim brain state (L64–68), §low-freq spectral attribution (L112), §contra→ipsi prediction (L130) — see "Analysis still needed" below.
 - [ ] Add Chrimson spatial-spread citation — `methods_edit.tex` L292 `\todo` (Nuo Li / Svoboda). NOT in refs.bib yet; needs exact paper from AL before adding a bib entry (do not fabricate).
 
