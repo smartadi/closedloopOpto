@@ -84,7 +84,7 @@ text(ax2, mean([tnow tf(end)]), yl2(2), 'plan', 'FontSize', S.fs_annot, 'Horizon
 text(ax2, tnow-0.04, yl2(2), 'apply 1st', 'FontSize', S.fs_annot, 'HorizontalAlignment','right', 'VerticalAlignment','top', 'Color', C.m);
 xlim(ax1, [-pre/Fs dur]); ylim(ax1, yl1); xlim(ax2, [-pre/Fs dur]); ylim(ax2, yl2);
 paperAxes(ax1, 'XLength', 0.5, 'YLength', 2, 'XLabel', '0.5 s', 'YLabel', '2% \DeltaF/F');
-paperAxes(ax2, 'XLength', 0, 'YLength', 1, 'YLabel', '1 mW');
+paperAxes(ax2, 'XLength', 0, 'YLength', 1, 'YLabel', '1 V');
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_0_schematic.png')); close(fig);
 
 %% B -- prediction R^2 vs lead (held-out OL trials): VARX / AR / naive
@@ -122,7 +122,7 @@ for e = 1:2
     end
     xlim(ax1, tx([1 end])); ylim(ax1, yl1); xlim(ax2, tx([1 end])); ylim(ax2, yl2);
     paperAxes(ax1, 'XLength', 1, 'YLength', 2, 'XLabel', '1 s', 'YLabel', '2% \DeltaF/F');
-    paperAxes(ax2, 'XLength', 0, 'YLength', 1, 'YLabel', '1 mW');
+    paperAxes(ax2, 'XLength', 0, 'YLength', 1, 'YLabel', '1 V');
     nameRow(fig, W2, col3, nam3, C);
     ctrl_mpc_export(fig, fullfile(figDir, [tags{e} '.png'])); close(fig);
 end

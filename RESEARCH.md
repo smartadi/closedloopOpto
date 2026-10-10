@@ -16,6 +16,26 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-09 — MPC supp in manuscript as Fig. S5 + Discussion paragraph; laser scale bars fixed to volts
+**Changed/Found:**
+- Manuscript (`Closedloop_edit`, main `a5cebf4`, pushed):
+  - `supplementary.tex` — new figure `fig:mpc_direct`, which renders as S5 after `reject_trials`. It shows `images/supplementary/S_mpc.pdf`, a copy of the user's Illustrator assembly `paper/figures_final/S4.pdf`, panels A–H.
+  - `discussion.tex` — a Future-directions paragraph on the direct-prediction MPC.
+  - `refs.bib` — new `lu2025benchmarking` (arXiv 2510.18037). `Nozari2024` is cited for linear models.
+  - Builds at 40 pp with no undefined references.
+- Panels: `ctrl_mpc_direct_panels.m` laser scale bars changed "1 mW" → "1 V". The laser trace is the command voltage, and the V→mW calibration is still a FILL in Methods. Re-exported to figures_final.
+
+Open issues:
+- The assembled `S4.pdf` still carries the old "1 mW" labels.
+- The filename collides with the manuscript's S4 (rejection-ratio trials, artwork pending), whose placeholder expects `images/supplementary/S4.pdf`.
+- Panel B (trial 79) and panel C (trial 23) are different trials.
+- Fig 3's "1 mW" laser scale bar (`analysisPlots_paper.m:356`) has the same units question.
+**Why:** user: "add to paper and write a discussion paragraph, push to main overleaf".
+**Next:**
+- User refreshes the Illustrator links, re-exports as e.g. `S5.pdf`, and re-copies it to `images/supplementary/S_mpc.pdf`.
+- Decide whether panel B should move to trial 23.
+- Check the Fig-3 laser units.
+
 ### 2026-10-09 — Direct-MPC panels locked into S-MPC (MANIFEST + figures_final); schematic moved to example trial 79
 **Changed/Found:**
 - `controller-analysis/mpc_direct.py` — new `MPCD_SNAP="trial,frame"` env var. The schematic snapshot was rerun on trial 79 with "now" at 2.0 s (70 frames). Its actual future shows the mid-trial excursion arriving inside the 1-s horizon, and the prediction does not see it coming. Results are unchanged.
