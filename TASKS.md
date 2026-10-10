@@ -24,6 +24,11 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ## 🔴 Blocking submission
 
+### arXiv blockers (plan: `paper-writing/arxiv_jneurosci_plan_2026-10-10.md` §A)
+- [ ] Review language pass (`draft` e47efb2, diff html) -> fast-forward `main`, push, Overleaf pull.
+- [ ] Fix author/affiliation block (`main.tex` L71-78 renders "Department of ,").
+- [ ] Results L18: stimulation spot both "adjacent to" and "overlapping" the kernel -- pick one.
+
 ### From the critical review (2026-10-10, RESEARCH 2026-10-10)
 - [ ] **Fig 4 state measures are circular**: δ power and motion-linked state come from the controlled signal itself, during the trial. Run a stim-blind state check (contralateral δ) and show |S(jω)| at 2–4 Hz for Fig 4D.
 - [ ] **Fig 4G exclusion wording**: the offset gate was chosen post hoc, but Methods says exclusions were pre-specified. Say so plainly and report the all-13-session result beside the gated one.
