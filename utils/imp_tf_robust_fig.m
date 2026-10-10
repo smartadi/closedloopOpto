@@ -161,7 +161,7 @@ for k = 1:n
     end
 end
 % headroom above the top row so the top-right legend clears the data (user 2026-10-10)
-ylim(axA,[0.4 n+0.6+0.6*hasFast]);  set(axA,'YTick',1:n,'YTickLabel',cellstr(lblS),'TickLabelInterpreter','none');
+ylim(axA,[0.4 n+0.6+1.0*hasFast]);  set(axA,'YTick',1:n,'YTickLabel',cellstr(lblS),'TickLabelInterpreter','none');
 % Linear x starting at 0 and extended just past the largest tau (user 2026-09-22). The
 % fast/slow poles fall within one linear decade here, so a zero-based linear axis reads clean.
 xhi = 1.1 * max([tau1(:); tau2(:)], [], 'omitnan');
@@ -174,12 +174,16 @@ if hasFast
     % Shared fast timescale (user 2026-10-10: the text stresses how close the fast tau is across
     % sessions, so show it): dotted line at the across-session MEDIAN fast tau, behind the markers.
     tf_med = median(tau2(isfinite(tau2)));
-    hMed = xline(axA, tf_med, ':', 'Color', [.45 .45 .45], 'LineWidth', PS.lw_ref, 'HandleVisibility','off');
+    % Line stops just above the top row so it does not run through the legend; label at its tip.
+    hMed = line(axA, tf_med*[1 1], [0.4 n+0.55], 'LineStyle', ':', 'Color', [.45 .45 .45], ...
+                'LineWidth', PS.lw_ref, 'HandleVisibility','off');
     uistack(hMed, 'bottom');
-    yTop = n + 0.6 + 0.6*hasFast;
-    text(axA, tf_med, yTop - 0.05, sprintf(' %.3f s', tf_med), 'Color', [.35 .35 .35], ...
-         'FontSize', PS.fs, 'FontWeight', PS.fw, 'HorizontalAlignment','left', 'VerticalAlignment','top');
-    lgA = legend(axA, [hSlow hFast], {'slow','fast'}, 'Location','northeast', 'Box','off');   % top right (user 2026-10-10)
+    % Label in the empty band below the bottom row (the top is taken by the legend).
+    text(axA, tf_med + 0.008, 0.62, sprintf('%.3f s', tf_med), 'Color', [.35 .35 .35], ...
+         'FontSize', PS.fs, 'FontWeight', PS.fw, 'HorizontalAlignment','left', 'VerticalAlignment','middle');
+    % Named by what each mode does in the response, not by speed (user 2026-10-10): the fast
+    % oscillatory pair sets the DIP, the slowest mode governs the REBOUND after it.
+    lgA = legend(axA, [hFast hSlow], {'dip','rebound'}, 'Location','northeast', 'Orientation','horizontal', 'Box','off');   % top right (user 2026-10-10)
     lgA.ItemTokenSize = PS.lgd_token;  lgA.FontSize = PS.fs;  lgA.FontWeight = PS.fw;
 else
     xlabel(axA,'\tau_{slow} (s)');
