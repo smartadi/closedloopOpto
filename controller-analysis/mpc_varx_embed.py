@@ -32,6 +32,7 @@ DATA, FIG = HERE / "data", HERE.parent / "paper" / "images" / "mpc_arx"
 Q, POST, VAL_FRAC, HMAX, PAD = 35, 70, 0.2, 141, 70
 L_GRID, LAMS = [2, 3, 5, 10], 10.0 ** np.arange(-1, 4)
 LEADS = np.array([1, 2, 3, 4, 5, 7, 10, 17, 35])
+AR_P = [1, 2, 3, 5, 10, 20, 35, 70]                         # Lu-style univariate AR orders (<= PAD)
 DIRECT = {"lead_ms": [29, 57, 86, 114, 143], "R2": [0.952, 0.831, 0.689, 0.576, 0.512]}  # tune2 base, held-out OL
 
 
@@ -64,6 +65,20 @@ def iterate(Z, u, org, W, L, H):
         nxt = A @ W                                            # M x nC  = z(t+h+1)
         out[:, h] = nxt[:, 0]
         hist = np.concatenate([nxt[:, None, :], hist[:, :-1, :]], axis=1)
+    return out
+
+
+def ar_fit(y, rows, p):
+    """Univariate AR(p) of y alone (no laser, no other spots) by OLS -- the Lu et al. 2025 baseline."""
+    A = np.hstack([y[rows[:, None] - np.arange(p)], np.ones((rows.size, 1))])
+    return np.linalg.lstsq(A, y[rows + 1], rcond=None)[0]
+
+
+def ar_iterate(y, org, w, H):
+    p = w.size - 1; hist = y[org[:, None] - np.arange(p)]; out = np.empty((org.size, H))
+    for h in range(H):
+        nxt = hist @ w[:-1] + w[-1]; out[:, h] = nxt
+        hist = np.concatenate([nxt[:, None], hist[:, :-1]], axis=1)
     return out
 
 
@@ -115,11 +130,19 @@ def main(sess="AL_0033_0226_e2"):
                 best = (s, L, lam)
     _, Lb, lamb = best
     print(f"[VARX] chosen L={Lb} ({Lb*1000/Fs:.0f} ms embedding), lambda={lamb:g}", flush=True)
+    # AR baseline (Lu et al. 2025): order by validation MSE aggregated over leads 1..35 (their valQL analogue)
+    vok = vo[vo + 36 < T]; yv35 = Z[vok[:, None] + np.arange(1, 36), 0]
+    ar_val = {p: np.mean((yv35 - ar_iterate(Z[:, 0], vok, ar_fit(Z[:, 0], r_tr, p), 35)) ** 2) for p in AR_P}
+    p_ar = min(ar_val, key=ar_val.get)
+    print(f"[VARX] AR (Lu) val MSE by order {dict((p, round(v, 4)) for p, v in ar_val.items())} -> p={p_ar}", flush=True)
 
     # ---- held-out OL test --------------------------------------------------------------------------
-    FC = np.full((nO, N + 1, HMAX), np.nan); rho = []
+    FC = np.full((nO, N + 1, HMAX), np.nan); FA = np.full((nO, N + 1, LEADS.max()), np.nan); rho = []
     for f in range(1, 6):
         rows, te = rows_for(f)
+        wa = ar_fit(Z[:, 0], rows, p_ar)
+        for k in te:
+            FA[k] = ar_iterate(Z[:, 0], onOL[k] - 1 + np.arange(N + 1), wa, LEADS.max()) * sy
         G, B = fit(Z, u, rows, Lb, lamb); Wf = solve(G, B, lamb)
         nC = Z.shape[1]                                          # stability of the AR part (companion)
         Ar = Wf[:nC * Lb].T                                       # nC x nC*L
@@ -129,10 +152,11 @@ def main(sess="AL_0033_0226_e2"):
             FC[k] = iterate(Z, u, onOL[k] - 1 + np.arange(N + 1), Wf, Lb, HMAX) * sy
         print(f"[VARX] fold {f}: {rows.size} rows | spectral radius {rho[-1]:.4f}", flush=True)
     REC = np.stack([yr[o:o + HMAX] for o in onOL]); PRE = np.stack([yr[o - pre:o] for o in onOL])
-    k2, per, lag = [], [], []
+    k2, per, lag, ar = [], [], [], []
     for L in LEADS:
         t0 = np.arange(N - L + 1); tg = REC[:, t0 + L - 1]; fc = FC[:, t0, L - 1]
         k2.append(r2(tg, fc)); per.append(r2(tg, np.stack([yr[o + t0 - 1] for o in onOL])))
+        ar.append(r2(tg, FA[:, t0, L - 1]))
         cc = [np.corrcoef(fc[:, s:].ravel(), tg[:, :tg.shape[1] - s].ravel())[0, 1] for s in range(min(9, L + 4))]
         lag.append(int(np.argmax(cc)))
     k2, per = np.array(k2), np.array(per)
@@ -143,6 +167,7 @@ def main(sess="AL_0033_0226_e2"):
     print(f"[VARX] lag (frames)                         {lag}")
     print(f"[VARX] direct whole-brain ridge             {DIRECT['R2']} (first five leads)")
     print(f"[VARX] persistence                          {np.round(per, 3)}")
+    print(f"[VARX] AR({p_ar}) of y alone (Lu et al.)          {np.round(ar, 3)}")
     print(f"[VARX] whole-trial forecast from -1 frame: single-trial R2 {fr1:.3f}, trial-avg R2 {fra:.3f}")
 
     # ---- figures -----------------------------------------------------------------------------------
@@ -180,7 +205,7 @@ def main(sess="AL_0033_0226_e2"):
     fig2.suptitle(f"VARX with {Lb}-frame delay embedding of 100 spots + controlled spot + laser "
                   f"(pooled R² at 86 ms {k2[2]:.2f})", fontsize=10)
     fig2.savefig(FIG / f"varx_examples_{sess}.png", dpi=200)
-    savemat(DATA / f"mpc_varx_embed_{sess}.mat", {"L": Lb, "lam": lamb, "R2": k2, "R2_persist": per, "lag": lag,
+    savemat(DATA / f"mpc_varx_embed_{sess}.mat", {"L": Lb, "lam": lamb, "R2": k2, "R2_persist": per, "R2_ar": ar, "ar_order": p_ar, "lag": lag,
             "lead_ms": lead_ms, "R2_free_single": fr1, "R2_free_avg": fra, "spectral_radius": rho, "fold": fold},
             do_compression=True)
 

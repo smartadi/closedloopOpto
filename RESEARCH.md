@@ -16,6 +16,40 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-09 — Direct-MPC supp panels revised after panel-by-panel review
+**Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m`:
+- The schematic is now shown in trial context: −1 to 3 s from onset, with the stim window shaded and "now" at 1.49 s.
+- The cost equation moved to its own text panel, `mpcd_0b_problem`.
+- Panel B gained the Lu-AR curve and marks at 200 ms and 1 s.
+- The example (C/D) gained the perfect-MPC trace and laser. Its labels now read "actual PI trial RMSE" and "MPC RMSE".
+- E scatter now includes the perfect-MPC points.
+- New `mpcd_E2_rmse_compare`: per-trial RMSE, paired, with median bars.
+- New `mpcd_E3_variance`: across-trial variance vs time.
+
+Results (descriptive):
+- Median RMSE: PI 1.46, MPC 0.82, perfect 0.27. MPC/PI 0.652 and perfect/PI 0.224, both 108/108.
+- Variance over 1–3 s, (%ΔF/F)²: PI 4.31, MPC 2.63, perfect 1.47.
+
+Dropped: A (learned laser response) and G (robustness).
+**Why:** user review: "A is a non-issue, drop it"; G "does not make sense as is, remove"; F stays as a demo at λ = 0.1 (no held-out λ selection).
+**Next:** user picks panels to lock → MANIFEST + PAPER.md + PAPER_FINAL export.
+
+### 2026-10-09 — Lu et al. AR baseline added to the held-out OL prediction benchmark
+**Changed/Found:** `controller-analysis/mpc_varx_embed.py` — added a univariate AR(p) of the controlled spot fitted by OLS. The order is picked by validation MSE over leads 1–35 (p = 35). It uses the same folds and the same 92 held-out OL trials as the VARX; the results are saved as `R2_ar` and `ar_order`.
+
+Held-out R²:
+
+| Lead | AR | VARX | Last value |
+|---|---|---|---|
+| 200 ms | 0.02 | 0.42 | 0.10 |
+| 1 s | −1.41 | 0.05 | −0.82 |
+
+The AR beats last value only below ~150 ms. On stimulated trials it cannot see the laser, so its iterated forecast diverges.
+
+VARX numbers are unchanged.
+**Why:** user asked for the Lu comparison in panel B.
+**Next:** caption must say the AR has no laser input, which is the main reason it fails on OL stim trials. Lu's own data were spontaneous.
+
 ### 2026-10-09 — Direct-MPC supp panels restyled (JNeurosci, minimal) + MPC schematic from a real step
 **Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m` rewritten to the rule book: grid sizes (4.13 × 3.3 cm 4-across, 8.43 cm 2-across, 3.3 × 3.3 scatter), Arial 6/7 pt via jnAxes, direct coloured labels instead of legends, 2–3 ticks per axis, lollipops for the robustness panel. The equation panel `mpcd_0_problem` is replaced by `mpcd_0_schematic`: one real MPC step (CL trial 23, 1.5 s after onset) — past signal to "now", the 1-s prediction converging on target, the actual future (gray), the planned laser with the applied first move, and a one-line cost in Arial. `controller-analysis/mpc_direct.py` saves that snapshot (snap_*) for the median trial (now chosen in Python; trial 23: PI recorded 1.32, MPC 0.77). Example trace/laser axes pinned to the same x-extent. Draft layout `paper/images/supp_mpc/_draft_mpcd_layout.png` (a schematic | b example | c–f | g). Numbers unchanged: MPC/PI(recorded) 0.652, 108/108.
 **Why:** user: "clean up the panels, make them jn style, minimalize the mpc figure make it look cool … stylish and minimalist".
