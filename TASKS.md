@@ -62,7 +62,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] **Fig 4G: re-place the rebuilt panel** (11 sessions, ***) in Illustrator. The open-loop comparator is now IN Results as text (RR 1.25 OL vs 0.72 CL, 11/11); the panel still plots CL alone, which is fine unless a referee asks to see it.
 - [ ] **Confirm two Methods sentences** marked `%% CHECK` in `methods_rewrite.tex` (Experimental Design): no power analysis predetermined n; analyses not blinded.
 - [ ] **DECIDE the status of relative 2-4 Hz power.** Fig 2G n.s. (p=0.068) and reverses sign on the Ye dataset, but in Fig 4D its REGULARIZABILITY effect is strong (CL error rises, p=8.6e-4, clears Bonferroni) - so it is a weak predictor of the impulse response but a clear limit on closed-loop regulation. Decide whether Fig 2's framing of it should change to match. Also decide whether to state in Methods that regularizability replaced the gap trend after the fact (RESEARCH 2026-10-07).
-- [ ] **Assemble S4** from `paper/figures_final/panels/supp_reject/` (4 panels, 11.15 x 5.33 cm, stack as rows A-D) -> `Closedloop_edit/images/supplementary/S4.pdf`, then uncomment the `\includegraphics` in `supplementary.tex`. Caption, label and both Discussion cross-references are already in.
 - [ ] **`ctrl_reject_trial_gallery.m`: fix or retire.** Its ER is not the paper's RR (0-3 s, no leak correction) and its header wrongly claims it comes from the headline function. Exploratory-only today, but it is a quotable wrong number. See RESEARCH 2026-10-09.
 - [ ] Fill in author names and affiliations — `main.tex` L62 (blocked on AL input)
 - [ ] Three remaining content `\todo` gaps in `results.tex`: §pre-stim brain state (L64–68), §low-freq spectral attribution (L112), §contra→ipsi prediction (L130) — see "Analysis still needed" below.
@@ -299,6 +298,7 @@ Full state + data-layout findings → `controller-tuning/CLAUDE.md`. Data model 
 ---
 
 ## 🟢 Deferred / waiting
+- [ ] S4 single-trial RR figure (A-r vs D, `f4_supp_reject_trials.m`) TABLED 2026-10-10; float + 2 Discussion refs commented out. Revive only if reviewers ask for single trials.
 
 - [ ] **Fig 2G stim-free control — rebuild on REAL catch trials, then revisit the overlay** (tabled by user 2026-10-03).
   Today's control is a within-trial pre-stimulus surrogate (`iSham`, −1.200 to −1.029 s), not an unstimulated

@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-10 - S4 single-trial rejection figure TABLED (out of the paper for now)
+**Changed/Found:** `Closedloop_edit/supplementary.tex` - the S4 float (`fig:reject_trials`) is commented out with a TABLED note; `discussion.tex` - both sentences citing it removed (restoring the text that was there before 2026-10-09). `paper/figures_final/MANIFEST.txt` `[supp_reject]` entries commented out, PAPER.md row marked TABLED, TASKS assembly item moved to deferred. `controller-analysis/f4_supp_reject_trials.m` and the panels on disk are kept as they are.
+**Why:** User: not wanted in the paper right now. Removing the float renumbers the following supplementary figure (the MPC figure, `fig:mpc_direct`) from S5 to S4 automatically.
+**Next:** none - revive by uncommenting the float and re-adding the two Discussion sentences (text in RESEARCH 2026-10-09 / git history).
+
 ### 2026-10-10 — Final MPC supplementary figure (S5) in the manuscript
 **Changed/Found:** The user's final assembly `paper/figures_final/S5.pdf` (with `S5.ai`) was copied to `Closedloop_edit/images/supplementary/S_mpc.pdf`. The manuscript builds at 40 pp with no undefined references and is pushed to main (`9af2916`). The panel letters match the caption: A diagram, B schematic, C example, D trial average, E RMSE, F variance, G prediction, H λ. PAPER.md row updated.
 **Why:** user: "look at the s5 pdf i just saved, that's final".
