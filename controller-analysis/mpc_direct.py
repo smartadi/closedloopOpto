@@ -164,6 +164,20 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
     res["ORACLE MPC rd=1"] = (S, np.array([rmse(s[0]) for s in S]))
     print(f"[MPCD] ORACLE MPC (future innovations known): MPC/PI {np.median(res['ORACLE MPC rd=1'][1] / rPI):.3f}", flush=True)
 
+    # snapshot of ONE MPC step (median trial, 1.5 s after onset) for the schematic panel: past, prediction, plan
+    m_rd = float(REF_RD.split("=")[1])
+    kx = int(np.argsort(res[REF_RD][1] - rPI)[int(round(0.5 * (nT - 1)))])
+    ts, base, snap = onCL[kx] + 52, mpc_policy(ctrl[fold[kx]], m_rd), {}
+    def pol_snap(t, zs, us):
+        if t == ts:
+            m = ctrl[fold[kx]]
+            f = m.free(zs[t - np.arange(m.L)], us[t - m.Q + 2:t + 1])
+            U = mpc_solve(m, f, us[t] * su, uss, umax, m_rd)
+            snap.update(t=t - onCL[kx], yhat=f + m.G @ U, U=U, ypast=zs[onCL[kx] - pre:t + 1, 0] * sz[0],
+                        upast=us[onCL[kx] - pre:t + 1] * su)
+        return base(t, zs, us)
+    ysn, usn = simulate(kx, pol_snap)
+
     # prediction quality of the controller models on the CL trials, conditional on the recorded future laser
     r2 = {}
     for Lh in (3, 7):
@@ -220,7 +234,9 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
             "Y": np.stack([np.column_stack([s[0] for s in res[n][0]]) for n in names], 2),   # N x nT x model
             "U": np.stack([np.column_stack([s[1] for s in res[n][0]]) for n in names], 2),
             "Yrec": np.column_stack([yr[o:o + N] for o in onCL]), "Urec": np.column_stack([ur[o:o + N] for o in onCL]),
-            "rPI": rPI, "Fs": Fs, "ref": REF})
+            "rPI": rPI, "Fs": Fs, "ref": REF, "pre": pre,
+            "snap_k": kx + 1, "snap_t": snap["t"], "snap_yhat": snap["yhat"], "snap_U": snap["U"],
+            "snap_ypast": snap["ypast"], "snap_upast": snap["upast"], "snap_ytrue": ysn, "snap_utrue": usn})
 
 
 if __name__ == "__main__":
