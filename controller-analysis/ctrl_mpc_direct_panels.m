@@ -24,8 +24,9 @@ nm = cellstr(D.names); iPI = find(strcmp(nm,'PI')); iM = find(startsWith(nm,'MPC
 ord3 = [iPI iM iO]; col3 = [C.pi; C.m; C.o]; nam3 = {'PI','MPC','perfect MPC'};
 Fs = double(D.Fs); N = size(D.Y,1); tt = (0:N-1).'/Fs; ref = double(D.ref); pre = double(D.pre);
 ext = double(D.ext); tx = (-ext:N+ext-1).'/Fs; dur = N/Fs;                % -2 .. 5 s
-rPI = D.rmse(:,iPI); rM = D.rmse(:,iM); rO = D.rmse(:,iO); q = rM./rPI; qo = rO./rPI; k = double(D.snap_k);
+rPI = D.rmse(:,iPI); rM = D.rmse(:,iM); rO = D.rmse(:,iO); q = rM./rPI; qo = rO./rPI;
 nT = numel(rPI);
+[~, srt] = sort(rM - rPI); k = srt(round(0.5*(nT-1))+1);                      % median trial of MPC - PI (= mpc_direct.py rule)
 fprintf('[MPCD-P] median RMSE  PI %.3f | MPC %.3f | perfect %.3f;  MPC/PI %.3f (%d/%d) | perfect/PI %.3f (%d/%d)\n', ...
     median(rPI), median(rM), median(rO), median(q), sum(q<1), nT, median(qo), sum(qo<1), nT);
 for p = {'mpcd_0_problem','mpcd_A_laser_response','mpcd_G_robustness','mpcd_E_rmse_scatter', ...
@@ -80,7 +81,7 @@ stairs(ax2, tp, up, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
 stairs(ax2, [tnow; tf], [up(end); D.snap_U(:)], '--', 'Color', C.m, 'LineWidth', S.lw_mean);
 plot(ax2, tf(1), D.snap_U(1), 'o', 'MarkerSize', 3, 'MarkerFaceColor', C.m, 'MarkerEdgeColor','w', 'LineWidth', 0.4);
 text(ax2, mean([tnow tf(end)]), yl2(2), 'plan', 'FontSize', S.fs_annot, 'HorizontalAlignment','center', 'VerticalAlignment','top', 'Color', C.m);
-text(ax2, tnow-0.04, D.snap_U(1), 'apply 1st', 'FontSize', S.fs_annot, 'HorizontalAlignment','right', 'VerticalAlignment','bottom', 'Color', C.m);
+text(ax2, tnow-0.04, yl2(2), 'apply 1st', 'FontSize', S.fs_annot, 'HorizontalAlignment','right', 'VerticalAlignment','top', 'Color', C.m);
 xlim(ax1, [-pre/Fs dur]); ylim(ax1, yl1); xlim(ax2, [-pre/Fs dur]); ylim(ax2, yl2);
 paperAxes(ax1, 'XLength', 0.5, 'YLength', 2, 'XLabel', '0.5 s', 'YLabel', '2% \DeltaF/F');
 paperAxes(ax2, 'XLength', 0, 'YLength', 1, 'YLabel', '1 mW');

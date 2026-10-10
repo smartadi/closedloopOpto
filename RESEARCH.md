@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-09 — Direct-MPC panels locked into S-MPC (MANIFEST + figures_final); schematic moved to example trial 79
+**Changed/Found:**
+- `controller-analysis/mpc_direct.py` — new `MPCD_SNAP="trial,frame"` env var. The schematic snapshot was rerun on trial 79 with "now" at 2.0 s (70 frames). Its actual future shows the mid-trial excursion arriving inside the 1-s horizon, and the prediction does not see it coming. Results are unchanged.
+- `controller-analysis/ctrl_mpc_direct_panels.m` — the median example trial is now computed in the panel script. It had read `snap_k`, which flipped it to 79 once the snapshot moved; it is trial 23 again. The "apply 1st" label moved to the top of the laser axes.
+- `paper/figures_final/MANIFEST.txt` [supp_mpc] — the 9 `mpcd_*` panels were added after the 10-07 set. The old panels were kept; the user did not ask to retire them.
+- `PAPER.md` — new S-MPC direct row.
+- Exported with PAPER_FINAL; jn-style copies are in `panels/supp_mpc/`. `collect_final_panels('dry')`: 108 present, 0 missing, 0 pruned.
+
+Gotcha: `paper_final_mirror` caches the manifest (persistent). Run `clear paper_final_mirror` after editing it, or nothing mirrors.
+**Why:** user: "mpc schematic on same trial as the controller comparison; put these in figure finals and manifest, all in the mpc supplementary figure".
+**Next:** confirm whether the 10-07 disturbance-preview panels stay in S-MPC or retire.
+
 ### 2026-10-09 — Direct-MPC supp panels exported as vector PDFs
 **Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m` run with `PAPER_FINAL = true` → 9 vector PDFs next to the PNGs in `paper/images/supp_mpc/` (mpcd_0b_problem, 0_schematic, B_prediction, C1/C2 examples, G_trial_average, E3_variance, E2_rmse_compare, F_lambda). None are in MANIFEST.txt, so the mirror copied nothing to `figures_final/`.
 **Why:** user: "save panel pdfs".

@@ -308,3 +308,19 @@ supp_mpc/mpc_I_mpc_by_forecaster.pdf
 supp_mpc/mpc_K_uncertainty_sweep.pdf
 supp_mpc/mpc_L_uncertainty_common_axis.pdf
 supp_mpc/mpc_M_lambda_error.pdf
+# Direct-prediction MPC (user 2026-10-09: "put these in figure finals and manifest, i want all these
+# in the mpc supplementary figure"). VARX predicts the controlled signal directly (no disturbance
+# proxy), lambda = 0.1; PI = the recorded rig CL trial. Producer: ctrl_mpc_direct_panels.m
+# (inputs from mpc_direct.py, MPCD_SNAP=79,70 -> schematic on example trial 79). Simulation ->
+# descriptive only. Draft layout: paper/images/supp_mpc/_draft_mpcd_layout.png
+#   problem (LaTeX) | schematic (trial 79, now = 2.0 s) | examples: trial 23 (median), trial 79
+#   (mid-trial excursion) | trial average | variance | RMSE (paired) | prediction R2 | lambda (demo)
+supp_mpc/mpcd_0b_problem.pdf
+supp_mpc/mpcd_0_schematic.pdf
+supp_mpc/mpcd_C1_example_median.pdf
+supp_mpc/mpcd_C2_example_deviation.pdf
+supp_mpc/mpcd_G_trial_average.pdf
+supp_mpc/mpcd_E3_variance.pdf
+supp_mpc/mpcd_E2_rmse_compare.pdf
+supp_mpc/mpcd_B_prediction.pdf
+supp_mpc/mpcd_F_lambda.pdf

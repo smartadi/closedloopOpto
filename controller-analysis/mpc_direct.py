@@ -169,9 +169,12 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
     print(f"[MPCD] ORACLE MPC (future innovations known): MPC/PI {np.median(res['ORACLE MPC rd=1'][1] / rPI):.3f}", flush=True)
 
     # snapshot of ONE MPC step (median trial, 1.5 s after onset) for the schematic panel: past, prediction, plan
+    # MPCD_SNAP = "trial,frame" (1-based trial, frames after onset) puts it on a chosen example trial instead
     m_rd = float(REF_RD.split("=")[1])
-    kx = int(np.argsort(res[REF_RD][1] - rPI)[int(round(0.5 * (nT - 1)))])
-    ts, base, snap = onCL[kx] + 52, mpc_policy(ctrl[fold[kx]], m_rd), {}
+    kx = int(np.argsort(res[REF_RD][1] - rPI)[int(round(0.5 * (nT - 1)))]); t_snap = 52
+    if os.environ.get("MPCD_SNAP"):
+        kx, t_snap = (int(v) for v in os.environ["MPCD_SNAP"].split(",")); kx -= 1
+    ts, base, snap = onCL[kx] + t_snap, mpc_policy(ctrl[fold[kx]], m_rd), {}
     def pol_snap(t, zs, us):
         if t == ts:
             m = ctrl[fold[kx]]
