@@ -121,5 +121,7 @@ PS.f2h   = 3.3;                                      % Fig-2 panel height (cm) =
 
 % --- axes defaults (for setPaperDefaults) ---
 PS.ax_box     = 'off';
+PS.f3_var_ylim = [0 11];   % Fig 3D + 3F share ONE variance y-range (user 2026-10-10: side by side,
+                           % clipped from [-2 12] to the data: single session 0.9-10.4, cross-session 3.0-9.2)
 PS.ax_tickdir = 'out';
 end

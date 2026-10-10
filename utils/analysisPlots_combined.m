@@ -84,6 +84,9 @@ text(ax_A, -0.1, 8, '1 mW', 'Color', colInpOL, ...
 uistack(findobj(ax_A,'Type','line'), 'top');
 hold(ax_A, 'off');
 paperAxes(ax_A, 'XLength', 1, 'YLength', 3, 'XLabel', '1 s', 'YLabel', '3% dF/F');
+% Per-trial RMSE over 0..dur (user 2026-10-10) -- the same quantity as panel E (data.er_*Dfk).
+text(ax_A, dur+0.15, -9.5, sprintf('RMSE %.2f', data.er_ncDfk(trial)), 'Color', colOL, ...
+    'HorizontalAlignment','left', 'VerticalAlignment','bottom', 'Clipping','off');
 text(ax_A, 0.5, 1.06, 'Open-Loop', 'Units','normalized', ...
     'HorizontalAlignment','center', 'Clipping','off');
 text(ax_A, 3*dur/4, 7, 'OL Stim', 'Color', colInpOL, ...
@@ -109,6 +112,8 @@ lgd.Position(2) = 0.01;
 lgd.Position(1) = 0.5 - lgd.Position(3)/2;
 hold(ax_B, 'off');
 paperAxes(ax_B);
+text(ax_B, dur+0.15, -9.5, sprintf('RMSE %.2f', data.er_wcDfk(trial)), 'Color', colCL, ...
+    'HorizontalAlignment','left', 'VerticalAlignment','bottom', 'Clipping','off');
 text(ax_B, 0.5, 1.06, 'Closed-Loop', 'Units','normalized', ...
     'HorizontalAlignment','center', 'Clipping','off');
 text(ax_B, 3*dur/4, 7, 'CL Stim', 'Color', colInpCL, ...
@@ -123,14 +128,18 @@ fig_B = paperFig(PW, PH_B);
 
 % tm raised from 0.12 to make room for the spanning title (2026-09-30, user:
 % panels B and C carried no indication of what they show).
-bm = 0.12; tm = 0.20;
+% Title sits directly on the axes top (user 2026-10-10: it floated too far above the plots).
+bm = 0.16; tm = 0.12;
 axH = 1 - bm - tm;
 ax_C = axes(fig_B, 'Position', [c1L, bm, cW, axH]);
 ax_D = axes(fig_B, 'Position', [c2L, bm, cW, axH]);
-annotation(fig_B, 'textbox', [0, 1-tm+0.04, 1, tm-0.05], ...
+annotation(fig_B, 'textbox', [0, 1-tm, 1, tm], 'Margin', 0, ...
     'String', 'Trial-averaged response', 'EdgeColor','none', ...
     'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
     'FontSize', 6, 'FontWeight','bold', 'Color','k');
+% RMSE of the trial-AVERAGED trace over 0..dur (what this panel draws; user 2026-10-10).
+% Not the mean per-trial RMSE of panel E: averaging first cancels trial-to-trial scatter.
+iStimP = find(Tp >= 0 & Tp <= dur);
 
 nc_std = std(pncDfk, 0, 1);
 hold(ax_C, 'on');
@@ -145,7 +154,9 @@ ylim(ax_C, [-10 10]); xlim(ax_C, [-3 dur+3]);
 addStimPatch(ax_C, x1, x2);
 uistack(findobj(ax_C,'Type','line'), 'top');
 hold(ax_C, 'off');
-paperAxes(ax_C, 'XLength', 0.01, 'YLength', 3, 'XLabel', ' ', 'YLabel', '3% dF/F');
+paperAxes(ax_C, 'XLength', 1, 'YLength', 3, 'XLabel', '1 s', 'YLabel', '3% dF/F');
+text(ax_C, dur+0.15, -9.5, sprintf('RMSE %.2f', sqrt(mean((nc_avg(iStimP)-d.ref).^2))), 'Color', colOL, ...
+    'HorizontalAlignment','left', 'VerticalAlignment','bottom', 'Clipping','off');
 
 wc_std = std(pwcDfk, 0, 1);
 hold(ax_D, 'on');
@@ -161,6 +172,8 @@ addStimPatch(ax_D, x1, x2);
 uistack(findobj(ax_D,'Type','line'), 'top');
 hold(ax_D, 'off');
 paperAxes(ax_D);
+text(ax_D, dur+0.15, -9.5, sprintf('RMSE %.2f', sqrt(mean((wc_avg(iStimP)-d.ref).^2))), 'Color', colCL, ...
+    'HorizontalAlignment','left', 'VerticalAlignment','bottom', 'Clipping','off');
 
 linkaxes([ax_C ax_D], 'x');
 paperExport(fig_B, 'paper/images/figure3/panel_B.pdf');
@@ -168,12 +181,12 @@ paperExport(fig_B, 'paper/images/figure3/panel_B.pdf');
 %% C: average inputs -----------------------------------------------------
 PH_C = 3;
 fig_C = paperFig(PW, PH_C);
-annotation(fig_C, 'textbox', [0, 0.84, 1, 0.15], ...
+bm = 0.18; tm = 0.13;   % title sits directly on the axes top (user 2026-10-10)
+annotation(fig_C, 'textbox', [0, 1-tm, 1, tm], 'Margin', 0, ...
     'String', 'Trial-averaged stimulation', 'EdgeColor','none', ...
     'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
     'FontSize', 6, 'FontWeight','bold', 'Color','k');
 
-bm = 0.15; tm = 0.20;   % tm raised for the spanning title (2026-09-30)
 axH = 1 - bm - tm;
 ax_E = axes(fig_C, 'Position', [c1L, bm, cW, axH]);
 ax_F = axes(fig_C, 'Position', [c2L, bm, cW, axH]);
@@ -192,7 +205,7 @@ ylim(ax_E, [-2 5]); xlim(ax_E, [-3 dur+3]);
 addStimPatch(ax_E, x1, x2);
 uistack(findobj(ax_E,'Type','line'), 'top');
 hold(ax_E, 'off');
-paperAxes(ax_E, 'XLength', 0.01, 'YLength', 2, 'XLabel', ' ', 'YLabel', '1 mW');
+paperAxes(ax_E, 'XLength', 1, 'YLength', 2, 'XLabel', '1 s', 'YLabel', '1 mW');
 
 wc_inp_mean = mean(wc_inp, 1);
 wc_inp_std  = std(wc_inp, 0, 1);
@@ -218,7 +231,7 @@ PH_D = 3.4;   % jn* resize: unify row height
 PW_D = 3.4;
 fig_D = paperFig(PW_D, PH_D);
 
-lm2 = 0.22; rm2 = 0.05; bm2 = 0.12; tm2 = 0.08;
+lm2 = 0.22; rm2 = 0.05; bm2 = 0.12; tm2 = 0.20;   % same box as 3F (variance_mse fig_F)
 ax_var = axes(fig_D, 'Position', [lm2, bm2, 1-lm2-rm2, 1-bm2-tm2]);
 
 nc_var = var(pncDfk);
@@ -229,7 +242,7 @@ plot(ax_var, Tp, nc_var, 'Color', colOL, 'LineWidth', PS.lw_mean);
 plot(ax_var, Tp, wc_var, 'Color', colCL, 'LineWidth', PS.lw_mean);
 xline(ax_var, 0,   'LineWidth', PS.lw_zero, 'HandleVisibility','off');
 xline(ax_var, dur, 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
-ylim(ax_var, [-2 12]); xlim(ax_var, [-3 dur+3]);
+ylim(ax_var, PS.f3_var_ylim); xlim(ax_var, [-3 dur+3]);
 addStimPatch(ax_var, x1, x2);
 uistack(findobj(ax_var,'Type','line'), 'top');
 hold(ax_var, 'off');
@@ -241,6 +254,7 @@ text(ax_var, -0.20, 0.5, 'Variance across trials', ...
     'Units','normalized', 'Rotation', 90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'Color','k', 'Clipping','off');
+title(ax_var, 'Single session', 'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');
 
 paperExport(fig_D, 'paper/images/figure3/panel_D.pdf');
 

@@ -39,7 +39,7 @@ plot(ax_var, tp, Mean_var_nc, 'Color',PS.col_ol, 'LineWidth', 1.5);
 plot(ax_var, tp, Mean_var_wc, 'Color',PS.col_cl, 'LineWidth', 1.5);
 xline(ax_var, 0,   'LineWidth', 0.75, 'HandleVisibility','off');
 xline(ax_var, dur, 'LineWidth', 0.75, 'HandleVisibility','off');
-ylim(ax_var, [-2 12]);
+ylim(ax_var, PS.f3_var_ylim);   % shared with panel_D (paperStyle)
 xlim(ax_var, [-3 dur+3]);
 addStimPatch(ax_var, 0, dur);
 uistack(findobj(ax_var,'Type','line'), 'top');
@@ -103,24 +103,25 @@ stars_fr = @(p) repmat('*', 1, (p < 0.001)*3 + (p >= 0.001 && p < 0.01)*2 + (p >
 
 % Compressed 5x4 -> 4.5x3.6 so panels I and J sit side by side where the retired
 % per-session RMSE-violin panel (all_MSE_sessions) used to be (user 2026-09-23).
-fig_Fr = paperFig(4.5, 3.4);   % jn* resize: unify row height
-ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.18 0.14 0.78 0.74]);
+fig_Fr = paperFig(3.6, 2.72);  % 4.5 x 3.4 scaled down 20% (user 2026-10-10)
+ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.20 0.15 0.77 0.70]);
 hold(ax_fr, 'on');
 
 for s = 1:nSess_f
     plot(ax_fr, [1 2 3 4], [r_pre_f(s) r_early_f(s) r_late_f(s) r_post_f(s)], ...
-        '-o', 'Color',[0.6 0.6 0.6], 'MarkerSize',3, ...
+        '-o', 'Color',[0.6 0.6 0.6], 'MarkerSize',2, ...
         'MarkerFaceColor',[0.6 0.6 0.6], 'LineWidth',0.6, 'HandleVisibility','off');
 end
 plot(ax_fr, [1 2 3 4], [mean(r_pre_f) mean(r_early_f) mean(r_late_f) mean(r_post_f)], ...
-    'k-o', 'LineWidth',1.5, 'MarkerSize',5, 'MarkerFaceColor','k', 'DisplayName','Mean');
+    'k-o', 'LineWidth',1.5, 'MarkerSize',3.5, 'MarkerFaceColor','k', 'DisplayName','Mean');
 yline(ax_fr, 1, 'k--', 'LineWidth',0.75, 'HandleVisibility','off');
 hold(ax_fr, 'off');
 
 xlim(ax_fr, [0.5 4.5]);
 ax_fr.XTick = [1 2 3 4]; ax_fr.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
 ylabel(ax_fr, 'OL/CL variance ratio', 'FontWeight','bold');
-lgd_fr = legend(ax_fr, 'Location','best'); paperLegend(lgd_fr);
+% No 'Mean' legend at the 80% size (2026-10-10): it collided with the Stim label; bold black = mean is in the caption.
+xtickangle(ax_fr, 0);
 
 % ONE significance mark, carried on the panel-title CLAIM (user 2026-09-23): two identical
 % per-window *** read as ambiguous. The session-aware LMM is the primary test (both stim
@@ -134,7 +135,7 @@ if ~isempty(G3)
     fprintf('[Fig3-I] variance: stim LMM p<=%.2g (0-1s %.2g, 1-3s %.2g)\n', ...
         pStim_fr, G3.var_early.lmm_p, G3.var_late.lmm_p);
 end
-title(ax_fr, sprintf('CL reduces trial variance %s', stars_fr(pStim_fr)), ...
+title(ax_fr, sprintf('CL lowers variance %s', stars_fr(pStim_fr)), ...
     'FontSize',6, 'FontWeight','bold');
 
 % Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
@@ -537,20 +538,20 @@ for k = 1:length(fields)
 end
 
 % Compressed to match panel I (4.5x3.6); I and J now sit side by side (user 2026-09-23).
-fig_G2r = paperFig(4.5, 3.4);   % jn* resize: unify row height
-ax_g2r = axes(fig_G2r,'Units','normalized','Position',[0.18 0.14 0.78 0.74]);
+fig_G2r = paperFig(3.6, 2.72);  % 4.5 x 3.4 scaled down 20% (user 2026-10-10)
+ax_g2r = axes(fig_G2r,'Units','normalized','Position',[0.20 0.15 0.77 0.70]);
 hold(ax_g2r,'on');
 
 for ki = 1:nValid_g2
     plot(ax_g2r, [1 2 3 4], ...
         [r_pre_g2r(ki) r_early_g2r(ki) r_late_g2r(ki) r_post_g2r(ki)], ...
-        '-o', 'Color',[0.6 0.6 0.6], 'MarkerSize',3, ...
+        '-o', 'Color',[0.6 0.6 0.6], 'MarkerSize',2, ...
         'MarkerFaceColor',[0.6 0.6 0.6], 'LineWidth',0.6, 'HandleVisibility','off');
 end
 % Mean line
 plot(ax_g2r, [1 2 3 4], ...
     [mean(r_pre_g2r) mean(r_early_g2r) mean(r_late_g2r) mean(r_post_g2r)], 'k-o', ...
-    'LineWidth',1.5, 'MarkerSize',5, 'MarkerFaceColor','k', 'DisplayName','Mean');
+    'LineWidth',1.5, 'MarkerSize',3.5, 'MarkerFaceColor','k', 'DisplayName','Mean');
 yline(ax_g2r, 1, 'k--', 'LineWidth',0.75, 'HandleVisibility','off');
 hold(ax_g2r,'off');
 
@@ -558,7 +559,7 @@ xlim(ax_g2r, [0.5 4.5]);
 ax_g2r.XTick = [1 2 3 4];
 ax_g2r.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
 ylabel(ax_g2r, 'OL/CL RMSE ratio', 'FontWeight','bold');
-lgd_g2r = legend(ax_g2r, 'Location','best'); paperLegend(lgd_g2r);
+xtickangle(ax_g2r, 0);   % no legend at 80% size (see panel H note)
 
 % ONE significance mark on the panel-title CLAIM (user 2026-09-23; see panel I note).
 % Session-aware LMM is the primary test (both stim windows p < 1e-8; pre/post n.s.).
@@ -571,7 +572,7 @@ if ~isempty(G3)
         pStim_g2r, G3.rmse_early.lmm_p, G3.rmse_late.lmm_p);
 end
 if ~isnan(pStim_g2r)
-    title(ax_g2r, sprintf('CL reduces tracking error %s', stars_fr(pStim_g2r)), ...
+    title(ax_g2r, sprintf('CL lowers RMSE %s', stars_fr(pStim_g2r)), ...
         'FontSize',6, 'FontWeight','bold');
 end
 

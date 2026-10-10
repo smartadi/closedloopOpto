@@ -95,8 +95,8 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 3E | Fig3 | paper/figures_final/panels/figure3/panel_E.pdf | 3.4 × 3.4 | vector | — | per-trial RMSE half-violin, single session |
 | 3F | Fig3 | paper/figures_final/panels/figure3/all_variance_sessions.pdf | 3.4 × 3.4 | vector | — | **cross-session** average variance; `variance_mse.m` fig_F. Title cut to 'Average across sessions' 2026-09-30 |
 | 3G | Fig3 | paper/figures_final/panels/figure3/all_average_sessions.pdf | 3.4 × 3.4 | vector | — | cross-session RMSE over time; `step_response.m` fig_H. **Legend removed 2026-09-30** |
-| 3H | Fig3 | paper/figures_final/panels/figure3/variance_ratio_by_window.pdf | 5 × 4 | vector | — | OL/CL **variance** ratio, 4 windows; `variance_mse.m` fig_Fr. **Was 3I** |
-| 3I | Fig3 | paper/figures_final/panels/figure3/MSE_ratio_by_window.pdf | 5 × 4 | vector | — | OL/CL **RMSE** ratio, 4 windows; `variance_mse.m` fig_G2r. **Was 3J**; filename still says MSE |
+| 3H | Fig3 | paper/figures_final/panels/figure3/variance_ratio_by_window.pdf | 3.5 × 2.7 (−20%, 2026-10-10) | vector | — | OL/CL **variance** ratio, 4 windows; `variance_mse.m` fig_Fr. **Was 3I** |
+| 3I | Fig3 | paper/figures_final/panels/figure3/MSE_ratio_by_window.pdf | 3.7 × 2.7 (−20%, 2026-10-10) | vector | — | OL/CL **RMSE** ratio, 4 windows; `variance_mse.m` fig_G2r. **Was 3J**; filename still says MSE |
 
 | 4A | Fig4 | paper/figures_final/panels/figure4/f4_state_exemplars.pdf | 7.5 × 4.6 | vector | — | one CL trial per pre-stim state |
 | 4B | Fig4 | paper/figures_final/panels/figure4/f4_1B_equation.pdf | 3.0 × 4.6 | vector | — | error-decomposition model |

@@ -395,7 +395,7 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
         if ~isfield(R,'sdRawNs')
             error('[STVF] R.sdRawNs missing -- rerun imp_state_trialvar.m (2026-10-10 or later).');
         end
-        C_thin = C_stim + 0.55*(1 - C_stim);
+        C_thin = [0.62 0.62 0.62];  C_mean = [0 0 0];   % user 2026-10-10: grey sessions, black mean
         allC = [];
         for m = 1:numel(idx), v = R(idx(m)).sdRawNs; allC = [allC v(isfinite(v)).']; end %#ok<AGROW>
         yLimC = [floor(min(allC)*10)/10, ceil(max(allC)*10)/10];
@@ -405,9 +405,10 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
             ax = nexttile(tl);  hold(ax,'on');  axc(m) = ax;
             hR = yline(ax, 1, ':', 'Color',[.55 .55 .55], 'LineWidth', PS.lw_zero); hR.HandleVisibility='off';
             for ii = 1:size(Ys,1)
-                plot(ax, xb, Ys(ii,:), '-', 'Color', C_thin, 'LineWidth', PS.lw_trial*1.5, 'HandleVisibility','off');
+                plot(ax, xb, Ys(ii,:), '-o', 'Color', C_thin, 'MarkerFaceColor', C_thin, ...
+                     'MarkerEdgeColor','none', 'MarkerSize', 1.6, 'LineWidth', PS.lw_trial*1.5, 'HandleVisibility','off');
             end
-            plot(ax, xb, yv, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
+            plot(ax, xb, yv, '-o', 'Color', C_mean, 'MarkerFaceColor', C_mean, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
             xticks(ax, 0.125:0.25:0.875);  xticklabels(ax, {'Q1','Q2','Q3','Q4'});
             xtickangle(ax, 0);
             xlim(ax, [0 1]);  ylim(ax, yLimC);
@@ -420,12 +421,13 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
             else,                  ss = 'n.s.'; end
             text(ax, 0.5, 0.99, sprintf('%s  %d/%d', ss, r.nSessAgree, r.nSess), 'Units','normalized', ...
                  'HorizontalAlignment','center', 'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
-            if m > 1, set(ax, 'YTickLabel', []); end     % shared y-axis
+            if m > 1, set(ax, 'YTickLabel', [], 'YTick', [], 'YColor', 'none'); end   % one y-axis (leftmost) serves all three
             fprintf('[STVF] 2G %-16s session-mean Q4/Q1 %.2f | per session %s\n', r.tag, yv(end)/yv(1), ...
                     mat2str(Ys(:,end)./Ys(:,1), 2));
         end
         linkaxes(axc, 'y');  ylim(axc(1), yLimC);
         ylabel(axc(1), {'Prediction error','(session-normalized)'}, 'FontSize', PS.fs, 'FontWeight', PS.fw);
+        title(tl, 'State dependence of stimulation response', 'FontSize', PS.fs, 'FontWeight', PS.fw);
         pdfDir = fullfile(paperRoot,'images','figure2');
         if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
         jnAxesAll(fC);   % rule-book font/axis pass

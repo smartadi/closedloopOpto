@@ -67,8 +67,16 @@ hold(ax_H, 'off');
 % Legend removed (2026-09-30, user): OL/CL colour is established on panels A-C and
 % stated in the caption, so the in-panel key only cost plot area at 3.4 cm.
 paperAxes(ax_H, 'XLength',0.5, 'YLength',1, 'XLabel','500 ms', 'YLabel','RMSE dF/F');
-title(ax_H, {'Average of Session'; 'Tracking error'}, ...
-    'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');    % user, 2026-08-26
+title(ax_H, 'Trial-averaged tracking error', ...
+    'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');    % user, 2026-10-10
+% Line-weight key (user 2026-10-10): thin = one session, bold = mean of sessions. Drawn in
+% neutral grey/black, NOT as a legend, because colour already codes OL/CL (panels A-C) and a
+% coloured key would read as a third condition.
+xk = dur - 1.05;  yl_k = ylim(ax_H);  yk = yl_k(2) - [0.10 0.20]*diff(yl_k);
+line(ax_H, xk + [0 0.35], yk(1)*[1 1], 'Color', [0.55 0.55 0.55], 'LineWidth', PS.lw_trial, 'Clipping','off');
+line(ax_H, xk + [0 0.35], yk(2)*[1 1], 'Color', [0 0 0], 'LineWidth', PS.lw_mean, 'Clipping','off');
+text(ax_H, xk + 0.45, yk(1), 'session', 'FontSize', 6, 'VerticalAlignment','middle', 'Color', [0.4 0.4 0.4]);
+text(ax_H, xk + 0.45, yk(2), 'mean',    'FontSize', 6, 'VerticalAlignment','middle', 'Color', [0 0 0]);
 paperExport(fig_H, fullfile(paper_root, 'images', 'figure3', 'all_average_sessions.pdf'));
 
 
