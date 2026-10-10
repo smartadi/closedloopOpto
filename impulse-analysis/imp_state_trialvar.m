@@ -517,6 +517,15 @@ for k = 1:nMK
     R(k).units = MK{k,4};
 end
 
+% --- SESSION-LEVEL CI for the quartile ratio (review 2026-10-10) ----------------------------
+% The trial bootstrap above treats 1767 trials as independent; the test beside the ratio is
+% session-level (df = nSess-1), so the reported interval is too. R(k).ci is now the HIERARCHICAL
+% bootstrap (sessions, then trials within session); the old trial-level interval is kept as
+% R(k).ciTrial. Point estimate unchanged. See impulse-analysis/imp_state_hboot.m.
+for k = 1:numel(R), R(k).ciTrial = R(k).ci; end
+STV_H = imp_state_hboot(R, 10000, STV_NBIN, 1);
+for k = 1:numel(R), R(k).ci = STV_H(k).ciHier; R(k).ratioPerSess = STV_H(k).perSess; end
+
 %% ================= (2b) MOTION: threshold split, because quantile bins are degenerate ===========
 % RAW motion is threshold-shaped: median -0.196, q75 -0.158, and only ~3% of trials exceed z=1.5.
 % Equal-count quartiles therefore put bins 1-3 inside a 0.10-wide sliver of motion and the "trend"
