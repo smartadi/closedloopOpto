@@ -38,6 +38,7 @@ HERE = Path(__file__).resolve().parent
 DATA, FIG = HERE / "data", HERE.parent / "paper" / "images" / "mpc_arx"
 CFG = dict(L=10, lam=100.0, Q=35)
 HP, REF, R_U, HIST = 35, -5.0, 1e-3, 70
+EXT = 70                                           # 2 s pre/post context saved for the Fig-3-style panels (laser off after stim)
 REF_RD = os.environ.get("MPCD_REF", "MPC rd=1")   # the MPC row shown in the example-trial figure
 RD_GRID = tuple(float(x) for x in os.environ.get("MPCD_RD", "0.1,1,10").split(","))   # override: MPCD_RD=0,0.01,...
 
@@ -117,21 +118,24 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
     # innovations of the world model on the recorded data
     E = np.zeros_like(Z)
     for o in onCL:
-        for t in range(o - 2, o + N + HP + 1):
+        for t in range(o - 2, o + N + max(HP, EXT) + 1):
             E[t + 1] = Z[t + 1] - world.step(Z[t - np.arange(world.L)], u[t + 1 - np.arange(world.Q)])
 
     def simulate(k, policy):
-        """closed loop in the world model for CL trial k; policy(t, zs, us) -> physical u(t+1)."""
+        """closed loop in the world model for CL trial k; policy(t, zs, us) -> physical u(t+1).
+        Continues EXT frames past the stim window with the laser OFF (post-stim context). Returns (y, u) over the
+        stim window, then (y, u) from EXT frames before onset to EXT frames after the window."""
         o = onCL[k]; zs, us = Z.copy(), u.copy()               # copies (cheap enough per trial)
-        zs_view = zs; lo, hi = o - 1, o + N - 1
+        zs_view = zs; lo, hi = o - 1, o + N - 1 + EXT
         for t in range(lo, hi):
-            us[t + 1] = policy(t, zs_view, us) / su
+            us[t + 1] = policy(t, zs_view, us) / su if t + 1 < o + N else 0.0
             zs_view[t + 1] = world.step(zs_view[t - np.arange(world.L)], gk[k] * us[t + 1 - np.arange(world.Q)]) + E[t + 1]
-        return zs_view[o:o + N, 0] * sz[0], us[o:o + N] * su
+        return (zs_view[o:o + N, 0] * sz[0], us[o:o + N] * su,
+                zs_view[o - EXT:o + N + EXT, 0] * sz[0], us[o - EXT:o + N + EXT] * su)
 
     rmse = lambda yy: np.sqrt(np.mean((yy[win] - REF) ** 2))
     # sanity: recorded laser reproduces the recording
-    y0, _ = simulate(0, lambda t, zs, us: u[t + 1] * su)
+    y0 = simulate(0, lambda t, zs, us: u[t + 1] * su)[0]
     if sig_g == 0:
         assert np.allclose(y0, yr[onCL[0]:onCL[0] + N], atol=1e-6), "world replay does not reproduce the recording"
     rec = np.array([rmse(yr[o:o + N]) for o in onCL])
@@ -139,7 +143,7 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
     # PI baseline = the rig's RECORDED CL trial (user 2026-10-09: "no need for re-tuned PI"). The world reproduces
     # each recording exactly under the recorded laser, so the recorded trace IS the world's output under the rig's
     # actual PI (its gains, latency, everything). (Worlds with a gain error, sig_g > 0: still the real recording.)
-    PI = [(yr[o:o + N], ur[o:o + N]) for o in onCL]
+    PI = [(yr[o:o + N], ur[o:o + N], yr[o - EXT:o + N + EXT], ur[o - EXT:o + N + EXT]) for o in onCL]
     rPI = rec
     print(f"[MPCD] PI = recorded rig CL: median RMSE {np.median(rPI):.3f}", flush=True)
 
@@ -176,7 +180,7 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
             snap.update(t=t - onCL[kx], yhat=f + m.G @ U, U=U, ypast=zs[onCL[kx] - pre:t + 1, 0] * sz[0],
                         upast=us[onCL[kx] - pre:t + 1] * su)
         return base(t, zs, us)
-    ysn, usn = simulate(kx, pol_snap)
+    ysn, usn = simulate(kx, pol_snap)[:2]
 
     # prediction quality of the controller models on the CL trials, conditional on the recorded future laser
     r2 = {}
@@ -234,7 +238,9 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
             "Y": np.stack([np.column_stack([s[0] for s in res[n][0]]) for n in names], 2),   # N x nT x model
             "U": np.stack([np.column_stack([s[1] for s in res[n][0]]) for n in names], 2),
             "Yrec": np.column_stack([yr[o:o + N] for o in onCL]), "Urec": np.column_stack([ur[o:o + N] for o in onCL]),
-            "rPI": rPI, "Fs": Fs, "ref": REF, "pre": pre,
+            "rPI": rPI, "Fs": Fs, "ref": REF, "pre": pre, "ext": EXT,
+            "Yx": np.stack([np.column_stack([s[2] for s in res[n][0]]) for n in names], 2),  # (EXT+N+EXT) x nT x model
+            "Ux": np.stack([np.column_stack([s[3] for s in res[n][0]]) for n in names], 2),
             "snap_k": kx + 1, "snap_t": snap["t"], "snap_yhat": snap["yhat"], "snap_U": snap["U"],
             "snap_ypast": snap["ypast"], "snap_upast": snap["upast"], "snap_ytrue": ysn, "snap_utrue": usn})
 

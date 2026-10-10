@@ -16,6 +16,35 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-09 — Direct-MPC supp panels, round 2: Fig-3 look, pre/post context, second example, trial average
+**Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m`:
+- Optimisation problem is back to LaTeX math (3 lines, no prose).
+- Trial-time panels now use the Fig-3 look: grey stim window with edge lines, zero line, dashed target, short corner scale bars (paperAxes), name row with no RMSE.
+- Two example trials, −2 to 5 s with laser: the median trial 23, and trial 79. Trial 79 has a large mid-trial PI excursion at ~2.2 s that the MPC cuts by more than half. It was shortlisted as top-12 by RMSE drop over 0.8–2.6 s and picked by eye; trial 31, the top of the list, was noisy and oscillating.
+- New trial-average panel (±SD, PI / MPC / perfect MPC side by side).
+- Variance panel now spans −2 to 5 s with no values in the labels.
+- Prediction labels now read VARX / AR / naive.
+- Dropped the RMSE scatter.
+
+Variance by period (PI / MPC / perfect):
+- pre: 9.33 for all three — the same recorded trials.
+- 1–3 s: 4.29 / 2.61 / 1.45.
+- post: 6.59 / 6.44 / 6.34.
+
+**Why:** user round-2 review: "clean math feel", "sample another one with bigger deviation in the middle", "take inspiration from figure 3, short corner axes".
+**Next:** user locks panels → MANIFEST + PAPER.md + PAPER_FINAL export.
+
+### 2026-10-09 — mpc_direct.py saves 2 s pre/post context per trial
+**Changed/Found:** `controller-analysis/mpc_direct.py`:
+- `simulate` now runs EXT = 70 frames past the stim window with the laser off, and returns the extended (y, u) as well.
+- Pre-stim is the recording; the PI extended trace is the recording.
+- New saved fields: `Yx`, `Ux` ((EXT+N+EXT) × nT × model) and `ext`.
+- Innovations are now computed out to N + max(HP, EXT).
+
+Reran λ = 0.1 (`_lam01`): numbers are unchanged (MPC/PI 0.652, 108/108; perfect 0.224).
+**Why:** the Fig-3-style panels need pre- and post-stim periods.
+**Next:** none.
+
 ### 2026-10-09 — Direct-MPC supp panels revised after panel-by-panel review
 **Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m`:
 - The schematic is now shown in trial context: −1 to 3 s from onset, with the stim window shaded and "now" at 1.49 s.
