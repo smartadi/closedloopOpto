@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-09 — Direct-MPC supp panels exported as vector PDFs
+**Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m` run with `PAPER_FINAL = true` → 9 vector PDFs next to the PNGs in `paper/images/supp_mpc/` (mpcd_0b_problem, 0_schematic, B_prediction, C1/C2 examples, G_trial_average, E3_variance, E2_rmse_compare, F_lambda). None are in MANIFEST.txt, so the mirror copied nothing to `figures_final/`.
+**Why:** user: "save panel pdfs".
+**Next:** when the user locks the set, add the lines under [supp_mpc] in MANIFEST.txt + PAPER.md and rerun with PAPER_FINAL so they land in figures_final.
+
 ### 2026-10-09 — Direct-MPC supp panels, round 2: Fig-3 look, pre/post context, second example, trial average
 **Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m`:
 - Optimisation problem is back to LaTeX math (3 lines, no prose).
