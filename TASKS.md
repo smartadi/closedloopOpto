@@ -9,6 +9,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-10-10 — **Overleaf edits merged; Fig 2F (dip/rebound), 2G (session-level) and Fig 3 captions applied**; captions realigned to new assemblies (2A<->B, 3H<->I swapped). RESEARCH 2026-10-10.
 - [x] 2026-10-07 — **JNeurosci statistics pass done:** Methods subsection renamed + Design + multiple-comparison paragraphs; every Results claim is estimate + CI + t(df) + exact p + n, quoted from `paper-writing/STATS_TABLE.csv` (new `paper_stats_table.m`); 0 inexact p left.
 - [x] 2026-10-07 — **Fig 4D multiple comparisons decided:** uncorrected, 8 tests stated, Bonferroni 0.0063 named; rel-delta softened (now p=0.050 after the df fix).
 - [x] 2026-10-07 — **LMM df bug fixed** (`utils/lmm_cluster_df.m`); Fig 3, 4D, 4G, 2G re-run; `f4_cl_reject_lmm.m` post-mode-switch rerun done (AL_0051 now reaches, n=12).
@@ -18,7 +19,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [x] 2026-08-12 — **Fig-4 beat 3+4 code built (all UNRUN, blocked on the Stage-2 rebuild).** (a) R² floor 0.85 now gates all three cross-session controller scripts identically (user decision); (b) `f4_reject_panels.m` = paper panels for cross-session disturbance rejection, read-only off the batch struct, ER as primary metric, with the T1 gain-vs-R² control as panel D; (c) `ctrl_optimal_xsess.m` + shared `utils/ctrl_opt_solve.m`/`ctrl_plant_markov.m` = the MPC beat across sessions, with the disturbance computed BOTH as the post-hoc residual and as the contra-predicted Global (the version a real controller could use). See RESEARCH 2026-08-12 ×3.
 - [x] 2026-07-01 — Impulse residual: DV → **L1-dev primary** (template-gain secondary); retargeted to laser center [373,353] (A2); pre-onset-window (A4) + bleed-artifact controls pass; `[CP-KRECON]` sparse-kernel reconstruction added. Committed to `alpha` (101a9b9, 3ec2e0c). Retired `contra_residual.m`.
 - [x] 2026-06-29 — Manuscript: variance-onset claim rewritten with −0.57 slope (`results.tex` L59)
-- [x] 2026-06-29 — Manuscript: Kp/Ki/Kr placeholders filled (Kr=0.1, Kp=0.07, Ki=0.1; `results.tex` L96)
 
 ---
 
@@ -71,9 +71,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ### Analysis still needed for text
 - [ ] **Fig 2G: test response vs stimulus-free control directly** (review 2026-10-10, item 5). Text says movement alters the evoked response itself because the response ratio (0.73, CI [0.62, 0.88]) is below the control ratio (0.80), but that difference was never tested and the CIs overlap. Need a test of response ratio vs control ratio (e.g. paired bootstrap of the ratio difference, or |z| ~ state × {response, control} + (1|session) interaction) in `impulse-analysis/imp_state_trialvar.m`. If n.s., soften `results.tex` to "consistent with" and drop "movement alters the evoked response itself".
-- [ ] **Fig 2F caption**: panel is bare points (no CIs) with slow+fast on one row; caption still says 'horizontal lines, 95% bootstrap CIs' -- replace with the censoring statement. HOLD for Overleaf merge.
-- [ ] **Fig 3 caption after panel revisions (2026-10-10)**: swap E<->F letters (D and F now side by side), G = 'Trial-averaged tracking error, thin = sessions, bold = mean of sessions', H/I titles now 'CL lowers variance/RMSE' and no Mean legend (say 'bold black, mean'), mention RMSE annotations in A (per-trial) and B (of the trial-averaged trace). HOLD until Overleaf edits are merged.
-- [ ] **Fig 2G caption + Results for the session-level panel** (panel rebuilt 2026-10-10: thin lines = sessions, bold = equal-weight mean, no band). Caption must say so; decide whether to quote the session-mean Q4/Q1 (motion 0.67, rel 1.03, abs 2.16) or keep the pooled ratio + hierarchical CI. HOLD until Aditya's Overleaf language edits are pushed and merged.
 - [ ] Run TF fit across all 3 impulse sessions; compare poles/time constants between sessions — `Impulse_mouseDataAnalysis_all.m`
 - [ ] Relax TF delay τ; report R² on held-out 20% test set (Nick, 2026-05-08)
 - [ ] Verify widebrain ARX R²_spont > 0.3; interpret OL vs CL residuals — `plottingScript.m`

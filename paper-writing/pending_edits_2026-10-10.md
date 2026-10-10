@@ -1,4 +1,4 @@
-# Manuscript edits queued 2026-10-10 (apply after Aditya's Overleaf push is merged)
+# Manuscript edits queued 2026-10-10 -- APPLIED 2026-10-10 (Closedloop e5fd510, 63a6607)
 
 Held because Aditya has unpushed language edits on Overleaf. Apply on `draft`, build, fast-forward `main`.
 
