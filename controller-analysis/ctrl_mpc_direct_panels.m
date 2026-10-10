@@ -41,16 +41,20 @@ k2 = 79;
 fprintf('[MPCD-P] examples: median trial %d (PI %.2f, MPC %.2f) | large-deviation trial %d (PI %.2f, MPC %.2f; mid peak %.1f -> %.1f)\n', ...
     k, rPI(k), rM(k), k2, rPI(k2), rM(k2), dPI(k2), dM(k2));
 
-%% 0b -- the optimisation problem (clean math, LaTeX)
-fig = jnFig(W2, 1.7); ax = axes(fig, 'Position', [0 0 1 1]); axis(ax, 'off'); xlim(ax,[0 1]); ylim(ax,[0 1]);
-L = {'$\displaystyle \min_{u_{t+1},\dots,u_{t+H}} \; \sum_{h=1}^{H} \big(\hat y_{t+h}-r\big)^2 \;+\; \rho \sum_{h=1}^{H} \big(u_{t+h}-u_{ss}\big)^2 \;+\; \lambda \sum_{h=1}^{H} \big(\Delta u_{t+h}\big)^2$', ...
-     '$\mathrm{s.t.}\quad \hat y_{t+h} = \mathrm{VARX}\big(z_{t},\dots,z_{t-L+1};\; u_{t+h},\dots\big), \qquad 0 \le u \le u_{\max}$', ...
-     '$H = 1\,\mathrm{s}, \quad r = -5\%, \quad \rho = 10^{-3}, \quad \lambda = 0.1$'};
-yy = [0.76 0.40 0.12];
-for i = 1:numel(L)
-    text(ax, 0.02, yy(i), L{i}, 'Interpreter','latex', 'FontSize', S.fs_annot + 1 + (i==1)*0.5, 'VerticalAlignment','middle');
+%% 0b -- MPC block diagram (TikZ, styled on the R01 grant's fig_mpc.tex; no parameter values)
+% Built with pdflatex from mpc_direct_diagram.tex; vector PDF + 300 dpi PNG. With PAPER_FINAL on, the
+% PDF is also copied to figures_final (a TikZ PDF has no axes for the mirror's jn restyle to touch).
+global PAPER_FINAL                                                   %#ok<GVMIS>
+tmp = fullfile(tempdir, 'mpcd_diagram'); if ~exist(tmp,'dir'), mkdir(tmp); end
+copyfile(fullfile(here, 'mpc_direct_diagram.tex'), tmp);
+[st_, msg] = system(sprintf('cd /d "%s" && pdflatex -interaction=nonstopmode mpc_direct_diagram.tex', tmp));
+if st_ ~= 0, error('mpc_direct_diagram.tex failed to compile:\n%s', msg(max(1,end-800):end)); end
+copyfile(fullfile(tmp, 'mpc_direct_diagram.pdf'), fullfile(figDir, 'mpcd_0b_problem.pdf'));
+system(sprintf('pdftoppm -png -r 300 -singlefile "%s" "%s"', fullfile(tmp, 'mpc_direct_diagram.pdf'), fullfile(figDir, 'mpcd_0b_problem')));
+if ~isempty(PAPER_FINAL) && PAPER_FINAL
+    fin = fullfile(here, '..', 'paper', 'figures_final', 'panels', 'supp_mpc');
+    copyfile(fullfile(figDir, 'mpcd_0b_problem.pdf'), fin); copyfile(fullfile(figDir, 'mpcd_0b_problem.png'), fin);
 end
-ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_0b_problem.png')); close(fig);
 
 %% 0 -- how the MPC works: one real step inside its trial (Fig-3 look, scale bars)
 st = double(D.snap_t); tnow = st/Fs;
@@ -84,7 +88,7 @@ text(ax2, mean([tnow tf(end)]), yl2(2), 'plan', 'FontSize', S.fs_annot, 'Horizon
 text(ax2, tnow-0.04, yl2(2), 'apply 1st', 'FontSize', S.fs_annot, 'HorizontalAlignment','right', 'VerticalAlignment','top', 'Color', C.m);
 xlim(ax1, [-pre/Fs dur]); ylim(ax1, yl1); xlim(ax2, [-pre/Fs dur]); ylim(ax2, yl2);
 paperAxes(ax1, 'XLength', 0.5, 'YLength', 2, 'XLabel', '0.5 s', 'YLabel', '2% \DeltaF/F');
-paperAxes(ax2, 'XLength', 0, 'YLength', 1, 'YLabel', '1 V');
+paperAxes(ax2, 'XLength', 0, 'YLength', 1, 'YLabel', '1 mW');
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_0_schematic.png')); close(fig);
 
 %% B -- prediction R^2 vs lead (held-out OL trials): VARX / AR / naive
@@ -122,7 +126,7 @@ for e = 1:2
     end
     xlim(ax1, tx([1 end])); ylim(ax1, yl1); xlim(ax2, tx([1 end])); ylim(ax2, yl2);
     paperAxes(ax1, 'XLength', 1, 'YLength', 2, 'XLabel', '1 s', 'YLabel', '2% \DeltaF/F');
-    paperAxes(ax2, 'XLength', 0, 'YLength', 1, 'YLabel', '1 V');
+    paperAxes(ax2, 'XLength', 0, 'YLength', 1, 'YLabel', '1 mW');
     nameRow(fig, W2, col3, nam3, C);
     ctrl_mpc_export(fig, fullfile(figDir, [tags{e} '.png'])); close(fig);
 end
@@ -149,14 +153,14 @@ end
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_G_trial_average.png')); close(fig);
 
 %% E3 -- across-trial variance vs time, -2..5 s (Fig-3 variance look)
-fig = jnFig(W1, H); ax = axes(fig, 'Units','centimeters', 'Position', [1.25 0.75 W1-1.4 2.2]); hold(ax,'on');
+fig = jnFig(W1, H); ax = axes(fig, 'Units','centimeters', 'Position', [0.95 0.75 W1-1.1 2.2]); hold(ax,'on');
 Vx = zeros(numel(tx), 3); for j = 1:3, Vx(:,j) = var(D.Yx(:,:,ord3(j)), 0, 2); end
 yl = [0 max(Vx(:))*1.05];
 stimBox(ax, 0, dur, yl, C);
 for j = [3 1 2], plot(ax, tx, Vx(:,j), '-', 'Color', col3(j,:), 'LineWidth', S.lw_mean); end
 xlim(ax, tx([1 end])); ylim(ax, yl);
 paperAxes(ax, 'XLength', 1, 'YLength', 5, 'XLabel', '1 s', 'YLabel', '5 (%\DeltaF/F)^2');
-text(ax, -0.36, 0.5, 'Variance across trials', 'Units','normalized', 'Rotation', 90, 'FontSize', S.fs_annot, ...
+text(ax, -0.13, 0.5, 'Variance across trials', 'Units','normalized', 'Rotation', 90, 'FontSize', S.fs_annot, ...
     'FontWeight','bold', 'HorizontalAlignment','center', 'Clipping','off');
 for j = 1:3
     text(ax, 0.12, yl(2)*(1.0 - 0.11*(j-1)), nam3{j}, 'Color', col3(j,:), 'FontSize', S.fs_annot, ...

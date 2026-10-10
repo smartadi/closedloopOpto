@@ -16,6 +16,20 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-09 — MPC panel A becomes a block diagram (grant style); laser bars back to mW; variance label tightened
+**Changed/Found:**
+- New `controller-analysis/mpc_direct_diagram.tex` (TikZ, standalone), modelled on the R01 grant's `draft/draft/fig_mpc.tex`:
+  - an MPC frame containing a VARX-model box, the compact cost, and "predict → optimize → apply first step";
+  - a cortex box with the laser and ΔF/F/z_t loop.
+  - Uses figure colours and Helvetica/sansmath, with no parameter values.
+- `ctrl_mpc_direct_panels.m` changes:
+  - It now compiles the diagram (pdflatex), writes `mpcd_0b_problem.pdf/.png` (pdftoppm, 300 dpi), and copies both to figures_final under PAPER_FINAL.
+  - Laser scale bars are back to "1 mW". The user confirmed this is the correct reading, which supersedes the "1 V" entry below.
+  - Variance panel: the axes moved left and the side label moved in, so the label no longer sits far from the plot.
+- Manuscript S5 caption A rewritten for the diagram (`Closedloop_edit` main `ef0c7cb`, pushed).
+**Why:** user: "revert back to 1 mW", "too much gap on variance y label", "equation panel not satisfactory, take inspiration from grant MPC figure, remove the actual numbers".
+**Next:** user refreshes the Illustrator links (panel A content changed; A is 7.9 × 3.5 cm now), re-exports the assembly, and I re-copy it to `images/supplementary/S_mpc.pdf`.
+
 ### 2026-10-09 — MPC supp in manuscript as Fig. S5 + Discussion paragraph; laser scale bars fixed to volts
 **Changed/Found:**
 - Manuscript (`Closedloop_edit`, main `a5cebf4`, pushed):
