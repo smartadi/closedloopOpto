@@ -16,6 +16,13 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-10 — Final MPC supplementary figure (S5) in the manuscript
+**Changed/Found:** The user's final assembly `paper/figures_final/S5.pdf` (with `S5.ai`) was copied to `Closedloop_edit/images/supplementary/S_mpc.pdf`. The manuscript builds at 40 pp with no undefined references and is pushed to main (`9af2916`). The panel letters match the caption: A diagram, B schematic, C example, D trial average, E RMSE, F variance, G prediction, H λ. PAPER.md row updated.
+**Why:** user: "look at the s5 pdf i just saved, that's final".
+**Next:**
+- `figures_final/S4.pdf/.ai` is a superseded draft of this figure, while the manuscript's S4 (rejection trials) expects its own `S4.pdf`. Rename or delete the draft before the reject-trials art is exported.
+- Panel A in the assembly has no "target r" arrow at the top. That is fine, but the caption mentions r.
+
 ### 2026-10-09 — MPC panel A becomes a block diagram (grant style); laser bars back to mW; variance label tightened
 **Changed/Found:**
 - New `controller-analysis/mpc_direct_diagram.tex` (TikZ, standalone), modelled on the R01 grant's `draft/draft/fig_mpc.tex`:
