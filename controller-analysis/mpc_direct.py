@@ -170,7 +170,8 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
         out = {n: (np.median(res[n][1] / rPI), int(np.sum(res[n][1] < rPI))) for n in res if n != "PI"}
         print(f"[MPCD-{tag}] PI Kp {Kp} Ki {Ki} RMSE {np.median(rPI):.3f} | " + " | ".join(f"{n} {v[0]:.3f} ({v[1]}/{nT})" for n, v in out.items()), flush=True)
         return out
-    S = [simulate(k, mpc_policy(world, 1.0, oracle=True)) for k in range(nT)]
+    ord_ = float(os.environ.get("MPCD_ORD", "1"))                      # oracle rd (panels: = the chosen rd)
+    S = [simulate(k, mpc_policy(world, ord_, oracle=True)) for k in range(nT)]
     res["ORACLE MPC rd=1"] = (S, np.array([rmse(s[0]) for s in S]))
     print(f"[MPCD] ORACLE MPC (future innovations known): MPC/PI {np.median(res['ORACLE MPC rd=1'][1] / rPI):.3f}", flush=True)
 
@@ -227,14 +228,23 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
     fig.savefig(FIG / f"mpc_direct_examples_{sess}{os.environ.get('MPCD_TAG', '')}.png", dpi=170)
     savemat(DATA / f"mpc_direct_{sess}{os.environ.get('MPCD_TAG', '')}.mat", {"names": np.array(names, dtype=object),
             "rmse": np.column_stack([res[n][1] for n in names]), "rec": rec, "Kp": Kp, "Ki": Ki,
-            "G": world.G, "r2_86": r2[3], "r2_200": r2[7], "examples": ex + 1})
+            "G": world.G, "r2_86": r2[3], "r2_200": r2[7], "examples": ex + 1, "oracle_rd": ord_,
+            "Y": np.stack([np.column_stack([s[0] for s in res[n][0]]) for n in names], 2),   # N x nT x model
+            "U": np.stack([np.column_stack([s[1] for s in res[n][0]]) for n in names], 2),
+            "Yrec": np.column_stack([yr[o:o + N] for o in onCL]), "Urec": np.column_stack([ur[o:o + N] for o in onCL]),
+            "rPI": rPI, "Fs": Fs, "ref": REF})
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "robust":
         sess = sys.argv[2] if len(sys.argv) > 2 else "AL_0033_0226_e2"
         alt = dict(L=20, lam=1e3, Q=70)
+        R = {}
         for tg, wc, sg in (("A_same", None, 0.0), ("B_otherworld", alt, 0.0), ("C_gain20", None, 0.2), ("D_both", alt, 0.2)):
-            main(sess, wc, sg, tg)
+            R[tg] = main(sess, wc, sg, tg)
+        cols = sorted({n for v in R.values() for n in v})
+        savemat(DATA / f"mpc_direct_robust_{sess}{os.environ.get('MPCD_TAG', '')}.mat", {
+            "scenarios": np.array(list(R), dtype=object), "models": np.array(cols, dtype=object),
+            "ratio": np.array([[R[s][c][0] for c in cols] for s in R]), "beats": np.array([[R[s][c][1] for c in cols] for s in R])})
     else:
         main(*sys.argv[1:])

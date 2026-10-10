@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-09 — Draft supp panels for the direct-prediction MPC (λ = 0.1)
+**Changed/Found:** `controller-analysis/mpc_direct.py` — saves traces (Y/U per controller, recorded y/u, rPI) and the oracle rd (`MPCD_ORD`); robust mode saves `data/mpc_direct_robust_<sess><tag>.mat`. Runs at λ = 0.1 (`MPCD_RD=0.1 MPCD_ORD=0.1 MPCD_TAG=_lam01`). New `controller-analysis/ctrl_mpc_direct_panels.m` → 8 PNG drafts in `paper/images/supp_mpc/` (mpcd_0_problem, A_laser_response, B_prediction, C_example_trace, D_example_laser, E_rmse_scatter, F_lambda, G_robustness) + contact sheet `_draft_mpcd_contact.png`. Numbers: MPC/PI 0.786 (108/108); oracle at λ 0.1 0.276; worlds A–D 0.786 / 0.758 / 0.789 / 0.790 (108/106/104/104); example = CL trial 59 (median MPC−PI): PI 0.92, MPC 0.65, oracle 0.25.
+**Why:** user: "ok use lambda 0.1 draft panels now". Drafts only — not added to `paper/figures_final/MANIFEST.txt` until the user locks them (they would replace the disturbance-preview panels).
+**Next:** user picks panels → MANIFEST + PAPER.md + rerun with PAPER_FINAL; decide which old d-based panels to retire.
+
 ### 2026-10-09 — Direct-prediction MPC at lower input smoothness (rd 0–0.1)
 **Changed/Found:** `controller-analysis/mpc_direct.py` — rd grid, output tag and example row now set by env vars (`MPCD_RD`, `MPCD_TAG`, `MPCD_REF`); run `MPCD_RD=0,0.01,0.03,0.1,1 MPCD_TAG=_lowrd MPCD_REF="MPC rd=0.01"` → `paper/images/mpc_arx/mpc_direct_AL_0033_0226_e2_lowrd.png` (+ `_examples_`). Same world as scenario A (PI Kp .5 Ki .25, RMSE 1.117). Median MPC/PI (beats PI): rd 0 0.773 (107) | 0.01 0.762 (107) | 0.03 **0.760 (108)** | 0.1 0.786 (108) | 1 0.862 (104); oracle 0.394. Gains flatten below rd ≈ 0.03. At rd = 0.01 the laser command swings 0 ↔ 2.67 nearly every frame (bang-bang), exploiting the model's fast lead-1/2 laser response (−0.18, −0.62 %/unit) that the rig's 2-frame delay may not allow.
 **Why:** user: "go even lower on input smoothness". Lower rd keeps helping until ~0.03, then stops; the extra gain over rd 0.1 is small (0.786 → 0.760) and is bought with a frame-rate bang-bang command. Simulation → descriptive.
