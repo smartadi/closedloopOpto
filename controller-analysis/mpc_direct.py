@@ -13,8 +13,8 @@ WORLD   no separate plant model, so the stand-in for the brain is the VARX fitte
         laser it reproduces the recording exactly (asserted); under another laser the activity responds through the
         model's laser dynamics and the innovations (what nobody could predict) are replayed. The controller's own
         model is the fold model (never saw the test trial).
-COMPARE PI in the same world (gains re-tuned there by grid, best median -> conservative for MPC); MPC; ORACLE MPC
-        (world model + the future innovations known = perfect prediction ceiling); recorded rig CL (reference only).
+COMPARE the rig's RECORDED PI (CL) trial = the world's output under the recorded laser; MPC; ORACLE MPC
+        (world model + the future innovations known = perfect prediction ceiling). No re-tuned/simulated PI (dropped 2026-10-09).
         RMSE over 1-3 s (ctrl_mpc_lqr rmseWin), ref -5. Simulation -> descriptive only.
 
 Usage:  .venv\\Scripts\\python.exe controller-analysis\\mpc_direct.py [sess]
@@ -136,23 +136,12 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
         assert np.allclose(y0, yr[onCL[0]:onCL[0] + N], atol=1e-6), "world replay does not reproduce the recording"
     rec = np.array([rmse(yr[o:o + N]) for o in onCL])
 
-    # PI: re-tuned in the world (grid, best median RMSE)
-    def pi_policy(Kp, Ki):
-        st = {"s": 0.0}
-        def pol(t, zs, us):
-            e = zs[t, 0] * sz[0] - REF; st["s"] += e
-            return float(np.clip(uss + Kp * e + Ki / Fs * st["s"], 0, umax))
-        return pol
-    best = (np.inf, None)
-    for Kp in (0.0, 0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0):      # widened 2026-10-09 (first grid's best sat on its edge)
-        for Ki in (0.0, 0.25, 0.5, 1.0, 2.0, 4.0):
-            r = np.median([rmse(simulate(k, pi_policy(Kp, Ki))[0]) for k in range(nT)])
-            if r < best[0]:
-                best = (r, (Kp, Ki))
-    Kp, Ki = best[1]
-    PI = [simulate(k, pi_policy(Kp, Ki)) for k in range(nT)]
-    rPI = np.array([rmse(p[0]) for p in PI])
-    print(f"[MPCD] PI re-tuned in the world: Kp {Kp} Ki {Ki} | median RMSE {np.median(rPI):.3f} (rig CL recorded {np.median(rec):.3f})", flush=True)
+    # PI baseline = the rig's RECORDED CL trial (user 2026-10-09: "no need for re-tuned PI"). The world reproduces
+    # each recording exactly under the recorded laser, so the recorded trace IS the world's output under the rig's
+    # actual PI (its gains, latency, everything). (Worlds with a gain error, sig_g > 0: still the real recording.)
+    PI = [(yr[o:o + N], ur[o:o + N]) for o in onCL]
+    rPI = rec
+    print(f"[MPCD] PI = recorded rig CL: median RMSE {np.median(rPI):.3f}", flush=True)
 
     def mpc_policy(m, rd, oracle=False):
         def pol(t, zs, us):
@@ -168,7 +157,7 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
               f"MPC/PI {np.median(res[f'MPC rd={rd:g}'][1] / rPI):.3f} | beats PI {np.sum(res[f'MPC rd={rd:g}'][1] < rPI)}/{nT}", flush=True)
     if tag:
         out = {n: (np.median(res[n][1] / rPI), int(np.sum(res[n][1] < rPI))) for n in res if n != "PI"}
-        print(f"[MPCD-{tag}] PI Kp {Kp} Ki {Ki} RMSE {np.median(rPI):.3f} | " + " | ".join(f"{n} {v[0]:.3f} ({v[1]}/{nT})" for n, v in out.items()), flush=True)
+        print(f"[MPCD-{tag}] rig CL RMSE {np.median(rPI):.3f} | " + " | ".join(f"{n} {v[0]:.3f} ({v[1]}/{nT})" for n, v in out.items()), flush=True)
         return out
     ord_ = float(os.environ.get("MPCD_ORD", "1"))                      # oracle rd (panels: = the chosen rd)
     S = [simulate(k, mpc_policy(world, ord_, oracle=True)) for k in range(nT)]
@@ -204,7 +193,7 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
         a.text(v + 0.01, i, f"{v:.3f} ({b}/{nT})", va="center", fontsize=8)
     a.set_yticks(np.arange(len(names))); a.set_yticklabels(names); a.invert_yaxis(); a.set_xlim(0, 1.3)
     a.set_xlabel("median RMSE / PI RMSE (1-3 s), 108 CL trials")
-    a.set_title(f"direct-prediction MPC in the VARX world | PI re-tuned (Kp {Kp}, Ki {Ki})\n"
+    a.set_title(f"direct-prediction MPC in the VARX world | baseline = recorded rig PI (CL)\n"
                 f"model R² of y on CL trials: 86 ms {r2[3]:.2f}, 200 ms {r2[7]:.2f}", fontsize=9)
     fig.savefig(FIG / f"mpc_direct_{sess}{os.environ.get('MPCD_TAG', '')}.png", dpi=170)
 
@@ -214,20 +203,19 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
     for j, k in enumerate(ex):
         o = onCL[k]
         a = ax[0, j]
-        a.plot(tt, yr[o:o + N], color="0.6", lw=1, label=f"recorded rig CL ({rec[k]:.2f})")
-        a.plot(tt, PI[k][0], color="#1f77b4", lw=1.2, label=f"PI in world ({rPI[k]:.2f})")
+        a.plot(tt, PI[k][0], color="#1f77b4", lw=1.2, label=f"PI, recorded rig CL ({rPI[k]:.2f})")
         a.plot(tt, res[REF_RD][0][k][0], color="#d62828", lw=1.4, label=f"{REF_RD}, VARX direct ({res[REF_RD][1][k]:.2f})")
         a.plot(tt, res["ORACLE MPC rd=1"][0][k][0], color="#c77dff", lw=1, label=f"oracle MPC ({res['ORACLE MPC rd=1'][1][k]:.2f})")
         a.axhline(REF, color="k", ls="--", lw=0.8); a.axvspan(0, 1, color="0.92", zorder=0)
         a.set_title(f"CL trial {k + 1} (RMSE 1-3 s in legend)", fontsize=9); a.set_ylabel("ΔF/F (%)"); a.legend(fontsize=6.5, frameon=False)
         a = ax[1, j]
-        a.plot(tt, ur[o:o + N], color="0.6", lw=1); a.plot(tt, PI[k][1], color="#1f77b4", lw=1.1)
+        a.plot(tt, PI[k][1], color="#1f77b4", lw=1.1)
         a.plot(tt, res[REF_RD][0][k][1], color="#d62828", lw=1.3); a.plot(tt, res["ORACLE MPC rd=1"][0][k][1], color="#c77dff", lw=1)
         a.set_xlabel("time from onset (s)"); a.set_ylabel("laser command")
     fig.suptitle("direct-prediction MPC (no disturbance proxy): 25th / 50th / 75th pct trials of MPC − PI", fontsize=10)
     fig.savefig(FIG / f"mpc_direct_examples_{sess}{os.environ.get('MPCD_TAG', '')}.png", dpi=170)
     savemat(DATA / f"mpc_direct_{sess}{os.environ.get('MPCD_TAG', '')}.mat", {"names": np.array(names, dtype=object),
-            "rmse": np.column_stack([res[n][1] for n in names]), "rec": rec, "Kp": Kp, "Ki": Ki,
+            "rmse": np.column_stack([res[n][1] for n in names]), "rec": rec,
             "G": world.G, "r2_86": r2[3], "r2_200": r2[7], "examples": ex + 1, "oracle_rd": ord_,
             "Y": np.stack([np.column_stack([s[0] for s in res[n][0]]) for n in names], 2),   # N x nT x model
             "U": np.stack([np.column_stack([s[1] for s in res[n][0]]) for n in names], 2),

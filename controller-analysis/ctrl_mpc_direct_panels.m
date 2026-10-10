@@ -3,6 +3,7 @@ function ctrl_mpc_direct_panels(sess)
 %   0.1, draft panels"). The MPC predicts the controlled signal itself with the delay-embedded VARX
 %   ([controlled spot, 100 brain spots] + laser; no disturbance proxy) -- mpc_direct.py. Simulation in a
 %   VARX "world" driven by each trial's recorded innovations -> descriptive only, no statistics.
+%   PI = the rig's RECORDED CL trial (the world reproduces it exactly under the recorded laser); no re-tuned PI.
 %   Inputs (run first):
 %     data/mpc_direct_<sess>_lam01.mat        MPCD_RD=0.1 MPCD_ORD=0.1 MPCD_TAG=_lam01 (traces, rmse, G)
 %     data/mpc_direct_robust_<sess>_lam01.mat mpc_direct.py robust, MPCD_RD=0.1 (worlds A-D)
@@ -20,7 +21,7 @@ D = load(fullfile(dataDir, sprintf('mpc_direct_%s_lam01.mat', sess)));
 names = cellstr(D.names); iPI = find(strcmp(names,'PI')); iM = find(startsWith(names,'MPC')); iO = find(startsWith(names,'ORACLE'));
 Fs = double(D.Fs); N = size(D.Y,1); tt = (0:N-1).'/Fs; ref = double(D.ref);
 rPI = D.rmse(:,iPI); rM = D.rmse(:,iM); rO = D.rmse(:,iO); q = rM ./ rPI;
-fprintf('[MPCD-P] lambda 0.1: MPC/PI %.3f (%d/%d) | oracle %.3f | PI Kp %g Ki %g\n', median(q), sum(q<1), numel(q), median(rO./rPI), D.Kp, D.Ki);
+fprintf('[MPCD-P] lambda 0.1: MPC/PI(recorded) %.3f (%d/%d) | oracle %.3f\n', median(q), sum(q<1), numel(q), median(rO./rPI));
 
 %% 0 -- the optimisation problem
 fig = jnFig(9.4, 4.0); ax = axes(fig,'Position',[0 0 1 1]); axis(ax,'off'); xlim(ax,[0 1]); ylim(ax,[0 1]); fs = S.fs_annot + 1;
@@ -62,7 +63,7 @@ h1 = plot(ax, tt, D.Y(:,k,iPI), '-', 'Color', cPI, 'LineWidth', S.lw_mean);
 h2 = plot(ax, tt, D.Y(:,k,iM), '-', 'Color', cM, 'LineWidth', S.lw_mean);
 h3 = plot(ax, tt, D.Y(:,k,iO), '-', 'Color', cO, 'LineWidth', S.lw_mean);
 xlabel(ax, 'time from onset (s)'); ylabel(ax, '\DeltaF/F (%)'); xlim(ax, [0 3]);
-lg = legend(ax, [h1 h2 h3], {sprintf('PI (%.2f)', rPI(k)), sprintf('MPC (%.2f)', rM(k)), sprintf('MPC, perfect prediction (%.2f)', rO(k))}, ...
+lg = legend(ax, [h1 h2 h3], {sprintf('PI, recorded (%.2f)', rPI(k)), sprintf('MPC (%.2f)', rM(k)), sprintf('MPC, perfect prediction (%.2f)', rO(k))}, ...
     'Box','off','Location','northeast','FontSize',S.fs_annot); lg.ItemTokenSize = S.itemtoken;
 jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_C_example_trace.png')); close(fig);
 fig = jnFig(6, 4); ax = axes(fig); hold(ax,'on');
@@ -79,7 +80,7 @@ mx = ceil(max([rPI; rM])*2)/2;
 plot(ax, [0 mx], [0 mx], '-', 'Color', cR, 'LineWidth', S.lw_ref);
 scatter(ax, rPI, rM, 6, cM, 'filled', 'MarkerFaceAlpha', 0.6);
 axis(ax, 'square'); xlim(ax, [0 mx]); ylim(ax, [0 mx]);
-xlabel(ax, 'PI RMSE (%\DeltaF/F)'); ylabel(ax, 'MPC RMSE (%\DeltaF/F)');
+xlabel(ax, 'PI (recorded) RMSE (%\DeltaF/F)'); ylabel(ax, 'MPC RMSE (%\DeltaF/F)');
 text(ax, 0.05*mx, 0.92*mx, sprintf('%d / %d trials below', sum(q<1), numel(q)), 'FontSize', S.fs_annot, 'Color', cM);
 jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_E_rmse_scatter.png')); close(fig);
 
@@ -88,7 +89,7 @@ Lw = load(fullfile(dataDir, sprintf('mpc_direct_%s_lowrd.mat', sess)));
 Hi = load(fullfile(dataDir, sprintf('mpc_direct_%s.mat', sess)));
 [lam, rat] = deal([]);
 for SRC = {Lw, Hi}
-    s = SRC{1}; nm = cellstr(s.names); p = s.rmse(:, strcmp(nm,'PI'));
+    s = SRC{1}; nm = cellstr(s.names); p = s.rec(:);          % baseline = recorded rig PI (2026-10-09)
     for i = find(startsWith(nm,'MPC rd='))
         l = sscanf(nm{i}, 'MPC rd=%f');
         if ~ismember(l, lam), lam(end+1) = l; rat(end+1) = median(s.rmse(:,i)./p); end %#ok<AGROW>
@@ -99,7 +100,7 @@ fig = jnFig(6, 4); ax = axes(fig); hold(ax,'on');
 plot(ax, [2e-3 20], [1 1], '-', 'Color', cPI, 'LineWidth', S.lw_ref);
 plot(ax, x, rat, '-o', 'Color', cM, 'LineWidth', S.lw_mean, 'MarkerSize', S.marker, 'MarkerFaceColor', cM);
 i1 = find(lam == 0.1); plot(ax, x(i1), rat(i1), 'o', 'MarkerSize', S.marker+3, 'Color', 'k', 'LineWidth', 0.75);
-set(ax, 'XScale','log', 'XTick', [3e-3 1e-2 1e-1 1 10], 'XTickLabel', {'0','0.01','0.1','1','10'}); xlim(ax, [2e-3 20]); ylim(ax, [0.6 1.05]);
+set(ax, 'XScale','log', 'XTick', [3e-3 1e-2 1e-1 1 10], 'XTickLabel', {'0','0.01','0.1','1','10'}); xlim(ax, [2e-3 20]); ylim(ax, [0.5 1.05]);
 xlabel(ax, 'input smoothness \lambda'); ylabel(ax, 'MPC / PI error (median)');
 text(ax, x(i1)*1.3, rat(i1)-0.03, 'used', 'FontSize', S.fs_annot);
 jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_F_lambda.png')); close(fig);

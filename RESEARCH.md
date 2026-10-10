@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-09 — Direct MPC: PI baseline = the rig's recorded CL trial (re-tuned PI dropped)
+**Changed/Found:** `controller-analysis/mpc_direct.py` — removed the simulated, grid-re-tuned PI; the PI baseline is now each recorded CL trial (the world reproduces it exactly under the recorded laser, so it is the world's output under the rig's actual PI: gains, latency, all). `controller-analysis/ctrl_mpc_direct_panels.m` relabelled "PI (recorded)"; λ-sweep panel now ratios against `rec`. λ = 0.1: MPC/PI 0.652 (108/108), oracle 0.224; worlds A–D 0.652 / 0.665 / 0.663 / 0.681 (108/107/102/101; in C/D the baseline is still the real recording). λ sweep vs recorded PI: 0 0.63, 0.01 0.62, 0.03 0.62, 0.1 0.65, 1 0.70, 10 0.79. Example = CL trial 102 (median): PI 1.83, MPC 1.27, oracle 0.69. Note: in the simulation the MPC turns the laser on 1–2 frames earlier at onset than the rig did (outside the 1–3 s RMSE window).
+**Why:** user: the PI trace should be the actual CL trace; "no need for re-tuned PI". The earlier re-tuned PI (Kp .5, Ki .25, faster loop timing) beat the rig (1.12 vs 1.46) and was an idealised baseline.
+**Next:** user picks panels → MANIFEST/PAPER.md + PAPER_FINAL export.
+
 ### 2026-10-09 — Draft supp panels for the direct-prediction MPC (λ = 0.1)
 **Changed/Found:** `controller-analysis/mpc_direct.py` — saves traces (Y/U per controller, recorded y/u, rPI) and the oracle rd (`MPCD_ORD`); robust mode saves `data/mpc_direct_robust_<sess><tag>.mat`. Runs at λ = 0.1 (`MPCD_RD=0.1 MPCD_ORD=0.1 MPCD_TAG=_lam01`). New `controller-analysis/ctrl_mpc_direct_panels.m` → 8 PNG drafts in `paper/images/supp_mpc/` (mpcd_0_problem, A_laser_response, B_prediction, C_example_trace, D_example_laser, E_rmse_scatter, F_lambda, G_robustness) + contact sheet `_draft_mpcd_contact.png`. Numbers: MPC/PI 0.786 (108/108); oracle at λ 0.1 0.276; worlds A–D 0.786 / 0.758 / 0.789 / 0.790 (108/106/104/104); example = CL trial 59 (median MPC−PI): PI 0.92, MPC 0.65, oracle 0.25.
 **Why:** user: "ok use lambda 0.1 draft panels now". Drafts only — not added to `paper/figures_final/MANIFEST.txt` until the user locks them (they would replace the disturbance-preview panels).
