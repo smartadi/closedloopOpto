@@ -387,39 +387,31 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
         % had no uncertainty at all. Collect the drawn values + CIs so the shared y-axis
         % is set by what is on the page, not by the admissible subset (abs-delta's Q4 was
         % landing outside it).
-        ciC = cell(numel(idx),1);  yvC = cell(numel(idx),1);  xbC = cell(numel(idx),1);
-        for m = 1:numel(idx)
-            k = idx(m);  r = R(k);  ip = find(adm==k, 1);
-            xbC{m} = r.binMed(:).';  yvC{m} = r.sdRawN(:).';
-            sc = yvC{m} ./ max(r.sdB(:).', eps);
-            if ~isempty(ip)
-                ciC{m} = [CI(ip).lo .* sc; CI(ip).hi .* sc];
-            else
-                [lo, hi] = local_binci(r.y, r.gbin, nB, STVF_NBOOT);
-                ciC{m} = [lo .* sc; hi .* sc];
-                fprintf('[STVF] %s is not in the admissible set -- CI bootstrapped here for the panel\n', r.tag);
-            end
+        % SESSION-LEVEL PANEL (user 2026-10-10). Thin lines = each session's own quartile curve
+        % (normalized to that session's typical error); bold = their EQUAL-WEIGHT mean, not the
+        % trial-pooled curve, so sessions with more trials do not dominate and the picture counts
+        % the same units as the session-level test beside it. No CI band: with four sessions the
+        % individual curves ARE the uncertainty, and an SEM over n = 4 would say less.
+        if ~isfield(R,'sdRawNs')
+            error('[STVF] R.sdRawNs missing -- rerun imp_state_trialvar.m (2026-10-10 or later).');
         end
-        allC = [yvC{:}];  for m = 1:numel(idx), allC = [allC ciC{m}(:).']; end %#ok<AGROW>
-        allC = allC(isfinite(allC));
-        yLimC = yNormLim;
-        if ~isempty(allC)
-            yLimC = [floor(min(allC)*20)/20, ceil(max(allC)*20)/20];
-        end
+        C_thin = C_stim + 0.55*(1 - C_stim);
+        allC = [];
+        for m = 1:numel(idx), v = R(idx(m)).sdRawNs; allC = [allC v(isfinite(v)).']; end %#ok<AGROW>
+        yLimC = [floor(min(allC)*10)/10, ceil(max(allC)*10)/10];
         for m = 1:numel(idx)
             k = idx(m);  r = R(k);
-            xb = xbC{m};  yv = yvC{m};  ciLo = ciC{m}(1,:);  ciHi = ciC{m}(2,:);
+            xb = r.binMed(:).';  Ys = r.sdRawNs;  yv = mean(Ys, 1, 'omitnan');
             ax = nexttile(tl);  hold(ax,'on');  axc(m) = ax;
-            fill(ax, [xb fliplr(xb)], [ciLo fliplr(ciHi)], C_stim, ...
-                 'FaceAlpha', PS.fa, 'EdgeColor','none', 'HandleVisibility','off');
-            hR = yline(ax, 1, ':', 'Color',[.55 .55 .55], 'LineWidth', PS.lw_zero); hR.HandleVisibility='off'; uistack(hR,'bottom');
+            hR = yline(ax, 1, ':', 'Color',[.55 .55 .55], 'LineWidth', PS.lw_zero); hR.HandleVisibility='off';
+            for ii = 1:size(Ys,1)
+                plot(ax, xb, Ys(ii,:), '-', 'Color', C_thin, 'LineWidth', PS.lw_trial*1.5, 'HandleVisibility','off');
+            end
             plot(ax, xb, yv, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
             xticks(ax, 0.125:0.25:0.875);  xticklabels(ax, {'Q1','Q2','Q3','Q4'});
-            xtickangle(ax, 0);   % Q1..Q4 fit horizontally even at 2.2 cm; MATLAB rotates them
+            xtickangle(ax, 0);
             xlim(ax, [0 1]);  ylim(ax, yLimC);
             set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
-            % Just the marker name: the Q1..Q4 ticks already say 'quartile', and the word
-            % does not fit under a 2.3 cm tile.
             xlabel(ax, r.name, 'FontSize', PS.fs, 'FontWeight', PS.fw);
             if     isnan(r.pLME),  ss = '';
             elseif r.pLME < 1e-3,  ss = '***';
@@ -429,6 +421,8 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
             text(ax, 0.5, 0.99, sprintf('%s  %d/%d', ss, r.nSessAgree, r.nSess), 'Units','normalized', ...
                  'HorizontalAlignment','center', 'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
             if m > 1, set(ax, 'YTickLabel', []); end     % shared y-axis
+            fprintf('[STVF] 2G %-16s session-mean Q4/Q1 %.2f | per session %s\n', r.tag, yv(end)/yv(1), ...
+                    mat2str(Ys(:,end)./Ys(:,1), 2));
         end
         linkaxes(axc, 'y');  ylim(axc(1), yLimC);
         ylabel(axc(1), {'Prediction error','(session-normalized)'}, 'FontSize', PS.fs, 'FontWeight', PS.fw);

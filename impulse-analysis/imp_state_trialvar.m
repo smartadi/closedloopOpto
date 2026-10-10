@@ -451,6 +451,25 @@ for k = 1:nMK
         end
         if den > 0, sdRawN(b) = sqrt(num/den); end
     end
+    % SAME normalized curve, ONE ROW PER SESSION (user 2026-10-10: Fig 2G drawn at the session
+    % level). Each session's curve uses only its own trials, pooled within (amplitude) cells as
+    % above; the panel draws these as thin lines and their equal-weight mean as the bold line,
+    % so the picture counts sessions the way the session-level test does.
+    gFull = zeros(numel(T.sess),1);  gFull(ok) = g;   % T is a struct of columns, not a table
+    uSN = unique(T.sess(ok)).';
+    sdRawNs = nan(numel(uSN), STV_NBIN);
+    for ii = 1:numel(uSN)
+        for b = 1:STV_NBIN
+            inB = (gFull == b) & (T.sess == uSN(ii));
+            num = 0; den = 0;
+            for cc = unique(grp(inB)).'
+                v = devRawN(inB & grp == cc);  v = v(isfinite(v));
+                if numel(v) < 3, continue; end
+                num = num + (numel(v)-1)*var(v);  den = den + (numel(v)-1);
+            end
+            if den > 0, sdRawNs(ii,b) = sqrt(num/den); end
+        end
+    end
     trend  = corr((1:STV_NBIN).', sdB(:), 'type','Spearman');
     trendP = corr((1:STV_NBIN).', sdP(:), 'type','Spearman');
 
@@ -506,6 +525,7 @@ for k = 1:nMK
     R(k).sdB=sdB; R(k).sdP=sdP; R(k).bf=bf; R(k).bfP=bfP;
     R(k).sdRaw = sdRaw;    % same curve in %dF/F -- see the PREDICTION UNCERTAINTY block above
     R(k).sdRawN = sdRawN;  % same curve, per-session normalized (x session-typical error, ~1)
+    R(k).sdRawNs = sdRawNs;  % one row per session (Fig 2G thin lines); mean over rows = bold line
     R(k).trend=trend; R(k).trendP=trendP; R(k).ratio=rat; R(k).ci=ci;
     R(k).verdict=verdict; R(k).x=x; R(k).y=y; R(k).n=nnz(ok);
     R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;

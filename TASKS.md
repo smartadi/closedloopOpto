@@ -71,7 +71,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ### Analysis still needed for text
 - [ ] **Fig 2G: test response vs stimulus-free control directly** (review 2026-10-10, item 5). Text says movement alters the evoked response itself because the response ratio (0.73, CI [0.62, 0.88]) is below the control ratio (0.80), but that difference was never tested and the CIs overlap. Need a test of response ratio vs control ratio (e.g. paired bootstrap of the ratio difference, or |z| ~ state × {response, control} + (1|session) interaction) in `impulse-analysis/imp_state_trialvar.m`. If n.s., soften `results.tex` to "consistent with" and drop "movement alters the evoked response itself".
-- [ ] **Fig 2G panel error bars -> session-level** (follow-up to 2026-10-10 hierarchical CI). Text/STATS_TABLE ratio CIs are now hierarchical (`imp_state_hboot.m`), but the plotted per-bin bars in `imp_state_trialvar_fig.m` (`local_binci`) still resample trials. Switch them on the next full `load_experiments` run (same run as the control test above), re-export 2G with PAPER_FINAL.
+- [ ] **Fig 2G caption + Results for the session-level panel** (panel rebuilt 2026-10-10: thin lines = sessions, bold = equal-weight mean, no band). Caption must say so; decide whether to quote the session-mean Q4/Q1 (motion 0.67, rel 1.03, abs 2.16) or keep the pooled ratio + hierarchical CI. HOLD until Aditya's Overleaf language edits are pushed and merged.
 - [ ] Run TF fit across all 3 impulse sessions; compare poles/time constants between sessions — `Impulse_mouseDataAnalysis_all.m`
 - [ ] Relax TF delay τ; report R² on held-out 20% test set (Nick, 2026-05-08)
 - [ ] Verify widebrain ARX R²_spont > 0.3; interpret OL vs CL residuals — `plottingScript.m`

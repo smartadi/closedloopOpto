@@ -86,7 +86,7 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 2D | Fig2 | paper/figures_final/panels/figure2/tf_cv_2D_sidebar.pdf | 4.2 × 3.6 | vector | IQR | within-session generalization + held-out R² sidebar. **Supersedes `tf_cv_heldout_r2.pdf`**, which the registry still named |
 | 2E | Fig2 | paper/figures_final/panels/figure2/tf_model_swap.pdf | 4.5 × 4 | vector | — | cross-session model-swap R² matrix |
 | 2F | Fig2 | paper/figures_final/panels/figure2/tf_tau_forest.pdf | 5 × 4 | vector | 95% CI | response timescales, slow + fast τ |
-| 2G | Fig2 | paper/figures_final/panels/figure2/imp_state_var_combined.pdf | 8.6 × 3.6 | vector | 95% CI band | 3 tiles, shared axis: motion / rel 2–4 Hz / abs δ. **Supersedes the separate 2G scatter, 2J and 2K rows** (retired below) |
+| 2G | Fig2 | paper/figures_final/panels/figure2/imp_state_var_combined.pdf | 6.5 × 3.5 | vector | none: thin lines = 4 sessions, bold = equal-weight session mean (2026-10-10) | 3 tiles, shared axis: motion / rel 2–4 Hz / abs δ. **Supersedes the separate 2G scatter, 2J and 2K rows** (retired below) |
 
 | 3A | Fig3 | paper/figures_final/panels/figure3/panel_A.pdf | 8.9 × 3.4 | vector | — | single trial OL\|CL; `analysisPlots_combined.m` |
 | 3B | Fig3 | paper/figures_final/panels/figure3/panel_B.pdf | 8.9 × 3.4 | vector | ±1 SD | trial-averaged response OL\|CL, titled 2026-09-30. ⚠ **the assembled Figure3.pdf appears to carry panel_A here instead** |
