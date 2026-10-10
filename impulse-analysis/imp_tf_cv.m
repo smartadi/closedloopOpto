@@ -142,7 +142,7 @@ if CV_REVAMP
     q75 = cellfun(@(c) prctile(c.R2_out,75), CV);
 
     % ---------- candidate 1: traces + R^2 side panel ----------
-    fS = paperFig(4.2, PS.f2h);   % trimmed again so row 2 can hold the enlarged swap grid
+    fS = paperFig(4.8, PS.f2h);   % 4.2 -> 4.8 (user 2026-10-10): wider gap so axR's ylabel clears axL
                                   % closes just inside the 17.6 cm double column.
                                   % NB this panel CROPS ~0.4 cm wider than its canvas.
     % Explicit axes, NOT a tiledlayout (2026-09-30): nexttile kept returning the
@@ -151,7 +151,7 @@ if CV_REVAMP
     % exact panel geometry the Illustrator assembly wants.
     % axL narrower / axR further right (user 2026-09-30): axR's rotated 'held-out R^2'
     % label was rendering INSIDE axL's plot box, across the traces' 0.3-0.5 s tails.
-    axL = axes(fS, 'Position', [0.105 0.215 0.455 0.655]);  hold(axL,'on');
+    axL = axes(fS, 'Position', [0.095 0.215 0.42 0.655]);  hold(axL,'on');
     for k = 1:n
         c = PS.sessColor(k);  t = CV{k}.tPost(:);
         hm = CV{k}.h_meas_cv(:);  hp = CV{k}.h_pred_cv(:);
@@ -166,15 +166,15 @@ if CV_REVAMP
     % Tile 3, NOT 1 (fixed 2026-09-30): axL spans tiles 1-2, so nexttile(tS,1)
     % re-entered tile 1 and REPLACED the trace overlay -- the exported sidebar
     % was the R^2 strip alone. Latent while this panel was only a candidate.
-    axR = axes(fS, 'Position', [0.805 0.215 0.175 0.655]);  hold(axR,'on');
+    axR = axes(fS, 'Position', [0.74 0.215 0.24 0.655]);  hold(axR,'on');   % wider strip: gap to axL still 1 cm+
     for k = 1:n
         c = PS.sessColor(k);
         plot(axR,[k k],[q25(k) q75(k)],'-','Color',c,'LineWidth',1.0);
         plot(axR,k,med(k),'o','Color',c,'MarkerFaceColor',c,'MarkerSize',3.5);
     end
     ylim(axR,[max(-0.2,min(q25)-0.05) 1.02]);  xlim(axR,[0.5 n+0.5]);
-    set(axR,'XTick',1:n,'XTickLabel',mlab,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
-    axR.XAxis.FontSize = PS.fs-1;  ylabel(axR,'held-out R^2');
+    set(axR,'XTick',1:n,'XTickLabel',strrep(mlab,'Mouse ','M'),'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
+    axR.XAxis.FontSize = PS.fs-1;  xtickangle(axR,90);  ylabel(axR,'held-out R^2');   % short labels, vertical: fits the narrow strip
     % Panel title carried by the layout so it spans both tiles (user 2026-09-30:
     % the sidebar is Fig-2 D and needs the title that used to sit on tf_cv_heldout_r2).
     annotation(fS, 'textbox', [0 0.90 1 0.10], 'String', 'LTI validation within session', ...
@@ -304,9 +304,9 @@ if CV_SINGLE
         lg = legend(axS, [hL(:); hFit], [lgS(:); {'fit'}], 'Box','off');
         lg.ItemTokenSize = [8 6];  lg.FontSize = PS.fs;  lg.FontWeight = PS.fw;
         drawnow; lg.Units = 'normalized'; lgp = lg.Position;
-        lg.Location = 'none';  lg.Position = [0.655, 0.20, lgp(3), lgp(4)];
+        lg.Location = 'none';  lg.Position = [0.625, 0.20, lgp(3), lgp(4)];   % pulled in toward the plot (user 2026-10-10; was 0.655)
         % Mouse tag at the head of the margin, clear of the legend below it.
-        text(axS, 1.06, 0.97, mouseLab{ksel}, 'Units','normalized', ...
+        text(axS, 1.02, 0.97, mouseLab{ksel}, 'Units','normalized', ...   % was 1.06, follows the legend in
              'HorizontalAlignment','left', 'VerticalAlignment','middle', 'Clipping','off', ...
              'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color', PS.sessColor(ksel));
         suppDir = CV_PANELDIR;   % panel C (user 2026-09-30: main figure, not supplementary)

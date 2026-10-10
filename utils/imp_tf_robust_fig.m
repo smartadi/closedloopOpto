@@ -171,6 +171,14 @@ if hasFast
     xlabel(axA,'\tau (s)');
     hSlow = plot(axA, NaN, NaN, 'o', 'MarkerSize',3.5, 'MarkerFaceColor',[.35 .35 .35], 'MarkerEdgeColor',[.35 .35 .35]);
     hFast = plot(axA, NaN, NaN, 's', 'MarkerSize',3.2, 'MarkerFaceColor','none', 'MarkerEdgeColor',[.35 .35 .35], 'LineWidth',0.6);
+    % Shared fast timescale (user 2026-10-10: the text stresses how close the fast tau is across
+    % sessions, so show it): dotted line at the across-session MEDIAN fast tau, behind the markers.
+    tf_med = median(tau2(isfinite(tau2)));
+    hMed = xline(axA, tf_med, ':', 'Color', [.45 .45 .45], 'LineWidth', PS.lw_ref, 'HandleVisibility','off');
+    uistack(hMed, 'bottom');
+    yTop = n + 0.6 + 0.6*hasFast;
+    text(axA, tf_med, yTop - 0.05, sprintf(' %.3f s', tf_med), 'Color', [.35 .35 .35], ...
+         'FontSize', PS.fs, 'FontWeight', PS.fw, 'HorizontalAlignment','left', 'VerticalAlignment','top');
     lgA = legend(axA, [hSlow hFast], {'slow','fast'}, 'Location','northeast', 'Box','off');   % top right (user 2026-10-10)
     lgA.ItemTokenSize = PS.lgd_token;  lgA.FontSize = PS.fs;  lgA.FontWeight = PS.fw;
 else
