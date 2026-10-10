@@ -139,6 +139,9 @@ figA = paperFig(PS.f2w, PS.f2h);  axA = axes(figA); hold(axA,'on');   % TF-A -- 
 % abutted into what read as a single interval 0.037-0.502 s. The offset is what keeps
 % each interval attached to its own marker.
 dy = 0.16;
+% User 2026-10-10: slow and fast of the same mouse on ONE horizontal line. Safe for the paper
+% panel, which draws bare points (bareA) -- the overlap objection above is about CI lines.
+if opts.bareA, dy = 0; end
 % Cross-session mean line + -/+1 SD band removed per user 2026-09-22 (kept in the console
 % report below: mean tau_slow / between-session SD / ratio). Markers alone now carry the panel.
 for k = 1:n
@@ -157,7 +160,8 @@ for k = 1:n
              'MarkerFaceColor','none', 'MarkerEdgeColor',grad(k), 'LineWidth',0.6);
     end
 end
-ylim(axA,[0.4 n+0.6]);  set(axA,'YTick',1:n,'YTickLabel',cellstr(lblS),'TickLabelInterpreter','none');
+% headroom above the top row so the top-right legend clears the data (user 2026-10-10)
+ylim(axA,[0.4 n+0.6+0.6*hasFast]);  set(axA,'YTick',1:n,'YTickLabel',cellstr(lblS),'TickLabelInterpreter','none');
 % Linear x starting at 0 and extended just past the largest tau (user 2026-09-22). The
 % fast/slow poles fall within one linear decade here, so a zero-based linear axis reads clean.
 xhi = 1.1 * max([tau1(:); tau2(:)], [], 'omitnan');
@@ -167,7 +171,7 @@ if hasFast
     xlabel(axA,'\tau (s)');
     hSlow = plot(axA, NaN, NaN, 'o', 'MarkerSize',3.5, 'MarkerFaceColor',[.35 .35 .35], 'MarkerEdgeColor',[.35 .35 .35]);
     hFast = plot(axA, NaN, NaN, 's', 'MarkerSize',3.2, 'MarkerFaceColor','none', 'MarkerEdgeColor',[.35 .35 .35], 'LineWidth',0.6);
-    lgA = legend(axA, [hSlow hFast], {'slow','fast'}, 'Location','southeast', 'Box','off');
+    lgA = legend(axA, [hSlow hFast], {'slow','fast'}, 'Location','northeast', 'Box','off');   % top right (user 2026-10-10)
     lgA.ItemTokenSize = PS.lgd_token;  lgA.FontSize = PS.fs;  lgA.FontWeight = PS.fw;
 else
     xlabel(axA,'\tau_{slow} (s)');
