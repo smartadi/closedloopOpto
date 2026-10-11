@@ -13,6 +13,7 @@
 %   (3) LOOP      does the controller itself raise rel / abs power? Per session, CL minus OL state
 %                 in the laser-off window (should be ~0: same pre-onset brain) and in the peri
 %                 window (contains the stimulation), and the within-trial peri-minus-pre2 change.
+%   (4) SPECTRUM  CL/OL power ratio by frequency band, stimulation [0,+3) vs laser-off [-2,0).
 % Needs: load_sessions.m (mouse/fields). Writes data/f4_rel_abs_checks.mat.
 % ============================================================================
 assert(exist('mouse','var') && exist('fields','var'), '[F4RA] run load_sessions.m first.');
@@ -84,6 +85,33 @@ for s = ["delta" "absdelta"]
             median(d(:,j)), sum(d(:,j)>0), numel(us), signrank(d(:,j)));
     end
 end
+%% (4) LOOP, spectrally: closed-to-open-loop power ratio by frequency ------------------------
+% Per session, mean PSD of the controlled readout over the stimulation window [0,+3) s and
+% the laser-off window [-2,0) s, CL / OL. Ratio > 1 at a frequency = the loop leaves MORE power
+% there than the open-loop input does (a sensitivity peak); laser-off should sit at ~1.
+fprintf('\n[F4RA] (4) CL/OL power ratio by band, median over sessions [IQR] (signrank of log ratio)\n');
+Fs = 35; c0_l = 106; fg = 0:0.05:12;
+BANDS = [0.4 1; 1 2; 2 4; 4 6; 6 10];
+WSP = struct('name',{'stim [0,+3)','laser-off [-2,0)'},'off',{0:104, -70:-1});
+ratio = nan(numel(fields), numel(fg), 2);
+for k = 1:numel(fields)
+    M = mouse.(fields{k}); if ~isfield(M,'data'), continue; end; d = M.data;
+    if ~isfield(d,'pncDfk_l') || isempty(d.pncDfk_l) || isempty(d.pwcDfk_l), continue; end
+    for w = 1:2
+        cols = c0_l + WSP(w).off;
+        ratio(k,:,w) = mean_psd(d.pwcDfk_l(:,cols), Fs, fg) ./ mean_psd(d.pncDfk_l(:,cols), Fs, fg);
+    end
+end
+ok = all(isfinite(ratio(:,:,1)),2); ratio = ratio(ok,:,:);
+for w = 1:2
+    for b = 1:size(BANDS,1)
+        m = fg >= BANDS(b,1) & fg < BANDS(b,2);
+        rb = mean(ratio(:,m,w), 2);                       % per-session band ratio
+        fprintf('   %-17s %4.1f-%4.1f Hz: %.2f [%.2f %.2f]  %2d/%d sessions >1  p=%.2g\n', WSP(w).name, ...
+            BANDS(b,:), median(rb), prctile(rb,25), prctile(rb,75), sum(rb>1), numel(rb), signrank(log(rb)));
+    end
+end
+OUT.spec = struct('f',fg,'ratio',ratio,'bands',BANDS,'windows',{{WSP.name}});
 save(fullfile(bpRoot,'data','f4_rel_abs_checks.mat'), 'OUT');
 fprintf('[F4RA] -> data/f4_rel_abs_checks.mat\n');
 
@@ -93,6 +121,18 @@ function z = zwin(x, s)
 z = zeros(size(x)); us = unique(s);
 for i = 1:numel(us), m = s==us(i); z(m) = x(m) - mean(x(m)); end
 z = z / std(z);
+end
+
+function P = mean_psd(B, Fs, fg)
+% Mean over trials (rows of B) of the linear-detrended, Hann-tapered periodogram, as a density
+% in (dF/F)^2/Hz on the grid fg (same taper/normalisation as utils/f4_bandpow 'continuous').
+B = double(B); B = B(all(isfinite(B),2), :);
+N = size(B,2); w = hann(N)'; nfft = 4096;
+X = detrend(B', 'linear')' .* w;
+S = abs(fft(X, nfft, 2)).^2 / (Fs * sum(w.^2));
+f = (0:nfft-1) * Fs / nfft; h = f <= Fs/2;
+S = S(:, h); S(:, 2:end-1) = 2*S(:, 2:end-1);
+P = interp1(f(h), mean(S,1), fg);
 end
 
 function [ol, cl, att, re] = joint_terms(T, nm)

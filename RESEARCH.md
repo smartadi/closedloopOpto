@@ -16,6 +16,20 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - Closed loop reshapes the spectrum during stimulation: <1 Hz down, 2-6 Hz up (waterbed); none before the laser
+**Changed/Found:** I added section (4) to `controller-analysis/f4_rel_abs_checks.m`. It computes the CL/OL mean-PSD ratio per session (detrend + Hann, density), median over 15 sessions with a signrank on the log ratio.
+- **Stimulation [0,+3) s:**
+  - 0.4–1 Hz: 0.79 (4/15 sessions above 1, p = 0.026)
+  - 1–2 Hz: 0.94 (p = 0.76)
+  - **2–4 Hz: 1.44 (13/15, p = 6.1e-4)**
+  - **4–6 Hz: 1.82 (15/15, p = 6.1e-5)**
+  - 6–10 Hz: 1.06 (p = 0.03)
+- **Laser-off [-2,0) s:** every band is 0.80–1.01, all p ≥ 0.14.
+
+So feedback attenuates slow power and amplifies power around crossover, which is the Bode sensitivity trade-off. The plant's damped 3–4 Hz dip mode (Fig 2F) sits in the amplified band. Relative 2–4 Hz (2–4 / 0.4–10 Hz) measured in the stimulation window is therefore inflated by the loop in CL on both counts: its numerator goes up and the slow part of its denominator goes down.
+**Why:** This tests the second half of the user's hypothesis ("maybe controller effect").
+**Next:** It is a candidate panel for the supplementary rel 2–4 Hz figure (CL/OL ratio vs frequency, stimulation vs laser-off, per-session lines). The ratio uses each session's own readout ΔF/F (rolling baseline), the same trace as the states.
+
 ### 2026-10-11 - Fig 2G under a random state slope: fitlme unusable at 4 sessions; two-stage per-session test keeps motion + abs
 **Changed/Found:** I ran this ad hoc on `STV_R` and changed no file.
 - `adev ~ state + (1+state|sess)` returns standard errors about 10× the real spread of the session slopes. Motion becomes t = −0.40, p = 0.71 and abs t = 2.05, p = 0.13. The fit is degenerate with 4 clusters, as the `imp_state_trialvar.m` L373 comment anticipated.
