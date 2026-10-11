@@ -16,6 +16,53 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - Fig 2G under a random state slope: fitlme unusable at 4 sessions; two-stage per-session test keeps motion + abs
+**Changed/Found:** I ran this ad hoc on `STV_R` and changed no file.
+- `adev ~ state + (1+state|sess)` returns standard errors about 10× the real spread of the session slopes. Motion becomes t = −0.40, p = 0.71 and abs t = 2.05, p = 0.13. The fit is degenerate with 4 clusters, as the `imp_state_trialvar.m` L373 comment anticipated.
+- The two-stage equivalent (per-session OLS slope of |dev| on state, then t-test over the 4 slopes) gives:
+  - motion −0.39 ± 0.10, t(3) = −3.95, p = 0.029, 4/4 sessions negative;
+  - abs +0.93 ± 0.09, t = 11.0, p = 0.0016, 4/4 positive;
+  - rel +0.17 ± 0.14, t = 1.19, p = 0.32 (slopes +0.27 / +0.43 / +0.18 / −0.22);
+  - pre-trial variance p = 3e-5.
+- The current 2G model `(1|sess)` gives p = 0.015 / 4.0e-4 / 0.068.
+**Why:** The user adopted the random-slope model for Fig 4 on 2026-10-11, which raises the question of using the same treatment in Fig 2G.
+**Next:** User decision on whether 2G switches to the two-stage test. Conclusions are unchanged either way: motion and abs are significant, rel is not.
+
+### 2026-10-11 - f4_rel_abs_checks: rel 2-4 Hz carries no Fig-4 information beyond abs power; the loop raises 1-4 Hz power in-stim
+**Changed/Found:** New `controller-analysis/f4_rel_abs_checks.m` [F4RA], which writes `data/f4_rel_abs_checks.mat`. It uses the Fig 4 pool and the random-slope model.
+- **(1) Overlap.** The within-session Spearman correlation of rel 2–4 with abs 1–4 Hz has median +0.38 (OL) / +0.42 (CL) in the peri window and +0.22 / +0.28 in the laser-off window.
+- **(2) Joint model** `y ~ cond*(xa+xr) + (1+cond+xa+xr|sess) + (1|mouse)`.
+  - Peri window: rel's CL slope is −0.05, p = 0.26 (it was +0.12, p = 0.05 alone), while abs is unchanged (OL +0.35, p = 6.5e-4; CL +0.36, p = 6e-4).
+  - Rel's only surviving term is a NEGATIVE OL slope (−0.18, p = 0.002): at fixed delta, a larger relative share means less total power.
+  - Laser-off window: rel adds nothing (all p ≥ 0.29), while abs holds (OL p = 0.0048, CL p = 8.5e-4, att p = 0.026).
+  - Rel orthogonalised to abs gives the same picture.
+- **(3) Loop effect** (CL − OL state per session, in laser-off SD units).
+  - Laser-off: rel +0.07 (p = 0.93) and abs −0.10 (p = 0.23), so the pre-onset brain is the same in both conditions.
+  - Peri: rel +0.19 SD (13/15 sessions, p = 0.048) and abs +0.16 SD (14/15, p = 1.8e-4).
+  - Within-trial rise: abs +0.18 SD (13/15, p = 0.002).
+  - So the controller raises low-frequency power during stimulation.
+
+**Why:** These test the user's hypothesis that "rel 2-4 is already a case of abs delta and maybe controller effect".
+**Next:** These results feed the reframing strategy (rel 2–4 Hz to a supplementary figure; motion + abs δ as the main states). Abs δ in the peri window is also partly loop-shaped, so its main-text claim should be anchored on the laser-off control.
+
+### 2026-10-11 - Fig 4 state LMM switched to a random state slope (user decision); 4D + STATS_TABLE regenerated
+**Changed/Found:**
+- `utils/f4_row2_fit.m`: all three fits (OL reference, CL reference, log) now use `y ~ cond*xw + (1+cond+xw|sess) + (1|mouse)`. The fallback chain is `(1+cond|sess)` → `(1|sess)`, done in a local `fit_chain` that warns on fallback, and `R.reForm` records the structure each fit used. All 12 fits used the full structure.
+- `paper_stats_table.m`: model labels updated.
+- Reran `f4_row2_quartiles` with PAPER_FINAL (final `figure4/f4_row2_quartiles.pdf` re-exported; new stars) and `paper_stats_table`. Only the 20 `4D_*` rows changed.
+- New values (pred / reg / att, p):
+
+  | State | Pred | Reg | Att |
+  |---|---|---|---|
+  | initdev | +0.15, 0.024 | +0.12, 0.055 | +0.1%, 0.97 |
+  | motion | +0.16, 0.015 | −0.06, 0.33 | −8.8%, 0.0046 |
+  | rel | +0.01, 0.82 | +0.12, 0.050 | +5.4%, 0.027 |
+  | abs | +0.28, 0.0011 | +0.34, 2.5e-4 | +7.8%, 0.0015 |
+
+- Gap at mean state is 0.71–0.82, t −7.8 to −11.4. The numbers reproduce the `f4_circularity_checks` sensitivity rows.
+**Why:** The user said "use random slope model" on 2026-10-11. The locked model's state-slope SEs were trial-level.
+**Next:** The manuscript (Table 1, Results L148–154, caption gap range, Methods model sentence, any Discussion numbers) is not updated yet; it will be done together with the rel 2–4 Hz reframing. Initdev and rel no longer clear Bonferroni; motion attenuation now does. The user re-places 4D in Illustrator after the reframing settles.
+
 ### 2026-10-10 - Manuscript Fig 2 numbers updated after the AL_0041 rebin
 **Changed/Found:** Closedloop_edit `results.tex`:
 - 2A amplitude range is now 0.23–0.90 mW.
