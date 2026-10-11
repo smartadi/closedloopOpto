@@ -7,12 +7,8 @@ function [R, T] = f4_row2_fit(T)
 %
 % T is one state's pooled table from f4_row2_pool (vars y, cond{OL,CL}, x, sess, mouse).
 % Adds xw = state centered WITHIN session then scaled by the pooled SD, and fits
-%   y ~ cond*xw + (1+cond+xw|sess) + (1|mouse)   (random OL/CL gap AND random state slope per session)
-% 2026-10-11 (user: "use random slope model"): the random STATE slope is now the primary model.
-% Without it the state-slope SEs are trial-level (they ignore that sessions differ in slope), which
-% is what f4_circularity_checks.m showed: rel 2-4 Hz regularizability p 8.6e-4 -> 0.05, motion
-% stronger. Fallback chain if a fit throws: (1+cond|sess) -> (1|sess). R.reForm records the
-% random-effects part actually used by each of the three fits (main / CL-reference / log).
+%   y ~ cond*xw + (1+cond|sess) + (1|mouse)          (random OL/CL slope per session)
+% falling back to (1|sess) + (1|mouse) if the random-slope model fails to converge.
 % Returns R with:
 %   gap/gapCI/gapP   cond_CL main effect  (OL-CL gap at mean state; <0 = CL lower RMSE)
 %   slope/slopeCI/slopeP  xw main effect  (OL state slope, per SD = PREDICTABILITY term)
@@ -21,17 +17,16 @@ function [R, T] = f4_row2_fit(T)
 %   att/attCI/attP   cond x state on LOG RMSE = slope of log(CL/OL) (ATTENUATION)
 %   dec (interaction on raw RMSE) is the GAP TREND -- Discussion only, not a panel property
 %   dec/decCI/decP   cond_CL:xw interaction (DECOUPLING; <0 = CL flattens state slope)
-%   randslope        true if the main fit used the random state slope (1+cond+xw|sess)
-%   reForm           {main, reg, att} random-effects formula actually used by each fit
+%   randslope        true if the random-slope model was used
 %   lme              the fitted model object
 % T is returned with the xw column added (used by the hierarchical bootstrap).
-RE_CHAIN = {'(1+cond+xw|sess)','(1+cond|sess)','(1|sess)'};
 T.xw=zeros(height(T),1); us=unique(T.sess);
 for i=1:numel(us), m=T.sess==us(i); T.xw(m)=T.x(m)-mean(T.x(m)); end
 T.xw=T.xw/std(T.xw);
 T.cond=reordercats(T.cond,{'OL','CL'});
 % REML + Satterthwaite, matching utils/cl_olcl_lmm.m (2026-10-01). See there.
-[lme, re1] = fit_chain(T);  rs = strcmp(re1, RE_CHAIN{1});
+try   lme=fitlme(T,'y ~ cond*xw + (1+cond|sess) + (1|mouse)', 'FitMethod','REML'); rs=true;
+catch, lme=fitlme(T,'y ~ cond*xw + (1|sess) + (1|mouse)',      'FitMethod','REML'); rs=false; end
 [~,~,C]=fixedEffects(lme, 'DFMethod','Satterthwaite');  C=dataset2table_safe(C);
 assert(~isempty(C) && ismember('Name', C.Properties.VariableNames), ...
     'f4_row2_fit:coefConv', 'Satterthwaite coefficient table did not convert.');
@@ -51,7 +46,7 @@ R=struct('gap',C.Estimate(gi),'gapCI',[C.LowerC(gi) C.UpperC(gi)],'gapP',C.pValu
     'sat',C(:,{'Name','DF','pValue'}), ...
     'reg',NaN,'regCI',[NaN NaN],'regP',NaN,'regT',NaN,'regDF',NaN, ...
     'att',NaN,'attCI',[NaN NaN],'attP',NaN,'attT',NaN,'attDF',NaN, ...
-    'randslope',rs,'reForm',{{re1,'',''}},'lme',lme);
+    'randslope',rs,'lme',lme);
 % ---- REGULARIZABILITY + ATTENUATION (2026-10-07) ------------------------------------------
 % The cond x xw interaction (GAP TREND) cannot tell "OL worsens, CL holds" from "CL worsens".
 % REGULARIZABILITY = the CL slope on state: does the loop keep the output at the reference as
@@ -62,7 +57,8 @@ R=struct('gap',C.Estimate(gi),'gapCI',[C.LowerC(gi) C.UpperC(gi)],'gapP',C.pValu
 nS = numel(unique(T.sess));
 try
     T2 = T; T2.cond = reordercats(T2.cond,{'CL','OL'});
-    [l2, R.reForm{2}] = fit_chain(T2);
+    try   l2=fitlme(T2,'y ~ cond*xw + (1+cond|sess) + (1|mouse)','FitMethod','REML');
+    catch, l2=fitlme(T2,'y ~ cond*xw + (1|sess) + (1|mouse)','FitMethod','REML'); end
     [~,~,C2]=fixedEffects(l2,'DFMethod','Satterthwaite'); C2=lmm_cluster_df(dataset2table_safe(C2),nS);
     k=find(strcmp(cellstr(string(C2.Name)),'xw'),1);
     R.reg=C2.Estimate(k); R.regCI=[C2.LowerC(k) C2.UpperC(k)]; R.regP=C2.pValueC(k);
@@ -70,26 +66,11 @@ try
 catch ME, warning('f4_row2_fit:reg','regularizability fit failed: %s',ME.message); end
 try
     T3 = T; ok = T3.y > 0; T3 = T3(ok,:); T3.y = log(T3.y);
-    [l3, R.reForm{3}] = fit_chain(T3);
+    try   l3=fitlme(T3,'y ~ cond*xw + (1+cond|sess) + (1|mouse)','FitMethod','REML');
+    catch, l3=fitlme(T3,'y ~ cond*xw + (1|sess) + (1|mouse)','FitMethod','REML'); end
     [~,~,C3]=fixedEffects(l3,'DFMethod','Satterthwaite'); C3=lmm_cluster_df(dataset2table_safe(C3),nS);
     k=find(strcmp(cellstr(string(C3.Name)),'cond_CL:xw'),1);
     R.att=C3.Estimate(k); R.attCI=[C3.LowerC(k) C3.UpperC(k)]; R.attP=C3.pValueC(k);
     R.attT=C3.tStat(k); R.attDF=C3.DFc(k);
 catch ME, warning('f4_row2_fit:att','attenuation fit failed: %s',ME.message); end
-end
-
-function [lme, re] = fit_chain(T)
-% Fit y ~ cond*xw + <RE> + (1|mouse), trying the random-effects structures in order of
-% RE_CHAIN and returning the first that fits. A fallback is reported so it never passes silently.
-RE_CHAIN = {'(1+cond+xw|sess)','(1+cond|sess)','(1|sess)'};
-for i = 1:numel(RE_CHAIN)
-    try
-        lme = fitlme(T, ['y ~ cond*xw + ' RE_CHAIN{i} ' + (1|mouse)'], 'FitMethod','REML');
-        re = RE_CHAIN{i};
-        if i > 1, warning('f4_row2_fit:fallback','random effects fell back to %s', re); end
-        return
-    catch ME
-        if i == numel(RE_CHAIN), rethrow(ME); end
-    end
-end
 end

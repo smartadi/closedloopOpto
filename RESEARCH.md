@@ -16,6 +16,27 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - Is n enough for a Fig-4 random state slope? Yes (15/11 sessions); the locked model is the one that fails
+**Changed/Found:** New `controller-analysis/f4_randslope_n_check.m` [F4RSN], which writes `data/f4_randslope_n_check.mat`.
+- **(1) Session slopes genuinely vary.** REML LRT locked vs random slope: initdev p = 8e-8, motion 0.015, rel 3e-4, abs 2e-6. AIC is lower with the slope in all four. The session SD of the state slope is 0.74–1.13× the fixed OL slope.
+- **Full covariance is at its limit for motion** (11 sessions): one slope correlation is −0.95. Initdev has 0.92.
+- **(2) Simulation at the real design**, 200 sims per state, OL state slope, Satterthwaite df capped at nSess−1:
+
+  | State | Type-I locked | Random | Uncorrelated `(xw-1\|sess)` | Power (random / uncorr) |
+  |---|---|---|---|---|
+  | initdev | 0.315 | 0.045 | 0.040 | 0.63 / 0.63 |
+  | motion (n = 11) | 0.115 | 0.015 | 0.025 | 0.67 / 0.66 |
+  | rel | 0.215 | 0.065 | 0.045 | 0.07 (no true effect) |
+  | abs | 0.645 | 0.055 | 0.045 | 0.98 / 0.99 |
+
+- **Uncorrelated-slope Fig 4 numbers** (pred / reg / att):
+  - initdev: +0.18 p = 0.014 / +0.15 p = 0.028 / +0.3% p = 0.89
+  - motion: +0.16 p = 0.013 / −0.07 p = 0.27 / −9.0% p = 0.0048
+  - rel: +0.02 p = 0.76 / +0.12 p = 0.044 / +5.4% p = 0.027
+  - abs: +0.30 p = 6.6e-4 / +0.36 p = 1.6e-4 / +7.8% p = 0.0014
+**Why:** User question, 2026-10-11: "is n enough for figure 4 random slope?". Earlier the same day they had asked to revert because "n is not too high".
+**Next:** The user picks locked / full random slope / uncorrelated slope; my recommendation is uncorrelated. The working tree has `utils/f4_row2_fit.m` and `paper_stats_table.m` restored to the locked model (uncommitted), while the 4D panel and STATS_TABLE on disk are still from the full random-slope run. Finalise, rerun and commit once the user decides. Fig 2G (4 sessions) is genuinely too small for a random slope.
+
 ### 2026-10-11 - Closed loop reshapes the spectrum during stimulation: <1 Hz down, 2-6 Hz up (waterbed); none before the laser
 **Changed/Found:** I added section (4) to `controller-analysis/f4_rel_abs_checks.m`. It computes the CL/OL mean-PSD ratio per session (detrend + Hann, density), median over 15 sessions with a signrank on the log ratio.
 - **Stimulation [0,+3) s:**
