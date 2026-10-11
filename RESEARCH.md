@@ -35,7 +35,7 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
   - rel: +0.02 p = 0.76 / +0.12 p = 0.044 / +5.4% p = 0.027
   - abs: +0.30 p = 6.6e-4 / +0.36 p = 1.6e-4 / +7.8% p = 0.0014
 **Why:** User question, 2026-10-11: "is n enough for figure 4 random slope?". Earlier the same day they had asked to revert because "n is not too high".
-**Next:** The user picks locked / full random slope / uncorrelated slope; my recommendation is uncorrelated. The working tree has `utils/f4_row2_fit.m` and `paper_stats_table.m` restored to the locked model (uncommitted), while the 4D panel and STATS_TABLE on disk are still from the full random-slope run. Finalise, rerun and commit once the user decides. Fig 2G (4 sessions) is genuinely too small for a random slope.
+**Next:** The user picks locked / full random slope / uncorrelated slope; my recommendation is uncorrelated. `utils/f4_row2_fit.m` and `paper_stats_table.m` were restored to the locked model and that restore went into commit 7f6fcbc (a `git checkout <rev> -- path` stages the files). The 4D panel and STATS_TABLE.csv are still the full random-slope outputs from c58b15a, so code and outputs disagree until the decision is made. Finalise, rerun and commit once the user decides. Fig 2G (4 sessions) is genuinely too small for a random slope.
 
 ### 2026-10-11 - Closed loop reshapes the spectrum during stimulation: <1 Hz down, 2-6 Hz up (waterbed); none before the laser
 **Changed/Found:** I added section (4) to `controller-analysis/f4_rel_abs_checks.m`. It computes the CL/OL mean-PSD ratio per session (detrend + Hann, density), median over 15 sessions with a signrank on the log ratio.
