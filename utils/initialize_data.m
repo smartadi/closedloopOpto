@@ -26,12 +26,21 @@ function d = initialize_data(mn,en,td)
     
     %% motion
 
+    % The server is READ-ONLY for us (user, 2026-10-11). Read motEngF/motEngProc from the
+    % session folder when they exist; anything we compute goes to a LOCAL cache
+    % (brain_paper/data/motion_cache/), never back into the server session folder.
     facefile  = fullfile(serverRoot, 'motEngF.npy');
     videofile = fullfile(serverRoot, 'face.mp4');
+    mcDir     = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'data', 'motion_cache');
+    mcTag     = sprintf('%s_%s_%s', char(mn), char(td), num2str(en));
+    faceLocal = fullfile(mcDir, [mcTag '_motEngF.npy']);
+    procLocal = fullfile(mcDir, [mcTag '_motEngProc.npy']);
 
-    if isfile(facefile) || isfile(videofile)
+    if isfile(facefile) || isfile(faceLocal) || isfile(videofile)
         if isfile(facefile)
             motEng = readNPY(facefile);
+        elseif isfile(faceLocal)
+            motEng = readNPY(faceLocal);
         else
             vr = VideoReader(videofile);
             nf = vr.NumFrames;
@@ -43,18 +52,22 @@ function d = initialize_data(mn,en,td)
                 motEng(q) = sum(sum((thisFrame - lastFrame).^2));
                 lastFrame = thisFrame;
             end
-            writeNPY(motEng, facefile);
+            if ~exist(mcDir, 'dir'), mkdir(mcDir); end
+            writeNPY(motEng, faceLocal);
         end
 
         % Downsample to match d.timeBlue (imaging runs at 2x camera, blue = every other frame)
         procfile = fullfile(serverRoot, 'motEngProc.npy');
         if isfile(procfile)
             motEngDS = readNPY(procfile);
+        elseif isfile(procLocal)
+            motEngDS = readNPY(procLocal);
         else
             motEngDS = downsample(double(motEng(:)), 2);
             motEngDS = medfilt1(motEngDS, 5);
             motEngDS = zscore(motEngDS);
-            writeNPY(motEngDS, procfile);
+            if ~exist(mcDir, 'dir'), mkdir(mcDir); end
+            writeNPY(motEngDS, procLocal);
         end
 
         % Low-pass filter

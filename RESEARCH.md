@@ -16,6 +16,71 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - CORRECTION: the Fig 2 "hemo change" was OUR frame-index alignment; the new correction itself barely moves the impulse response
+**Found:** Read-only diagnostic `scratchpad/hemo_align_diag.m` (per-amp 0–200 ms response at the readout kernel, load_experiments definition). It compares old corr, new corr and raw blue (no correction), each aligned by frame index (`round((tStim − timeBlue(1))·35)+1`, as `load_experiments.m:279` does) and by that V's own timestamps.
+
+Dose slopes in %ΔF/F per V:
+
+| Session | old, index (published) | new, index (today's rerun) | new, timestamps | raw blue |
+|---|---|---|---|---|
+| AL_0041 e1 | −0.301 | −0.073 | −0.295 | −0.396 |
+| AL_0041 e2 | −0.479 | −0.253 (4/5 amps wrong sign) | −0.438 | −0.456 |
+| AL_0033 | −0.515 | −0.332 (non-monotonic) | −0.491 | −0.506 |
+
+- Cause: the new corr drops the first blue frame, so column k = blue frame k+1, and it is stamped at blue frame times (t(1) − timeBlue(1) = +35.6 ms; old +21.1 ms; blue +0.0 ms).
+- Index alignment therefore puts every trial ~1.5 frames (~43 ms) earlier than before. The onset reference sample `dF(b)` lands inside the dip, and the 0–200 ms window takes in the rebound.
+- The user spotted it ("a lot of amps are showing negative dose response which might be incorrect").
+- Aligned by timestamps, the new correction reproduces the published dose-response and matches raw blue, as the lab expected for fast signals.
+- So the 2026-10-11 entry "LAB-WIDE HEMO RECOMPUTE" is WRONG in two places: the slope numbers it lists (−0.301 → −0.076 etc.), and its line "loadUVt reads the new timestamps file, so the alignment is handled". load_experiments never uses t.
+- The audit workflow also found that `imp_build_session` (4G) takes onF from corr timestamps but indexes the rig's dFk by blue frame. On the new corr, G is therefore one frame ahead of A.
+- AL_0039 0420 e2 lost 75 zero frames mid-session, so index alignment drifts there.
+
+**Why:** The user flagged the negative amplitudes before the full Fig 2 rerun. The wrong-sign responses come from the alignment, not from the data.
+**Next:**
+- Do NOT place today's new-corr panels (2B imp_response, 2C, 2D, supp tf_cv_*); they are misaligned.
+- Fix: align V by its own timestamps (load_experiments.m:279 for dF and the S1 maps; keep the blue-frame index for motion), and fix the same in imp_build_session / ctrl caches before 4G or MPC are rebuilt.
+- Then rerun Fig 2 + S1 on the new corr for the user's approval.
+- Correct the hub worklog line that quoted the false slopes.
+- Diagnostic figure: `scratchpad/hemo_align_diag.png`.
+
+### 2026-10-11 - utils/initialize_data.m wrote motion energy INTO the server session folder; now writes a local cache
+**Changed:** `utils/initialize_data.m` motion block.
+- It used to `writeNPY(motEng, <session>/motEngF.npy)` and `writeNPY(motEngDS, <session>/motEngProc.npy)` whenever those files were missing, i.e. it wrote into the server session folder.
+- Now it reads the server copy if one exists, else a local copy in `brain_paper/data/motion_cache/<mn>_<td>_<en>_motEng{F,Proc}.npy` (git-ignored). Anything it computes goes only to that local cache.
+- Same values; only the write location changed. Not yet run in MATLAB.
+**Why:** The user: "you do not have permission to edit files on server". The new server-write guard's sweep of all 557 project .m/.py files flagged this as the only real server write in project code. Any earlier controller-session load that computed motion from face.mp4 would have left a motEngF.npy/motEngProc.npy on the server.
+**Next:** On the next `load_sessions` with a missing motion file, check that data/motion_cache fills and nothing appears on the server. Optionally ask the user whether earlier motEng*.npy files on the server came from this code.
+
+### 2026-10-11 - Server read-only guard: PreToolUse hook blocks any Claude write to the lab servers
+**Changed:**
+- NEW `.claude/hooks/server_readonly_guard.py` and NEW `.claude/settings.json` (project, committed, so it travels to the home PC).
+- The same hook was added to the user-level `~/.claude/settings.json` on this PC, pointing at the repo script. It covers sessions started in any folder.
+- Matcher: Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell|mcp__matlab__.*.
+- Servers covered: \\sahale, \\steinmetzsuper1, zserver, \\tower/Z: (`net use` maps Z: to \\tower.wanprc.org\Azadeh), and any *.washington.edu / cortexlab.net / wanprc.org UNC path.
+- What it blocks:
+  - file edits on a server path;
+  - shell redirects into a server;
+  - rm/mv/mkdir/touch/Remove-Item/Set-Content/... on one;
+  - copies whose destination is a server; sed -i; git writes;
+  - cd-into-server followed by a write; $VAR indirection; pipelines from the server into a write; unknown verbs on server paths;
+  - Python/MATLAB write calls (save, writeNPY, np.save, open 'w', shutil, os.remove, exportgraphics, ...) on a server literal or a variable built from one (expPath, serverRoot; flow-sensitive). It scans inline code, script files named on the command line, MATLAB MCP code, and repo scripts called by name, one level deep.
+- Reads stay allowed. If the script is missing the hook exits 1 (non-blocking, with a warning) so it cannot lock tools.
+- Test suite `scratchpad/guard_test.py`: 49 must-block and 24 must-allow cases, all pass. The repo sweep flags only initialize_data.m (real; fixed above), and nothing after the fix.
+- Live self-test: a shell command containing the script's SELFTEST marker was blocked by both the project and user hooks. Blocks are logged to `~/.claude/hooks/server_guard.log`.
+- It conservatively blocks running any local script that literally contains server-write code, even inside a string.
+**Why:** The user: "you do not have permission to edit files on server in case you didnt know, make sure we make a hook that makes sure of this".
+**Next:** Heuristic, not a sandbox: it cannot see paths built inside functions it never reads (one level of called scripts). Revisit if a block looks wrong. Z:/tower is included by default; drop it from SERVER in the script if Claude should ever write there for Yazdan Lab work.
+
+### 2026-10-11 - Switch to reproduce the OLD hemo correction (old-vs-new comparison of Fig 2 and S1)
+**Changed:**
+- NEW `utils/loadUVt_hemo.m`: calls `loadUVt`, then, if `global HEMO_CORR` names an old folder (e.g. `'corr_hemoApr2021'`), takes V and t from that folder. Empty, or `'corr'`, gives exactly `loadUVt` (the new server corr).
+- `impulse-analysis/load_experiments.m:87` now calls `loadUVt_hemo` instead of `loadUVt`.
+- The vendored `loadUVt` is untouched. Server reads only.
+- All three impulse sessions have `corr/` plus `corr_hemoApr2021/` on the server (checked today).
+- Snapshot of everything before the comparison runs: `paper/_hemo_compare/orig_snapshot_2026-10-11/`. It holds figures_final figure2 and supplementary, `imp_tf_fits.mat`, `fig2g_state_stats.mat`, `fig2g_hboot.mat`, `STATS_TABLE.csv`, stim_vars, and the Overleaf `Figure2.pdf`.
+**Why:** The user wants to see every changed figure and approve it. If they reject it, we go back to the original version. Rendering both corrections from identical code (with today's mW = V/3 labels) isolates the effect of the correction, and it lets us revert without anything lost.
+**Next:** Run the Fig 2 + S1 chain with HEMO_CORR = '' (new), then with 'corr_hemoApr2021' (old, run last so figures_final ends in the original state). Store each set in `paper/_hemo_compare/{new,old}/` and build side-by-side sheets.
+
 ### 2026-10-11 - LAB-WIDE HEMO RECOMPUTE: impulse sessions' corr/ replaced this morning; today's Fig 2 re-exports use the NEW correction
 **Found:** On the server, `corr/svdTemporalComponents_corr.npy` was replaced on 2026-10-11 for AL_0041 2025-12-02 e1 (09:08) and e2 (09:09) and AL_0033 2025-01-29 e1 (10:36). The old file was moved to `corr_hemoApr2021/` with a README: "Old hemodynamic correction: do not use… overcorrected: subtracted about 1.8 times the hemodynamic signal, leaving about 0.8 of that signal with its sign flipped… differs from a fresh run by 43.5%… redo anything computed from corr/ before 2026-10-11."
 - Lab explainer: `\\sahale\data\Code\dataChangeLog\2026-10_hemoCorrect_recompute\EXPLAINER.md` (Anna Li, in progress). About 860 sessions recomputed; 831 were made by the Apr 2021 version.

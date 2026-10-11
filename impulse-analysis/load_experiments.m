@@ -82,7 +82,9 @@ traces(tInd).lims = [0 5];
 
 nSV = 500;
 
-[U, V, t, mimg] = loadUVt(serverRoot, nSV);
+% loadUVt_hemo = loadUVt, unless global HEMO_CORR names an old correction folder (e.g.
+% 'corr_hemoApr2021'): the server corr/ was recomputed 2026-10-11, the old one kept beside it.
+[U, V, t, mimg] = loadUVt_hemo(serverRoot, nSV);
 %
 mv   = d.motion.motion_1(1:2:end);
 mv_z = zscore(mv);
