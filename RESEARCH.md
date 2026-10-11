@@ -16,6 +16,61 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-10 - Manuscript Fig 2 numbers updated after the AL_0041 rebin
+**Changed/Found:** Closedloop_edit `results.tex`:
+- 2A amplitude range is now 0.23–0.90 mW.
+- 2B is now 44–100 trials per amplitude.
+- Bootstrap >window rises to 42–55%.
+- Mouse 1b slope −1.30/mW, R² 0.76.
+- Cross-session swap R² 0.74.
+- Rebound τ 0.18/0.30/0.33/0.59 s.
+- 2G text matches the new STATS_TABLE `2G_*` rows:
+  - motion t = −5.00, p = 0.015;
+  - rel 1.03 [0.81, 1.39], ρ +0.092, p = 1.0e-4, control ρ +0.007, p = 0.77, t = 2.79;
+  - abs 2.10 [1.59, 2.87], t = 17.6, p = 4.0e-4, control ratio 2.24.
+
+`discussion.tex` 2-pole value 0.84 → 0.83. In `methods_rewrite.tex`, "Amplitudes with fewer than 20 trials were excluded" became "Every nonzero amplitude had at least 44 trials", because the code has no such filter. The PDF builds clean.
+**Why:** The detector rebin and the Fig 2 rerun (entries below) changed these values.
+**Next:** The pooled 0.86 and the ≈0.145 s dip are unchanged, and so is "three to nine nonzero levels". The 2A legend still converts with /3 (the user said Fig 2 laser values are fine), while the text slopes use ×4.9/1.8.
+
+### 2026-10-10 - 2-pole CV redone after rebin: pooled held-out R² 0.829 vs 0.855 (4-pole main)
+**Changed/Found:** I ran this ad hoc in the workspace and changed no files.
+- Setup: `imp_tf_fit_session` with maxPoles 2 / maxZeros 1 / maxDelay 3 / 0.5 s / AIC, then `imp_tf_cv` with Sprim = those fits, CV_NSPLIT = 100, CV_EXPORT = false and PAPER_FINAL = false. I confirmed no panel was written, and Sprim was restored afterwards.
+- Orders chosen: 2p0z1d / 2p1z1d / 2p0z0d / 2p0z0d.
+- Per-session held-out R²: 0.514 / 0.774 / 0.872 / 0.876. The main 4-pole model gives 0.503 / 0.855 / 0.948 / 0.841.
+- Pooled: 0.829 vs **0.8552** (main, recomputed at 4 decimals, so "0.86" stands).
+**Why:** Discussion L9 quotes the 2-pole vs main comparison, and the rebin changed AL_0041 e2. This run uses 100 splits, like-for-like with the main analysis; the original used 30.
+**Next:** none
+
+### 2026-10-10 - Fig 2 rerun after the AL_0041 rebin: results
+**Changed/Found:** The full chain ran with PAPER_FINAL on: `load_experiments` → `f2_slope_ci` → `dose_response` → `trace_overlay` → `imp_tf_run` (300 boot) → `imp_tf_cv` → `imp_state_trialvar` → `fig2g_state_stats.mat` → `imp_state_trialvar_fig` → `paper_stats_table`.
+- AL_0041 e2 bins: 0.7/1.3/1.9/2.6/2.7 V, n = 53/58/45/50/54 (was 6 bins, with 26 + 19 trials on a split plateau). The other sessions are unchanged.
+- Mouse 1b: slope −0.479 %/V = −1.30/mW (was −1.36), R² 0.76 (was 0.51). The other three slopes are unchanged.
+- e2 refit 4p3z0d: τ rebound 0.586 s (was 0.54) and dip 0.107 s at 4.2 Hz (was 0.093). Dip pairs across sessions are 2.9–4.3 Hz, so "3–4 Hz" holds. The median dip is 0.145 s; 3/4 sessions fall in 0.14–0.15.
+- Bootstrap refits with τ > window: 42 / 55 / 4 / 43%.
+- Swap: self 0.991 vs cross 0.738 (was 0.71).
+- CV pooled 0.855.
+- 2G: motion ratio 0.731 [0.509, 0.913], t = −4.997, p = 0.0154; rel 1.025 [0.815, 1.389], t = 2.792, p = 0.068; abs 2.105 [1.586, 2.871], t = 17.64, p = 3.97e-4; 1767 trials unchanged.
+- Changed final panels: imp_response, imp_single_AL_0041_2025-12-02_en2, tf_cv_2D_sidebar, tf_model_swap, tf_tau_forest, imp_state_var_combined, plus supplementary tf_cv_2D_endlabels and tf_cv_shape_across_sessions.
+- Backups of the pre-rebin fits, stats and CSV are in the session scratchpad.
+**Why:** The user asked to "rebin al41, rerun".
+**Next:** The user re-places the changed panels in Illustrator. Gotcha from this run: a base-workspace variable named `lines` shadows `lines()` and breaks `imp_state_trialvar` with "Invalid color", so never name a variable `lines`.
+
+### 2026-10-10 - loadData: local motion fallback; AL_0041 2025-12-02 face_proc.mat is gone from the server
+**Changed/Found:**
+- `utils/loadData.m`: if `face_proc.mat` does not load, `d.motion.motion_1` is read from the local `impulse-analysis/data/<mn>_<td>_e<en>_face_proc_motion_1.npy`, and `d.motion_source` is set.
+- `utils/faceproc_npy_motion.py` (new, numpy only) extracts facemap `motion[1]` from `face_proc.npy` into that file.
+- Local caches were made for AL_0041 2025-12-02 e1/e2 and AL_0033 2025-01-29 e1. These sit in a gitignored data dir, so they are lab-PC local.
+- Checked on AL_0033: npy `motion[1]` is identical to the old .mat `motion_1`.
+
+**Why:** `load_experiments` failed because the server now has only `face_proc.npy` for the AL_0041 sessions. The server is read-only for us, so the fix is a local cache, not a rewrite of server files.
+**Next:** On the home PC, regenerate the caches with `faceproc_npy_motion.py` before running Fig 2.
+
+### 2026-10-10 - detectStimEvents_idx: gap-based amplitude grouping (AL_0041 e2 split plateau merged)
+**Changed/Found:** `utils/detectStimEvents_idx.m`: amplitude levels are now found by sorting per-event amplitudes and starting a new group where consecutive values differ by more than `GapTol = 0.03` V (new option `'gaptol'`). Each group is labelled `round(median/AmpTol)*AmpTol`, and an `assert` fires if two groups get the same label. Plain rounding had split AL_0041 2025-12-02 e2's 1.945–1.958 V plateau into "1.9" (26 events) and "2.0" (19 events).
+**Why:** One physical level was being treated as two amplitudes. That halved the trials per bin and distorted the Mouse 1b dose-response (R² 0.51). Within-plateau spread is ≤0.013 V in every impulse session, and the closest real levels are 0.079 V apart (2.594 vs 2.682 V), so 0.03 V separates them safely.
+**Next:** Other callers (`imp_lds_grid.m`, `package_for_collab.m`) inherit the change. Their sessions had no split plateaus, so their labels are unchanged.
+
 ### 2026-10-10 — AUDIT: direct-MPC gain inflated by a one-frame timing advantage; fair number is 0.78x, not 0.65x
 **Changed/Found:** `controller-analysis/mpc_direct_audit.py` (new; recorded-data checks) and `mpc_direct.py` (new `MPCD_LAT` option = frames of latency for the MPC; new `MPCD_AUDIT` block → `data/mpc_direct_audit_<sess>.mat`). Results:
 

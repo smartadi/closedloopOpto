@@ -96,6 +96,18 @@ try
     d.mv = d.motion.motSVD_0(1:2:end,1);
 catch
 end
+% 2026-10-10: some sessions have only facemap's face_proc.npy on the server (AL_0041
+% 2025-12-02 e1/e2; face_proc.mat is gone). Fall back to a LOCAL motion cache extracted from it
+% with utils/faceproc_npy_motion.py: impulse-analysis/data/<mn>_<td>_e<en>_face_proc_motion_1.npy
+% (= facemap motion[1], what face_proc.mat stored as motion_1). The server is never written.
+if ~isfield(d,'motion')
+    fm = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'impulse-analysis', 'data', ...
+        sprintf('%s_%s_e%d_face_proc_motion_1.npy', mn, td, en));
+    if exist(fm,'file')
+        d.motion = struct('motion_1', readNPY(fm));
+        d.motion_source = fm;
+    end
+end
 
 end
 

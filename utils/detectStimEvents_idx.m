@@ -6,6 +6,7 @@ function [stimStarts_time, stimEnds_time, uniqueImpulseAmp, idxByImpulseAmp] = .
     ThreshFrac  = 0.1;
     AmpTol      = 0.0;
     PreWin_sec  = 0.02;
+    GapTol      = 0.03;   % V; see grouping note below
 
     % Parse optional args
     for k = 1:2:length(varargin)
@@ -18,6 +19,8 @@ function [stimStarts_time, stimEnds_time, uniqueImpulseAmp, idxByImpulseAmp] = .
                 AmpTol = varargin{k+1};
             case 'prewin'
                 PreWin_sec = varargin{k+1};
+            case 'gaptol'
+                GapTol = varargin{k+1};
         end
     end
 
@@ -81,8 +84,23 @@ function [stimStarts_time, stimEnds_time, uniqueImpulseAmp, idxByImpulseAmp] = .
     end
 
     % --- Grouping (unique amplitudes) ---
+    % 2026-10-10: group by GAPS between sorted per-event amplitudes (a new level starts where
+    % consecutive amplitudes differ by > GapTol), then label each group on the AmpTol grid
+    % (round(median/AmpTol)*AmpTol). Plain rounding split a single plateau that straddles a
+    % rounding boundary: AL_0041 2025-12-02 e2's 1.945-1.958 V plateau went 26 events to "1.9"
+    % and 19 to "2.0" (RESEARCH 2026-10-10). Within-plateau spread is <= 0.013 V in every impulse
+    % session, and the closest genuine levels are 0.079 V apart (AL_0041 e2, 2.594 vs 2.682 V),
+    % so GapTol = 0.03 merges split plateaus without merging real levels. Labels are unchanged
+    % for every group that rounding did not split.
     if AmpTol > 0
-        ampKey = round(amp / AmpTol) * AmpTol;
+        [sa, so] = sort(amp);
+        gid = cumsum([1; diff(sa) > GapTol]);
+        ampKey = zeros(size(amp));
+        for gI = 1:max(gid)
+            ampKey(so(gid == gI)) = round(median(sa(gid == gI)) / AmpTol) * AmpTol;
+        end
+        assert(numel(unique(ampKey)) == max(gid), 'detectStimEvents_idx:labels', ...
+            'two amplitude groups round to the same %.2f V label; inspect the levels', AmpTol);
     else
         ampKey = amp;
     end
