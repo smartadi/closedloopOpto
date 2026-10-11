@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - The pre-stim "rise" in the new-corr impulse responses comes from index alignment, not from the new hemo correction
+**Found:** Read-only diagnostic `paper/_hemo_compare/prestim_diag/hemo_prestim_diag.m` (copy of a scratchpad script; figures in the same folder). It builds trial-averaged kernel traces for all 3 impulse sessions from old corr (index-aligned), new corr (timestamp-aligned), raw blue and raw violet (each + detrendAndFilt), with baseline −1..−0.3 s instead of the onset sample, and a sham at 400 random non-stim times.
+- **Onset-referenced, index-aligned new corr** (`hemo_onsetref_index_vs_ts.png`): the whole pre-stim trace sits about +0.5 to +1.3 % above old. The onset sample `dF(b)` is ~1.5 frames late and already inside the dip, so subtracting it lifts everything before onset. This is the "activity rises before the stim" look.
+- **Timestamp-aligned new corr** overlays old corr on all 3 sessions, pre-stim included.
+- **Raw blue (no hemo correction) shows the same pre-stim shape** as both corrections. Example: AL_0041 e1 at 2.7 V has a +0.5..0.9 % bump from −250 to 0 ms in old, new and blue alike. So it is in the data, not added by the correction.
+- Pre-stim mean (−200..−29 ms) is not graded with laser amplitude in any session, and it is within the spread of the sham pre-values (−0.53..+0.40 %). So it reads as ongoing activity/noise at n≈55–85 trials, not stim-locked leakage.
+- Raw violet is flat around the stim in all sessions: no laser bleed into the violet channel that the regression could subtract and smear.
+- Mechanism check in the code: `HemoCorrectLocal` regression and `detrendAndFilt` both use causal `filter()`. The only non-causal step is `resample(V', t, 2·Fs)` in `hemoCorrect.m` (vendored copy; the server c0de607 version was not readable). It is an FIR sinc interpolation; on a synthetic 1-frame dip it puts −0.61 at −14 ms and +0.19 at −43 ms. That only matters for transients shorter than ~2 frames. The real GCaMP dip is ~100 ms wide, so new ≈ blue in the real traces (AL_0033: identical).
+**Why:** The user suspected the new hemo correction's filtering creates a pre-stim rise in the impulse responses.
+**Next:** Use timestamp alignment (the uncommitted `load_experiments.m` fix) for every new-corr rerun of Fig 2 / S1. If any onset-referenced panel still shows a pre-onset lift after the fix, check its alignment first. Optional: read the server's c0de607 `hemoCorrect.m` to confirm it still uses `resample`.
+
 ### 2026-10-11 - CORRECTION: the Fig 2 "hemo change" was OUR frame-index alignment; the new correction itself barely moves the impulse response
 **Found:** Read-only diagnostic `scratchpad/hemo_align_diag.m` (per-amp 0–200 ms response at the readout kernel, load_experiments definition). It compares old corr, new corr and raw blue (no correction), each aligned by frame index (`round((tStim − timeBlue(1))·35)+1`, as `load_experiments.m:279` does) and by that V's own timestamps.
 
