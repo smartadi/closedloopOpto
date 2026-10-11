@@ -84,6 +84,8 @@ nSV = 500;
 
 % loadUVt_hemo = loadUVt, unless global HEMO_CORR names an old correction folder (e.g.
 % 'corr_hemoApr2021'): the server corr/ was recomputed 2026-10-11, the old one kept beside it.
+% It must be a GLOBAL set after any `clear all`:  global HEMO_CORR; HEMO_CORR = 'corr_hemoApr2021';
+% The [hemo] and [LE] lines below print which correction and column mapping were used.
 [U, V, t, mimg] = loadUVt_hemo(serverRoot, nSV);
 %
 mv   = d.motion.motion_1(1:2:end);
@@ -271,15 +273,58 @@ iSpec_hw = round(1.0 / dt_spec);          % Â±1 s in spectrogram bins
 nF  = numel(dF);
 nMv = numel(mv_z);
 t0  = d.timeBlue(1);
+
+% ---- V column of each blue frame (2026-10-11) ------------------------------------------
+% The stim is placed on a BLUE FRAME (published convention: the frame whose exposure onset
+% is nearest the stim, bBlue below). dF/V and motion are then read at that frame.
+% The server corr recomputed on 2026-10-11 (Pipelines c0de607) drops the first blue frame
+% (and any frame at an LED slip, gap or blank), so V column k is NOT blue frame k: assuming
+% it shifted every trial ~1.5 frames and broke Fig 2 (RESEARCH 2026-10-11 CORRECTION). Map
+% columns to blue frames through V's own timestamps (blue frame times, ~7 ms after exposure
+% onset). The old corr (HEMO_CORR = 'corr_hemoApr2021') keeps the published identity mapping:
+% its columns are blue frames 1..N but its timestamps are violet times (~21 ms late).
+% Motion (mv_z) is indexed by blue frame and is unaffected.
+global HEMO_CORR
+if ~isempty(HEMO_CORR) && ~strcmp(HEMO_CORR, 'corr')
+    blueOfCol = (1:nF)';
+else
+    tV = double(t(:));
+    if numel(tV) == nF + 1, tV = tV(1:nF); end       % blue/ fallback can carry one extra stamp
+    blueOfCol = round(interp1(double(d.timeBlue(:)), (1:numel(d.timeBlue))', tV, 'nearest', 'extrap'));
+    offMs = 1e3 * (tV - d.timeBlue(blueOfCol));
+    % Stamps must be blue frame times (c0de607: +6.6..+7.6 ms after exposure onset). Violet
+    % stamps (+21 ms) would map one frame late without this check.
+    assert(numel(tV) == nF && all(diff(blueOfCol) > 0) && all(offMs > -2 & offMs < 0.5e3/fs) ...
+        && range(offMs) < 3, ['[LE] V timestamps do not map one-to-one onto blue frames ' ...
+        '(%s %s e%d; offset %.1f..%.1f ms)'], mn, td, en, min(offMs), max(offMs));
+end
+colOfBlue = nan(max(numel(d.timeBlue), blueOfCol(end)), 1);
+colOfBlue(blueOfCol) = 1:nF;
+fprintf('[LE] %s %s e%d: V column 1 = blue frame %d, %d blue frames have no V column (HEMO_CORR=''%s'')\n', ...
+    mn, td, en, blueOfCol(1), sum(isnan(colOfBlue(1:min(end, blueOfCol(end))))), char(HEMO_CORR));
+
 for i = 1:length(uAmp)
     impulseNums  = idxByAmp{i};
     startTimes_i = stimStarts(impulseNums);
 
     % vectorised nearest-frame lookup (avoids per-trial linear scan)
-    bAll  = round((startTimes_i(:) - t0) * fs) + 1;
-    bAll  = max(1, min(nF, bAll));
-    valid = (bAll - winSamp) >= 1 & (bAll + winSamp) <= min(nF, nMv);
+    bBlue = round((startTimes_i(:) - t0) * fs) + 1;              % blue frame of each stim
+    bBlue = max(1, min(numel(colOfBlue), bBlue));
+    bAll  = colOfBlue(bBlue);                                     % V column (NaN = frame dropped)
+    valid = isfinite(bAll) & (bAll - winSamp) >= 1 & (bAll + winSamp) <= nF & ...
+            (bBlue - winSamp) >= 1 & (bBlue + winSamp) <= nMv;
+    % a dropped frame INSIDE a trial's +/-3 s window would warp dfImp against t_win and
+    % motTrace: exclude such trials (never happens with the identity mapping of the old corr)
+    vi = find(valid);
+    gapFree = all(reshape(blueOfCol(bAll(vi) + (-winSamp:winSamp)), numel(vi), []) == ...
+                  bBlue(vi) + (-winSamp:winSamp), 2);
+    if any(~gapFree)
+        fprintf('[LE] %s %s e%d amp %.2f: %d trial(s) dropped (frame gap inside the window)\n', ...
+            mn, td, en, uAmp(i), sum(~gapFree));
+    end
+    valid(vi(~gapFree)) = false;
     bAll  = bAll(valid);
+    bBlue = bBlue(valid);
     valid_start = startTimes_i(valid)';
     nV    = numel(bAll);
 
@@ -306,14 +351,14 @@ for i = 1:length(uAmp)
         freqSpec = nan(0, nBands);
     else
         % df_imp and motTrace: extract all trials at once via index matrix
-        idxMat   = bAll(:) + (-winSamp:winSamp);              % nV Ã— nSamp
+        idxMat   = bAll(:) + (-winSamp:winSamp);              % nV Ã— nSamp  (V columns)
         baseline = reshape(dF(bAll), nV, 1);                  % force nV Ã— 1
         df_imp   = bsxfun(@minus, dF(idxMat), baseline);      % nV Ã— nSamp
-        motTrace = mv_z(idxMat);                               % nV Ã— nSamp
+        motTrace = reshape(mv_z(bBlue(:) + (-winSamp:winSamp)), nV, []);   % blue frames
 
         % motion cumsum over Â±35 samples (Â±1 s) â€” wide window kept for analysis flexibility
-        i0_mot = max(1,   bAll - 35);
-        i1_mot = min(nMv, bAll + 35);
+        i0_mot = max(1,   bBlue - 35);
+        i1_mot = min(nMv, bBlue + 35);
         mot    = (cumMv(i1_mot + 1) - cumMv(i0_mot))';   % 1 Ã— nV
 
         % freqSpec: pre-allocated, integer-index spectrogram slice per trial
@@ -399,6 +444,7 @@ allExperiments(expIdx).DF_imp = DF_imp;
 allExperiments(expIdx).uAmp      = uAmp;
 allExperiments(expIdx).dF        = dF;
 allExperiments(expIdx).timeBlue  = d.timeBlue;
+allExperiments(expIdx).blueOfCol = blueOfCol;   % blue frame of each dF/V column (dF(k) is at timeBlue(blueOfCol(k)))
 allExperiments(expIdx).mv_z          = mv_z;
 allExperiments(expIdx).freqBandCtrs  = freqBandCtrs;
 allExperiments(expIdx).brainMask     = brainMask_e;

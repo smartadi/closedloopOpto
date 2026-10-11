@@ -16,6 +16,51 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - load_experiments aligns V by timestamps; Fig 2 + S1 rendered on OLD vs NEW hemo correction for approval
+**Changed:** `impulse-analysis/load_experiments.m`:
+- Each stim is placed on a blue frame (`bBlue`, the published rounding).
+- dF/V is read at `colOfBlue(bBlue)`, where `blueOfCol` maps every V column to its blue frame through V's own timestamps (new corr). The old corr (`HEMO_CORR='corr_hemoApr2021'`) keeps the identity mapping. Motion stays on `bBlue`.
+- New guards:
+  - an assert that the stamps sit −2..+14 ms after blue exposure onset (violet stamps would fail);
+  - trials whose ±3 s window spans a dropped frame are excluded;
+  - an extra trailing stamp is tolerated.
+- New field `allExperiments.blueOfCol`.
+- Reviewed by a 3-lens read-only workflow:
+  - old path: 20,000-case simulation, 0 mismatches;
+  - new path: blueOfCol == (2:N+1) in all three sessions, unambiguous, no interior gaps.
+
+**Found:**
+- **OLD pass** (old corr, today's code, PAPER_FINAL) reproduces the published results EXACTLY:
+  - 2B slopes −0.301 / −0.479 / −0.515 / −0.810;
+  - TF fits identical in every numeric field, including the bootstraps;
+  - CV pooled 0.855;
+  - 2G per-trial x/y identical;
+  - STATS_TABLE.csv byte-identical to HEAD.
+- **NEW pass** (new corr, timestamp alignment), compared with OLD:
+  - 2B slopes −0.295 / −0.438 / −0.510 (R² 0.971 / 0.732 / 0.882 vs 0.967 / 0.759 / 0.924); AL_0048 identical (not recomputed).
+  - 2C/2D CV pooled 0.845 vs 0.855 (shape 0.869 both).
+  - 2G motion 0.72 [0.52, 0.89] p=0.015 (was 0.73, p=0.015); abs δ 2.19 [1.60, 2.91] (was 2.10); rel δ ns (p=0.057 vs 0.068). Same stars.
+  - S1 maps and area essentially unchanged.
+  - **2F changes:**
+    - dip τ faster: M1a 0.148→0.106, M1b 0.107→0.112, M2 0.150→0.114 s; median 0.145→0.113 s;
+    - dip frequency 2.9/4.2/4.3→2.4/4.1/4.2 Hz;
+    - M1a's 3p1z slow pole goes to ~1 (τ = 1.7e6 s), which stretches the 2F axis to 1.7e6 s, so the panel is unusable as drawn;
+    - M1b slow τ 0.586→0.973 s; M2 0.333→0.268 s.
+  - 2E cross-session R² drops for M1b's model (0.90/0.83→0.85/0.62).
+- Outputs:
+  - `paper/_hemo_compare/{old,new}/` holds finals, data and logs;
+  - side-by-side page `paper/_hemo_compare/hemo_compare.html`;
+  - TF table `paper/_hemo_compare/tf_summary.csv`.
+- figures_final and the data caches were restored to the OLD set (= original + mW = V/3 labels) pending approval.
+
+**Why:** The user asked to approve the new-correction figures before adopting them ("if i dont approve we go back to the original version"). Identical code for both makes the correction the only difference.
+**Next:**
+- User decision.
+- If approved: copy `new/` finals and data back, and fix 2F's censoring of τ beyond the window (M1a's slow mode), or revisit M1a's order.
+- Update the manuscript numbers: dip τ ~0.11 s, 2.4–4.2 Hz, CV 0.845, 2B slopes.
+- 4G (imp_build_session) and the MPC caches need the same blueOfCol fix before they are rebuilt on the new corr.
+- The residual-stream scripts (f2_prep, cp_residual_core, ols_tf_pipeline, lds_ipsi) still assume column = blue frame and call loadUVt directly.
+
 ### 2026-10-11 - The pre-stim "rise" in the new-corr impulse responses comes from index alignment, not from the new hemo correction
 **Found:** Read-only diagnostic `paper/_hemo_compare/prestim_diag/hemo_prestim_diag.m` (copy of a scratchpad script; figures in the same folder). It builds trial-averaged kernel traces for all 3 impulse sessions from old corr (index-aligned), new corr (timestamp-aligned), raw blue and raw violet (each + detrendAndFilt), with baseline −1..−0.3 s instead of the onset sample, and a sham at 400 random non-stim times.
 - **Onset-referenced, index-aligned new corr** (`hemo_onsetref_index_vs_ts.png`): the whole pre-stim trace sits about +0.5 to +1.3 % above old. The onset sample `dF(b)` is ~1.5 frames late and already inside the dip, so subtracting it lifts everything before onset. This is the "activity rises before the stim" look.
