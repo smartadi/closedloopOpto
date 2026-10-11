@@ -289,7 +289,9 @@ if CV_SINGLE
             % 1.8/4.9 = 0.36735 mW/V (0 V = 0 mW, 4.9 V = 1.8 mW), used by prestim_variance.m,
             % spatial_spread.m and presentation/export_ampmaps.m. Every mW label on this panel
             % was therefore ~9.4% low.
-            vToMW  = 1.8 / 4.9;
+            % 2026-10-11 (user): the project convention is mW = Timeline volts / 3, the factor
+            % trace_overlay.m (2A) and tf_fit.m use; this reverts the 2026-10-03 switch to 1.8/4.9.
+            vToMW  = 1 / 3;
             lgS{i} = sprintf('%.2f mW  R^2=%.2f', S1.amp.uA(a)*vToMW, S1.amp.R2(a));
         end
         yline(axS, 0, '-', 'Color', [.6 .6 .6], 'LineWidth', PS.lw_zero);

@@ -20,7 +20,7 @@
 % ============================================================================
 
 PX_MM   = 0.0173;          % mm per pixel
-V_TO_MW = 1.8 / 4.9;       % command volts -> mW
+V_TO_MW = 1 / 3;           % Timeline modulation volts -> mW (project convention, user 2026-10-11)
 SEL     = 3;               % AL_0033 2025-01-29 e1
 ROI_HALF = 5;              % readout kernel half-width, px (rig ROI_HALF)
 

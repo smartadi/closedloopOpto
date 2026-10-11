@@ -69,7 +69,9 @@ ax_B = axes(fig_A, 'Position', [c2L, bm, cW, axH]);
 
 hold(ax_A, 'on');
 plot(ax_A, T, zeros(1,length(T)), 'k', 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
-plot(ax_A, tt(k_nc:k2_nc)-tt(k_nc), 5*v(k_nc:k2_nc), ...
+% Laser trace gain 4 in BOTH halves (OL was 5, CL 4, under one bar). Bar: 0.2 mW = 0.6 V
+% (mW = Timeline volts / 3, user 2026-10-11) = 2.4 units at gain 4; it was 2 units labelled 1 mW.
+plot(ax_A, tt(k_nc:k2_nc)-tt(k_nc), 4*v(k_nc:k2_nc), ...
     'Color', colInpOL, 'LineWidth', PS.lw_mean, 'HandleVisibility','off');
 plot(ax_A, T, dFk((i_nc-3*35):(i_nc+35*(dur+3))), ...
     'Color', colOL, 'LineWidth', PS.lw_mean, 'HandleVisibility','off');
@@ -78,8 +80,8 @@ xline(ax_A, 0, 'HandleVisibility','off');
 xline(ax_A, dur, 'HandleVisibility','off');
 ylim(ax_A, [-10 10]); xlim(ax_A, [-3 dur+3]);
 addStimPatch(ax_A, x1, x2);
-line(ax_A, [0 0], [6 8], 'Color', colInpOL, 'LineWidth', PS.lw_mean, 'Clipping','off', 'HandleVisibility','off');
-text(ax_A, -0.1, 8, '1 mW', 'Color', colInpOL, ...
+line(ax_A, [0 0], [6 8.4], 'Color', colInpOL, 'LineWidth', PS.lw_mean, 'Clipping','off', 'HandleVisibility','off');
+text(ax_A, -0.1, 7.2, '0.2 mW', 'Color', colInpOL, ...
     'HorizontalAlignment','right', 'VerticalAlignment','middle', 'Clipping','off');
 uistack(findobj(ax_A,'Type','line'), 'top');
 hold(ax_A, 'off');
@@ -205,7 +207,8 @@ ylim(ax_E, [-2 5]); xlim(ax_E, [-3 dur+3]);
 addStimPatch(ax_E, x1, x2);
 uistack(findobj(ax_E,'Type','line'), 'top');
 hold(ax_E, 'off');
-paperAxes(ax_E, 'XLength', 1, 'YLength', 2, 'XLabel', '1 s', 'YLabel', '1 mW');
+% Bar: 0.2 mW = 0.6 V (mW = V/3, user 2026-10-11) = 1.8 units at gain 3; it was 2 units labelled 1 mW.
+paperAxes(ax_E, 'XLength', 1, 'YLength', 1.8, 'XLabel', '1 s', 'YLabel', '0.2 mW');
 
 wc_inp_mean = mean(wc_inp, 1);
 wc_inp_std  = std(wc_inp, 0, 1);

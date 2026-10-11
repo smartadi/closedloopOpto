@@ -16,6 +16,37 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - LAB-WIDE HEMO RECOMPUTE: impulse sessions' corr/ replaced this morning; today's Fig 2 re-exports use the NEW correction
+**Found:** On the server, `corr/svdTemporalComponents_corr.npy` was replaced on 2026-10-11 for AL_0041 2025-12-02 e1 (09:08) and e2 (09:09) and AL_0033 2025-01-29 e1 (10:36). The old file was moved to `corr_hemoApr2021/` with a README: "Old hemodynamic correction: do not use… overcorrected: subtracted about 1.8 times the hemodynamic signal, leaving about 0.8 of that signal with its sign flipped… differs from a fresh run by 43.5%… redo anything computed from corr/ before 2026-10-11."
+- Lab explainer: `\\sahale\data\Code\dataChangeLog\2026-10_hemoCorrect_recompute\EXPLAINER.md` (Anna Li, in progress). About 860 sessions recomputed; 831 were made by the Apr 2021 version.
+- The new corr has one frame fewer and timestamps +14.5 ms (blue frame times). `loadUVt` reads the new timestamps file, so the alignment is handled.
+- Effect on our data (today's `load_experiments` vs yesterday's), dose-response slope %dF/F per V:
+  - AL_0041 e1: −0.301 → −0.076 (R² 0.97 → 0.31)
+  - e2: −0.479 → −0.253 (0.76 → 0.40)
+  - AL_0033: −0.515 → −0.332 (0.92 → 0.72)
+  - AL_0048: unchanged (separate loader; probably already aligned)
+  - Held-out TF R² (same orders): pooled 0.855 → 0.846; per session 0.503 → 0.442, 0.855 → 0.820, 0.948 → 0.955, 0.841 → 0.841.
+  - Stim onsets and trial counts are identical; I checked that the published fits file matches yesterday's run exactly.
+- **figures_final is now MIXED for Fig 2.** These were re-exported today with the NEW correction: `figure2/imp_response.pdf` (2B, now with the V/3 bar), `figure2/tf_cv_single_AL_0033.pdf` (2C), `figure2/tf_cv_2D_sidebar.pdf` (2D), `supplementary/tf_cv_shape_across_sessions.pdf`, `supplementary/tf_cv_2D_endlabels.pdf`. 2A, 2E, 2F and 2G are still yesterday's (old correction). S1 (`imp_spatial_panels`) was NOT re-run.
+**Why:** I was re-exporting 2B/2C/S1 for the mW = V/3 label convention and saw 2C's pooled R² move (0.855 → 0.846) with no code change. I traced it to the server data.
+**Next:** User decision: redo Fig 2 (dose response, TF fits + bootstrap, CV, timescales, 2G) and S1 on the new correction, and check the Fig 4 Global/ridge caches that were trained on corrected V. Until then the user must not place today's 2B/2C/2D or the supplementary CV panels. Fig 3/4/5 tracking error and the Fig 4 states come from the rig readout and are unaffected.
+
+### 2026-10-11 - Laser labels: mW = Timeline volts / 3 everywhere (user convention); minimal bar/factor fixes
+**Changed:**
+- `impulse-analysis/dose_response.m`: 2B bar is 0.75 V = 0.25 mW (was 1 V labelled 0.25 mW); the median version is 0.9 V = 0.3 mW.
+- `imp_tf_cv.m`: vToMW = 1/3 (reverts the 2026-10-03 switch to 1.8/4.9).
+- `imp_spatial_panels.m`: V_TO_MW = 1/3.
+- `utils/analysisPlots_combined.m`:
+  - 3A laser traces are drawn at gain 4 in both halves (OL was 5, CL 4, under one bar), with a 2.4-unit bar = 0.6 V = **0.2 mW** (was 2 units labelled 1 mW);
+  - 3C bar is 1.8 units at gain 3 = 0.2 mW (was 2 units labelled 1 mW).
+- `controller-analysis/ctrl_mpc_direct_panels.m`: S5 B and C bars are 1.5 V = **0.5 mW** (were 1 V labelled 1 mW).
+- Re-exported with PAPER_FINAL:
+  - Fig 3 A–E (`load_sessions`; the rig caches are unaffected by the hemo change). I checked 3A, 3C and S5 C1 visually.
+  - S5 (MPC caches dated 10-09 23:11, before the 23:30 panels, so content is unchanged).
+- The 2A legend (V/3) and its caption (0.23–0.90 mW) were already correct under the convention.
+**Why:** The user (2026-10-11) said to read input voltages from Timeline and use V/3 as the mW convention, keeping changes minimal. The audit had found 2B/3A/3C/S5 bars inconsistent (3A 6.8× and 3C 4× high).
+**Next:** Manuscript text still uses 0.37 mW/V: Methods L266–273, Results L43 "0 to 1.8 mW", L63 slopes, S1 "0.6 / 1.4 mW", Discussion L40 "1 / 1.8 mW". Change these to V/3 once Fig 2 is settled on the new hemo correction, since the slopes change anyway. Fig 5 and the new-mice panels use the per-date calibration (`laser_v2mw`), not V/3; the user is to decide. 3F/5E y bars are left as is ("what we have is ok").
+
 ### 2026-10-11 - Fig 4 state LMM = UNCORRELATED random state slope (user decision); 4D, STATS_TABLE, rel/abs checks rerun
 **Changed/Found:**
 - `utils/f4_row2_fit.m`: all three fits now use `y ~ cond*xw + (1+cond|sess) + (xw-1|sess) + (1|mouse)`. The fallback chain is `(1+cond|sess)` → `(1|sess)`, run by a local `fit_chain` / `f4_re_chain` that warns on fallback, and `R.reForm` records the structure used. All 12 fits used the full structure.

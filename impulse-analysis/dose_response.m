@@ -133,7 +133,9 @@ if DR_YAXIS
     % 2.5 %dF/F effect into a third of the panel.
     yb = [-3 1];
     ylim(ax, yb);
-    paperAxes(gca,'XLength',1,'YLength',0.01,'XLabel','0.25 mW','YLabel',' ');
+    % XLength is in DATA units (V). mW = V/3 (user, 2026-10-11), so 0.25 mW = 0.75 V; the bar
+    % was 1 V labelled 0.25 mW.
+    paperAxes(gca,'XLength',0.75,'YLength',0.01,'XLabel','0.25 mW','YLabel',' ');
     ax.YAxis.Visible   = 'on';
     ax.YAxis.Color     = 'k';
     ax.YAxis.LineWidth = 1.0;
@@ -146,7 +148,8 @@ else
     try
         % x scale bar halved 0.5 -> 0.25 mW (user, 2026-08-17). XLength is in DATA units (V);
         % the label is the mW equivalent, so both must move together or the bar lies.
-        paperAxes(gca,'XLength',1,'YLength',0.01,'XLabel','0.25 mW','YLabel',' ');
+        % mW = V/3 (user, 2026-10-11): 0.25 mW = 0.75 V.
+        paperAxes(gca,'XLength',0.75,'YLength',0.01,'XLabel','0.25 mW','YLabel',' ');
     catch
         xlabel('Input(V)', 'FontWeight','bold');
         ylabel('dF/F %', 'FontWeight','bold');
@@ -325,7 +328,7 @@ title(ax_m, 'Dose-response: median +/- IQR per amplitude (all sessions)', ...
     'FontSize', 6, 'FontWeight', 'bold', 'Color', 'k');
 uistack(h1m, 'bottom');
 try
-    paperAxes(ax_m,'XLength',1,'YLength',0.01,'XLabel','0.3 mW','YLabel',' ');
+    paperAxes(ax_m,'XLength',0.9,'YLength',0.01,'XLabel','0.3 mW','YLabel',' ');   % mW = V/3
 catch
     xlabel('Input(V)','FontWeight','bold');  ylabel('dF/F %','FontWeight','bold');
 end
