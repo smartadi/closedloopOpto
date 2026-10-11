@@ -16,6 +16,42 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-10 — AUDIT: direct-MPC gain inflated by a one-frame timing advantage; fair number is 0.78x, not 0.65x
+**Changed/Found:** `controller-analysis/mpc_direct_audit.py` (new; recorded-data checks) and `mpc_direct.py` (new `MPCD_LAT` option = frames of latency for the MPC; new `MPCD_AUDIT` block → `data/mpc_direct_audit_<sess>.mat`). Results:
+
+**T1 — rig latency.** Fitting the rig's PI law to the recorded commands works best when u(t+1) is built from e(t−1):
+
+| Lag d | R² |
+|---|---|
+| 0 | 0.36 |
+| **1** | **0.49** |
+| 2 | 0.39 |
+
+So the rig was one frame behind, while the simulated MPC used y(t). This is a ~29 ms information advantage. **REAL ISSUE.**
+
+**T2 — laser delay.** In the OL trial average, y responds about one frame after the command's half-rise. The VARX laser response (−0.19, −0.62, −0.66 … at leads 1, 2, 3) matches this, so the fast learned response is physical in index terms. **Not an issue.**
+
+**Simulated-brain fairness.** The fitted rig PI law (c 1.37, Kp 0.154, Ki′ 0.00023, lag 1) run inside the simulated brain gives 1.02× recorded (42/108 trials below). A PI re-tuned there (Kp 0.3, Ki′ 0.001, lag 1) gives 0.99×. So the simulated brain is **not** easier than the rig for PI. **Not an issue.**
+
+**MPC vs recorded PI, all 108 trials:**
+
+| Controller | Ratio | Trials below PI |
+|---|---|---|
+| MPC, lag 0 (as published) | 0.652 | 108/108 |
+| **MPC, lag 1 (fair)** | **0.778** | **105/108** |
+| Perfect MPC, lag 1 | 0.224 | 108/108 |
+
+About a third of the claimed gain was the timing advantage.
+
+**Still untestable in simulation:** the controller and the simulated brain share the linear VARX family. The innovations are additive and independent of the laser, so a state-dependent laser effect (cf. Fig 4) is absent.
+**Why:** user: "seems too good to be true, can we review".
+**Next:** rerun the S5 panels with MPCD_LAT=1, then update the S5 caption numbers and the Discussion paragraph (currently 0.82 vs 1.46, "about 40%" variance) on main — waiting for the user's go.
+
+### 2026-10-10 - Abstract + Intro: state dependence stated generically; laser-setting CHECK resolved
+**Changed/Found:** `Closedloop_edit/main.tex` abstract: "The error that remains under feedback is state-dependent: it tracks the initial deviation ... and ongoing low-frequency power later. Feedback keeps the output regulated as movement increases, but not as 2-4 Hz power increases." -> "The error that remains under feedback is state-dependent." `introduction.tex` summary paragraph: "Feedback decoupled tracking error from movement-related state but not from slow (2-4 Hz) cortical rhythms, and partially rejected ..." -> "The error left under feedback depended on brain state, and feedback partially rejected ...". `methods_rewrite.tex`: removed the `%% CHECK (units)` comment on the AL_0041 / AL_0048 laser setting.
+**Why:** User 2026-10-10: say state-dependent in the abstract without the motion / rel 2-4 Hz specifics (those depend on the window and on the random-slope model, RESEARCH 2026-10-10 'Circularity'); user confirmed the Fig 2 laser values are correct. Intro changed for consistency with the abstract (flagged to user).
+**Next:** Results/Discussion 2-4 Hz wording and Table 1 control rows still await the user's decision.
+
 ### 2026-10-10 - Manuscript: Global described as an estimate that carries laser leak; 4D caption session-level; offset share corrected
 **Changed/Found:** `Closedloop_edit/results.tex` + `methods_rewrite.tex`. (1) Methods said "pixels near the homotopic stimulation site were excluded" - FALSE for the locked ridge model, which keeps the whole grid (`ctrl_ols_ol_stimblind.m:277-291`, keep_n = nG); now "used every pixel of the contralateral grid". (2) G was called "the activity ... with no controller input"; now "an estimate of" it, plus: contralateral activity changes during stimulation, so in open loop G's 0-3 s dip is 6-42% of the readout's (median 23%; leak_sus, 13 ridge caches). (3) "leak-corrected" is now defined in Methods (G referenced to the 1 s before onset minus the session's mean open-loop G over the same window = `f4_cl_reject_lmm.m:43-44`). (4) "since G is estimated without reference to the laser" -> "since the predictor is fitted without reference to the laser". (5) 4D caption + Methods quartile sentence: quartiles within session, points = mean across sessions +/- SEM across sessions. (6) Results 4G paragraph: standing offset share 41%/8% -> 35%/7% (10/11, p = 9.8e-4 unchanged).
 **Why:** Adversarial verification of the Global-state analysis (wf f4-gstate-verify) flagged the pixel-exclusion and "no controller input" sentences; the 41%/8% could not be reproduced by any definition in the code (see the f4_rr_denominator_check entry). Build clean, 40 pages.

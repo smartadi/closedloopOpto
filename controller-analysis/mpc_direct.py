@@ -66,10 +66,12 @@ class VX:
         """one-step prediction z(t+1) from zh (L x nC, newest first) and uh = [u(t+1), u(t), ...] (scaled)."""
         return np.concatenate([zh.ravel(), uh, [1.0]]) @ self.W
 
-    def free(self, zh, u_past, innov=None):
-        """y_hat(t+1..t+HP) with the future laser = 0; u_past = scaled u(t-Q+2..t) (Q-1 values)."""
+    def free(self, zh, u_past, innov=None, lat=0):
+        """y_hat(t+1..t+HP) with the future laser = 0; u_past = scaled u(t-d-Q+2..t) (Q-1+d values) where the
+        newest observed frame is t-d (lat = d: the rig's loop latency, audit 2026-10-10); zh is the history
+        at t-d. The d frames t-d+1..t are rolled forward under their already-committed commands."""
         uf = np.concatenate([u_past, np.zeros(HP)])
-        return self._roll(self.W, zh, uf, HP, innov)[:, 0] * self.sz[0]
+        return self._roll(self.W, zh, uf, HP + lat, innov)[lat:, 0] * self.sz[0]
 
 
 def mpc_solve(m, f, u_prev, uss, umax, rd):
@@ -147,12 +149,52 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
     rPI = rec
     print(f"[MPCD] PI = recorded rig CL: median RMSE {np.median(rPI):.3f}", flush=True)
 
-    def mpc_policy(m, rd, oracle=False):
+    LAT = int(os.environ.get("MPCD_LAT", "0"))     # MPC sees y up to t-LAT when choosing u(t+1); rig = 1 (audit)
+
+    def mpc_policy(m, rd, oracle=False, lat=None):
+        lat = LAT if lat is None else lat
         def pol(t, zs, us):
-            innov = E[t + 1:t + 1 + HP] if oracle else None
-            f = m.free(zs[t - np.arange(m.L)], us[t - m.Q + 2:t + 1], innov)
+            o = t - lat
+            innov = E[o + 1:o + 1 + HP + lat] if oracle else None
+            f = m.free(zs[o - np.arange(m.L)], us[o - m.Q + 2:t + 1], innov, lat)
             return float(mpc_solve(m, f, us[t] * su, uss, umax, rd)[0])
         return pol
+
+    if os.environ.get("MPCD_AUDIT"):
+        # PI inside the simulated brain, one frame behind like the rig: u(t+1) = sat(c + Kp e(t-1) + Ki' sum_{105} e)
+        e_rec = yr - REF; csr = np.concatenate([[0.0], np.cumsum(e_rec)])
+        rows = np.concatenate([o + np.arange(10, N - 1) for o in onCL])
+        rows = rows[(ur[rows + 1] > 0.02) & (ur[rows + 1] < umax - 0.02)]
+        tq = rows - 1; Xf = np.column_stack([e_rec[tq], csr[tq + 1] - csr[tq + 1 - 105], np.ones(tq.size)])
+        c_fit = np.linalg.lstsq(Xf, ur[rows + 1], rcond=None)[0]
+
+        def pi_policy(kp, ki, c0):
+            def pol(t, zs, us):
+                e = zs[t - 1 - np.arange(105), 0] * sz[0] - REF
+                return float(np.clip(c0 + kp * e[0] + ki * e.sum(), 0.0, umax))
+            return pol
+        out = {"recorded": rPI}
+        S = [simulate(k, pi_policy(*c_fit[[0, 1, 2]])) for k in range(nT)]
+        out["PI fitted law (lat 1)"] = np.array([rmse(s[0]) for s in S])
+        best = (np.inf,)
+        for kp in (0.0, 0.1, 0.2, 0.3, 0.45, 0.6):
+            for ki in (0.0, 1e-3, 3e-3, 1e-2):
+                v = np.median([rmse(simulate(k, pi_policy(kp, ki, uss))[0]) for k in range(0, nT, 3)])
+                best = min(best, (v, kp, ki))
+        S = [simulate(k, pi_policy(best[1], best[2], uss)) for k in range(nT)]
+        out[f"PI tuned in world (lat 1; Kp {best[1]}, Ki' {best[2]})"] = np.array([rmse(s[0]) for s in S])
+        for lat in (0, 1):
+            S = [simulate(k, mpc_policy(ctrl[fold[k]], 0.1, lat=lat)) for k in range(nT)]
+            out[f"MPC lat {lat}"] = np.array([rmse(s[0]) for s in S])
+        S = [simulate(k, mpc_policy(world, 0.1, oracle=True, lat=1)) for k in range(nT)]
+        out["perfect MPC lat 1"] = np.array([rmse(s[0]) for s in S])
+        print(f"[AUDIT] fitted rig PI law: c {c_fit[2]:.3f}, Kp {c_fit[0]:.3f}, Ki' {c_fit[1]:.5f}")
+        for n_, v in out.items():
+            print(f"[AUDIT] {n_:52s} median RMSE {np.median(v):.3f} | vs recorded {np.median(v / rPI):.3f} "
+                  f"({np.sum(v < rPI)}/{nT} below)", flush=True)
+        savemat(DATA / f"mpc_direct_audit_{sess}.mat", {"names": np.array(list(out), dtype=object),
+                "rmse": np.column_stack(list(out.values())), "c_fit": c_fit})
+        return out
     res = {"PI": (PI, rPI)}
     for rd in RD_GRID:
         S = [simulate(k, mpc_policy(ctrl[fold[k]], rd)) for k in range(nT)]
