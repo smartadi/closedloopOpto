@@ -4,11 +4,11 @@
 % (2026-10-11)
 %
 % User hypothesis (2026-10-11): "rel 2-4 is already a case of abs delta and maybe controller
-% effect anyways". Three tests, all on the Fig-4 trial pool (f4_row2_pool) and the adopted
-% random-state-slope model:
+% effect anyways". Tests on the Fig-4 trial pool (f4_row2_pool) with the Fig-4 model of
+% utils/f4_row2_fit (uncorrelated random state slope per session, user decision 2026-10-11):
 %   (1) OVERLAP   within-session correlation of rel 2-4 Hz with abs 1-4 Hz, per condition and
 %                 window (peri [-2,+3) vs laser-off pre2 [-2,0)).
-%   (2) JOINT     y ~ cond*(xa + xr) + (1+cond+xa+xr|sess) + (1|mouse): does rel predict OL / CL
+%   (2) JOINT     y ~ cond*(xa + xr) + (1+cond|sess) + (xa-1|sess) + (xr-1|sess) + (1|mouse): does rel predict OL / CL
 %                 error once abs is in the model? Also rel orthogonalised to abs within session.
 %   (3) LOOP      does the controller itself raise rel / abs power? Per session, CL minus OL state
 %                 in the laser-off window (should be ~0: same pre-onset brain) and in the peri
@@ -43,7 +43,7 @@ for w = 1:2
 end
 
 %% (2) JOINT model -------------------------------------------------------------------------
-fprintf('\n[F4RA] (2) joint model y ~ cond*(xa + xr), random state slopes per session\n');
+fprintf('\n[F4RA] (2) joint model y ~ cond*(xa + xr), uncorrelated random state slopes per session\n');
 for w = 1:2
     T = WIN(w).P.delta;  T.xr = zwin(T.x, T.sess);  T.xa = zwin(WIN(w).P.absdelta.x, T.sess);
     T.cond = reordercats(T.cond, {'OL','CL'});
@@ -139,7 +139,7 @@ function [ol, cl, att, re] = joint_terms(T, nm)
 % OL slope, CL slope (CL reference) and attenuation (log y) of state nm in the joint model.
 % Returns [estimate p] pairs. Random-effects chain mirrors f4_row2_fit.
 nS = numel(unique(T.sess));
-chain = {'(1+cond+xa+xr|sess)','(1+cond+xa|sess)','(1+cond|sess)'};
+chain = {'(1+cond|sess) + (xa-1|sess) + (xr-1|sess)','(1+cond|sess)','(1|sess)'};
 ol = [NaN NaN]; cl = ol; att = ol; re = '';
 for i = 1:numel(chain)
     f = ['y ~ cond*(xa + xr) + ' chain{i} ' + (1|mouse)'];

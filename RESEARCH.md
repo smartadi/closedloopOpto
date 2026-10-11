@@ -16,6 +16,24 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - Fig 4 state LMM = UNCORRELATED random state slope (user decision); 4D, STATS_TABLE, rel/abs checks rerun
+**Changed/Found:**
+- `utils/f4_row2_fit.m`: all three fits now use `y ~ cond*xw + (1+cond|sess) + (xw-1|sess) + (1|mouse)`. The fallback chain is `(1+cond|sess)` → `(1|sess)`, run by a local `fit_chain` / `f4_re_chain` that warns on fallback, and `R.reForm` records the structure used. All 12 fits used the full structure.
+- `paper_stats_table.m`: labels updated.
+- Reran `f4_row2_quartiles` with PAPER_FINAL (final `figure4/f4_row2_quartiles.pdf`) and `paper_stats_table` (20 `4D_*` rows).
+- Fig 4 values (pred / reg / att):
+  - initdev: +0.18 p = 0.014 / +0.15 p = 0.028 / +0.3% p = 0.89
+  - motion: +0.16 p = 0.013 / −0.07 p = 0.27 / −9.0% p = 0.0048
+  - rel 2–4: +0.02 p = 0.76 / +0.12 p = 0.044 / +5.4% p = 0.027
+  - abs 1–4: +0.30 p = 6.6e-4 / +0.36 p = 1.6e-4 / +7.8% p = 0.0014
+- Laser-off [-2,0) rows:
+  - abs: +0.23 p = 0.0023 / +0.28 p = 5.3e-4 / +5.6% p = 0.017
+  - rel: p = 0.22 / 0.23 / 0.34
+  - motion: p = 0.72 / 0.40 / 0.11 (motion comes from the face camera, so the peri window is not circular for it)
+- `f4_rel_abs_checks.m` joint model switched to the same specification, `(1+cond|sess) + (xa-1|sess) + (xr-1|sess)`. Peri: rel given abs is OL −0.22 p = 2.6e-4 and CL −0.09 p = 0.052, so rel's positive CL slope disappears. Laser-off: rel adds nothing (p ≥ 0.49), and abs holds (OL p = 0.0024, CL p = 5e-4).
+**Why:** The user chose it on 2026-10-11 ("do: recommendation is the uncorrelated random slope") after `f4_randslope_n_check`.
+**Next:** The manuscript (Table 1, Results L148–154, the caption gap range now 0.71–0.82, and the Methods model sentence) is updated together with the rel 2–4 Hz reframing. The user re-places 4D after that. Fig 2G is unchanged (4 sessions; user decision pending on the two-stage test).
+
 ### 2026-10-11 - Is n enough for a Fig-4 random state slope? Yes (15/11 sessions); the locked model is the one that fails
 **Changed/Found:** New `controller-analysis/f4_randslope_n_check.m` [F4RSN], which writes `data/f4_randslope_n_check.mat`.
 - **(1) Session slopes genuinely vary.** REML LRT locked vs random slope: initdev p = 8e-8, motion 0.015, rel 3e-4, abs 2e-6. AIC is lower with the slope in all four. The session SD of the state slope is 0.74–1.13× the fixed OL slope.
