@@ -37,11 +37,12 @@ if nargin < 2 || isempty(mouse) || isempty(fields)
 end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data');
 bpData = fullfile(fileparts(here),'data');
-CFG.nSV_load=500; CFG.Fs=35; CFG.pre_s=1.0; CFG.resp_s=3.0; REF=-5; REACH_TOL=1.5;
+CFG.nSV_load=500; CFG.Fs=35; CFG.pre_s=1.0; CFG.resp_s=3.0; REF=-5; REACH_TOL=1.5; BIAS_MAX=1/3;
 
 RRD = struct('tag',{},'mn',{},'nOL',{},'nCL',{},'R2te',{},'Aset',{},'reach',{}, ...
     'msD_cl',{},'msD_ol',{},'msErr_cl',{},'msErr_ol',{},'bias2_cl',{},'fluct_cl',{},'bias2_ol',{},'fluct_ol',{}, ...
-    'RR_cl',{},'RR_ol',{},'RRfluct_cl',{},'RRfluct_ol',{},'Doffset',{});
+    'RR_cl',{},'RR_ol',{},'RRfluct_cl',{},'RRfluct_ol',{},'Doffset',{}, ...
+    'Aset_ol',{},'biasFrac',{},'keep',{},'offShare_ol',{},'offShare_cl',{});
 
 for s = 1:numel(fields)
     fld = fields{s}; M = mouse.(fld); freeAfter=false;
@@ -81,6 +82,9 @@ for s = 1:numel(fields)
     ok_ol = isfinite(msE_ol) & isfinite(msD_ol) & msD_ol>0;
 
     Aset = mean(mean(S.Acl(:,wr),2));
+    Aset_ol = mean(mean(S.Aol(:,wr),2));             % OL settled mean (Results: OL offset above ref)
+    % offset gate, EXACTLY as f4_cl_reject_lmm (mean over trials, not median)
+    biasFrac = (Aset-REF)^2 / mean(msE_cl(ok_cl));
     RRD(end+1) = struct('tag',S.sess_tag,'mn',S.mn,'nOL',nnz(ok_ol),'nCL',nnz(ok_cl), ...
         'R2te',S.R2_te,'Aset',Aset,'reach',abs(Aset-REF)<=REACH_TOL, ...
         'msD_cl',median(msD_cl(ok_cl)),'msD_ol',median(msD_ol(ok_ol)), ...
@@ -91,7 +95,10 @@ for s = 1:numel(fields)
         'RR_ol',median(msE_ol(ok_ol)./msD_ol(ok_ol)), ...
         'RRfluct_cl',median(fl_cl(ok_cl)./msD_cl(ok_cl)), ...
         'RRfluct_ol',median(fl_ol(ok_ol)./msD_ol(ok_ol)), ...
-        'Doffset',mean(mean(D_cl(:,wr),2))); %#ok<AGROW>
+        'Doffset',mean(mean(D_cl(:,wr),2)), ...
+        'Aset_ol',Aset_ol,'biasFrac',biasFrac,'keep',biasFrac<=BIAS_MAX, ...
+        'offShare_ol',median(b2_ol(ok_ol))/median(msE_ol(ok_ol)), ...   % share of the residual: session-median
+        'offShare_cl',median(b2_cl(ok_cl))/median(msE_cl(ok_cl))); %#ok<AGROW>  % bias2 over session-median msErr (2026-10-10)
 end
 
 % ------------------------------- report ----------------------------------
@@ -137,6 +144,20 @@ fprintf('  open loop  median %.2f (passes the disturbance through if ~1)\n', med
 fprintf('  closed loop median %.2f, lower in %d of %d sessions, signrank p=%.3g\n', ...
     median(fl_cl), sum(fl_cl<fl_ol), numel(fl_cl), signrank(log(fl_ol),log(fl_cl),'tail','right'));
 
+% ---- RESULTS (Fig 4G paragraph 2): the offset-gated sessions, OL vs CL, paired ----------
+K = RRD([RRD.keep]); nK = numel(K);
+fprintf('\n===== OFFSET-GATED sessions (n=%d; excluded: %s) =====\n', nK, strjoin({RRD(~[RRD.keep]).tag},', '));
+for i = find(~[RRD.keep]), fprintf('  excluded %-18s OL settled %+.2f, CL settled %+.2f above ref; offset share %.0f%%\n', ...
+        RRD(i).tag, RRD(i).Aset_ol-REF, RRD(i).Aset-REF, 100*RRD(i).biasFrac); end
+[pR,~,stR] = signrank([K.RR_ol],[K.RR_cl],'tail','right');
+[pO,~,stO] = signrank([K.offShare_ol],[K.offShare_cl],'tail','right');
+[pF,~,stF] = signrank(log([K.RRfluct_ol]),log([K.RRfluct_cl]),'tail','right');
+fprintf('  median RR  OL %.2f vs CL %.2f; CL lower in %d/%d; V=%d p=%.2g\n', median([K.RR_ol]), median([K.RR_cl]), ...
+    sum([K.RR_cl]<[K.RR_ol]), nK, stR.signedrank, pR);
+fprintf('  offset share of residual OL %.0f%% vs CL %.0f%%; lower in %d/%d; V=%d p=%.2g\n', 100*median([K.offShare_ol]), ...
+    100*median([K.offShare_cl]), sum([K.offShare_cl]<[K.offShare_ol]), nK, stO.signedrank, pO);
+fprintf('  fluctuation/disturbance OL %.2f vs CL %.2f; lower in %d/%d; V=%d p=%.2g\n', median([K.RRfluct_ol]), ...
+    median([K.RRfluct_cl]), sum([K.RRfluct_cl]<[K.RRfluct_ol]), nK, stF.signedrank, pF);
 save(fullfile(dataDir,'f4_rr_denominator_check.mat'),'RRD');
 fprintf('\nsaved -> %s\n', fullfile(dataDir,'f4_rr_denominator_check.mat'));
 end

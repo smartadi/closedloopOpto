@@ -771,7 +771,9 @@ Restructured 2026-07-29 into **three ordered blocks**, coarse → mechanistic:
 > 1.88→2.21 and the 1–2 Hz CL series is **flat** (2.04, 2.09, 2.08, 2.07). The two panels may now
 > sit side by side, and doing so is the clearest statement of the dissociation in the figure.
 >
-> ⚠ **2026-10-02 (user decision): the current `f4_row2_quartiles.m` draws TRIAL-level SEM on
+> ✅ **SUPERSEDED 2026-10-10 (user): 4D is now SESSION-LEVEL** (per-session quartile means on each session's own edges, mean ± SEM across sessions); the pooled view below is kept as the fallback `f4_row2_quartiles_pooled.pdf`. See RESEARCH 2026-10-10.
+>
+> ~~2026-10-02~~ (user decision): the current `f4_row2_quartiles.m` draws TRIAL-level SEM on
 > pooled-trial quartiles (L147-152), not session-SEM as stated above, and this is KEPT on purpose.**
 > The display is a pooled trial-level view, and the inference is session-level (LMM
 > `RMSE~cond*state+(1+cond|sess)+(1|mouse)`, with a session signed-rank on per-session quartiles).

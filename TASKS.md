@@ -9,6 +9,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-10-10 — Fig 4D session-level points (+pooled/median fallbacks); OL offsets + 4G paired stats saved (`f4_rr_denominator_check`); Global-state circularity check done (does not fix it).
 - [x] 2026-10-10 — **Overleaf edits merged; Fig 2F (dip/rebound), 2G (session-level) and Fig 3 captions applied**; captions realigned to new assemblies (2A<->B, 3H<->I swapped). RESEARCH 2026-10-10.
 - [x] 2026-10-07 — **JNeurosci statistics pass done:** Methods subsection renamed + Design + multiple-comparison paragraphs; every Results claim is estimate + CI + t(df) + exact p + n, quoted from `paper-writing/STATS_TABLE.csv` (new `paper_stats_table.m`); 0 inexact p left.
 - [x] 2026-10-07 — **Fig 4D multiple comparisons decided:** uncorrected, 8 tests stated, Bonferroni 0.0063 named; rel-delta softened (now p=0.050 after the df fix).
@@ -18,7 +19,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [x] 2026-10-02 — Methods paragraph for the Fig-4 Row-2 session-aware LMM: covered by Statistics (cond × state model, predictability/controllability, hierarchical bootstrap) + "Brain-state measures" (motion = mean z over −2..+3 s).
 - [x] 2026-08-12 — **Fig-4 beat 3+4 code built (all UNRUN, blocked on the Stage-2 rebuild).** (a) R² floor 0.85 now gates all three cross-session controller scripts identically (user decision); (b) `f4_reject_panels.m` = paper panels for cross-session disturbance rejection, read-only off the batch struct, ER as primary metric, with the T1 gain-vs-R² control as panel D; (c) `ctrl_optimal_xsess.m` + shared `utils/ctrl_opt_solve.m`/`ctrl_plant_markov.m` = the MPC beat across sessions, with the disturbance computed BOTH as the post-hoc residual and as the contra-predicted Global (the version a real controller could use). See RESEARCH 2026-08-12 ×3.
 - [x] 2026-07-01 — Impulse residual: DV → **L1-dev primary** (template-gain secondary); retargeted to laser center [373,353] (A2); pre-onset-window (A4) + bleed-artifact controls pass; `[CP-KRECON]` sparse-kernel reconstruction added. Committed to `alpha` (101a9b9, 3ec2e0c). Retired `contra_residual.m`.
-- [x] 2026-06-29 — Manuscript: variance-onset claim rewritten with −0.57 slope (`results.tex` L59)
 
 ---
 
@@ -27,13 +27,12 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ### arXiv blockers (plan: `paper-writing/arxiv_jneurosci_plan_2026-10-10.md`; RESEARCH 2026-10-10)
 - [ ] (user) Author/affiliation block (`main.tex` L71-78 renders "Department of ,") -- editing on Overleaf.
 - [ ] (user) **Laser power setting on 2025-12-02 (AL_0041) and 2026-07-15 (AL_0048 impulse).** If 100%, Fig 2 mW values and the Mouse 1a/1b/3 per-mW slopes are ~5x off.
-- [ ] (user, Illustrator) **Figure4.pdf panels C and G are stale** -> re-place `figures_final/panels/figure4/f4_decomp_unique_sep.pdf` + `f4_cl_reject_RR.pdf` (text quotes 0.41/0.03, 0.15/0.19; panel shows 0.39/0.10).
+- [ ] (user, Illustrator) **Figure4.pdf panels C, D and G** -> re-place `f4_row2_quartiles.pdf` (4D now session points, 2026-10-10) and `figures_final/panels/figure4/f4_decomp_unique_sep.pdf` + `f4_cl_reject_RR.pdf` (text quotes 0.41/0.03, 0.15/0.19; panel shows 0.39/0.10).
 - [ ] **Mislabeled power scale bars** -> fix code, re-export, re-place: 2A legend (`trace_overlay.m:53` uses /3; use plateau V x 1.8/4.9), 2B bar ('0.25 mW' spans 1 V = 0.37 mW, `dose_response.m:136,149`), 3A/3C '1 mW' bars are 0.15-0.24 mW (`analysisPlots_combined.m:72,81-82,97,200,208,216`), S-MPC '1 mW' on command volts (`ctrl_mpc_direct_panels.m:91,129`).
-- [ ] **Circularity caveat (decide):** Fig 4 band-power states share samples with the error window and the loop amplifies 2-4 Hz (S(f) 1.089). Add a limitation sentence, or run the stim-blind check (rel/abs delta on contra-predicted G, same window, refit f4_row2_fit). Abstract still states the 2-4 Hz result without caveat.
+- [ ] **DECIDE 2-4 Hz framing (circularity; RESEARCH 2026-10-10 'Circularity').** Contra/Global state does NOT fix it (keeps the overlap, carries laser leak). Laser-off window [-2,0) on the readout: abs 1-4 Hz holds (OL/CL p 4e-7/5e-8), rel 2-4 Hz predicts OL and CL equally (att p=0.47) -> 'OL flat, CL rises' is in-stimulation only. Options: add laser-off rows to Table 1 + reword Abstract/Intro L46/Results L152/Discussion L18,L42 as concurrent effects; Methods 'sub-band least attenuated' justification.
+- [ ] **DECIDE random state slope for Table 1** (1+cond+xw|sess): rel 2-4 reg 8.6e-4 -> 0.05, initdev reg 3.5e-5 -> 0.055, motion att 0.015 -> 0.0046, abs all still pass. `data/f4_circularity_checks.mat`.
 - [ ] AL_0041 e2: raw trace has five levels (1.93 V split into 1.9/2.0 bins by 0.1 V rounding) -> rebin; affects Fig 2B points and Mouse 1b TF fit.
-- [ ] Save OL settled offsets (`Aset_ol`) in `f4_rr_denominator_check.m` so the 2.6/1.9 in Results/Methods sit in a saved output.
 - [ ] Methods tuning: re-read end gains for AL_0034 10-25 e1 and AL_0033 12-19 from Kdata.npy and the iteration count; remove the `%% CHECK`.
-- [ ] Fig 4D session-level redesign (recommended design A; RESEARCH 2026-10-10) -- user decision.
 
 ### From the critical review (2026-10-10, RESEARCH 2026-10-10)
 - [ ] **Fig 4G exclusion**: Methods now says the threshold was chosen after inspection (2026-10-10). Still to do: report the all-13-session result beside the gated one.

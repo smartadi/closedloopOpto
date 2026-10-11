@@ -68,7 +68,8 @@ gridIdx=S1.gridIdx; px_prim=S1.px_prim; py_prim=S1.py_prim; k_prim=S1.k_prim;
 horizon=S1.horizon; dur=S1.trial_dur;
 b=S2.b; mu=S2.mu; sd=S2.sd; muY=S2.muY; Su=S2.Su;
 
-[U_cp,V_cp,t_svd,mimg_cp] = cp_loadUVt(expPath(mn,td,en), nSV_load, d_s.timeBlue);
+% same V the Stage-2 weights were trained on, read from the cache (utils/ctrl_force_uncorr.m)
+[U_cp,V_cp,t_svd,mimg_cp] = cp_loadUVt(expPath(mn,td,en), nSV_load, d_s.timeBlue, ctrl_force_uncorr(S2));
 V_cp=double(V_cp); [nY,nX]=size(mimg_cp); nSV=size(U_cp,3);
 Uflat=reshape(U_cp,nY*nX,nSV); t_full=t_svd(:); nF=min(size(V_cp,2),numel(t_full));
 [y_full,ok] = local_svd_rolling_dfk(Uflat,V_cp,mimg_cp,px_prim,py_prim,k_prim,horizon,nY,nX);

@@ -33,6 +33,10 @@
 %     (ticks+label only on the leftmost tile), legend on init-dev only, state-colored titles.
 %     This stitched version is the main-text panel.
 %   No cond x state tag on any panel (the LMM decoupling p is still printed to console + f4_2S_stats).
+%   DISPLAY (user 2026-10-10, supersedes the 2026-10-02 pooled decision): the main panels are
+%   SESSION-LEVEL -- each session's OL/CL quartile means on its own combined-state quartile
+%   edges, then mean +/- SEM across sessions (n = sessions). The old pooled-trial view
+%   (pooled quartiles, trial SEM) is still written as the fallback *_pooled.pdf.
 %   Requires load_sessions.m first.
 % ============================================================================
 clc; close all;
@@ -78,7 +82,8 @@ Pl = struct();
 % zx/zy/g = pooled trial arrays for the panel; gap1/gap4 = per-session Q1/Q4 gaps (primary test).
 % l* = per-trial table for the LME supplement (ly outcome, lc cond, lx within-session state z,
 % lq within-session quartile, lsess session id, lmouse mouse name).
-for pn=preds; Pl.(pn{1})=struct('zx',[],'zy',[],'g',[],'gap1',[],'gap4',[], ...
+% sqO/sqC = per-session quartile means [nSess x 4] (SESSION-LEVEL display, 2026-10-10).
+for pn=preds; Pl.(pn{1})=struct('zx',[],'zy',[],'g',[],'gap1',[],'gap4',[],'sqO',[],'sqC',[], ...
         'ly',[],'lc',[],'lx',[],'lq',[],'lsess',[],'lmouse',{{}}); end
 for k=1:numel(fields)
     M=mouse.(fields{k}); if ~isfield(M,'data'); continue; end; d=M.data;
@@ -128,6 +133,9 @@ for k=1:numel(fields)
         g1=mean(zyOL(qO==1),'omitnan')-mean(zyCL(qC==1),'omitnan');
         g4=mean(zyOL(qO==4),'omitnan')-mean(zyCL(qC==4),'omitnan');
         if isfinite(g1)&&isfinite(g4); Pl.(nm).gap1(end+1)=g1; Pl.(nm).gap4(end+1)=g4; end
+        % per-session quartile means on the SAME within-session edges (session-level display)
+        Pl.(nm).sqO(end+1,:)=arrayfun(@(b) mean(zyOL(qO==b & oOK),'omitnan'),1:4);
+        Pl.(nm).sqC(end+1,:)=arrayfun(@(b) mean(zyCL(qC==b & cOK),'omitnan'),1:4);
         % per-trial LME table (trials in sessions in mice); within-session quartile + state z
         nOk=nnz(oOK); nCk=nnz(cOK);
         Pl.(nm).ly    =[Pl.(nm).ly;    zyOL(oOK); zyCL(cOK)];
@@ -151,16 +159,32 @@ LME = struct();
 % _preview/, so the stitched panel's PNG read as hours stale while its PDF was current.
 outview=fullfile(fileparts(which('f4_row2_quartiles')),'_preview');
 if ~exist(outview,'dir'); mkdir(outview); end
-PQ=struct('qmO',{},'qmC',{},'qsO',{},'qsC',{},'predP',{},'predUp',{},'ctrlP',{},'ctrlUp',{});   % per-state quantities for the stitched figure
+PQ=struct('qmO',{},'qmC',{},'qsO',{},'qsC',{},'qmOp',{},'qmCp',{},'qsOp',{},'qsCp',{},'medO',{},'medC',{},'iqO',{},'iqC',{},'predP',{},'predUp',{},'ctrlP',{},'ctrlUp',{});   % per-state quantities for the stitched figure
 for ip=1:numel(preds); nm=preds{ip};
     zx=Pl.(nm).zx; zy=Pl.(nm).zy; g=Pl.(nm).g;
     if isempty(zx); fprintf('%-9s (no data)\n',nm); continue; end
+    % POOLED-TRIAL view (the 2026-10-02 display, kept as the FALLBACK -> *_pooled.pdf):
+    % quartiles on the pooled within-session z, trial-level SEM.
     edg=quantile(zx,[0 .25 .5 .75 1]); edg=uniqedges(edg);
     qb=discretize(zx,edg); qb(isnan(qb))=4;
-    qmO=arrayfun(@(b) mean(zy(qb==b&g==0),'omitnan'),1:4);
-    qmC=arrayfun(@(b) mean(zy(qb==b&g==1),'omitnan'),1:4);
-    qsO=arrayfun(@(b) std(zy(qb==b&g==0),'omitnan')/sqrt(max(1,nnz(qb==b&g==0))),1:4);
-    qsC=arrayfun(@(b) std(zy(qb==b&g==1),'omitnan')/sqrt(max(1,nnz(qb==b&g==1))),1:4);
+    qmOp=arrayfun(@(b) mean(zy(qb==b&g==0),'omitnan'),1:4);
+    qmCp=arrayfun(@(b) mean(zy(qb==b&g==1),'omitnan'),1:4);
+    qsOp=arrayfun(@(b) std(zy(qb==b&g==0),'omitnan')/sqrt(max(1,nnz(qb==b&g==0))),1:4);
+    qsCp=arrayfun(@(b) std(zy(qb==b&g==1),'omitnan')/sqrt(max(1,nnz(qb==b&g==1))),1:4);
+    % SESSION-LEVEL view (MAIN panel, user 2026-10-10, same move as Fig 2G): each session's
+    % quartile means on its OWN combined-state edges, then mean +/- SEM ACROSS SESSIONS
+    % (sessions weighted equally, matching the session-aware LMM the panel reports).
+    sO=Pl.(nm).sqO; sC=Pl.(nm).sqC;
+    % alternative summary (user 2026-10-10 asked mean vs median/IQR): median across sessions,
+    % error bar = interquartile range of the session values (asymmetric, [below; above]).
+    medO=median(sO,1,'omitnan'); medC=median(sC,1,'omitnan');
+    qO_=prctile(sO,[25 75],1); qC_=prctile(sC,[25 75],1);
+    iqO=[medO-qO_(1,:); qO_(2,:)-medO]; iqC=[medC-qC_(1,:); qC_(2,:)-medC];
+    qmO=mean(sO,1,'omitnan'); qmC=mean(sC,1,'omitnan');
+    qsO=std(sO,0,1,'omitnan')./sqrt(max(1,sum(isfinite(sO),1)));
+    qsC=std(sC,0,1,'omitnan')./sqrt(max(1,sum(isfinite(sC),1)));
+    fprintf('[F4R2 sess] %-9s n=%2d sessions | OL %s | CL %s\n',nm,size(sO,1), ...
+        sprintf('%+.2f ',qmO),sprintf('%+.2f ',qmC));
     % SESSION-LEVEL paired test (PRIMARY, Nick 2026-09-11): one OL-CL gap per
     % session in Q1 and Q4; paired signed-rank of gap4 vs gap1 across sessions.
     % This respects session/mouse structure -- the trial-pooled OLS below ignores
@@ -203,13 +227,14 @@ for ip=1:numel(preds); nm=preds{ip};
         tern(predUp,'UP','DOWN'),bOL,predP, tern(ctrlUp,'UP','DOWN'),Rf.reg,ctrlP, Rf.att,Rf.attP, Rf.dec,Rf.decP);
 
     % stash per-state quantities so the stitched paper figure reuses them (no recompute)
-    PQ(ip)=struct('qmO',qmO,'qmC',qmC,'qsO',qsO,'qsC',qsC, ...
+    PQ(ip)=struct('qmO',qmO,'qmC',qmC,'qsO',qsO,'qsC',qsC,'qmOp',qmOp,'qmCp',qmCp,'qsOp',qsOp,'qsCp',qsCp, ...
+                  'medO',medO,'medC',medC,'iqO',iqO,'iqC',iqC, ...
                   'predP',predP,'predUp',predUp,'ctrlP',ctrlP,'ctrlUp',ctrlUp); %#ok<AGROW>
 
     % ---- separate standalone panel: keep its own y-axis; legend ONLY on init-dev; colored title ----
     figP=jnFig(jnPanelWidth('double',4),3.3); ax=axes(figP);   % jn* v2 sizing
     draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, titR2{ip}, titCol(ip,:), true, ip==1, ...
-        predP,predUp,ctrlP,ctrlUp);
+        predP,predUp,ctrlP,ctrlUp,'points');
     % ---- F4Q_GRANT: grant copies of 2B/2C at the EXACT printed width (opt-in, 2026-09-30) ----
     % Set F4Q_GRANT = {targetCm, outDir} to ALSO write fig:pid C,D for the R01. The locked
     % paper PDFs in outdir are written either way -- this branch never touches them. These
@@ -246,25 +271,44 @@ for ip=1:numel(preds); nm=preds{ip};
         paperExport(figP, fullfile(outdir,fnout{ip}));
         paperExport(figP, fullfile(outview,strrep(fnout{ip},'.pdf','.png')));
     catch ME, warning('[F4R2] export skip %s (%s)',fnout{ip},ME.message); end
+    % FALLBACK standalone (pooled-trial view, the pre-2026-10-10 display) -> *_pooled.pdf
+    figPp=jnFig(jnPanelWidth('double',4),3.3); axp=axes(figPp);
+    draw_panel(axp, qmOp,qmCp,qsOp,qsCp, colOL,colCL, PS, titR2{ip}, titCol(ip,:), true, ip==1, ...
+        predP,predUp,ctrlP,ctrlUp);
+    try
+        paperExport(figPp, fullfile(outdir,strrep(fnout{ip},'.pdf','_pooled.pdf')));
+    catch ME, warning('[F4R2] export skip pooled %s (%s)',fnout{ip},ME.message); end
 end
 fprintf('\n[F4R2] row-2 four individual panels -> %s\n', outdir);
 
 % ---- STITCHED paper figure: 1x4 sharing ONE y-axis (ticks+label only on leftmost), legend on init-dev ----
-figR=jnFig(16.5,3.3); tlR=tiledlayout(figR,1,4,'TileSpacing','compact','Padding','tight');   % jn* v2 stitched: 16.5 canvas -> crops to ~16.6, fits 17.6 col w/ clearance
-for ip=1:numel(preds)
-    if numel(PQ)<ip || isempty(PQ(ip).qmO); continue; end
-    ax=nexttile(tlR);
-    draw_panel(ax, PQ(ip).qmO,PQ(ip).qmC,PQ(ip).qsO,PQ(ip).qsC, colOL,colCL, PS, ...
-        titR2{ip}, titCol(ip,:), ip==1, ip==1, ...   % showY only leftmost; legend only leftmost
-        PQ(ip).predP,PQ(ip).predUp,PQ(ip).ctrlP,PQ(ip).ctrlUp);
+% Two views (2026-10-10): SESSION-LEVEL = main panel f4_row2_quartiles.pdf (in MANIFEST);
+% POOLED-TRIAL = fallback f4_row2_quartiles_pooled.pdf (working dir only, not in MANIFEST).
+% + MEDIAN view (session median, IQR across sessions) -> f4_row2_quartiles_median.pdf (alternative).
+VIEWS={'session','f4_row2_quartiles'; 'pooled','f4_row2_quartiles_pooled'; 'median','f4_row2_quartiles_median'};
+for iv=1:size(VIEWS,1)
+    figR=jnFig(16.5,3.3); tlR=tiledlayout(figR,1,4,'TileSpacing','compact','Padding','tight');   % jn* v2 stitched: 16.5 canvas -> crops to ~16.6, fits 17.6 col w/ clearance
+    for ip=1:numel(preds)
+        if numel(PQ)<ip || isempty(PQ(ip).qmO); continue; end
+        ax=nexttile(tlR);
+        q=PQ(ip);
+        switch VIEWS{iv,1}
+            case 'session', m={q.qmO,q.qmC,q.qsO,q.qsC}; sty='points';
+            case 'median',  m={q.medO,q.medC,q.iqO,q.iqC}; sty='points';
+            otherwise,      m={q.qmOp,q.qmCp,q.qsOp,q.qsCp}; sty='bars';
+        end
+        draw_panel(ax, m{:}, colOL,colCL, PS, ...
+            titR2{ip}, titCol(ip,:), ip==1, ip==1, ...   % showY only leftmost; legend only leftmost
+            PQ(ip).predP,PQ(ip).predUp,PQ(ip).ctrlP,PQ(ip).ctrlUp,sty);
+    end
+    title(tlR,'Effect of state on controller performance','FontSize',PS.fs,'FontWeight','bold');
+    xlabel(tlR,'sorted state quartile bins','FontSize',PS.fs,'FontWeight','bold');   % common x-label
+    try
+        paperExport(figR, fullfile(outdir2,[VIEWS{iv,2} '.pdf']));
+        paperExport(figR, fullfile(outview,[VIEWS{iv,2} '.png']));
+    catch ME, warning('[F4R2] stitched export skip (%s)',ME.message); end
+    fprintf('[F4R2] row-2 STITCHED (%s view) -> %s\\%s.pdf\n', VIEWS{iv,1}, outdir2, VIEWS{iv,2});
 end
-title(tlR,'Effect of state on controller performance','FontSize',PS.fs,'FontWeight','bold');
-xlabel(tlR,'sorted state quartile bins','FontSize',PS.fs,'FontWeight','bold');   % common x-label
-try
-    paperExport(figR, fullfile(outdir2,'f4_row2_quartiles.pdf'));
-    paperExport(figR, fullfile(outview,'f4_row2_quartiles.png'));
-catch ME, warning('[F4R2] stitched export skip (%s)',ME.message); end
-fprintf('[F4R2] row-2 STITCHED paper figure -> %s\\f4_row2_quartiles.pdf\n', outdir2);
 
 %% ============ ROW 2 SUPPLEMENT: mixed-effects (LME) interaction table (Nick) ============
 % The panel star IS the session-aware LMM cond x state interaction, computed by the SHARED helper
@@ -294,22 +338,37 @@ bpRoot=fileparts(fileparts(mfilename('fullpath')));   % absolute: run() changes 
 try, save(fullfile(bpRoot,'data','f4_motion_slopes.mat'),'MOTSLOPE'); catch, end
 try, save(fullfile(bpRoot,'data','f4_row2_lme.mat'),'LME'); fprintf('[F4R2-LME] -> data/f4_row2_lme.mat\n'); catch ME; warning('[F4R2-LME] save skipped (%s)',ME.message); end
 
-function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, showLegend, predP,predUp,ctrlP,ctrlUp)
+function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, showLegend, predP,predUp,ctrlP,ctrlUp,sty)
+% sty: 'bars' (pooled fallback, the original look) | 'points' (session views, user 2026-10-10:
+% point-and-line, OL/CL offset in x). qs* is a 1x4 symmetric error or a 2x4 [below; above].
+    if nargin<17 || isempty(sty), sty='bars'; end
 % One OL/CL-by-quartile panel. Colored title; optional y-axis + legend.
 % Two-concept annotation (top-right): Predictability + Regularizability, each an up/down arrow
 % with significance stars (n.s. if p>=0.05). Predictability = OL slope, Regularizability = CL slope.
     hold(ax,'on');
     yline(ax,0,'-','Color',[0.6 0.6 0.6],'LineWidth',0.5);
     xq=1:4; w=0.36;
-    bar(ax,xq-w/2,qmO,w,'FaceColor',colOL,'EdgeColor','none');
-    bar(ax,xq+w/2,qmC,w,'FaceColor',colCL,'EdgeColor','none');
-    errorbar(ax,xq-w/2,qmO,qsO,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
-    errorbar(ax,xq+w/2,qmC,qsC,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
+    lohi=@(e) deal(e(1,:), e(end,:));          % 1x4 -> symmetric; 2x4 -> [below; above]
+    [lO,hO]=lohi(qsO); [lC,hC]=lohi(qsC);
+    if strcmp(sty,'points')
+        dx=0.12;
+        errorbar(ax,xq-dx,qmO,lO,hO,'-o','Color',colOL,'MarkerFaceColor',colOL,'MarkerEdgeColor','none', ...
+            'MarkerSize',3.5,'LineWidth',1.0,'CapSize',0);
+        errorbar(ax,xq+dx,qmC,lC,hC,'-o','Color',colCL,'MarkerFaceColor',colCL,'MarkerEdgeColor','none', ...
+            'MarkerSize',3.5,'LineWidth',1.0,'CapSize',0);
+    else
+        bar(ax,xq-w/2,qmO,w,'FaceColor',colOL,'EdgeColor','none');
+        bar(ax,xq+w/2,qmC,w,'FaceColor',colCL,'EdgeColor','none');
+        errorbar(ax,xq-w/2,qmO,lO,hO,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
+        errorbar(ax,xq+w/2,qmC,lC,hC,'k','LineStyle','none','LineWidth',0.5,'CapSize',2);
+    end
     % OL-CL gap line REMOVED 2026-10-07 (user): the gap trend is a Discussion quantity now,
     % and drawing it invited reading it as the panel's second property.
     set(ax,'XTick',1:4,'XTickLabel',{'Q1','Q2','Q3','Q4'},'Box','off','TickDir','out', ...
         'FontSize',PS.fs,'FontWeight','bold');
-    xlim(ax,[0.35 4.65]); ylim(ax,[-0.65 1.40]); yl=ylim(ax);
+    % ylim lower edge -0.95 (2026-10-10): Abs-delta CL Q1 is -0.74 (session view) and was
+    % clipped at the old -0.65 in BOTH views.
+    xlim(ax,[0.35 4.65]); ylim(ax,[-0.95 1.40]); yl=ylim(ax);
     title(ax,ttl,'FontSize',PS.fs,'FontWeight','bold','Color',titleCol);   % colored to match state exemplars
     % ---- two-concept annotation (top-center, black): predictability + controllability, arrow + stars ----
     % First/leftmost panel spells the names out; the rest abbreviate to P / C.
@@ -326,9 +385,10 @@ function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, 
     end
     if showLegend
         xL=0.5; yTop=yl(2)-0.03*range(yl); dh=0.10*range(yl);   % far-left so it clears the centered annotation
-        plot(ax,xL,yTop,'s','MarkerFaceColor',colOL,'MarkerEdgeColor','none','MarkerSize',5);
+        mk=tern(strcmp(sty,'points'),'o','s');   % legend glyph matches the plot style
+        plot(ax,xL,yTop,mk,'MarkerFaceColor',colOL,'MarkerEdgeColor','none','MarkerSize',5);
         text(ax,xL+0.14,yTop,'OL','FontSize',5,'FontWeight','bold','Color',colOL,'VerticalAlignment','middle');
-        plot(ax,xL,yTop-dh,'s','MarkerFaceColor',colCL,'MarkerEdgeColor','none','MarkerSize',5);
+        plot(ax,xL,yTop-dh,mk,'MarkerFaceColor',colCL,'MarkerEdgeColor','none','MarkerSize',5);
         text(ax,xL+0.14,yTop-dh,'CL','FontSize',5,'FontWeight','bold','Color',colCL,'VerticalAlignment','middle');
     end
     hold(ax,'off');

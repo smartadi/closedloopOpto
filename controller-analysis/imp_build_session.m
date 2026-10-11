@@ -44,7 +44,13 @@ gridIdx=S1.gridIdx; px_prim=S1.px_prim; py_prim=S1.py_prim; k_prim=S1.k_prim;
 dur=S1.trial_dur;
 b=S2.b; mu=S2.mu; sd=S2.sd; muY=S2.muY; Su=S2.Su;
 
-[U_cp,V_cp,t_svd,mimg_cp] = cp_loadUVt(expPath(mn,td,en), cfg.nSV_load, d_s.timeBlue);
+% Load the SAME V the Stage-2 weights were trained on, as recorded IN the Stage-2 cache
+% (utils/ctrl_force_uncorr.m). Caches without the field predate the forceUncorr option
+% (2026-09-05) and were trained on the default (corrected where corr/ exists) V -- verified
+% 2026-10-10 on AL_0039 0419/0420: corrected V predicts the readout better (pre-stim R^2
+% 0.85/0.81 vs 0.74/0.75 uncorrected). Do NOT key this on a session list.
+S.force_uncorr = ctrl_force_uncorr(S2);
+[U_cp,V_cp,t_svd,mimg_cp] = cp_loadUVt(expPath(mn,td,en), cfg.nSV_load, d_s.timeBlue, S.force_uncorr);
 V_cp=double(V_cp); [nY,nX]=size(mimg_cp); nSV=size(U_cp,3);
 Uflat=reshape(U_cp,nY*nX,nSV); t_full=t_svd(:); nF=min(size(V_cp,2),numel(t_full));
 Xg   = double(Uflat(gridIdx,:))*V_cp;

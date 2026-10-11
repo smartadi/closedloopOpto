@@ -629,6 +629,7 @@ OL.leak_sus=leak(swin); OL.leak_tran_w=leak(twin);
 % how K was chosen (empty-ish struct when K was pinned or the 'dip' rule was used)
 OL.KSEL=KSEL; OL.K_star=KSEL.K_star; OL.R2_ceiling=KSEL.R2_ceiling; OL.K_reachable=KSEL.reachable;
 OL.b=b; OL.mu=mu; OL.sd=sd; OL.muY=muY; OL.Su=Su; OL.target_mode=target_mode;
+OL.force_uncorr=force_uncorr;   % which V b/mu/sd were trained on; consumers read it (utils/ctrl_force_uncorr.m)
 OL.R2_te=R2_te; OL.R2_tr=R2_tr; OL.r2_floor=r2_floor; OL.gate_pass=gate_pass;
 OL.onF=onF; OL.rel=rel; OL.pre=pre; OL.Fs=Fs;
 OL.A_tr=A_tr; OL.G_tr=G_tr; OL.L_tr=L_tr; OL.Aa=Aa; OL.Gg=Gg; OL.Lo=Lo;
