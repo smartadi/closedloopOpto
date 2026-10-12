@@ -160,6 +160,18 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Status:** Analysis done. Figures promoted to paper panel 2F. Manuscript integration pending.
 **⚠ 2026-06-22 TENSION:** the contra-residual stream's reproduced fig 6 (peakdev, pooled n=1467) shows motion → *less* |Peak dev| (more predictable: median No-motion 1.23 vs Motion 0.59, ranksum p=9e-11) — the OPPOSITE sign to this entry's "motion → greater deviation." Reconcile before relying on panel 2F (likely a metric difference — peakdev here vs the `dev_metric='cperr'` default this entry may have used — or a sign/interpretation error). See the next finding.
 
+**2026-10-12 update (Fig 2G, matched stimulus-free control, `imp_state_trialvar.m` `STV_SHAM='self8'`)**
+
+The control is now the response statistic itself: 8 samples at −1.23 to −1.03 s, referenced like the response. With it, the motion effect on prediction error does NOT exceed its control:
+
+| State | Response Q4/Q1 | Control Q4/Q1 | Response ρ | Control ρ |
+|---|---|---|---|---|
+| Motion | 0.72 | 0.68 | −0.12 | −0.15 |
+| Rel δ | 1.01 | 1.11 | +0.096 | +0.046 (p 0.053) |
+| Abs δ | 2.19 | 2.88 | +0.40 | +0.39 |
+
+The old 7-sample onset-referenced sham gave a motion control of 0.80. That is what supported "movement alters the evoked response". This is consistent with the PARTIAL finding below: the motion dependence lives in ongoing/global activity, not in the local stimulus response.
+
 ---
 
 ## PARTIAL: Local photoinhibition response is state-robust to motion; state-dependence lives in GLOBAL activity

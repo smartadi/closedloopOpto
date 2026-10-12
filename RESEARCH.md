@@ -16,6 +16,57 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — Manuscript second pass after an adversarial check of today's edits (Closedloop_edit draft)
+**Changed:** Applied only the fixes that don't depend on the decision below.
+- `results.tex`:
+  - Rel δ sentence: the control has a weaker ρ but a quartile ratio no closer to one (1.11), so it does not separate response from ongoing activity.
+  - Abs δ now reads "as steeply or more".
+  - Motion: referent fixed.
+  - Added the 2G Bonferroni line (0.05/3 = 0.017; motion and abs clear it).
+  - 4C last sentence made descriptive ("absolute power was the largest unique term"), with no "therefore … tied to".
+- `methods_rewrite.tex`:
+  - y_{j,t} reference now defined at Eq. inhib_energy (onset sample; AL_0048 18-sample pre-mean).
+  - The control paragraph now says the ratio and ρ are repeated (not "every test"; the code runs no LME or agreement on the control).
+  - Discloses that AL_0048's response reference falls inside the state window.
+  - Names the exceed-rule as "both quartile ratio and correlation".
+  - Added a 2G threshold to the multiple-comparisons sentence.
+  - Regression paragraph rewritten to what is reported: per-session motion slopes plus Wilcoxon; 4C descriptive.
+- `discussion.tex`: OL motion slope given p = 0.013 (not below corrected; within-session p = 0.0020), matching the treatment of rel-δ p = 0.044.
+
+**Why:** the verify workflow (wf_9bc099bc-510, 4 checkers) found the following:
+- the rel/abs wording contradicted one of the two numbers given;
+- the Methods overstated what is repeated on the control;
+- the trace reference was undefined;
+- the Regression paragraph attached Bonferroni tests to 4C;
+- p-qualifiers in the Discussion were uneven.
+
+**Next:** held for the user's amp-0 / AL_0048-reference decision, because the motion conclusion flips with it:
+- section heading "Stimulation response is state dependent" (L71);
+- intro L44 "single-trial responses depended on … state";
+- results L148 "movement trials are better described by the impulse model";
+- 2G panel title "State dependence of stimulation response" (`imp_state_trialvar_fig.m` L430).
+
+The compiled `images/Figure4.pdf` still has the old 4C (n=613) and stale 4D stars; the user is reassembling it.
+
+### 2026-10-12 — Found: Fig 2G includes 251 zero-amplitude trials, and AL_0048's response reference sits inside the state window
+**Found:** `imp_state_trialvar.m` loops over every amplitude.
+- 251 of the 1767 trials are amp 0, with no light in the "response" window: AL_0041 e1 has 55 and AL_0033 has 196.
+- AL_0048's `dfImp` is referenced to the mean of the 18 pre-onset frames (cols 88:105), which lie inside the [−1, 0) state window. The other three sessions are referenced to the onset frame.
+
+Added off-by-default knobs `STV_SKIP_AMP0` and `STV_REREF_ONSET`; the default reproduces the paper exactly. Sensitivity (response vs control):
+
+| Variant | n | Motion ratio | Motion ρ | Rel δ LME | Abs δ ratio |
+|---|---|---|---|---|---|
+| Paper | 1767 | 0.72 vs 0.68 | −0.116 vs −0.149 | p 0.057, 3/4 | 2.19 vs 2.88 |
+| Skip amp 0 | 1516 | 0.73 vs 0.65 | — | p 0.055 | 2.27 vs 2.74 |
+| Re-reference AL_0048 | 1767 | 0.64 vs 0.72 | −0.133 vs −0.126 | p 0.039, 4/4 | 2.41 vs 2.87 |
+| Both | 1516 | 0.63 vs 0.69 | −0.136 vs −0.120 | p 0.037, 4/4 | 2.56 vs 2.74 |
+
+Results are in `scratchpad/fig2g_sensitivity.mat`.
+
+**Why:** the reviewer flagged the no-light trials as contradicting "response vs matched quantity with no stimulus". Whether motion beats its control depends on AL_0048's reference.
+**Next:** the user decides. Recommended: drop amp 0 and use one reference definition for all sessions (onset frame). If adopted in the loader rather than only in 2G, the Mouse 3 Fig 2 numbers (2B slope, TF, CV) need a rerun.
+
 ### 2026-10-12 — Manuscript: p-values added where the text says "not significant" (Closedloop_edit draft, not pushed)
 **Changed:** Several files.
 - `results.tex`:

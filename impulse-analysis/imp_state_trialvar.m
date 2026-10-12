@@ -167,6 +167,10 @@ end
 % state window keeps the full stated [-1, 0) and nothing is spent. The sham's real requirement was
 % only to sit outside the removed -0.5..0 s baseline, which -1.2..-1.03 s satisfies; it was never
 % required to be at exactly -1.0 s. Asserted below, both ways.
+% CORRECTION 2026-10-12: there is no -0.5..0 s baseline in 3 of 4 sessions -- load_experiments
+% references dfImp to the ONSET FRAME; only AL_0048 (load_bilateral_impulse) uses an 18-frame
+% pre-onset mean. With the self-referenced 'self8' sham the trace reference no longer matters to
+% the sham at all; the < -0.5 s assert is kept only as a guard that the sham stays early.
 % SHAM = THE RESPONSE STATISTIC, SHIFTED (user, 2026-10-12, "option B"). Peak_imp is the mean of
 % df_imp over cols iOn : iOn+round(0.2*fs) -- 8 samples, 0 to +200 ms -- with df_imp referenced to
 % the onset frame, so its first sample is 0 by construction (load_experiments win3). The sham was 7
@@ -177,6 +181,13 @@ end
 % loader) references its response to the mean of the 18 pre-onset frames instead, so its sham is
 % referenced to the 18 frames before the sham (cols 45:62); the reference is detected per amplitude.
 if ~exist('STV_SHAM','var') || isempty(STV_SHAM), STV_SHAM = 'self8'; end
+% SENSITIVITY KNOBS (2026-10-12 review; both OFF = the published analysis):
+%  STV_SKIP_AMP0   drop the 0-amplitude level (AL_0041 e1: 55, AL_0033: 196 trials), whose
+%                  "response" window contains no light -- 251 of the 1767 trials.
+%  STV_REREF_ONSET re-reference AL_0048 to its onset frame (its loader uses the mean of the 18
+%                  pre-onset frames, which lie inside the [-1,0) state window).
+if ~exist('STV_SKIP_AMP0','var')   || isempty(STV_SKIP_AMP0),   STV_SKIP_AMP0   = false; end
+if ~exist('STV_REREF_ONSET','var') || isempty(STV_REREF_ONSET), STV_REREF_ONSET = false; end
 iOn   = find(tAxis >= 0, 1);
 switch lower(STV_SHAM)
     case 'self8',  Lresp = numel(iOn : iOn + round(0.2*fs));       % 8 samples, as Peak_imp
@@ -200,12 +211,12 @@ else
     stWin  = [tAxis(iPow(1)), tAxis(iPow(end))];
 end
 assert(~any(ismember(find(iState), iSham)), '[STV] state and sham windows overlap');
-assert(tAxis(iSham(end)) < -0.5, '[STV] sham window has entered the removed -0.5..0 s baseline');
+assert(tAxis(iSham(end)) < -0.5, '[STV] sham window has moved later than -0.5 s');
 
 % ---- MOTION WINDOW: decoupled from iState (user, 2026-10-02) -------------------------------------
-% Motion gets the [-1, 0) s window the manuscript actually states. It CANNOT share iState, because
-% iState was pushed to start at -0.8 s so it would not overlap the sham -- and the sham occupies
-% -1.000 to -0.829 s, i.e. the first fifth of [-1, 0). That disjointness exists to stop the POWER
+% Motion gets the [-1, 0) s window the manuscript actually states. (Historical: under the 'legacy'
+% geometry iState started at -0.8 s so it would not overlap the sham at -1.000 to -0.829 s; in the
+% default geometry both iState and iMot are [-1, 0) and the sham sits before them.) That disjointness exists to stop the POWER
 % markers (PVv/DPa/DPr) being built from the same samples as the control they are tested against;
 % both come from `df`. Motion does not: it comes from `imp.motTrace` (FaceMap), an independent
 % channel, so an overlap with a df-derived sham carries no circularity. Keeping one shared window
@@ -258,7 +269,14 @@ for e = 1:nExp_s
         if isempty(df) || isempty(pk), continue; end
         n = min([size(df,1), numel(pk), size(imp.motTrace{a},1)]);
         if n < 8, continue; end                       % need enough trials for a spread estimate
+        if STV_SKIP_AMP0 && imp.uAmp{a} == 0, continue; end      % no light in the response window
         df = df(1:n,:);  pk = pk(1:n);
+        if STV_REREF_ONSET && ~all(df(:,iOn) == 0 | isnan(df(:,iOn)))
+            % AL_0048: re-reference to the onset frame like the other sessions, so the response
+            % no longer borrows its reference from inside the [-1,0) state window.
+            df = df - df(:,iOn);
+            pk = mean(df(:, iOn : iOn + round(0.2*fs)), 2, 'omitnan');
+        end
 
         % --- DV: SIGNED deviation from the amplitude mean, scaled by within-amp SD --------------
         d  = pk - mean(pk,'omitnan');
