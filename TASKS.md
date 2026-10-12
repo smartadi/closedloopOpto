@@ -99,8 +99,10 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 - [ ] **Fig 2G stim-free control — rebuild on REAL catch trials, then revisit the overlay** (tabled by user 2026-10-03).
   Today's control is a within-trial pre-stimulus surrogate (`iSham`, −1.200 to −1.029 s), not an unstimulated
-  trial. The 0 V events in `uAmp` are NOT usable as catch trials — they are gap-fill placeholders for events the
-  detector missed (`load_experiments.m:153`), so their amplitude is unknown, not zero. Real catch trials have no
+  trial. The 0 V events in `uAmp` are NOT usable as catch trials — they are SYNTHETIC times the gap-fill code
+  inserts every 5 s into laser-off gaps > 7.5 s (`load_experiments.m:106-156`); the detector misses no pulses
+  (corrected 2026-10-12: they are not missed stimulations). Real no-light trials: AL_0033 90 designed + 62
+  commanded-but-unfired (input_params), AL_0041 e1 ~44, AL_0041 e2 none, AL_0048 100 R-site shams (Block). Real catch trials have no
   laser onset and must be recovered from Block via the Block↔Timeline clock offset — same mechanism as the open
   bilateral item. Do this together with the `Lresp` 7-vs-8 length fix (`imp_state_trialvar.m:170`, see RESEARCH
   2026-10-03). Preview of both overlay framings already built: `impulse-analysis/_preview/stv_2g_ctrl_preview.m`

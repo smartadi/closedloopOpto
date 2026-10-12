@@ -16,6 +16,49 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — Found: Mouse 3 (AL_0048) is on an older hemo correction, and its t = 0 frame is picked by a different rule
+**Found:** from the read-only investigation workflow wf_ebe82208-64e (4 investigators, each with a skeptic).
+- **Correction version:** AL_0048 2026-07-15/1 `corr/` was written 2026-07-15 and is not in the lab's recompute list. It is the May-2021 aligned version (d836449). That version resamples blue onto violet times and applies a one-direction band-stop, which delays 1–5 Hz by about 13–21 ms (per the lab notes, as quoted by the verifiers). Sessions 1–3 are on the 2026-10-11 recompute.
+- **Onset-frame rule:**
+  - `load_bilateral_impulse.m:150` takes the first corr sample stamped at or after the laser.
+  - `load_experiments.m:311` takes the nearest blue exposure.
+  - The investigators disagreed on whether to switch. The skeptic's lag regression shows the AL_0048 corr columns mix blue(k−1), blue(k) and blue(k+1) and are correctly stamped. Switching to the nearest-exposure rule would move the t = 0 sample later (median ~20 ms after the laser vs ~14 now, and ~7 in sessions 1–3).
+  - My data check: the AL_0048 onset sample is dark under the current rule. Trial-averaged col 106 vs the 18-frame pre-mean is −0.36 ± 0.21, −0.08 ± 0.22 and −0.09 ± 0.30 at 0.4, 1.0 and 1.6 V, and the dip starts at col 107. The same holds in all four sessions.
+- Possibly relevant: Mouse 3's slower dip τ (0.1425 s vs ~0.11 s) resembles the old-correction τs of sessions 1 and 3 (0.148, 0.150 s). Speculative.
+
+**Why:** the user asked why onset differs for Mouse 3.
+**Next:** keep L150. Ask the user whether to keep Mouse 3's correction and state it in Methods, or have it recomputed (lab or local; the server is read-only).
+
+### 2026-10-12 — Found: the amplitude-0 "trials" in sessions 1 and 3 are synthetic gap-fill events; real no-light trials are not loaded
+**Found:**
+- `load_experiments.m:106-156` inserts events every 5 s into any laser-off gap longer than 7.5 s and labels them amp 0: 55 in AL_0041 e1 and 196 in AL_0033.
+- The detector misses no pulses (AL_0033 748/748, AL_0041 209/209 and 260/260). So the 2026-10-03 entry and the TASKS note calling them "missed stimulations" were wrong; TASKS is corrected.
+- Real no-light trials (from input_params and Block files, per the workflow):
+
+| Session | Real no-light trials |
+|---|---|
+| AL_0033 | 90 designed zero (input_params col 9) + 62 commanded but never fired |
+| AL_0041 e1 | ~44 trials with no pulse. The lit-trial laser delay varies 0.02–2 s, so the sham onset is not defined |
+| AL_0041 e2 | none (261 rows, 260 fired, the last row unlit) |
+| AL_0048 | 200 shams in the Block, 100 for the R site, recoverable by a Block↔Timeline clock fit (7 ms RMS) |
+
+- All other Fig 2/S1 producers already exclude amp 0. Only 2G included the synthetic events (251 of 1767).
+
+**Why:** the user said "dont use no light trials … there should be some in all sessions". The second part does not hold for Mouse 1b.
+**Next:** the user decides the 2G control: keep the within-trial `self8` (available in all 4 sessions) and/or add a real catch-trial control (3 of 4 sessions; needs new loader code).
+
+### 2026-10-12 — Found: Mouse 3's pre-onset-mean reference is an undocumented port artifact, not a choice
+**Found:**
+- `load_bilateral_impulse.m:227` (`trM - mean(trM(:, relW<0 & relW>=-round(0.5*Fs_b)),2)`) was written once, in a91c076 (2026-08-02), when AL_0048 was ported from the Python bilateral sub-area. That sub-area's `impulse_config.py` sets `BASE_WIN = (-0.5, 0.0)`. The port never changed this line, although its comment says "matching the load_experiments contract".
+- `load_experiments` has referenced every trial to the onset frame since the April monolith (8827995). The 2026-07-16 entry required an onset-frame reference so the TF fit has r(1) = 0.
+- Data:
+  - per-trial Mouse 3 Peak under the two references correlates only r = 0.36–0.55;
+  - the onset reference lowers the within-amp SD (2.39→2.02, 2.27→1.56, 3.09→1.88);
+  - the 2B slope of the amp means goes from −0.810 to −1.035 per V, i.e. −2.43 → −3.11 per mW.
+
+**Why:** the user asked why Mouse 3's onset differs. It is truly wrong by the project's own convention.
+**Next:** with the user's go, change L227 to the onset frame and rerun the Mouse 3 Fig 2 chain: 2B, TF (2C–2F), CV (2D), the 2-pole CV, 2G (with amp 0 dropped), STATS_TABLE, and the manuscript numbers.
+
 ### 2026-10-12 — Manuscript second pass after an adversarial check of today's edits (Closedloop_edit draft)
 **Changed:** Applied only the fixes that don't depend on the decision below.
 - `results.tex`:
