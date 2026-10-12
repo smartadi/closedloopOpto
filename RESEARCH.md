@@ -16,6 +16,58 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - Retired the two Fig-2 supplementary panels (tf_cv_2D_endlabels, tf_cv_shape_across_sessions)
+**Changed:** `paper/figures_final/MANIFEST.txt` `[supplementary]`: both lines removed, with a dated note. Their four files (pdf + png) were deleted from `panels/supplementary/` by hand.
+- `collect_final_panels` was NOT run in prune mode. Its dry run would also prune the 8 S4 reject-trial files (`[supp_reject]`, tabled 2026-10-10 but not retired), which is outside this request.
+- PAPER.md and the manuscript never referenced either panel, so nothing else changes.
+- Working copies remain in `paper/images/figure2/` and `paper/_hemo_compare/`.
+**Why:** User 2026-10-11: "fig2 supplementary work are plots that are not needed".
+**Next:** Decide whether the tabled S4 panels should be pruned. Until then `collect_final_panels` (prune mode) will delete them.
+
+### 2026-10-11 - Fig 2F: tau beyond the 0.5 s fit window drawn as an off-scale triangle (tauClip)
+**Changed:**
+- `utils/imp_tf_robust_fig.m`: new `opts.tauClip` (default Inf). In TF-A, a tau above it is drawn as a filled right-pointing triangle at the ceiling, CI ends are clipped to it, and the axis is sized from the clipped values. The clipped sessions are printed to the console.
+- `impulse-analysis/imp_tf_run.m` passes `'tauClip',RUN_TFIT` (0.5).
+- `impulse-analysis/imp_tf_figs.m` now passes `'bareA',true,'tauClip',0.5`. It used to draw TF-A with CI lines while imp_tf_run drew bare points, and both write the same final `tf_tau_forest.pdf`.
+- Re-exported 2F only (PAPER_FINAL, from the NEW-corr `imp_tf_fits.mat`).
+**Found:** Two of four slow modes are off-scale:
+- M1a: tau ~1.7e6 s, a pole at ~0;
+- M1b: 0.973 s. It was already 0.586 s, beyond the window, on the old correction.
+
+M2 0.268 s and M3 0.30 s sit on scale. The dip median is 0.113 s (dotted line).
+**Why:** User 2026-10-11: "increase model order so we get something relevant for slow mode if not clip it to 0.5s". The order sweep failed (entry below). A mode slower than the 0.5 s window it was fit on is not resolved, and without a ceiling M1a's pole stretched the axis so far that every marker collapsed onto x = 0.
+**Next:** 2F caption: "triangles, tau beyond the 0.5 s fit window (M1a, M1b)". The console's mean tau_slow / between-session SD / ratio are meaningless with an infinite tau, so don't quote them.
+
+### 2026-10-11 - Higher TF order for M1a (AL_0041 e1) does NOT give a usable slow mode (dead end)
+**Found:** NEW-corr `allExperiments(1)`, `imp_tf_fit_session` with `opts.forceOrder` over every 3-6 pole x 0..np-1 zero x 0-3 delay (72 fits, no bootstrap, `per_amp_fit` false).
+- AIC still picks 3p1z0d (R2_h 0.978, LOAO 0.50, slow tau 1.7e6 s).
+- Every 4-6 pole fit either puts the extra pole back at ~0 (4p2z2d, 5p3z0d, 5p1z0d: tau 1e6-1e11 s) or collapses (R2_h <= 0.48).
+- The only fit with all tau below 2 s and more than 3 poles is 6p1z0d (slow tau 0.516 s), at R2_h 0.17 and LOAO -0.13, so it is unusable.
+- Lower order, 3p0z0d (AIC -6.38 vs -6.88), has no slow mode at all (tau 0.005/0.089 s), though its LOAO is higher (0.61).
+**Why:** User asked to raise the model order before clipping. Within the 0.5 s window the M1a response gives the extra pole nothing slow to fit.
+**Next:** none for order. The fallback (clip at 0.5 s) is in the entry above; `imp_tf_fits.mat` is unchanged (AIC selection, bootstrap from the NEW pass).
+
+### 2026-10-11 - ADOPTED the new server hemo correction (corr/) for Fig 2 + S1
+**Changed:** Installed the NEW-pass outputs (`paper/_hemo_compare/new/`, same code as OLD: timestamp alignment + mW = V/3):
+- into `paper/figures_final/panels/figure2/`: all 7 Fig-2 panels;
+- into `panels/supp_spatial/`: `imp_spatial_area`, `supp_spatial_cbar`, `supp_spatial_map_01..09`. `supp_s1_batch_variance` / `supp_s1_ol_variance_evolution` are controller panels, byte-identical, and were left as they were;
+- caches: `impulse-analysis/data/imp_tf_fits.mat`, `data/fig2g_state_stats.mat`, `paper-writing/STATS_TABLE.csv`.
+
+The pre-adoption originals stay in `paper/_hemo_compare/orig_snapshot_2026-10-11/` and `old/`. The default `HEMO_CORR` ('' = corr/) is now the paper path.
+**Found:** STATS_TABLE 2G moves:
+- motion Q4/Q1 0.731 -> 0.721 (LMM p 0.015 -> 0.015);
+- abs delta ratio 2.10 -> 2.19;
+- rel delta ns (p 0.068 -> 0.057);
+- the motion stimulus-free control strengthens (rho -0.049, p 0.040 -> rho -0.076, p 0.0014).
+
+Other numbers are in the OLD vs NEW entry below (2B slopes, CV 0.845, dip tau median 0.113 s, dip 2.4-4.2 Hz).
+**Why:** User 2026-10-11: "keep the new for fig 2 and s1, put them in pdf panel folders ill replace".
+**Next:**
+- The user replaces the panels in Illustrator.
+- Update the manuscript numbers (2B slopes, CV 0.845, dip tau ~0.11 s, 2.4-4.2 Hz, 2G values).
+- Fig 4G + MPC still read corr/ without the alignment fix. Fix and rebuild them before quoting any 4G/MPC number.
+- The motion stim-free control is now p = 0.0014; check how the text describes it.
+
 ### 2026-10-11 - load_experiments aligns V by timestamps; Fig 2 + S1 rendered on OLD vs NEW hemo correction for approval
 **Changed:** `impulse-analysis/load_experiments.m`:
 - Each stim is placed on a blue frame (`bBlue`, the published rounding).

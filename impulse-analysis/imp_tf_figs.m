@@ -112,7 +112,8 @@ if want('amp'), rbPanels{end+1} = 'C'; end
 if want('swap'), rbPanels{end+1} = 'D'; end
 if ~isempty(rbPanels)
     FIGS.robust = imp_tf_robust_fig(Sfit, outDir, ...
-        struct('tag','','export',FIG_EXPORT,'amp_norm',true,'panels',{rbPanels}));
+        struct('tag','','export',FIG_EXPORT,'amp_norm',true,'panels',{rbPanels}, ...
+               'bareA',true,'tauClip',0.5));   % match imp_tf_run: both write tf_tau_forest.pdf
 end
 if want('poles')
     FIGS.poles = imp_tf_poles_fig(Sfit, outDir, struct('tag','','export',FIG_EXPORT));

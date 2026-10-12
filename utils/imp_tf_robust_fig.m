@@ -67,6 +67,12 @@ if ~isfield(opts,'panels'),   opts.panels   = {'A','D'}; end
 % not a usable interval (it reads as a "full line" across the axis). For the paper panel the
 % point estimate is shown alone; quote the estimate with the rejection fraction, not the bar.
 if ~isfield(opts,'bareA'),    opts.bareA    = false; end
+% tauClip: TF-A x-axis ceiling, seconds. A tau beyond it is drawn AT the ceiling as a filled
+% right-pointing triangle (off-scale) instead of its own marker. Set to the fit window (0.5 s)
+% for the paper panel (user 2026-10-11): a mode slower than the window it was fit on is not
+% resolved by the data -- on the new hemo correction M1a's slowest pole sits at ~0 (tau ~1e6 s)
+% and stretched the axis so far that every other marker collapsed onto x = 0.
+if ~isfield(opts,'tauClip'),  opts.tauClip  = Inf;   end
 wantP = @(c) any(strcmpi(opts.panels, c));
 
 PS = paperStyle();
@@ -144,27 +150,38 @@ dy = 0.16;
 if opts.bareA, dy = 0; end
 % Cross-session mean line + -/+1 SD band removed per user 2026-09-22 (kept in the console
 % report below: mean tau_slow / between-session SD / ratio). Markers alone now carry the panel.
+cl = @(v) min(v, opts.tauClip);              % CI ends are clipped to the same ceiling
 for k = 1:n
     yS = k + hasFast*dy;                       % slow row nudges up only if a fast row exists
     if ~opts.bareA && isfinite(lo(k)) && isfinite(hi(k))
-        plot(axA, [lo(k) hi(k)], [yS yS], '-', 'Color', grad(k), 'LineWidth', PS.lw_fit);
+        plot(axA, cl([lo(k) hi(k)]), [yS yS], '-', 'Color', grad(k), 'LineWidth', PS.lw_fit);
     end
-    plot(axA, tau1(k), yS, 'o', 'MarkerSize',3.5, ...
-         'MarkerFaceColor',grad(k), 'MarkerEdgeColor',grad(k));
+    if tau1(k) > opts.tauClip                  % off-scale: triangle at the ceiling
+        plot(axA, opts.tauClip, yS, '>', 'MarkerSize',3.5, ...
+             'MarkerFaceColor',grad(k), 'MarkerEdgeColor',grad(k));
+    else
+        plot(axA, tau1(k), yS, 'o', 'MarkerSize',3.5, ...
+             'MarkerFaceColor',grad(k), 'MarkerEdgeColor',grad(k));
+    end
     if isfinite(tau2(k))
         yF = k - dy;
         if ~opts.bareA && isfinite(lo2(k)) && isfinite(hi2(k))
-            plot(axA, [lo2(k) hi2(k)], [yF yF], '-', 'Color', grad(k), 'LineWidth', PS.lw_fit);
+            plot(axA, cl([lo2(k) hi2(k)]), [yF yF], '-', 'Color', grad(k), 'LineWidth', PS.lw_fit);
         end
-        plot(axA, tau2(k), yF, 's', 'MarkerSize',3.2, ...
+        plot(axA, cl(tau2(k)), yF, 's', 'MarkerSize',3.2, ...
              'MarkerFaceColor','none', 'MarkerEdgeColor',grad(k), 'LineWidth',0.6);
     end
+end
+nClip = sum(tau1 > opts.tauClip) + sum(tau2 > opts.tauClip);
+if nClip
+    fprintf('[TF-A] %d tau value(s) beyond the %.2f s ceiling drawn as off-scale triangles: %s\n', ...
+            nClip, opts.tauClip, strjoin(cellstr(lblS(tau1 > opts.tauClip | tau2 > opts.tauClip)), ', '));
 end
 % headroom above the top row so the top-right legend clears the data (user 2026-10-10)
 ylim(axA,[0.4 n+0.6+1.0*hasFast]);  set(axA,'YTick',1:n,'YTickLabel',cellstr(lblS),'TickLabelInterpreter','none');
 % Linear x starting at 0 and extended just past the largest tau (user 2026-09-22). The
 % fast/slow poles fall within one linear decade here, so a zero-based linear axis reads clean.
-xhi = 1.1 * max([tau1(:); tau2(:)], [], 'omitnan');
+xhi = 1.1 * max(cl([tau1(:); tau2(:)]), [], 'omitnan');
 if ~isfinite(xhi) || xhi <= 0, xhi = 0.5; end
 xlim(axA, [0 xhi]);
 if hasFast
