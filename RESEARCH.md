@@ -16,6 +16,99 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — Manuscript: p-values added where the text says "not significant" (Closedloop_edit draft, not pushed)
+**Changed:** Several files.
+- `results.tex`:
+  - 2G caption now reads "n.s., not significant, p = 0.057 for relative power";
+  - Fig 3 variance-ratio windows: before V = 56, p = 0.85; after V = 54, p = 0.76.
+- `discussion.tex` L18:
+  - CL motion p = 0.27;
+  - rel δ OL p = 0.76; CL p = 0.044 ("not below the corrected threshold");
+  - gap trends rel p = 0.081, abs p = 0.31, init p = 0.69.
+
+All of these values come from the sweep workflow (wf_nsp.json) and match Results L150/L152 and STATS_TABLE.
+
+**Skipped:**
+- results L110 (a duplicate of the L112 test);
+- the Methods L1180 insertion (results belong in Results).
+
+**Why:** user, 2026-10-12: "mention the p value if we dont have significance".
+**Next:** these claims still have no computed test anywhere:
+- 3H pre/post RMSE ratio;
+- mouse-variance LRT;
+- S1 plateau, S1C, S1D;
+- Fig 5G/H/I preview claims (these conflict with the Fig 5 "no significance tests" caption policy);
+- the Discussion's preview "no detectable change" and the feedback × preview interaction.
+
+Ask the user which ones to compute.
+
+### 2026-10-12 — Manuscript: Fig 4C is construction only, no tests (Closedloop_edit draft, not pushed)
+**Changed:**
+- `results.tex` 4C paragraph: removed every V, p and the signed-rank and Bonferroni sentence, keeping mean ± SEM. "Kept the same share in both windows" now reads "took a similar share (0.11 ± 0.05 and 0.11 ± 0.06)".
+- `methods_rewrite.tex`:
+  - dropped "test ... with a one-sided Wilcoxon signed-rank test";
+  - removed 4C from the multiple-comparisons families and from the 0.0063 threshold sentence.
+
+**Why:** user, 2026-10-12: "4C dont state p values or significance we are just going to explain the construction here".
+**Next:** `f4_error_decomp.m` still computes `DEC.sep.p` / `V` for the record. The panel has no stars, so it needs no change.
+
+### 2026-10-12 — Manuscript: Fig 2G stimulus-free control numbers and Methods for the matched (Option B) control (Closedloop_edit draft)
+**Changed:**
+- `results.tex` L73/L75:
+  - control described as "the same quantity over an eight-sample window just before the state window";
+  - motion now reads "control fell at least as steeply (0.68 vs 0.72; ρ −0.15 vs −0.12), so quieter ongoing activity during movement can account for it; it does not show movement alters the evoked response";
+  - rel δ control ratio 1.11, ρ +0.046, p = 0.053 ("about half as large, not significant"), replacing "flat, 0.98, p 0.94";
+  - abs δ control 2.88 vs 2.19, ρ +0.39 vs +0.40;
+  - closing line now covers both motion and abs power.
+- `methods_rewrite.tex`: control paragraph rewritten:
+  - Eq. inhib_energy over −1.23 to −1.03 s;
+  - referenced like the response (onset frame; Mouse 3: preceding 0.5 s mean);
+  - the "−0.5 to 0 s baseline" clause removed, because it was wrong for 3 of 4 sessions, whose traces are onset-frame referenced.
+
+**Why:** rerun below; the old text's "motion falls more steeply than control → movement alters the evoked response" no longer holds.
+**Next:** the user must agree the 2G narrative change before the push.
+
+### 2026-10-12 — Decision: keep the OLD hemo correction for Fig 4E–G and the MPC supplement; hold the Methods hemo sentence
+**Found/decided:** in answer to the correction explainer, the user said "hold off keep using old correction". Fig 4E–G and the MPC supplement stay on the corr_hemoApr2021-era caches. Fig 2/S1 stay on the new correction (the user's 2026-10-11 instruction). The Methods hemo-version sentence is not added.
+**Why:** a user decision. A rebuild would also have to handle the AL_0033 2025-04-15 dropped/doubled-frame flag.
+**Next:** revisit if the user reopens it. Until then the Methods hemo description stays generic.
+
+### 2026-10-12 — Found: MATLAB ran a stale `imp_state_trialvar` after an edit
+**Found:** the second edit (the AL_0048 reference branch) was not picked up. The run reproduced the previous numbers exactly and the new `fprintf` never printed. `clear imp_state_trialvar; rehash` fixed it.
+**Why:** this is the known function-cache issue (memory `reference_matlab_function_cache`). It also hits scripts run through the MCP right after an Edit.
+**Next:** after editing a script, always `clear <name>; rehash` before rerunning it via MCP. Check that a new print line appears.
+
+### 2026-10-12 — `imp_state_trialvar.m`: Fig 2G sham = Option B (8 samples, self-referenced, matches the response statistic)
+**Changed:** new knob `STV_SHAM`.
+- `'self8'` (default):
+  - `Lresp = numel(iOn:iOn+round(0.2*fs))` = 8, giving `iSham` cols 63:70 (−1.229 to −1.029 s);
+  - the sham is referenced to its own first frame, as `Peak_imp` (`load_experiments` win3) is referenced to the onset frame;
+  - for AL_0048, whose `load_bilateral_impulse` references `dfImp` to the mean of the 18 pre-onset frames (cols 88:105), the sham is referenced to cols 45:62;
+  - the reference is detected from the data per amplitude, with an assert.
+- `'onset7'` restores the old 7-sample, onset-referenced sham.
+
+**Found:** the response is unchanged. The control changed:
+
+| State | Q4/Q1 ratio, new (old) | ρ, new (old) |
+|---|---|---|
+| Motion | 0.68 (0.80) | −0.149 (−0.076) |
+| Rel δ | 1.11 (0.98) | +0.046, p 0.053 (+0.002, p 0.94) |
+| Abs δ | 2.88 (2.35) | +0.390 (+0.385) |
+
+- Motion threshold split: control 0.51 vs response 0.40.
+- The variance-decomposition regression of obs on sham now gives b = −0.081. The code comment records r = +0.39 for the old sham. The old sham shared the response's onset reference frame, which is the likely source of that correlation.
+- The verdict for motion is now "NOT above stim-free control".
+- The 2G paper panel is unchanged, because paper mode (`STVF_UNITS='norm'`) does not draw the control. It was re-exported anyway.
+- `STATS_TABLE.csv` was regenerated.
+
+**Why:** user, 2026-10-12: "rerun 2G with correct control, 8 samples … go option B". The old sham was one sample short since the 2026-10-03 response-window change, and it shared the onset frame with the response.
+**Next:** manuscript updated (entry above). `imp_state_trial_examples.m` still uses the legacy 7-sample geometry; it is not a paper panel.
+
+### 2026-10-12 — Fig 4C abs δ, transient vs steady state: paired test computed, not reported
+**Found:** adjusted unique R² in the separate-model abs δ term, 0–1 s vs 1–3 s: 0.106 vs 0.114, a difference of 0.007. Paired signed-rank V = 31, p = 0.898, n = 11.
+**Why:** this was computed to back "kept the same share in both windows". The user then decided 4C states no tests, so the text now gives the two values only.
+**Next:** none.
+
 ### 2026-10-11 - Manuscript updated for today's changes (Closedloop_edit draft, not pushed)
 **Changed:** `Closedloop_edit/{results,methods_rewrite,discussion,supplementary}.tex` on `draft`. The edits came from a read-only audit workflow: 6 finders, 2 verifiers per file and a critic, 68 proposals. I applied the verified ones plus the Fig 4C rewrite (entry below).
 - **Fig 2, new hemo correction:**

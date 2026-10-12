@@ -44,7 +44,8 @@
 %           were (corrected 2026-10-02):
 %             MOTION              iMot   = [-1 s, -1/fs]  cols 71:105, 35 samples
 %             POWER (PVv/DPa/DPr) iState = [-1 s, -1/fs]  cols 71:105, 35 samples
-%             SHAM control        iSham  = [-1.2, -1.03]s cols  64:70,  7 samples
+%             SHAM control        iSham  = [-1.23,-1.03]s cols  63:70,  8 samples, own-frame ref
+%                                 (STV_SHAM='onset7': cols 64:70, 7 samples, onset-frame ref)
 %           ONE window for every marker, as the manuscript states (user, 2026-10-02). Up to that
 %           date the power markers used -0.8..-0.03 s (26 samples) because the sham was pinned at
 %           -1.0 s and the state window was pushed to start after it; that dependency is now
@@ -94,8 +95,8 @@ if ~exist('STV_MOT_WIN','var')   || isempty(STV_MOT_WIN),   STV_MOT_WIN = 'paper
 %  (b) The sham no longer has to collide with it. The sham was pinned at -1.0 s and the state window
 %      was then pushed to START after it; here that dependency is INVERTED -- the state window is
 %      fixed at [-1,0) and the sham is placed to END one sample before it (cols 64:70, -1.200 to
-%      -1.029 s). Still outside the -0.5..0 s baseline dfImp has had removed, which was the sham's
-%      actual placement requirement, and the disjointness assert below is unchanged and still passes.
+%      -1.029 s; since 2026-10-12 cols 63:70, 8 samples, self-referenced -- see STV_SHAM). The
+%      disjointness assert below is unchanged and still passes.
 if ~exist('STV_PWR_WIN','var')   || isempty(STV_PWR_WIN),   STV_PWR_WIN = 'paper'; end
 % STATE SCALING (user, 2026-08-12). Default RAW: the markers keep their physical units, so an axis
 % reads "motion z-score 2.5" or "pre-trial variance 20 (dF/F)^2" instead of a within-amp z that
@@ -166,8 +167,22 @@ end
 % state window keeps the full stated [-1, 0) and nothing is spent. The sham's real requirement was
 % only to sit outside the removed -0.5..0 s baseline, which -1.2..-1.03 s satisfies; it was never
 % required to be at exactly -1.0 s. Asserted below, both ways.
+% SHAM = THE RESPONSE STATISTIC, SHIFTED (user, 2026-10-12, "option B"). Peak_imp is the mean of
+% df_imp over cols iOn : iOn+round(0.2*fs) -- 8 samples, 0 to +200 ms -- with df_imp referenced to
+% the onset frame, so its first sample is 0 by construction (load_experiments win3). The sham was 7
+% samples referenced to that same onset frame, ~1.1 s away: one sample short, and sharing the
+% response's reference frame. 'self8' (default) takes 8 samples and references them to their OWN
+% first frame -- the identical calculation at a time with no stimulus, sharing no frame with the
+% response or the state window. 'onset7' restores the pre-2026-10-12 sham. AL_0048 (bilateral
+% loader) references its response to the mean of the 18 pre-onset frames instead, so its sham is
+% referenced to the 18 frames before the sham (cols 45:62); the reference is detected per amplitude.
+if ~exist('STV_SHAM','var') || isempty(STV_SHAM), STV_SHAM = 'self8'; end
 iOn   = find(tAxis >= 0, 1);
-Lresp = numel(iOn+2 : iOn + round(0.22*fs));            % response-window length (7 samples)
+switch lower(STV_SHAM)
+    case 'self8',  Lresp = numel(iOn : iOn + round(0.2*fs));       % 8 samples, as Peak_imp
+    case 'onset7', Lresp = numel(iOn+2 : iOn + round(0.22*fs));    % 7 samples (pre-2026-10-12)
+    otherwise,     error('[STV] STV_SHAM must be ''self8'' or ''onset7''.');
+end
 if strcmpi(STV_PWR_WIN,'legacy')
     % PRE-2026-10-02: sham pinned at -1.0 s, state window pushed to start after it.
     iSham = find(tAxis >= -1.0, 1) + (0:Lresp-1);
@@ -179,7 +194,7 @@ else
     iEnd  = iOn - 1;                                    % strictly pre-onset
     if strcmpi(STV_STATE_WIN,'peri'), iEnd = iOn + round(0.5*fs); end   % A4 comparison window
     iPow  = (iOn - round(1.0*fs)) : iEnd;               % cols 71:105 (35 samples) when 'pre'
-    iSham = (iPow(1) - Lresp) : (iPow(1) - 1);          % cols 64:70, -1.200 to -1.029 s
+    iSham = (iPow(1) - Lresp) : (iPow(1) - 1);          % 'self8': cols 63:70, -1.229 to -1.029 s
     assert(iSham(1) >= 1, '[STV] sham window runs off the start of the trace');
     iState = false(size(tAxis));  iState(iPow) = true;
     stWin  = [tAxis(iPow(1)), tAxis(iPow(end))];
@@ -229,10 +244,10 @@ fprintf('\n[STV] state window %s = [%.2f %.2f] s | %d bins | %d bootstrap\n', ..
 fprintf('[STV] motion window %s = [%.2f %.2f] s (%d smp), stat = %s\n', upper(STV_MOT_WIN), ...
         tAxis(iMot(1)), tAxis(iMot(end)), numel(iMot), upper(STV_MOT_STAT));
 fprintf(['[STV] power  window %+0.3f .. %+0.3f s (%d samples, df = %.3f Hz, %d bins in 2-4 Hz)\n' ...
-         '[STV] sham   window %+0.3f .. %+0.3f s (%d samples)\n'], ...
+         '[STV] sham   window %+0.3f .. %+0.3f s (%d samples, cols %d:%d, %s)\n'], ...
         stWin(1), stWin(2), nnz(iState), fs/nnz(iState), ...
         nnz((0:nnz(iState)-1)*(fs/nnz(iState)) >= 2 & (0:nnz(iState)-1)*(fs/nnz(iState)) <= 4), ...
-        tAxis(iSham(1)), tAxis(iSham(end)), numel(iSham));
+        tAxis(iSham(1)), tAxis(iSham(end)), numel(iSham), iSham(1), iSham(end), upper(STV_SHAM));
 
 for e = 1:nExp_s
     imp = allExperiments(e).imp;
@@ -251,7 +266,22 @@ for e = 1:nExp_s
         dev = d / sd;
 
         % --- stim-free control: MATCHED SHAM PEAK (same statistic, same length, no stimulus) -----
-        pre  = mean(df(:, iSham), 2, 'omitnan');
+        shm  = df(:, iSham);
+        if strcmpi(STV_SHAM,'self8')
+            % Copy THIS session's response reference, read off the data: load_experiments
+            % references df_imp to the onset frame (col iOn == 0); load_bilateral_impulse
+            % (AL_0048) to the mean of the 18 frames before onset (cols 88:105).
+            if all(df(:,iOn) == 0 | isnan(df(:,iOn)))
+                shm = shm - shm(:,1);                             % own first frame = 0
+            else
+                nb = find(arrayfun(@(k) max(abs(mean(df(:,iOn-k:iOn-1),2,'omitnan'))) < 1e-6, 1:35), 1);
+                assert(~isempty(nb) && iSham(1)-nb >= 1, '[STV] %s amp %d: response reference not recognised', labels{e}, a);
+                shm = shm - mean(df(:, iSham(1)-nb : iSham(1)-1), 2, 'omitnan');   % own nb-frame pre-mean
+                if a == 1, fprintf('[STV] %s: response ref = mean of %d pre-onset frames; sham ref = cols %d:%d\n', ...
+                        labels{e}, nb, iSham(1)-nb, iSham(1)-1); end
+            end
+        end
+        pre  = mean(shm, 2, 'omitnan');
         dpc  = pre - mean(pre,'omitnan');
         sdp  = std(dpc,'omitnan');   if ~isfinite(sdp) || sdp == 0, sdp = eps; end
         devPre = dpc / sdp;
@@ -583,8 +613,9 @@ end
 %  the actual trace, so var(dev) = response variability + ongoing activity sitting in the window. If
 %  motion only shrank the second term the response would not be more reproducible -- the measurement
 %  would merely be cleaner. Those are different claims and they look identical in var(dev) alone.
-%  Resolved by REGRESSION, not subtraction: obs and sham are correlated (r = +0.39, the ongoing
-%  signal is slow), so var(obs) - var(sham) assumes an independence that does not hold. Fit
+%  Resolved by REGRESSION, not subtraction: obs and sham are correlated (r = +0.39 with the old
+%  'onset7' sham, which shared the response's onset reference frame; b = -0.08 with 'self8'), so
+%  var(obs) - var(sham) assumes an independence that need not hold. Fit
 %  obs ~ b*sham on the LOW-motion trials, apply that b to both groups, and compare the RESIDUAL
 %  variance -- what is left of the response once the part predictable from a stim-free window is
 %  removed. All in RAW dF/F, because the SD-normalised copies are 1 by construction.
