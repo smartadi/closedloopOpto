@@ -16,6 +16,80 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-11 - Manuscript updated for today's changes (Closedloop_edit draft, not pushed)
+**Changed:** `Closedloop_edit/{results,methods_rewrite,discussion,supplementary}.tex` on `draft`. The edits came from a read-only audit workflow: 6 finders, 2 verifiers per file and a critic, 68 proposals. I applied the verified ones plus the Fig 4C rewrite (entry below).
+- **Fig 2, new hemo correction:**
+  - 2B slopes −0.88/−1.32/−1.53/−2.43 per mW (per V × 3), R² 0.97/0.73/0.88/0.92;
+  - CV pooled 0.85 (4 dp 0.8452); swap cross-session 0.68;
+  - dip 2.4–4.2 Hz, τ 0.11 s, median 0.113 s;
+  - rebound sentence rewritten: Mice 2 and 3 at 0.27 and 0.30 s, Mouse 1b 0.97 s, Mouse 1a no decay within the window;
+  - 2F caption describes the triangles; bootstrap 43–73%;
+  - all 2G numbers, including the stimulus-free control ratios 0.80 / 0.98 / 2.35;
+  - S1 plateau ~1.2 mW (Results L18).
+- **mW = V/3:** Results "0 to 1.6 mW"; Methods laser paragraph (1 mW per 3 V; a `%% FILL` asks for the convention's source); Methods 1.6 mW ×2; Discussion 1.6 mW.
+- **Fig 4 uncorrelated random slope:**
+  - Table 1 (all four rows, bold marks) and its caption gap range;
+  - Results L150–154 significance wording: initial deviation and rel no longer clear Bonferroni, motion attenuation now does;
+  - Methods formula + a justification sentence (simulation type-I, fallback chain);
+  - Discussion gap trend 0.23 [0.09, 0.37], p = 0.0051; rel p = 0.081.
+- **Discussion 2-pole:** 0.81 vs 0.85.
+- **Methods fixes:** TF order rule corrected (parsimonious within 0.002 of the best R², not "escalate to higher order"); 2G state-window sentence 29–200 ms → 0–200 ms (Eq. inhib_energy).
+- **Second pass**, after a 3-lens adversarial check of the applied diff:
+  - 4C text reports V for each signed-rank test, and only the transient initial deviation clears Bonferroni (0.0063). Methods Multiple comparisons lists the 4C family of eight.
+  - The steady-state claim is now 'remains the largest steady-state term' (abs 0.07 ± 0.04 with rel in the model, 0.11 ± 0.06 without), not 'keeps its share'.
+  - Mouse 1b's rebound is described as beyond the 0.5 s window, not 0.97 s; Results and Discussion drop 'several-fold'.
+  - ρ(abs, rel δ) 0.55 → **0.46 over the impulse trials**. 0.55 was a pre-2026-10-02 value; current within-session values are 0.41–0.48.
+  - 4B caption: 'within each session'. Methods: signed-rank wording and exemplar z-scoring clarified.
+- `latexmk` builds clean: 40 pp, 0 undefined.
+**Found:**
+- **Left for the user:**
+  - Methods hemo-correction note (whether AL_0048 is post-fix is unknown);
+  - Methods L271 / Fig 5D per-date calibration;
+  - **2G sham window is 7 samples while the response window is now 8** (Methods L1177 says "same length" — false). Fix the code (Lresp = 8, rerun 2G control) or the text;
+  - ρ = 0.55 between the δ measures comes from the 613 controller trials, not the impulse trials it sits beside;
+  - the rel 2–4 Hz CL claims now rest on p = 0.044.
+- 4E–G, MPC and S4 numbers are untouched (old-correction caches).
+**Why:** User 2026-10-11: "update the write up wherever needed then wait on me to reassemble figures then we push".
+**Next:** The user reassembles Fig 2, S1, Fig 4 (4C + 4D) and S3 B–D in Illustrator and updates `images/`. Then commit on draft, fast-forward main and push both.
+
+### 2026-10-11 - Fig 4C error decomposition is now session by session (adjusted R², mean ± SEM over 11 sessions)
+**Changed:** `controller-analysis/f4_error_decomp.m`.
+- New knob `F4_DECOMP_LEVEL`: 'session' is the default; 'pooled' is the legacy behaviour.
+- In session mode:
+  - the bar is the mean over sessions of each session's own fit (states z-scored within session);
+  - the error bar is the SEM;
+  - the title reads "Unique R^2 (11 sessions)".
+- New knob `F4_DECOMP_ADJ` (default true): per-session fits use adjusted R².
+- The console prints a one-sided signed-rank V and p over sessions, and `DEC` stores level/adj/pooled/p/V. `F4_DECOMP_ADJ` defaults to on only in session mode, so 'pooled' reproduces the legacy panel.
+- Re-exported with PAPER_FINAL: `figure4/f4_decomp_unique_sep.pdf`, `supp_f4/supp_f4_unique_{both,rel,abs,legend}.pdf`.
+**Found:** sep model, unique R² for 0–1 s / 1–3 s:
+
+| Factor | Pooled (old panel) | Session, adjusted, p |
+|---|---|---|
+| init | 0.41 / 0.03 | **0.53 / 0.03** (V 66 / 39, p 4.9e-4 / 0.32) |
+| motion | 0.00 / 0.00 | 0.00 / −0.00 (p 0.82 / 0.77) |
+| rel 2–4 | 0.15 / 0.19 | 0.05 / 0.03 (p 0.012 / 0.21) |
+| abs 1–4 | 0.28 / 0.44 | 0.11 / 0.11 (p 0.051 / 0.021) |
+
+- The pooled fit inflated the power terms with between-session differences.
+- A raw per-session unique R² cannot be negative. With 16–108 trials per session (median 50), its permutation null is 0.009–0.026, which is all of motion's raw 0.011/0.021. Adjusted R² matches raw minus the permutation null to within 0.01 for every factor.
+- Abs δ is still the largest steady-state term, and the initial deviation still owns the transient. Rel alone no longer carries a significant steady-state share.
+**Why:** User 2026-10-11: "figure 4c the error comp model needs to be session by session not sessions pooled ... we wrote n=613 11 sessions".
+**Next:**
+- The user re-places 4C and S3 B–D.
+- The manuscript text was updated (entry above).
+- `cl_rmse_factor_windows.m`, kept "in sync" per the header, still pools; it is not a paper panel.
+
+### 2026-10-11 - 2-pole TF CV on the new hemo correction: pooled held-out R² 0.809 vs 0.845 (main)
+**Found:**
+- Setup: scratchpad `cv2p_new.m`, the same as on 2026-10-10 (maxPoles 2 / maxZeros 1 / maxDelay 3 / 0.5 s / AIC, no bootstrap; `imp_tf_cv` with 100 splits, CV_EXPORT false, PAPER_FINAL false; no panel written).
+- Orders: 2p0z0d / 2p1z0d / 2p1z1d / 2p0z0d.
+- Per session: 0.486 / 0.775 / 0.838 / 0.876.
+- Pooled: **0.8094**. The main 4-pole model, rerun for 4 dp, gives **0.8452** (shape 0.8687); the log prints 0.845.
+- So the text reads 0.81 vs 0.85; it was 0.83 vs 0.86 on the old correction.
+**Why:** Discussion L9 quotes the 2-pole vs main comparison.
+**Next:** none
+
 ### 2026-10-11 - Retired the two Fig-2 supplementary panels (tf_cv_2D_endlabels, tf_cv_shape_across_sessions)
 **Changed:** `paper/figures_final/MANIFEST.txt` `[supplementary]`: both lines removed, with a dated note. Their four files (pdf + png) were deleted from `panels/supplementary/` by hand.
 - `collect_final_panels` was NOT run in prune mode. Its dry run would also prune the 8 S4 reject-trial files (`[supp_reject]`, tabled 2026-10-10 but not retired), which is outside this request.

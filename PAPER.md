@@ -100,7 +100,7 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 
 | 4A | Fig4 | paper/figures_final/panels/figure4/f4_state_exemplars.pdf | 7.5 × 4.6 | vector | — | one CL trial per pre-stim state |
 | 4B | Fig4 | paper/figures_final/panels/figure4/f4_1B_equation.pdf | 3.0 × 4.6 | vector | — | error-decomposition model |
-| 4C | Fig4 | paper/figures_final/panels/figure4/f4_decomp_unique_sep.pdf | 6.5 × 4.6 | vector | — | unique R² per factor, by window ('sep' mode) |
+| 4C | Fig4 | paper/figures_final/panels/figure4/f4_decomp_unique_sep.pdf | 6.5 × 4.6 | vector | — | unique R² per factor, by window ('sep' mode); SESSION-LEVEL since 2026-10-11 (adj R², mean ± SEM, 11 sessions) |
 | 4D | Fig4 | paper/figures_final/panels/figure4/f4_row2_quartiles.pdf | 18 × 4.6 | vector | — | OL/CL/gap vs quartile, 1×4 tiled row. **Supersedes the four standalone `f4_2A`–`f4_2D` panels** |
 | 4E | Fig4 | paper/figures_final/panels/figure4/f4_kernel_map.pdf | 5.0 × 4.6 | vector | — | contra→ipsi ridge kernel |
 | 4F | Fig4 | paper/figures_final/panels/figure4/f4_agl.pdf | 5.0 × 4.6 | vector | — | A = G + L decomposition |

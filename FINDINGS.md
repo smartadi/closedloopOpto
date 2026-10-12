@@ -15,6 +15,20 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Paper claim:** Initial deviation owns the transient; low-frequency power carries the steady state; feedback decouples motion-driven error but not error tied to relative 2–4 Hz power.
 **Figure:** Fig 4A–E (`paper/figures_final/panels/figure4/`), supp S3/S4.
 **Status:** IN PAPER (results.tex Fig-4 section, 2026-10-02). Rel-δ controllability was band-edge fragile under the old bin estimator (p 0.009 ↔ 0.074 with a one-sample window change); the continuous estimator fixes it (p 0.031–0.034). See RESEARCH 2026-10-02.
+**Update 2026-10-11:**
+- LMM is now the uncorrelated random state slope (Table 1).
+  - Initial deviation: pred +0.18, p = 0.014; reg +0.15, p = 0.028. Neither clears Bonferroni.
+  - Motion: pred +0.16, p = 0.013; reg n.s.; attenuation −9%, p = 0.0048, which clears Bonferroni.
+  - Rel: reg +0.12, p = 0.044.
+  - Abs: +0.30 / +0.36, p ≤ 6.6e-4.
+- The decomposition is now SESSION-LEVEL (adjusted R², mean ± SEM over 11 sessions, one-sided signed-rank). Unique R² for 0–1 s → 1–3 s:
+  - init 0.53 (p 4.9e-4) → 0.03 (n.s.);
+  - abs 0.11 (p 0.051) → 0.11 (p 0.021);
+  - rel 0.05 (p 0.012) → 0.03 (n.s.);
+  - motion 0.
+- The pooled numbers above were inflated by between-session differences.
+- The claim narrows: the initial deviation owns the transient, and ABSOLUTE low-frequency power is the largest steady-state term. Rel alone does not carry it.
+- See RESEARCH 2026-10-11.
 
 ---
 

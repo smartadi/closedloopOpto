@@ -1,8 +1,9 @@
 % controller-analysis/f4_error_decomp.m
 % Fig-4 BLOCK 2 -- error-decomposition model. How much of the CL tracking error (RMSE
 % to ref) is explained by the four pre-stimulus state factors, UNIQUELY and COMBINED,
-% resolved by error window (early 0-1 s transient / settled 1-3 s hold), computed BOTH
-% pooled across all motion-available CL trials AND per session.
+% resolved by error window (early 0-1 s transient / settled 1-3 s hold). Since 2026-10-11 the
+% bars are SESSION-LEVEL (F4_DECOMP_LEVEL='session'): mean over sessions of each session's own
+% adjusted unique R^2, error bar = SEM; 'pooled' gives the pre-2026-10-11 single pooled fit.
 %
 % FOUR FACTORS (user 2026-09-15):
 %   F1 init-dev   = |dF/F(onset) - ref|
@@ -12,9 +13,9 @@
 %
 % TWO PANELS:
 %   f4_decomp_unique.pdf   -- unique R^2 of each factor (full model minus drop-one),
-%                             grouped by window, pooled bar + per-session dots.
+%                             grouped by window (bar + across-session error bar).
 %   f4_decomp_combined.pdf -- combined R^2 of factor GROUPS (init+motion, rel+abs delta,
-%                             all four = full model), grouped by window, pooled + per-session.
+%                             all four = full model), grouped by window.
 %
 % Reuses the pool logic + bandpower of cl_rmse_factor_windows.m (kept in sync).
 % Requires: load_sessions.m has run (mouse, fields in workspace).
@@ -39,12 +40,32 @@ if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; en
 if ~exist('F4_STATE_WIN','var') || isempty(F4_STATE_WIN), F4_STATE_WIN = 'peri'; end
 W_state = f4_state_window(F4_STATE_WIN);
 fprintf('[f4_error_decomp] state window: %s\n', W_state.label);
+% DECOMPOSITION LEVEL (user 2026-10-11: "the error comp model needs to be session by session not
+% sessions pooled"). 'session' (default): each session gets its own fit, states z-scored within
+% that session; the bar is the MEAN of the session unique R^2 and the error bar is the SEM across
+% sessions, so the session is the unit, as in Fig 4D. 'pooled' (legacy, before 2026-10-11): the
+% bar was one fit on all CL trials z-scored over the pool, which mixes between-session
+% differences in state and error level into the R^2; error bar = SD of the per-session fits.
+if ~exist('F4_DECOMP_LEVEL','var') || isempty(F4_DECOMP_LEVEL), F4_DECOMP_LEVEL = 'session'; end
+assert(any(strcmp(F4_DECOMP_LEVEL, {'session','pooled'})), 'f4_error_decomp: F4_DECOMP_LEVEL must be session|pooled');
+bySess = strcmp(F4_DECOMP_LEVEL, 'session');
+errMode = 'sd'; if bySess, errMode = 'sem'; end
+fprintf('[f4_error_decomp] decomposition level: %s (error bar = %s across sessions)\n', F4_DECOMP_LEVEL, upper(errMode));
 delta_bnd=[1 4]; hi_bnd=[2 4]; tot_bnd=[0.4 10];
 eE = c0 : c0+round(1*Fs);                 % 0 -> 1 s
 lL = c0+round(1*Fs)+1 : c0+round(3*Fs);   % 1 -> 3 s
 bandpow = @(seg, lo, hi) f4_bandpow(seg, Fs, lo, hi, W_state.bandpow);   % shared estimator
 fitR2 = @(Xp, yp) 1 - sum((yp - [ones(size(Xp,1),1), Xp]*([ones(size(Xp,1),1), Xp]\yp)).^2) / ...
                       max(sum((yp - mean(yp)).^2), eps);
+% Per-session fits use ADJUSTED R^2 (2026-10-11). An in-sample unique R^2 cannot be negative, so
+% with ~50 trials per session (16 in the smallest) its session mean sits on a positive floor: a
+% within-session permutation null gave 0.01-0.03 per factor, about all of motion's raw value.
+% adj R^2 = 1 - (1-R^2)(n-1)/(n-p-1) removes that floor (it matched raw minus the permutation
+% null to within 0.01 for every factor). The pooled fit (n = 613) keeps raw R^2, where the
+% correction is < 0.002. F4_DECOMP_ADJ = false restores raw per-session R^2.
+fitR2a = @(Xp, yp) 1 - (1 - fitR2(Xp, yp)) * (numel(yp) - 1) / (numel(yp) - size(Xp,2) - 1);
+if ~exist('F4_DECOMP_ADJ','var') || isempty(F4_DECOMP_ADJ), F4_DECOMP_ADJ = bySess; end   % pooled = legacy raw
+fitS = fitR2; if F4_DECOMP_ADJ, fitS = fitR2a; end
 
 %% ── Pool CL trials (per-session tagged) ─────────────────────────────────────
 X1=[];X2=[];Xrel=[];Xdel=[]; YE=[];YL=[]; SESS=[];
@@ -128,21 +149,28 @@ for mi=1:numel(modes)
         ix=SESS==usess(si); if nnz(ix)<minTr; continue; end
         okS(si)=true; Xs=zscore(Xm(ix,:));
         for w=1:2
-            y=Wout{w}(ix); rf=fitR2(Xs,y);
-            for j=1:nF, Us(j,w,si)=rf-fitR2(Xs(:,setdiff(1:nF,j)),y); end
-            for g=1:numel(grp), Cs(g,w,si)=fitR2(Xs(:,grp{g}),y); end
+            y=Wout{w}(ix); rf=fitS(Xs,y);
+            for j=1:nF, Us(j,w,si)=rf-fitS(Xs(:,setdiff(1:nF,j)),y); end
+            for g=1:numel(grp), Cs(g,w,si)=fitS(Xs(:,grp{g}),y); end
         end
     end
     nSok=nnz(okS);
-    fprintf('\n==== MODE ''%s'' (%d factors) | UNIQUE R^2 (0-1 / 1-3), pooled ====\n',mo,nF);
-    for j=1:nF, fprintf('  %-11s %6.3f %6.3f\n',fl{j},Up(j,1),Up(j,2)); end
+    UpPool=Up; CpPool=Cp;
+    if bySess, Up=mean(Us(:,:,okS),3); Cp=mean(Cs(:,:,okS),3); end
+    fprintf('\n==== MODE ''%s'' (%d factors) | UNIQUE R^2 (0-1 / 1-3): session mean [SEM] | pooled ====\n',mo,nF);
+    for j=1:nF
+        fprintf('  %-11s %6.3f [%5.3f] %6.3f [%5.3f] | %6.3f %6.3f\n',fl{j}, ...
+            mean(Us(j,1,okS)),std(Us(j,1,okS))/sqrt(nSok),mean(Us(j,2,okS)),std(Us(j,2,okS))/sqrt(nSok), ...
+            UpPool(j,1),UpPool(j,2));
+    end
     fprintf('  COMBINED:\n');
-    for g=1:numel(grp), fprintf('  %-13s %6.3f %6.3f\n',grpL{g},Cp(g,1),Cp(g,2)); end
+    for g=1:numel(grp), fprintf('  %-13s %6.3f %6.3f | %6.3f %6.3f\n',grpL{g},Cp(g,1),Cp(g,2),CpPool(g,1),CpPool(g,2)); end
+    if bySess, ttlU=sprintf('Unique R^2 [\\delta: %s] (%d sessions)',mo,nSok);
+    else,      ttlU=sprintf('Unique R^2 [\\delta: %s] (n=%d, %d sess)',mo,n,nSok); end
     % NON-MAIN decomp panels -> supplementary (only 'sep' unique-R^2 is the main-text panel).
-    draw_grouped(Up, Us(:,:,okS), fl, {col_e,col_l}, win_lbl, 'unique R^2', ...
-        sprintf('Unique R^2 [\\delta: %s] (n=%d, %d sess)',mo,n,nSok), PS, ...
+    draw_grouped(Up, Us(:,:,okS), fl, {col_e,col_l}, win_lbl, 'unique R^2', ttlU, PS, ...
         fullfile(outsupp,sprintf('f4_decomp_unique_%s.pdf',mo)), ...
-        fullfile(outview,sprintf('f4_decomp_unique_%s.png',mo)));
+        fullfile(outview,sprintf('f4_decomp_unique_%s.png',mo)), [], [], struct('err',errMode));
     % SUPPLEMENTARY PANEL (2026-10-05): the same numbers, bare and narrow, for the
     % combined S6+S7 figure assembled in Illustrator. The wide titled version above
     % is kept because the current LaTeX still includes it; retire it once the
@@ -154,12 +182,13 @@ for mi=1:numel(modes)
     draw_grouped(Up, Us(:,:,okS), fl, {col_e,col_l}, win_lbl, 'unique R^2', '', PS, ...
         fullfile(outsupp,sprintf('supp_f4_unique_%s.pdf',mo)), ...
         fullfile(outview,sprintf('supp_f4_unique_%s.png',mo)), FCfac(cols,:), 1.05*nF+1.1, ...
-        struct('bare',true,'tag',modeTag{mi},'hCm',2.8));
+        struct('bare',true,'tag',modeTag{mi},'hCm',2.8,'err',errMode));
     draw_grouped(Cp, Cs(:,:,okS), grpL, {col_e,col_l}, win_lbl, 'combined R^2', ...
         sprintf('Combined R^2 [\\delta: %s]',mo), PS, ...
         fullfile(outsupp,sprintf('f4_decomp_combined_%s.pdf',mo)), ...
-        fullfile(outview,sprintf('f4_decomp_combined_%s.png',mo)));
-    DEC.(mo)=struct('Up',Up,'Cp',Cp,'Us',Us,'Cs',Cs,'okS',okS,'fac',{fl},'grp',{grpL},'nSok',nSok);
+        fullfile(outview,sprintf('f4_decomp_combined_%s.png',mo)), [], [], struct('err',errMode));
+    DEC.(mo)=struct('Up',Up,'Cp',Cp,'UpPool',UpPool,'CpPool',CpPool,'Us',Us,'Cs',Cs,'okS',okS, ...
+                    'fac',{fl},'grp',{grpL},'nSok',nSok,'level',F4_DECOMP_LEVEL,'adj',F4_DECOMP_ADJ);
 end
 
 %% ── MODE 'sep': 4 bars, but rel & abs delta each in its OWN init+motion+delta model ──────────
@@ -169,25 +198,41 @@ end
 % competing: u_init/u_motion from the rel model; u_rel from {init,motion,rel}; u_abs from
 % {init,motion,abs}. This is the Panel-B main-text decomposition.
 %   Xall cols: 1=init 2=motion 3=rel-2-4 4=abs-delta(log10)
-sepU = @(Z,y) [ fitR2(Z(:,[1 2 3]),y)-fitR2(Z(:,[2 3]),y); ...   % init  (rel model)
-                fitR2(Z(:,[1 2 3]),y)-fitR2(Z(:,[1 3]),y); ...   % motion(rel model)
-                fitR2(Z(:,[1 2 3]),y)-fitR2(Z(:,[1 2]),y); ...   % rel   (unique over init+motion)
-                fitR2(Z(:,[1 2 4]),y)-fitR2(Z(:,[1 2]),y) ];     % abs   (unique over init+motion)
+sepU = @(Z,y,F) [ F(Z(:,[1 2 3]),y)-F(Z(:,[2 3]),y); ...   % init  (rel model)
+                  F(Z(:,[1 2 3]),y)-F(Z(:,[1 3]),y); ...   % motion(rel model)
+                  F(Z(:,[1 2 3]),y)-F(Z(:,[1 2]),y); ...   % rel   (unique over init+motion)
+                  F(Z(:,[1 2 4]),y)-F(Z(:,[1 2]),y) ];     % abs   (unique over init+motion)
 Usep=nan(4,2);
-for w=1:2, Usep(:,w)=sepU(zscore(Xall),Wout{w}); end
+for w=1:2, Usep(:,w)=sepU(zscore(Xall),Wout{w},fitR2); end
 okSsep=false(nS,1); UsepS=nan(4,2,nS);
 for si=1:nS
     ix=SESS==usess(si); if nnz(ix)<minTr; continue; end
     okSsep(si)=true; Zs=zscore(Xall(ix,:));
-    for w=1:2, UsepS(:,w,si)=sepU(Zs,Wout{w}(ix)); end
+    for w=1:2, UsepS(:,w,si)=sepU(Zs,Wout{w}(ix),fitS); end
 end
 nSsep=nnz(okSsep);
+UsepPool=Usep;
+if bySess, Usep=mean(UsepS(:,:,okSsep),3); end
 fprintf('\n==== MODE ''sep'' (each delta in its own init+motion+d model) | UNIQUE R^2 (0-1 / 1-3) ====\n');
-for j=1:4, fprintf('  %-11s %6.3f %6.3f\n',fac_lbl{j},Usep(j,1),Usep(j,2)); end
-draw_grouped(Usep, UsepS(:,:,okSsep), fac_lbl, {col_e,col_l}, win_lbl, 'unique R^2', ...
-    sprintf('Unique R^2 (n=%d, %d sess)',n,nSsep), PS, ...
-    fullfile(outfig2,'f4_decomp_unique_sep.pdf'), fullfile(outview,'f4_decomp_unique_sep.png'), FCfac, 5.5);
-DEC.sep=struct('Up',Usep,'Us',UsepS,'okS',okSsep,'fac',{fac_lbl},'nSok',nSsep);
+fprintf('  %-11s %22s %22s | %13s   %s\n','factor','0-1 s mean [SEM]','1-3 s mean [SEM]','pooled 0-1/1-3','sessions > 0 (0-1/1-3)');
+pSep=nan(4,2); Vsep=nan(4,2);   % one-sided Wilcoxon signed-rank over sessions: session unique R^2 > 0
+for j=1:4
+    v1=squeeze(UsepS(j,1,okSsep)); v2=squeeze(UsepS(j,2,okSsep));
+    [pSep(j,1),~,st1]=signrank(v1,0,'tail','right'); [pSep(j,2),~,st2]=signrank(v2,0,'tail','right');
+    Vsep(j,:)=[st1.signedrank st2.signedrank];   % V is reported with p (Methods reporting rule)
+    fprintf('  %-11s %8.3f [%5.3f] V=%-3d p=%-6.2g %8.3f [%5.3f] V=%-3d p=%-6.2g | %6.3f %6.3f   %d/%d %d/%d\n',fac_lbl{j}, ...
+        mean(v1),std(v1)/sqrt(nSsep),Vsep(j,1),pSep(j,1),mean(v2),std(v2)/sqrt(nSsep),Vsep(j,2),pSep(j,2), ...
+        UsepPool(j,1),UsepPool(j,2),nnz(v1>0),nSsep,nnz(v2>0),nSsep);
+end
+fprintf('  (p: one-sided signed-rank over %d sessions; per-session R^2 %s)\n', nSsep, ...
+        tern_s(F4_DECOMP_ADJ,'adjusted','raw'));
+if bySess, ttlSep=sprintf('Unique R^2 (%d sessions)',nSsep);
+else,      ttlSep=sprintf('Unique R^2 (n=%d, %d sess)',n,nSsep); end
+draw_grouped(Usep, UsepS(:,:,okSsep), fac_lbl, {col_e,col_l}, win_lbl, 'unique R^2', ttlSep, PS, ...
+    fullfile(outfig2,'f4_decomp_unique_sep.pdf'), fullfile(outview,'f4_decomp_unique_sep.png'), FCfac, 5.5, ...
+    struct('err',errMode));
+DEC.sep=struct('Up',Usep,'UpPool',UsepPool,'Us',UsepS,'okS',okSsep,'fac',{fac_lbl},'nSok',nSsep,'p',pSep,'V',Vsep, ...
+               'level',F4_DECOMP_LEVEL,'adj',F4_DECOMP_ADJ);
 
 save(fullfile(root,'controller-analysis','data','f4_error_decomp.mat'), ...
     'DEC','usess','win_lbl','n','nS','minTr','fac_lbl');
@@ -222,6 +267,9 @@ function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, 
     if nargin<11, faceRGB=[]; end
     if nargin<13 || isempty(opt), opt=struct(); end
     bare = isfield(opt,'bare') && opt.bare;
+    % opt.err: 'sd' (legacy: spread of the per-session fits around the pooled bar) or 'sem'
+    % (session-level bar = mean of the session fits, so its uncertainty is the SEM).
+    errM = 'sd'; if isfield(opt,'err') && ~isempty(opt.err), errM = opt.err; end
     nI=size(P,1);
     if nargin<12 || isempty(wCm), wCm=max(6,1.7*nI+2); end
     hCm=3.3; if isfield(opt,'hCm') && ~isempty(opt.hCm), hCm=opt.hCm; end
@@ -236,12 +284,12 @@ function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, 
         hb(1).FaceColor=wcol{1}; hb(2).FaceColor=wcol{2};
     end
     nser=2;
-    for w=1:nser   % 1 SD error bar on each bar (across-session spread), replaces scatter (user 2026-09-29)
+    for w=1:nser   % across-session error bar (SD or SEM, opt.err), replaces scatter (user 2026-09-29)
         xE=hb(w).XEndPoints;               % exact grouped-bar centres for this series
         sd=nan(1,nI);
         for j=1:nI
             v=squeeze(Ps(j,w,:)); v=v(isfinite(v));
-            if ~isempty(v); sd(j)=std(v); end
+            if ~isempty(v); sd(j)=std(v); if strcmp(errM,'sem'), sd(j)=sd(j)/sqrt(numel(v)); end; end
         end
         errorbar(ax,xE,P(:,w).',sd,'LineStyle','none','Color',[.25 .25 .25], ...
             'LineWidth',0.6,'CapSize',2,'HandleVisibility','off');
@@ -269,6 +317,7 @@ function draw_grouped(P, Ps, xlbl, wcol, wlbl, ylab, ttl, PS, pdfpath, pngpath, 
     jnAxes(ax);
     paperExport(f,pdfpath); paperExport(f,pngpath);
 end
+function s=tern_s(c,a,b); if c, s=a; else, s=b; end; end
 function p=local_bandpow(seg,Fs,lo,hi)
     seg=detrend(double(seg(:)).','linear'); N=numel(seg);
     w=hannwin(N).'; P=abs(fft(seg.*w)).^2; P=P(1:floor(N/2)+1);
