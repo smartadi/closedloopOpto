@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Methods: AL_0050 and the unspecified opsin-expression exclusion removed from the paper
+**Changed/Found:** `methods_rewrite.tex` "Session and trial selection": the "Opsin expression" bullet (no method, no count) and the "Stimulation quality" (AL_0050) bullet are deleted. No other mention of AL_0050 is left in the body.
+**Why:** reviewer m13. The user said not to mention AL_0050 in the paper. "drop al_0051" was read as a typo for AL_0050, and AL_0051 stays in the cohort; this was flagged to the user.
+**Next:** the user confirms that AL_0051 stays.
+
 ### 2026-10-13 — Methods: stimulus waveform corrected to a 40 Hz sine (not 50 Hz) in early sessions
 **Changed/Found:**
 - The waveform sentence printed with an undefined actuator. It now says the controller writes one command per 28.6 ms sample, which sets the laser power for that sample.
