@@ -16,6 +16,20 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — STATS_TABLE: Fig 4G open- vs closed-loop rejection rows added
+**Changed/Found:** `paper_stats_table.m` adds `4G_olcl_RR` / `_offshare` / `_RRfluct` from `f4_rr_denominator_check.mat` (kept sessions, one-sided signed-rank OL > CL). STATS_TABLE now has 65 rows. All three reproduce Results L193 exactly:
+- RR 1.25 vs 0.72, V = 66, p = 4.9e-4, 11/11 sessions;
+- offset share 35% vs 7%, V = 65, p = 9.8e-4, 10/11;
+- fluctuation 0.66 vs 0.54, V = 63, p = 0.0024, 10/11.
+
+**Why:** reviewer m18. L193 numbers had no table row.
+**Next:** L63 dose slopes/R² still have no row (no saved output from `f2_slope_ci`). Fig 5 is descriptive by design, so it has no rows.
+
+### 2026-10-13 — Two-pole model comparison moved from Discussion to Results
+**Changed/Found:** the "two-pole held-out R² 0.81 vs 0.85 (Mouse 3 0.87 vs 0.85)" numbers now sit in `results.tex` after the model-order sentence. `discussion.tex` L9 refers back to Results.
+**Why:** reviewer m14. New results should not first appear in the Discussion.
+**Next:** none.
+
 ### 2026-10-13 — Fig 3F gets a y scale bar; Fig 3 panels A–E regenerated (1 mW bars now on disk)
 **Changed/Found:** `utils/analysisPlots_combined.m` panel E (paper 3F, trial-RMSE half-violins) had no y scale at all. It now has a y-only "1% dF/F" bar (XLength 0), and the "Trial RMSE" label is raised to 0.74 so it clears the bar label. All five panels were regenerated with PAPER_FINAL from the m10 cache (`data/AL_0039ctrl04191.mat`) via `matlab -batch`. This also writes the restored "1 mW" bars on panels A/C to `figures_final`, closing the "panels still carry 0.2 mW" item.
 **Why:** reviewer m19. The user chose a scale bar.
