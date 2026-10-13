@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Manuscript pushed to Overleaf with re-exported Figures 2–4
+**Changed/Found:**
+- Copied the user's re-exported `figures_final/Figure{2,3,4}.pdf` to `Closedloop_edit/images`. Figure 2 has the global mouse labels and the new 2G stars; Figure 3 has the 3F bar; Figure 4 has the session-level 4C and the 4F title.
+- `images/Figure1.pdf` was deliberately NOT updated: the user's `figures_final/Figure1.pdf` was accidentally overwritten with Figure 2 content, so main's copy is kept.
+- Build: 42 pp, clean.
+- Commit abb3119 on draft, then fast-forwarded `main` and pushed (6e0ddf2..abb3119). The first push hung up; the retry with `http.version=HTTP/1.1` and a larger postBuffer succeeded.
+
+**Why:** the user asked to update the figures, commit everything and push the paper to main.
+**Next:** the user re-exports Figure 1 from Illustrator so `figures_final/Figure1.pdf` is correct again. The manuscript's copy is fine.
+
 ### 2026-10-13 — User confirmations: AL_0051 stays; Matveev 2024 supports the crosstalk citation
 **Changed/Found:** The user confirmed that AL_0051 stays in the 15-session cohort; "drop al_0051" meant AL_0050, as implemented. The user also confirmed that Matveev et al. 2024 shows the imaging light does not activate the opsin, so the Methods citation stands as written.
 **Why:** these closed two open items from the 2026-10-12/13 reviewer pass.
