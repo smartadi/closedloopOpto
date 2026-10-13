@@ -113,6 +113,20 @@ ks = S.keptsess([S.keptsess.keep]); med = [ks.medRR];
 add('4G_sessmed','4G',sprintf('session median RR < 1 in %d/%d sessions',sum(med<1),numel(med)),median(med),'median RR',[NaN NaN], ...
     'Wilcoxon signed-rank on log median RR','V',S.srV,NaN,S.srSess1,'1',numel(med),'sessions','f4_cl_reject_lmm');
 
+% ---------------- Figure 4G : open- vs closed-loop rejection (Results L193; added 2026-10-13) ----
+S = load(fullfile(root,'controller-analysis','data','f4_rr_denominator_check.mat')); D = S.RRD([S.RRD.keep]);
+nK = numel(D);
+pairs = {'RR',        [D.RR_ol],      [D.RR_cl],      'energy ratio RR (OL vs CL)';
+         'offshare',  [D.offShare_ol],[D.offShare_cl],'standing-offset share of residual (OL vs CL)';
+         'RRfluct',   [D.RRfluct_ol], [D.RRfluct_cl], 'fluctuation energy / disturbance (OL vs CL)'};
+for i = 1:size(pairs,1)
+    o = pairs{i,2}; c = pairs{i,3};
+    [p1,~,st] = signrank(o, c, 'tail','right');          % one-sided: feedback lowers it
+    add(['4G_olcl_' pairs{i,1}],'4G',sprintf('%s; CL lower in %d/%d sessions',pairs{i,4},sum(c<o),nK), ...
+        median(o),sprintf('median OL (CL %.3g)',median(c)),[NaN NaN],'Wilcoxon signed-rank, one-sided OL>CL', ...
+        'V',st.signedrank,NaN,p1,'1',nK,'sessions','f4_rr_denominator_check');
+end
+
 T = cell2table(rows,'VariableNames',{'id','figure','claim','effect','unit','ci_lo','ci_hi','test', ...
     'stat_name','stat','df','p','sided','n','n_unit','source'});
 out = fullfile(root,'paper-writing','STATS_TABLE.csv');
