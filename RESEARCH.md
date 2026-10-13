@@ -16,6 +16,29 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Methods: disturbance-predictor details and Fig 3 variance metric written from code
+**Changed/Found:** `methods_rewrite.tex`:
+- **Predictor:** the undefined "grid / catch windows / target-independent split" text was replaced with values from `ctrl_ols_spont.m` / `ctrl_ridge_path.m`:
+  - a lattice of ~500 contralateral pixels, mask eroded 12 px;
+  - a temporal 2/3 : 1/3 train/test split;
+  - λ from logspace(−8, 1, 28) × mean diag(Gram), chosen by the catch-floor rule on 200 laser-off catch windows.
+- **Variance metric:** "per-trial windowed variance" is now defined as the log mean squared deviation from the condition's trial average (matching the 3I caption), with inference over sessions and the same direction in every mouse.
+- `results.tex` L108: "every session and in all four mice".
+
+**Why:** reviewer m10/m11.
+**Next:** none.
+
+### 2026-10-13 — Global mouse numbering across the paper (user decision)
+**Changed/Found:**
+- `utils/imp_mouse_label.m` now uses fixed IDs: 1 = AL_0033, 2 = AL_0039, 3 = AL_0048, 4 = AL_0051, 5 = AL_0041, with a/b per session. It used to number by order of appearance, which made Fig 2 Mouse 1 = AL_0041 but Fig 4G Mouse 1 = AL_0033.
+- Text: the Fig 2 labels were remapped (1a/1b → 5a/5b, 2 → 1, 3 unchanged) in results L51–70, methods L122–123/788–831 and discussion L9.
+- The Fig 4G caption warning is replaced by "numbered as in Table cohort", and the cohort caption defines the numbering.
+- Regenerated with PAPER_FINAL: `tf_tau_forest`, `tf_model_swap`.
+- `tf_cv_*` (2C/2D) are re-rendering in a background `matlab -batch` job, because the CV refit takes over 30 min. `imp_response` (2B) is still to rerun.
+
+**Why:** reviewer m17. The user chose one global numbering.
+**Next:** confirm the background job wrote `tf_cv_*`; rerun `dose_response` with PAPER_FINAL; reassemble Fig 2 in Illustrator.
+
 ### 2026-10-13 — Methods: AL_0050 and the unspecified opsin-expression exclusion removed from the paper
 **Changed/Found:** `methods_rewrite.tex` "Session and trial selection": the "Opsin expression" bullet (no method, no count) and the "Stimulation quality" (AL_0050) bullet are deleted. No other mention of AL_0050 is left in the body.
 **Why:** reviewer m13. The user said not to mention AL_0050 in the paper. "drop al_0051" was read as a typo for AL_0050, and AL_0051 stays in the cohort; this was flagged to the user.
