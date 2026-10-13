@@ -18,6 +18,7 @@ figDir = fullfile(here,'..','paper','images','supp_mpc');
 PS = paperStyle(); S = jnStyle();
 C.pi = PS.col_cl; C.m = [0.45 0.20 0.60]; C.o = [0.78 0.66 0.90]; C.g = [0.62 0.62 0.62]; C.k = [0 0 0];
 C.edge = [0.45 0.45 0.45]; C.ref = [0.25 0.25 0.25];
+C.p = [0.85 0.25 0.55];   % MPC prediction / plan (schematic): solid magenta, not dashed (user 2026-10-12)
 W1 = 4.13; W2 = 8.43; H = 3.3;
 D = load(fullfile(dataDir, sprintf('mpc_direct_%s_lam01.mat', sess)));
 nm = cellstr(D.names); iPI = find(strcmp(nm,'PI')); iM = find(startsWith(nm,'MPC')); iO = find(startsWith(nm,'ORACLE'));
@@ -76,18 +77,18 @@ plot(ax1, [-pre/Fs max(dur, tf(end))], [0 0], '-', 'Color', C.k, 'LineWidth', 0.
 plot(ax1, [0 dur], [ref ref], '--', 'Color', C.ref, 'LineWidth', S.lw_ref);
 plot(ax1, [tnow; tfu], [yp(end); ytrue(ifu)], '-', 'Color', C.g, 'LineWidth', S.lw_ind+0.2);
 plot(ax1, tp, yp, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
-plot(ax1, [tnow; tf], [yp(end); D.snap_yhat(:)], '--', 'Color', C.m, 'LineWidth', S.lw_mean);
+plot(ax1, [tnow; tf], [yp(end); D.snap_yhat(:)], '-', 'Color', C.p, 'LineWidth', S.lw_mean);
 plot(ax1, tnow, yp(end), 'o', 'MarkerSize', 3, 'MarkerFaceColor', C.m, 'MarkerEdgeColor', 'w', 'LineWidth', 0.4);
 text(ax1, tnow-0.04, yl1(2), 'now', 'FontSize', S.fs_annot, 'VerticalAlignment','top', 'HorizontalAlignment','right', 'Color', C.m);
-text(ax1, mean([tnow tf(end)]), yl1(2), 'predict', 'FontSize', S.fs_annot, 'VerticalAlignment','top', 'HorizontalAlignment','center', 'Color', C.m);
+text(ax1, mean([tnow tf(end)]), yl1(2), 'predict', 'FontSize', S.fs_annot, 'VerticalAlignment','top', 'HorizontalAlignment','center', 'Color', C.p);
 text(ax1, xr(2)+0.05, ref, 'target', 'FontSize', S.fs_annot, 'VerticalAlignment','middle', 'Color', C.ref, 'Clipping','off');
 text(ax1, xr(2)+0.05, ref-1.1, 'actual', 'FontSize', S.fs_annot, 'Color', C.g, 'VerticalAlignment','middle', 'Clipping','off');
 stairs(ax2, [tnow; tfu], [up(end); utrue(ifu)], '-', 'Color', C.g, 'LineWidth', S.lw_ind+0.2);
 stairs(ax2, tp, up, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
-stairs(ax2, [tnow; tf], [up(end); D.snap_U(:)], '--', 'Color', C.m, 'LineWidth', S.lw_mean);
-plot(ax2, tf(1), D.snap_U(1), 'o', 'MarkerSize', 3, 'MarkerFaceColor', C.m, 'MarkerEdgeColor','w', 'LineWidth', 0.4);
-text(ax2, mean([tnow tf(end)]), yl2(2), 'plan', 'FontSize', S.fs_annot, 'HorizontalAlignment','center', 'VerticalAlignment','top', 'Color', C.m);
-text(ax2, tnow-0.04, yl2(2), 'apply 1st', 'FontSize', S.fs_annot, 'HorizontalAlignment','right', 'VerticalAlignment','top', 'Color', C.m);
+stairs(ax2, [tnow; tf], [up(end); D.snap_U(:)], '-', 'Color', C.p, 'LineWidth', S.lw_mean);
+plot(ax2, tf(1), D.snap_U(1), 'o', 'MarkerSize', 3, 'MarkerFaceColor', C.p, 'MarkerEdgeColor','w', 'LineWidth', 0.4);
+text(ax2, mean([tnow tf(end)]), yl2(2), 'plan', 'FontSize', S.fs_annot, 'HorizontalAlignment','center', 'VerticalAlignment','top', 'Color', C.p);
+text(ax2, tnow-0.04, yl2(2), 'apply 1st', 'FontSize', S.fs_annot, 'HorizontalAlignment','right', 'VerticalAlignment','top', 'Color', C.p);
 xlim(ax1, xr); ylim(ax1, yl1); xlim(ax2, xr); ylim(ax2, yl2);
 paperAxes(ax1, 'XLength', 0.5, 'YLength', 2, 'XLabel', '0.5 s', 'YLabel', '2% \DeltaF/F');
 % u is the recorded modulation voltage (peak envelope); mW = V/3 (user 2026-10-11): 0.5 mW = 1.5 V.

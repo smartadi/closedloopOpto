@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — S5B: prediction phase drawn solid magenta instead of dashed purple
+**Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m` — the predicted signal, the planned laser, the first-move dot and the "predict" / "plan" / "apply 1st" labels now use C.p = [0.85 0.25 0.55], solid instead of dashed.
+- Light purple stays reserved for perfect MPC (panels C–F).
+- The jagged look was mostly dash gaps on a step plot; the plan itself is smooth.
+- The past applied laser is genuinely jagged: with λ = 0.1 the controller re-plans every frame and applies only the first move.
+- Re-exported to figures_final.
+- Manuscript caption B now says "magenta" (`draft`, not pushed).
+**Why:** user: "why does the planned input look jagged; make it a different colour for the predict phase instead of dashed".
+**Next:** user re-places panel B and re-exports S5.
+
 ### 2026-10-12 — Fig 3 laser scale bar back to "1 mW" (revert of the 10-11 V/3 relabel for Fig 3)
 **Changed:** `utils/analysisPlots_combined.m`: reverse-applied the Fig 3 hunks of 160e8d8. Panel A is back to OL laser gain 5, a [6 8] bar and the "1 mW" label; panel C (`ax_E`) is back to YLength 2 and "1 mW". A comment now explains why.
 **Why:** User: on the closed-loop controller trials the rig modifies the stim voltage, so "1 mW" is correct for Fig 3. The mW = V/3 correction holds only for the impulse experiments (dose_response, imp_tf_cv, imp_spatial_panels), which have no such modification. The assembled Figure3.pdf already shows 1 mW and is correct. My earlier audit flag ("stale 1 mW") was wrong.
