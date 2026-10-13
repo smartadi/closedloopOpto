@@ -16,6 +16,28 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Methods: stimulus waveform corrected to a 40 Hz sine (not 50 Hz) in early sessions
+**Changed/Found:**
+- The waveform sentence printed with an undefined actuator. It now says the controller writes one command per 28.6 ms sample, which sets the laser power for that sample.
+- A few early sessions used a 40 Hz sine whose peak the controller set each sample. The old text said "AL_0033 … 50 Hz".
+- The peak-power sentence was updated to match.
+
+**Why:** reviewer m16; the facts are from the user.
+**Next:** none.
+
+### 2026-10-13 — Methods: imaging-light crosstalk claim cited to Matveev 2024
+**Changed/Found:** "kept below levels that cause … direct opsin activation" (no evidence) → "same illumination as Matveev et al. 2024, used with the same opsin without detectable activation".
+**Why:** reviewer m15; the user chose the citation.
+**Next:** confirm that Matveev 2024 actually reports no blue-light activation of ChrimsonR.
+
+### 2026-10-13 — Methods: husbandry cited to Matveev 2024; availability = deposit on acceptance
+**Changed/Found:**
+- Housing, light cycle, handling and water restriction are now cited to Matveev 2024. The IACUC number stays a FILL comment.
+- The data/code availability statement no longer prints "URL" placeholders. It now says the material will be deposited in a public repository on acceptance.
+
+**Why:** reviewer M1 and m4 (user choices).
+**Next:** IACUC protocol number before submission.
+
 ### 2026-10-13 — Impulse protocol written from the session data
 **Changed/Found:** `methods_rewrite.tex` "Impulse-response protocol": the "earlier version of the control system" paragraph and its FILL were replaced with measured values. These are:
 - Pulse width from the Timeline light command (2 kHz): 28.5, 28.5, 23.0 and 27.5 ms.
