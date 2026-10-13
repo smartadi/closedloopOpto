@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Impulse protocol written from the session data
+**Changed/Found:** `methods_rewrite.tex` "Impulse-response protocol": the "earlier version of the control system" paragraph and its FILL were replaced with measured values. These are:
+- Pulse width from the Timeline light command (2 kHz): 28.5, 28.5, 23.0 and 27.5 ms.
+- ITI medians from `imp.startTimes`: 5.77, 6.11, 5.74 and 9.80 s.
+- Blue frame rate: 35.0–35.1 Hz.
+- Logged `params.kernel` = 10.
+- The readout uses the hemodynamically corrected movie, with the mean-image ΔF/F.
+
+The text gives these as a single shared protocol with across-session ranges. "Amplitudes from 0 to 1.6 mW" became "nonzero amplitudes up to 1.6 mW", since amplitude 0 is synthetic.
+**Why:** reviewer M11. The user said all impulse experiments had the same conditions and the text should not mention earlier or later versions.
+**Next:** none.
+
 ### 2026-10-13 — Methods: second-opsin and feedback-sign language removed (user decision)
 **Changed/Found:** `methods_rewrite.tex`:
 - "AL_0048/AL_0051 additionally expressed a second, spectrally distinct opsin" is replaced with a neutral sentence: stimulated at 638/594 nm through an interneuron-expressed opsin, giving suppression as in the other mice.
