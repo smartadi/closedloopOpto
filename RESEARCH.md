@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — User confirmations: AL_0051 stays; Matveev 2024 supports the crosstalk citation
+**Changed/Found:** The user confirmed that AL_0051 stays in the 15-session cohort; "drop al_0051" meant AL_0050, as implemented. The user also confirmed that Matveev et al. 2024 shows the imaging light does not activate the opsin, so the Methods citation stands as written.
+**Why:** these closed two open items from the 2026-10-12/13 reviewer pass.
+**Next:** the user re-places Fig 2 B–G, Fig 3 A–F and Fig 4 C/F in Illustrator; IACUC number; push draft → main.
+
 ### 2026-10-13 — STATS_TABLE: Fig 4G open- vs closed-loop rejection rows added
 **Changed/Found:** `paper_stats_table.m` adds `4G_olcl_RR` / `_offshare` / `_RRfluct` from `f4_rr_denominator_check.mat` (kept sessions, one-sided signed-rank OL > CL). STATS_TABLE now has 65 rows. All three reproduce Results L193 exactly:
 - RR 1.25 vs 0.72, V = 66, p = 4.9e-4, 11/11 sessions;
