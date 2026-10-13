@@ -42,6 +42,8 @@ function T = imp_tf_fit_session(A, fs, tWin, opts)
 %   opts  .maxPoles (5) .maxZeros (4) .maxDelay (3) .tFit_s (0.5) .per_amp_fit (true)
 %         .verbose (true) .ampRange ([] = all) .nBoot (0 = off)
 %         .select ('aic') .minR2h (0.98)
+%         .seedOffset (false) .seedPre_s (0.5): add one SEEDED candidate to the sweep, see the
+%         SEEDED CANDIDATE note below; T.seeded records whether it was the one selected
 %
 % MODEL-CLASS BOUNDS AND WHY THEY WERE WIDENED (2026-08-10). The sweep used to be
 % 3 poles / 3 zeros / NO input delay, and some sessions came back with a visibly poor
@@ -79,7 +81,7 @@ if nargin < 4, opts = struct(); end
 % that window). See the rejection block near the bootstrap for why this exists.
 def = struct('maxPoles',5,'maxZeros',4,'maxDelay',3,'tFit_s',0.5,'per_amp_fit',true, ...
              'verbose',true,'ampRange',[],'nBoot',0,'select','aic','minR2h',0.98,'tauMax',NaN, ...
-             'forceOrder',[],'preShow_s',0.15);
+             'forceOrder',[],'preShow_s',0.15,'seedOffset',false,'seedPre_s',0.5);
 fn = fieldnames(def);
 for i = 1:numel(fn), if ~isfield(opts,fn{i}) || isempty(opts.(fn{i})), opts.(fn{i}) = def.(fn{i}); end, end
 
@@ -88,7 +90,7 @@ for i = 1:numel(fn), if ~isfield(opts,fn{i}) || isempty(opts.(fn{i})), opts.(fn{
 % ANIMALS the sessions come from, which the caption must state -- must not have to
 % parse it back out.
 T = struct('label',sprintf('%s %s e%d', A.mn, A.td, A.en), ...
-           'mn',A.mn, 'td',A.td, 'en',A.en, 'ok',false);
+           'mn',A.mn, 'td',A.td, 'en',A.en, 'ok',false, 'seeded',false);
 Ts = 1/fs;
 
 DF   = A.DF_imp;
@@ -132,6 +134,35 @@ if isempty(best)
     return
 end
 
+% ---- SEEDED CANDIDATE (opts.seedOffset, 2026-10-12) -----------------------------------------
+% tfest's default initialisation can miss the best model when the onset-referenced h(t) carries a
+% sustained offset relative to the pre-onset baseline. Found on AL_0048 after it was re-referenced
+% to its onset frame: h moved by a constant +0.098, every sweep fit stalled at R2h <= 0.94, yet the
+% same response plus one slow pole fits at R2h 0.993 with a better AIC. The seed is built from this
+% session's own data: run the same sweep on h referenced to its pre-onset mean (no offset), then add
+% a slow pole carrying the offset, and refit THAT on the onset-referenced h. It only adds one
+% candidate; selection (AIC, then the R2h escalation) is unchanged, so a session whose sweep
+% already found its best model keeps it. If the seeded model is selected, the per-amplitude and
+% bootstrap refits are warm-started from it, since the default start cannot reach it either; the
+% held-out refits (LOAO here, CV half-splits in imp_tf_cv_session) rebuild the seed instead.
+% HELD-OUT refits (CV half-splits, LOAO) must NOT start from this full-data model: that lets the
+% held-out data pick the basin (measured on Mouse 3: held-out R2 0.953 warm-started vs 0.868 with the
+% seed rebuilt from the training data alone, 2026-10-12). So the alt ORDER is kept (T.seedAlt; a
+% structure choice made once on all trials, like the main order) and each training set rebuilds its
+% own seed via local_fit_seeded. Bootstrap and per-amplitude refits estimate uncertainty, not
+% prediction, so they keep the warm start.
+seedAltOrd = [];
+if opts.seedOffset
+    [sSeed, seedAltOrd] = local_seed_offset(DF, uA, validAmp, w_amp, t_full, h_norm(validT), nPre, Ts, opts);
+    if ~isempty(sSeed)
+        k = numel(res) + 1;
+        res(k).np = numel(sSeed.Denominator) - 1;
+        res(k).nz = numel(sSeed.Numerator) - 1;
+        res(k).nd = round(sSeed.InputDelay / Ts);
+        res(k).AIC = aic(sSeed);  res(k).sys = sSeed;  res(k).seeded = true;
+    end
+end
+
 % ---- score EVERY surviving candidate against the measured h(t), then select ------------------
 % R2_h is the number the shape panel is actually showing, so selection should be able to see it.
 % Simulation is safe here because local_sweep already screened with tf_ok.
@@ -149,6 +180,11 @@ if isempty(best)
     return
 end
 
+T.seeded = isfield(best,'seeded') && isequal(best.seeded, true);
+initRef  = [];  if T.seeded, initRef = best.sys; end      % warm start: bootstrap + per-amp refits only
+T.seedAlt = [];  T.seedPre_s = opts.seedPre_s;
+if T.seeded, T.seedAlt = seedAltOrd; end                   % [np nz nd] for leak-free held-out refits
+iPreSeed = find(t_full >= -opts.seedPre_s & t_full < 0);
 T.sys    = best.sys;   T.np = best.np;  T.nz = best.nz;  T.nd = best.nd;
 T.AIC    = best.AIC;   T.res = res;     T.R2_h = best.R2h;
 T.poles  = pole(best.sys);
@@ -243,7 +279,12 @@ for k = 1:numel(validIdx)
     hn = sum((DF(trainIdx, iPost) ./ uA(trainIdx)) .* w, 1, 'omitnan').';
     vt = isfinite(hn);
     if nnz(vt) < opts.maxPoles + 3, continue; end
-    sysLo = local_fit_one(hn(vt), nPre, Ts, best.np, best.nz, best.nd);
+    if T.seeded                                % leak-free: seed rebuilt from the training amps only
+        mLo   = sum(mean(DF(trainIdx, iPreSeed) ./ uA(trainIdx), 2, 'omitnan') .* w, 'omitnan');
+        sysLo = local_fit_seeded(hn(vt), mLo, T.seedAlt, nPre, Ts);
+    else
+        sysLo = local_fit_one(hn(vt), nPre, Ts, best.np, best.nz, best.nd);
+    end
     if isempty(sysLo), continue; end
     hLo = local_unit_response(sysLo, nPre, nPost, Ts);
     if isempty(hLo), continue; end
@@ -262,7 +303,7 @@ if opts.per_amp_fit
         if uA(a) <= 0, continue; end
         y = DF(a, iPost).'/uA(a);  v = isfinite(y);
         if nnz(v) < opts.maxPoles + 3, continue; end
-        sysA = local_fit_one(y(v), nPre, Ts, best.np, best.nz, best.nd);
+        sysA = local_fit_one(y(v), nPre, Ts, best.np, best.nz, best.nd, initRef);
         if isempty(sysA), continue; end
         p = pole(sysA);  tt = sort(-1./real(p(real(p) < 0)), 'descend');
         tau_amp(a, 1:min(numel(tt), opts.maxPoles)) = tt(1:min(numel(tt), opts.maxPoles)).';
@@ -281,7 +322,7 @@ if opts.nBoot > 0
     if ~isfield(A,'imp') || ~isfield(A.imp,'dfImp')
         if opts.verbose, fprintf('  [TF] %s: no per-trial dfImp -- bootstrap skipped\n', T.label); end
     else
-        T.tauBoot = local_boot_tau(A.imp.dfImp, uA, validAmp, iPost, nPre, Ts, best, opts);
+        T.tauBoot = local_boot_tau(A.imp.dfImp, uA, validAmp, iPost, nPre, Ts, best, opts, initRef);
         % ---- DISCARD NON-IDENTIFIABLE RESAMPLES (2026-08-12) -------------------------------
         % A resample whose slowest pole lands marginally stable (real part -> 0-) returns
         % tau -> Inf. Measured on the 4-session set: 25% of resamples above 1000 s in
@@ -296,6 +337,10 @@ if opts.nBoot > 0
         tauMax = opts.tauMax;
         if isempty(tauMax) || ~isfinite(tauMax), tauMax = numel(iPost) * Ts; end
         T.tauMax  = tauMax;
+        % The two reasons a draw is dropped, kept apart (2026-10-12): the caption reports the
+        % share whose slowest tau lies BEYOND the window, which must not include failed refits.
+        T.tauBootFail   = mean(~isfinite(T.tauBoot(:,1)));             % refit failed or unsafe
+        T.tauBootBeyond = mean(any(T.tauBoot > tauMax, 2));            % refit OK, slowest tau > window
         badB      = any(T.tauBoot > tauMax, 2) | ~isfinite(T.tauBoot(:,1));
         T.tauBootReject = mean(badB);
         T.tauBoot(badB, :) = NaN;
@@ -304,13 +349,14 @@ if opts.nBoot > 0
             T.tauCI = [prctile(T.tauBoot, 2.5, 1).' , prctile(T.tauBoot, 97.5, 1).'];
             T.tauSD = std(T.tauBoot, 0, 1, 'omitnan').';
             if opts.verbose && T.tauBootReject > 0.02
-                fprintf(['  [TF] %s: %.0f%% of bootstrap refits gave tau > %.2f s (window length)\n' ...
-                         '       -- not identifiable, dropped from the CI. Report this fraction.\n'], ...
-                    T.label, 100*T.tauBootReject, tauMax);
+                fprintf(['  [TF] %s: %.0f%% of bootstrap refits dropped: %.1f%% gave tau > %.2f s (window length),\n' ...
+                         '       %.1f%% failed -- dropped from the CI. Report the beyond-window share.\n'], ...
+                    T.label, 100*T.tauBootReject, 100*T.tauBootBeyond, tauMax, 100*T.tauBootFail);
             end
         elseif opts.verbose
-            fprintf('  [TF] %s: only %d/%d bootstrap refits usable -- CI not reported\n', ...
-                nOK, opts.nBoot, T.label);
+            fprintf(['  [TF] %s: only %d/%d bootstrap refits usable -- CI not reported ' ...
+                     '(%.1f%% tau > window, %.1f%% failed)\n'], ...
+                T.label, nOK, opts.nBoot, 100*T.tauBootBeyond, 100*T.tauBootFail);
         end
     end
 end
@@ -328,6 +374,10 @@ if opts.verbose
         T.linSlope, ciStr);
     if ~strcmp(T.selRule,'AIC')
         fprintf('       order re-picked: %s\n', T.selRule);
+    end
+    if T.seeded
+        fprintf(['       selected model is the SEEDED candidate (alt order %s): bootstrap/per-amp refits ' ...
+                 'warm-started from it, held-out refits rebuild the seed\n'], mat2str(T.seedAlt));
     end
     % A low pooled R2 with a high rho is a SIZE failure (saturation), not a model-order
     % failure -- widening the sweep cannot fix it, and saying so here stops the next
@@ -397,7 +447,7 @@ end
 end
 
 % =================================================================================================
-function tb = local_boot_tau(dfImp, uA, validAmp, iPost, nPre, Ts, best, opts)
+function tb = local_boot_tau(dfImp, uA, validAmp, iPost, nPre, Ts, best, opts, initRef)
 % Trial bootstrap: for each draw, resample trials WITH REPLACEMENT within every fitted amplitude,
 % rebuild that amplitude's trial average, rebuild the amp^2-weighted h(t), refit at the fixed
 % selected order, and take the time constants. Draws whose refit fails or is unsafe come back NaN.
@@ -417,7 +467,7 @@ for b = 1:opts.nBoot
     hn = sum((DFb ./ uA(idx)) .* w, 1, 'omitnan').';
     vt = isfinite(hn);
     if nnz(vt) < best.np + 3, continue; end
-    sysB = local_fit_one(hn(vt), nPre, Ts, best.np, best.nz, best.nd);
+    sysB = local_fit_one(hn(vt), nPre, Ts, best.np, best.nz, best.nd, initRef);
     if isempty(sysB), continue; end
     p  = pole(sysB);
     tt = sort(-1./real(p(real(p) < 0)), 'descend');
@@ -474,9 +524,10 @@ best = res(ib);
 end
 
 % -------------------------------------------------------------------------------------------------
-function sys = local_fit_one(h, nPre, Ts, np, nz, nd)
+function sys = local_fit_one(h, nPre, Ts, np, nz, nd, init)
 % Refit ONE fixed order (used by LOAO and the per-amplitude fits). Returns [] on failure or on an
-% unsafe fit, so callers record NaN rather than crashing MATLAB in sssim.
+% unsafe fit, so callers record NaN rather than crashing MATLAB in sssim. A non-empty init (an
+% idtf of that order) warm-starts tfest from it instead of the default initialisation.
 sys = [];
 nT = numel(h);
 if nT < np + 3, return; end
@@ -484,7 +535,63 @@ u = [zeros(nPre,1); 1; zeros(nT-1,1)];
 y = [zeros(nPre,1); h(:)];
 d = iddata(y, u, Ts);  d.Tstart = -nPre*Ts;
 try
-    s = tfest(d, np, nz, tfestOptions('EnforceStability',false,'Display','off'), 'InputDelay', nd*Ts);
+    tfOpt = tfestOptions('EnforceStability',false,'Display','off');
+    if nargin >= 7 && ~isempty(init)
+        s = tfest(d, init, tfOpt);
+    else
+        s = tfest(d, np, nz, tfOpt, 'InputDelay', nd*Ts);
+    end
+catch
+    return
+end
+if tf_ok(s, Ts), sys = s; end
+end
+
+% -------------------------------------------------------------------------------------------------
+function [sSeed, altOrd] = local_seed_offset(DF, uA, validAmp, w_amp, t_full, h, nPre, Ts, opts)
+% The seeded candidate (opts.seedOffset). m = the pre-onset mean of the amplitude-normalised,
+% onset-referenced response, weighted exactly as h is, so h - m is the same response referenced to
+% its pre-onset mean. Sweep h - m as usual, add a slow pole carrying the offset m to its AIC winner,
+% and refit that as the starting point on h itself. Returns [] if any step fails or is unsafe.
+% altOrd = [np nz nd] of that AIC winner, so held-out refits can rebuild the seed (local_fit_seeded).
+sSeed = [];  altOrd = [];
+iPre = find(t_full >= -opts.seedPre_s & t_full < 0);
+if isempty(iPre), return; end
+m = sum(mean(DF(validAmp, iPre) ./ uA(validAmp), 2, 'omitnan') .* w_amp, 'omitnan');
+if ~isfinite(m) || m == 0, return; end
+% The seed adds one pole (and one zero), so the alt sweep stops one short of the bounds: the seeded
+% candidate then stays inside the swept class (<= maxPoles poles, <= maxZeros zeros) that Methods states.
+oAlt = opts;  oAlt.maxPoles = opts.maxPoles - 1;  oAlt.maxZeros = min(opts.maxZeros, opts.maxPoles - 2);
+if oAlt.maxPoles < 1, return; end
+bAlt = local_sweep(h - m, nPre, Ts, oAlt);
+if isempty(bAlt), return; end
+altOrd = [bAlt.np bAlt.nz bAlt.nd];
+nT = numel(h);
+d  = iddata([zeros(nPre,1); h(:)], [zeros(nPre,1); 1; zeros(nT-1,1)], Ts);  d.Tstart = -nPre*Ts;
+try
+    s0 = bAlt.sys + idtf(tf(m, [1 1e-3], 'InputDelay', bAlt.sys.InputDelay));
+    s  = tfest(d, idtf(s0), tfestOptions('EnforceStability',false,'Display','off'));
+catch
+    return
+end
+if tf_ok(s, Ts), sSeed = s; end
+end
+
+% -------------------------------------------------------------------------------------------------
+function sys = local_fit_seeded(h, m, altOrd, nPre, Ts)
+% LEAK-FREE seeded refit for held-out scoring: the seed is rebuilt from THIS training set alone --
+% fit h - m at the fixed alt order (default start), add m/(s+1e-3), refit on h. m must be the
+% training set's own pre-onset offset. Returns [] on failure (callers count it as a failed fold).
+% imp_tf_cv_session carries an identical copy; keep the two in step.
+sys = [];
+if isempty(altOrd) || ~isfinite(m), return; end
+sAlt = local_fit_one(h - m, nPre, Ts, altOrd(1), altOrd(2), altOrd(3));
+if isempty(sAlt), return; end
+nT = numel(h);
+d  = iddata([zeros(nPre,1); h(:)], [zeros(nPre,1); 1; zeros(nT-1,1)], Ts);  d.Tstart = -nPre*Ts;
+try
+    s0 = sAlt + idtf(tf(m, [1 1e-3], 'InputDelay', sAlt.InputDelay));
+    s  = tfest(d, idtf(s0), tfestOptions('EnforceStability',false,'Display','off'));
 catch
     return
 end

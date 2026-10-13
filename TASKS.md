@@ -9,6 +9,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-10-12 — **Fig 2C–F on the seeded Mouse 3 fit + leak-free CV, manuscript made consistent** (Closedloop draft 8db98b1, not pushed). Held-out 0.85 pooled. Mouse 3's slowest pole is vestigial (< 0.2%), dip 0.14 s; the dip τ is order-sensitive. RESEARCH 2026-10-12.
 - [x] 2026-10-10 — **AL_0041 e2 rebinned + Fig 2 rerun** (gap-based levels in `detectStimEvents_idx`; Mouse 1b R² 0.51 -> 0.76) and manuscript numbers updated; Fig 2 laser values accepted as-is (user); 4G stays gated, the all-13-session result is not reported (user); 4D = session mean ± SEM (user).
 - [x] 2026-10-10 — Fig 4D session-level points (+pooled/median fallbacks); OL offsets + 4G paired stats saved (`f4_rr_denominator_check`); Global-state circularity check done (does not fix it).
 - [x] 2026-10-10 — **Overleaf edits merged; Fig 2F (dip/rebound), 2G (session-level) and Fig 3 captions applied**; captions realigned to new assemblies (2A<->B, 3H<->I swapped). RESEARCH 2026-10-10.
@@ -18,7 +19,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [x] 2026-10-05 — **MPC finished as a supplement:** forecast σ measured with our own CV forecasters (in place of Ziyu's model); MPC rebuilt on the 108 real single-trial disturbances (old tube-MPC was 17× under-scaled); 3-panel supp figure. Resolves `2026-09-11.3/.4` and the placement decision. See RESEARCH 2026-10-05.
 - [x] 2026-10-02 — **Methods synced to the code behind every figure** (`methods_rewrite.tex`): state windows Fig 2 [−1,0) / Fig 4 [−2,+3) + continuous band power, Fig-4 exemplars + unique-R² decomposition, Fig-2G variability pipeline, Fig-2 TF/CV/swap/τ bootstrap (+ new Table tab:tf_fig2), preview controller + Fig-5 metrics, two ΔF/F normalizations, 40 s baseline. Fig-5 Results made descriptive (no tests). See RESEARCH 2026-10-02.
 - [x] 2026-10-02 — Methods paragraph for the Fig-4 Row-2 session-aware LMM: covered by Statistics (cond × state model, predictability/controllability, hierarchical bootstrap) + "Brain-state measures" (motion = mean z over −2..+3 s).
-- [x] 2026-08-12 — **Fig-4 beat 3+4 code built (all UNRUN, blocked on the Stage-2 rebuild).** (a) R² floor 0.85 now gates all three cross-session controller scripts identically (user decision); (b) `f4_reject_panels.m` = paper panels for cross-session disturbance rejection, read-only off the batch struct, ER as primary metric, with the T1 gain-vs-R² control as panel D; (c) `ctrl_optimal_xsess.m` + shared `utils/ctrl_opt_solve.m`/`ctrl_plant_markov.m` = the MPC beat across sessions, with the disturbance computed BOTH as the post-hoc residual and as the contra-predicted Global (the version a real controller could use). See RESEARCH 2026-08-12 ×3.
 
 ---
 
@@ -27,6 +27,14 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ### arXiv blockers (plan: `paper-writing/arxiv_jneurosci_plan_2026-10-10.md`; RESEARCH 2026-10-10)
 - [ ] (user) Author/affiliation block (`main.tex` L71-78 renders "Department of ,") -- editing on Overleaf.
 - [ ] (user decision) **Fig 2G trial set + AL_0048 reference** (RESEARCH 2026-10-12): drop the 251 amp-0 trials? re-reference AL_0048 to onset? The motion-vs-control conclusion flips with the reference. Then fix heading L71, intro L44, results L148, 2G panel title.
+- [ ] **NEXT, after the 2026-10-12 TF rerun + M3 dip check finish (user 2026-10-12): recompute Mouse 3 (AL_0048 2026-07-15/1) hemo correction LOCALLY, then rerun its Fig 2 chain.** Why: so that all four sessions are on one pipeline version (the lab's fixed hemoCorrect). ⚠ Updated 2026-10-12 evening (RESEARCH "CORRECTION: Mouse 3's slow dip…"): M3's May-2021 corr has NO net filter delay on its own onset frames (+0.75 ms vs zero-phase raw blue). The recompute is therefore NOT expected to move its 0.14 s dip to ~0.11 s; the earlier raw-blue 0.102 s was an onset-frame artefact. The lab's code and record are at `\\sahale\data\Code\dataChangeLog\2026-10_hemoCorrect_recompute\` (EXPLAINER.md, hemo_corr_sessions.csv). How:
+  - copy the raw widefield frames for that session from the server to local disk (the server is read-only: read and copy only);
+  - run the lab's CURRENT (2026-10-11) SVD + hemo pipeline locally. First find the exact code version the lab used; the c0de607 `hemoCorrect.m` was unreadable on 10-11;
+  - save U/V/corr + timestamps locally, then DELETE the local frames;
+  - point `load_bilateral_impulse` at the local corr via a knob, not by hard-editing paths;
+  - rerun 2B, TF (2C–2F, seeded), CV, 2-pole, 2G and STATS_TABLE, then update the manuscript numbers.
+  - Check free disk space before copying.
+- [ ] (later, user advises) **Run the hemo correction locally for ALL sessions for consistency**, with the same frames → local SVD + hemo → delete-frames procedure and one code version for every session. Then rerun every figure that reads corr/.
 - [ ] (user, Illustrator) **Figure4.pdf panels C, D and G** -> re-place `f4_row2_quartiles.pdf` (4D now session points, 2026-10-10) and `figures_final/panels/figure4/f4_decomp_unique_sep.pdf` + `f4_cl_reject_RR.pdf` (text quotes 0.41/0.03, 0.15/0.19; panel shows 0.39/0.10).
 - [ ] **Mislabeled power scale bars** -> fix code, re-export, re-place: 2A legend (`trace_overlay.m:53` uses /3; use plateau V x 1.8/4.9), 2B bar ('0.25 mW' spans 1 V = 0.37 mW, `dose_response.m:136,149`), 3A/3C '1 mW' bars are 0.15-0.24 mW (`analysisPlots_combined.m:72,81-82,97,200,208,216`), S-MPC '1 mW' on command volts (`ctrl_mpc_direct_panels.m:91,129`).
 - [ ] **DECIDE 2-4 Hz framing (circularity; RESEARCH 2026-10-10 'Circularity').** Contra/Global state does NOT fix it (keeps the overlap, carries laser leak). Laser-off window [-2,0) on the readout: abs 1-4 Hz holds (OL/CL p 4e-7/5e-8), rel 2-4 Hz predicts OL and CL equally (att p=0.47) -> 'OL flat, CL rises' is in-stimulation only. Options: add laser-off rows to Table 1 + reword Abstract/Intro L46/Results L152/Discussion L18,L42 as concurrent effects; Methods 'sub-band least attenuated' justification.
@@ -35,14 +43,14 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ### From the critical review (2026-10-10, RESEARCH 2026-10-10)
 - [ ] **Fig 4G leak correction**: check per trial that subtracting the OL dip does not bias RR toward CL.
-- [ ] **Cohort table**: add the AL_0048 impulse session and the sine sessions (units done 2026-10-10).
+- [ ] **Cohort table**: add the sine sessions (units done 2026-10-10; the impulse sessions incl. AL_0048 2026-07-15 were added to the caption 2026-10-12).
 - [ ] **Overclaims**: "The linear relationship guarantees the stability of a linear feedback controller" (`results.tex` ~L69, user's wording — flagged, not changed); difference-in-significance arguments in 2G-vs-control and 4D motion.
 - [ ] (user, Illustrator) Fig 2D right-axis label reads "he ld-out".
 - [ ] **Fig 2G: test response vs stimulus-free control directly** (review 2026-10-10, item 5). Text says movement alters the evoked response itself because the response ratio (0.73, CI [0.62, 0.88]) is below the control ratio (0.80), but that difference was never tested and the CIs overlap. Need a test of response ratio vs control ratio (e.g. paired bootstrap of the ratio difference, or |z| ~ state × {response, control} + (1|session) interaction) in `impulse-analysis/imp_state_trialvar.m`. If n.s., soften `results.tex` to "consistent with" and drop "movement alters the evoked response itself".
 
 ### Manuscript text
 - [ ] Methods FILLs added 2026-10-02: K_r/K_p/K_i per sine session (§Sinusoidal reference and preview); provenance of old `tab:tf_sessions` (CHECK — is it the controller-design fit?; the new 4-session table was dropped 2026-10-02); readout kernel size on rig.
-- [ ] (LATER, user) **Re-place revised panels in Illustrator**: Fig 2 A/B/C/D/E/F/G (2026-10-10; A/B/D/E/F/G changed again by the AL_0041 rebin), Fig 3 all panels (2026-10-10), Fig 4 A/C/D/G, Fig 5G.
+- [ ] (LATER, user) **Re-place revised panels in Illustrator**: Fig 2 A/B/C/D/E/F/G (2026-10-10; A/B/D/E/F/G changed again by the AL_0041 rebin; B–F again 2026-10-12, Mouse 3 onset reference + seeded fit + leak-free CV — the assembled Figure2.pdf predates all of it), Fig 3 all panels (2026-10-10), Fig 4 A/C/D/G, Fig 5G.
 - [ ] Step-response paragraph (`results.tex` L59): rewritten + integral-term motivation present, but does NOT explicitly state the 3 s window is too short to observe steady state. Confirm whether that caveat is still wanted; add one sentence if so.
 - [ ] **Confirm two Methods sentences** marked `%% CHECK` in `methods_rewrite.tex` (Experimental Design): no power analysis predetermined n; analyses not blinded.
 - [ ] **DECIDE the status of relative 2-4 Hz power.** Fig 2G n.s. (p=0.068) and reverses sign on the Ye dataset, but in Fig 4D its REGULARIZABILITY effect is strong (CL error rises, p=8.6e-4, clears Bonferroni) - so it is a weak predictor of the impulse response but a clear limit on closed-loop regulation. Decide whether Fig 2's framing of it should change to match. Also decide whether to state in Methods that regularizability replaced the gap trend after the fact (RESEARCH 2026-10-07).

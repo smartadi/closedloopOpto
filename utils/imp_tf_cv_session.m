@@ -97,6 +97,23 @@ end
 w = uA(idxA).^2;  w = w/sum(w);                        % amp^2 weighting, as the fit uses
 
 np = T.np;  nz = T.nz;  nd = T.nd;  nPre = opts.nPre;
+% A SEEDED fit (imp_tf_fit_session opts.seedOffset) is one the default tfest start cannot reach.
+% Its half-split refits must NOT warm-start from the full-data model T.sys: that lets the held-out
+% half pick the basin (Mouse 3, 2026-10-12: held-out R2 0.953 warm-started vs 0.868 leak-free).
+% Each training half instead rebuilds its own seed at the fixed alt order T.seedAlt (a structure
+% choice made once on all trials, like the main order) from its own pre-onset offset.
+seedAlt = [];  iPreS = [];
+if isfield(T,'seeded') && isequal(T.seeded,true)
+    if ~isfield(T,'seedAlt') || isempty(T.seedAlt)
+        if opts.verbose
+            fprintf(2,'  [CV] %s: seeded fit without T.seedAlt -- refit with the current imp_tf_fit_session; CV skipped\n', T.label);
+        end
+        return
+    end
+    seedAlt = T.seedAlt;
+    preS = 0.5;  if isfield(T,'seedPre_s') && ~isempty(T.seedPre_s), preS = T.seedPre_s; end
+    iPreS = find(t_full >= -preS & t_full < 0);
+end
 rng(opts.seed, 'twister');
 
 R2out = nan(2*opts.nSplit,1);  R2shp = nan(2*opts.nSplit,1);  R2in = nan(2*opts.nSplit,1);
@@ -113,12 +130,12 @@ for s = 1:opts.nSplit
         c  = floor(nTr(a)/2);
         H1{j} = p(1:c);  H2{j} = p(c+1:end);
     end
-    hA = local_build_h(dfI, idxA, uA, iPost, w, H1);
-    hB = local_build_h(dfI, idxA, uA, iPost, w, H2);
+    [hA, mA] = local_build_h(dfI, idxA, uA, iPost, w, H1, iPreS);
+    [hB, mB] = local_build_h(dfI, idxA, uA, iPost, w, H2, iPreS);
 
     % ---- both directions: fit one half, predict the other ----
-    [ro1, rs1, ri1, pr1] = local_fit_predict(hA, hB, np, nz, nd, nPre, Ts, nPost);
-    [ro2, rs2, ri2, pr2] = local_fit_predict(hB, hA, np, nz, nd, nPre, Ts, nPost);
+    [ro1, rs1, ri1, pr1] = local_fit_predict(hA, hB, np, nz, nd, nPre, Ts, nPost, seedAlt, mA);
+    [ro2, rs2, ri2, pr2] = local_fit_predict(hB, hA, np, nz, nd, nPre, Ts, nPost, seedAlt, mB);
     R2out(2*s-1) = ro1;  R2shp(2*s-1) = rs1;  R2in(2*s-1) = ri1;
     R2out(2*s)   = ro2;  R2shp(2*s)   = rs2;  R2in(2*s)   = ri2;
 
@@ -180,25 +197,32 @@ end
 end
 
 % =================================================================================================
-function h = local_build_h(dfI, idxA, uA, iPost, w, sub)
+function [h, m] = local_build_h(dfI, idxA, uA, iPost, w, sub, iPre)
 % amp^2-weighted, amplitude-normalised mean impulse response from a TRIAL SUBSET.
 % Identical construction to imp_tf_fit_session's h_norm, but averaging only sub{j} trials.
-rows = nan(numel(idxA), numel(iPost));
+% m = the same subset's weighted pre-onset mean over iPre (only needed for seeded fits).
+rows = nan(numel(idxA), numel(iPost));  pre = nan(numel(idxA),1);
 for j = 1:numel(idxA)
     tr = dfI{idxA(j)};
     rows(j,:) = mean(tr(sub{j}, iPost), 1, 'omitnan') ./ uA(idxA(j));
+    if ~isempty(iPre), pre(j) = mean(mean(tr(sub{j}, iPre), 1, 'omitnan'), 'omitnan') ./ uA(idxA(j)); end
 end
 h = sum(rows .* w, 1, 'omitnan').';
+m = NaN;  if ~isempty(iPre), m = sum(pre .* w, 'omitnan'); end
 end
 
 % -------------------------------------------------------------------------------------------------
-function [r2out, r2shape, r2in, pred] = local_fit_predict(hTrain, hTest, np, nz, nd, nPre, Ts, nPost)
+function [r2out, r2shape, r2in, pred] = local_fit_predict(hTrain, hTest, np, nz, nd, nPre, Ts, nPost, seedAlt, mTrain)
 % Fit the fixed order to hTrain, simulate its unit response, score against hTest (held out)
 % and against hTrain (in-sample control). pred = the held-out prediction waveform (amp-norm).
 r2out = NaN; r2shape = NaN; r2in = NaN; pred = [];
 vt = isfinite(hTrain);
 if nnz(vt) < np + 3, return; end
-sys = local_fit_one(hTrain(vt), nPre, Ts, np, nz, nd);
+if isempty(seedAlt)
+    sys = local_fit_one(hTrain(vt), nPre, Ts, np, nz, nd);
+else
+    sys = local_fit_seeded(hTrain(vt), mTrain, seedAlt, nPre, Ts);   % leak-free seeded refit
+end
 if isempty(sys), return; end
 hHat = local_unit_response(sys, nPre, nPost, Ts);
 if isempty(hHat), return; end
@@ -220,6 +244,26 @@ y = [zeros(nPre,1); h(:)];
 d = iddata(y, u, Ts);  d.Tstart = -nPre*Ts;
 try
     s = tfest(d, np, nz, tfestOptions('EnforceStability',false,'Display','off'), 'InputDelay', nd*Ts);
+catch
+    return
+end
+if tf_ok(s, Ts), sys = s; end
+end
+
+% -------------------------------------------------------------------------------------------------
+function sys = local_fit_seeded(h, m, altOrd, nPre, Ts)
+% LEAK-FREE seeded refit: rebuild the seed from THIS training half alone -- fit h - m at the fixed
+% alt order (default start), add m/(s+1e-3), refit on h. Identical copy of imp_tf_fit_session's
+% local_fit_seeded; keep the two in step. Returns [] on failure (counted as a failed fold).
+sys = [];
+if isempty(altOrd) || ~isfinite(m), return; end
+sAlt = local_fit_one(h - m, nPre, Ts, altOrd(1), altOrd(2), altOrd(3));
+if isempty(sAlt), return; end
+nT = numel(h);
+d  = iddata([zeros(nPre,1); h(:)], [zeros(nPre,1); 1; zeros(nT-1,1)], Ts);  d.Tstart = -nPre*Ts;
+try
+    s0 = sAlt + idtf(tf(m, [1 1e-3], 'InputDelay', sAlt.InputDelay));
+    s  = tfest(d, idtf(s0), tfestOptions('EnforceStability',false,'Display','off'));
 catch
     return
 end

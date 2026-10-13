@@ -38,7 +38,9 @@
 %     illuminated spot [422,423]: -0.50 (p=0.014) / -0.12 (p=0.66) / -0.32 (p=0.074) <- NON-monotone
 %     anterior focus   [272,355]: -0.47 (p=0.005) / -1.42 (p=5e-9) / -1.61 (p=5e-9)  <- clean dose
 % (re-measured 2026-08-02 at the CORRECTED calibrated spot [422,423]; the earlier quote used
-%  [387,326], the spot position implied by the retracted bregma x=215. Same verdict, stronger.)
+%  [387,326], the spot position implied by the retracted bregma x=215. Same verdict, stronger.
+%  These energies were computed with the old 18-frame pre-onset-mean reference; the trial
+%  reference is now the onset frame (2026-10-12), so the exact values above are historical.)
 % The illuminated spot has no usable dose-response (the middle amplitude is not even significant),
 % so SITE_MODE defaults to 'response' = the data-derived deepest focal inhibition. That is also
 % what the project's locked site rule says (root CLAUDE.md: the site is data-derived, params.pixel
@@ -224,7 +226,12 @@ for sI = sIlist
         fA = fA(fA > winS & fA + winS <= numel(dF_b));
         imp.startTimes{a} = t_b(fA);
         trM = cell2mat(arrayfun(@(f) dF_b(f+relW), fA', 'uni',0)');
-        trM = trM - mean(trM(:, relW < 0 & relW >= -round(0.5*Fs_b)), 2);   % [-0.5,0]s baseline
+        % ONSET-FRAME reference, exactly as load_experiments df_imp = dF - dF(onset) (user,
+        % 2026-10-12). Until then this subtracted the mean of the 18 pre-onset frames (-0.51 to
+        % -0.03 s), a convention copied from the Python sub-area (BASE_WIN) in a91c076 and never
+        % documented; it sat inside the Fig 2G [-1,0) state window and made Mouse 3 the only
+        % session whose t = 0 sample was not 0. See RESEARCH 2026-10-12.
+        trM = trM - trM(:, relW == 0);
         imp.dfImp{a} = trM;
         imp.Peak_imp{a} = mean(trM(:, dipC), 2);
         imp.Peak_imp_mean(a) = mean(imp.Peak_imp{a}, 'omitnan');

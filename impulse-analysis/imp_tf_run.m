@@ -165,9 +165,13 @@ if ~exist('RUN_MINR2H','var')   || isempty(RUN_MINR2H),   RUN_MINR2H   = 0.98;  
 % long and the slow pole is correspondingly weakly identified -- 42-50% of bootstrap
 % resamples in 3 of 4 sessions returned a tau longer than the window itself.
 if ~exist('RUN_TFIT','var') || isempty(RUN_TFIT), RUN_TFIT = 0.5; end
+% RUN_SEED (2026-10-12): add one seeded candidate per session (imp_tf_fit_session opts.seedOffset).
+% Needed since AL_0048 was re-referenced to its onset frame: the default tfest start then misses
+% its best model in every order of the sweep. Selection is unchanged; see the note in the engine.
+if ~exist('RUN_SEED','var') || isempty(RUN_SEED), RUN_SEED = true; end
 opt = struct('maxPoles',RUN_MAXPOLES,'maxZeros',max(RUN_MAXPOLES-1,1),'maxDelay',RUN_MAXDELAY, ...
              'tFit_s',RUN_TFIT,'per_amp_fit',true,'verbose',true,'ampRange',[], ...
-             'nBoot',RUN_NBOOT,'select',RUN_SELECT,'minR2h',RUN_MINR2H);
+             'nBoot',RUN_NBOOT,'select',RUN_SELECT,'minR2h',RUN_MINR2H,'seedOffset',RUN_SEED);
 
 fprintf('\n[TFRUN] fitting %d sessions over ALL amplitudes ...\n', nS);
 fprintf('[TFRUN] sweep: up to %d poles / %d zeros / %d samples input delay, select=%s (minR2h %.2f)\n', ...

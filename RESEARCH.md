@@ -16,6 +16,331 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — Manuscript Fig 2B–F: Results/Methods/Discussion made consistent (Closedloop_edit 8db98b1, draft, not pushed)
+**Changed:** `results.tex`, `methods_rewrite.tex`, `discussion.tex` via `apply_ms_1012g.py` (14 edits). The three-lens verify (wf_42b24b7c-583) found the problems. Every number was re-checked in MATLAB against `imp_tf_fits.mat` (exact modal decomposition, residual < 2e-15) and the logs (cvfree, cv2p_new, bootsplit).
+- Mouse 3's slowest pole (τ = 1768 s) contributes **+0.003 against a trough of −1.777 (< 0.2%)**. Dropping it changes R² only from 0.9936 to 0.9932.
+  - It does NOT carry the offset; my earlier draft said it did.
+  - The seeded fit's gain comes from the starting point. Methods now says this and does not treat that pole as a timescale.
+  - Results and caption F name Mouse 3's slowest substantive mode: 0.50 s, at the window edge, so its 0.5 s triangle sits in the same place.
+- Dip: "tightly reproducible" became "similar in three of four sessions". Values: 0.106–0.114 s (two of them from Mouse 1), 0.14 s in Mouse 3, median 0.113 s.
+  - It is order-sensitive: the only other model within 0.005 R² gives 0.117 s instead of 0.106 s (Mouse 1a) and 0.154 s instead of 0.114 s (Mouse 2). Mice 1b and 3 have no such model.
+- The modes overlap. In Mice 1b and 2 the slow mode supplies 60–68% of the trough. In Mouse 1a the slowest pole is a near-integrator giving 6% sustained suppression. Methods now says this.
+  - The 2D claim "share the dip, diverge in the rebound" holds in the data: across-session SD of the peak-normalized responses is 0.066 up to the trough and 0.226 after it. Only the causal "Accordingly" was dropped.
+- Held-out CV:
+  - "held within each session" became per-session medians, 0.56 (Mouse 1a, IQR 0.09–0.79) to 0.95.
+  - Methods now states that failed folds are excluded (10% in Mouse 3, ≤ 2% elsewhere) and how the pooled value is formed.
+- Swap (recomputed, matches): the diagonal is labelled in-sample (0.99); cross-session mean 0.69, range 0.12–0.97.
+- Bootstrap: the beyond-window share is now given per session (39 / 72 / 3 / 100%), with tauMax = 18 samples = 0.51 s and failed refits counted as not beyond. The unrun "matched-range refit" sentence was deleted.
+- Discussion: "more than one pole pair" was false for Mice 1a and 3, so it now reads "more than two poles". It also says the 2-pole model did slightly better in Mouse 3 (0.87 vs 0.85). "Conserved dip / rebound" became "shared fast dip / slower modes that differ".
+- Smaller fixes:
+  - The Methods nominal model is now "an earlier two-pole fit" (it was the Fig-2 fits, which have 3–5 poles), and Methods adds that the per-session fits were not used for the design.
+  - The 2A gray band is −0.2 to 0.5 s (trace_overlay.m L21), not the fit window.
+  - The cohort caption now lists the impulse sessions, including AL_0048 2026-07-15.
+- Staging: the parallel session's uncommitted 2G rewrite sits in the same files. I staged HEAD plus my passes 1012d–g, replayed into the index with `git update-index`. Their edits stay unstaged.
+- Compiles clean; the one overfull box is pre-existing.
+
+**Why:** The user asked to "apply the edits on manuscript. make things consistent across results and methods" after the seeded M3 fit and the leak-free CV.
+**Next:**
+- The assembled `images/Figure2.pdf` (14:43) predates the seeded refit, the leak-free CV and the 2F re-mirror. The user must re-assemble 2B–2F from figures_final in Illustrator.
+- Optional: change the 2F rule to drop negligible-amplitude modes (< 1% of the response) before ranking. Mouse 3 would then plot as a 0.50 s circle; this needs a bootstrap rerun for the Mouse 3 share.
+- Claim softenings ("similar", "shared") need the user's review.
+
+### 2026-10-12 — 2F tau forest re-mirrored to figures_final (file was locked earlier)
+**Changed:** `imp_tf_figs` (FIG_PANELS {'tau'}, FIG_SRC = patched `imp_tf_fits.mat`, PAPER_FINAL on) → `figures_final/panels/figure2/tf_tau_forest.pdf/.png` at 3.21 × 3.28 cm.
+- M3 dip 0.1435 s; median line 0.113 s.
+- Triangles at 0.5 s for M1a, M1b and M3; M2 rebound 0.268 s.
+
+**Why:** the user closed the PDF in Illustrator.
+**Next:** the user re-places 2B, 2C, 2D, 2E, 2F and 2G in Illustrator.
+
+### 2026-10-12 — Supp state rasters parked as a candidate beside S1–S5
+**Changed:** I copied `panels/supplementary/supp_state_raster.png` to `paper/figures_final/S_state_raster.png`, next to the assembled S1–S5. `PAPER.md` marks the row CANDIDATE. It is not added to `supplementary.tex` or to `Closedloop_edit/images`. The MANIFEST line is kept, so the producer keeps refreshing the panel copy.
+**Why:** User: "put it in supplementary figures folder, I'll decide if we put it in later".
+**Next:** If it is approved, add a supplementary.tex float and caption and cite it from the 2G Results paragraph. If it is rejected, delete the MANIFEST line and run collect_final_panels.
+
+### 2026-10-12 — CORRECTION: Mouse 3's slow dip is NOT a hemo filter-delay artefact; a recompute is unlikely to move it to ~0.11 s
+**Found:**
+- Read-only workflow wf_9882df74-940: 1 builder plus 3 skeptics (code-fidelity: refutes, inference: inconclusive, numbers: supports). Files in `scratchpad/m3dip/`.
+- Plus a decisive follow-up, `m3dip_build_pf.m`.
+
+1. **Sessions 1–3, old → new dip shift** (0.148 → 0.106 and 0.150 → 0.114 s):
+   - This is the old correction's one-pass 9–14 Hz heartbeat band-stop, which delays 1–5 Hz by 13–21 ms (group delay 13.0 / 13.8 / 15.2 / 17.6 / 21.4 ms).
+   - The lab's fixed hemoCorrect (server `Code/dataChangeLog/2026-10_hemoCorrect_recompute/EXPLAINER.md`) runs that band-stop forwards and backwards.
+   - Old corr plus one backward pass lines up with new to ±0.25 ms, and gives dip τ 0.116 / 0.115 s in M1a / M2. M1b is ambiguous.
+   - So the shift is not the hemodynamic over-subtraction.
+2. **One-pass raw blue (loadUVt's `detrendAndFilt`) is NOT a calibrated proxy.** It lags new by 13.5–15 ms. My partial note above ("raw blue tracks NEW in M1a; M3 raw-blue pair 0.102 s") was WRONG, for two reasons:
+   - M1a at a fixed order gives 0.150, which matches OLD;
+   - the M3 raw-blue variants were built about 1 frame off the paper's onset frames (blue stamps are 21.2 ms earlier than the corr stamps the L152 rule uses).
+3. **Decisive check on the paper's OWN onset frames** (L152 rule on the corr stamps, applied to blue V):
+   - M3's May-2021 corr vs zero-phase raw blue: lag **+0.75 ms**, R² 0.997, trough on the same frame (114 ms);
+   - one-pass raw blue: +14 ms.
+   - So **M3's corr carries no net delay.** The 0.14 s dip is not the artefact that slowed M1a and M2.
+4. **M3's dip τ is fit-fragile:**
+   - every unseeded candidate on its corr is at R²h ≤ 0.938;
+   - zero-phase raw blue on the paper frames gives 6p5z0d with a 0.177 s pair (before the cap below);
+   - delay-removed variants reach R²h ≤ 0.957.
+5. **The TF dip τ moves 0.025–0.04 s within a session** with model order or small non-timing shape changes (M1a raw blue 0.119 vs 0.150; M1b 0.080 vs 0.107). The "conserved dip, 0.11 s in 3 of 4" claim is therefore less robust than it reads.
+6. **Implication:** anything still on an Apr/May-2021 corr carries that 13–21 ms delay at 1–5 Hz. That includes Fig 4E–G and the MPC supplement, which were kept on the OLD correction this morning.
+
+**Why:** the user asked whether the Mouse 3 fit should repair the dip toward 0.1 s.
+**Next:**
+- The TASKS item for the local M3 hemo recompute stays (the user's decision). Its stated reason is now consistency (one pipeline version for all sessions), with no expectation that M3's dip moves.
+- Tell the user about point 6 for Fig 4E–G and MPC, and about point 5 for the Discussion's "conserved dip".
+
+### 2026-10-12 — Fig 2D CV rerun leak-free: Mouse 3 0.845, pooled 0.846 → manuscript back to 0.85; seeded class capped
+**Found:** `scratchpad/cvfree_batch.m` reran `imp_tf_cv` (PAPER_FINAL on) with the leak-free engine, with Mouse 3 `seedAlt` [4 2 0].
+- Mouse 3: **0.845** [0.675, 0.925], 10% folds failed. My check script gave 0.868 / 7%; the engine also screens the alt fit with `tf_ok`.
+- Mice 1a, 1b and 2 are unchanged: 0.561 / 0.833 / 0.950.
+- **Pooled 0.846** (shape 0.864). So the 0.898 was entirely the warm-start leak.
+- `tf_cv_2D_sidebar` and `tf_cv_single_AL_0033` were re-mirrored to figures_final.
+
+**Changed:**
+- `results.tex` pooled CV 0.90 → **0.85**.
+- `discussion.tex` L9 restored to the committed sentence (0.81 against 0.85, "nearly as well"); the file is unchanged vs HEAD.
+- `methods_rewrite.tex`: held-out refits rebuild the seed from the training trials; bootstrap refits start from the selected model.
+- `utils/imp_tf_fit_session.m`:
+  - the alt sweep is capped at maxPoles−1, so a seeded candidate can never exceed the stated 1–5 poles / 0–4 zeros (the zero-phase test above produced 6p5z);
+  - Mouse 3 is unchanged (5p4z0d, R²h 0.9936, AIC −6.058, same τ, seedAlt [4 2 0]);
+  - the log message is updated.
+- `impulse-analysis/data/imp_tf_fits.mat` is patched with `seedAlt` / `seedPre_s` so a CV-only run from file works. M3 [4 2 0] is what the engine now computes; the others are [].
+
+**Why:** a held-out score must not use the held-out data. The seed must stay in the swept model class.
+**Next:** `tf_tau_forest.pdf` in figures_final is still LOCKED (open in Illustrator). Close it, then run `imp_tf_figs` with PAPER_FINAL on.
+
+### 2026-10-12 — Supp state rasters: 8 cm wide, short centred colour key
+**Changed:** `imp_state_raster_supp.m`:
+- `paperFig(8, 14)` (was 11 cm wide);
+- all x-labels are "Time (s)" and the title is shortened ("Trials sorted by pre-stimulus state (n = 1516)"), because they collided at 8 cm;
+- the colour key is no longer a tile-spanning bar. It is a short (34 % width), hairline-thin key hung off a hidden helper axes below the grid, with ticks −3 / 0 / +3, no box, and the label underneath;
+- `tl.OuterPosition` leaves a strip for it.
+- Re-exported to `figures_final` at 7.41 × 13.84 cm.
+
+**Why:** The user asked to squish x further, then for a shorter, more stylish colour bar.
+**Next:** Caption and supplementary.tex float; the caption must say the right column's time axis is time within the −1.51 to −1.03 s control window.
+
+### 2026-10-12 — 2F bootstrap: failed vs beyond-window split; caption "43–73%" → "39–100%"
+**Found:** `scratchpad/bootsplit_batch.m` replays the paper fits: rng(3), same opts, same session order. All four sessions are identical to the 19:20 run (τ, tauBootReject).
+
+| Session | Beyond window | Failed |
+|---|---|---|
+| M1a | 38.7% | 2.3% |
+| M1b | 72.3% | 0.3% |
+| M2 | 2.7% | 0% |
+| M3 | 100% | 0% |
+
+The old `tauBootReject` (41 / 73 / 3 / 100%) counted failed refits as "beyond". M3 is 100% because its slowest mode is the offset pole by construction.
+**Changed:**
+- `Closedloop_edit/results.tex` 2F caption: "In three of four sessions, 39--100\%".
+- `utils/imp_tf_fit_session.m`: the bootstrap log lines now print the beyond-window and failed shares separately (the old message called the combined share "tau > window").
+
+**Why:** the caption reports the beyond-window share only.
+**Next:** none for 2F. The Methods sentence ("fraction whose slowest τ exceeded the 0.5 s fit window") is now accurate.
+
+### 2026-10-12 — Supp state rasters: x squished instead (11 × 14 cm); y squish reverted
+**Changed:** `imp_state_raster_supp.m`:
+- `paperFig(11, 14)`: width 17 → 11 cm; the height is back to 14 cm, which reverts the previous entry's 10 cm.
+- The two-line y-labels are restored.
+- Column titles are shortened to "Activity / Deviation / No-stim control" and the control x-label to "Time in window (s)", because the long titles collided at 11 cm.
+- Re-exported to `figures_final` at 10.30 × 13.61 cm.
+
+**Why:** The user clarified that they meant squishing the x axis, not the y axis.
+**Next:** The caption must define "Deviation" (from the amplitude mean) and the control window (−1.51 to −1.03 s).
+
+### 2026-10-12 — Supp state rasters: figure squished to 10 cm tall, single-line y labels
+**Changed:** `imp_state_raster_supp.m`:
+- the figure is now `paperFig(17, 10)` (was 14 cm tall);
+- the y-labels are just the state name: "trials sorted by state" overlapped between rows at the new height, and the caption will say it instead.
+- Re-exported to `figures_final` at 15.89 × 9.62 cm.
+
+**Why:** The user asked to squish the y axis so the rasters look less blocky.
+**Next:** The caption must say the rows are trials sorted by state.
+
+### 2026-10-12 — Supp state rasters: Q4 on top, Q1 at the bottom
+**Changed:** `imp_state_raster_supp.m` now sets the axes to `'YDir','normal'`. Same sort, so row 1 (the lowest state) is drawn at the bottom. Re-exported `figures_final/panels/supplementary/supp_state_raster.png` (PAPER_FINAL).
+**Why:** The user asked for the order reversed: Q1 below, Q4 on top.
+**Next:** none.
+
+### 2026-10-12 — Found + fixed: warm-starting Mouse 3's CV refits from the full-data model inflated its held-out R²
+**Found:** `scratchpad/m3cv_leakfree.m` uses the same 100 splits × 2 as the paper CV (rng 7).
+- Warm start from the full-data seeded model, as in the 19:39 paper CV: median **0.953** [0.918, 0.973], 0% folds failed. It reproduces the paper's 0.957 to within 0.004.
+- Seed rebuilt from each training half alone: the alt fit of (h − m) at the full-data alt order 4p2z0d, plus that half's own offset pole, refit. Median **0.868** [0.717, 0.942], 7% folds failed.
+- So the warm start let the held-out half choose the basin, which inflated Mouse 3 by ~0.09 and the pooled median from ~0.87 to 0.898.
+
+**Changed:**
+- `utils/imp_tf_fit_session.m`:
+  - stores `T.seedAlt` [np nz nd] and `T.seedPre_s`;
+  - LOAO rebuilds the seed from the training amplitudes (new `local_fit_seeded`);
+  - bootstrap and per-amp refits keep the warm start, since they estimate uncertainty, not prediction.
+- `utils/imp_tf_cv_session.m`:
+  - the warm start from T.sys is removed;
+  - seeded fits rebuild the seed per training half (`local_build_h` now also returns that half's pre-onset mean);
+  - a seeded T without `seedAlt` skips CV loudly, so it never leaks silently.
+
+**Why:** a held-out score must not depend on the held-out data. The order is still chosen once on all trials, which Methods already says.
+**Next:**
+- `scratchpad/cvfree_batch.m` reruns `imp_tf_cv` with Mouse 3's `seedAlt` patched to [4 2 0] (same sweep, same data).
+- Update the 2D panel, the pooled median (0.90 → new), the Discussion 2-pole comparison, and the Methods sentence ("held-out refits rebuilt the seed from the training half").
+
+### 2026-10-12 — Manuscript: Fig 2C–F numbers + seeded-start Methods sentence (Closedloop_edit draft, uncommitted)
+**Changed:** `scratchpad/apply_ms_1012e.py`:
+- `results.tex`:
+  - 2F caption triangles are now "(Mice 1a, 1b and 3)";
+  - pooled CV 0.85 → 0.90;
+  - swap cross 0.68 → 0.69;
+  - rebound clause: "0.27 s in Mouse 2, beyond … in Mouse 1b, and no decay … in Mice 1a and 3".
+- `discussion.tex` L9: 2-pole vs main is now "0.81 against 0.90", and the sentence is reworded. "Nearly as well" no longer holds; it now reads "kept more than one pole pair because a single damped oscillation predicted held-out trials less well … and because the extra poles separate …".
+- `methods_rewrite.tex`, after the selection rule: the Mouse 3 seeded initialization (default start best R² 0.94; one data-built candidate per session; selected only in Mouse 3, 5p4z, R² 0.99; held-out and bootstrap refits started from it).
+- The dip sentences (0.11 s in 3/4, median 0.113, 2.4–4.2 Hz) and the other session's model-order sentence are already correct.
+
+**Why:** the seeded rerun (entry below).
+**Next:**
+- 2F caption censoring "43–73%" waits on `bootsplit_batch` (failed vs beyond).
+- Adversarial check of the edits.
+- Commit on draft (no push). Mouse 3 values stay provisional until the hemo recompute.
+
+### 2026-10-12 — Fig 2C–F rerun with the seeded fit (Mouse 3 onset-referenced; May-2021 hemo still)
+**Found:** the `matlab -batch` run of `scratchpad/tfseed_run.m` (`imp_tf_run` 55 min → `imp_tf_cv` 18 min → 2-pole CV 10 min, PAPER_FINAL on).
+- **Fits:** Mice 1a, 1b and 2 are identical to the 10-11 new pass (3p1z0d / 4p3z0d / 4p3z0d, same τ and R²h). Mouse 3 selects the SEEDED 5p4z0d (R²h 0.994, AIC rule, no escalation). Its τ are 1768 s (offset mode), 0.500, 0.187, and a 0.1435 s dip pair at 3.25 Hz.
+- **2F:** dip τ 0.1055 / 0.1117 / 0.1141 / 0.1435 → median 0.113 s, and three of four sessions at ≈0.11 s. Dip frequencies 2.43 / 4.12 / 4.19 / 3.25 Hz, so 2.4–4.2 Hz is unchanged.
+  - Rebound: Mouse 2 0.268 s. Mice 1a, 1b and 3 are beyond the window (triangles); Mice 1a and 3 show no decay within it.
+  - Bootstrap `tauBootReject` (includes failed refits): 41 / 73 / 3 / **100%**. Every Mouse 3 draw is rejected because its slowest mode is the offset pole. The failed vs beyond split is being replayed in `bootsplit_batch.m`.
+- **2D CV:** 0.561 / 0.833 / 0.950 (identical to 10-11) / **0.957** [0.922, 0.975] for Mouse 3 (was 0.841 at 4p2z0d, 10% folds failed; now 0%). The pooled median goes **0.845 → 0.898**.
+- **2E swap:** self 0.992, cross 0.691 (was 0.68).
+- **2-pole CV:** Mouse 3 2p0z0d 0.871 (was 0.876); pooled 0.813 (was 0.809).
+- **Exports:**
+  - `tf_cv_2D_sidebar`, `tf_cv_single_AL_0033` and `tf_model_swap` were mirrored to figures_final.
+  - **`tf_tau_forest.pdf` was NOT mirrored, because the file was locked (open in Illustrator).** Its `paper/images/figure2` copy is current. To re-mirror, close the file and run `imp_tf_figs` with PAPER_FINAL on.
+- **Fixed:** the "only %d/%d bootstrap refits usable" fprintf had its arguments in the wrong order, which garbled the log. `T.tauBootFail` / `T.tauBootBeyond` are added so the 2F caption can report only the beyond-window share.
+
+**Why:** the user chose the seeded fit (option B). These are the numbers with the onset-frame reference.
+**Next:**
+- Update the manuscript 2D–2F and Discussion numbers on draft.
+- Re-mirror tau_forest.
+- ⚠ Mouse 3's CV refits are warm-started from the full-data model (a basin-choice leak, like the order choice). Check it with per-fold seeds.
+- All Mouse 3 numbers are provisional until its hemo correction is recomputed (TASKS 🔴).
+
+### 2026-10-12 — Supp state rasters locked: pooled, all columns 0–0.5 s
+**Changed:**
+- `imp_state_raster_supp.m`:
+  - the activity column is now 0–0.486 s, so all three columns share one span (it was −1 to +0.5 s);
+  - removed the onset line;
+  - the colorbar is a horizontal strip under the grid;
+  - export goes through `paperExport(...,300)`, so the PAPER_FINAL mirror picks it up.
+- `MANIFEST.txt [supplementary]` gains `supplementary/supp_state_raster.png`. `PAPER.md` gains the S-state rasters row.
+- Exported `figures_final/panels/supplementary/supp_state_raster.png` (16.08 × 13.61 cm @300 dpi).
+
+**Why:** User: "pooled, keep all column length same ie 0-500 ms activity".
+**Next:** Write the caption plus a `supplementary.tex` float, and cite it from the 2G Results paragraph. Optionally make the colorbar strip thinner at assembly.
+
+### 2026-10-12 — Supp: state-sorted trial rasters (3 states × activity / deviation / control)
+**Changed:** New script `impulse-analysis/imp_state_raster_supp.m`. Rows = trials sorted by within-session state percentile, with quartile lines.
+- Panel layout, one row per state (motion, rel δ, abs δ):
+  - column 1 = onset-referenced activity, −1 to +0.49 s;
+  - column 2 = deviation from the amplitude mean, 0–0.49 s;
+  - column 3 = stim-free control deviation on the 18-sample window at −1.51 to −1.03 s.
+- Every trial is divided by its session's response RMS L2. The control uses the same divisor, so magnitudes are directly comparable.
+- Colours: purple–white–orange map, ±3 shared across panels.
+- Knobs: `RS_SESS` ([] = pooled, 3 = Mouse 2), `RS_CLIM`, `RS_SMOOTH`.
+- Rows are asserted against T.devRaw.
+- Output: `paper/images/supplementary/supp_state_raster.png` and `supp_state_raster_s3.png` (300 dpi, heatmap rule). Not in MANIFEST.
+
+**Found:** In the abs δ row, Q1 is pale in all three columns and Q4 is saturated in all three, so the control column tracks the deviation column visibly. Q4 also shows large pre-onset swings in the activity column. Motion is slightly paler in Q4; rel δ is flat.
+**Why:** The user asked for sorted-trial rasters (9 panels) in place of the example-trial layouts A–C.
+**Next:** User to choose pooled vs single-session and approve. Then make the colorbar compact, add the panel to MANIFEST [supplementary] and write a caption.
+
+### 2026-10-12 — Decision: recompute Mouse 3's hemo correction locally (queued after the running TF rerun)
+**Found (partial, read-only workflow wf_9882df74-940, `scratchpad/m3dip/`):** dip τ by V source, refit with the paper's options (seeded, no bootstrap):
+
+| Session | Old corr | New corr / paper V | Raw blue (detrendAndFilt, timestamp-aligned) |
+|---|---|---|---|
+| M1a | 0.148 (2.89 Hz) | 0.1055 (2.43 Hz) | 0.119 (2.41 Hz) |
+| M3 | — | 0.1435 (3.25 Hz; May-2021 corr) | pair 0.102, plus a real pole at 0.062 |
+
+- Raw blue tracks the NEW correction in M1a, not the old one.
+- M3's raw-blue dip pair matches the other mice. So the 0.14 s likely comes from its May-2021 correction (a one-way band-stop in the dip band).
+- M1b and M2 calibration and the skeptic review are still running.
+
+**Decision (user):**
+- After the running tasks finish, recompute M3's hemo correction locally:
+  - copy its widefield frames from the server (read-only);
+  - run the SVD + hemo pipeline locally;
+  - save the SVD/corr locally;
+  - delete the frames;
+  - then rerun M3's Fig 2 chain.
+- Later, do the same for ALL sessions so every session is on one correction version.
+
+**Why:** M3's slower dip is a correction artifact, not physiology. Leaving it would put a known artifact in 2F and the Discussion's conserved-dip claim.
+**Next:** see TASKS 🔴. First find the lab's exact 2026-10-11 pipeline code and check disk space. Until the recompute, M3's numbers from today's TF rerun are provisional.
+
+### 2026-10-12 — Dead end: launching a long MATLAB run from an MCP timer does not work; use `matlab -batch`
+**Found:**
+- A `timer` started from an MCP call (`evalin('base','run(tfseed_run.m)')`, StartDelay 2 s) reported TasksExecuted = 1 but never ran the script body. No variables, logs or error file appeared, and MATLAB sat idle for 85 min.
+- The earlier probe only "worked" because it fired during a `pause(3)` inside the same call.
+
+**Why:** the long TF rerun has to run without blocking the MCP session (1800 s idle timeout).
+**Next:** long runs now go through a separate `matlab -batch` process (`scratchpad/tfseed_batch.m`):
+- restore the MCP session's path;
+- load the `allExperiments` saved from the session;
+- run the job.
+
+The TF rerun was relaunched that way at 18:25.
+
+### 2026-10-12 — New supp producer: single-trial examples of the Fig 2G state effect (3 layouts)
+**Changed/Found:** `impulse-analysis/imp_state_examples_supp.m` (new) — rebuilds per-trial traces in T's row order and asserts e and e_ctrl equal `T.devRaw`/`T.shmRaw` exactly (1516 trials, control -1.514..-1.029 s). Bins = Fig 2G's pooled equal-count quartiles of the within-session percentile. **Trial rule (deterministic):** "typical" trial = the one whose L2 error e is closest to its session x quartile cell's RMS e (ties -> lowest T row); spread overlay = trials at the 10/30/50/70/90th percentile ranks of e. Layouts (`SUPP_LAYOUT`): A = abs δ, 4 mice x Q1-Q4 typical trial (16.5 cm); B = 3 states x Q1/Q4, Mouse 2 (`SUPP_SESS=3`), 11.6 cm; C = residual x-μ_amp vs control c-μ_ctrl overlays, Q1 vs Q4, Mouse 2. Purple quartile ramp (not OL/CL colours), grey control, black dashed amplitude mean. PDFs -> `paper/images/supplementary/supp_state_examples_opt{A,B,C}.pdf`; 300-dpi workshop PNGs in the session scratchpad. Not added to MANIFEST; PAPER_FINAL untouched (it was already true in base, but the mirror is a no-op for unlisted names).
+**Why:** Fig 2G's "fixed stimulus effect on state-dependent ongoing activity" reading needs a single-trial picture; the earlier random-pick scratch diagnostic was not reproducible.
+**Next:** user picks a layout; then add it to PAPER.md + MANIFEST and caption it. Note single trials are dominated by ongoing activity (amp means ~1-3 % ΔF/F vs e ~2-6 %), and Mouse 2 motion runs Q1 > Q4 (cell RMS 3.65 vs 2.94).
+
+### 2026-10-12 — Manuscript: Fig 2G text, caption, Methods switched to the L2 error
+**Changed:** `Closedloop_edit/results.tex` and `methods_rewrite.tex` (uncommitted on `draft`; latexmk builds clean):
+- **Results** state section, all from STATS_TABLE `2G_*`:
+  - DV is now defined as the L2 error over 0–0.5 s;
+  - control window is "equally long";
+  - every response number is replaced: motion 0.64 [0.47, 0.82], t(3) = −7.33, p = 0.0052; rel δ 1.03 [0.85, 1.23], ρ +0.148, t(3) = 3.57, p = 0.038; abs δ 2.31 [1.85, 2.75], t(3) = 21.0, p = 2.4e-4;
+  - control ratios 0.66 / 1.08 / 2.71, control ρ −0.23 / +0.127 / +0.57;
+  - control/response RMS 0.92–1.06.
+- **2G caption:** y definition, control window −1.51 to −1.03 s, a ** star level added (motion is now **).
+- **Methods "Impulse-response variability":**
+  - rewritten around the new Eq. `eq:l2_error` (18 samples, 0–0.49 s, onset-referenced, vs per-amplitude mean trace);
+  - z = e / RMS_{s,a}(e) and RMS-based ratios;
+  - control is the same equation over 18 samples ending at −1.03 s;
+  - the Statistics paragraph's |dev| model is now z ~ state + (1|session).
+- **Unchanged:** the Bonferroni statement (motion and abs pass 0.017, rel doesn't) and the δ-measure ρ = 0.47 (states only).
+
+**Why:** User: "use L2, update the paper and the text across results and methods".
+**Next:** None for 2G text. Fig 4 L151's cross-reference still reads correctly ("scatter around the mean response").
+
+### 2026-10-12 — 2G DV switched to L2 time-course error (STV_DV='l2', default)
+**Changed:**
+- `impulse-analysis/imp_state_trialvar.m`:
+  - new knobs `STV_DV` ('l2' default | 'mean') and `STV_L2_WIN` (0.5 s → 18 samples, 0–0.486 s);
+  - per-trial e = RMS over t of (onset-referenced trace − per-amplitude mean trace);
+  - control = same statistic over 18 stim-free samples (cols 53:70, −1.514 to −1.029 s, own-first-frame reference);
+  - every spread summary goes through new helpers `local_spr`/`local_ss`/`local_dof`/`local_var`: SD/(n−1) pooling for 'mean', RMS/sum-of-squares for 'l2';
+  - the bin test is Kruskal–Wallis under L2 (Brown–Forsythe under 'mean');
+  - new R fields `ratioP`, `ctlRespSD`, `dvMode`, `l2Win`.
+- `imp_state_hboot.m`: the bootstrap ratio is RMS under L2.
+- `paper-writing/paper_stats_table.m`: 2G row labels follow the DV, and new rows `2G_*_ctrlratio` + `2G_ctl_resp_spread`.
+- Re-ran: `data/fig2g_state_stats.mat` saved, `imp_state_var_combined.pdf` re-exported (PAPER_FINAL), STATS_TABLE.csv regenerated (only 2G rows changed, 58 rows).
+
+**Found:** `STV_DV='mean'` reproduces the published numbers exactly (0.63 / 1.09 / 2.56, same CIs and t). L2 results are in the table below. All four sessions agree in every state. Control/response RMS per session is [0.92 0.94 1.06 1.06].
+
+| State | Q4/Q1 [CI] | Control Q4/Q1 | LME | ρ (control ρ) |
+|---|---|---|---|---|
+| Motion | 0.64 [0.47, 0.82] | 0.66 | t(3) = −7.33, p = 0.0052 | −0.223 (−0.228) |
+| Rel δ | 1.03 [0.85, 1.23] | 1.08 | t(3) = 3.57, p = 0.038 | +0.148 (+0.127) |
+| Abs δ | 2.31 [1.85, 2.75] | 2.71 | t(3) = 21.0, p = 2.4e-4 | +0.551 (+0.573) |
+
+**Why:** User chose L2 (0–0.5 s = the LTI fit window) after comparing candidates. It scores the response time course, not only its 0–200 ms mean.
+**Next:** Supplementary example-trial figure in progress (background).
+
+### 2026-10-12 — Fig 2G example trials per session × state quartile (diagnostic)
+**Found:** I made scratch figures (`stv_example_trials.m`, session scratchpad): 2 random trials (rng 1) per session × quartile for motion / rel δ / abs δ, each trial's onset-referenced trace against the trial average at its own amplitude (−0.3 to 0.6 s, mW = V/3).
+- **Abs δ:** Q1 trials hug their amplitude mean. Q4 trials carry large slow swings, ±5–15 % ΔF/F, that are already present BEFORE onset and continue through 0–0.5 s, which dwarfs the 1–5 % evoked dip. This is visual support for the "ongoing activity" reading.
+- **Mice 1a/1b:** mean responses are only about 1–2 % ΔF/F, so single trials are dominated by ongoing activity even at low δ.
+- **Control overlay (added on request):** each trial's own stim-free control (−1.543 to −1.029 s, own-first-frame reference) is drawn on the 0–0.5 s axis. High-δ control segments swing as much as the responses, and in Q4 control L2 is often ≥ response L2. The control's per-amplitude mean is not flat: it reaches up to 1.74 % ΔF/F of drift.
+**Why:** The user asked to see what the 2G quartiles look like at the trial level.
+**Next:** If the user wants it, convert this to a supplementary panel: fixed trial selection (e.g. median-L2 trial per quartile) and paper style.
+
 ### 2026-10-12 — S5B schematic shows the no-stimulation vs planned prediction; MPC prose checked against results
 **Changed/Found:**
 - `mpc_direct.py` now saves `snap_yfree`, the free response with the laser off from "now", next to `snap_yhat`, the prediction under the plan. Rerun gave identical numbers: MPC/PI 0.652 (108/108), perfect 0.224, medians 1.46 / 0.82 / 0.27.
@@ -372,1478 +697,5 @@ Ask the user which ones to compute.
 **Found:** adjusted unique R² in the separate-model abs δ term, 0–1 s vs 1–3 s: 0.106 vs 0.114, a difference of 0.007. Paired signed-rank V = 31, p = 0.898, n = 11.
 **Why:** this was computed to back "kept the same share in both windows". The user then decided 4C states no tests, so the text now gives the two values only.
 **Next:** none.
-
-### 2026-10-11 - Manuscript updated for today's changes (Closedloop_edit draft, not pushed)
-**Changed:** `Closedloop_edit/{results,methods_rewrite,discussion,supplementary}.tex` on `draft`. The edits came from a read-only audit workflow: 6 finders, 2 verifiers per file and a critic, 68 proposals. I applied the verified ones plus the Fig 4C rewrite (entry below).
-- **Fig 2, new hemo correction:**
-  - 2B slopes −0.88/−1.32/−1.53/−2.43 per mW (per V × 3), R² 0.97/0.73/0.88/0.92;
-  - CV pooled 0.85 (4 dp 0.8452); swap cross-session 0.68;
-  - dip 2.4–4.2 Hz, τ 0.11 s, median 0.113 s;
-  - rebound sentence rewritten: Mice 2 and 3 at 0.27 and 0.30 s, Mouse 1b 0.97 s, Mouse 1a no decay within the window;
-  - 2F caption describes the triangles; bootstrap 43–73%;
-  - all 2G numbers, including the stimulus-free control ratios 0.80 / 0.98 / 2.35;
-  - S1 plateau ~1.2 mW (Results L18).
-- **mW = V/3:** Results "0 to 1.6 mW"; Methods laser paragraph (1 mW per 3 V; a `%% FILL` asks for the convention's source); Methods 1.6 mW ×2; Discussion 1.6 mW.
-- **Fig 4 uncorrelated random slope:**
-  - Table 1 (all four rows, bold marks) and its caption gap range;
-  - Results L150–154 significance wording: initial deviation and rel no longer clear Bonferroni, motion attenuation now does;
-  - Methods formula + a justification sentence (simulation type-I, fallback chain);
-  - Discussion gap trend 0.23 [0.09, 0.37], p = 0.0051; rel p = 0.081.
-- **Discussion 2-pole:** 0.81 vs 0.85.
-- **Methods fixes:** TF order rule corrected (parsimonious within 0.002 of the best R², not "escalate to higher order"); 2G state-window sentence 29–200 ms → 0–200 ms (Eq. inhib_energy).
-- **Second pass**, after a 3-lens adversarial check of the applied diff:
-  - 4C text reports V for each signed-rank test, and only the transient initial deviation clears Bonferroni (0.0063). Methods Multiple comparisons lists the 4C family of eight.
-  - The steady-state claim is now 'remains the largest steady-state term' (abs 0.07 ± 0.04 with rel in the model, 0.11 ± 0.06 without), not 'keeps its share'.
-  - Mouse 1b's rebound is described as beyond the 0.5 s window, not 0.97 s; Results and Discussion drop 'several-fold'.
-  - ρ(abs, rel δ) 0.55 → **0.46 over the impulse trials**. 0.55 was a pre-2026-10-02 value; current within-session values are 0.41–0.48.
-  - 4B caption: 'within each session'. Methods: signed-rank wording and exemplar z-scoring clarified.
-- `latexmk` builds clean: 40 pp, 0 undefined.
-**Found:**
-- **Left for the user:**
-  - Methods hemo-correction note (whether AL_0048 is post-fix is unknown);
-  - Methods L271 / Fig 5D per-date calibration;
-  - **2G sham window is 7 samples while the response window is now 8** (Methods L1177 says "same length" — false). Fix the code (Lresp = 8, rerun 2G control) or the text;
-  - ρ = 0.55 between the δ measures comes from the 613 controller trials, not the impulse trials it sits beside;
-  - the rel 2–4 Hz CL claims now rest on p = 0.044.
-- 4E–G, MPC and S4 numbers are untouched (old-correction caches).
-**Why:** User 2026-10-11: "update the write up wherever needed then wait on me to reassemble figures then we push".
-**Next:** The user reassembles Fig 2, S1, Fig 4 (4C + 4D) and S3 B–D in Illustrator and updates `images/`. Then commit on draft, fast-forward main and push both.
-
-### 2026-10-11 - Fig 4C error decomposition is now session by session (adjusted R², mean ± SEM over 11 sessions)
-**Changed:** `controller-analysis/f4_error_decomp.m`.
-- New knob `F4_DECOMP_LEVEL`: 'session' is the default; 'pooled' is the legacy behaviour.
-- In session mode:
-  - the bar is the mean over sessions of each session's own fit (states z-scored within session);
-  - the error bar is the SEM;
-  - the title reads "Unique R^2 (11 sessions)".
-- New knob `F4_DECOMP_ADJ` (default true): per-session fits use adjusted R².
-- The console prints a one-sided signed-rank V and p over sessions, and `DEC` stores level/adj/pooled/p/V. `F4_DECOMP_ADJ` defaults to on only in session mode, so 'pooled' reproduces the legacy panel.
-- Re-exported with PAPER_FINAL: `figure4/f4_decomp_unique_sep.pdf`, `supp_f4/supp_f4_unique_{both,rel,abs,legend}.pdf`.
-**Found:** sep model, unique R² for 0–1 s / 1–3 s:
-
-| Factor | Pooled (old panel) | Session, adjusted, p |
-|---|---|---|
-| init | 0.41 / 0.03 | **0.53 / 0.03** (V 66 / 39, p 4.9e-4 / 0.32) |
-| motion | 0.00 / 0.00 | 0.00 / −0.00 (p 0.82 / 0.77) |
-| rel 2–4 | 0.15 / 0.19 | 0.05 / 0.03 (p 0.012 / 0.21) |
-| abs 1–4 | 0.28 / 0.44 | 0.11 / 0.11 (p 0.051 / 0.021) |
-
-- The pooled fit inflated the power terms with between-session differences.
-- A raw per-session unique R² cannot be negative. With 16–108 trials per session (median 50), its permutation null is 0.009–0.026, which is all of motion's raw 0.011/0.021. Adjusted R² matches raw minus the permutation null to within 0.01 for every factor.
-- Abs δ is still the largest steady-state term, and the initial deviation still owns the transient. Rel alone no longer carries a significant steady-state share.
-**Why:** User 2026-10-11: "figure 4c the error comp model needs to be session by session not sessions pooled ... we wrote n=613 11 sessions".
-**Next:**
-- The user re-places 4C and S3 B–D.
-- The manuscript text was updated (entry above).
-- `cl_rmse_factor_windows.m`, kept "in sync" per the header, still pools; it is not a paper panel.
-
-### 2026-10-11 - 2-pole TF CV on the new hemo correction: pooled held-out R² 0.809 vs 0.845 (main)
-**Found:**
-- Setup: scratchpad `cv2p_new.m`, the same as on 2026-10-10 (maxPoles 2 / maxZeros 1 / maxDelay 3 / 0.5 s / AIC, no bootstrap; `imp_tf_cv` with 100 splits, CV_EXPORT false, PAPER_FINAL false; no panel written).
-- Orders: 2p0z0d / 2p1z0d / 2p1z1d / 2p0z0d.
-- Per session: 0.486 / 0.775 / 0.838 / 0.876.
-- Pooled: **0.8094**. The main 4-pole model, rerun for 4 dp, gives **0.8452** (shape 0.8687); the log prints 0.845.
-- So the text reads 0.81 vs 0.85; it was 0.83 vs 0.86 on the old correction.
-**Why:** Discussion L9 quotes the 2-pole vs main comparison.
-**Next:** none
-
-### 2026-10-11 - Retired the two Fig-2 supplementary panels (tf_cv_2D_endlabels, tf_cv_shape_across_sessions)
-**Changed:** `paper/figures_final/MANIFEST.txt` `[supplementary]`: both lines removed, with a dated note. Their four files (pdf + png) were deleted from `panels/supplementary/` by hand.
-- `collect_final_panels` was NOT run in prune mode. Its dry run would also prune the 8 S4 reject-trial files (`[supp_reject]`, tabled 2026-10-10 but not retired), which is outside this request.
-- PAPER.md and the manuscript never referenced either panel, so nothing else changes.
-- Working copies remain in `paper/images/figure2/` and `paper/_hemo_compare/`.
-**Why:** User 2026-10-11: "fig2 supplementary work are plots that are not needed".
-**Next:** Decide whether the tabled S4 panels should be pruned. Until then `collect_final_panels` (prune mode) will delete them.
-
-### 2026-10-11 - Fig 2F: tau beyond the 0.5 s fit window drawn as an off-scale triangle (tauClip)
-**Changed:**
-- `utils/imp_tf_robust_fig.m`: new `opts.tauClip` (default Inf). In TF-A, a tau above it is drawn as a filled right-pointing triangle at the ceiling, CI ends are clipped to it, and the axis is sized from the clipped values. The clipped sessions are printed to the console.
-- `impulse-analysis/imp_tf_run.m` passes `'tauClip',RUN_TFIT` (0.5).
-- `impulse-analysis/imp_tf_figs.m` now passes `'bareA',true,'tauClip',0.5`. It used to draw TF-A with CI lines while imp_tf_run drew bare points, and both write the same final `tf_tau_forest.pdf`.
-- Re-exported 2F only (PAPER_FINAL, from the NEW-corr `imp_tf_fits.mat`).
-**Found:** Two of four slow modes are off-scale:
-- M1a: tau ~1.7e6 s, a pole at ~0;
-- M1b: 0.973 s. It was already 0.586 s, beyond the window, on the old correction.
-
-M2 0.268 s and M3 0.30 s sit on scale. The dip median is 0.113 s (dotted line).
-**Why:** User 2026-10-11: "increase model order so we get something relevant for slow mode if not clip it to 0.5s". The order sweep failed (entry below). A mode slower than the 0.5 s window it was fit on is not resolved, and without a ceiling M1a's pole stretched the axis so far that every marker collapsed onto x = 0.
-**Next:** 2F caption: "triangles, tau beyond the 0.5 s fit window (M1a, M1b)". The console's mean tau_slow / between-session SD / ratio are meaningless with an infinite tau, so don't quote them.
-
-### 2026-10-11 - Higher TF order for M1a (AL_0041 e1) does NOT give a usable slow mode (dead end)
-**Found:** NEW-corr `allExperiments(1)`, `imp_tf_fit_session` with `opts.forceOrder` over every 3-6 pole x 0..np-1 zero x 0-3 delay (72 fits, no bootstrap, `per_amp_fit` false).
-- AIC still picks 3p1z0d (R2_h 0.978, LOAO 0.50, slow tau 1.7e6 s).
-- Every 4-6 pole fit either puts the extra pole back at ~0 (4p2z2d, 5p3z0d, 5p1z0d: tau 1e6-1e11 s) or collapses (R2_h <= 0.48).
-- The only fit with all tau below 2 s and more than 3 poles is 6p1z0d (slow tau 0.516 s), at R2_h 0.17 and LOAO -0.13, so it is unusable.
-- Lower order, 3p0z0d (AIC -6.38 vs -6.88), has no slow mode at all (tau 0.005/0.089 s), though its LOAO is higher (0.61).
-**Why:** User asked to raise the model order before clipping. Within the 0.5 s window the M1a response gives the extra pole nothing slow to fit.
-**Next:** none for order. The fallback (clip at 0.5 s) is in the entry above; `imp_tf_fits.mat` is unchanged (AIC selection, bootstrap from the NEW pass).
-
-### 2026-10-11 - ADOPTED the new server hemo correction (corr/) for Fig 2 + S1
-**Changed:** Installed the NEW-pass outputs (`paper/_hemo_compare/new/`, same code as OLD: timestamp alignment + mW = V/3):
-- into `paper/figures_final/panels/figure2/`: all 7 Fig-2 panels;
-- into `panels/supp_spatial/`: `imp_spatial_area`, `supp_spatial_cbar`, `supp_spatial_map_01..09`. `supp_s1_batch_variance` / `supp_s1_ol_variance_evolution` are controller panels, byte-identical, and were left as they were;
-- caches: `impulse-analysis/data/imp_tf_fits.mat`, `data/fig2g_state_stats.mat`, `paper-writing/STATS_TABLE.csv`.
-
-The pre-adoption originals stay in `paper/_hemo_compare/orig_snapshot_2026-10-11/` and `old/`. The default `HEMO_CORR` ('' = corr/) is now the paper path.
-**Found:** STATS_TABLE 2G moves:
-- motion Q4/Q1 0.731 -> 0.721 (LMM p 0.015 -> 0.015);
-- abs delta ratio 2.10 -> 2.19;
-- rel delta ns (p 0.068 -> 0.057);
-- the motion stimulus-free control strengthens (rho -0.049, p 0.040 -> rho -0.076, p 0.0014).
-
-Other numbers are in the OLD vs NEW entry below (2B slopes, CV 0.845, dip tau median 0.113 s, dip 2.4-4.2 Hz).
-**Why:** User 2026-10-11: "keep the new for fig 2 and s1, put them in pdf panel folders ill replace".
-**Next:**
-- The user replaces the panels in Illustrator.
-- Update the manuscript numbers (2B slopes, CV 0.845, dip tau ~0.11 s, 2.4-4.2 Hz, 2G values).
-- Fig 4G + MPC still read corr/ without the alignment fix. Fix and rebuild them before quoting any 4G/MPC number.
-- The motion stim-free control is now p = 0.0014; check how the text describes it.
-
-### 2026-10-11 - load_experiments aligns V by timestamps; Fig 2 + S1 rendered on OLD vs NEW hemo correction for approval
-**Changed:** `impulse-analysis/load_experiments.m`:
-- Each stim is placed on a blue frame (`bBlue`, the published rounding).
-- dF/V is read at `colOfBlue(bBlue)`, where `blueOfCol` maps every V column to its blue frame through V's own timestamps (new corr). The old corr (`HEMO_CORR='corr_hemoApr2021'`) keeps the identity mapping. Motion stays on `bBlue`.
-- New guards:
-  - an assert that the stamps sit −2..+14 ms after blue exposure onset (violet stamps would fail);
-  - trials whose ±3 s window spans a dropped frame are excluded;
-  - an extra trailing stamp is tolerated.
-- New field `allExperiments.blueOfCol`.
-- Reviewed by a 3-lens read-only workflow:
-  - old path: 20,000-case simulation, 0 mismatches;
-  - new path: blueOfCol == (2:N+1) in all three sessions, unambiguous, no interior gaps.
-
-**Found:**
-- **OLD pass** (old corr, today's code, PAPER_FINAL) reproduces the published results EXACTLY:
-  - 2B slopes −0.301 / −0.479 / −0.515 / −0.810;
-  - TF fits identical in every numeric field, including the bootstraps;
-  - CV pooled 0.855;
-  - 2G per-trial x/y identical;
-  - STATS_TABLE.csv byte-identical to HEAD.
-- **NEW pass** (new corr, timestamp alignment), compared with OLD:
-  - 2B slopes −0.295 / −0.438 / −0.510 (R² 0.971 / 0.732 / 0.882 vs 0.967 / 0.759 / 0.924); AL_0048 identical (not recomputed).
-  - 2C/2D CV pooled 0.845 vs 0.855 (shape 0.869 both).
-  - 2G motion 0.72 [0.52, 0.89] p=0.015 (was 0.73, p=0.015); abs δ 2.19 [1.60, 2.91] (was 2.10); rel δ ns (p=0.057 vs 0.068). Same stars.
-  - S1 maps and area essentially unchanged.
-  - **2F changes:**
-    - dip τ faster: M1a 0.148→0.106, M1b 0.107→0.112, M2 0.150→0.114 s; median 0.145→0.113 s;
-    - dip frequency 2.9/4.2/4.3→2.4/4.1/4.2 Hz;
-    - M1a's 3p1z slow pole goes to ~1 (τ = 1.7e6 s), which stretches the 2F axis to 1.7e6 s, so the panel is unusable as drawn;
-    - M1b slow τ 0.586→0.973 s; M2 0.333→0.268 s.
-  - 2E cross-session R² drops for M1b's model (0.90/0.83→0.85/0.62).
-- Outputs:
-  - `paper/_hemo_compare/{old,new}/` holds finals, data and logs;
-  - side-by-side page `paper/_hemo_compare/hemo_compare.html`;
-  - TF table `paper/_hemo_compare/tf_summary.csv`.
-- figures_final and the data caches were restored to the OLD set (= original + mW = V/3 labels) pending approval.
-
-**Why:** The user asked to approve the new-correction figures before adopting them ("if i dont approve we go back to the original version"). Identical code for both makes the correction the only difference.
-**Next:**
-- User decision.
-- If approved: copy `new/` finals and data back, and fix 2F's censoring of τ beyond the window (M1a's slow mode), or revisit M1a's order.
-- Update the manuscript numbers: dip τ ~0.11 s, 2.4–4.2 Hz, CV 0.845, 2B slopes.
-- 4G (imp_build_session) and the MPC caches need the same blueOfCol fix before they are rebuilt on the new corr.
-- The residual-stream scripts (f2_prep, cp_residual_core, ols_tf_pipeline, lds_ipsi) still assume column = blue frame and call loadUVt directly.
-
-### 2026-10-11 - The pre-stim "rise" in the new-corr impulse responses comes from index alignment, not from the new hemo correction
-**Found:** Read-only diagnostic `paper/_hemo_compare/prestim_diag/hemo_prestim_diag.m` (copy of a scratchpad script; figures in the same folder). It builds trial-averaged kernel traces for all 3 impulse sessions from old corr (index-aligned), new corr (timestamp-aligned), raw blue and raw violet (each + detrendAndFilt), with baseline −1..−0.3 s instead of the onset sample, and a sham at 400 random non-stim times.
-- **Onset-referenced, index-aligned new corr** (`hemo_onsetref_index_vs_ts.png`): the whole pre-stim trace sits about +0.5 to +1.3 % above old. The onset sample `dF(b)` is ~1.5 frames late and already inside the dip, so subtracting it lifts everything before onset. This is the "activity rises before the stim" look.
-- **Timestamp-aligned new corr** overlays old corr on all 3 sessions, pre-stim included.
-- **Raw blue (no hemo correction) shows the same pre-stim shape** as both corrections. Example: AL_0041 e1 at 2.7 V has a +0.5..0.9 % bump from −250 to 0 ms in old, new and blue alike. So it is in the data, not added by the correction.
-- Pre-stim mean (−200..−29 ms) is not graded with laser amplitude in any session, and it is within the spread of the sham pre-values (−0.53..+0.40 %). So it reads as ongoing activity/noise at n≈55–85 trials, not stim-locked leakage.
-- Raw violet is flat around the stim in all sessions: no laser bleed into the violet channel that the regression could subtract and smear.
-- Mechanism check in the code: `HemoCorrectLocal` regression and `detrendAndFilt` both use causal `filter()`. The only non-causal step is `resample(V', t, 2·Fs)` in `hemoCorrect.m` (vendored copy; the server c0de607 version was not readable). It is an FIR sinc interpolation; on a synthetic 1-frame dip it puts −0.61 at −14 ms and +0.19 at −43 ms. That only matters for transients shorter than ~2 frames. The real GCaMP dip is ~100 ms wide, so new ≈ blue in the real traces (AL_0033: identical).
-**Why:** The user suspected the new hemo correction's filtering creates a pre-stim rise in the impulse responses.
-**Next:** Use timestamp alignment (the uncommitted `load_experiments.m` fix) for every new-corr rerun of Fig 2 / S1. If any onset-referenced panel still shows a pre-onset lift after the fix, check its alignment first. Optional: read the server's c0de607 `hemoCorrect.m` to confirm it still uses `resample`.
-
-### 2026-10-11 - CORRECTION: the Fig 2 "hemo change" was OUR frame-index alignment; the new correction itself barely moves the impulse response
-**Found:** Read-only diagnostic `scratchpad/hemo_align_diag.m` (per-amp 0–200 ms response at the readout kernel, load_experiments definition). It compares old corr, new corr and raw blue (no correction), each aligned by frame index (`round((tStim − timeBlue(1))·35)+1`, as `load_experiments.m:279` does) and by that V's own timestamps.
-
-Dose slopes in %ΔF/F per V:
-
-| Session | old, index (published) | new, index (today's rerun) | new, timestamps | raw blue |
-|---|---|---|---|---|
-| AL_0041 e1 | −0.301 | −0.073 | −0.295 | −0.396 |
-| AL_0041 e2 | −0.479 | −0.253 (4/5 amps wrong sign) | −0.438 | −0.456 |
-| AL_0033 | −0.515 | −0.332 (non-monotonic) | −0.491 | −0.506 |
-
-- Cause: the new corr drops the first blue frame, so column k = blue frame k+1, and it is stamped at blue frame times (t(1) − timeBlue(1) = +35.6 ms; old +21.1 ms; blue +0.0 ms).
-- Index alignment therefore puts every trial ~1.5 frames (~43 ms) earlier than before. The onset reference sample `dF(b)` lands inside the dip, and the 0–200 ms window takes in the rebound.
-- The user spotted it ("a lot of amps are showing negative dose response which might be incorrect").
-- Aligned by timestamps, the new correction reproduces the published dose-response and matches raw blue, as the lab expected for fast signals.
-- So the 2026-10-11 entry "LAB-WIDE HEMO RECOMPUTE" is WRONG in two places: the slope numbers it lists (−0.301 → −0.076 etc.), and its line "loadUVt reads the new timestamps file, so the alignment is handled". load_experiments never uses t.
-- The audit workflow also found that `imp_build_session` (4G) takes onF from corr timestamps but indexes the rig's dFk by blue frame. On the new corr, G is therefore one frame ahead of A.
-- AL_0039 0420 e2 lost 75 zero frames mid-session, so index alignment drifts there.
-
-**Why:** The user flagged the negative amplitudes before the full Fig 2 rerun. The wrong-sign responses come from the alignment, not from the data.
-**Next:**
-- Do NOT place today's new-corr panels (2B imp_response, 2C, 2D, supp tf_cv_*); they are misaligned.
-- Fix: align V by its own timestamps (load_experiments.m:279 for dF and the S1 maps; keep the blue-frame index for motion), and fix the same in imp_build_session / ctrl caches before 4G or MPC are rebuilt.
-- Then rerun Fig 2 + S1 on the new corr for the user's approval.
-- Correct the hub worklog line that quoted the false slopes.
-- Diagnostic figure: `scratchpad/hemo_align_diag.png`.
-
-### 2026-10-11 - utils/initialize_data.m wrote motion energy INTO the server session folder; now writes a local cache
-**Changed:** `utils/initialize_data.m` motion block.
-- It used to `writeNPY(motEng, <session>/motEngF.npy)` and `writeNPY(motEngDS, <session>/motEngProc.npy)` whenever those files were missing, i.e. it wrote into the server session folder.
-- Now it reads the server copy if one exists, else a local copy in `brain_paper/data/motion_cache/<mn>_<td>_<en>_motEng{F,Proc}.npy` (git-ignored). Anything it computes goes only to that local cache.
-- Same values; only the write location changed. Not yet run in MATLAB.
-**Why:** The user: "you do not have permission to edit files on server". The new server-write guard's sweep of all 557 project .m/.py files flagged this as the only real server write in project code. Any earlier controller-session load that computed motion from face.mp4 would have left a motEngF.npy/motEngProc.npy on the server.
-**Next:** On the next `load_sessions` with a missing motion file, check that data/motion_cache fills and nothing appears on the server. Optionally ask the user whether earlier motEng*.npy files on the server came from this code.
-
-### 2026-10-11 - Server read-only guard: PreToolUse hook blocks any Claude write to the lab servers
-**Changed:**
-- NEW `.claude/hooks/server_readonly_guard.py` and NEW `.claude/settings.json` (project, committed, so it travels to the home PC).
-- The same hook was added to the user-level `~/.claude/settings.json` on this PC, pointing at the repo script. It covers sessions started in any folder.
-- Matcher: Write|Edit|MultiEdit|NotebookEdit|Bash|PowerShell|mcp__matlab__.*.
-- Servers covered: \\sahale, \\steinmetzsuper1, zserver, \\tower/Z: (`net use` maps Z: to \\tower.wanprc.org\Azadeh), and any *.washington.edu / cortexlab.net / wanprc.org UNC path.
-- What it blocks:
-  - file edits on a server path;
-  - shell redirects into a server;
-  - rm/mv/mkdir/touch/Remove-Item/Set-Content/... on one;
-  - copies whose destination is a server; sed -i; git writes;
-  - cd-into-server followed by a write; $VAR indirection; pipelines from the server into a write; unknown verbs on server paths;
-  - Python/MATLAB write calls (save, writeNPY, np.save, open 'w', shutil, os.remove, exportgraphics, ...) on a server literal or a variable built from one (expPath, serverRoot; flow-sensitive). It scans inline code, script files named on the command line, MATLAB MCP code, and repo scripts called by name, one level deep.
-- Reads stay allowed. If the script is missing the hook exits 1 (non-blocking, with a warning) so it cannot lock tools.
-- Test suite `scratchpad/guard_test.py`: 49 must-block and 24 must-allow cases, all pass. The repo sweep flags only initialize_data.m (real; fixed above), and nothing after the fix.
-- Live self-test: a shell command containing the script's SELFTEST marker was blocked by both the project and user hooks. Blocks are logged to `~/.claude/hooks/server_guard.log`.
-- It conservatively blocks running any local script that literally contains server-write code, even inside a string.
-**Why:** The user: "you do not have permission to edit files on server in case you didnt know, make sure we make a hook that makes sure of this".
-**Next:** Heuristic, not a sandbox: it cannot see paths built inside functions it never reads (one level of called scripts). Revisit if a block looks wrong. Z:/tower is included by default; drop it from SERVER in the script if Claude should ever write there for Yazdan Lab work.
-
-### 2026-10-11 - Switch to reproduce the OLD hemo correction (old-vs-new comparison of Fig 2 and S1)
-**Changed:**
-- NEW `utils/loadUVt_hemo.m`: calls `loadUVt`, then, if `global HEMO_CORR` names an old folder (e.g. `'corr_hemoApr2021'`), takes V and t from that folder. Empty, or `'corr'`, gives exactly `loadUVt` (the new server corr).
-- `impulse-analysis/load_experiments.m:87` now calls `loadUVt_hemo` instead of `loadUVt`.
-- The vendored `loadUVt` is untouched. Server reads only.
-- All three impulse sessions have `corr/` plus `corr_hemoApr2021/` on the server (checked today).
-- Snapshot of everything before the comparison runs: `paper/_hemo_compare/orig_snapshot_2026-10-11/`. It holds figures_final figure2 and supplementary, `imp_tf_fits.mat`, `fig2g_state_stats.mat`, `fig2g_hboot.mat`, `STATS_TABLE.csv`, stim_vars, and the Overleaf `Figure2.pdf`.
-**Why:** The user wants to see every changed figure and approve it. If they reject it, we go back to the original version. Rendering both corrections from identical code (with today's mW = V/3 labels) isolates the effect of the correction, and it lets us revert without anything lost.
-**Next:** Run the Fig 2 + S1 chain with HEMO_CORR = '' (new), then with 'corr_hemoApr2021' (old, run last so figures_final ends in the original state). Store each set in `paper/_hemo_compare/{new,old}/` and build side-by-side sheets.
-
-### 2026-10-11 - LAB-WIDE HEMO RECOMPUTE: impulse sessions' corr/ replaced this morning; today's Fig 2 re-exports use the NEW correction
-**Found:** On the server, `corr/svdTemporalComponents_corr.npy` was replaced on 2026-10-11 for AL_0041 2025-12-02 e1 (09:08) and e2 (09:09) and AL_0033 2025-01-29 e1 (10:36). The old file was moved to `corr_hemoApr2021/` with a README: "Old hemodynamic correction: do not use… overcorrected: subtracted about 1.8 times the hemodynamic signal, leaving about 0.8 of that signal with its sign flipped… differs from a fresh run by 43.5%… redo anything computed from corr/ before 2026-10-11."
-- Lab explainer: `\\sahale\data\Code\dataChangeLog\2026-10_hemoCorrect_recompute\EXPLAINER.md` (Anna Li, in progress). About 860 sessions recomputed; 831 were made by the Apr 2021 version.
-- The new corr has one frame fewer and timestamps +14.5 ms (blue frame times). `loadUVt` reads the new timestamps file, so the alignment is handled.
-- Effect on our data (today's `load_experiments` vs yesterday's), dose-response slope %dF/F per V:
-  - AL_0041 e1: −0.301 → −0.076 (R² 0.97 → 0.31)
-  - e2: −0.479 → −0.253 (0.76 → 0.40)
-  - AL_0033: −0.515 → −0.332 (0.92 → 0.72)
-  - AL_0048: unchanged (separate loader; probably already aligned)
-  - Held-out TF R² (same orders): pooled 0.855 → 0.846; per session 0.503 → 0.442, 0.855 → 0.820, 0.948 → 0.955, 0.841 → 0.841.
-  - Stim onsets and trial counts are identical; I checked that the published fits file matches yesterday's run exactly.
-- **figures_final is now MIXED for Fig 2.** These were re-exported today with the NEW correction: `figure2/imp_response.pdf` (2B, now with the V/3 bar), `figure2/tf_cv_single_AL_0033.pdf` (2C), `figure2/tf_cv_2D_sidebar.pdf` (2D), `supplementary/tf_cv_shape_across_sessions.pdf`, `supplementary/tf_cv_2D_endlabels.pdf`. 2A, 2E, 2F and 2G are still yesterday's (old correction). S1 (`imp_spatial_panels`) was NOT re-run.
-**Why:** I was re-exporting 2B/2C/S1 for the mW = V/3 label convention and saw 2C's pooled R² move (0.855 → 0.846) with no code change. I traced it to the server data.
-**Next:** User decision: redo Fig 2 (dose response, TF fits + bootstrap, CV, timescales, 2G) and S1 on the new correction, and check the Fig 4 Global/ridge caches that were trained on corrected V. Until then the user must not place today's 2B/2C/2D or the supplementary CV panels. Fig 3/4/5 tracking error and the Fig 4 states come from the rig readout and are unaffected.
-
-### 2026-10-11 - Laser labels: mW = Timeline volts / 3 everywhere (user convention); minimal bar/factor fixes
-**Changed:**
-- `impulse-analysis/dose_response.m`: 2B bar is 0.75 V = 0.25 mW (was 1 V labelled 0.25 mW); the median version is 0.9 V = 0.3 mW.
-- `imp_tf_cv.m`: vToMW = 1/3 (reverts the 2026-10-03 switch to 1.8/4.9).
-- `imp_spatial_panels.m`: V_TO_MW = 1/3.
-- `utils/analysisPlots_combined.m`:
-  - 3A laser traces are drawn at gain 4 in both halves (OL was 5, CL 4, under one bar), with a 2.4-unit bar = 0.6 V = **0.2 mW** (was 2 units labelled 1 mW);
-  - 3C bar is 1.8 units at gain 3 = 0.2 mW (was 2 units labelled 1 mW).
-- `controller-analysis/ctrl_mpc_direct_panels.m`: S5 B and C bars are 1.5 V = **0.5 mW** (were 1 V labelled 1 mW).
-- Re-exported with PAPER_FINAL:
-  - Fig 3 A–E (`load_sessions`; the rig caches are unaffected by the hemo change). I checked 3A, 3C and S5 C1 visually.
-  - S5 (MPC caches dated 10-09 23:11, before the 23:30 panels, so content is unchanged).
-- The 2A legend (V/3) and its caption (0.23–0.90 mW) were already correct under the convention.
-**Why:** The user (2026-10-11) said to read input voltages from Timeline and use V/3 as the mW convention, keeping changes minimal. The audit had found 2B/3A/3C/S5 bars inconsistent (3A 6.8× and 3C 4× high).
-**Next:** Manuscript text still uses 0.37 mW/V: Methods L266–273, Results L43 "0 to 1.8 mW", L63 slopes, S1 "0.6 / 1.4 mW", Discussion L40 "1 / 1.8 mW". Change these to V/3 once Fig 2 is settled on the new hemo correction, since the slopes change anyway. Fig 5 and the new-mice panels use the per-date calibration (`laser_v2mw`), not V/3; the user is to decide. 3F/5E y bars are left as is ("what we have is ok").
-
-### 2026-10-11 - Fig 4 state LMM = UNCORRELATED random state slope (user decision); 4D, STATS_TABLE, rel/abs checks rerun
-**Changed/Found:**
-- `utils/f4_row2_fit.m`: all three fits now use `y ~ cond*xw + (1+cond|sess) + (xw-1|sess) + (1|mouse)`. The fallback chain is `(1+cond|sess)` → `(1|sess)`, run by a local `fit_chain` / `f4_re_chain` that warns on fallback, and `R.reForm` records the structure used. All 12 fits used the full structure.
-- `paper_stats_table.m`: labels updated.
-- Reran `f4_row2_quartiles` with PAPER_FINAL (final `figure4/f4_row2_quartiles.pdf`) and `paper_stats_table` (20 `4D_*` rows).
-- Fig 4 values (pred / reg / att):
-  - initdev: +0.18 p = 0.014 / +0.15 p = 0.028 / +0.3% p = 0.89
-  - motion: +0.16 p = 0.013 / −0.07 p = 0.27 / −9.0% p = 0.0048
-  - rel 2–4: +0.02 p = 0.76 / +0.12 p = 0.044 / +5.4% p = 0.027
-  - abs 1–4: +0.30 p = 6.6e-4 / +0.36 p = 1.6e-4 / +7.8% p = 0.0014
-- Laser-off [-2,0) rows:
-  - abs: +0.23 p = 0.0023 / +0.28 p = 5.3e-4 / +5.6% p = 0.017
-  - rel: p = 0.22 / 0.23 / 0.34
-  - motion: p = 0.72 / 0.40 / 0.11 (motion comes from the face camera, so the peri window is not circular for it)
-- `f4_rel_abs_checks.m` joint model switched to the same specification, `(1+cond|sess) + (xa-1|sess) + (xr-1|sess)`. Peri: rel given abs is OL −0.22 p = 2.6e-4 and CL −0.09 p = 0.052, so rel's positive CL slope disappears. Laser-off: rel adds nothing (p ≥ 0.49), and abs holds (OL p = 0.0024, CL p = 5e-4).
-**Why:** The user chose it on 2026-10-11 ("do: recommendation is the uncorrelated random slope") after `f4_randslope_n_check`.
-**Next:** The manuscript (Table 1, Results L148–154, the caption gap range now 0.71–0.82, and the Methods model sentence) is updated together with the rel 2–4 Hz reframing. The user re-places 4D after that. Fig 2G is unchanged (4 sessions; user decision pending on the two-stage test).
-
-### 2026-10-11 - Is n enough for a Fig-4 random state slope? Yes (15/11 sessions); the locked model is the one that fails
-**Changed/Found:** New `controller-analysis/f4_randslope_n_check.m` [F4RSN], which writes `data/f4_randslope_n_check.mat`.
-- **(1) Session slopes genuinely vary.** REML LRT locked vs random slope: initdev p = 8e-8, motion 0.015, rel 3e-4, abs 2e-6. AIC is lower with the slope in all four. The session SD of the state slope is 0.74–1.13× the fixed OL slope.
-- **Full covariance is at its limit for motion** (11 sessions): one slope correlation is −0.95. Initdev has 0.92.
-- **(2) Simulation at the real design**, 200 sims per state, OL state slope, Satterthwaite df capped at nSess−1:
-
-  | State | Type-I locked | Random | Uncorrelated `(xw-1\|sess)` | Power (random / uncorr) |
-  |---|---|---|---|---|
-  | initdev | 0.315 | 0.045 | 0.040 | 0.63 / 0.63 |
-  | motion (n = 11) | 0.115 | 0.015 | 0.025 | 0.67 / 0.66 |
-  | rel | 0.215 | 0.065 | 0.045 | 0.07 (no true effect) |
-  | abs | 0.645 | 0.055 | 0.045 | 0.98 / 0.99 |
-
-- **Uncorrelated-slope Fig 4 numbers** (pred / reg / att):
-  - initdev: +0.18 p = 0.014 / +0.15 p = 0.028 / +0.3% p = 0.89
-  - motion: +0.16 p = 0.013 / −0.07 p = 0.27 / −9.0% p = 0.0048
-  - rel: +0.02 p = 0.76 / +0.12 p = 0.044 / +5.4% p = 0.027
-  - abs: +0.30 p = 6.6e-4 / +0.36 p = 1.6e-4 / +7.8% p = 0.0014
-**Why:** User question, 2026-10-11: "is n enough for figure 4 random slope?". Earlier the same day they had asked to revert because "n is not too high".
-**Next:** The user picks locked / full random slope / uncorrelated slope; my recommendation is uncorrelated. `utils/f4_row2_fit.m` and `paper_stats_table.m` were restored to the locked model and that restore went into commit 7f6fcbc (a `git checkout <rev> -- path` stages the files). The 4D panel and STATS_TABLE.csv are still the full random-slope outputs from c58b15a, so code and outputs disagree until the decision is made. Finalise, rerun and commit once the user decides. Fig 2G (4 sessions) is genuinely too small for a random slope.
-
-### 2026-10-11 - Closed loop reshapes the spectrum during stimulation: <1 Hz down, 2-6 Hz up (waterbed); none before the laser
-**Changed/Found:** I added section (4) to `controller-analysis/f4_rel_abs_checks.m`. It computes the CL/OL mean-PSD ratio per session (detrend + Hann, density), median over 15 sessions with a signrank on the log ratio.
-- **Stimulation [0,+3) s:**
-  - 0.4–1 Hz: 0.79 (4/15 sessions above 1, p = 0.026)
-  - 1–2 Hz: 0.94 (p = 0.76)
-  - **2–4 Hz: 1.44 (13/15, p = 6.1e-4)**
-  - **4–6 Hz: 1.82 (15/15, p = 6.1e-5)**
-  - 6–10 Hz: 1.06 (p = 0.03)
-- **Laser-off [-2,0) s:** every band is 0.80–1.01, all p ≥ 0.14.
-
-So feedback attenuates slow power and amplifies power around crossover, which is the Bode sensitivity trade-off. The plant's damped 3–4 Hz dip mode (Fig 2F) sits in the amplified band. Relative 2–4 Hz (2–4 / 0.4–10 Hz) measured in the stimulation window is therefore inflated by the loop in CL on both counts: its numerator goes up and the slow part of its denominator goes down.
-**Why:** This tests the second half of the user's hypothesis ("maybe controller effect").
-**Next:** It is a candidate panel for the supplementary rel 2–4 Hz figure (CL/OL ratio vs frequency, stimulation vs laser-off, per-session lines). The ratio uses each session's own readout ΔF/F (rolling baseline), the same trace as the states.
-
-### 2026-10-11 - Fig 2G under a random state slope: fitlme unusable at 4 sessions; two-stage per-session test keeps motion + abs
-**Changed/Found:** I ran this ad hoc on `STV_R` and changed no file.
-- `adev ~ state + (1+state|sess)` returns standard errors about 10× the real spread of the session slopes. Motion becomes t = −0.40, p = 0.71 and abs t = 2.05, p = 0.13. The fit is degenerate with 4 clusters, as the `imp_state_trialvar.m` L373 comment anticipated.
-- The two-stage equivalent (per-session OLS slope of |dev| on state, then t-test over the 4 slopes) gives:
-  - motion −0.39 ± 0.10, t(3) = −3.95, p = 0.029, 4/4 sessions negative;
-  - abs +0.93 ± 0.09, t = 11.0, p = 0.0016, 4/4 positive;
-  - rel +0.17 ± 0.14, t = 1.19, p = 0.32 (slopes +0.27 / +0.43 / +0.18 / −0.22);
-  - pre-trial variance p = 3e-5.
-- The current 2G model `(1|sess)` gives p = 0.015 / 4.0e-4 / 0.068.
-**Why:** The user adopted the random-slope model for Fig 4 on 2026-10-11, which raises the question of using the same treatment in Fig 2G.
-**Next:** User decision on whether 2G switches to the two-stage test. Conclusions are unchanged either way: motion and abs are significant, rel is not.
-
-### 2026-10-11 - f4_rel_abs_checks: rel 2-4 Hz carries no Fig-4 information beyond abs power; the loop raises 1-4 Hz power in-stim
-**Changed/Found:** New `controller-analysis/f4_rel_abs_checks.m` [F4RA], which writes `data/f4_rel_abs_checks.mat`. It uses the Fig 4 pool and the random-slope model.
-- **(1) Overlap.** The within-session Spearman correlation of rel 2–4 with abs 1–4 Hz has median +0.38 (OL) / +0.42 (CL) in the peri window and +0.22 / +0.28 in the laser-off window.
-- **(2) Joint model** `y ~ cond*(xa+xr) + (1+cond+xa+xr|sess) + (1|mouse)`.
-  - Peri window: rel's CL slope is −0.05, p = 0.26 (it was +0.12, p = 0.05 alone), while abs is unchanged (OL +0.35, p = 6.5e-4; CL +0.36, p = 6e-4).
-  - Rel's only surviving term is a NEGATIVE OL slope (−0.18, p = 0.002): at fixed delta, a larger relative share means less total power.
-  - Laser-off window: rel adds nothing (all p ≥ 0.29), while abs holds (OL p = 0.0048, CL p = 8.5e-4, att p = 0.026).
-  - Rel orthogonalised to abs gives the same picture.
-- **(3) Loop effect** (CL − OL state per session, in laser-off SD units).
-  - Laser-off: rel +0.07 (p = 0.93) and abs −0.10 (p = 0.23), so the pre-onset brain is the same in both conditions.
-  - Peri: rel +0.19 SD (13/15 sessions, p = 0.048) and abs +0.16 SD (14/15, p = 1.8e-4).
-  - Within-trial rise: abs +0.18 SD (13/15, p = 0.002).
-  - So the controller raises low-frequency power during stimulation.
-
-**Why:** These test the user's hypothesis that "rel 2-4 is already a case of abs delta and maybe controller effect".
-**Next:** These results feed the reframing strategy (rel 2–4 Hz to a supplementary figure; motion + abs δ as the main states). Abs δ in the peri window is also partly loop-shaped, so its main-text claim should be anchored on the laser-off control.
-
-### 2026-10-11 - Fig 4 state LMM switched to a random state slope (user decision); 4D + STATS_TABLE regenerated
-**Changed/Found:**
-- `utils/f4_row2_fit.m`: all three fits (OL reference, CL reference, log) now use `y ~ cond*xw + (1+cond+xw|sess) + (1|mouse)`. The fallback chain is `(1+cond|sess)` → `(1|sess)`, done in a local `fit_chain` that warns on fallback, and `R.reForm` records the structure each fit used. All 12 fits used the full structure.
-- `paper_stats_table.m`: model labels updated.
-- Reran `f4_row2_quartiles` with PAPER_FINAL (final `figure4/f4_row2_quartiles.pdf` re-exported; new stars) and `paper_stats_table`. Only the 20 `4D_*` rows changed.
-- New values (pred / reg / att, p):
-
-  | State | Pred | Reg | Att |
-  |---|---|---|---|
-  | initdev | +0.15, 0.024 | +0.12, 0.055 | +0.1%, 0.97 |
-  | motion | +0.16, 0.015 | −0.06, 0.33 | −8.8%, 0.0046 |
-  | rel | +0.01, 0.82 | +0.12, 0.050 | +5.4%, 0.027 |
-  | abs | +0.28, 0.0011 | +0.34, 2.5e-4 | +7.8%, 0.0015 |
-
-- Gap at mean state is 0.71–0.82, t −7.8 to −11.4. The numbers reproduce the `f4_circularity_checks` sensitivity rows.
-**Why:** The user said "use random slope model" on 2026-10-11. The locked model's state-slope SEs were trial-level.
-**Next:** The manuscript (Table 1, Results L148–154, caption gap range, Methods model sentence, any Discussion numbers) is not updated yet; it will be done together with the rel 2–4 Hz reframing. Initdev and rel no longer clear Bonferroni; motion attenuation now does. The user re-places 4D in Illustrator after the reframing settles.
-
-### 2026-10-10 - Manuscript Fig 2 numbers updated after the AL_0041 rebin
-**Changed/Found:** Closedloop_edit `results.tex`:
-- 2A amplitude range is now 0.23–0.90 mW.
-- 2B is now 44–100 trials per amplitude.
-- Bootstrap >window rises to 42–55%.
-- Mouse 1b slope −1.30/mW, R² 0.76.
-- Cross-session swap R² 0.74.
-- Rebound τ 0.18/0.30/0.33/0.59 s.
-- 2G text matches the new STATS_TABLE `2G_*` rows:
-  - motion t = −5.00, p = 0.015;
-  - rel 1.03 [0.81, 1.39], ρ +0.092, p = 1.0e-4, control ρ +0.007, p = 0.77, t = 2.79;
-  - abs 2.10 [1.59, 2.87], t = 17.6, p = 4.0e-4, control ratio 2.24.
-
-`discussion.tex` 2-pole value 0.84 → 0.83. In `methods_rewrite.tex`, "Amplitudes with fewer than 20 trials were excluded" became "Every nonzero amplitude had at least 44 trials", because the code has no such filter. The PDF builds clean.
-**Why:** The detector rebin and the Fig 2 rerun (entries below) changed these values.
-**Next:** The pooled 0.86 and the ≈0.145 s dip are unchanged, and so is "three to nine nonzero levels". The 2A legend still converts with /3 (the user said Fig 2 laser values are fine), while the text slopes use ×4.9/1.8.
-
-### 2026-10-10 - 2-pole CV redone after rebin: pooled held-out R² 0.829 vs 0.855 (4-pole main)
-**Changed/Found:** I ran this ad hoc in the workspace and changed no files.
-- Setup: `imp_tf_fit_session` with maxPoles 2 / maxZeros 1 / maxDelay 3 / 0.5 s / AIC, then `imp_tf_cv` with Sprim = those fits, CV_NSPLIT = 100, CV_EXPORT = false and PAPER_FINAL = false. I confirmed no panel was written, and Sprim was restored afterwards.
-- Orders chosen: 2p0z1d / 2p1z1d / 2p0z0d / 2p0z0d.
-- Per-session held-out R²: 0.514 / 0.774 / 0.872 / 0.876. The main 4-pole model gives 0.503 / 0.855 / 0.948 / 0.841.
-- Pooled: 0.829 vs **0.8552** (main, recomputed at 4 decimals, so "0.86" stands).
-**Why:** Discussion L9 quotes the 2-pole vs main comparison, and the rebin changed AL_0041 e2. This run uses 100 splits, like-for-like with the main analysis; the original used 30.
-**Next:** none
-
-### 2026-10-10 - Fig 2 rerun after the AL_0041 rebin: results
-**Changed/Found:** The full chain ran with PAPER_FINAL on: `load_experiments` → `f2_slope_ci` → `dose_response` → `trace_overlay` → `imp_tf_run` (300 boot) → `imp_tf_cv` → `imp_state_trialvar` → `fig2g_state_stats.mat` → `imp_state_trialvar_fig` → `paper_stats_table`.
-- AL_0041 e2 bins: 0.7/1.3/1.9/2.6/2.7 V, n = 53/58/45/50/54 (was 6 bins, with 26 + 19 trials on a split plateau). The other sessions are unchanged.
-- Mouse 1b: slope −0.479 %/V = −1.30/mW (was −1.36), R² 0.76 (was 0.51). The other three slopes are unchanged.
-- e2 refit 4p3z0d: τ rebound 0.586 s (was 0.54) and dip 0.107 s at 4.2 Hz (was 0.093). Dip pairs across sessions are 2.9–4.3 Hz, so "3–4 Hz" holds. The median dip is 0.145 s; 3/4 sessions fall in 0.14–0.15.
-- Bootstrap refits with τ > window: 42 / 55 / 4 / 43%.
-- Swap: self 0.991 vs cross 0.738 (was 0.71).
-- CV pooled 0.855.
-- 2G: motion ratio 0.731 [0.509, 0.913], t = −4.997, p = 0.0154; rel 1.025 [0.815, 1.389], t = 2.792, p = 0.068; abs 2.105 [1.586, 2.871], t = 17.64, p = 3.97e-4; 1767 trials unchanged.
-- Changed final panels: imp_response, imp_single_AL_0041_2025-12-02_en2, tf_cv_2D_sidebar, tf_model_swap, tf_tau_forest, imp_state_var_combined, plus supplementary tf_cv_2D_endlabels and tf_cv_shape_across_sessions.
-- Backups of the pre-rebin fits, stats and CSV are in the session scratchpad.
-**Why:** The user asked to "rebin al41, rerun".
-**Next:** The user re-places the changed panels in Illustrator. Gotcha from this run: a base-workspace variable named `lines` shadows `lines()` and breaks `imp_state_trialvar` with "Invalid color", so never name a variable `lines`.
-
-### 2026-10-10 - loadData: local motion fallback; AL_0041 2025-12-02 face_proc.mat is gone from the server
-**Changed/Found:**
-- `utils/loadData.m`: if `face_proc.mat` does not load, `d.motion.motion_1` is read from the local `impulse-analysis/data/<mn>_<td>_e<en>_face_proc_motion_1.npy`, and `d.motion_source` is set.
-- `utils/faceproc_npy_motion.py` (new, numpy only) extracts facemap `motion[1]` from `face_proc.npy` into that file.
-- Local caches were made for AL_0041 2025-12-02 e1/e2 and AL_0033 2025-01-29 e1. These sit in a gitignored data dir, so they are lab-PC local.
-- Checked on AL_0033: npy `motion[1]` is identical to the old .mat `motion_1`.
-
-**Why:** `load_experiments` failed because the server now has only `face_proc.npy` for the AL_0041 sessions. The server is read-only for us, so the fix is a local cache, not a rewrite of server files.
-**Next:** On the home PC, regenerate the caches with `faceproc_npy_motion.py` before running Fig 2.
-
-### 2026-10-10 - detectStimEvents_idx: gap-based amplitude grouping (AL_0041 e2 split plateau merged)
-**Changed/Found:** `utils/detectStimEvents_idx.m`: amplitude levels are now found by sorting per-event amplitudes and starting a new group where consecutive values differ by more than `GapTol = 0.03` V (new option `'gaptol'`). Each group is labelled `round(median/AmpTol)*AmpTol`, and an `assert` fires if two groups get the same label. Plain rounding had split AL_0041 2025-12-02 e2's 1.945–1.958 V plateau into "1.9" (26 events) and "2.0" (19 events).
-**Why:** One physical level was being treated as two amplitudes. That halved the trials per bin and distorted the Mouse 1b dose-response (R² 0.51). Within-plateau spread is ≤0.013 V in every impulse session, and the closest real levels are 0.079 V apart (2.594 vs 2.682 V), so 0.03 V separates them safely.
-**Next:** Other callers (`imp_lds_grid.m`, `package_for_collab.m`) inherit the change. Their sessions had no split plateaus, so their labels are unchanged.
-
-### 2026-10-10 — AUDIT: direct-MPC gain inflated by a one-frame timing advantage; fair number is 0.78x, not 0.65x
-**Changed/Found:** `controller-analysis/mpc_direct_audit.py` (new; recorded-data checks) and `mpc_direct.py` (new `MPCD_LAT` option = frames of latency for the MPC; new `MPCD_AUDIT` block → `data/mpc_direct_audit_<sess>.mat`). Results:
-
-**T1 — rig latency.** Fitting the rig's PI law to the recorded commands works best when u(t+1) is built from e(t−1):
-
-| Lag d | R² |
-|---|---|
-| 0 | 0.36 |
-| **1** | **0.49** |
-| 2 | 0.39 |
-
-So the rig was one frame behind, while the simulated MPC used y(t). This is a ~29 ms information advantage. **REAL ISSUE.**
-
-**T2 — laser delay.** In the OL trial average, y responds about one frame after the command's half-rise. The VARX laser response (−0.19, −0.62, −0.66 … at leads 1, 2, 3) matches this, so the fast learned response is physical in index terms. **Not an issue.**
-
-**Simulated-brain fairness.** The fitted rig PI law (c 1.37, Kp 0.154, Ki′ 0.00023, lag 1) run inside the simulated brain gives 1.02× recorded (42/108 trials below). A PI re-tuned there (Kp 0.3, Ki′ 0.001, lag 1) gives 0.99×. So the simulated brain is **not** easier than the rig for PI. **Not an issue.**
-
-**MPC vs recorded PI, all 108 trials:**
-
-| Controller | Ratio | Trials below PI |
-|---|---|---|
-| MPC, lag 0 (as published) | 0.652 | 108/108 |
-| **MPC, lag 1 (fair)** | **0.778** | **105/108** |
-| Perfect MPC, lag 1 | 0.224 | 108/108 |
-
-About a third of the claimed gain was the timing advantage.
-
-**Still untestable in simulation:** the controller and the simulated brain share the linear VARX family. The innovations are additive and independent of the laser, so a state-dependent laser effect (cf. Fig 4) is absent.
-**Why:** user: "seems too good to be true, can we review".
-**Next:** rerun the S5 panels with MPCD_LAT=1, then update the S5 caption numbers and the Discussion paragraph (currently 0.82 vs 1.46, "about 40%" variance) on main — waiting for the user's go.
-
-### 2026-10-10 - Abstract + Intro: state dependence stated generically; laser-setting CHECK resolved
-**Changed/Found:** `Closedloop_edit/main.tex` abstract: "The error that remains under feedback is state-dependent: it tracks the initial deviation ... and ongoing low-frequency power later. Feedback keeps the output regulated as movement increases, but not as 2-4 Hz power increases." -> "The error that remains under feedback is state-dependent." `introduction.tex` summary paragraph: "Feedback decoupled tracking error from movement-related state but not from slow (2-4 Hz) cortical rhythms, and partially rejected ..." -> "The error left under feedback depended on brain state, and feedback partially rejected ...". `methods_rewrite.tex`: removed the `%% CHECK (units)` comment on the AL_0041 / AL_0048 laser setting.
-**Why:** User 2026-10-10: say state-dependent in the abstract without the motion / rel 2-4 Hz specifics (those depend on the window and on the random-slope model, RESEARCH 2026-10-10 'Circularity'); user confirmed the Fig 2 laser values are correct. Intro changed for consistency with the abstract (flagged to user).
-**Next:** Results/Discussion 2-4 Hz wording and Table 1 control rows still await the user's decision.
-
-### 2026-10-10 - Manuscript: Global described as an estimate that carries laser leak; 4D caption session-level; offset share corrected
-**Changed/Found:** `Closedloop_edit/results.tex` + `methods_rewrite.tex`. (1) Methods said "pixels near the homotopic stimulation site were excluded" - FALSE for the locked ridge model, which keeps the whole grid (`ctrl_ols_ol_stimblind.m:277-291`, keep_n = nG); now "used every pixel of the contralateral grid". (2) G was called "the activity ... with no controller input"; now "an estimate of" it, plus: contralateral activity changes during stimulation, so in open loop G's 0-3 s dip is 6-42% of the readout's (median 23%; leak_sus, 13 ridge caches). (3) "leak-corrected" is now defined in Methods (G referenced to the 1 s before onset minus the session's mean open-loop G over the same window = `f4_cl_reject_lmm.m:43-44`). (4) "since G is estimated without reference to the laser" -> "since the predictor is fitted without reference to the laser". (5) 4D caption + Methods quartile sentence: quartiles within session, points = mean across sessions +/- SEM across sessions. (6) Results 4G paragraph: standing offset share 41%/8% -> 35%/7% (10/11, p = 9.8e-4 unchanged).
-**Why:** Adversarial verification of the Global-state analysis (wf f4-gstate-verify) flagged the pixel-exclusion and "no controller input" sentences; the 41%/8% could not be reproduced by any definition in the code (see the f4_rr_denominator_check entry). Build clean, 40 pages.
-**Next:** User decision on the 2-4 Hz framing and the random-slope model (TASKS); Results L152 "so it does not enlarge the disturbance" and Methods "sub-band least attenuated by the controller" are left for that decision.
-
-### 2026-10-10 - f4_rr_denominator_check: offset-gated OL-vs-CL stats now computed and saved; published 41%/8% not reproducible
-**Changed/Found:** `controller-analysis/f4_rr_denominator_check.m` now records Aset_ol (OL settled mean), the offset gate exactly as `f4_cl_reject_lmm` (biasFrac on trial means, > 1/3 excluded) and the per-session offset share = session-median bias^2 / session-median residual, and prints the Results 4G-paragraph-2 statistics for the 11 gated sessions. Reproduces: excluded 0212/0051 OL settled +2.57/+1.93, CL +2.24/+1.44 above ref, shares 38%/59%; RR OL 1.25 vs CL 0.72, 11/11, V = 66, p = 4.9e-4; fluctuation 0.66 -> 0.54, 10/11, V = 63, p = 0.0024. Offset share: 35% OL vs 7% CL, 10/11, V = 65, p = 9.8e-4 - the test statistic matches the published one exactly, but the published percentages (41%/8%) match no definition tried (trial-level median 47/8, mean 42/10, pooled 40/13, geometric 36/7). Manuscript now 35%/7%.
-**Why:** Results quoted 11-session numbers that sat in no saved output (TASKS "save OL settled offsets"); needed for the 4G re-check.
-**Next:** none
-
-### 2026-10-10 - FALSE ALARM: "imp_build_session ignores forceUncorr" - fix reverted; V choice now read from the Stage-2 cache
-**Changed/Found:** Investigation flagged that `imp_build_session.m` loads the hemo-corrected V for AL_0039 0419/0420 although `ctrl_ols_ol_stimblind.m` lists them as force-uncorrected. I "fixed" it (passed forceUncorr) and re-ran 4G (RR 0.576 -> 0.570). Verification then showed the ridge caches for both sessions are dated 2026-08-12, BEFORE forceUncorr existed (2026-09-05), so their weights were trained on the corrected V. Confirmed empirically: corrected V predicts the readout better (pre-stim R^2 0.846 vs 0.741 for 0419, 0.805 vs 0.754 for 0420). The original code was consistent; my change created the mismatch. Reverted. Durable fix: `utils/ctrl_force_uncorr.m` now takes the loaded Stage-2 struct and returns its saved `force_uncorr` (absent -> false = default V); `imp_build_session.m` and `internal_model_principle.m` use it; `ctrl_ols_ol_stimblind.m` now saves `OL.force_uncorr` with the weights. 4G re-run reproduces the published numbers exactly (RR 0.5759 [0.4630, 0.7164], t(9.34) = -5.686, p = 1.31e-4; nested 0.571, t(1.25) = -4.655, p = 0.049).
-**Why:** A session list and a cache can disagree; the weights must be applied to the V they were trained on, which only the cache knows.
-**Next:** Other direct loaders (`ctrl_state_dependence.m`, `ctrl_ols_cl_deploy.m`, `ctrl_subspace_id.m`, `ctrl_ols_spont.m`) still call loadUVt without the flag - consistent with today's caches, but route them through ctrl_force_uncorr(S2) if the ridge caches are ever refit.
-
-### 2026-10-10 - Circularity: Global (contra) state does NOT remove it; laser-off control and random-slope sensitivity
-**Changed/Found:** New `controller-analysis/f4_gstate_build.m` (per-trial G on [-2,+3] s for OL+CL, 13 sessions; rows match data.nc/wc exactly, max|dA| = 0, SVD onset 1 frame early in 5 sessions -> G realigned to the readout onset), `utils/f4_row2_pool.m` 5th arg `withG` (Gdelta/Gabsdelta, same estimator + window), `controller-analysis/f4_circularity_checks.m` -> `data/f4_circularity_checks.mat`. Results (OL slope / CL slope / attenuation p):
-- locked peri readout, 15 sess: rel 0.36 / 8.6e-4 / 0.012; abs 5.7e-9 / 1.2e-9 / 8.9e-4.
-- Global peri, 13 sess: rel 0.78 / 0.013 / 0.035 (CL +0.113); abs 3.7e-8 / 6.8e-9 / 0.0025 = the readout result diluted (CL slope 0.153 x rho 0.8).
-- LASER-OFF window [-2,0) on the readout, 15 sess: rel +0.127 p = 0.006 / +0.113 p = 0.011 / +0.016 p = 0.47 -> before onset rel 2-4 Hz predicts OL and CL error EQUALLY; the "OL flat, CL rises" dissociation is specific to the in-stimulation window. abs +0.328 p = 4.2e-7 / +0.385 p = 5.3e-8 / +0.057 p = 0.013 -> abs result holds without overlap.
-- Global and readout agree before onset (rho 0.83, in-sample: the ridge training mask runs to onset-2), so G adds nothing to the laser-off control.
-- In-stimulation CL-OL change (pre-SD units): Global +0.20 (p = 0.033) vs readout +0.24 (p = 0.068); per-session G/readout median 0.73, Spearman 0.69 -> G carries most of the readout's stimulation-period CL excess (leak and/or real bilateral response; both are caused by stimulation). G also keeps the sample overlap and 6-42% open-loop leak.
-- RANDOM STATE SLOPE per session (1+cond+xw|sess), Table 1 states, peri: initdev pred 1.7e-5 -> 0.024, reg 3.5e-5 -> 0.055; motion pred 0.0069 -> 0.015, att 0.015 -> 0.0046 (stronger); rel 2-4 reg 8.6e-4 -> 0.05, att 0.012 -> 0.027; abs pred 0.0011, reg 2.5e-4, att 0.0015 (all still pass).
-A check correlating CL laser-command 2-4 Hz power with the state was run and DROPPED: the PI command follows the readout's own fluctuations, so it cannot detect leak.
-**Why:** User asked whether the contra model can supply a stimulation-unaffected state (circularity). Answer: no - the clean control is the laser-off window on the readout. Investigation + verification workflows (f4-contra-state-investigate, f4-gstate-verify).
-**Next:** USER DECISION (TASKS): (1) add the laser-off rows to Table 1 as the circularity control; (2) reframe the rel 2-4 Hz claims (Abstract "but not as 2-4 Hz power increases", Results L152 "left open-loop error unchanged, so it does not enlarge the disturbance", Discussion L18/L42, Intro L46) as concurrent, in-stimulation effects; (3) whether to adopt the random-slope model for Table 1 (it weakens rel 2-4 Hz and initdev, strengthens motion attenuation).
-
-### 2026-10-10 - Fig 4D drawn as points (session mean +/- SEM); median/IQR alternative; final panel exported
-**Changed/Found:** `controller-analysis/f4_row2_quartiles.m` `draw_panel` gained a style: session views are point-and-line (OL/CL offset in x, error bar = SEM across sessions), the pooled fallback keeps bars. New alternative `f4_row2_quartiles_median.pdf` = session median +/- IQR across sessions (noisier; e.g. rel 2-4 Hz CL Q4 drops). Main panel re-exported with PAPER_FINAL -> `paper/figures_final/panels/figure4/f4_row2_quartiles.pdf` (16.58 x 3.39 cm). Fallbacks (`_pooled`, `_median`) stay in paper/images/figure4 only.
-**Why:** User 2026-10-10: "instead of bars ... points as session mean or median IQR?" Mean +/- SEM chosen as main because the LMM it annotates estimates mean slopes.
-**Next:** User re-places 4D in Illustrator (with C and G).
-
-### 2026-10-10 - Fig 4D made session-level; pooled view kept as fallback
-**Changed/Found:** `controller-analysis/f4_row2_quartiles.m` - main 4D panel (`f4_row2_quartiles.pdf` + the four standalone `f4_2*` PDFs) now shows, per state, each session's OL/CL quartile means on its OWN combined-state quartile edges, averaged across sessions (equal weight) +/- SEM across sessions (n = 15 sessions; motion 11). The old pooled-trial view (pooled quartiles, trial SEM) is still written as `*_pooled.pdf` (working dir only, not in MANIFEST). LMM stats unchanged (they were already session-aware): rel-delta regularizability +0.158 p = 8.6e-4, abs-delta attenuation p = 8.9e-4, motion predictability p = 0.0069. Session-level means: motion CL falls monotonically (-0.29 -> -0.51) while OL rises (+0.14 -> +0.73); rel-delta CL rises -0.51 -> -0.28 with OL flat. Also widened ylim to [-0.95 1.40]: Abs-delta CL Q1 (-0.74) was clipped at -0.65 in BOTH views (pre-existing).
-**Why:** User 2026-10-10: display should match the session-level inference, as was done for Fig 2G; supersedes the 2026-10-02 "keep pooled" decision.
-**Next:** Re-run with PAPER_FINAL on once the stim-blind (Global) state decision is made; update the 4D caption ("means across sessions, SEM across sessions").
-
-### 2026-10-10 - Empty "Section ~" references fixed with \nameref
-**Changed/Found:** `discussion.tex` (1) and `methods_rewrite.tex` (5) used `Section~\ref{...}` to unnumbered `\subsection*` labels, which rendered as "(Section )" in the PDF. Replaced with `\nameref{...}` (hyperref already loaded), which prints the subsection title; Discussion form is "(Materials and Methods, <title>)".
-**Why:** Found while checking the rendered Discussion after the verification fixes.
-**Next:** none
-
-### 2026-10-10 - Methods tuning numbers corrected against Fig S2 (partial; two runs still to re-read)
-**Changed/Found:** `methods_rewrite.tex` gain-tuning text contradicted S2: the 2025-03-05 grid minimum was listed as (0.30, 0.10) but S2D shows J = 16.1 at (0.05, 0.10) -> fixed, and "two of the four" minima on the upper Kp edge -> "one". Auto-tune end gains were apparently read from input_params (which logs rejected probes): AL_0033 03-17 -> (0.07, 0.06) (S2B star, controller-tuning/CLAUDE.md), AL_0034 10-25 e2 -> (0, 0) ("stuck at (0,0)"). Removed "only the first ends near any grid minimum" and the cross-check claim; now "In AL_0033 the auto-tuned gains ended inside the low-cost region of the grid measured twelve days earlier". Left a `%% CHECK` for the other two runs (AL_0034 10-25 e1, AL_0033 12-19) and "ran 5 iterations" (S2C shows 9).
-**Why:** Adversarial verification of the edited manuscript (captions-vs-panels lens) found the Methods contradicting its own supplementary figure.
-**Next:** Re-read end gains from Kdata.npy/Kval.npy for the two unchecked runs and the logged iteration count; remove the CHECK.
-
-### 2026-10-10 - Methods units paragraph corrected from raw rig recordings
-**Changed/Found:** `methods_rewrite.tex` (one-location units paragraph) and `discussion.tex` saturation sentence. Verifier read lightCommand + input_amps per session: modulation/command ratio is ~2.0 in the first two sessions (AL_0033 01-20, 02-12; logged command not clipped, up to 4.1 V, laser input saturated at 4.885 V), ~1.5 in later AL_0033 sessions (modulation saturates ~2.62-2.68 V at commands ~1.75 V, below u_max), 1.29 in AL_0039 (8-bit 3.3 V Teensy DAC). AL_0033 CL sessions used a 50 Hz waveform (mean = half peak); AL_0039 DC. So all mW values are peak; the power ceiling was ~1 mW in most 2025 sessions and 1.8 mW in the first two; commands reached it in 7 of 13 2025 sessions. K_i is in V per %dF/F per s. 0.37 mW/V is a linear-fit extrapolation of the April 2025 calibration (measured only to 4 V), after most of these sessions, and overstates power below ~1 V. All stated in Methods now.
-**Why:** Verification (units lens) showed the first-pass paragraph mis-stated the mechanism ("scaled to the 0-5 V input", "about 1 mW" from command volts).
-**Next:** Laser power setting on 2025-12-02 (AL_0041) and 2026-07-15 (AL_0048 impulse) still unconfirmed - if those used the 100% setting, the Fig 2 mW values and per-mW slopes for Mouse 1a/1b/3 are ~5x off.
-
-### 2026-10-10 - Verification-driven fixes to Results, captions, Discussion, Abstract
-**Changed/Found:** From a 5-lens adversarial check (all Fig 3, 4G and Table 1 numbers confirmed against STATS_TABLE.csv). Fixed: "two of the three mice contribute a single session" (false for the 11-session pool: 7/3/1) in Results; Methods mouse-nested model 4 mice/2.5 df -> 3 mice/1.2 df; Discussion gap trend sign (-0.20 -> +0.20 [0.06, 0.33], t = 3.19; the CSV value is the CL-minus-OL interaction); motion attenuation flagged as not below 0.0125, band-power effects as below; "so we repeated the test" -> "a separate within-session test shows the same contrast" (the per-session test predates the LMM); 4G exclusion sentence now states the criterion (offset share > 1/3) as well as the feedforward/feedback story; Results "closed loop better in all 15 sessions" -> RMSE 15/15, variance 14/15; "impulse response has to be identified per session" -> gains tuned per session (contradicted the Discussion); 2D "amplitude-normalized" -> "peak-normalized" (overlap through the dip is partly by construction); 2G caption y = SD of prediction error, fractions defined; 3H post window is 1 s (I is 3 s); 3G error is zero outside the window by construction; 4 caption: A exemplars pooled over 11 sessions, F is the OPEN-loop trial average, R^2_te defined, 4G mouse labels differ from Fig 2 numbering; S2D shading is SD not SEM; S1C wording; initial-deviation transient share depends on the model (S3C/D); abs-delta control "at least as steeply" -> "about as steeply" (rho 0.38 vs 0.42); Fig 4 measures change between Fig 2 and Fig 4 now stated; sinusoid offset term values added to Results (10.97/13.13/10.22/7.86); Discussion "most error power in an offset neither mechanism targets" -> "largest single term, 44-55%"; Discussion step-response paragraph cut (no Results support, contradicted 1 s settling); latency paragraph no longer calls three remedies "the direct route", pointer 4C -> 4D/Table 1; "needed more than one pole pair" -> "kept"; Abstract "actively rejects" -> "partially rejects", "2-4 Hz power later" -> "low-frequency power later"; Significance "at stimulus onset" -> "around the time of stimulation"; Fig 2A caption -> "three of the delivered amplitudes (0.23-0.94 mW)" (raw trace shows five delivered levels, not six; 0.1 V binning splits 1.93 V into two bins). Stim-area sentence reworded: S1A thresholds are for the half-max core in one mapping session; kernel "next to the spot, within the region where stimulation lowered activity".
-**Why:** Verify the applied edits before pushing to main; most findings were pre-existing errors surfaced by reading code and panels.
-**Next:** See TASKS arXiv blockers: stale Figure4.pdf panels C/G, panel scale bars (2A legend /3, 2B bar, 3A/3C, S-MPC), AL_0041 e2 five-vs-six amplitude binning (affects 2B and the TF fits for Mouse 1b), circularity caveat decision.
-
-### 2026-10-10 - Fig 4D: recommend session-level display (no change made yet)
-**Changed/Found:** Nothing changed. Investigation of `controller-analysis/f4_row2_quartiles.m`: 4D bars are pooled-trial means on quartile edges cut over pooled trials (L158-163; header "within session" at L6 is wrong for the panel), error bars are trial SEM (~3x too small vs session SEM), sessions are weighted 30-200 trials (6.7x spread), while P/R stars come from the session-df LMM. The abs-delta Q1 CL bar is clipped by the fixed ylim [-0.65 1.40] (L312). Recommended design A: quartiles cut within session, equal-weight mean of session means +/- SEM across sessions (n = 15, 11 motion), same tiles and stars; ~8 lines (store per-session `sqO/sqC` after L127, replace L160-163, data-driven ylim). Thin per-session lines (2G style) rejected for 4D: 30 lines per tile, ~4 trials per cell in small sessions.
-**Why:** User asked whether 4D should match the session-level 2G redesign, since its stats are session-wise.
-**Next:** User decision; if yes, edit + rerun on lab PC with PAPER_FINAL, check each tile's equal-weight trend agrees in sign with its P/R arrow (else run the (1+cond+xw|sess) random-slope model), update PAPER.md:774-778 note and caption D.
-
-### 2026-10-10 - Fig 4 state "circularity" explained; manuscript text NOT changed yet
-**Changed/Found:** Spectral states (rel 2-4 Hz, abs 1-4 Hz) are computed from `dFk`, the controller's own readout, over [-2,+3) s (`utils/f4_state_window.m:49-52`, `f4_row2_pool.m:54-60`); the Fig 4D error window (+1 to +3 s) is 70/71 samples inside it, and with the Hann taper 75% of the spectral weight is post-onset. RMSE^2 = offset^2 + var(y), and band power of the same samples is part of var(y), so part of the state-error relation is built in (null simulation: rho +0.11-0.26 abs, +0.05-0.09 rel with no true state effect; ~0 pre-only). Second mechanism: `ctrl_sensitivity_freq.m` (2026-08-13) measured CL/OL = 1.089 at 2-4 Hz (10/13 sessions), i.e. the loop amplifies 2-4 Hz, so "CL error rises with rel delta, OL flat" may be loop ringing. The pre-only re-run (2026-10-02) removed the OL-flat/CL-rising split. Motion (camera) and initial deviation (onset sample) are not affected. Methods L1040-1043 "both conditions are measured identically" is the sentence a referee will push on.
-**Why:** User asked for an explanation of the review's circularity point. Not edited because the user asked only for the explanation, and the fix that settles it is an analysis, not wording.
-**Next:** Decide: (a) decisive check = rel/abs delta from the contra-predicted Global G over the same window (Stage-2 caches, 13 sessions), refit f4_row2_fit; (b) at minimum a Discussion limitation paragraph (drafted, in the workflow output) before arXiv; (c) optionally add the S(f) panel to the supplement.
-
-### 2026-10-10 - Discussion pruned of redundancy (2,547 -> 1,807 words)
-**Changed/Found:** `Closedloop_edit/discussion.tex` - 19 cuts/merges: integral-term/K_r point said 3x -> once; the "feedback needs no disturbance model" paragraph cut (repeats Intro + Results); linear-dynamics literature sentence cut (repeats Intro); latency/bandwidth argument consolidated into the limitations paragraph; MPC mentioned 4x -> simulation paragraph + one hierarchy clause; Results restatements (3.5-fold, 143 ms, 51.4 deg, three sessions) cut; prior-work paragraph shortened (Intro already covers it). "set by the loop's own timing and not by the form of the control law" softened to "set mainly by the loop's own timing" (it contradicted the internal-model prediction that a resonant control law should help). Citations no longer in the Discussion: Churchland2012, Cunningham2014, Stringer2019, astrom1995pid, Zaaimi2022, Nozari2024 (all but Cunningham2014 still cited elsewhere).
-**Why:** User: prune the discussion by cutting redundancies. J Neurosci limit is 1,500 words.
-**Next:** Remaining ~300 words need content cuts (user choice): MPC paragraph -> pointer, broader-avenues -> one sentence, J-hat paragraph shortened, step-response paragraph moved. Cunningham2014 drops out of the bibliography unless re-cited.
-
-### 2026-10-10 - Fig 4 statistics moved into Table 1 (tab:fig4_state_stats)
-**Changed/Found:** `Closedloop_edit/results.tex` - the four stats-dense paragraphs of "Controller performance is brain-state dependent" now carry only headline slope + p; CIs, t, df and exact p for all 8 predictability/regularizability and 4 attenuation tests live in a new table (plain tabular, no new packages). Bold = below Bonferroni (0.0063 / 0.0125); this newly marks rel-delta attenuation (p = 0.0119) as clearing 0.0125. New row value from STATS_TABLE.csv 4D_initdev_att: +0.3 [-4, 5] %/SD, t = 0.16 (text had only p = 0.88). Gap-at-mean-state t/p range moved to the table caption. Every number checked against STATS_TABLE.csv rows 30-52.
-**Why:** User: Fig 4 stats need cleaning up.
-**Next:** none
-
-### 2026-10-10 - All captions rewritten to describe only; five factual caption errors fixed
-**Changed/Found:** `results.tex` Fig 1-5 and `supplementary.tex` S1-S4 captions: interpretation and result narration removed. Errors fixed: 3F said "points indicate individual trials" (none drawn: half-violins + mean asterisks); 4G said "all 11 lie below one" (dots are geometric means, one session ~1.05; the 11/11 claim is about medians); S2A star is the final auto-tuned gains, not the lowest-cost node (that is Kp 0.05 / Ki 0.1, J = 16.1); 4C and S3 B-D error bars are 1 SD across sessions on pooled unique R^2, not SEM; 2C model is fit on one half of trials and scored on the other, not "fit to held-out trials". Numbers that lived only in captions moved to Results: 3I signed-rank ratios (1.60/1.87, 0.99/1.00 with V, p), 2G rel-delta control ratio 1.00, S1A area thresholds (0.6 / ~1.4 mW). Kept in captions: 2F 42-50% bootstrap censoring (Methods says it is reported), S-MPC controller description (no Methods subsection for it). Fig 1B/C now "adjacent"; 1C "Markers are not to scale"; S1B black square described as centred on the suppression peak.
-**Why:** User: captions should only describe the figure.
-**Next:** Panel defects the captions cannot fix: assembled Figure4.pdf panels C and G are older than the locked panels (C shows 0.39/0.10-0.13, Results quotes 0.41/0.03, 0.15/0.19); 3F and 5E lack y scale bars; 3G has an unexplained purple vertical line; 4A initial-deviation exemplar uses the CL blue.
-
-### 2026-10-10 - Stimulation described as adjacent to the output kernel; S1 cited for area of effect
-**Changed/Found:** `results.tex` setup paragraph: removed the contradictory "overlap closely" sentence; now "a cortical spot adjacent to the output kernel", suppressed region negligible below 0.6 mW and not growing above ~1.4 mW (Fig S1A,B), kernel within the area of effect. `methods_rewrite.tex` "neighboring ... spread of activation" -> "adjacent ... spread of suppression". Evidence (computed, not yet in a source file): kernel-to-detected-spot distance 0.15-1.00 mm (median 0.66) over 11 AL_0033/AL_0039 sessions vs S1A plateau radius ~0.54 mm; open-loop 0-200 ms map is negative at the kernel in every session (-0.9 to -2.1 %dF/F), but under the strict S1A half-max rule the kernel is inside in only 7/11 sessions.
-**Why:** User item 5: say adjacent and point to S1 for the stimulation's area of effect.
-**Next:** If a distance number is wanted in the paper, verify in MATLAB (cp_stim_site_ctrl_*.mat vs params.pixel). Kernel size: Methods says 10x10 px but offline getpixel_dFoF averages +/-10 px (21x21) - reconcile.
-
-### 2026-10-10 - Stimulation units moved to mW; "36 mW" removed (no source); calibration found inconsistent across sessions
-**Changed/Found:** `methods_rewrite.tex`: one paragraph now says the controller computes in volts (gains in V per %dF/F, u_max = 2.45 V), the recorded modulation voltage is converted to focal-plane mW, 1.8 mW at 4.9 V (0.37 mW/V) for impulse and 2025 sessions, per-date calibration for 2026 sessions, and the 2025 command limit was ~1 mW; "stable across sessions" and "capped at 36 mW" removed; impulse levels now "0 to 1.8 mW (three to nine nonzero levels per session)". `results.tex`: Fig 2B slopes now %dF/F per mW (-0.82, -1.36, -1.40, -2.20 = V slopes x 4.9/1.8); Fig 2A caption 0.26-0.96 mW (was the old /3 factor); Fig 5 "laser command" -> "laser power". `discussion.tex`: "saturation at 36 mW (5 V)" -> command limit ~1 mW in the 2025 sessions. Found: no calibration file supports 36 mW; rig calibration slope changed with the laser power setting (0.39-0.41 mW/V in 2025-04..11 at 18%; 2.06 on 2025-11-17 at 100%; 1.66 on 2026-07-09); AL_0041 (2025-12-02) and the AL_0048 impulse session (2026-07-15) fall under the 100% files, which would make their mW ~5.6x and ~4.5x larger than the canonical factor. Panel labels wrong: Fig 2A legend uses /3 (`trace_overlay.m:53`), Fig 2B bar "0.25 mW" spans 1 V = 0.37 mW (`dose_response.m:136,149`), Fig 3A/3C "1 mW" bars are 0.15-0.24 mW (`analysisPlots_combined.m:72,81-82,97,200,208,216`), S-MPC "1 mW" bars are on command volts (`ctrl_mpc_direct_panels.m:91,129`). Logged `d.inpVals` scale differs across sessions (ratio to Kr*|ref| 0.7-3.4; AL_0048 channel ~0 V).
-**Why:** User item 4: all input units in mW, with one mention that the code works in volts.
-**Next:** BLOCKING for the mW numbers: user confirms the laser power setting on 2025-12-02 (AL_0041) and 2026-07-15 (AL_0048 impulse). Then fix and re-export the four mislabeled panels (and 2B slopes/CIs via f2_slope_ci.m in mW). Check AL_0041 e2: 1.9 and 2.0 V bins share one 1.93 V plateau, so "six amplitudes" may be five.
-
-### 2026-10-10 - Fig 4G exclusion stated directly (feedforward offset + feedback closed little of it); "pre-defined exclusions" claim corrected
-**Changed/Found:** `results.tex` + `methods_rewrite.tex`: the two excluded sessions are now described by what happened - feedforward left the open-loop response 2.6 and 1.9 %dF/F above ref (AL_0033 2025-02-12, AL_0051), and feedback brought closed loop only to 2.2 and 1.4 above it; offset shares 38%/59% kept. Methods "All exclusions were defined before the analyses they affect" (false for this gate) -> "All exclusions are collected here." and "We chose this threshold after inspecting the sessions; any threshold between 20% and 37% selects the same eleven." Found: user's "poor OL tuning" is only half the cause - three kept sessions had equally large feedforward errors (AL_0033 04-15 +2.10, AL_0039 04-30 +1.89, AL_0033 03-04 -1.88) that feedback removed 86-95% of, vs 13% and 25% in the excluded two; low gains do not explain it (02-12 had the highest Kr and Ki). AL_0048 (CL 1.33 above ref) is kept because its offset is only 17% of its residual, so the rule must stay the offset share. OL values were computed in memory by the investigation agent with the production `imp_build_session` front end (reproduces every production CL value exactly); not yet in a saved file.
-**Why:** User item 2: mention directly that the sessions were excluded for poor open-loop tuning so the trial average does not reach the reference even under closed loop.
-**Next:** Add `Aset_ol = mean(mean(S.Aol(:,wr),2))` to `f4_rr_denominator_check.m` and rerun so the OL offsets sit in a saved output / STATS_TABLE.
-
-### 2026-10-10 - Manuscript language pass (abstract, significance, Results, Discussion) + arXiv/JNeurosci plan
-**Changed/Found:** `Closedloop_edit/main.tex`, `results.tex`, `discussion.tex` (draft e47efb2, NOT yet on main/Overleaf) - plainer sentences in Aditya's voice: split stacked semicolon/dash sentences, removed "not X but Y" asides, fixed grammar in the Overleaf-edited Fig 2/3 paragraphs. Token check: every number, \ref and \cite preserved (only intended changes: "before 1s" -> "within the first second"; Discussion opener gained a findings summary with "2--4 Hz"). Softened two claims: "linear relationship guarantees stability" and "so movement alters the evoked response" (2G vs control is untested). `\citep` -> `\citet` at sentence start for Newman/Bolus. Discussion Fig.~ -> Figure~ to match body style. Abstract 237 words, Significance 110 (JNeurosci 250/120). Build clean, 40 pp. Found: author/affiliation block is broken in the PDF (`\affil[12,3,4,5]{Department of , ...}`); Results L18 says the spot is both "adjacent to" and "overlapping" the kernel. Plan in `paper-writing/arxiv_jneurosci_plan_2026-10-10.md`; diff in `paper-writing/language_pass_2026-10-10_diff.html` (untracked).
-**Why:** User: make the text sound less machine-written and more like them, light touch, and get the paper ready for arXiv ASAP with JNeurosci as the target.
-**Next:** User reviews the diff; then fast-forward main and push so Overleaf can pull. arXiv blockers: author block, 4G post-hoc exclusion disclosure + 13-session RR, Fig 4 circularity limitation sentence, stimulation units, L18 contradiction.
-
-### 2026-10-10 - New Illustrator assemblies swap Fig 2 A/B and Fig 3 H/I; captions + text realigned
-**Changed/Found:** `Closedloop_edit/results.tex` (commit 63a6607) - user flagged that the new `paper/figures_final/Figure2.pdf` (10 Oct 15:23) puts the impulse traces in A and dose-response in B (previously A = dose-response). Checking `Figure3.pdf` (15:24) found the same kind of swap: H = RMSE ratio, I = variance ratio (caption had H = variance). Swapped caption order/letters for both, moved the four-window definition into the new H caption, retargeted body refs (traces -> 2A, linear dose-response -> 2B, RMSE ratio -> 3H, variance ratio -> 3I). Copied both PDFs into `Closedloop_edit/images/`. Build clean, 41 pp, 0 undefined refs. Fig 3 E/F already matched (E = cross-session variance, F = RMSE violin).
-**Why:** Captions must follow the assembled figure, not the old panel lettering; I had not compared the Illustrator output against the captions before writing the Fig 3 caption edit.
-**Next:** Fig 2D right-axis label reads "he ld-out" in the assembly (Illustrator text glitch) - fix in Illustrator. Always render the assembled PDF and check letters before editing captions.
-
-### 2026-10-10 - Merged Overleaf language edits; applied held Fig 2F/2G/3 caption + text edits on top
-**Changed/Found:** `Closedloop_edit/results.tex`, `discussion.tex` (merge 6ea9904, commit e5fd510) - Fig 2 paragraph now reports dip and rebound timescales in the user's sentence frame; dropped "consistent with the ~200 ms settling time" (dip tau 0.145 s is not a settling time); caption F = dip/rebound + censoring note (no CIs); caption G = thin grey sessions with dots + bold black equal-weight mean; Fig 3 captions: E<->F swapped (refs in text updated, "A--E" -> "A--D and F"), RMSE annotations in A (per trial) and B (trial-averaged trace) explained, G line-weight key, H/I "bold black" + stars in title. Discussion: one paragraph on why the extra pole pair is kept (separates conserved dip from session-specific rebound; held-out R2 0.84 vs 0.86). Pushed main + draft.
-**Why:** User pushed Overleaf language edits; queued edits from `paper-writing/pending_edits_2026-10-10.md` had to land on their wording, not overwrite it.
-**Next:** User's sentence "The linear relationship guarantees the stability of a linear feedback controller." (results.tex ~L69) is an overclaim - flagged, not changed. Methods `methods_rewrite.tex` L777 "Time constants" paragraph may still say slow/fast - align to dip/rebound.
-
-### 2026-10-10 - Fig 2F relabelled dip / rebound; free-order fits kept
-**Changed/Found:** `utils/imp_tf_robust_fig.m` TF-A legend now names the modes by role, "dip" (open square, the fast oscillatory pair) and "rebound" (filled circle, the slowest mode), as a one-row horizontal legend at the top; headroom raised to 1.0 row so it clears M3; the median-dip dotted line now stops below the legend and its label (0.145 s) sits in the empty band under M1a. Re-exported (3.21 x 3.28 cm). Text for Results, the 2F caption and a Discussion paragraph drafted in NEW `paper-writing/pending_edits_2026-10-10.md`, not yet applied.
-**Why:** User decision after the 2-pole cap test: keep the extra-pole fits, because they separate the conserved dip from the session-specific rebound, and report timescales as dip and rebound rather than fast and slow. Caveat for the text: in M1a the "rebound" mode is a real pole at 0.176 s and that session shows little rebound, so "rebound timescale" means "slowest fitted mode, which governs the return after the dip".
-**Next:** Apply the drafted text once the Overleaf edits are merged.
-
-### 2026-10-10 - Tested capping the impulse TF at 2 poles (<=1 zero): prediction unchanged, shared fast tau disappears
-**Changed/Found:** Analysis only, no script or cache changed (fits run with `imp_tf_fit_session` directly, opts maxPoles 2 / maxZeros 1 / maxDelay 3 / 0.5 s / AIC + R2h escalation / 100 bootstraps; CV via `imp_tf_cv` with the capped fits in the workspace, 30 splits, no export). 2 poles + 2 zeros is not allowed by the pipeline (nz < np: onset-referenced h(0) = 0). Capped orders: M1a 2p0z +1 sample delay, M1b 2p1z +1, M2 2p0z, M3 2p0z - every session becomes ONE damped oscillation. Held-out split-half R^2 (Fig 2D measure) per session full -> capped: M1a 0.50 -> 0.53, M1b 0.86 -> 0.81, M2 ~0.95 -> 0.88, M3 0.84 -> 0.88; pooled 0.857 -> 0.842. Leave-one-amplitude-out median: 0.53 -> 0.62, -0.07 -> -0.12, 0.79 -> 0.70, 0.85 -> 0.84. In-sample R2h falls to 0.91-0.96 (all below the 0.98 escalation threshold). The single decay tau spreads WIDER than before: 0.062 / 1.11 / 0.269 / 0.183 s, with M1b 86% bootstrap-censored; the oscillation FREQUENCY is consistent instead: 2.1 / 1.6 / 2.2 / 2.2 Hz.
-**Why:** User asked whether to restrict the fits to 2 poles / 2 zeros given the M1a/M1b timescale discrepancy. Result: the extra poles buy almost no out-of-sample prediction (pooled 0.86 vs 0.84), so the 4-pole models are not needed for the generalization claim, but they are what separates the dip (fast pair, shared ~0.145 s) from the session-specific rebound. One pole pair must compromise between the two, so its tau is no longer comparable across sessions and the "shared fast timescale" result disappears.
-**Next:** User decision. Options: (a) keep the free-order fits for 2C/D and replace the tau forest with model-free timing measured directly on the traces (trough latency, dip width, rebound), which needs no pole bookkeeping; (b) adopt the 2-pole model as the paper's plant (matches the Methods' n = 2 design model) and report natural frequency + damping instead of tau.
-
-### 2026-10-10 - Fig 2C/D/F layout + what the TF fits actually learned (M1a vs M1b audit)
-**Changed/Found:** Layout: `impulse-analysis/imp_tf_cv.m` 2C legend pulled in (x 0.655 -> 0.625, mouse tag 1.06 -> 1.02); 2D canvas 4.2 -> 4.8 cm with the R^2 strip moved/widened (gap to the trace panel > 1 cm) and short vertical tick labels M1a/M1b/M2/M3 (the full "Mouse 1a" labels collided once the fitter narrowed the strip). `utils/imp_tf_robust_fig.m` 2F gained a dotted line at the across-session median fast tau (0.145 s) so the shared fast timescale is visible. Full `imp_tf_cv` rerun (CV unseeded) reproduced the pooled held-out R^2 0.857. Panels: C 5.36x3.21, D 4.76x3.39, F 3.21x3.28 cm. FOUND (from `data/imp_tf_fits.mat`): every session's FAST tau is the decay of a complex pole pair, i.e. a damped oscillation (the dip + rebound): M1a 0.148 s at 2.9 Hz, M1b 0.093 s at 4.2 Hz, M2 0.150 s at 4.3 Hz, M3 0.142 s at 3.2 Hz. The SLOW tau is a different kind of mode in each session: M1a a real pole (0.176 s), M1b and M2 a second, slower oscillatory pair (0.54 s at 1.2 Hz; 0.333 s at 1.5 Hz), M3 two real poles (0.27/0.30 s). Orders 3p1z / 4p3z / 4p3z / 4p2z (AIC + R^2_h >= 0.98 escalation). M1a vs M1b (same mouse, same day, experiments 1 and 2): M1b's model is the weakest - 4 poles + 3 zeros with a zero at -0.16 almost cancelling at the origin (DC gain -0.07 vs -3.2 for M1a), in-sample R^2_h 1.000 but leave-one-amplitude-out R^2 negative at 3 of 6 amplitudes, dose-response R^2 0.33, 50% of bootstrap refits censored past the 0.5 s window. M1a has the lowest split-half held-out R^2 (median 0.50, IQR ~0.05-0.76). DC gains are not interpretable across sessions (-3.2, -0.07, -1.6, +4.9): they are set by behaviour after the 0.5 s window, which the fit does not constrain.
-**Why:** User asked what TF parameters Fig 2C-F rest on, and whether M1a/M1b's different timescales are OK. They are not a physiological difference that can be claimed: the slow tau of M1b is censored and comes from an over-parameterised fit, and "slow" names different mode types across sessions. The fast, oscillatory mode is the robust shared feature (3 of 4 at 0.14-0.15 s; M1b's 0.093 s outlier is the same weak fit).
-**Next:** Text: describe the fast tau as the decay of a damped ~3-4 Hz oscillation; stop comparing slow tau across sessions as one quantity; consider dropping the slow markers or marking them censored. Worth checking (not claimed): the shared 3-4 Hz plant resonance sits in the 2-4 Hz band where closed-loop regulation degrades (Fig 4D).
-
-### 2026-10-10 - Fig 2F: slow and fast tau of each session on one line, legend top right
-**Changed/Found:** `utils/imp_tf_robust_fig.m` TF-A - `dy = 0` when `opts.bareA` (the paper panel draws bare points), so each session's slow (filled circle) and fast (open square) tau sit on the same row; the CI version keeps `dy = 0.16`, because the 2026-09-30 revert was about overlapping CI lines, which the paper panel does not draw. Legend moved southeast -> northeast, with 0.6 rows of headroom above the top row so it clears M3. Regenerated from the 2026-10-03 fit cache (`impulse-analysis/data/imp_tf_fits.mat`) via `imp_tf_robust_fig(..., 'panels',{'A'}, 'bareA',true)`; 3.21 x 3.28 cm, unchanged size. The PNG preview beside it failed to write from MATLAB ("PNG library failed: Could not open file"), so it was re-rendered from the PDF with pdftoppm. Found on the way: the Fig 2F caption in `results.tex` still says "horizontal lines, 95% bootstrap confidence intervals", but the paper panel has drawn bare points (no CIs) since the censoring was found.
-**Why:** User: slow and fast of the same mouse should be read as a pair on one horizontal line; legend top right.
-**Next:** Caption fix for 2F (drop the CI sentence; state the censoring, e.g. "42-50% of bootstrap refits exceeded the 0.5 s window in 3 of 4 sessions, so intervals are not shown") - held with the other caption edits until the Overleaf merge. Note `imp_tf_figs.m` calls `imp_tf_robust_fig` WITHOUT `bareA`, so running it would redraw 2F with CI lines; only `imp_tf_run.m` builds the paper version.
-
-### 2026-10-10 - Fig 3 panel revisions: RMSE on A/B, tighter B/C titles, 1 s bars, shared D/F y-range, G key, H/I at 80%
-**Changed/Found:** `utils/analysisPlots_combined.m`: panel A prints each example trial's RMSE over 0-3 s (OL 2.64, CL 1.71; identical to `data.er_ncDfk/er_wcDfk`, so it matches panel E); panel B prints the RMSE of the trial-AVERAGED trace over 0-3 s (OL 1.38, CL 1.23) - deliberately not the mean per-trial RMSE, which panel E already shows and which includes trial scatter; B and C titles moved onto the axes top (annotation Margin 0, tm 0.20 -> 0.12/0.13); B and C gained the 1 s short-corner x bar; panel D got the same plot box and a title ("Single session") as 3F so the two variance panels can sit side by side. `utils/paperStyle.m`: new `PS.f3_var_ylim = [0 11]`, used by both D (`analysisPlots_combined`) and F (`variance_mse.m` fig_F), replacing [-2 12] (data: single session 0.9-10.4, cross-session 3.0-9.2). `controller-analysis/step_response.m`: G title "Trial-averaged tracking error" plus a neutral line-weight key (thin grey = session, bold black = mean) instead of a coloured legend. `controller-analysis/variance_mse.m`: H and I canvases 4.5 x 3.4 -> 3.6 x 2.72 cm (-20%); at that size the "Mean" legend collided with the Stim label and the titles clipped, so the legend is removed (caption carries "bold black = mean"), x ticks horizontal, markers 3/5 -> 2/3.5, titles shortened to "CL lowers variance ***" / "CL lowers RMSE ***". All panels re-exported with PAPER_FINAL; sizes A 8.43x3.28, B 8.43x2.96, C 8.40x2.58, D 3.21x2.89, F 3.46x2.89, G 3.53x2.89, H 3.53x2.65, I 3.74x2.65 cm.
-**Why:** User review of Fig 3: wants the error numbers on the example panels, titles nearer their plots, consistent time bars, D and F side by side (swap E and F letters in the assembly) on identical y-limits, a clearer G, and smaller ratio panels.
-**Next:** Illustrator: swap E/F positions so D and F are adjacent, re-place all Fig 3 panels. Caption + Results edits (E<->F letters, G and H/I wording, RMSE annotations in A/B) are HELD until the Overleaf language edits are merged.
-
-### 2026-10-10 - Fig 2G restyle: grey session curves with quartile dots, black mean, panel title, one y-axis
-**Changed/Found:** `impulse-analysis/imp_state_trialvar_fig.m` combined panel - session curves now grey (0.62) with small dots at each quartile, mean curve black with larger dots; middle and right tiles have no y-axis line (the leftmost axis serves all three); tiled-layout title "State dependence of stimulation response". Re-exported with PAPER_FINAL (6.53 x 3.46 cm). No numbers changed.
-**Why:** User styling request: dots make the four per-session quartile values readable, and grey/black separates sessions from the summary without implying a condition colour.
-**Next:** Re-place 2G in Illustrator.
-
-### 2026-10-10 - Fig 2G redrawn at the session level (4 session curves + equal-weight mean)
-**Changed/Found:** `impulse-analysis/imp_state_trialvar.m` now stores `R(k).sdRawNs`, the normalized quartile curve computed separately for each session (same within-amplitude pooling as the pooled curve). `imp_state_trialvar_fig.m` combined panel now draws those four curves as thin light-red lines and their equal-weight mean as the bold line, with no CI band; star and n/4 annotation unchanged. Full rerun (`load_experiments` -> `imp_state_trialvar` -> fig, PAPER_FINAL) reproduced every published statistic (motion 0.73, LMM t(3) = -4.97, p = 0.016, 4/4; rel delta 1.02, p = 0.068, 3/4; abs delta 2.09, p = 4.1e-4, 4/4) and the hierarchical CIs. `data/fig2g_state_stats.mat` re-saved from the full run. Session-mean Q4/Q1: motion 0.67 (per session 0.58/0.46/0.81/0.91), rel delta 1.03 (1.3/1.3/0.99/0.66), abs delta 2.16 (3.2/2.3/2.3/1.4). Panel 6.53 x 3.49 cm in `figures_final/panels/figure2/`. Bug fixed on the way: the new per-session block first used `height(T)`, but T is a struct of columns, not a table (height = 1).
-**Why:** User: the panel pools sessions, so it should be shown at the level the stats are tested at. The equal-weight mean stops high-trial sessions dominating; the thin lines show the replication directly. The motion drop is visibly concentrated in Q4 (threshold-shaped, as the motion-split block already noted), and rel delta is visibly a 2-up / 2-down null.
-**Next:** Caption + Results wording for 2G (held until the Overleaf language edits are merged); re-place 2G in Illustrator (size changed from 8.6 x 3.6 to 6.5 x 3.5 cm registry value). Response-vs-control test still open; the control's per-trial values are now in the workspace STV, so it can run without another load.
-
-### 2026-10-10 - Fig 2G quartile-ratio CIs moved to a session-level (hierarchical) bootstrap
-**Changed/Found:** NEW `impulse-analysis/imp_state_hboot.m` - resamples sessions with replacement, then trials within each drawn session, re-bins, and recomputes SD(top quartile)/SD(bottom quartile); also returns per-session ratios and a t(3) interval on the mean log ratio. Reseeded per state so each interval is reproducible on its own. `imp_state_trialvar.m` now stores this as `R(k).ci` (old trial-level interval kept as `R(k).ciTrial`, per-session ratios as `R(k).ratioPerSess`); `data/fig2g_state_stats.mat` updated in place and `STATS_TABLE.csv` regenerated. Point estimates unchanged. Results (10,000 resamples): motion 0.73, trial CI [0.62, 0.88] -> **[0.51, 0.91]**, per session 0.57/0.49/0.84/0.84 (4/4 below 1), session t(3) CI on the geometric mean [0.43, 1.03]; abs delta 2.09, [1.76, 2.57] -> **[1.58, 2.82]**, 4/4 above 1; rel delta 1.02, [0.88, 1.19] -> **[0.81, 1.37]**, only 2/4 sessions above 1 (pre-trial variance 3.16, [2.48, 3.88], not in the paper). `Closedloop_edit/results.tex` CIs and the Methods bootstrap description updated.
-**Why:** Review 2026-10-10: the panel pools 1767 trials from 4 sessions, but trials within a session are not independent, and the test beside each ratio is already session-level (df = 3). The interval has to match the unit of replication. Conclusions hold (motion still excludes 1, abs delta strongly), but motion is weaker than it looked: the parametric session-level interval just touches 1, so motion rests on 4/4 sessions agreeing plus the LMM, not on a tight interval.
-**Next:** (1) The Fig 2G panel's per-bin error bars (`imp_state_trialvar_fig.m` `local_binci`) are still trial-level; switch them to the same hierarchical scheme on the next full run (needs `load_experiments`). (2) The response-vs-control test is still open (TASKS); the control's per-trial values are not in the saved .mat, so it needs that same full run. (3) Rel delta's 2/4 per-session ratios vs 3/4 Spearman sign agreement: the two summaries disagree, so quote one consistently.
-
-### 2026-10-10 - S4 single-trial rejection figure TABLED (out of the paper for now)
-**Changed/Found:** `Closedloop_edit/supplementary.tex` - the S4 float (`fig:reject_trials`) is commented out with a TABLED note; `discussion.tex` - both sentences citing it removed (restoring the text that was there before 2026-10-09). `paper/figures_final/MANIFEST.txt` `[supp_reject]` entries commented out, PAPER.md row marked TABLED, TASKS assembly item moved to deferred. `controller-analysis/f4_supp_reject_trials.m` and the panels on disk are kept as they are.
-**Why:** User: not wanted in the paper right now. Removing the float renumbers the following supplementary figure (the MPC figure, `fig:mpc_direct`) from S5 to S4 automatically.
-**Next:** none - revive by uncommenting the float and re-adding the two Discussion sentences (text in RESEARCH 2026-10-09 / git history).
-
-### 2026-10-10 — Final MPC supplementary figure (S5) in the manuscript
-**Changed/Found:** The user's final assembly `paper/figures_final/S5.pdf` (with `S5.ai`) was copied to `Closedloop_edit/images/supplementary/S_mpc.pdf`. The manuscript builds at 40 pp with no undefined references and is pushed to main (`9af2916`). The panel letters match the caption: A diagram, B schematic, C example, D trial average, E RMSE, F variance, G prediction, H λ. PAPER.md row updated.
-**Why:** user: "look at the s5 pdf i just saved, that's final".
-**Next:**
-- `figures_final/S4.pdf/.ai` is a superseded draft of this figure, while the manuscript's S4 (rejection trials) expects its own `S4.pdf`. Rename or delete the draft before the reject-trials art is exported.
-- Panel A in the assembly has no "target r" arrow at the top. That is fine, but the caption mentions r.
-
-### 2026-10-09 — MPC panel A becomes a block diagram (grant style); laser bars back to mW; variance label tightened
-**Changed/Found:**
-- New `controller-analysis/mpc_direct_diagram.tex` (TikZ, standalone), modelled on the R01 grant's `draft/draft/fig_mpc.tex`:
-  - an MPC frame containing a VARX-model box, the compact cost, and "predict → optimize → apply first step";
-  - a cortex box with the laser and ΔF/F/z_t loop.
-  - Uses figure colours and Helvetica/sansmath, with no parameter values.
-- `ctrl_mpc_direct_panels.m` changes:
-  - It now compiles the diagram (pdflatex), writes `mpcd_0b_problem.pdf/.png` (pdftoppm, 300 dpi), and copies both to figures_final under PAPER_FINAL.
-  - Laser scale bars are back to "1 mW". The user confirmed this is the correct reading, which supersedes the "1 V" entry below.
-  - Variance panel: the axes moved left and the side label moved in, so the label no longer sits far from the plot.
-- Manuscript S5 caption A rewritten for the diagram (`Closedloop_edit` main `ef0c7cb`, pushed).
-**Why:** user: "revert back to 1 mW", "too much gap on variance y label", "equation panel not satisfactory, take inspiration from grant MPC figure, remove the actual numbers".
-**Next:** user refreshes the Illustrator links (panel A content changed; A is 7.9 × 3.5 cm now), re-exports the assembly, and I re-copy it to `images/supplementary/S_mpc.pdf`.
-
-### 2026-10-09 — MPC supp in manuscript as Fig. S5 + Discussion paragraph; laser scale bars fixed to volts
-**Changed/Found:**
-- Manuscript (`Closedloop_edit`, main `a5cebf4`, pushed):
-  - `supplementary.tex` — new figure `fig:mpc_direct`, which renders as S5 after `reject_trials`. It shows `images/supplementary/S_mpc.pdf`, a copy of the user's Illustrator assembly `paper/figures_final/S4.pdf`, panels A–H.
-  - `discussion.tex` — a Future-directions paragraph on the direct-prediction MPC.
-  - `refs.bib` — new `lu2025benchmarking` (arXiv 2510.18037). `Nozari2024` is cited for linear models.
-  - Builds at 40 pp with no undefined references.
-- Panels: `ctrl_mpc_direct_panels.m` laser scale bars changed "1 mW" → "1 V". The laser trace is the command voltage, and the V→mW calibration is still a FILL in Methods. Re-exported to figures_final.
-
-Open issues:
-- The assembled `S4.pdf` still carries the old "1 mW" labels.
-- The filename collides with the manuscript's S4 (rejection-ratio trials, artwork pending), whose placeholder expects `images/supplementary/S4.pdf`.
-- Panel B (trial 79) and panel C (trial 23) are different trials.
-- Fig 3's "1 mW" laser scale bar (`analysisPlots_paper.m:356`) has the same units question.
-**Why:** user: "add to paper and write a discussion paragraph, push to main overleaf".
-**Next:**
-- User refreshes the Illustrator links, re-exports as e.g. `S5.pdf`, and re-copies it to `images/supplementary/S_mpc.pdf`.
-- Decide whether panel B should move to trial 23.
-- Check the Fig-3 laser units.
-
-### 2026-10-09 — Direct-MPC panels locked into S-MPC (MANIFEST + figures_final); schematic moved to example trial 79
-**Changed/Found:**
-- `controller-analysis/mpc_direct.py` — new `MPCD_SNAP="trial,frame"` env var. The schematic snapshot was rerun on trial 79 with "now" at 2.0 s (70 frames). Its actual future shows the mid-trial excursion arriving inside the 1-s horizon, and the prediction does not see it coming. Results are unchanged.
-- `controller-analysis/ctrl_mpc_direct_panels.m` — the median example trial is now computed in the panel script. It had read `snap_k`, which flipped it to 79 once the snapshot moved; it is trial 23 again. The "apply 1st" label moved to the top of the laser axes.
-- `paper/figures_final/MANIFEST.txt` [supp_mpc] — the 9 `mpcd_*` panels were added after the 10-07 set. The old panels were kept; the user did not ask to retire them.
-- `PAPER.md` — new S-MPC direct row.
-- Exported with PAPER_FINAL; jn-style copies are in `panels/supp_mpc/`. `collect_final_panels('dry')`: 108 present, 0 missing, 0 pruned.
-
-Gotcha: `paper_final_mirror` caches the manifest (persistent). Run `clear paper_final_mirror` after editing it, or nothing mirrors.
-**Why:** user: "mpc schematic on same trial as the controller comparison; put these in figure finals and manifest, all in the mpc supplementary figure".
-**Next:** confirm whether the 10-07 disturbance-preview panels stay in S-MPC or retire.
-
-### 2026-10-09 — Direct-MPC supp panels exported as vector PDFs
-**Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m` run with `PAPER_FINAL = true` → 9 vector PDFs next to the PNGs in `paper/images/supp_mpc/` (mpcd_0b_problem, 0_schematic, B_prediction, C1/C2 examples, G_trial_average, E3_variance, E2_rmse_compare, F_lambda). None are in MANIFEST.txt, so the mirror copied nothing to `figures_final/`.
-**Why:** user: "save panel pdfs".
-**Next:** when the user locks the set, add the lines under [supp_mpc] in MANIFEST.txt + PAPER.md and rerun with PAPER_FINAL so they land in figures_final.
-
-### 2026-10-09 — Direct-MPC supp panels, round 2: Fig-3 look, pre/post context, second example, trial average
-**Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m`:
-- Optimisation problem is back to LaTeX math (3 lines, no prose).
-- Trial-time panels now use the Fig-3 look: grey stim window with edge lines, zero line, dashed target, short corner scale bars (paperAxes), name row with no RMSE.
-- Two example trials, −2 to 5 s with laser: the median trial 23, and trial 79. Trial 79 has a large mid-trial PI excursion at ~2.2 s that the MPC cuts by more than half. It was shortlisted as top-12 by RMSE drop over 0.8–2.6 s and picked by eye; trial 31, the top of the list, was noisy and oscillating.
-- New trial-average panel (±SD, PI / MPC / perfect MPC side by side).
-- Variance panel now spans −2 to 5 s with no values in the labels.
-- Prediction labels now read VARX / AR / naive.
-- Dropped the RMSE scatter.
-
-Variance by period (PI / MPC / perfect):
-- pre: 9.33 for all three — the same recorded trials.
-- 1–3 s: 4.29 / 2.61 / 1.45.
-- post: 6.59 / 6.44 / 6.34.
-
-**Why:** user round-2 review: "clean math feel", "sample another one with bigger deviation in the middle", "take inspiration from figure 3, short corner axes".
-**Next:** user locks panels → MANIFEST + PAPER.md + PAPER_FINAL export.
-
-### 2026-10-09 — mpc_direct.py saves 2 s pre/post context per trial
-**Changed/Found:** `controller-analysis/mpc_direct.py`:
-- `simulate` now runs EXT = 70 frames past the stim window with the laser off, and returns the extended (y, u) as well.
-- Pre-stim is the recording; the PI extended trace is the recording.
-- New saved fields: `Yx`, `Ux` ((EXT+N+EXT) × nT × model) and `ext`.
-- Innovations are now computed out to N + max(HP, EXT).
-
-Reran λ = 0.1 (`_lam01`): numbers are unchanged (MPC/PI 0.652, 108/108; perfect 0.224).
-**Why:** the Fig-3-style panels need pre- and post-stim periods.
-**Next:** none.
-
-### 2026-10-09 — Direct-MPC supp panels revised after panel-by-panel review
-**Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m`:
-- The schematic is now shown in trial context: −1 to 3 s from onset, with the stim window shaded and "now" at 1.49 s.
-- The cost equation moved to its own text panel, `mpcd_0b_problem`.
-- Panel B gained the Lu-AR curve and marks at 200 ms and 1 s.
-- The example (C/D) gained the perfect-MPC trace and laser. Its labels now read "actual PI trial RMSE" and "MPC RMSE".
-- E scatter now includes the perfect-MPC points.
-- New `mpcd_E2_rmse_compare`: per-trial RMSE, paired, with median bars.
-- New `mpcd_E3_variance`: across-trial variance vs time.
-
-Results (descriptive):
-- Median RMSE: PI 1.46, MPC 0.82, perfect 0.27. MPC/PI 0.652 and perfect/PI 0.224, both 108/108.
-- Variance over 1–3 s, (%ΔF/F)²: PI 4.31, MPC 2.63, perfect 1.47.
-
-Dropped: A (learned laser response) and G (robustness).
-**Why:** user review: "A is a non-issue, drop it"; G "does not make sense as is, remove"; F stays as a demo at λ = 0.1 (no held-out λ selection).
-**Next:** user picks panels to lock → MANIFEST + PAPER.md + PAPER_FINAL export.
-
-### 2026-10-09 — Lu et al. AR baseline added to the held-out OL prediction benchmark
-**Changed/Found:** `controller-analysis/mpc_varx_embed.py` — added a univariate AR(p) of the controlled spot fitted by OLS. The order is picked by validation MSE over leads 1–35 (p = 35). It uses the same folds and the same 92 held-out OL trials as the VARX; the results are saved as `R2_ar` and `ar_order`.
-
-Held-out R²:
-
-| Lead | AR | VARX | Last value |
-|---|---|---|---|
-| 200 ms | 0.02 | 0.42 | 0.10 |
-| 1 s | −1.41 | 0.05 | −0.82 |
-
-The AR beats last value only below ~150 ms. On stimulated trials it cannot see the laser, so its iterated forecast diverges.
-
-VARX numbers are unchanged.
-**Why:** user asked for the Lu comparison in panel B.
-**Next:** caption must say the AR has no laser input, which is the main reason it fails on OL stim trials. Lu's own data were spontaneous.
-
-### 2026-10-09 — Direct-MPC supp panels restyled (JNeurosci, minimal) + MPC schematic from a real step
-**Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m` rewritten to the rule book: grid sizes (4.13 × 3.3 cm 4-across, 8.43 cm 2-across, 3.3 × 3.3 scatter), Arial 6/7 pt via jnAxes, direct coloured labels instead of legends, 2–3 ticks per axis, lollipops for the robustness panel. The equation panel `mpcd_0_problem` is replaced by `mpcd_0_schematic`: one real MPC step (CL trial 23, 1.5 s after onset) — past signal to "now", the 1-s prediction converging on target, the actual future (gray), the planned laser with the applied first move, and a one-line cost in Arial. `controller-analysis/mpc_direct.py` saves that snapshot (snap_*) for the median trial (now chosen in Python; trial 23: PI recorded 1.32, MPC 0.77). Example trace/laser axes pinned to the same x-extent. Draft layout `paper/images/supp_mpc/_draft_mpcd_layout.png` (a schematic | b example | c–f | g). Numbers unchanged: MPC/PI(recorded) 0.652, 108/108.
-**Why:** user: "clean up the panels, make them jn style, minimalize the mpc figure make it look cool … stylish and minimalist".
-**Next:** user locks panels → MANIFEST.txt + PAPER.md + PAPER_FINAL PDF export; retire the disturbance-preview MPC panels.
-
-### 2026-10-09 — Direct MPC: PI baseline = the rig's recorded CL trial (re-tuned PI dropped)
-**Changed/Found:** `controller-analysis/mpc_direct.py` — removed the simulated, grid-re-tuned PI; the PI baseline is now each recorded CL trial (the world reproduces it exactly under the recorded laser, so it is the world's output under the rig's actual PI: gains, latency, all). `controller-analysis/ctrl_mpc_direct_panels.m` relabelled "PI (recorded)"; λ-sweep panel now ratios against `rec`. λ = 0.1: MPC/PI 0.652 (108/108), oracle 0.224; worlds A–D 0.652 / 0.665 / 0.663 / 0.681 (108/107/102/101; in C/D the baseline is still the real recording). λ sweep vs recorded PI: 0 0.63, 0.01 0.62, 0.03 0.62, 0.1 0.65, 1 0.70, 10 0.79. Example = CL trial 102 (median): PI 1.83, MPC 1.27, oracle 0.69. Note: in the simulation the MPC turns the laser on 1–2 frames earlier at onset than the rig did (outside the 1–3 s RMSE window).
-**Why:** user: the PI trace should be the actual CL trace; "no need for re-tuned PI". The earlier re-tuned PI (Kp .5, Ki .25, faster loop timing) beat the rig (1.12 vs 1.46) and was an idealised baseline.
-**Next:** user picks panels → MANIFEST/PAPER.md + PAPER_FINAL export.
-
-### 2026-10-09 — Draft supp panels for the direct-prediction MPC (λ = 0.1)
-**Changed/Found:** `controller-analysis/mpc_direct.py` — saves traces (Y/U per controller, recorded y/u, rPI) and the oracle rd (`MPCD_ORD`); robust mode saves `data/mpc_direct_robust_<sess><tag>.mat`. Runs at λ = 0.1 (`MPCD_RD=0.1 MPCD_ORD=0.1 MPCD_TAG=_lam01`). New `controller-analysis/ctrl_mpc_direct_panels.m` → 8 PNG drafts in `paper/images/supp_mpc/` (mpcd_0_problem, A_laser_response, B_prediction, C_example_trace, D_example_laser, E_rmse_scatter, F_lambda, G_robustness) + contact sheet `_draft_mpcd_contact.png`. Numbers: MPC/PI 0.786 (108/108); oracle at λ 0.1 0.276; worlds A–D 0.786 / 0.758 / 0.789 / 0.790 (108/106/104/104); example = CL trial 59 (median MPC−PI): PI 0.92, MPC 0.65, oracle 0.25.
-**Why:** user: "ok use lambda 0.1 draft panels now". Drafts only — not added to `paper/figures_final/MANIFEST.txt` until the user locks them (they would replace the disturbance-preview panels).
-**Next:** user picks panels → MANIFEST + PAPER.md + rerun with PAPER_FINAL; decide which old d-based panels to retire.
-
-### 2026-10-09 — Direct-prediction MPC at lower input smoothness (rd 0–0.1)
-**Changed/Found:** `controller-analysis/mpc_direct.py` — rd grid, output tag and example row now set by env vars (`MPCD_RD`, `MPCD_TAG`, `MPCD_REF`); run `MPCD_RD=0,0.01,0.03,0.1,1 MPCD_TAG=_lowrd MPCD_REF="MPC rd=0.01"` → `paper/images/mpc_arx/mpc_direct_AL_0033_0226_e2_lowrd.png` (+ `_examples_`). Same world as scenario A (PI Kp .5 Ki .25, RMSE 1.117). Median MPC/PI (beats PI): rd 0 0.773 (107) | 0.01 0.762 (107) | 0.03 **0.760 (108)** | 0.1 0.786 (108) | 1 0.862 (104); oracle 0.394. Gains flatten below rd ≈ 0.03. At rd = 0.01 the laser command swings 0 ↔ 2.67 nearly every frame (bang-bang), exploiting the model's fast lead-1/2 laser response (−0.18, −0.62 %/unit) that the rig's 2-frame delay may not allow.
-**Why:** user: "go even lower on input smoothness". Lower rd keeps helping until ~0.03, then stops; the extra gain over rd 0.1 is small (0.786 → 0.760) and is bought with a frame-rate bang-bang command. Simulation → descriptive.
-**Next:** if a low-rd MPC is used, enforce the measured laser delay in the model (zero response at leads 1–2) to check the gain is not an artefact of the early response.
-
-### 2026-10-09 — Direct-prediction MPC (no disturbance proxy): VARX on [y, 100 spots] + laser as the MPC model
-**Changed/Found:** new `controller-analysis/mpc_direct.py`. The VARX (L10, λ100, Q35) predicts the controlled spot y itself; it is affine in the future laser (y_hat = free response + G·U, G = learned laser→y impulse response), so each MPC step is a bounded least-squares problem (Hp 35, r 1e-3, rd {0.1,1,10}, 0 ≤ u ≤ 2.67). Trained on every valid frame (spont between trials + OL + CL) except the test fold's CL windows. WORLD = VARX fit on all data driven by each trial's recorded one-step innovations (reproduces the recording exactly under the recorded laser — asserted); PI re-tuned in the same world by grid; ORACLE = MPC knowing the future innovations. Learned laser→y response: peak at lead 3 (2-frame delay recovered from data), DC −3.5 %ΔF/F per laser unit. Controller-model R² of y on CL trials (recorded future laser): 86 ms 0.44, 200 ms 0.02. Results, median MPC/PI (trials MPC better), 108 CL trials, RMSE 1–3 s:
-- A same world, PI Kp .5 Ki .25 (RMSE 1.117): rd .1 0.786 (108) | rd 1 0.862 (104) | rd 10 0.932 (74); oracle 0.394
-- B world = different VARX (L20, λ1e3, Q70), PI 1.201: 0.758 (106) | 0.824 (100) | 0.916 (84)
-- C A + ±20 % per-trial laser-gain error, PI 1.193: 0.789 (104) | 0.843 (99) | 0.923 (78)
-- D B + C, PI 1.209: 0.790 (104) | 0.841 (99) | 0.922 (82)
-**Why:** user: "we never wanted to use the d … directly predict and play MPC". With the signal predicted directly, the MPC's advantage comes from knowing the laser's effect over the next second (model-based control), not from forecasting spontaneous activity (R² 0.02 at 200 ms on CL trials). It survives a structurally different world and ±20 % gain error. CAVEATS: the world is a linear model of the same session — in it even PI (1.12–1.21) beats the real rig's CL (1.46), and both controllers chatter the laser 0.5–2.67, i.e. the world rewards fast laser moves more than the brain may; descriptive simulation, one session. First-run PI grid had its best on the edge (Kp .5 / Ki .5) → widened (Kp ≤ 2, Ki 0–4); numbers above are from the widened grid.
-**Also:** the learned laser→y response is already −0.18 %/unit at lead 1 (same frame as the laser sample) and −0.62 at lead 2, although the rig's loop delay is 2 frames — either frame-clock alignment of u or light/artifact coupling; the MPC can exploit an effect a real controller could not use.
-**Next:** constrain the laser response to zero at leads 1–2 (enforce the measured delay) and re-run; test against a world with slower/nonlinear laser dynamics (e.g. the old 2-pole plant + VARX innovations), and with a latency of 1 extra frame; decide rd (smoothness) jointly with what the rig can deliver.
-
-### 2026-10-09 - S4 redrawn as A-r vs D, RR window at full strength, -3..+5 s context tinted
-**Changed/Found:** `controller-analysis/f4_supp_reject_trials.m` - tiles now plot exactly the two traces RR divides: the error A-r (condition colour) against the disturbance D (grey), both on a zero baseline, with a dashed zero line, the settled window [+1,+3] s shaded and drawn at full strength, and everything else drawn in a light tint. The window now runs from 3 s before onset to 2 s after the laser turns off (+5 s); the laser-on period is shown as a blue bar along the top. Outside stimulation, D is the baseline-referenced G with **no** leak term (there is no laser to leak), and an `assert` checks that D inside the RR window is identical to the production D. `controller-analysis/imp_build_session.m` gained an optional `cfg.post_extra_s` (default 0, so every existing caller is unchanged) that lengthens the trial trace past stimulation end. Session medians are unchanged: CL 0.72/0.74/0.75/1.94, OL 1.26/1.25/0.84/3.46. S4 caption in `Closedloop_edit/supplementary.tex` rewritten to match.
-**Why:** User asked to compare A-r directly against the disturbance over only the 1-3 s window, keeping the surrounding time as lighter context. The old tiles showed absolute A and G, so the reader had to subtract the reference by eye to see what the ratio measures.
-**Next:** User re-assembles S4.pdf from the four re-exported panels (same 11.1 x 5.3 cm size), then uncomments the `\includegraphics`.
-
-### 2026-10-09 — Audit of the MPC disturbance prediction: indexing/causality OK; the CL disturbance carries a laser-model-mismatch component
-**Changed/Found:** `controller-analysis/ctrl_mpc_lqr.m` — new switch `P.fcstOff` (default false): adds the measured offset off = dh − dep(t) to a precomputed forecast, as the perfect-preview arm already does. No-op in the fig3 frame (σ_u = 0 → g = 1, off = 0): MPC/PI unchanged (AR 0.942, VARX 0.897, wbbest 0.896); it matters only if a gain error is simulated. Audit (inline checks): (1) indexing — forecast row t uses data through frame onset+t−1 = the MPC's current observation; lead j → frame +j (rel = −pre:N; matches DEP; lead-1 R² 0.93). (2) No future leak via the laser: on CL trials a laser change at t follows the signal change at t−2 (r 0.72) and t−1 (0.54), not t (0.09). (3) The forecast truly anticipates: R² of the CHANGE d(t+L) − d(t) is 0.35 / 0.35 / 0.33 at 86 / 143 / 200 ms (AR 0.23–0.27); holding the current value gives level R² 0.045 at 200 ms and MPC/PI 1.061 (worse than PI) vs VARX 0.897. (4) **Conceptual issue:** in CL trials 24 % of the frame-to-frame variance of d is explained by the laser changes of the last 0–5 frames (OL: 2 %; sd(Δu) CL 0.215 vs OL 0.076). The 2-pole plant (fit on ramped OL commands, 82 %) misses the fast response to the PI's rapidly varying laser, so d = y − plant(u_rec) contains a mismatch term driven by the RECORDED laser. Forecasters partly predict that term from laser history, and the replay keeps it attached to u_rec while the MPC applies a different u.
-**Why:** user: "are we even correctly predicting the upcoming disturbance?" Prediction mechanics are correct and informative (≈ ⅓ of the 86–200 ms change); the definition of the disturbance in CL is contaminated by plant mismatch.
-**Next:** refit the plant on data with fast laser variation (CL + OL), check that laser changes no longer explain d's changes (~2 % as in OL), then rebuild d → forecasters → MPC replay.
-
-### 2026-10-09 — Averaging predictions: 8-model VARX ensemble ≈ single VARX in the MPC
-**Changed/Found:** inline MATLAB (no new script) — averaged the 8 VARX model variants of `data/ctrl_mpc_varx_tune_<sess>.mat` (L {5,10,20} × λ {100,1e3} + Q {10,70}) → `data/ctrl_mpc_varx_ens_<sess>.mat` (F.ens, F.base). Disturbance R² at 86/200 ms: ensemble 0.572/0.368 vs single 0.571/0.364. MPC/PI (200 ms preview): rd 1 — ensemble 0.889 (86/108; odd 0.882, even 0.909) vs single 0.897 (85; 0.885/0.914); rd 10 — 0.892 (91/108; 0.860/0.909) vs 0.894 (89; 0.864/0.911).
-**Why:** user asked whether the single VARX prediction could be averaged N times for a better estimate. Re-running a deterministic model N times returns the identical forecast; averaging only helps across *different* predictions. Successive-origin averaging was already tested (combA, no held-out gain); averaging different models gives +0.004 R² and ≈0.005–0.008 MPC/PI — the models make nearly the same errors (bias-limited, cf. the 2026-10-07 learning curve). Simulation → descriptive.
-**Next:** none — ensemble optional; if used, it is the "VARX ensemble" row (0.889× PI at rd 1).
-
-### 2026-10-09 — VARX-MPC tuning (forecaster × forecast smoothing × Δu penalty): within noise of the untuned VARX
-**Changed/Found:** new `controller-analysis/mpc_varx_tune.py` (12 forecaster variants → `data/ctrl_mpc_varx_tune_<sess>.mat`: VARX L {5,10,20} × λ {100,1e3}, Q {10,70}; preview smoothing on the base VARX — moving average across leads (3, 5) and causal combination of successive forecasts of the same target frame, a = 0.5 / 0.3) and `controller-analysis/ctrl_mpc_varx_tune.m` (× MPC rd {0.3,1,3,10}; selection on ODD CL trials, report on EVEN + all; AR gets the same rd tuning). Selected: base VARX L10/λ100 with rd = 10 → even 0.911, all 0.894 (89/108 beat PI) vs untuned VARX rd 1: even 0.914, all 0.897 (85/108); AR at its best rd (10): even 0.937, all 0.933. Smoothing the preview: forecast combination a = 0.5 was best on odd trials at rd ≤ 1 (0.867) but did not hold on even (0.905–0.908); lead-axis MA no gain. Perfect preview gets worse with rd (0.082 / 0.138 / 0.231 / 0.381 at rd 0.3/1/3/10), so a large rd trades away the ceiling. Odd–even differences (~0.02–0.03) exceed every tuning gain (≤ 0.003 on held-out).
-**Why:** user: "tune varx for best performance, maybe we need input smoothing to not react against fast twitches". Input smoothing inside a linear VARX is redundant (a boxcar ≤ L frames is a linear combination of the embedded lags), so smoothing was tested where it acts — on the preview and through rd. Result: the MPC is not limited by twitch-chasing; it is limited by forecast quality (R² ≈ 0.36 at 200 ms). Simulation → descriptive.
-**Next:** keep VARX L10/λ100, rd = 1 (project choice 2026-10-05) for the supp figure; rd = 10 only if a smoother command is wanted for its own sake (≈ same error, lower ceiling).
-
-### 2026-10-09 - NEW S4: single trials behind the Fig-4G rejection ratio; Discussion now points at them
-**Changed/Found:** NEW `controller-analysis/f4_supp_reject_trials.m` -> four panels in `paper/images/supplementary/` and, under PAPER_FINAL, `figures_final/panels/supp_reject/` (11.15 x 5.33 cm each; MANIFEST section `[supp_reject]` added). Each panel is one session as 2 rows (OL, CL) x 3 trials drawn at RR percentiles 10/50/90, grey = contralateral prediction G, colour = measured A, dashed ref. Sessions: AL_0033 0226, AL_0039 0420, AL_0048 0729 (the analysed pool, one per mouse) plus **AL_0051 0729, the session the standing-offset criterion excludes** - included deliberately so the Discussion can SHOW the exclusion instead of asserting it. `supplementary.tex` gained the S4 float (caption + `fig:reject_trials` live, `\includegraphics` commented pending the Illustrator assembly, so the draft builds), `discussion.tex` two cross-references. Build clean, 39 pages, no undefined refs.
-**Why:** User asked for trial examples of the predicted disturbance and its rejection, as in Fig-4 row 3, to support the Discussion.
-**Next:** User assembles `images/supplementary/S4.pdf` from the four panels (stack as rows A-D), then uncomment the one `\includegraphics` line.
-
-### 2026-10-09 - Two traps in the S4 producer, both caught before the numbers were quoted
-**Changed/Found:** (1) **The display window silently moved the statistic.** `imp_build_session`'s `cfg.pre_s` sets BOTH the drawn context and the baseline for `Gr = G - mean(G(bwin))`, from which the leak term `gdipOL` and the disturbance `D` are built. Drawing 3 s of pre-stimulus context therefore widened the baseline from the production 1 s and moved every printed RR - measured on AL_0048, **CL median 0.75 -> 1.04, which would have put a number in the supplement that contradicts Fig 4G and even reversed the OL/CL ordering for that session**. Fixed by keeping `pre_s = 3` for display but taking the baseline as the LAST 1 s, `bwin = pre-round(Fs)+1 : pre`. All four session medians now reproduce production exactly: 0.72 / 0.74 / 0.75 / 1.94. (2) **Per-tile y-limits.** The first draft let every tile autoscale and hid the tick labels on all but the leftmost, so the reference dash sat at a different height in each tile and six incomparable tiles looked like a comparable row. Now one shared y-range per panel, computed over all six selected trials.
-**Why:** Worth logging as its own entry: both are silent failures that produce a plausible-looking figure with wrong or misleading content, and the first one is a general hazard - any script that reuses `imp_build_session` with a different `pre_s` than the producer it is illustrating will quietly recompute the statistic.
-**Next:** `ctrl_reject_trial_gallery.m` has the same class of problem and is NOT fixed: it prints ER = ||A-ref||^2/||G-ref||^2 over 0-3 s with no leak correction, and its header still claims ER comes from "the same function that produces the headline statistic", which has not been true since the headline moved to `f4_cl_reject_lmm.m`. It is exploratory-only (PNG) so nothing in the paper depends on it, but either retire it or correct that comment before someone quotes an ER as an RR.
-
-### 2026-10-09 — Example CL trials: MPC with VARX vs AR forecasts
-**Changed/Found:** `controller-analysis/ctrl_mpc_wb2s_example.m` — new 5th arg `mdl = {fcstModel, fcstFile, label}` (default wbbest, unchanged behaviour); run with `{'varx','ctrl_mpc_varx_out_%s.mat','VARX'}` → `paper/images/mpc_arx/wb2s_mpc_example_AL_0033_0226_e2_varx.png`. Trials 16/99/85 (25th/50th/75th pct of VARX−AR per-trial gain): RMSE PI 1.99/0.54/1.83, MPC-AR 1.82/0.62/1.62, MPC-VARX 1.67/0.56/1.63 (gain −0.148/−0.069/+0.005). VARX's 86 ms forecasts track the fast disturbance swings (e.g. trial 85 at 1.2–1.5 s, trial 16 at 2.5–3 s) that the AR forecast smooths over; laser commands are otherwise similar.
-**Why:** user: "show example trials with VARX". Simulation → descriptive.
-**Next:** none unless VARX replaces wbbest in the supp figure.
-
-### 2026-10-08 — Delay-embedded VARX as the MPC disturbance forecaster: ties the best (0.897× PI, 85/108)
-**Changed/Found:** new `controller-analysis/mpc_varx_cl.py` → `data/ctrl_mpc_varx_out_<sess>.mat` (F.varx = d + 100 spots + laser, L10/λ100; F.varx_svd = d + 50 SVD comps + laser, L5/λ1e3; iterated 35 leads; future laser HELD at its origin value since it is the MPC's decision; same 5 CL folds, paired). `controller-analysis/ctrl_mpc_wb2s_compare.m` now includes both. MPC replay (Fig-3 frame, Lp 7 = 200 ms, λ=1, 108 CL trials), median MPC/PI: AR 0.942 (83/108), pyarx 0.969, roi2s 0.961, wb2s 0.933, wbbest 0.896 (84), **VARX 0.897 (85)**, VARX-SVD 0.904 (85); perfect preview 0.138. Disturbance R² at 29/57/86/143/200 ms: VARX .933/.760/.571/.449/.364 (wbbest .931/.758/.579/.455/.365; AR .876/.663/.494/.372/.301).
-**Why:** user: "use our VARX in the MPC and compare". One iterated VARX (one model for all leads) does as well as the 35 per-lead direct ridges (wbbest); both whole-brain forecasters sit at the same point on the forecast-uncertainty line. Simulation → descriptive only (no stats).
-**Next:** if VARX replaces wbbest in the supp panel, swap `ctrl_mpc_wb2s_example.m` to plot VARX forecasts; the ceiling remains forecast quality (perfect preview 0.138 vs 0.897).
-
-### 2026-10-07 — Lu et al. (Ziyu) recipe replicated on our session: our data is as forecastable as theirs; "worse" was the metric/task
-**Changed/Found:** new `controller-analysis/ctrl_lu_regions_export.m` (8 APPROXIMATE regions — MO/SS/RSP/VIS boxes on the stimulated hemisphere + mirrors on contra — from the corrected SVD; controller sessions have no CCF/bregma) and `controller-analysis/mpc_lu_replicate.py` (paper's recipe from the PDF now in the repo root, `2510.18037.pdf`: chronological 60/20/20, sliding windows with non-overlapping targets, AR(valQL) with 10-order patience, Naive σ²h, MWQL/MAE/MSE normalised by Σ|y|, Σy², per-step MSE_t). Results (136,887 valid frames, test = last 13 min): AR MWQL/Naive aggregated over 35 steps = **0.68–0.88** across regions (their AR ≈ 0.83, PatchTST ≈ 0.80); per-step MSE_t at 0.2 s ≈ 0.3–0.6 (controlled spot ≈ 0.37) vs their Fig A3 ≈ 0.35–0.4. Our VARX (spots + laser) on the same windows beats their AR: R² at 200 ms controlled spot 0.71 vs 0.62 (all windows), 0.45 vs 0.40 (stim-free windows); SS 0.72 vs 0.64 / 0.50 vs 0.43. AR(valQL) picks p=1 for most series at 0.5–1 s (MWQL favours a wide-band AR(1), as noted 2026-10-07).
-**Why:** user: "seems much worse than AR reported by Ziyu … use what they do". The apparent gap came from (a) their headline number is MWQL/Naive aggregated over all steps, not R²; (b) their test windows are the whole continuous recording, whereas our 0.42 is R² on origins inside 3-s stimulated OL trials of a 5×5 px spot — a harder, low-variance target. On their protocol our numbers match or beat theirs.
-**Dead-end:** StatsForecast 2.1.1 `AutoRegressive` (installed with user permission) took >10 min for a single fit on this Python (no numba) → AR fitted by least squares (conditional Gaussian ML; identical for T ≈ 80k). Regions are approximations, not CCF.
-**Next:** report predictor quality for the MPC on BOTH scales (their MWQL/Naive for comparability, our in-trial R² for what the MPC actually sees); CCF-register the session if exact region parity matters.
-
-### 2026-10-07 — 200 ms predictor round 2: stim-trial selection + rollout training + SVD inputs — no gain on held-out
-**Changed/Found:** `controller-analysis/ctrl_mpc_svd_export.m` (new; 200 corrected SVD temporal comps on the timeBlue clock → `data/ctrl_mpc_svd_in_<sess>_k200.mat`) and `controller-analysis/mpc_pred200_torch.py` (new; torch 2.14.1+cpu installed in .venv with user permission). (1) Selection on 20 % of the TRAINING OL trials held out per fold (stimulated, every-frame origins) instead of the spont-dominated chronological tail → prefers SHORT embedding L=5 (143 ms), λ=1e3, for every input; inner-val R² 200 ms: svd50 0.416, svd100 0.406, spots100 0.404, svd200 0.349. (2) Rollout fine-tune (backprop through the 7-step iterated forecast, ridge penalty, early stop on inner val): +0.000–0.008 inner-val (best svd50 + 0.1·state loss 0.420); lead-weighting / stim-oversampling ×3 no better. HELD-OUT 92 OL trials: current VARX (spots L10 λ100) 86 ms 0.684 / 200 ms 0.417; stim-selected ridge svd50 L5 0.668 / 0.411; rollout-trained svd50 0.668 / 0.413; all lag 7 frames at 200 ms; persistence 0.098.
-**Why:** user asked to do suggestions 1+2 and to try the SVD components directly. Result: the linear delay-embedded family is at its ceiling (~0.41–0.42 at 200 ms) on this session regardless of input basis (spots ≈ SVD), selection target, or training loss; 15 inner-val trials are too few to resolve ±0.01 differences.
-**Dead-end:** first rollout run used Adam lr 3e-4 → inner-val R² dropped from 0.416 to 0.31–0.36 within epochs (step size >> ridge weights); fixed with lr ≤ 1e-5. Also a PowerShell Set-Content round-trip double-encoded the script's UTF-8 (figure showed "RÂ²"); repaired.
-**Next:** remaining lever is model class / data, not tuning — nonlinear (MLP/GRU on the SVD state) and pooled sessions/mice; keep the current VARX (spots L10 λ100) as the MPC predictor meanwhile.
-
-### 2026-10-07 — 200 ms predictor sweep: linear family is saturated at held-out R² ≈ 0.41–0.42
-**Changed/Found:** `controller-analysis/mpc_pred200_sweep.py` (new) — coordinate sweep selected on fold-1 training data (last 20 % validation), criterion = R² of the controlled spot at 200 ms (lead 7). Stage 1 L {3,5,10,15,20,30} × λ {1..1e4}: best L=20, λ=1e3, val 0.647 (current L10/λ100 ≈ 0.64; whole surface within ~0.03). Stage 2 levers (λ re-tuned each): laser lags Q=70 +0.001, stim-window weight ×3 +0.001 (×10 worse), spot PCA k=10/20/40 all worse (−0.01 to −0.02), combined 0.649. Stage 3 direct-for-lead-7 ridge: best λ=1e3 val ≈0.646 (−0.003 vs iterated; λ=10 0.62). HELD-OUT 92 OL trials (5 folds): current VARX 86 ms 0.687 / 200 ms 0.419 (lag 7 fr); tuned iterated 0.676 / 0.414 (lag 8); tuned direct 200 ms 0.412 (lag 8); persistence 0.098. Tuning does NOT transfer — the current model stays best.
-**Why:** user goal "best 200 ms predictor, parameter sweep + suggest changes". Validation rows are mostly spontaneous, so the +0.002 val gains are noise relative to the stimulated OL test; at 200 ms every linear variant lags by ~the full lead (tracks the slow component, does not anticipate).
-**Dead-end:** the 'smooth inputs 3' lever is a DESIGN BUG, not a result (R² −333): iterating feeds raw one-step predictions back into a history that was trained on smoothed inputs. Smoothing was not actually tested.
-**Next:** remaining levers are structural, not hyperparameters — (a) select on stimulated windows / OL-trial validation, (b) multi-step (rollout) training loss, (c) pooled sessions / nonlinear model (bias-limited learning curve) — the last needs torch-install permission.
-
-### 2026-10-07 — Delay-embedded VARX (100 spots + controlled spot + laser): one iterated model matches the per-lead direct ridge
-**Changed/Found:** New `controller-analysis/mpc_varx_embed.py`. State z = [controlled-spot dF/F, 100 brain spots]; one-step ridge map z(t+1) = W'[z(t..t−L+1), u(t+1..t−Q+2), 1] (Q = 35 laser frames, all 101 outputs share one Gram); forecasts are iterated with the known laser schedule. Selection on fold-1 training rows (last 20%), by iterated validation R² of y at 86 ms: L=10 (286 ms embedding), λ=100; L=2 was clearly worse (0.736), L≥3 flat (0.752–0.765). Held-out OL (92 trials, same folds as before) R² of y at 29/57/86/114/143/200/286/486/1000 ms: .952/.831/.687/.575/.503/.418/.362/.218/.046. The direct whole-brain ridge gets .952/.831/.689/.576/.512 and persistence .905/.703/.484/.311/.198. Lag 2 frames at 86 ms, the same as direct. Whole-trial forecast from −1 frame: single-trial R² 0.20, trial-average 0.90. The model is stable (companion spectral radius 0.992 in every fold).
-**Why:** The user asked for an AR model with time-delay embedding that takes the 100 spots + laser and predicts the controlled spot's future. A single dynamical model gives the same accuracy as one regression per lead, and because the laser enters through W it can serve directly as the MPC's prediction model (no separate plant / disturbance split).
-**Next:** Use the VARX as the MPC model on the CL trials via innovation replay: e(t) = z(t) − ẑ(t|t−1) from the recorded trial, then re-simulate the trial with the MPC choosing u, driven by the same innovations.
-
-### 2026-10-07 - OL comparator written into Results: the CL advantage in RR is mostly the OFFSET, not the fluctuation
-**Changed/Found:** `f4_rr_denominator_check.m` now also splits the OPEN-LOOP numerator (it previously kept only the CL split) and prints the mechanism test; re-run. `results.tex` + `methods_rewrite.tex` gained the comparator. **The user's framing - "OL just shifts while CL works" - is supported, but the literal version of it is not.** Open loop does NOT pass the disturbance through untouched: its fluctuation energy is already 0.66 of the disturbance, not ~1, because D is the contra-PREDICTED excursion and the prediction is imperfect. What actually separates the conditions is the STANDING OFFSET. Over the 11 analysed sessions: total RR median **1.25 OL vs 0.72 CL, CL lower in 11/11 (V = 66, one-sided p = 4.9e-4)**; the standing offset supplies **41% of the open-loop residual against 8% closed loop** (10/11, p = 9.8e-4); the fluctuation term improves far less, **0.66 -> 0.54** (10/11, p = 0.0024). Over all 13 sessions the totals are 1.26 vs 0.72, 13/13, V = 91, p = 1.2e-4. So the fixed feedforward input lands the response at a level set by its calibration rather than by the reference, and the integral term is what removes that; feedback's effect on the fluctuation is real but secondary. Build clean, 39 pages.
-**Why:** User asked to mention that RR is much better under CL in all sessions because "OL just shifts while CL works". The claim was worth measuring rather than asserting, and measuring it changed the wording.
-**Next:** This is the paired control NUMBERS.md §5.3 has had open since 2026-10-01 - that item can be closed. The comparator is text-only; Fig 4G still plots CL alone. If a referee wants it shown, the panel would need OL and CL dots per session.
-
-### 2026-10-07 — Learning curve: the whole-brain linear forecaster is near its ceiling (+0.01 R² per doubling); up-weighting stim windows ×10 gives +0.013
-**Changed/Found:** New `controller-analysis/mpc_arx_learning_curve.py`: 'wbbest' disturbance forecaster on the CL folds, trained on 5–100% of the training frames (random 60-s blocks, 3 draws). Held-out CL R² at 29/57/86/143 ms: 3 min .847/.631/.443/.262; 15 min .916/.734/.554/.421; 30 min .924/.747/.568/.441; 61 min .931/.758/.579/.455. Training R² at full data .942/.799/.635/.454. The train–test gap is only ~0.06 at 86 ms and ~0 at 143 ms, so the model is bias-limited rather than variance-limited. An inline test duplicating stimulation-window rows (OL+CL 0–3 s) in training gave held-out R² at 57/86/143 ms of ×1 .758/.579/.455, ×3 .755/.583/.464, ×10 .763/.592/.471. The train/test mismatch (training mostly spontaneous, test = stimulated CL) is part of the gap. Ziyu's paper (Lu et al. 2025): best overall is PatchTST, but the benchmark is univariate region averages at 0.5–2 s horizons, not 57–143 ms multivariate with a stim input.
-**Why:** The user asked for the best predictor from Ziyu's paper, what we can build ourselves, and whether to pool other datasets. More data alone for the linear model buys about +0.01 R² per doubling (≈0.004× PI on the MPC). Pooling only pays if it is paired with a higher-capacity (nonlinear) model that the extra data can feed.
-**Next:** User decision: (a) lock the whole-brain linear forecaster (+ stim-window weighting) as "our predictor" for the MPC figure; (b) pooled multi-session AL_0033 training + a nonlinear model (MLP/GRU on the same 100-spot features), which needs registered spot grids across sessions and torch (permission) or the MATLAB DL toolbox.
-
-### 2026-10-07 — Very aggressive MPC (λ→0, ρ=1e-6) adds almost nothing with real forecasts; laser bounds are not the limit either
-**Changed/Found:** Sweep with ctrl_mpc_lqr (fig3 frame, 200 ms preview, PI Kp 0.10/Ki 1.5), ρ=1e-6, rd ∈ {1, 0.1, 0.01, 0}. MPC/PI (trials lower than PI) | command roughness ×PI | perfect preview: AR 0.942 (83) 2.00 0.138 → 0.954 (75) 2.37 0.076 → 0.955 (74) 2.42 → 0.955 (74) 2.47 0.075; whole-brain (wbbest) 0.896 (84) 2.04 0.138 → 0.892 (82) 2.44 0.076 → 0.892 (82) 2.49 → 0.892 (82) 2.55 0.075. With the laser bounds also removed (rd=0, unbounded): AR 0.944 (75), roughness 2.95; whole-brain 0.889 (80), roughness 2.88; perfect 0.000. `ctrl_mpc_wb2s_example.m` gains `extra`/`suffix` args; it rendered wb2s_mpc_example_<sess>_aggressive.png for the same trials 26/67/35.
-**Why:** The user asked for a very aggressive controller. Aggression only pays with a near-perfect preview (0.138→0.075). With real forecasts it adds 25% more command roughness for ≤0.004 error (whole brain) or makes things worse (AR, which chases its own forecast noise). Removing the laser limits gains only 0.003 more. The limit is the forecast, not the penalties or laser authority.
-**Next:** Keep λ=1 as the paper setting. The aggressive sweep is a Discussion-level point, not a new panel unless the user wants one.
-
-### 2026-10-07 — Whole-brain disturbance forecaster in the MPC replay: 0.896× PI (best yet, was 0.942); 2-s history on everything is worse than the tuned 286 ms spot history
-**Changed/Found:** New `controller-analysis/mpc_arx_wb2s.py`. Mode 'ol': held-out OL responses with a 2-s history on every input (y, laser, 100 spots = 7282 features). The big block is Cholesky-factored once and the per-lead scheduled-laser block is handled by a Schur complement. Mode 'cl': direct ridge disturbance forecasters (target d = y − plant(u); no future laser) on the 5 CL folds of ctrl_mpc_forecasters, trained on spont + all OL + training-fold CL with test-CL windows ±2 s excluded. Models: wb2s (2-s everything), roi2s (d + laser 2-s), wbbest (tuned: d/laser 35 frames, spots 10). Written to data/ctrl_mpc_wb2s_out_<sess>.mat for ctrl_mpc_lqr. New `controller-analysis/ctrl_mpc_wb2s_compare.m`: CL-trial forecast R² + MPC replay (200 ms preview, λ=1, PI Kp 0.10/Ki 1.5) for all forecasters on the same folds. BUG caught and fixed before reporting: the CL forecast origins were one frame early (onCL + arange(N) − 1), which made every lead h really h+1; the 29 ms R² of the direct models was 0.65–0.69 vs 0.88 for AR, which is impossible for a direct regression at one step. OL held-out R² at 29/57/86/143/200 ms: 2-s history .941/.805/.651/.459/.368 vs the tuned 286 ms spots .948/.823/.677/.496/.411; the 7000 spot features force λ=1000 and blur the short-lag weights. Whole-trial forecast: trial-average R² 0.94, single-trial 0.16. CL-trial disturbance R² at 29/57/86/143/200 ms and MPC/PI (trials lower than PI): AR trial-trained .876/.663/.494/.372/.301, 0.942 (83); DLinear 0.944 (81); session ARX+laser .927/.724/.500/.372/.292, 0.969 (66); ROI+laser 2-s .912/.707/.502/.373/.292, 0.961 (68); **whole-brain tuned .931/.758/.579/.455/.365, 0.896 (84)**; whole-brain 2-s .918/.739/.563/.433/.339, 0.933 (77). Perfect preview 0.138. All points sit on the earlier forecast-uncertainty line.
-**Why:** The user asked for a 2-s history of everything, held-out trial-level responses again, and the forecaster used in the MPC compared with our earlier MPC work. Whole-brain input is the first forecaster to move the MPC clearly below the 0.94 cluster, via +0.085 R² at 86 ms. Caveat: in the replay the spot traces during CL trials reflect the RECORDED PI command; under an MPC command the stim-responsive spots near the laser would differ. The same counterfactual caveat already applies to d.
-**Next:** Decide whether the whole-brain result goes into the supp figure (panel l / n) or the Discussion; that needs the user. Check the stim-contamination caveat by refitting with spots within ~1 mm of the laser excluded.
-
-### 2026-10-07 — Second parameter search (leads 29–143 ms): no further win; whole-brain ARX is at its ceiling
-**Changed/Found:** New `controller-analysis/mpc_arx_wb_tune2.py` tests five levers coordinate-wise from the tuned base (PY35, spots raw L10, QU35), each with its own per-lead λ, scored by validation R² averaged over leads 1–5 (fold-1 training only): group ridge (spot-block multiplier 0.1–10); causally high-passed spots (minus the trailing 2 s mean); spot PCA k ∈ {10,20,50} × L ∈ {10,20}; motion lags (d.motion, now in the `ctrl_mpc_arx_export.m` bundle); stim-on interaction (s·y lags, s·spots). Base mean validation R² is 0.8162. Changes: high-pass +0.0016, group multiplier 10 +0.0009, motion +0.0006, stim interaction +0.0002, PCA −0.001 to −0.005. The combination of all helpful changes gives +0.0030. Held-out OL test R² at 29/57/86/114/143 ms: base whole-brain .952/.831/.689/.576/.512, combined .952/.829/.686/.575/.510, ROI only .947/.806/.631/.518/.455, persistence .905/.703/.488/.321/.212. Lags (frames) at those leads: brain 1/1/2/3/4 vs ROI 1/1/3/4/5.
-**Why:** The user asked whether parameter search can win more, with leads extended to 150 ms. It cannot: the validation gains (≤0.003) do not transfer to held-out trials. The brain's advantage over ROI-only grows with lead (+0.025 at 57 ms → +0.057 at 143 ms), and it holds the forecast one frame earlier than ROI-only from 86 ms on.
-**Next:** Keep the base whole-brain config. Further gains need new information or a different model class, not hyper-parameters.
-
-### 2026-10-07 — Whole-brain ARX: tuning is flat; the forecast "lag" is intrinsic (brain model lines up 1 frame earlier than persistence at 86 ms)
-**Changed/Found:** New `controller-analysis/mpc_arx_wb_tune.py`: a grid over y lags {3,10,35,70} × spot lags {0,1,3,5,10,20} × past-stim lags {10,35} × λ 1e-3..1e3, scored by validation R² at lead 3 (86 ms) using fold-1 training data only (last 20% chronological). It then runs a 5-fold held-out OL test of best vs default vs ROI-only, and measures the lag as the shift that maximises corr(forecast, recording shifted). The validation surface is flat: best (PY35, L10, Q35, λ100) 0.7979 vs default (PY70, L10) 0.7974. Spot lags matter (L 0→1→10: 0.762→0.781→0.798); y lags beyond 10 and stim lags beyond 10 do not. Held-out OL test at 86 ms: tuned R² 0.689, default 0.687 (0.677 in mpc_arx_wholebrain, where λ was chosen on leads 1–35 rather than lead 3), ROI-only 0.628, persistence 0.488. Lag at 86 ms: the brain models line up at 57 ms, ROI-only and persistence at 86 ms. At 200 ms every model lines up at 200 ms, but the brain model's correlation profile is nearly flat (0.68 at 0 shift → 0.75 at 200 ms) vs persistence (0.55 → 1.00).
-**Why:** The user asked why the prediction lags and to tune parameters. The lag is the signature of a shrunk, mostly-persistence linear forecast of a partly unpredictable signal; parameter tuning cannot remove it. The brain inputs are what move the forecast earlier, by one frame at 86 ms.
-**Next:** Bigger gains would need a different information source or model class (nonlinear/state-dependent), not hyper-parameters. Adopt per-lead λ selection (λ≈100 at lead 3) in mpc_arx_wholebrain.
-
-### 2026-10-07 - Fig 4G: reach gate REPLACED by a standing-offset gate (offset > 1/3 of settled residual)
-**Changed/Found:** User decision after the diagnostic below. `f4_cl_reject_lmm.m`: `REACH_TOL=1.5` on the settled mean is gone, replaced by `BIAS_MAX=1/3` on the session's standing-offset SHARE of the settled residual energy, `biasFrac = (Aset-ref)^2 / mean(mean((A_CL-ref).^2,2))`. Struct field `reach` renamed `keep` (consumers updated: the script's own `sessMed`, and `paper_stats_table.m`). **Measured shares: AL_0051 59%, AL_0033_0212 38% | AL_0048 17%, then 10, 9, 8, 5, 4, 1, 1, 1, 0%.** The 1/3 threshold sits in the gap between 38 and 17, so no session is near it. **Pool: 11 sessions / 595 trials / 3 mice** (was 12 / 640 / 4). Session model GM RR **0.58 [0.46, 0.72], t(9.3) = -5.69, one-sided p = 1.3e-4**; session medians **11/11 below 1**, V = 0, p = 4.9e-4; mouse-nested now t(1.25) = -4.65, p = 0.049, GM 0.57 [0.22, 1.50] - still not a claim worth resting on. Final `f4_cl_reject_RR.pdf` rebuilt (11 sessions, ***). `STATS_TABLE.csv` regenerated. Manuscript: Methods exclusion rule rewritten (it had also gone STALE - it still described the pre-dF/F-fix state in which AL_0051 failed a 1.5 tolerance, which after the fix it did not), Results body + Fig-4 caption subsets + caption G updated. Builds clean, 39 pages.
-**Why:** The gate's stated purpose is to drop sessions whose residual is a standing setpoint error rather than unrejected disturbance. A threshold on the settled mean is a proxy for that and fails here: AL_0048 (1.33 %dF/F from ref) and AL_0051 (1.44) are indistinguishable by it, so every tolerance that rejects AL_0051 also rejects AL_0048 and takes the cohort to 2 mice. The offset share measures the stated quantity directly and separates them, because AL_0048's disturbance is large enough that its offset is a minor part of its residual.
-**Next:** Note for the write-up: this threshold was chosen while looking at which sessions it excludes. The criterion is the manuscript's own stated rationale and the 38/17 gap is wide, but if a referee asks, the defensible answer is the gap plus the sensitivity - at any threshold from 20% to 37% the same 11 sessions are kept. Worth stating that range in Methods rather than the bare 1/3.
-
-### 2026-10-07 — Forecaster evaluation switched to R²; 199 brain spots ≈ 100 spots (saturated)
-**Changed/Found:** `controller-analysis/mpc_arx_wholebrain.py` is rewritten to score everything as pooled R² on the held-out OL trials (user: model performance should be R², not MSE). It reports (a) k-step R² per lead, targets 0–3 s; (b) R² of the deviation from the stim-locked mean, i.e. 1 − SSE/SSE(training-fold OL average); (c) R² of the whole-trial forecast from −1 frame, single-trial and trial-average. It runs ROI-only, +100 and +199 spots in one pass. `ctrl_mpc_wb_export.m` gains an nSpot argument; files are tagged `_n<requested>`, and requesting 200 gives 199 on a 29.75 px grid. Bug fixed: the block scale for y used std over the warm-up frames (268 vs ~3), which over-penalised the y lags. k-step R² at 29/57/86/143/200/286 ms: ROI only .947/.805/.638/.440/.363/.300; +100 .948/.823/.677/.496/.411/.351; +199 .944/.818/.676/.502/.420/.361; persistence .905/.703/.484/.198/.098/.015. The stim-locked mean alone reaches only 0.07 at these targets: within 0–3 s nearly all variance is trial-to-trial fluctuation, not the stim response. Whole-trial forecast from −1 frame: single-trial R² ROI 0.16, +100 0.21, +199 0.21; trial-average 0.93/0.94/0.93.
-**Why:** The user asked for R² and 200 spots. Doubling the spot density adds nothing over 100 (differences ≤ 0.01), so spatial sampling is not the limit. The brain's added value is +0.04 R² at 86 ms and +0.06 at 143 ms.
-**Next:** Use the 100-spot model going forward (cheaper, same R²). Next comes the CL-trial design for feeding these forecasts to the MPC.
-
-### 2026-10-07 - AL_0051's RR = 1.94 is a STANDING OFFSET, not a small denominator and not a rejection failure
-**Changed/Found:** NEW `controller-analysis/f4_rr_denominator_check.m` (reads caches only, writes `data/f4_rr_denominator_check.mat`; takes `(mouse,fields)` as arguments because `impulse-analysis/load_experiments.m` does `clear all` and wipes the base workspace). It splits the RR numerator per trial into a standing-offset term and a fluctuation term, `mean((A-r)^2) = (mean(A)-r)^2 + var(A)`, and adds the open-loop comparator. **The small-denominator hypothesis is only half right.** AL_0051 does have the **smallest disturbance energy in the cohort** (msD = 1.265, rank 1 of 13), so the ratio is amplified - but that is not what puts it above 1. Across sessions the denominator does NOT drive RR (Spearman rho(msD, RR) = -0.19, p = 0.53) while the numerator does (rho(msErr, RR) = +0.56, p = 0.050), and AL_0051's numerator is entirely ordinary (msErr = 2.94, z = -0.16). **73% of its numerator is the constant setpoint bias** (bias^2 = 2.15 of msErr = 2.94; settled at -3.56 against ref -5, so offset^2 = 2.07). **With the offset removed its RR is 0.44**, which would be among the best sessions in the cohort (RR_fluct range 0.28-0.79). The same holds for the other high-RR session, AL_0033_0212 (the already-excluded non-reacher): 47% offset, RR_fluct 0.68. **Every one of the 13 sessions has RR_fluct < 1.** Prediction 4 (a poor Stage-2 predictor shrinks D) is NOT supported: rho(R2_te, msD) = +0.29, p = 0.33, and AL_0048 has the worst predictor (R2_te = 0.44) with the LARGEST disturbance (msD = 11.9).
-**Why:** User asked how to test whether AL_0051's RR is inflated by a small denominator rather than by poor control. The test had to be able to come out against the hypothesis, so it was framed as four falsifiable predictions.
-**Next:** **This exposes an inconsistency in the reach gate.** The manuscript justifies excluding non-reachers because "there the residual is dominated by a standing setpoint error rather than by disturbance rejection" - which is exactly the bias/fluctuation split, except the gate approximates it with a threshold on the settled mean and then still counts the bias inside the numerator of the sessions it keeps. Decomposing the numerator is the principled version of what the gate was reaching for, and it makes the gate far less load-bearing (AL_0051 currently sits 0.06 inside a 1.5 tolerance). Reach-gate sensitivity: tol 1.0 or 1.25 -> n = 10, median RR 0.68, 10/10 below 1 (drops AL_0051 AND AL_0048, i.e. a whole mouse); tol 1.5 or 2.0 -> n = 12, 11/12 below 1. Decision for Aditya, and it must be made on principle, not on which number comes out lower.
-
-### 2026-10-07 - OPEN-LOOP COMPARATOR for RR: closed loop is below open loop in 13 of 13 sessions
-**Changed/Found:** Same run. NUMBERS.md §5.3 has flagged since 2026-10-01 that "RR is CL-only. Computing RR on the OL trials of the same sessions is the obvious control and is nearly free." Done: applying the identical construction (same leak correction, same settled window) to the open-loop trials gives **RR_OL > RR_CL in 13 of 13 sessions (signed-rank on log ratios, V = 91, one-sided p = 1.2e-4), median RR_OL = 1.26 versus RR_CL = 0.72**. Open loop also sits above one on its own (9/13 sessions, V = 73, p = 0.029), i.e. the uncontrolled response carries MORE energy than the disturbance it faces, as it should when a fixed input cannot track. **This is a materially stronger control than the one-sample test the paper currently reports:** RR < 1 depends on how D is scaled, but RR_CL < RR_OL is a within-session paired contrast in which any error in the scale of D cancels. For AL_0051 specifically, RR_OL = 3.46 against RR_CL = 1.94 - feedback nearly halved the ratio in the one session that sits above one.
-**Why:** It was the decisive test of the small-denominator hypothesis (a weak D inflates BOTH conditions), and it was already an open control in NUMBERS.md.
-**Next:** Strong candidate for Fig 4G: plot OL and CL per session as a paired comparison instead of CL alone against the RR = 1 line. That reframes the panel from "is CL below 1" (scale-dependent, and one session is not) to "is CL below OL" (paired, unanimous). Needs the user's decision before any panel or text change; the trial-level pooled LMM would also need re-running with condition as a fixed effect.
-
-### 2026-10-07 — Whole-brain ARX (100 spots) beats ROI-only by 5–7% at 57–143 ms on held-out OL trials
-**Changed/Found:** New `controller-analysis/ctrl_mpc_wb_export.m`: corrected SVD (cp_loadUVt, 200 SV), the cached brain outline (cp_roi_masks contra|ipsi, eroded 3 px) in the session's cp_orient view, and a square grid at 42 px spacing giving exactly 100 spots. Each spot is a 5×5 px mean-image dF/F; the SVD clock equals timeBlue (138,286 frames each). New `controller-analysis/mpc_arx_wholebrain.py`: DIRECT multi-step ridge, one regression per lead 1..141, using the ROI's last 70 frames, past stim (35 frames), the scheduled stim up to t+h, and for "wb" also the last 10 frames (286 ms) of all 100 spots. λ is chosen by validation MSE over leads 1–35 (wb 1e-3–1e-2, uni 1e-2). Same 92-OL-trial folds and exclusions as mpc_arx_ol_recon. Spot vs ROI correlation: median 0.64, max 0.89. Held-out OL k-step RMSE at 29/57/86/143/200 ms: wb 0.56/1.04/1.41/1.75/1.89, uni 0.59/1.12/1.51/1.85/1.97, persistence 0.79/1.38/1.80/2.22/2.35, so wb/uni = 0.93–0.95 out to 200 ms and 0.98 at 1 s. Free run from −1 frame: trial-average R² uni 0.93, wb 0.94; median per-trial RMSE 1.52 vs 1.51. High-weight spots for the 86 ms forecast are spread across both hemispheres, not only around the laser site. Ridge weights at small λ are noisy, so the map is suggestive only.
-**Why:** The user asked for whole-brain input (100 evenly spaced spots, with time history). Direct forecasting avoids having to forecast the 100 spots themselves. The brain adds a real but modest gain at the MPC-relevant 57–143 ms leads, about a 0.1 %dF/F RMSE reduction.
-**Next:** Translate the forecast gain into an MPC gain. A ~7% lower forecast error at 86 ms is small against the uncertainty sweep slope (panel n), so expect roughly 0.94→0.90× PI at best; verify by feeding wb forecasts into the CL replay. That needs the CL-trial design the user wants to brainstorm, since PI was in the loop.
-
-### 2026-10-07 — BUG: dFk rolling-baseline warm-up (first 1399 frames, values up to 5.8e4) contaminated the continuous-session Python fits; plus order-selection fixes
-**Changed/Found:** The rig's online dF/F uses a trailing 1400-frame (40 s) baseline, so the first 1399 frames of `data.dFk` are garbage (|y| > 50 on 922 frames, up to 58,000). `ctrl_mpc_arx_export.m` now exports a `valid` mask; `mpc_arx_forecaster.py`, `mpc_arx_ol_recon.py` and `mpc_arx_wholebrain.py` AND it into every usable-frame mask. The first trial starts at frame 11,146, so the MATLAB trial pipeline and the locked supp_mpc panels are UNAFFECTED. On clean data, the paper's AR(valQL) rule picked p=1 in every fold, even with a full order scan, because validation MWQL also rewards interval calibration and prefers a wide-band AR(1) whose point forecast is worse (lead-1 RMSE 0.67 at p=1 vs 0.55 at p=10). DEVIATIONS from Lu et al., both documented in `mpc_arx_forecaster.py`: SEL_METRIC='mse' (the MPC uses only the point forecast), SEL_H=7 (score leads up to 200 ms, the MPC preview), FULL_SCAN over orders 1–20 then every 5 to 150. Corrected numbers: OL reconstruction ARX p 10–14, trial-average R² 0.81 (was 0.58 contaminated), median per-trial RMSE 1.59 (was 1.63), k-step 86 ms 1.51 (was 1.52); ARX+CL is still the same as ARX. Disturbance forecaster pyar/pyarx p=10: MPC 0.979× PI (58/108) and 0.969× (66/108); were 0.993/0.961 contaminated. The trial-trained MATLAB AR at 0.942× remains the best.
-**Why:** Caught when the whole-brain spots correlated r≈0 with the ROI, which is impossible for spots next to the laser site. Root cause: std(y) = 268 %dF/F from the warm-up frames.
-**Next:** Any future script that uses `data.dFk` over the whole session must drop the first `d.params.horizon − 1` frames.
-
-### 2026-10-07 — ARX trained on spont + OL (stim as input) predicts the held-out OL stim response; AR cannot; adding CL changes nothing
-**Changed/Found:** New `controller-analysis/mpc_arx_ol_recon.py` models the online dF/F y directly: y = AR lags + laser-command lags + c, with orders chosen by Lu et al. AR(valQL), validated with the known future stim. 5-fold CV over the 92 OL trials (seed 7); each test window (−1..+5 s, padded by the max lag) is excluded from training. Training = spont (69% of the 66-min session) + training-fold OL; ARX+CL also adds all 108 CL trials. `mpc_arx_forecaster.py`: `select_and_fit` gets a `known_u` flag (validate with the true future command; search p with the 35 u-lags in place), defaulting off so the earlier pyar/pyarx results are unchanged. Orders: AR p 58–70; ARX p 64–70, q 35; ARX+CL p 70–77. Free-run simulation from −1 frame, given only the stim command (0–3 s): median per-trial RMSE AR 4.40, ARX 1.63, ARX+CL 1.64, template 1.62. Trial-average R²: ARX 0.58, ARX+CL 0.55, AR −26. k-step with known stim, RMSE at 57/86/200 ms: ARX 1.12/1.52/2.01, AR 1.18/1.63/2.27, persistence 1.38/1.80/2.35, template 2.46. The learned step response is consistent across folds (−3.5 at ~0.7 s, partial recovery to ~−3 by 1.5 s) and the same with CL included. The ARX free run under-predicts the sustained suppression after 1 s (−3 vs −4) and the post-offset rebound.
-**Why:** The user wants to confirm that a model trained on spont + OL with the stim fed in predicts the stim response before designing how to use it on CL trials. Answer: yes for ARX; the paper's AR cannot (no input). Adding CL feedback data neither biases nor improves the OL prediction. Its lower validation MWQL is not comparable because its validation split contains CL frames.
-**Next:** Discuss with the user how to use the ARX on CL trials, given that PI was in the loop. Possible fixes for the sustained-level error: a longer u-lag window (q > 35, so the 3 s plateau is inside the input memory) or a stim-on indicator input. The trial-average legend now flags the template R² as trivial (fold mean ≈ grand mean); fixed for the next run, and the PNG still shows the old label.
-
-### 2026-10-07 — Python Lu et al. AR (+ laser-command ARX) on the continuous session → MPC: no better than trial-trained AR
-**Changed/Found:** New `controller-analysis/ctrl_mpc_arx_export.m` exports the continuous-session disturbance d = dFk − plant(u): 138,286 frames (65.9 min), plus the laser command, CL onsets, the forecaster folds and Dmean. It is v7 so scipy can read it without h5py. Matches the trial DEP to 0.032 max; the residual is plant state carried through the ITI. New `controller-analysis/mpc_arx_forecaster.py` reimplements AR(valQL) from Lu et al. 2025 (arXiv:2510.18037) in numpy: univariate Gaussian AR, lag order grown until validation MWQL fails to improve 10× in a row, then refit on train+val. It adds an ARX variant with laser-command lags (future command held), runs 5-fold CV on the same folds as ctrl_mpc_forecasters, and excludes test-trial windows from training. `ctrl_mpc_lqr.m` gets a new `P.fcstFile` option so it can read these forecasts. Results: order p=70 in all 5 folds; ARX q=35. Error/climatology at 86 ms: pyar 0.757, pyarx 0.713, MATLAB trial-trained AR 0.71. MPC at 200 ms preview: pyar 0.993× PI (beats PI on 56/108 trials), pyarx 0.961× (68/108), trial-trained AR 0.942× (83/108).
-**Why:** The user asked to run Ziyu's AR on our widefield data plus stim and use it in the MPC. Finding: the paper's recipe, trained on the whole session (mostly spontaneous ITI), forecasts the in-trial disturbance worse than an AR trained on trial snippets. The stim-window disturbance is not stationary relative to the session, and the laser-command lags recover only part of the gap. The supp-figure conclusion is unchanged: no forecaster beats about 0.94× PI.
-**Next:** Optional: (a) multivariate ARX with the contra/Global region as an extra input (needs the SVD → contra ROI trace, not in the dFk cache); (b) fit the session ARX on departures from the stim-locked mean. Keep pyar/pyarx out of the locked panels unless the user wants them added to panel l.
-
-### 2026-10-07 — Supp MPC panels locked into figures_final/panels/supp_mpc (15 PDFs)
-**Changed/Found:** Added a `[supp_mpc]` section (15 panels, lettering a–o) to `paper/figures_final/MANIFEST.txt`, plus a matching row in `PAPER.md` "Supplementary figures in use". New `controller-analysis/ctrl_mpc_export.m` writes the PNG, and with PAPER_FINAL on it also writes the vector PDF, which `paper_final_mirror` drops into the final folder. All 8 MPC producers now export through it. Re-ran every producer with PAPER_FINAL on, and all 15 PDFs landed. `ctrl_mpc_equation_panel.m`: canvas widened 8.9→9.4 cm because the PDF overhung by 0.27 cm (now 9.17×3.74). `git rm controller-analysis/ctrl_mpc_supp_fig.m`: it was obsolete, svd-frame, and also wrote mpc_A_plant_fit.png, which would have clobbered the new panel. Held panels (F, N, J) are not listed.
-**Why:** User: "put plots in supplementary panel folder".
-**Next:** Assemble S-MPC in Illustrator. Paste the caption and Discussion/Methods snippets (2026-10-07 chat) into Overleaf. Held panels stay working copies only.
-
-### 2026-10-07 — Supp MPC figure: panel selection, equation panel, draft layout
-**Changed/Found:** New `controller-analysis/ctrl_mpc_equation_panel.m` → mpc_0_problem.png (the QP solved every frame, with its parameters). New `controller-analysis/ctrl_mpc_supp_montage.m` → _draft_supp_mpc_layout.png, a 15-panel review mock-up (a–o). The user selected: equation, plant fit, f3s A–G, preview window, forecast skill, MPC-by-forecaster, uncertainty sweep (both x-axes), λ vs error. HELD (not in the figure): mpc_F_smooth_tradeoff (roughness vs error), mpc_N_lambda_roughness, mpc_J_kalman_bias_noise.
-**Why:** The user asked to construct the supp figure and its story from the current panels.
-**Next:** Get the user's sign-off on the story, caption and Methods text. Then add the panels to MANIFEST.txt/PAPER.md and export as PDF with PAPER_FINAL.
-
-### 2026-10-07 — MPC panels A/E/F regenerated in the Fig-3 frame; svd-frame B/C/D retired
-**Changed/Found:** New `controller-analysis/ctrl_mpc_plant_fig.m` redraws panel A (plant fit) from the Fig-3-frame identification: recorded OL trial average (n=92) vs the model (τ=159 ms, 57 ms delay, fit 82%). `ctrl_mpc_preview_sweep.m` now runs in the fig3 frame with the replay PI (Kp 0.10, Ki 1.5). Result: a perfect preview saturates exactly at 86 ms, i.e. the loop delay plus one sample (1.1 → 0.12× PI). The AR forecast gives 0.94× from 114 ms on, and half the AR error gives 0.53×. `ctrl_mpc_smooth_tradeoff.m` was rerun with the qb fix: AR 0.95/0.94/0.93/0.98× PI at λ=0/1/10/100, with roughness 21/17/9.2/3.6 (PI 8.6, recorded CL 11.8). Fixed label overlaps in both. Moved the svd-frame mpc_B/C/D into paper/images/supp_mpc/_stale_svd_frame/; they are superseded by H, K/L and f3s_A.
-**Why:** The user asked for all panels to pick from for the supp figure. A–F were stale (wrong frame, rd=10, qb=1, double-counted gain spread).
-**Next:** The user picks panels, then we draft the supp layout, caption and story. `ctrl_mpc_supp_fig.m` is now obsolete; retire it once the selection is made.
-
-### 2026-10-07 - Manuscript: controllability -> regularizability + attenuation; gap trend + internal model principle in Discussion
-**Changed/Found:** `Closedloop_edit/{methods_rewrite,results,discussion,main}.tex` + `refs.bib` (+Francis & Wonham 1976, `francis1976internal`). Methods defines predictability (OL slope), **regularizability** (CL slope, CL reference refit) and **attenuation** (cond x state on log RMSE = slope of log CL/OL, the empirical sensitivity function), states why the interaction is not used (it cannot separate "OL rises, CL holds" from other combinations), and gives two families: P+R = 8 tests (Bonferroni 0.0063), attenuation = 4 tests (0.0125), kept isolated as its own paragraph. Results 4D rewritten; units corrected to %dF/F RMSE per within-session SD of state (the earlier "SD per SD" was wrong - the LMM is on RAW RMSE, only the bars are z-scored). Caption D now P/R with exact p. Discussion: new internal-model-principle paragraph (PI = integrator model; motion inside the modelled class, 2-4 Hz outside; gap trend reported there with its numbers, explicitly not used to judge regulation; resonant-mode controller as the testable prediction). Abstract: "more steerable" replaced. Built clean, 39 pages.
-**Why:** User 2026-10-07: rename steerability -> regularizability to keep the internal-model-principle wording, move the gap trend to the Discussion without clashing with controllability, find a word for rejection efficiency (-> attenuation), keep it isolated, remove the 4D gap lines.
-**Next:** Regularizability and attenuation were adopted AFTER the gap-trend result was seen; the conceptual reason is real (interaction confounds), but decide whether to say so in Methods. Abstract is now at ~248/250 words.
-
-### 2026-10-07 - f4_row2_fit: regularizability (CL slope) + attenuation (log CL/OL slope); 4D panel P/R, gap line removed
-**Changed/Found:** `utils/f4_row2_fit.m` refits the same model with CL as reference (xw = CL slope = REGULARIZABILITY) and on log(RMSE) (cond x xw = slope of log CL/OL = ATTENUATION), both on the shared df cap; the raw-RMSE interaction is kept as the GAP TREND. `f4_row2_quartiles.m`: second annotation is now R (arrow up iff CL error falls), black gap line + 'gap' legend removed; final `f4_row2_quartiles.pdf` rebuilt. `paper_stats_table.m`: 4D rows pred/reg/att/gaptrend (54 rows). Results (raw %dF/F RMSE per SD of state): **initdev** P +0.24 p=1.7e-5, R +0.23 p=3.5e-5, att +0.003 p=0.88; **motion** P +0.14 p=0.0069, **R -0.06 p=0.24 (holds)**, **att -0.073 p=0.015 (improves)**; **rel 2-4 Hz** P +0.04 p=0.36, **R +0.16 [0.08,0.24] t(14)=4.22 p=8.6e-4 (loses output; clears Bonferroni)**, att +0.061 p=0.012; **abs 1-4 Hz** P +0.44 p=5.7e-9, R +0.50 p=1.2e-9, att +0.081 p=8.9e-4. Gap trend: motion -0.20 p=0.0097, others n.s. (rel 0.050).
-**Why:** The gap trend cannot detect "CL just gets worse" - exactly the rel 2-4 Hz case, which it left borderline while the CL slope is unambiguous.
-**Next:** User re-places 4D in Illustrator.
-
-### 2026-10-07 - Manuscript statistics pass: every claim now estimate + CI + t(df) + exact p + n
-**Changed/Found:** `Closedloop_edit/{methods_rewrite,results,discussion,main}.tex` (21 edits, scratchpad `stats_pass.py`), all numbers from `paper-writing/STATS_TABLE.csv`. Methods: subsection renamed **Experimental Design and Statistical Analysis** (JNeurosci-required title) with a new Design paragraph (within-session interleaved OL/CL, session = unit of replication, cohort sizes + sex 2M/2F for the controller cohort, pointer to Table 1), the df-cap rule, the reporting convention, the Fig-4G session-level model + nested caveat, the Fig-2G model, and a new Multiple-comparisons paragraph (Fig 4D = 8 tests reported uncorrected, Bonferroni threshold 0.0063 stated; Fig 2G = 3 tests). Results: Fig 2G, Fig 3 body + captions H/I, Fig 4D body + caption, Fig 4G body + caption all rewritten; **0 inexact p-values remain** (grep-verified); the vague "all p < 5e-4" sentence is replaced by four effect sizes with CIs. rel-delta softened to "weak trend" (Fig 2) and "suggestive ... did not reach significance" (Fig 4D); the "sets the irreducible closed-loop error" sentence rewritten. Discussion: bandwidth argument now cites Fig 4C only, not 4D. Abstract: "across all sessions" corrected to "all 15" (accuracy) and "14 of 15" (variability). Built clean, 38 pages.
-**Why:** User decision 2026-10-07: report uncorrected, state 8 tests, soften rel-delta; then "do all in the order of work".
-**Next:** Two `%% CHECK` items left for Aditya in Methods (no power analysis; not blinded). User re-places panels 2G, 4D, 4G in Illustrator.
-
-### 2026-10-07 - NEW paper_stats_table.m + STATS_TABLE.csv: one table the manuscript quotes
-**Changed/Found:** `paper-writing/paper_stats_table.m` (new) loads the saved outputs of the five producers and writes `paper-writing/STATS_TABLE.csv`, 46 rows: id, figure, claim, effect, unit, CI, test, statistic, df, exact p, sidedness, n and its unit, source script. It recomputes nothing, so a stale row means a producer was not re-run. `variance_mse.m` and `f4_row2_quartiles.m` now save the two results that were previously typed from the console (Fig-3H window signed-ranks with V; Fig-4 within-session motion slopes), to absolute paths - `run()` changes the CWD, which had sent `f4_row2_lme.mat` into `controller-analysis/data/` while a stale 2026-10-02 copy sat in `data/`.
-**Why:** The Fig-3 caption p-values had gone stale (pre-m14/m15 values still printed) because numbers were hand-copied; one generated table removes that failure mode.
-**Next:** Re-run `paper_stats_table` after any producer re-run, and diff the CSV.
-
-### 2026-10-07 - LMM df bug: predictability tested against TRIALS; one df rule now shared by every fit
-**Changed/Found:** NEW `utils/lmm_cluster_df.m`: caps Satterthwaite df at nSessions-1 (falls back to nSessions-1 when Satterthwaite returns 0/NaN) and recomputes p and a t-based CI. Wired into `utils/cl_olcl_lmm.m`, `utils/f4_row2_fit.m`, `controller-analysis/f4_cl_reject_lmm.m`, `impulse-analysis/imp_state_trialvar.m`. Three defects it fixes: (1) **`f4_row2_quartiles.m` read the Fig-4D PREDICTABILITY p from `lme.Coefficients` = fitlme's RESIDUAL df (~1640, the trial count)** while controllability came from Satterthwaite - two references in one panel; it now reads `Rf.slopeP`. (2) Even Satterthwaite reverts to trial-level df for the cond x state interaction and the state slope (no random slope on state: df 1164-1652). (3) `f4_cl_reject_lmm.m` and `imp_state_trialvar.m` used fitlme defaults (ML + residual df 594 / ~1766) despite the Methods claiming REML + Satterthwaite. All helpers now also return t and df (`gapT/gapDF`, `slopeT/slopeDF/slopeP/slopeCI`, `decT/decDF`), keeping the raw Satterthwaite values alongside.
-**Why:** The Methods promised that between-session contrasts are referenced against sessions; the code did not deliver it, and the Fig-3 boundary-fit entry of 2026-10-02 had already shown df 71/85 from 15 sessions.
-**Next:** Consider the principled version for Fig 4D - a random slope on state, `(1+cond+xw|sess)` - as a sensitivity check; the cap is a conservative approximation of it.
-
-### 2026-10-07 - Fig 3 re-run with t/df: all six effects hold; caption values were stale
-**Changed/Found:** `fig3_olcl_stats.m` now stores `lmm_t`, `lmm_df`, `sr_V`, OL/CL medians and median ratio. Results (n = 15 sessions, 4 mice, 1670 trials): RMSE 0-3 s gap -0.63 [-0.76,-0.51] t(13.9)=-10.7 p=4.0e-8; 0-1 s -0.46 [-0.62,-0.31] t(14)=-6.39 p=1.7e-5 (was Satterthwaite df 71.0, p 1.5e-8); 1-3 s -0.75 [-0.91,-0.58] t(13.8)=-9.87 p=1.3e-7; log-variance 0-1 s -0.28 [-0.39,-0.16] t(14)=-5.28 p=1.2e-4 (was df 84.6); 1-3 s -0.52 [-0.67,-0.38] t(14)=-7.84 p=1.7e-6. Signed-rank V=116-120, CL<OL in 14-15/15. Fig-3H windows: pre 0.99 V=56 p=0.85; 0-1 s 1.60 V=116 p=4.3e-4; 1-3 s **1.87** V=120 p=6.1e-5; post 1.00 V=54 **p=0.76**. The caption had said 1.78 and 0.49 and the LMM p 4.7e-4/4.1e-6 and 1.8e-7/1.0e-6 - all pre-m14/m15-fix values.
-**Why:** JNeurosci requires t(df); the stale caption was found in the process.
-**Next:** none - stars unchanged, so Fig-3 panels (built 2026-10-05) stand.
-
-### 2026-10-07 - Fig 4D re-run at session df: rel-delta controllability 0.032 -> 0.050 (n.s.); panel rebuilt
-**Changed/Found:** `f4_row2_quartiles.m` with PAPER_FINAL (final panel `f4_row2_quartiles.pdf` rewritten). Session-referenced: initdev pred +0.24 t(14)=6.40 p=1.7e-5, ctrl p=0.75; **motion pred +0.14 t(10)=3.39 p=0.0069 (was 7.3e-4), ctrl -0.20 t(10)=-3.19 p=0.0097 (was 0.0015)**; **rel 2-4 Hz pred p=0.36, ctrl +0.12 [-0.00,+0.24] t(14)=2.14 p=0.050 (was 0.032 on ~1642 df)** -> panel now prints "C n.s."; abs pred +0.44 t(14)=12.5 p=5.7e-9, ctrl p=0.25. Gap at mean state p=3.3e-8..3.7e-5. Against Bonferroni over 8 (0.0063) only initdev and abs predictability survive; motion misses narrowly, so the text leans on the independent within-session slope test (11/11 sessions, V=66, p=9.8e-4). Within-session motion slopes reproduced exactly (+0.13 / -0.05 / 11-of-11) - z-scoring is within session AND condition, which the Results now say.
-**Why:** The df fix above; user asked to update panels if needed.
-**Next:** User re-places 4D in Illustrator. The rel-delta thread is now n.s. in both Fig 2G and Fig 4D - see FINDINGS-level implication in the session summary.
-
-### 2026-10-07 - Fig 4G re-run: AL_0051 now passes the reach gate; nested model has 2.5 df; session model adopted
-**Changed/Found:** `f4_cl_reject_lmm.m` re-run (the pending post-mode-switch rerun). **AL_0051 settled at -3.56 (margin 1.44 < 1.5) and now REACHES**, so the pool is **12 sessions / 640 trials / 4 mice**; its median RR is 1.94, the only session above 1. Under REML + Satterthwaite the mouse-nested intercept has **df 2.5**: GM RR 0.73 [0.29,1.82], one-sided p=0.16 (and even the old 11-session pool gives df 1.2, p=0.049 - the paper's 2.1e-8 was the residual-df artifact). Session-clustered `logRR ~ 1+(1|sess)`: **GM 0.63 [0.48,0.83], t(10.8)=-3.69, one-sided p=0.0018**; session medians 11/12 < 1, signed-rank V=10, p=0.010. Script now fits and saves both models (`sessM`, `lmeS`); `f4_cl_reject_panel.m` draws the session-model band and star (**), final `f4_cl_reject_RR.pdf` rebuilt with 12 sessions. Manuscript reports the session test as the result and the nested model as the mouse-level caveat, in both body and caption.
-**Why:** Methods say mouse-nested REML/Satterthwaite; applied honestly, a 4-mouse intercept test cannot be significant, so the claim has to be stated at the session level.
-**Next:** **Decision for Aditya:** keep "rejection at the session level, not established across animals" (current text), or add sessions from AL_0048/AL_0051 to make the mouse level testable. The reach tolerance (1.5) now decides whether AL_0051 is in, and it is 0.06 inside it - a referee may ask for a sensitivity analysis at tol 1.0/2.0.
-
-### 2026-10-07 - Fig 2G re-run at session df: motion p=0.016, rel-delta p=0.068 (n.s.); panel rebuilt
-**Changed/Found:** `imp_state_trialvar.m` (REML + Satterthwaite + df cap, saves t/df/CI), then `imp_state_trialvar_fig.m` with `STVF_PAPER=true` (and `clear STVF_UNITS` - a stale workspace value silently skipped the paper panel). Final `imp_state_var_combined.pdf` rewritten 10:59. With 4 sessions the cap gives df 3: **motion t(3)=-4.97 p=0.016 (was 7.3e-7), 4/4**; **rel 2-4 Hz t(3)=2.80 p=0.068 (was 0.005), 3/4 - no longer significant**; abs 2-4 Hz t(3)=17.5 p=4.1e-4 (Satterthwaite had returned df 0 here; the util now falls back to n-1). Quartile ratios and controls unchanged.
-**Why:** Same df rule. The intercept-only session model left the state slope tested against ~1766 trials.
-**Next:** The rel-delta result is now weak everywhere it appears (Fig 2G n.s., Fig 4D n.s., reverses sign on the Ye dataset per NUMBERS). Worth deciding whether rel-delta stays a named state variable or becomes a secondary/supplementary measure.
-
-### 2026-10-07 — Introduction rewrite applied to Closedloop_edit `draft` (6228a1b); 27 refs added
-**Changed/Found:** `Closedloop_edit/introduction.tex` replaced with the 5-paragraph draft from the 2026-10-05 lit review (state-dependent variability → mesoscale tools → closed-loop prior work → gap → Here-we covering Figs 2–5). `refs.bib`: 27 new entries pulled as BibTeX from doi.org records (no hand-typed author lists); Salkoff/Nozari set to print year (2020/2024); `Zaaimi2022` year field → 2023 (key kept so discussion.tex still resolves). Fig-5 sentence worded "demonstrated the feasibility" (no tests on Fig 5). Builds clean, 37 pp, 0 undefined cites, 0 BibTeX warnings.
-**Why:** the 10-05 draft was only given as a chat snippet and never applied; user asked why it was missing from the paper draft.
-**Next:** Aditya reviews `git diff main..draft` → merge → push → Overleaf pull. Dropped intro cites (Cunningham2014, saxena2019towards, wekselblatt2016large, pinto2019task, deisseroth/fenno, Ren2021, ghanbari2019cortex, mohajerani2013spontaneous, vanni2014mesoscale) are now uncited in the intro — re-add any wanted. Consider citing Shimaoka2019 in the Results/Discussion contra-disturbance section.
-
-### 2026-10-07 - Results audited against JNeurosci statistical-reporting rules: 26 p-values, 0 with df
-**Changed/Found:** No file edited - audit only. JNeurosci requires (a) a Materials and Methods subsection titled exactly **"Experimental Design and Statistical Analysis"** covering design, control groups, sample sizes and sex of subjects, (b) **complete results of every test: degrees of freedom, effect sizes and EXACT p-values, not ranges**, and (c) figures that show the full variability of the data rather than bar/line summaries alone. Measured against `results.tex`: **26 p-values reported; 3 carry a confidence interval (lines 68, 124, 242); 0 carry a test statistic or degrees of freedom.** Five inexact p-values, at lines 68 (`p < 10^-16`), 103 (`all p < 5e-4`, covering FOUR separate tests), 121 (caption, `p<10^-6`), 176 (`p <= 3.7e-5 for all four factors`), 191 (`p < 10^-6`). The line-103 case is the worst: the body is vaguer than its own figure caption, which already prints all four exact values (4.7e-4, 4.1e-6 for variance; 1.8e-7, 1.0e-6 for RMSE). Our Methods subsection is titled `Statistics` (`methods_rewrite.tex:1200`), not the required title, though its CONTENT is already strong (REML rationale, Satterthwaite df, explicit n-is-sessions-vs-trials rule, the Fig-5-is-descriptive statement). **The fix is mostly a reporting change, not a re-analysis:** `fig3_olcl_stats.m:84` already stores `lmm_gap` and `lmm_ci` next to `lmm_p`, so the effect sizes and intervals for the headline Fig-3 claims are ALREADY ON DISK and simply are not printed; `f4_cl_reject_lmm.m:54` already computes `tStat` and `DF` and saves the whole `lme` object. Degrees of freedom for the Fig-3 models are the one thing not cached (G3 keeps p/gap/CI only), so `fig3_olcl_stats.m` needs one re-run to capture `Coefficients.DF` and `tStat`.
-**Why:** User asked how results are conventionally reported and for a review against the journal's guidelines.
-**Next:** See TASKS. Order of work: rename the Methods subsection; print the four exact p-values at line 103 from the caption values we already have; add estimate+CI to every mixed-model claim from the cached `lmm_gap`/`lmm_ci`; re-run `fig3_olcl_stats.m` once to capture df and t.
-
-### 2026-10-07 - MULTIPLE COMPARISONS: the rel-delta controllability claim would not survive correction
-**Changed/Found:** Surfaced by the same audit. Fig 4D tests four state factors on two properties (predictability and controllability) = **eight tests**, and no correction is stated for that family anywhere in Methods or Results - the only Bonferroni sentence in the paper covered the batch-mean stationarity check, which has since been deleted with S4. The relative 2--4 Hz **controllability** result is reported at **p = 0.032**; Bonferroni over eight tests puts it at 0.26, and even Holm would not save it since it is the weakest of the family. This is not a peripheral number: it is the "ongoing low-frequency fluctuation sets the irreducible closed-loop error" claim, which the Results paragraph builds the internal-model story on and the Discussion then ties to the ~2.6 Hz loop-bandwidth argument. It is also already known to be fragile - RESEARCH 2026-10-02 records this same p swinging 0.009 <-> 0.074 on a one-sample window change before the continuous-PSD estimator stabilised it at 0.032, and TASKS records only 3 of 4 sessions agreeing in sign for the related Fig-2 rel-delta effect.
-**Why:** A referee applying the journal's own rigor standards will ask for the correction, and the claim is positioned as a headline.
-**Next:** Decide the defensible framing BEFORE submission. Options: (a) declare the eight tests a pre-planned family and report corrected p (the rel-delta claim then becomes "suggestive, uncorrected p = 0.032"); (b) argue predictability and controllability are two pre-specified contrasts per factor and correct within factor only (4 tests, p = 0.13 - still not significant); (c) keep it uncorrected but state the number of comparisons explicitly and soften the claim in both Results and Discussion. Do NOT leave it unstated.
-
-### 2026-10-06 - One vocabulary for the session subsets: "qualifying" vs "motion-tracked"
-**Changed/Found:** `results.tex`. The Fig-4 caption was carrying **two different sets of eleven sessions** a few words apart - the 11 with a usable motion trace (panels C and D) and the 11 that enter the rejection analysis (panel G) - with nothing to tell a reader they are different animals' sessions. Fixed by naming each set once and using the name everywhere: **motion-tracked sessions** (11 of 15, panels C/D) and **qualifying sessions** (13 of 15 admit a contralateral predictor; 11 of those reached the setpoint, panel G). The caption now says in one clause that the two elevens are different sets. The body paragraph was also reordered: the qualifying criterion and the two exclusion steps are stated BEFORE the statistic instead of after it, so the denominator is established before n=11 is quoted, and the statistic itself now reads "n = 11 qualifying sessions that reached the setpoint". Caption G gained the criterion in one sentence. Build clean, 36 pp, 0 undefined.
-**Why:** User, 2026-10-06: "make the writing consistent saying the qualifying sessions". The counts were all individually correct but used four different phrasings for three different subsets.
-**Next:** none.
-
-### 2026-10-06 - The Fig-4G 15->13 drop is m1 and m13, NOT the dual-opsin mice
-**Changed/Found:** Traced in code (background agent, then verified the quoted comments and `NUMBERS.md:201` by hand). **My hypothesis was wrong.** The two sessions that leave the rejection pool before the reach gate are **m1 (AL_0033 2025-01-20 e3)** and **m13 (AL_0039 2025-04-20 e2)**, both because the Stage-1/Stage-2 contra->ipsi predictor cache does not exist for them (`f4_cl_reject_lmm.m:27` silently `continue`s on `~S.ok`, set at `imp_build_session.m:24-28`). m1 has **no decomposed full-frame widefield SVD on the server at all** - the raw 101 GB `widefield.tar` was never decomposed (`ctrl_ols_spont.m:37`). m13's online `dFk` is **75 frames short of the SVD with corr 0.03 and scattered frame loss**, so it is built against the `yfull` target, which `imp_build_session.m:31` then rejects: `yfull` is not ref-referenced (~1.5x scale) and the RR numerator ||A-ref||^2 is not scale-invariant (`ctrl_ols_ol_stimblind.m:92-99`). **m14 (AL_0048) is IN the n=11 pool** (medRR 0.77, 55 trials, "Mouse3a"); **m15 (AL_0051) is one of the two non-reachers**, removed by the reach gate itself (settled -3.38 vs ref -5, margin 1.62 against tol 1.5). There is no filter anywhere in that pipeline keyed on dual opsin, bilateral stimulation or hemisphere. Independently corroborated by `NUMBERS.md:201` ("11 = {m2...m12}") and by the 11 tick labels on the locked panel. The manuscript now states the reason in Results and names it in the Fig-4 caption.
-**Why:** The paper reported 15 -> "11 of 13" with the 15->13 step unexplained; a referee totalling the sessions would find it.
-**Next:** Two caveats from the trace, both worth knowing: (a) the saved `f4_cl_reject_lmm.mat` is dated 2026-09-28, BEFORE the 2026-10-01 switch of m14/m15 dF/F from mode 1 to mode 2, so m14's and m15's `Aset`/`medRR` may move on a rerun - m14's reach margin is comfortable (0.83) but **m15's is borderline (1.62 vs 1.5) and could flip**, which would change n from 11 to 12. Rerun `f4_cl_reject_lmm.m` before submission. (b) the 13-session pool is specific to the `'ridge'` predictor default (`utils/ctrl_pred_tag.m:29`); under `'softblind'` the available caches are a different 12-session set. If m1's widefield is ever decomposed, the pool grows.
-
-### 2026-10-06 - Alyx confirms the AL_0034 date was a year wrong; cohort table filled
-**Changed/Found:** Queried Alyx read-only (alyx.steinmetzlab.net) through the token DataBrowser had already cached at `~/.databrowser/auth.json`, using plain REST GETs - the DataBrowser package itself is a Python/Qt desktop app and its conda env is not installed on this machine, but none of it is needed to read session metadata. **The date conflict is settled: AL_0034's ENTIRE recorded history is 2024-07-25 to 2024-12-06, 28 dates, with no 2025 session at all.** So the cohort table's `2025-10-17` was wrong and the Methods body's `2024-10-17` is right; 2024-10-18 and 2024-10-25 (the unscorable fifth sweep and the auto-tuning sessions) are both real Alyx dates too, so the body checks out in full. Table corrected. Possible origin of the typo: AL_0041 does have a 2025-10-17 session, so the wrong row may have been copied from it. Every other row's dates fall inside that animal's Alyx range (AL_0033 2024-06-21..2025-08-08, AL_0039 2025-03-20..2025-10-03, AL_0048 2026-04-22..2026-09-25, AL_0051 only 2026-07-29). **Table-1 FILLs answered:** all six animals are C57BL/6J carrying tetO-g8s + tTA (= GCaMP8s); sex is AL_0033 M, AL_0034 F, AL_0039 F, AL_0041 F, AL_0048 M, AL_0051 F. AL_0039 and AL_0041 also list eGFP at zygosity 0, i.e. ABSENT - not an indicator, must not be reported as one. Ages from birth dates against the session dates: 4.9-11.1 months at first session, 14.1 at the last, written as "5--14 months". **Second-construct FILL partially answered:** AL_0051's subject record reads `PHP S5E2 C1V1`, consistent with it being the 594 nm animal (C1V1 is excited there, and driving interneurons via the S5E2 enhancer suppresses pyramidal output - the same target as the 638 nm inhibitory actuation). Left in a comment, NOT written into the body, because the wavelength pairing is my inference and AL_0048 still has no construct description in Alyx at all.
-**Why:** User asked to resolve the AL_0034 date conflict using DataBrowser.
-**Next:** Titers for AL_0039/0041/0048/0051 are NOT in Alyx (only AL_0034 has an injection note, "20 uL DLX Chrimson 2.0 04/08/24"); housing and light cycle are not in Alyx either. Both still need the lab's own records. Also worth a look: the cohort table credits AL_0041 with the impulse characterization, but RESEARCH 2026-10-?? has AL_0048 entering Fig 2A through `load_bilateral_impulse.m` - check which animals actually supply the four Fig-2 sessions.
-
-### 2026-10-06 - Figure 5 now reports numbers only, no tests
-**Changed/Found:** `discussion.tex` no longer quotes `Friedman p = 0.060`. The sentence now says the four modes are reported descriptively and the across-session claim rests on the consistency of direction. This removes the contradiction with `results.tex:259` ("with three sessions we do not report significance tests"), which the paper was simultaneously asserting and breaking. The test itself still exists in `bilateral/sine_ff_across_sessions.m:220` (`friedman(RMSE,1,'off')` on a 3x4 session-by-mode matrix) - it is just not reported.
-**Why:** User decision, 2026-10-06: "no tests on figure 5 just reporting numbers".
-**Next:** Fig 5 is now test-free in both Results and Discussion; keep it that way if a reviewer asks for a p-value, the honest answer is n=3 sessions in one mouse and one hemisphere.
-
-### 2026-10-06 - Three of the six review contradictions fixed; two turned into checks
-**Changed/Found:** Acted on the critical read (see the 2026-10-06 entries below). **Fixed in text:** (a) `discussion.tex` no longer says preview cut at-frequency error "roughly threefold in every comparison" - it quotes both measured factors, 3.5-fold OL->OL+p and 1.5-fold CL->CL+p, straight off the figure; (b) `discussion.tex` "reduced mean-squared error" -> "root-mean-squared tracking error", matching the project-wide RMSE naming (2026-07-16 decision) - note `methods_rewrite.tex:653` keeps "mean squared error" correctly, since the Parseval partition really is of the squared quantity; (c) `results.tex` now states that Fig-2G and Fig-4D measure different things. **User's framing, adopted verbatim in substance:** Fig 2G is prediction of the stimulus RESPONSE (how well the LTI model reproduces the response to the stimulus), Fig 4D predictability is prediction of the TRIAL (how well a fixed feedforward input anticipates what that trial will do). Motion improves the first and degrades the second, which is why the two "predict*" numbers point opposite ways; the text now says so instead of leaving a reader to find the apparent contradiction. **Turned into checks rather than guesses:** the 15->13 session drop and the AL_0034 date conflict, both added to `TASKS.md` under Blocking submission. Builds clean, 36 pages, 0 undefined. Pushed to `draft` and `main` (42f2763), so Overleaf has it.
-**Why:** User review pass, 2026-10-06, item by item.
-**Next:** The remaining contradiction is the Friedman test: `bilateral/sine_ff_across_sessions.m:220` runs `friedman(RMSE,1,'off')` on a 3x4 session-by-mode matrix and gets p=0.060, which the Discussion reports and the Results sentence "with three sessions we do not report significance tests" denies. It is the one correctly blocked, non-pseudoreplicated test in the Fig-5 set, so the better fix is to soften the Results sentence rather than delete the number - awaiting the user's call.
-
-### 2026-10-06 — Where the 24 ms hardware latency goes, and how far it can be cut
-**Changed/Found:** Code read of `StLab_Rainier/experiment_core` (no runs). Of the 24 ms, 11 ms is the exposure itself, leaving 13 ms after exposure end. Estimated split of the 13 ms: 560×560 uint16 frame (627 KB) readout + USB3 transfer ~3–6 ms; pylon `RetrieveResult` + `GetArray` + `np.copyto` ~1 ms; cross-process semaphore wake <1 ms; Process B compute <0.5 ms (one small ROI mean + 2 IIRs); 3-byte USB-serial write ~1 ms. That leaves **~5–8 ms unaccounted for, most likely on the Arduino**. The protocol (`serial_output.build_serial_lut`) sends ASCII "100".."345" with **no terminator**. If the sketch reads with `Serial.parseInt()`/`readString()`, it returns only when `Serial.setTimeout` expires, which would be a fixed delay and fits the 0.5 ms IQR. The sketch is not on this PC (rig PC only). Realistic floor without changing exposure: ~14–16 ms from exposure start (save ~8–10 ms). Below that needs a shorter exposure or a faster frame rate. Bigger point: the update already lands before the next blue exposure 87% of the time, so cutting hardware latency does NOT change the 1-frame discrete delay. It only applies the light earlier within the frame. Against the ~86–90 ms full-loop delay this is ~10% more rejection bandwidth (~1.9 → ~2.1 Hz). The 12.6% late tail (`_mp_reader` GIL contention) is the cheaper win: the late updates cost up to a whole frame.
-**Why:** User asked how much the hardware latency can be reduced.
-**Next:** On the rig PC, read the laser Arduino sketch's serial read. If it is parseInt/readString, send a terminator (e.g. `\n`) or a single raw byte and read with `Serial.read()`. Measure each piece with a bench test (Timeline-recorded NI digital pulse at frame receipt in `_mp_reader` + at `write_serial` in Process B). New sessions write `timer_dt.csv`/`timing_stats.csv`; the 07-29 one does not.
-
-### 2026-10-06 — Total loop delay is ~3 frames (86 ms), not the 24 ms hardware latency
-**Changed/Found:** Ad-hoc MATLAB (no script). AL_0051 2026-07-29/2: averaged the 55 OL trials, aligning the logged `error.csv` with `input_amps` (the command on the laser during frame k). The fluorescence change first shows at +57 ms (2 frames; −0.6, −1.4 %ΔF/F at +57/+86 ms) and reaches its trough at ~0.5 s. It then sags back over the trial (−4.6 → −3.7 between 0.5–1 s and 2–3 s). A first-order-plus-delay fit is poor (R² 0.82, τ collapses to 35 ms) because of that sag. Loop delay = 1 frame compute/hardware (24 ms, see entry below) + ~2 frames laser→fluorescence ≈ 3 frames ≈ 86 ms. Pure-delay phase lag 360·f·θ is π/2 at 2.9 Hz; at 10 Hz it is 86° from the hardware alone but 310° for the full loop. For an integral-type loop with 30–60° phase margin, rejection (|S|<1) stops at ~1–2 Hz. It would stop at ~2–4 Hz even if the biology were instant (24 ms + 14 ms zero-order hold).
-**Why:** User asked what disturbance frequency the controller can still reject, given the 24 ms latency.
-**Next:** If needed for the paper, compute |S(f)| from a 2-state plant fitted to AL_0051 OL with the deployed gains, plus an empirical CL/OL error-PSD ratio (designed 2026-10-03, never run). This is consistent with Fig 4 (2–4 Hz survives control).
-
-### 2026-10-06 — Controller hardware latency: frame exposure → laser = 24.0 ms (AL_0051)
-**Changed/Found:** New `controller-analysis/ctrl_latency.m` (AL_0051 2026-07-29/2, latest rig build). Rig code (`StLab_Rainier/experiment_core/mp_controller.py` `_mp_reader` + `mp_control.py`) shows `input_amps(k)` is the command Process B computed from **blue frame k−1**: the reader releases `frame_sem` and then reads `STATE_UVAL` straight away, before B has processed frame k. The data confirm this: the laser level after each edge matches `input_amps(src+1)` with Spearman 0.9996, versus 0.73 off by one. Every laser step (>0.1 V) in trial windows was timed on the 2 kHz Timeline `lightCommand594` against the `widefieldExposure` rise of its source blue frame. **Latency from exposure start: median 24.0 ms, IQR [24.0 24.5] (≈ the 0.5 ms Timeline grid), the same for OL (n=103 edges) and CL (n=3539).** From exposure end (11 ms exposure): 13.0 ms. From mid-exposure: 18.5 ms. Tail: 95/99% = 36/40 ms, max 43.5 ms. **12.6% of CL updates (7.8% OL) arrive after the next blue exposure has started** (>28.5 ms). These late steps are spread evenly over 28–44 ms and carry the right value (they are late, not misassigned), with no drift across the session. No update ever skipped a frame (max 43.5 < 57 ms). Laser edges are single-sample (<0.5 ms rise). Discrete-time reading: ~87% of the time the command from y[k−1] is on the laser for the whole exposure of frame k, so the loop is one sample delay.
-**Why:** User asked for the controller's image-acquisition → laser latency on the latest code. It also checks the 57 ms (2-sample) plant delay used by the MPC model: hardware accounts for ~1 sample (24 ms), so the remaining ~1 sample is physiology (opsin + indicator onset), not the rig.
-**Next:** Optional: decompose the 24 ms (camera readout/USB vs Process B compute vs serial/Arduino) using the rig's `timer_dt` or B-side timestamps, which this session does not save. Cut the late-update tail (~13%), probably from GUI/plot-thread contention. Add one Methods sentence ("command applied 24 ms after exposure onset, median; jitter <0.5 ms IQR").
-
-### 2026-10-06 - Critical read of the whole manuscript: 6 internal contradictions found
-**Changed/Found:** No file edited - full referee-style read of main/intro/results/discussion/methods/supplement as they stand at `Closedloop_edit` 88b9f1e. **Contradictions a referee will catch:** (1) Fig-4G session accounting - cohort is 15, the caption says "11 of 13 sessions that reach the setpoint", the body says two were excluded for not reaching it, n=11; the 15->13 step is never stated anywhere, and `methods_rewrite.tex:597` separately says the controller reduced steady-state offset "in 13 of the 15 sessions", which reads as 13 reaching the reference and collides with "11 of 13". (2) `discussion.tex:43` says preview cut at-frequency error "roughly threefold in every comparison"; `results.tex:262` gives 3.5-fold for OL->OL+p and **1.5-fold** for CL->CL+p. (3) `discussion.tex:70` reports Friedman p=0.060 across modes while `results.tex:259` says "with three sessions we do not report significance tests" - the paper both does and does not test it. (4) Cohort table `methods_rewrite.tex:92` dates AL_0034 to 2025-10-17; the body (`:827`, `:838`, `:852`) dates its sweeps 2024-10-17/18/25 - one year apart. (5) `discussion.tex:3` says "reduced mean-squared error" after the project standardised on RMSE everywhere else. (6) "predictability" flips sign for motion between figures: Fig 2G reports prediction error SMALLER at high motion (0.73), Fig 4D reports motion makes the disturbance LESS predictable (open-loop error rises, p=7.3e-4). Different quantities - LTI residual vs open-loop tracking error - but both are called "predict*" and the paper never distinguishes them. Dose-response slopes were spot-checked against the record and are correct (-0.30/-0.50/-0.52/-0.81, R2 0.97/0.51/0.92/0.92, matching the 0-200 ms re-run).
-**Why:** User asked for a fresh critical review.
-**Next:** Fix (1)-(5) as text edits; (6) needs either a renaming or one explicit sentence saying the two "predictability" measures are different quantities.
-
-### 2026-10-06 - The 2-4 Hz result sits in the band where uncorrected hemodynamics live
-**Changed/Found:** The paper's headline state result - that ongoing 2--4 Hz power sets the irreducible closed-loop error - is exposed, and `methods_rewrite.tex:188-190` already names the reason in a FILL: the control loop ran on the **blue channel with no hemodynamic correction** (correction needs both channels and cannot run inside one control interval), and uncorrected hemodynamics fall in exactly that band. The manuscript still does not state, per figure, whether the corrected or uncorrected signal was used. Compounding it, the Discussion's own latency argument puts the achievable closed-loop bandwidth at ~2.6 Hz and calls the coincidence with 2--4 Hz "suggestive" - so there are now TWO candidate explanations for the same result (loop bandwidth, hemodynamic contamination) and the paper advances only one.
-**Why:** Found while reading Methods for the review. This is the most likely reason a referee rejects the state-dependence claim, and it is cheap to defuse by stating which signal each figure uses and showing the 2--4 Hz effect survives on corrected data.
-**Next:** Fill `methods_rewrite.tex:188` (one sentence per figure, corrected vs uncorrected). If Fig-4's rel-delta effect can be recomputed on hemodynamically corrected data and holds, say so explicitly - that single sentence is worth more than any other edit left in the paper.
-
-### 2026-10-06 — MPC supp: removed all stats/stars (simulation), descriptive point estimates only
-**Changed/Found:** `controller-analysis/ctrl_mpc_fig3style.m` — removed the ranksum/signrank brackets and stars from E. Replaced the bootstrap CIs in F/G with point estimates only, and deleted the `stars()` helper. Regenerated the f3s panels; medians are unchanged (OL 2.25, CL 2.02, CL+MPC 1.68, CL+MPC* 1.10). Also dropped the bootstrap from `ctrl_mpc_uncertainty_sweep.m`.
-**Why:** User: "this is a sim so no point making stats claims and putting stars". The MPC rows are model replays, so a p-value would test the simulator, not the brain.
-**Next:** Keep every MPC panel and text descriptive (medians, ratios, n trials lower). No significance language in the caption or Discussion.
-
-### 2026-10-06 — Effect of λ (input-smoothness weight) as forecast uncertainty shrinks
-**Changed/Found:** `controller-analysis/ctrl_mpc_lambda_uncertainty.m` (new) — AR forecaster, 200 ms preview, λ ∈ {0, 0.1, 1, 10, 100} × forecast error kept ∈ {100…0%}. Outputs: mpc_M_lambda_error.png and mpc_N_lambda_roughness.png; data in data/ctrl_mpc_lambda_uncertainty_AL_0033_0226_e2.mat. With the real AR forecast (100% error kept), λ barely matters: 0.93–0.98× PI for every λ, with the best at λ=10 (0.933). With a perfect preview, λ is what limits performance: 0.075 (λ=0), 0.14 (λ=1), 0.38 (λ=10), 0.60 (λ=100). Command roughness relative to PI is ~2.5 at λ=0, 2.0 at λ=1, 1.0 at λ=10 and 0.4 at λ=100. Roughness is U-shaped in forecast error.
-**Why:** The user asked for the effect of the smoothing operator λ alongside the uncertainty sweep. Reading: under realistic forecast uncertainty the smoothness cost is nearly free. λ=10 matches PI's smoothness at 0.93× PI error. The penalty only bites once the preview becomes accurate.
-**Next:** Decide whether the paper uses λ=1 (current) or λ=10 (PI-matched smoothness, marginally better with the real forecast).
-
-### 2026-10-06 — Uncertainty sweep: each forecaster with its error shrunk toward 0 (200 ms preview)
-**Changed/Found:** `controller-analysis/ctrl_mpc_uncertainty_sweep.m` (new) — preview = truth + x·(model forecast − truth), x ∈ {1, 0.8, …, 0}, for all 8 bake-off models; λ=1, PI fixed at Kp=0.10, Ki=1.5. Outputs: mpc_K_uncertainty_sweep.png and mpc_L_uncertainty_common_axis.png. Every model falls roughly linearly from its as-is ratio (0.94–1.22) to 0.138 at a perfect preview. Plotted against the remaining 200 ms forecast error, all 8 models collapse onto one line.
-**Why:** The user asked to see model performance with less and less uncertainty at 200 ms. The collapse shows that MPC performance is set by the forecast error at short lead, whatever the model; the model family adds nothing beyond that.
-**Next:** none
-
-### 2026-10-06 — MPC supp panels H/I/J: forecaster skill, MPC-by-forecaster, Kalman bias-noise sweep
-**Changed/Found:** `controller-analysis/ctrl_mpc_forecaster_fig.m` (new) — draws three panels into paper/images/supp_mpc/: mpc_H_forecast_skill_models (error/climatology vs lead for 8 models), mpc_I_mpc_by_forecaster (MPC/PI ratio and trials beating PI), and mpc_J_kalman_bias_noise (MPC/PI vs qb). Panel J uses hard-coded values from the 2026-10-05 qb runs (0.988/0.956/0.939/0.942/0.942) because that sweep was never saved to a .mat.
-**Why:** The user asked for plots of the bake-off and the noise fix. What they show: every model that beats the naive forecast at ~86 ms (AR, ARMA, DLinear, MLP, LSTM) lands at 0.94–0.96× PI, so the choice of forecaster is not the bottleneck. Forecast skill at the lead that matters is the bottleneck.
-**Next:** Save the qb sweep properly if panel J goes into the paper. Regenerate the stale panels A–E in the fig3 frame. Then pick the final supp layout.
-
-### 2026-10-05 — Forecaster bake-off (Lu et al. families) + found the injected noise: the Kalman bias state (qb=1)
-**Changed/Found:** (1) New `controller-analysis/ctrl_mpc_forecasters.m`: 5-fold-CV forecasts on the Fig-3 replay departures for naive, average, AR(19), ARMA(4,2), theta, DLinear-style direct ridge, MLP (TiDE-like) and LSTM (DeepAR family) → `data/ctrl_mpc_forecasters_<sess>.mat` (~5 min). Error / climatology at 86 ms: naive 0.81 · **AR 0.71** · ARMA 0.72 · DLinear 0.71 · theta 0.86 · MLP 0.73 · LSTM 0.75. Linear models tie; the neural nets overfit with ~100 trials. (2) `ctrl_mpc_lqr.m` gains `P.fcstModel` (precomputed forecasts, fig3 frame). MPC with a 0.2 s preview window (Lp = 7, user), ratio to tuned PI / beats PI: naive 1.061/29 · average 1.218/23 · **ar 0.942/83** · arma 0.958/79 · theta 1.046/33 · dlinear 0.944/81 · mlp 0.950/79 · lstm 0.951/71. (3) The same AR inside the built-in Kalman forecaster gave 0.988. The cause is the bias random-walk variance `qb = 1`: each step the bias state absorbed a chunk of the fluctuation and the forecast held it flat over the horizon (injected noise; the user's suspicion). qb sweep 1 / 0.1 / 0.01 / 1e-3 / 0 → 0.988 / 0.956 / 0.939 / 0.942 / 0.942. **Default `P.qb` 1 → 1e-3.** (4) White imaging noise checked and absent: the autocovariance extrapolation gives a negative noise variance and the lag-1 correlation is 0.92. (5) The Lp = 0.2 s preview window is the same as 1 s (0.988 both before the fix). Fig-3 replay rerun with qb = 1e-3: MPC-AR vs tuned PI **0.94× (83/108)**, half-AR-error 0.53×, perfect 0.14×. 0–3 s medians: OL 2.25 · rec CL 2.02 · PI replay 1.79 · MPC-AR 1.68 (below rec CL on 99/108) · MPC* 1.10.
-**Why:** User: forecast only 0.2 s, "we are adding too much noise", try other models from Ziyu's paper.
-**Next:** PatchTST / TiDE / Chronos / Moirai need Python torch + pretrained-weight downloads (ask the user first). Expect little: linear ≈ neural at this data size and lead. The remaining lever is informative inputs (contra-hemisphere spatial pattern, motion), not model class.
-
-### 2026-10-05 — DEAD END: shrinking / low-passing the AR forecast does not help → "HF noise injection" hypothesis rejected
-**Changed/Found:** `ctrl_mpc_lqr.m` gains `P.fcst` ('ar' | 'shrink' | 'lp') and `P.lpHz`, plus a `fitShrink` helper. 'shrink' scales the AR fluctuation forecast by α_L = ⟨f,d⟩/⟨f,f⟩ fitted on training folds; 'lp' fits and runs the AR on the causally 3-Hz low-passed departure (2nd-order Butterworth). Fig-3 replay, rd = 1, MPC-AR vs tuned-PI replay (median paired ratio / beats PI): **ar 0.988 / 59** · **shrink 0.988 / 59** · **lp 0.997 / 57**; hold 1.061. α_L at leads 1, 3, 5, 10, 20, 35 = 1.00, 1.00, 0.99, 0.98, 0.94, 0.93: the AR forecast is already the least-squares conditional mean, so there's nothing to shrink. Removing the >3 Hz forecast content also changes nothing. So the band table's >100% error above 3 Hz is not what cancels the gains, and the explanation given to the user earlier today was wrong. The correct reading: the forecast's real information at the ≥86 ms lead the plant needs is (i) slow drift, already partly handled by feedback, and (ii) ~40% of the 1–3 Hz variance. That's only a ~20% amplitude reduction in that band, so the net gain is ~7% over the no-preview MPC (1.06 → 0.99), which lands at PI parity.
-**Why:** User asked to run the cheap fix and how the AR forecast enters the controller.
-**Next:** No forecast post-processing will help; only a forecaster with more information at ~100 ms lead (phase of the 1–3 Hz rhythm, contra-hemisphere spatial inputs, motion) can. Keep `P.fcst='ar'` as default.
-
-### 2026-10-05 — Why the AR preview barely helps: band decomposition of the replayed CL-trial disturbance
-**Changed/Found:** Ad-hoc analysis (MATLAB session, not a script) on the Fig-3 replay disturbances d_k = recorded CL − model(recorded command), 108 trials, 1–3 s, AR(12), 5-fold CV across trials. AR error / sd(d) by lead: 29 ms 0.32 · 57 ms 0.55 · **86 ms 0.70** · 114 ms 0.77 · 200 ms 0.84 · 486 ms 0.96 · 1 s 0.98. By band (share of d variance | fraction PI leaves | fraction the AR forecast error at 86 ms leaves):
-- 0–1 Hz: 36% | 48% | 11%
-- 1–3 Hz: 38% | 99% | 62%
-- 3–6 Hz: 18% | 150% | 129%
-- 6–17.5 Hz: 7% | 113% | 211%
-
-Reading: the slow band, which AR predicts well, is partly handled by feedback already. The 1–3 Hz band (the largest share, = the Fig-4 delta rhythm) is untouched by PI, but AR predicts only ~40% of it 86 ms ahead. Above 3 Hz the AR forecast error *exceeds* the signal (129–211%), so an un-shrunk forecast injects noise there. The partial gains below 3 Hz and the injected noise above 3 Hz roughly cancel, which is why MPC-AR ≈ PI (0.99×).
-**Why:** User asked why the AR preview is so bad.
-**Next:** Cheap test: low-pass or shrink the forecast above ~3 Hz (or use the conditional mean, which shrinks automatically, i.e. a properly regularized/shrunk forecaster) so the preview stops adding noise. The real target is a better 1–3 Hz forecaster ~100 ms ahead (phase-tracking of the delta rhythm, contra-hemisphere spatial inputs). If kept, promote this analysis into a script.
-
-### 2026-10-05 — λ_Δu set to 1 (user); Fig-3 CL-trial replay rerun
-**Changed/Found:** `ctrl_mpc_lqr.m` default `P.rd` 10 → **1** (user choice; the command roughness is ~2× PI's, 17.5–17.9 vs 8.6; the recorded rig command is 11.8). Fig-3-frame replay (`_fig3`) and `ctrl_mpc_fig3style.m` panels were regenerated. 0–3 s RMSE medians: OL 2.25 · recorded CL 2.02 · **CL+MPC (AR) 1.66** (lower on 97/108, p=9e-17) · **CL+MPC* (perfect) 1.10** (108/108). Ratios vs recorded CL, 0–1 / 1–3 s: variance MPC 0.86/0.85, MPC* 0.35/0.28; RMSE MPC 0.89/0.88, MPC* 0.71/**0.12**. Versus the tuned-PI replay (+1..+3 s window): perfect 0.14×, half-AR-error 0.56×, AR 0.99×, hold 1.06×. The ratio-panel legend was moved to the lower left (the perfect point now sits at 0.12 and stretched the log axis).
-**Why:** User decision after the smoothness tradeoff plot.
-**Next:** Panels A–E of the older supp figure (`ctrl_mpc_supp_fig.m`, preview sweep) still come from the svd-frame run with rd = 10 and the double-counted σ_u = 0.40 → regenerate them in the Fig-3 frame with rd = 1 before they are used.
-
-### 2026-10-05 — Smoothness (Δu) cost tradeoff plot: perfect preview trades error for command roughness; AR preview is flat
-**Changed/Found:** New `controller-analysis/ctrl_mpc_smooth_tradeoff.m` → `paper/images/supp_mpc/mpc_F_smooth_tradeoff.png`. Fig-3-frame replay of the 108 recorded CL trials with λ_Δu (`rd`) ∈ {0, 0.1, 1, 10, 100, 1000}; roughness = median per-trial total variation of the command over 0–3 s. Error/tuned-PI:
-- perfect preview 0.07 / 0.08 / 0.14 / 0.38 / 0.61 / 0.79 at roughness 21 / 21 / 18 / 8.7 / 3.7 / 1.4
-- AR preview 1.00 / 1.00 / 0.99 / 0.97 / 0.98 / 1.00 at 21 / 20 / 18 / 11 / 5.2 / 2.3
-- tuned PI: roughness 8.6; recorded rig command: 11.8 (error 1.11× tuned PI)
-
-User agrees the smoothness/R term belongs in the cost. At rd = 10 the MPC command is as smooth as the PI's (8.7 vs 8.6), so that's the like-for-like comparison: perfect preview 0.38×, AR 0.97×. Allowing ~2× rougher commands (rd = 1) would take perfect preview to 0.14× but buys nothing with the AR forecast. The roughness the AR controller can use is wasted on unpredictable fluctuations. The first draw had overlapping labels; the legend was moved outside (panel widened to 8.9 cm).
-**Why:** User asked to show the plot behind the "smoothness penalty limits perfect cancellation" statement.
-**Next:** Keep rd = 10 (PI-matched smoothness) as the reported setting.
-
-### 2026-10-05 — CORRECTION: the "40% trial-to-trial actuator-gain spread" is mostly spontaneous disturbance, not gain
-**Changed/Found:** The σ_u = 0.40 used since 2026-09-15 (`ctrl_tube_mpc.m`, `ctrl_mpc_realtrial.m`, `ctrl_mpc_lqr.m` 'auto') regresses each OL trial onto the OL trial-average shape. Null test: projecting the laser-free contra-Global departures onto the same shape gives an apparent gain sd of **0.32**, so at most √(0.40²−0.32²) ≈ **0.24** could be real gain variability. With a per-trial offset term, the gain is unidentifiable: CV 0.77 vs a null of 0.80; Fig-3 frame 0.39 / 0.83. The OL step is ~a constant level, so gain and offset are confounded. The 2026-09-15 entry's "noise contribution negligible" was wrong. In the svd-frame simulations the variability was double-counted (real disturbance realizations + a 40% gain draw). So "the laser range and the gain variability each roughly halve what a perfect preview achieves" (said to the user today) overstated the gain part. In the Fig-3 replay (no gain draw; each trial's real mismatch is inside its d_k), perfect preview is 0.38× tuned-PI with the laser bounded and 0.33× unbounded, so the laser range costs little there too. The remaining gap to 0 is the Δu smoothness penalty (rd=10): PI-smooth commands can't cancel the fast part of the disturbance. With rd=0 + unbounded + no gain error, the svd diagnostic reached 0.00×.
-**Why:** User asked why gain variability was cited as a limit.
-**Next:** Use the Fig-3 replay (σ_u = 0) as the reported MPC result. Drop actuator-gain variability as a claimed limiter (no gain-scheduling motivation from these data). Any svd-frame number with σ_u = 0.40 overstates the gain effect.
-
-### 2026-10-05 — Grid LDS: bleed-free check (amp ≤ 1.1 V) is underpowered, not a pass; impulse DC gain is unreliable
-**Changed/Found:** `impulse-analysis/imp_lds_grid.m` (`LG.ampMax = 1.1`) — with only the 0.5/1.1 V pulses, even the model-free train→test unit-IR ceiling is negative (all points −0.18, site 0.05), so the low-amplitude response cannot be estimated and the bleed question stays open for this analysis. Separately, the impulse model's DC gain at the site comes out POSITIVE (+1.58 %ΔF/F per V). The ~1 s post-dip rebound plus the slow tail outweigh the dip, whereas the OL step shows sustained inhibition. So steady-state quantities extrapolated from impulse data are not trustworthy. Collateral is therefore defined as the LS gain of each point's 0–1 s laser response on the target's (bootstrap |r| 0.99; the DC-ratio version had 0.74).
-**Why:** Bleed is present at ≥1.6 V, and the reachable footprint has a brain-wide component that could be bleed. The DC ratio was the first collateral definition tried.
-**Next:** Test the global component of the footprint against bleed another way, e.g. compare its timing (bleed = same frame) or run on AL_0041. Do not quote impulse-derived steady-state gains.
-
-### 2026-10-05 — Grid LDS dead ends: DMDc, single CVA, Wo-eigenvector maps, observer "hidden collateral"
-**Changed/Found:** `impulse-analysis/imp_lds_grid.m`, four rejected versions:
-(1) **DMDc** (state = top PCs of y). B is set by the one-frame jump, which is ~0 because the site response ramps from lag 1 to lag 5. So B → 0, and the CV evoked R² was ≈ 0 at every n.
-(2) **One CVA model on everything.** The data are so smooth that ~40 canonical correlations are > 0.95, and the laser accounts for 0.16% of variance, so no state was spent on the input (CV IR R² ≈ 0).
-(3) **Maps from eigenvectors of W_o.** These are dual (left-eigenvector) directions: salt-and-pepper maps, bootstrap |r| 0.11.
-(4) **Observer-based "hidden collateral" ≈ 100%.** This treats the laser as unknown, but a controller knows its own command. The ~100% only reflects SNR (laser/spontaneous variance at the site = 0.006).
-**Why:** Each failed for the reason given. Fixes: a separate laser-driven block (ERA on the unit IR); observer-based observable maps (stable, |r| 1.00); collateral as a regression gain.
-**Next:** none.
-
-### 2026-10-05 — Add imp_lds_grid.m: 100-point bilateral LDS + controllability/observability for one target
-**Changed/Found:** New `impulse-analysis/imp_lds_grid.m`, run on AL_0033 0129 e1 impulse (hemo-corrected).
-- **Setup:** 100-point grid (50 ipsi k-means points plus their midline mirrors; site = #83). %ΔF/F uses the impulse definition per point. Model x(t+1) = A x + B u, y = C x, D = 0 (no added delay).
-- **Laser-driven block:** ERA on the unit IR, nD = 6. Blocked 5-fold CV unit-IR R² 0.51 vs model-free ceiling 0.52 (site 0.80 vs 0.83).
-- **Spontaneous block:** subspace ID on the residual, nS = 25. 10-step CV R² 0.37 vs persistence 0.16.
-- **Combined model:** A = blkdiag, n = 31, C orthonormalized so maps are physical.
-- **Reachable patterns:** reachable map 1 (89%) = local site dip plus a weak brain-wide negative component. The reachable output subspace (2 maps) holds 81% of spontaneous variance (2% by chance), because it overlaps the global mode.
-- **What one pixel reveals:** the target's last 1 s reveals 74% (site) / 77% (contra mirror) / 56% (anterior-medial #51) of brain-wide spontaneous variance. Mostly this is the global mode; the site is blind to an anterior–posterior gradient.
-- **Collateral (0–1 s):** moving the contra mirror moves the site 2.1×, and moving #51 moves it 3.9×. Holding the site moves its neighbours ≤ 0.89×.
-- Modal "seen but undriven" classes are uncontrollable BY CONSTRUCTION (B_S = 0); the shared-mode table compares patterns (|corr| ≈ 0.93, dominated by the global pattern) but the time constants differ (80–979 vs 700 ms).
-**Why:** User asked for a multi-output A,B,C with dim x < dim y, plus controllable/observable subspace analysis for one target pixel, shown on the brain, using the impulse dataset (no delay).
-**Next:** Replicate on AL_0041 e1/e2. Fit the spontaneous block with a shared A (not block-diagonal) so laser-reachability of spontaneous modes becomes testable. Apply the collateral map to the controller sessions (predicted off-target pattern under CL vs the observed CL−OL difference).
-
-### 2026-10-05 — CL-trial MPC replay in the Fig-3 frame (fixes the simulated-OL mistake) + why MPC-with-AR is only modestly better
-**Changed/Found:** User correction: OL is always a separate set of trials and must not be simulated on CL disturbances; the intended comparison is a recorded CL trial vs MPC put on that same trial. `ctrl_mpc_lqr.m` gains `P.frame='fig3'` (+ `P.rawFile`): the rig's online ΔF/F `data.dFk` (verified identical to Fig-3 `wcDfk`, max diff 0, onset = col 36) and each trial's recorded command (`cp_laser_amplitude`, 2 kHz → frame times). The plant is refit on the Fig-3 OL trial average (2-state + 57 ms: τ 159 ms, DC −3.37, fit 82.1%). Per-CL-trial disturbance d_k = recorded output − model(recorded command), replayed under MPC; σ_u = 0 in this frame (each trial's gain error is already inside its d_k). `ctrl_mpc_fig3style.m` was rewritten: OL = recorded OL trials (ranksum, unpaired; absent from the single-trial panel); CL = recorded CL; CL+MPC / CL+MPC* = replays (signrank, paired); the bootstrap resamples OL independently and MPC paired. Results, 0–3 s RMSE medians: OL 2.25 · CL 2.02 (OL vs CL p=0.017) · tuned-PI replay 1.79 · **CL+MPC (AR) 1.66** (lower on 100/108, p=7e-18) · **CL+MPC* 1.18** (108/108). Ratios vs CL, 0–1 / 1–3 s: variance MPC 0.85/0.86, MPC* 0.39/0.32; RMSE MPC 0.88/0.87, MPC* 0.74/0.34. Part of MPC's gain over the *recorded* CL is the rig PI's steady offset (the recorded CL average sits at ≈ −4.3, short of −5, consistent with the boxcar "integral" having no true integrator, cf. `ctrl_margins.m`). Against the tuned-PI replay on the same trials, MPC-AR is 0.97× (paired).
-**Diagnostic, "why barely better?"** (svd frame, 108 trials, error/PI): perfect preview 0.52× default → 0.53× with an aggressive cost (rd=0, r=1e-6) → 0.21× with a perfect actuator → 0.21× with an unbounded two-sided laser → **0.00×** with both (exact cancellation; sanity check passes). AR preview: 0.93–0.98× in every configuration. Cost aggressiveness is not the lever. Perfect-preview cancellation is limited by the inhibition-only laser range and the gain spread; realistic MPC is limited by forecast quality. `P.unbounded` was added for this diagnostic.
-**Why:** User correction + question 2026-10-05.
-**Next:** Decide which baseline the paper quotes (recorded CL vs tuned-PI replay). A second session would allow a cross-session test.
-
-### 2026-10-05 — Fig-3-style single-session comparison: OL vs CL (PI) vs CL+MPC on all 108 simulated trials
-**Changed/Found:** `ctrl_mpc_lqr.m` now also simulates OL (feedforward only, u = uss) and saves PI/OL commands (`yOL/uOL/uPI`). New `controller-analysis/ctrl_mpc_fig3style.m` → `paper/images/supp_mpc/f3s_{A..G}*.png`, mirroring Fig 3 A–E + the ratio panels: single trial, trial average ±SD, stimulation, across-trial variance vs time, per-trial RMSE half-violins with paired signrank, and variance/RMSE ratios vs CL by window with bootstrap 95% CIs. Conditions are OL, CL, CL+MPC (AR preview) and CL+MPC* (perfect preview). Per-trial RMSE over 0–3 s, medians: **OL 3.03 → CL 2.01 → CL+MPC 1.92 → CL+MPC* 1.63**. CL beats OL on 101/108 trials (p=1e-18); CL+MPC beats CL on 85/108 (p=3e-13); CL+MPC* beats CL on 104/108 (p=3e-19). Ratios vs CL, 0–1 s / 1–3 s:
-- variance: OL 1.74 / 2.24 · CL+MPC 0.86 / 0.91 · CL+MPC* 0.57 / 0.46
-- RMSE: OL 1.15 / 1.53 · CL+MPC 0.98 / 0.97 · CL+MPC* 0.90 / 0.52
-
-Sanity check: the simulated OL/CL variance ratio (1.7–2.2) is in the range of the real Fig-3 OL/CL effect. Trial-level p-values come from one simulated session, so they are descriptive. The ratio-panel legend first overlapped the OL point, so a log-axis headroom fix and explicit ticks were added.
-**Why:** User asked to run all CL trials of the session and compare OL / CL / CL+MPC Fig-3 style.
-**Next:** User review. A realistic forecast gives a small but very consistent gain (variance −9–14%); a perfect preview halves the 1–3 s error. A second session would turn this into a cross-session comparison.
-
-### 2026-10-05 — Preview window vs MPC performance: the whole benefit arrives by ~100 ms (just past the loop delay)
-**Changed/Found:** `ctrl_mpc_lqr.m` gains `P.Lp` (preview window inside the fixed 1-s horizon; beyond it the last previewed value is held; Lp = 0 = no preview). New `controller-analysis/ctrl_mpc_preview_sweep.m` sweeps Lp = 0…35 samples (0–1 s), with PI fixed at the tuned gains and measured σ_u, → `paper/images/supp_mpc/mpc_E_preview_window.png`. Median error relative to PI at Lp = 0 / 29 / 57 / 86 / 114 / 143 ms / 1 s:
-- perfect forecast: 1.00 / 0.92 / 0.78 / 0.57 / 0.53 / 0.51 / 0.52
-- half AR error: 1.00 / 0.96 / 0.86 / 0.73 / 0.67 / 0.66 / 0.68
-- AR forecast: 1.00 / 1.00 / 0.98 / 0.97 / 0.97 / 0.96 / 0.97
-
-The benefit saturates at 3–4 samples (86–114 ms), i.e. 1–2 samples past the 57 ms model delay. Previewing further adds nothing, because the receding horizon applies only the first move and the plant's ~190 ms time constant makes far-future disturbance irrelevant to it.
-**Why:** The user asked for preview allowed vs performance.
-**Next:** Implication for forecasting: only a ~100–150 ms horizon matters. At those leads the AR error is 0.77–0.85 of no-forecast, so a better forecaster needs to win at short lead, not at 1 s. That's the target for the disturbance-prediction discussion. The sweep took ~2.7 min; the first legend draft overlapped the curves and was replaced with direct labels.
-
-### 2026-10-05 — Preview-LQR chattered; Δu penalty (rd=10) makes it PI-smooth with the same benefit; supp figure rebuilt
-**Changed/Found:** `controller-analysis/ctrl_mpc_lqr.m` — with only a level penalty the LQR laser command chattered sample-to-sample for every preview: median total variation 18–24 per trial over +1..+3 s vs 5.4 for PI. It exploits the model's fast zero (b = [−1.58, +0.943]), which the ramped OL step cannot validate. Raising r (1e-2…1) did not help. Added `P.rd`·‖Δu‖², default rd = 10 → total variation 4.4–7.9 (PI-like). RMSE barely changes, so the benefit was never from the chatter. Final (108 trials, median ratio to tuned PI Kp 0.15/Ki 0.50, PI RMSE 1.35):
-- measured σ_u = 0.40: perfect preview **0.52×** (107/108) · half AR error 0.68× · AR **0.97×** (69/108) · hold 1.00×
-- perfect actuator: 0.44× · 0.67× · 0.94× · 0.99×
-
-With smooth commands **the gain spread costs little** (perfect preview 0.44 → 0.52×). This supersedes the earlier "gain spread costs about half the benefit" (0.21 vs 0.53×), which came from the chattering controller. `ctrl_mpc_supp_fig.m` was rewritten on `ctrl_mpc_lqr` output: A plant fit (OL trial-average vs 2-state + 57 ms model), B forecast skill vs lead, C error/PI vs forecast error (both actuator cases, PI = 1), D representative trial (#82: PI 1.29, MPC-AR 1.29, MPC-perfect 0.75). Old realtrial-based PNGs were deleted.
-**Why:** The chattering command would not be credible on the rig, and the comparison should give both controllers equally smooth inputs.
-**Next:** The limit is forecast quality alone, so the LPV/state-gain extension is a minor lever here. Discussion paragraph; panel D's traces overlap visually because fast disturbance wiggles pass through every controller (consider showing the laser command or a smoothed trace).
-
-### 2026-10-05 — LQR plant (m4) is minimal: fully controllable + observable, but effectively 1st-order
-**Changed/Found:** `ctrl_mpc_lqr.m` [LQR-SYSID] plant (no edit; checked in MATLAB) — G(z) = −1.577(z−0.598) / (z³(z−0.861)), 4 states after the 2-sample delay is folded in. On the balanced realization, ctrb and obsv both have rank 4 (cond 5.3), so there is no uncontrollable or unobservable subspace and no pole-zero cancellation (closest |p−z| = 0.26). Hankel SVs [2.81 1.47 1.37 0.24]. The fitted 2nd pole goes to 0 and joins the delay's poles at 0 as a nilpotent chain z⁻³, i.e. a finite input memory, not a dynamic mode. balred to 1 state changes the 3-s step response by only 2.5% NRMSE. The raw absorbDelay realization is badly scaled (entries ~2048), which makes PBH/rank tests on it misleading; use balreal.
-**Why:** User asked about the controllable and observable subspaces of the preview-LQR plant.
-**Next:** none. Optionally note in Methods that the plant is minimal (no hidden modes the LQR could miss).
-
-### 2026-10-05 — Preview-LQR plant → 2-state + 2-sample (57 ms) input delay; PI now realistic (Kp 0.15 = deployed range)
-**Changed/Found:** `controller-analysis/ctrl_mpc_lqr.m` [LQR-SYSID] — per user: 2-dimensional model plus the measured 47 ms loop latency, rounded to d = 2 samples (57 ms at 35 Hz). Output-error fit of y(t)=a1y(t−1)+a2y(t−2)+b1u(t−1−d)+b2u(t−2−d) on u_OL vs trial-averaged y_OL, realized as ss with the delay absorbed (4 states). **Identifiability:** an unconstrained fit gives an unstable pole at d=0 and a negative-real pole (−0.41 at d=2, sample-to-sample ringing) at d≥1. With both poles constrained real in (0,1), the 2nd pole collapses to ~0 at every d (d=1/2/3: τ 183/191/204 ms, fits 88.8/88.7/88.4%). So the ramped OL step identifies only one time constant plus delay plus a fast zero (b = [−1.58 0.943]); DC −4.55. Results (108 trials, median RMSE ratio to tuned PI):
-- PI re-tunes to **Kp = 0.15, Ki = 0.50** (interior of the grid; Kp is inside m4's deployed range 0.10–0.20). Sim PI 1.35 vs recorded CL 1.80 (no-delay scalar model: 1.08 with Kp pinned at the grid edge)
-- measured σ_u = 0.40: hold 1.01× · AR preview **0.98×** (56/108) · half AR error 0.60× · perfect preview **0.53×** (106/108)
-- perfect actuator (PI 1.22): hold 1.00× · AR 0.95× (71/108) · half error 0.55× · perfect 0.21× (108/108)
-**Why:** User direction 2026-10-05. Without the delay, feedback was unrealistically strong (see entry below).
-**Next:** The preview's value is now set almost entirely by forecast quality. Today's AR barely beats hold; halving its error is worth ~40%. Discuss with the user how to predict the disturbance (signal, inputs, model class). Then rebuild `ctrl_mpc_supp_fig.m` on `ctrl_mpc_lqr` output; r is still fixed at 1e-3.
-
-### 2026-10-05 — Intro literature review: verified reference map; novelty claim checked; 5 bib errors found
-**Changed/Found:** new `paper-writing/INTRO_LITREVIEW.md` — ~60 refs verified against Crossref/Europe PMC across brain state, closed-loop control, linear models. No published closed-loop optogenetic control of a widefield/mesoscale calcium signal (closest: Gupta & Murphy 2026 eLife widefield neurofeedback, reward actuator; Matveev 2024 platform leaves closed loop to future work). No prior test of mesoscale optogenetic dose-response linearity. Shimaoka 2019 eLife already shows contra hemisphere predicts trial variability → precedent for our contra-disturbance claim. Bib errors: `Zaaimi2022` is 2023; Ye spirals now Science 2026 (10.1126/science.adx1369); Ritt & Ching is ACC 2015 proceedings; O'Shea/Shenoy perturbation is bioRxiv 2022 only; Matveev2024 is bioRxiv, not closed-loop.
-**Why:** user asked for intro critique + lit review grounded in current claims; bib previously held 4 fabricated refs, so every citation was source-verified.
-**Next:** user to approve intro rewrite (snippet given in chat); add new BibTeX entries + fix the bib errors on `draft`; cite Shimaoka 2019 alongside the contra-disturbance result in Results/Discussion.
-
-### 2026-10-05 — MPC redone per user spec: scalar OL-identified plant + preview LQR; MPC now ≥ PI (earlier "MPC worse than PI" was my MPC design)
-**Changed/Found:** User objection: with the same input variability, MPC should at least match PI. Agreed; two flaws in `ctrl_mpc_realtrial.m` handicapped MPC under gain error: (1) its input penalty anchored u to the *nominal* steady command, which fights the correction a gain error needs (PI's integral has no anchor); (2) the AR forecaster decays the gain-mismatch offset to zero. User's spec, implemented in new `controller-analysis/ctrl_mpc_lqr.m`: plant x(t+1)=a·x+b·u by least squares on the fixed OL step u_OL and the trial-averaged OL response y_OL → **a=0.8792, b=−0.5487** (τ 222 ms, DC −4.54, free-run fit 88.4%, same as the 2-state+delay ss model). Receding-horizon finite-horizon LQR, Hp = 1 s preview, 0 ≤ u ≤ u_max, r = 1e-3 (aggressive) on (u−uss)². The disturbance estimate keeps the gain offset in every preview (Kalman bias + AR for the AR preview). PI uses the same plant, information and gain draws, and is grid-tuned. Median RMSE ratio to PI (108 trials):
-- measured σ_u = 0.40 (PI 1.08): hold 0.99× (67/108) · **AR preview 0.94× (77/108)** · half AR error 0.76× · perfect preview **0.65× (105/108)**
-- perfect actuator (PI 0.83): hold 1.01× · AR 0.95× (93/108) · perfect 0.51× (108/108)
-**Why:** User direction 2026-10-05. Supersedes the 1.19×/0.45× numbers in the entry below and the chat discussion snippet from earlier today.
-**Next:** ⚠ The scalar model has **no input delay**, so high-gain feedback is unrealistically effective. PI's Kp ends at the grid edge (2.0), and sim PI (0.83–1.08) beats the recorded CL (1.80) by ~2×. The measured loop latency (47 ms ≈ 2 samples) should go into the model before these numbers are final (ask user). Also tune r (fixed at 1e-3), and rebuild `ctrl_mpc_supp_fig.m` on `ctrl_mpc_lqr` output.
-
-### 2026-10-05 - S4 dropped, and with it the batch-mean stationarity argument
-**Changed/Found:** User: "s4 and its content not needed". Removed the `batch_mean_stationarity` float from `supplementary.tex`, deleted `images/supplementary/batch_mean_stationarity.pdf` from the manuscript repo, and removed everything in Methods that existed to support it. That is more than the figure: the trial-averaging assumption paragraph lost its whole second limb - "a converging variance estimate ... does not exclude a slowly drifting mean, so we also confirmed that the per-trial spontaneous mean is stationary across acquisition order", the 14/15 no-trend result, the 9-positive/6-negative slope balance (sign test p = 0.61), the 0.17 SD median drift, **and the AL_0051 disclosure** (the one dual-opsin session that drifts upward, linear regression p < 0.001, drift 1.63 SD, retained because excluding it changed nothing downstream). Three statements elsewhere went stale with it and were also removed: the sign test in the stats section (its only use was that slope balance), the "per-trial mean against acquisition order" item in the regression list, and the "as in the batch-mean stationarity check" example attached to the Bonferroni sentence. The paragraph now rests on the two S1C/S1D observations only, relabelled First/Second so it still reads as two. Supplement is S1-S3; the paper builds clean at 36 pages (was 37), no undefined references or citations.
-**Why:** User decision. `step_response.m` still produces the stationarity figure - it is simply not a paper figure any more, so nothing is lost on disk.
-**Next:** ⚠ Worth a deliberate second look before submission: the Methods used to argue that variance convergence ALONE is insufficient (it is a central-limit effect and is also consistent with a slowly drifting mean) and then closed that gap with the stationarity check. With the check gone, the assumption rests on the variance argument the text itself called incomplete, and the one session known to drift is no longer disclosed anywhere. If a referee presses on non-stationarity there is now no answer in the paper. Reinstating it costs one sentence and no figure - say so if wanted.
-
-### 2026-10-05 — Supplementary MPC figure built (3 panels, working PNGs)
-**Changed/Found:** New `controller-analysis/ctrl_mpc_supp_fig.m` → `paper/images/supp_mpc/mpc_{A_forecast_skill,B_rmse_vs_forecast,C_example_trial}.png` (jn style, 5.53 × 3.3 cm each). A = forecast error (relative to climatology) vs lead for AR and persistence, with the 86 ms plant delay marked. B = median per-trial RMSE (IQR band) vs forecast error in units of the AR forecaster, solid = measured gain spread, dashed = perfect actuator, with tuned-PI and recorded-CL lines. C = representative trial (#101, jointly nearest each controller's median RMSE: PI 1.36, MPC-AR 1.75, MPC-perfect 0.68). The first example pick (nearest the median PI only, trial 100) was rejected because the perfect-forecast trace overlay hid PI.
-**Why:** The user chose discussion + one supplementary figure for MPC.
-**Next:** PNG only; not in `MANIFEST.txt`. When the user locks it, add the three to MANIFEST/PAPER.md, then rerun with `PAPER_FINAL` (producer currently calls `paperExport` with .png only, so add the .pdf call). Panel B's dashed curve is relative to its own PI (1.30 with a perfect actuator), not the solid PI line (1.42); say this in the caption.
-
-### 2026-10-05 — MPC rebuilt on the 108 real single-trial disturbances: real forecasters only match PI; the clairvoyant bound is 0.45× PI
-**Changed/Found:** New `controller-analysis/ctrl_mpc_realtrial.m` (supersedes `ctrl_tube_mpc.m`). m4 (AL_0033 2025-02-26), each rollout driven by one recorded trial's contra Global, nominal-model planning, realized actuator gain lognormal with the measured CV σ_u = 0.40, controller sees y up to t−1, offset-free disturbance estimate. Baseline = a **grid-tuned PI** with the rig's 3-s boxcar integral (Kp=0.12, Ki=0.75): sim RMSE 1.42 vs the real CL 1.80, so this PI is better than the deployed one. MPC (Hp = 1 s, u∈[0,u_max], penalty λ(u−uff)² tuned per forecaster), median per-trial RMSE (+1..+3 s, vs −5), paired ratio to PI:
-- clairvoyant forecast: 0.67 (**0.45×**, beats PI on 101/108 trials); with a perfect actuator 0.22 (0.14×)
-- blend fc = clair + x·(AR − clair): x = 0.25 → 0.50×, x = 0.5 (half the AR error) → **0.77×**, break-even at x = 0.75 (1.00×); perfect actuator: x = 0.5 → 0.51×
-- no preview ("hold", standard offset-free MPC): 1.03× (beats PI on 34/108)
-- real AR / ARI forecasters (fitted on other folds, run causally): **1.19× / 1.31×**, i.e. worse than PI. With a perfect actuator they match it (0.95× / 0.96×, beats on 73–78/108)
-- (an earlier pass blended toward ARI instead of AR; switched so the x-axis forecaster is the one whose skill is plotted. Clairvoyant/hold/ARI numbers unchanged.)
-
-Interpretation: two limits, both measured. (1) The disturbance is barely predictable past the ~86 ms plant delay (`ctrl_mpc_forecast_sigma.m`: AR error 0.77 of climatology at 4 samples, 0.98 at 1 s), so a real forecaster gives no headroom even with a perfect actuator. (2) The 40% trial-to-trial actuator-gain spread contaminates the online disturbance estimate. The forecasters, trained on the open-loop disturbance, then extrapolate that contamination, while PI's integral just absorbs it. The ~2× headroom of a clairvoyant controller is real, but it needs a forecaster with half the current error plus online gain adaptation.
-**Why:** The user wanted MPC finished for the paper as discussion + one supplementary figure, with σ measured from forecasters we fit ourselves rather than waiting for Ziyu's model. Trial-level counts are reported descriptively (one session, n=1 mouse; pooled-trial p-values are not session-aware, per Nick 09-11).
-**Next:** Supplementary figure (`ctrl_mpc_supp_fig.m`) and a discussion paragraph. Caveats to state: a certainty-equivalent MPC (no tube, no gain estimation); one session; sim PI is tuned and noise-free (optimistic baseline, which is conservative for MPC). Ziyu's model can be dropped onto the x-axis later as its error relative to ARI.
-
-### 2026-10-05 — Tube-MPC disturbance was ~17× too small: sized from the trial MEAN, not single trials
-**Changed/Found:** `controller-analysis/ctrl_tube_mpc.m` — `sig_nat = std(dbar(wmask))` is the std of the **trial-averaged** contra Global over +1..+3 s (0.154 %ΔF/F on m4), and every realization is `dbar + sig_nat*w`. The actual single-trial departures the controller faces (`S3.Gabs` minus its trial mean, 108 trials) have sd **2.67 %ΔF/F** — 17× larger. Their temporal structure also differs from the synthetic 86-ms-Gaussian `w`: real autocorrelation is 0.94/0.66/0.47 at lags 1/3/5 and then plateaus near 0.44 (a slow per-trial offset plus fast fluctuation); the synthetic one decays to 0.05 by lag 10. The PI baseline is also off: it is an open-loop replay of the mean recorded command, RMSE 1.22, while the real per-trial CL RMSE on this session is 1.80 (median, +1..+3 s vs −5). So the earlier headlines ("flat curve; actuator-gain uncertainty dominates; forecast quality is second-order"; MPC 0.89 vs PI 1.22) were measured on a disturbance far smaller than reality. A tiny disturbance makes forecast quality irrelevant by construction.
-**Why:** Found while placing a measured forecaster on the curve (user chose to fit our own forecasters instead of waiting for Ziyu's model). New `controller-analysis/ctrl_mpc_forecast_sigma.m` (5-fold CV across trials, persistence / AR(p) / direct per-lead regression on the per-trial Global departures) gives forecast RMSE relative to climatology of 0.22/0.43/0.67/0.77 at leads 1–4 samples (AR), 0.89 at 300 ms and 0.98 at 1 s. Persistence is worse than climatology past ~150 ms (1.32 at 1 s). Fitted to the tube-MPC ρ(τ) profile, the operating point is x=1.19, i.e. *worse* than the curve's "Naive" end: our real disturbance is much less predictable than the Lu et al. profile assumed.
-**Next:** Rebuild the MPC comparison on the 108 real single-trial disturbances (new script, not a patch): simulated closed-loop PI and MPC on the identical realizations, with the measured actuator-gain spread kept, a real AR forecaster run causally, and validation of simulated PI against the real CL RMSE (1.80). Do not use any `ctrl_tube_mpc.m` number in the paper.
-
-### 2026-10-05 - Supplement repointed at the three assembled figures; 7 floats -> 4
-**Changed/Found:** `Closedloop_edit/supplementary.tex` rewritten. The supplement was seven floats, several of them several `\includegraphics` stitched with `\hfill`, pointing at pre-jn-style working images. It is now four floats, three of which are the single assembled PDFs (`images/supplementary/S1-S3.pdf`, copied from `paper/figures_final/`, 17.60 cm wide to match the main figures). Mapping: **S1** <- spatial area + 9 spatial maps + batch variance + OL variance evolution (A-D); **S2** <- cost surface + accepted gain path + online cost + per-node responses (A-D); **S3** <- session exemplars + the three unique-R2 specifications (A-D); **S4** = batch-mean stationarity, unchanged. The standalone `spont_variance` float is gone (it is S1C now) and the `AL_0034` grid panel is gone from S2. Three labels disappeared with them (`fig:spatial_maps`, `fig:spont_variance`, `fig:f4_unique`), so all 12 cross-references in `methods_rewrite.tex`, `results.tex` and `discussion.tex` were remapped and now carry panel letters. Verified: every referenced label is defined and every defined label is referenced; `latexmk` exits 0, 37 pages, no undefined references or citations.
-**Why:** User, 2026-10-05: "s1s2s3 illustrator and pdfs have been assembled" then "let put these in S1 figures and amend the text to show these ... push and merge to main". The supplement was still pointing at the superseded stitched images.
-**Next:** S4 (`batch_mean_stationarity.pdf`) is the last non-house-style supplementary figure - it carries its own title, internal `m1..m15` session labels and a non-jn axis style. Rebuild it as panels if the supplement is to be uniform.
-
-### 2026-10-05 - Methods claim about "convergence rates differ between sessions" withdrawn
-**Changed/Found:** `methods_rewrite.tex`, trial-averaging assumption paragraph. It read "the cross-trial variance ... converges with trial count and stabilizes beyond roughly 50 trials per session; convergence rates differ between sessions recorded from the same region, consistent with session-to-session differences in brain state." That second clause was being read off the OLD min-max-scaled axis, where each session's curve is stretched so its own minimum is 0 and its maximum is 1 - the between-session differences in "convergence rate" were that session's bootstrap noise at full amplitude, and (the bootstrap was unseeded) they changed from run to run. Replaced with what the redrawn panel actually shows: the mean total variance is flat in N to within 1-2% of itself while the SEM of the estimate falls as roughly N^-1/2, so the estimate is unbiased and its uncertainty shrinks. Added a sentence for the new S1D: open-loop across-trial variance falls during stimulation and recovers after, so the spread is not inflated by the stimulus.
-**Why:** The claim could not survive the figure being drawn correctly, and it was a brain-state interpretation resting entirely on a plotting artifact.
-**Next:** none.
-
-### 2026-10-05 - Two typesetting defects in the supplement captions
-**Changed/Found:** `supplementary.tex`. (a) The `%% FILL` comment for the Chrimson citation sat between the last word and the sentence period, so the caption typeset as "...local opsin activation . C: Total cross-trial variance..." - a floating period mid-caption. The period moved up to the word and the comment now says not to put it back. (b) `sec:f4_decomp` labels a **starred** `\subsubsection*`, which steps no counter, so `Section~\ref{sec:f4_decomp}` rendered as "(Section 1)" - a reference to a section that does not have that number. It was the only reference to that label; replaced with the section named in words. Both confirmed fixed in the rebuilt PDF.
-**Why:** Found by rendering the compiled supplement pages rather than trusting the source - neither is a LaTeX error, so both compile silently and would have reached a referee.
-**Next:** Any other `\ref` to a starred section would fail the same silent way; there are currently none.
-
-### 2026-10-05 - spont_variance.pdf is NOT REPRODUCIBLE: it plots three random sessions
-**Changed/Found:** `controller-analysis/step_response.m` line ~146 does `custom_idx = randperm(numel(fields), n_sample)`, which **overwrites** the step-response set (`custom_idx = [4 9 11]`, line 84) with three RANDOMLY CHOSEN sessions, drawn fresh on every run, and the bootstrap itself is unseeded. So the published `spont_variance.pdf` - supplementary S4 in the current build - plots three sessions nobody can identify, its "Session 1/2/3" legend names different animals every time the script runs, and the curves cannot be regenerated. Confirmed by running it twice: the first pass drew m2/m8/m14 (200/60/100 trials), the second drew m10/m13/m8 (100/100/60).
-**Why:** Found while building the S1 batch-variance panel. The random sample is a fine exploratory check ("does convergence hold for arbitrary sessions") and is not fine for a figure in the paper.
-**Next:** The new S1 panel pins the set to `[4 9 11]` and seeds the draws, so it is self-contained. The WORKING view and the `spont_variance.pdf` the manuscript still includes are untouched and still unreproducible - decide whether to retire that file with the rest of the stitched supplement, or fix line 146 too.
-
-### 2026-10-05 - Batch-variance panel: min-max normalisation was showing noise as signal
-**Changed/Found:** New self-contained S1 panel `supp_s1_batch_variance.pdf` (3.21 x 3.10 cm) in `step_response.m`. **What the bootstrap actually says:** mean total variance is FLAT in batch size - it moves 1.0-2.0% of its own mean from 10 to 100 trials across the three sessions, i.e. the estimate is unbiased - while its SEM falls roughly as 1/sqrt(n) (session 1: 1.74% -> 0.38% of the mean, x0.22 over n=10->100, against the 1/sqrt(10)=0.32 ideal; sessions 2 and 3 x0.11 over 10->90). The convergence claim lives entirely in the ERROR BARS. The working view min-max normalises each session's curve, mapping its own min to 0 and max to 1, which **stretches that ~1% ripple across the full panel height** - what the reader sees is bootstrap noise at full amplitude, reading as "variance wanders with batch size", the opposite of the finding. The panel now normalises by each session's own MEAN: every session sits at 1.0 and the shrinking error bars are the visible result. Also DROPS degenerate points: the draw is `randperm(n_trials, min(n, n_trials))`, so once the batch size reaches a session's trial count every repeat returns the same full set and the SEM is exactly 0 by construction - those would have plotted as perfect convergence.
-**Why:** User, 2026-10-05: "need to add batch variance figure to S1".
-**Next:** Caption must say the y axis is per-session normalised and that the claim is the error bars, not the curve. If a stronger version is wanted, all 15 sessions pooled (normalised then averaged) would be one curve instead of three and fully reproducible.
-
-### 2026-10-05 - OL variance-evolution panel redrawn for S1
-**Changed/Found:** New `supp_s1_ol_variance_evolution.pdf` (3.60 x 2.93 cm) in `controller-analysis/variance_mse.m`, a redraw of `onset_variance_slope.pdf`. In the working version the three slope annotations were all placed at the SAME y at the bottom of the axes; at 6 pt in a 3.4 cm panel the three "slope=%+.2f" strings overlapped into `slope=-0.2lope=-0.5lope=+0.21` - unreadable, and the only quantitative content the figure has. Each slope value now sits ON its own dashed fit line inside its own epoch, the epochs are named pre / stim / post, the single-entry "OL mean" legend is dropped, and the two-line rotated y label is shortened. Values unchanged: pre -0.21, stim -0.52, post +0.21. Nothing is recomputed - same traces, fits and slopes.
-**Why:** User, 2026-10-05: "the session OL open loop variance eveolution figure (the onset variance slope figure here: paper/images/figure2, but redrawn properly)".
-**Next:** none.
-
-### 2026-10-05 - A locked output file no longer aborts a producer
-**Changed/Found:** `utils/paperExport.m` wraps the export in try/catch: a permission error on the destination now warns (`paperExport:locked`, naming the file and saying its copy on disk is STALE) and the producer continues. Previously it threw, and one PDF left open in Illustrator killed the whole script - `onset_variance_slope.pdf` being open aborted `variance_mse.m` before it reached the new S1 panel, which is nowhere near that file.
-**Why:** `paper_final_mirror` already degraded this to a warning; the working-copy export did not, so the two halves of the same operation disagreed.
-**Next:** `paper/images/figure2/onset_variance_slope.pdf` is currently stale (locked through every run today). It is superseded by the S1 panel anyway, but re-run `variance_mse.m` once it is closed if the working copy matters.
-
-### 2026-10-05 - Ticked off all grant action items in MEETINGS.md
-**Changed/Found:** `MEETINGS.md` — 15 grant items marked DONE: 09-24.1/.2/.3/.6, 09-23.2/.3/.4/.6, Nick's 09-24.4/.5 + 09-23.5, and older carried 09-15.8, 08-24.2, 08-24.3, 08-10.6.
-**Why:** User confirmed the Azadeh grant is done ("grant items are all done").
-**Next:** The Command board's Grant (R01) lane still has 3 open lines; that's the user's to tick.
-
-### 2026-10-05 - S6 window widened to show the stimulus release; S7 bars take the state colours
-**Changed/Found:** `controller-analysis/f4_state_exemplars_supp.m` - strip display window is now **t = -2 to +5 s**, i.e. 2 s either side of the 0-3 s stimulus. The old -2 to +3 ended EXACTLY at stimulus offset, so the strips showed the controller holding the reference and then simply stopped; the release back toward baseline was never on screen. The buffer carries 6 s post-onset, so +5 is real data. This is a DISPLAY window only - the state-measure window stays the locked [-2,+3) s and the exemplar picking is untouched. The standalone scale panel is gone; the 1 s x 5% corner bar is now drawn on **S11's initial-deviation cell**, below the data box with clipping off. `controller-analysis/f4_error_decomp.m` - the bare unique-R^2 trio now passes `FCfac(cols,:)`, so each bar carries its **state exemplar colour** (init-dev blue, motion orange, rel 2-4 Hz green, abs delta purple); `FCfac` moved above the mode loop.
-**Why:** User, 2026-10-05: "put the short corner axis on s11 initial dev plot so it seems like it carries over to others, show stim -2 to stim +2 for al plots, for error comp plots re draw with the corrsponding state exemlar colors". ASSUMPTION STATED: "stim -2 to stim +2" read as 2 s either side of the stimulus **period**, not of its onset - onset-relative would have cut the 3 s stimulus in half, and the defect being fixed is precisely that the old window stopped at offset.
-**Next:** A reserved-band approach for the S11 bar was tried and dropped - it cost ~40% of every strip's height to serve one panel and the labels still fell outside the band. Drawing below the box with `Clipping','off'` leaves strips S01-S10 identical at 11.25 x 0.71 cm and makes only S11 taller (0.99 cm), which hangs off the bottom of the stack and disturbs nothing. Align the stack from the top, not by centring.
-
-### 2026-10-05 - S3 node panels: corner axes, no ticks, gains named, 40% smaller
-**Changed/Found:** `controller-tuning/tune_supp_panels.m` node panels went from a boxed, ticked axis at **2.89 x 1.55 cm** to the house minimalist form at **2.47 x 0.92 cm**: `axis off`, a hand-drawn 1 s x 5% corner bar on node 01 only (clipping off, both labels to the right of the vertical arm so it adds no width), and the gains written as **`K_p 0.05  K_i 0.1`** instead of `0.05, 0.1`. Node 01 is 2.47 x 1.13 - taller only, and it is the (0,0) no-control reference that sits apart from the 3 x 3 of nodes 02-10. Dropping the tick furniture is what allowed the shrink: the tick text was padding the page out, which is why the earlier 1.9 cm canvas still exported at 2.9 cm.
-**Why:** User, 2026-10-05: "on the trial avg plots remove ticks make short corner axes (which you should hae nderstodd cause its a paper figure, make it so that we knwo which value is kp and which is ki), also make em a bit smaller than current size". The bare `0.05, 0.1` did not say which number was which, and Kp and Ki are not interchangeable - the whole point of the matrix is that they do different things to the trace.
-**Next:** `shortCornerAxes_plot` was not used for either bar: it places the bar a fraction INSIDE the axes, which at these sizes lands it on the trace and the reference line. If that helper ever grows an "outside" placement option, both hand-drawn blocks should move back onto it.
-
-### 2026-10-05 - imp_spatial_area.pdf re-exported (it was not locked)
-**Changed/Found:** Re-ran `imp_spatial_panels.m` with `PAPER_FINAL` on after restoring `allExperiments`; `panels/supp_spatial/imp_spatial_area.pdf` now mirrors cleanly at **2.93 x 3.32 cm**, no lock warning. Collector: 78 present, 0 missing. The superseded `supp_f4_exemplar_scale.pdf/.png` were pruned.
-**Why:** User, 2026-10-05: "imp_spatial_area.pdf is not locked". The three earlier runs all raised `paper_final_mirror:locked` on that one file, so the stale copy was reported as a blocker; whatever held the handle is released now.
-**Next:** none.
-
-### 2026-10-05 - S6 + S7 rebuilt as 16 assemblable panels in one figure
-**Changed/Found:** `controller-analysis/f4_state_exemplars_supp.m` gains a strip-export block (`F4_SUPP_STRIPS`, default on): **one panel per session** rather than the 11 x 4 contact sheet, 11 strips at **11.18 x 0.64 cm** plus a standalone `supp_f4_exemplar_scale.pdf`. `controller-analysis/f4_error_decomp.m` `draw_grouped` gains an `opt` struct (`.bare`, `.tag`, `.hCm`) and emits a **bare** narrow copy of each unique-R^2 mode (`supp_f4_unique_{both,rel,abs}.pdf`, 4.7 / 4.0 / 4.0 x 2.79 cm) plus one `supp_f4_unique_legend.pdf`. New `[supp_f4]` manifest section, 16 panels; collector reports 79 present, 0 missing, 0 pruned.
-Three layout defects found and fixed by looking at the exported files, not the figure window: (1) the session label burned in at the top-left **printed across the trace** at 1.3 cm - moved outside the axes on the left, where every strip gets one so the crops stay equal; (2) the in-strip scale bar's "5%" / "1 s" labels **sat on the first cell's data** - split into a standalone panel drawn at the same axes height and y-limits, so it is still physically correct at 100%; (3) the strips were cropping to **18 pt for some and 19 pt for others** (a 0.35 mm jitter that accumulates down an 11-strip stack) because traces reaching the clip boundary pushed the content bbox up a point - fixed by padding the strip y-limits 4%, after which all eleven are identical.
-**Why:** User, 2026-10-05: "figure 11, 12 can be put together but we need smaller panels and better assembly". The old S6 was 16 x 29.7 cm - a full page before S7 was placed - and S7 was three `\includegraphics` stitched with `\hfill`. Panel-per-cell was rejected: the four cells of a row share a session, a y-scale and a scale bar, so splitting them would make the assembler re-establish by hand an alignment the figure already has, 44 times.
-**Next:** `supplementary.tex` still includes the old `f4_exemplars_sessions.pdf` and the three wide `f4_decomp_unique_*.pdf`; repoint `fig:f4_exemplars` + `fig:f4_unique` at the single assembled PDF once it exists, then retire those four. Strip widths differ by 0.35 mm on one of the eleven (11.15 vs 11.18) - irrelevant for a vertical stack aligned on the left edge, but do not centre them.
-
-### 2026-10-05 - S3 cut to one mouse; cost labels split into offline vs online
-**Changed/Found:** `controller-tuning/tune_supp_panels.m` `PAIRS` reduced to the single AL_0033 pair (grid 2025-03-05 e1 + auto-tune 2025-03-17 e3). The AL_0034 row is gone. With one mouse the `_m1` suffix is meaningless, so panel names are now unsuffixed (`supp_tune_surface.pdf`, `supp_tune_path.pdf`, `supp_tune_cost.pdf`, `supp_tune_node_01..10.pdf`); the suffix is derived from the tag, so restoring a second mouse is a one-line change to `PAIRS`. Also split the two cost labels that were both reading "cost": the surface colourbar is now **"offline cost J"** (recomputed by `ct_process_set`) and the convergence axis **"online cost (rig)"** (what the rig logged while tuning) - they differ by 0.76x even on this well-behaved pair. `MANIFEST.txt` `[supp_tuning]` rewritten to the 13 panels; the 32 superseded tagged files pruned from `figures_final/panels/supp_tuning/` and the 16 working copies deleted from `images/tuning/`.
-**Why:** User, 2026-10-05, after the row-2 pairing check: "lets keep row 1 only, and show the per grid point trial avg responses and J value ie the row 3 figures". The node panels were already AL_0033-only, so they carry over unchanged.
-**Next:** Node ordering is (0,0) followed by a clean 3 Kp x 3 Ki lattice - node 01 is the no-control reference and nodes 02-10 tile the surface's own axes, so the natural assembly is a 3 x 3 matching the cost surface with the (0,0) panel set apart, not the 5 x 2 used for preview. `supplementary.tex` still stitches the three stale June images; repoint `fig:cost_landscape` once the assembly exists.
-
-### 2026-10-05 - S3 row 2 IS same-mouse, but it is not the same experiment as row 1
-**Changed/Found:** User challenged whether the S3 grid and auto-tune panels are within-mouse. Checked against the loaded structs and the server paths, not the registry: **both rows are same-mouse.** Row 1 = AL_0033 grid 2025-03-05 e1 + AL_0033 auto-tune 2025-03-17 e3 (12 days apart). Row 2 = AL_0034 grid 2024-10-17 e30 + AL_0034 auto-tune 2024-10-25 e1 (8 days apart). The same-mouse rule is not violated. **But row 2 differs from row 1 in four ways the layout hides:**
-1. **Different rig build within the row.** The row-2 grid is 7-column `input_params` (no onset column; onsets reconstructed from Timeline). Its own auto-tune session, and both row-1 sessions, are 8-column with a direct onset index. The row-2 grid predates the build its partner ran on.
-2. **Different stim duration within the row.** Row-2 grid ran dur=4 s, cost window [0,4] (140 samples); its auto-tune ran dur=3 s, [0,3] (105). Row 1 is [0,3] on both. J is an un-normalised `norm(y-ref)`, so the row-2 grid's J is inflated ~sqrt(140/105) = 1.15x before any difference in control quality.
-3. **The two panels in a row plot DIFFERENT METRICS.** Surface colour = offline J recomputed by `ct_process_set`; convergence y-axis = the rig's online `Kval` (pre-2026-06-29 definition). Ratio of online-final to offline-grid-min: **0.76 for row 1, 0.15 for row 2.** Recomputing the converged gains in the *offline* metric: row 1 J=15.1 vs grid min 16.1 (tuner beat the best grid node); row 2 J=25.8 vs grid min 30.2 (but across different windows, so not a clean comparison).
-4. **AL_0034 appears nowhere else in the paper.** The 15 controller sessions are AL_0033 (9), AL_0039 (4), AL_0048, AL_0050, AL_0051. Row 2 introduces a mouse the reader has never met - already an open item in PAPER.md line 51.
-Control quality also differs: row-1 best node holds -5.18 against ref -5 from a -0.05 baseline; row-2 best node reaches only -3.65 from a +1.42 baseline (~1.35% steady-state error).
-**ONSET-ALIGNMENT WORRY CLEARED.** The `r=0.24` in the row-2 Timeline lag calibration is the lag-search correlation, not the resulting alignment. Per-node half-fall time has **IQR = 0 s across all 17 nodes** (and 10/10 for row 1), and row 2's 10-90% fall is *sharper* than row 1's (3 vs 13 samples). The inferred onsets are not smearing the surface.
-**Why:** The 3x2 layout puts the two rows in visual parallel, which asserts they are equivalent demonstrations. FINDINGS.md already says they are not - "auto-tuning settles into the grid's low-cost basin (clearest in AL_0033 03-17); it **explores rather than pinpoints** when the basin is broad/flat (AL_0034)" and "the flat basin makes a strong convergence claim unsupported here". The figure currently contradicts the project's own recorded finding.
-**Next:** Decide with the user: (a) drop row 2 and show the clean AL_0033 pair only (CLAUDE.md already calls that "the strong same-mouse story"); (b) keep it but plot the convergence panel in the OFFLINE metric so surface and curve share one scale, and caption the dur=4 / 7-col differences; or (c) keep as-is with an explicit caption. Do NOT silently rescore the row-2 grid on [0,3] - cwin=[0 4] is a locked decision (dur=4 variant exhibit).
-
-### 2026-10-05 - S3 controller tuning rebuilt as 16 individual panels
-**Changed/Found:** New `controller-tuning/tune_supp_panels.m` - the paper producer for supplementary S3, consuming `G`/`A` from `load_grid.m`. Writes per mouse: cost surface `J(Kp,Ki)` (3.3 x 3.0 cm) with the online tuner's converged gains starred on it, accepted gain path (3.1 x 2.6), online cost vs iteration (2.9 x 2.2); plus **ten one-node-per-panel** mean-response traces (2.9 x 1.6 each) for the m1 grid. Axis gridlines off and the node montage split into separate files - **both** readings of the user's "remove grids". Node panels use a shaded stim band instead of two `xline`s (the vertical lines ran full height and the gain/J labels printed across them) with +7.5 headroom for the labels, and carry **no** axis titles so all ten crop identically and align as a matrix. New `[supp_tuning]` manifest section; `gain_grid.m` and `auto_tune.m` untouched (they stay the exploratory views, and `gain_grid.m` is also the talk re-export path).
-**Why:** User, 2026-10-05: "figure 8 panels need to be exported as individual panels (remove grids) use jn style, make smaller". Re-exporting was impossible: the three images the LaTeX pulls (`grid_cost_surface_AL_0033_0305.pdf`, `grid_cost_surface_AL_0034_1017.pdf`, `autotune_convergence_both.pdf`) are **June 2026 files whose producers no longer exist under those names** - `gain_grid.m` now writes `gain_cost_surface_*`, and nothing in the repo produces `autotune_convergence_both` at all. S3 had to be regenerated, not resized.
-**Next:** `supplementary.tex` still `\includegraphics`-stitches the three stale June files; repoint `fig:cost_landscape` at the assembled PDF once the Illustrator assembly exists. Node panels exist for m1 only - say whether m2's 17 nodes are wanted too.
-
-### 2026-10-05 - Auto-tune convergence was being plotted from the wrong array
-**Changed/Found:** `tune_supp_panels.m` reads the accepted path from the rig's `Kdata.npy` / `Kval.npy` (new local `local_accepted_path`), not from `input_params` the way `auto_tune.m` does. `input_params` logs **every applied candidate including the probes the optimizer rejected and reverted**, so plotting it shows random probes as if they were the trajectory. Measured on the accepted path: m1 (AL_0033 03-17) 9 iterations, **3 distinct accepted points**, cost 16.6 -> 12.3 (-26%), final (Kp=0.0677, Ki=0.0636); m2 (AL_0034 10-25 e1) 9 iterations, **5 distinct**, 11.9 -> 4.57 (-61%), final (Kp=0.0999, Ki=0.2188). Both files carry a trailing uninitialised row (gains written, Kval exactly 0) that is not an iteration and is dropped; row 1 IS real - the (0,0) no-feedback start the descent is measured from. Sessions with `Kval == 0` throughout are refused outright rather than plotted as a flat line.
-**Why:** controller-tuning/CLAUDE.md already states Kdata/Kval are the figure source, but the only live producer (`auto_tune.m`) uses input_params - so the rule existed and the code did not follow it. A supplementary panel captioned "the tuner converges" must not be drawn from the rejected probes.
-**Next:** **m2's converged point (Ki=0.219) lies OUTSIDE the swept grid box** (Ki only went to 0.18), so the online search left the region the exhaustive sweep covers. The axes are widened so this is visible rather than cropped away; decide how the caption frames it. Also reconcile `auto_tune.m` to the same source, or mark it explicitly as the debug view.
-
-### 2026-10-05 - run() cwd trap: tuning producers have been writing to a stray paper/ tree
-**Changed/Found:** `tune_supp_panels.m` resolves `out_dir` from `fileparts(fileparts(mfilename('fullpath')))`, not from a relative `'paper/images/tuning'`. `run()` cd's into the script's own folder, so the relative path silently created **`controller-tuning/paper/images/tuning/`** and wrote there. That stray tree already holds ~20 panels from `gain_grid.m` and `auto_tune.m`, while the real `paper/images/tuning/` still contains only the five June files - which is a large part of why S3's assets looked frozen in June.
-**Why:** Found when the first `tune_supp_panels` run reported "exported" but the files were not in `paper/images/tuning/`. Same trap previously hit `run(fullfile('controller-analysis','load_sessions.m'))`.
-**Next:** `gain_grid.m` and `auto_tune.m` still have the relative `out_dir` and will keep writing to the stray tree - fix both, then delete `controller-tuning/paper/` (left in place for now; it is the user's call, and nothing references it).
-
-### 2026-10-05 - Supp spatial maps: all 9 amplitudes, labels burned in, scale bar embedded
-**Changed/Found:** `impulse-analysis/imp_spatial_panels.m` - the individual-panel loop now exports **all nine** amplitude maps (the 5-panel `SP_MAP_SUBSET` is gone), every panel carries its own `%.2f mW` label, and the 1 mm scale bar is drawn on panel 01 instead of being shipped as a standalone `supp_spatial_scalebar.pdf`. Canvas 1.5 -> 1.6 cm; after padding each panel is 578 x 519 px = **1.22 x 1.10 cm**, so a 3 x 3 block is 3.67 x 3.30 cm and leaves room for the colourbar + the area/variance/stationarity column inside the 8 x 5 cm budget. New local function `pad_png_to_common_canvas` pads the set to a common white canvas, because exportgraphics tight-crops to content and panel 01's scale bar made it 1.22 x 0.95 while the rest were 1.07 x 0.97 - eight different sizes cannot be dropped into a grid at 100%. `MANIFEST.txt` lists all nine and no longer lists the scale bar; stale `supp_spatial_map_0[1-5].pdf` + `supp_spatial_scalebar.*` pruned from `figures_final/panels/supp_spatial/` and deleted from `images/supplementary/`.
-**Why:** User, 2026-10-05: "all spatial map panels should have amps written on it, i want all 9 maps ill place it as 3 by 3, grid replan ... i also want one of them to have the 1mm label embedded instead of separate loading." The earlier no-label / subset decision was taken at 1.3 cm; at 1.6 cm with padding the 6 pt label fits without colliding.
-**Next:** `imp_spatial_area.pdf` was LOCKED (open in Illustrator/Acrobat) on all three runs, so the `figures_final` copy is stale - close it and re-run with `PAPER_FINAL` on. Then re-export `spont_variance` + stationarity at the budgeted size to finish S1.
-
-### 2026-10-05 - exportgraphics' vector PDF path silently JPEG-downsamples embedded rasters
-**Changed/Found:** `utils/paperExport.m` (new optional `dpi` arg), `utils/paper_final_mirror.m` (mirrors `.png`/`.tif` panels, not vector only; new `local_img_page_cm`), `paper/figures_final/collect_final_panels.m` (prune logic checks a file's own manifest entry BEFORE falling back to the `.pdf`-preview rule, so a `.png` that IS a panel is not deleted). The nine spatial maps now export as **PNG at 1200 dpi**. Root cause, measured on the emitted files: `exportgraphics(fig, '*.pdf', 'ContentType','vector')` re-encodes every embedded raster as a **JPEG resampled to the figure's ON-SCREEN pixel size**. A 1.6 cm canvas is ~60 screen px, so each brain map was landing as a lossy **64 x 63** image (~135 dpi) - below even the 103 x 121 native resolution of the cropped data. Passing `'Resolution'` alongside `'ContentType','vector'` is accepted and then ignored (verified: byte-identical output, 3708 B both ways). `print -dpdf -painters` keeps 485 x 484 but writes a US-Letter page.
-**Why:** User reported "pdf load issues" on the exported map panels. My first diagnosis - an `/SMask` soft mask from `AlphaData` - was **WRONG**: all 46 raster-bearing panels in `figures_final` carry an `/SMask`, including every one that assembles fine, so it cannot be the discriminator. Removing `AlphaData` and pre-composing RGB on white did not remove the `/SMask` either. Recorded so it is not re-investigated.
-**Next:** The resolution defect is fixed and proven; whether it was also the *load* failure is unconfirmed - ask the user what Illustrator actually reports if the new PNGs still misbehave. Any other small raster panel (<= ~2 cm) exported as vector PDF has the same defect and should move to PNG + explicit dpi.
-
-### 2026-10-05 - Parsed the 2026-09-24 Nick meeting into MEETINGS.md
-**Changed/Found:** `MEETINGS.md` — new `### 2026-09-24` entry + snapshot refreshed to "as of 2026-09-24" (grant section, new 09-23 manuscript items, Nick's items); old 09-15 snapshot kept below it. The meeting was grant-only (Azadeh aims sprint). It carries `2026-09-23.x` items from a 09-23 meeting with **no transcript in the vault**. Flagged on `2026-09-15.2` that the 2026-10-02 re-run weakened the rel-δ controllability claim, so the "all three hold" stats are not what to show Nick as-is.
-**Why:** User asked for the open work from the Nick meetings; standing rule is to parse every transcript newer than the last MEETINGS entry (was 09-15).
-**Next:** Confirm which grant items closed at the ~09-30 deadline; find/record the 09-23 meeting if it exists.
-
-### 2026-10-05 - Hand-drawn cortex mask; S1 spatial panels sized to the 8x5 cm budget
-**Changed/Found:** `ae.brainMask` is **not a cortex outline** - on AL_0033 2025-01-29 it is TRUE over **75% of the frame** (70.2 mm2), including the dark surround at the top corners, while EXCLUDING a large block of posterior cortex. Every spatial map published through it showed diffuse signal outside the brain and dropped real cortex. An automatic threshold was tried and REJECTED: it split the hemispheres down the sagittal sinus (dark vessel falls below threshold) and trimmed the dim posterior taper - both anatomical calls, not intensity calls. The user drew the mask by hand instead; cached at `impulse-analysis/data/cortex_mask_AL_0033_2025-01-29_e1.mat`, **189374 px / 56.7 mm2 / 60% of frame**. It is applied as a DISPLAY mask after unpacking, because `imp.resp_map` is indexed by `bmask` and that indexing cannot change. Panels re-exported for the new S1 (spatial spread + spont variance + stationarity, under 8 cm x 5 cm): five of nine amplitudes at **1.13 cm**, standalone scalebar 0.64 x 0.28, colourbar 1.31 x 1.52, area narrowed 4.2 -> 2.8 cm canvas (**2.93 x 3.32**).
-**Why:** User: "the brain images need a mask to be drawn they are covering a lot of area outside the cortex"; and the assembled figure must come in under 8 x 5 cm.
-**Next:** **Three traps caught, all of the same family - a pull folder or a tiled layout that silently keeps stale or oversized content.** (1) `collect_final_panels('dry')` would have DELETED `latency_histogram.pdf`, the Fig-1 panel staged weeks ago but never added to `MANIFEST.txt`; registered it under `[figure1]` BEFORE pruning, then pruned the 4 stale map panels (06-09). Always dry-run the collector. (2) The first 1.3 cm panels burned in 6 pt labels that took ~20% of panel height, and the "1 mm" text collided with its own bar; panels are now clean (`SP_PANEL_TEXT = false`) with the scale bar as its own panel and the amplitude->filename mapping printed for Illustrator. (3) A sed-style replace of the scale-bar guard hit the MONTAGE loop instead of the panel loop - both contained identical text - and broke the script with "Unrecognized variable ii". **OPEN DECISION blocking the rest of S1:** `batch_mean_stationarity.m` is a `nC = 5` column montage at 2.6 x 2.1 cm per tile, so for 15 sessions it is ~13 x 6.3 cm. It CANNOT shrink into the ~2.5 cm bottom-row slot as a montage. Needs either one representative session or a compact cross-session summary - a presentation choice for the user.
-
-### 2026-10-05 - S1/S2 spatial: montage split into 11 individually pullable panels
-**Changed/Found:** `impulse-analysis/imp_spatial_panels.m` now exports one panel per laser amplitude (`supp_spatial_map_01..09.pdf`, 2.6 cm canvas, cropping to ~2.12 cm) plus a standalone colourbar, alongside the existing `imp_spatial_area.pdf`. The 8.5 x 8.9 cm tiled montage is kept as a working-dir contact sheet but is no longer what gets pulled. Added a `[supp_spatial]` section to `MANIFEST.txt` listing all 11 basenames; `paper_final_mirror` routes by basename into the manifest's own section, so they land in `panels/supp_spatial/`. Verified: all 11 mirrored, shared colour axis (clim +/- 3.10) preserved across panels so they stay mutually comparable.
-**Why:** User wants supplementary figures assembled in Illustrator from individual jn-style panels rather than stitched in LaTeX or montaged in MATLAB.
-**Next:** **Two traps that a tiled-to-individual split creates, both handled, both worth remembering for S3/S6/S7.** (1) The colourbar was welded to the layout (`cb.Layout.Tile = 'east'`), which is meaningless once tiles are separate files - it had to become its own panel. (2) That standalone bar first cropped to **1.83 cm against 2.12 cm map panels**; scaling it in Illustrator to match would have rescaled the tick text and broken the 6 pt rule, so its `Position` is now forced to span the canvas and it exports at 2.50 cm. Any future montage split needs both checks. Remaining supplementary producers still montaged or LaTeX-stitched: S3 tuning (`controller-tuning/auto_tune.m`, 3 files via subfigures - user also wants axis gridlines off AND each node trace as its own panel), S6 (`f4_state_exemplars_supp.m`), S7 (`f4_error_decomp.m`, 3 files via \hfill - the worst offender). S2's trial-examples panel adjacent to Fig 4A has no producer at all yet.
-
-### 2026-10-05 - Supplementary section created after the references; Table 3 cut is BLOCKED
-**Changed/Found:** The paper had no supplementary section at all - seven figures sat inside Materials and Methods ahead of the bibliography, rendering as Figures 6-12 in the main sequence, and `main.tex` ran intro/results/discussion/methods_rewrite/bibliography with nothing after. Created `supplementary.tex`, moved the contiguous block (the existing `\subsection*{Supplementary figures}` header through the last `\end{figure}`), input it after `ibliography{refs}`, and reset + S-prefixed the figure counter. Now renders **S1 spatial_spread, S2 spatial_maps, S3 cost_landscape, S4 spont_variance, S5 mean_stationarity, S6 f4_exemplars, S7 f4_unique** on pp. 35-40; main figures stay 1-5. Renamed `fig:S1`-`fig:S4` to content-based labels - under the S prefix they render S4-S7, so a label named `fig:S1` printing "Figure S4" was a trap for the next edit. Build clean: 40 pp, 0 undefined references. Committed to `draft` only.
-**Why:** User: "i dont think we have a proper supplementary section let make it after references"; and the supplementary figures are to be assembled by the user in Illustrator from individually exported jn-style panels rather than stitched in LaTeX.
-**Next:** **TABLE 3 (`tab:tf_sessions`) CANNOT SIMPLY BE CUT - it is load-bearing for the user's own Discussion.** Three live references: `methods_rewrite:779` (the controller was designed on this fit), `methods_rewrite:846` (settling time), and **`discussion.tex:108`, where the "lightly damped second-order system resonant near 2.2 Hz" argument cites it directly**. The user writes the Discussion, so deleting the table would silently strip the support from their own claim. The table is ALSO stale and that makes it worse, not better: it lists AL_0033 as order 2/0 with tau = 271 ms where the current fit is 4p3z0d with tau_slow 333 ms, it covers three sessions where the analysis now has four, and its own embedded CHECK comment records that it predates the 2026-08-10 widening of the order sweep - so the 2.2 Hz figure the Discussion quotes has no current source. Decide with the user: re-derive the damped frequency from today's fits and rebuild the table, or cut it AND rewrite the Discussion sentence. Not an editorial call to make alone. Also still open: the Overleaf/GitHub merge conflict is unresolved, so `main` was deliberately NOT pushed this round to avoid compounding it.
-
-### 2026-10-04 - Both remaining exclusion gates dropped; paper has zero rendered placeholders
-**Changed/Found:** User resolved the two blocked placeholders by removing the gates rather than filling them. (1) **No 40-trials-per-condition gate exists** - confirmed against the data (m6 keeps 14 OL / 14 CL, m5 24 CL, m8 22 CL, m12 35 OL, all retained), so the item was cut, not filled. (2) **The contralateral-predictor R2 gate is dropped**, resolving the 0.3-vs-0.85 contradiction by making it moot: the controller analysis needs only a stimulation-blind ESTIMATE of the disturbance, not a certified model, so no session is excluded on predictor quality; instead we report the predictor's held-out R2 and set the disturbance zero level by referencing it to its own no-laser baseline with leak correction. This now matches what `results.tex` already said and I had not connected - "This split is a construction, not a fitted model ... We therefore make no claim from the decomposition itself". The Fig-4C n of 11 sessions / 613 trials therefore stands; the 0.85 floor in `ctrl_r2_floor()` gates other cross-session scripts, not this decomposition. (3) **Third find, same class as the motion sentence:** Methods promised "cross-validated R2 ... against two nested nulls, Global alone and trial-average alone" and `results.tex` reports NO nulls anywhere. Since the Results explicitly make no claim from the decomposition, the nulls clause was cut and the reconstruction check kept (Fig 4F does report it, R2_te = 0.75). **Rendered placeholders across all four built files: 0.** Build clean, 38 pp, 0 undefined refs or citations. Merged to `main` and pushed (df62ee0); Overleaf needs a pull from the user's side.
-**Why:** User: "no such gate of 40 trials exits"; "in controller analysis we just need disturbance so we dont care about the gate so we report the R2 on learned model and say the procedure we use to get disturbance to zero level"; then "finalize the paper and push again".
-**Next:** Preprint blockers now reduce to **author names and affiliations only**, which the user is doing directly in Overleaf. Figure-side follow-up, not blocking: re-place Fig 2C in Illustrator - its legend text changed with the calibration fix (0.40 / 1.18 / 1.80 mW) though the bounding box did not. Worth a final pass for the same "promised but absent" defect found three times today (motion with/without, nested nulls, and the two phantom gates): grep Methods for every "we report", "we tested" and "results are reported" and confirm each has a counterpart in Results.
-
-### 2026-10-03 - Methods exclusion counts: 8 of 10 placeholders filled, 2 are blocked on a contradiction
-**Changed/Found:** Filled the motion exclusions in `methods_rewrite.tex` and corrected the rule as written. **The Methods described the wrong statistic:** it said "trials whose PEAK motion energy exceeded 1.5 standard deviations ABOVE the session mean". The implemented rule (`trial_state_mse.m:78-89`) is `abs(mean(motion over -2..+3 s)) <= 1.5` on already-z-scored motion - a MEAN not a peak, and TWO-SIDED not one-sided. The difference is not cosmetic: counted both ways the exclusion is **30 trials by the implemented mean rule vs 297 by the peak wording**, a 10x difference, so the sentence as written misdescribed which trials are in every motion analysis. Rewritten to the implemented rule and filled: **30 of 1190 trials, 11 of 15 sessions**. The pool reproduces the canonical `f4_row2_pool` audit exactly (11 sessions / 1190 trials) once the canonical has-motion test is used - `isfield(M,'has_motion') && M.has_motion && any(d.ncmotion(:))`; a laxer "field is not all-NaN" test wrongly admits m1/m3/m7/m8 and gives 15. Also replaced the "Closed-loop stability" paragraph (3 more placeholders) with the stability assumption plus its evidence, since the margins stream is dropped. Rendered placeholders in the built PDF: **10 -> 2**.
-**Why:** Preprint blocker - `	extbf{n}` renders as a bold "n" in the public PDF.
-**Next:** **Two placeholders left and BOTH need the user.** (1) *Trial count*, L942: "Sessions required at least 40 valid trials per condition after motion exclusion, removing n sessions." **This claim is false as written** - m6 keeps 14 OL / 14 CL, m5 24 CL, m8 22 CL and m12 35 OL, all below 40 and all retained in the 15-session cohort. So the rule removed 0 sessions AND is violated by 4 that were kept. Either it was never applied (cut the item) or the threshold is not 40. (2) *Contralateral predictor*, L954: "Sessions entered the decomposition only if the spontaneous-data predictor reached R2 > 0.3, removing n sessions." **The code has TWO different gates:** `ctrl_ols_spont.m:382` uses `R2_te < 0.3`, while `ctrl_r2_floor()` returns **0.85** and gates `ctrl_affected_gui.m` and `ctrl_ols_xsess.m` - recorded in TASKS as a locked 2026-08-12 user decision applying "to all three cross-session controller scripts identically". `ctrl_roi_audit.m:11` states only **three sessions clear the 0.85 floor**, while `results.tex` claims Fig 4C uses **11 sessions / 613 trials**. Resolve which gate is operative before filling, because at 0.85 the Fig-4C n is wrong by a factor of ~4.
-
-### 2026-10-03 - Fig 2C re-exported on the corrected V->mW calibration
-**Changed/Found:** Re-ran `imp_tf_cv.m` with `PAPER_FINAL` on, closing the gap left this morning when the calibration was fixed in code but the panel was not rebuilt. The per-amplitude legend now reads **0.40 / 1.18 / 1.80 mW** where the old `/3` factor gave ~0.36 / 1.07 / 1.63 - every label was ~9.4% low. `panels/figure2/tf_cv_single_AL_0033.pdf` written at **5.36 x 3.21 cm**, exactly the manifest size, so the Illustrator link geometry is unchanged. The same run also refreshed `tf_cv_2D_sidebar.pdf` (3.99 x 3.35 cm, manifest-matching) and the two supplementary CV panels. Cross-validation numbers unchanged and consistent with the text: pooled held-out R2 **0.857**, which is the 0.86 quoted in `results.tex`.
-**Why:** NUMBERS.md item 9; the panel was the one piece of the calibration fix still outstanding.
-**Next:** Re-place 2C in Illustrator at the next pass - the content changed (legend text), though the bounding box did not. Nothing in Results or Methods quotes these mW values, so no text change is needed.
-
-### 2026-10-03 - DECISION: drop the control-theoretic stability stream entirely
-**Changed/Found:** User: "drop this stream i think just showing pid efficacy is enough". The whole arc is parked - analytic gain/phase margins (`ctrl_margins.m`), per-session CL/OL pole identification (`ctrl_cl_poles.m`), and the proposed empirical-sensitivity route (|S(w)|^2 = P_yy,CL/P_yy,OL from interleaved trials, giving a modulus margin and rigorous GM/PM lower bounds) which was designed but NEVER RUN. The empirical demonstration that the controller works - the Fig-3 RMSE reduction, the variance panels and the RR disturbance-rejection metric - is taken as sufficient on its own. Both scripts stay in the repo (committed, 2026-10-03) but feed no panel and no text.
-**Why:** The formal treatment kept costing more than it returned. Margins needed a Kp/Ki/clamp model the rig only approximately matches; the data-driven pole route hit a hard resolution limit (dominant tau ~0.17 s = ~6 samples at 35 Hz, so one step cannot resolve a modest pole shift - CL faster in only 8/15 by the model-free measure, with identical medians). Of the three, only the empirical-sensitivity route was actually sound, and by then the user had judged the stability assumption already well enough made elsewhere.
-**Next:** **PAPER CONSEQUENCE - the "Closed-loop stability" paragraph in `methods_rewrite.tex` (~L607-614) must now be cut or rewritten.** It promises a computation nobody will do: "We assessed stability on the nominal model rather than asserting it ... gain margin of 	extbf{n}\,dB and a phase margin of 	extbf{n}$^{\circ}$". Its three 	extbf{n} placeholders can never be filled, and they RENDER in the PDF. Cutting it resolves 3 of the 10 rendered placeholders blocking a preprint; the remaining 6-7 are the exclusion counts at L946-959, which are still live work. The ONE result worth salvaging if the gain story is ever wanted: CL reduces the steady-state offset in 13/15 sessions and raises mean drive in 12/15 - that is well supported and needs no control theory to state.
-
-### 2026-10-03 - CL/OL pole analysis: the GAIN claim holds, the POLE claim does not
-**Changed/Found:** New `controller-analysis/ctrl_cl_poles.m` - per-session LTI identification on the 15 Fig-3 controller sessions, under the user's constraints: no TF-fit reuse (every session fit independently from its own data), no Kp/Ki/clamping model, reference->output only (exogenous reference, so unbiased indirect closed-loop ID). OL trials identify the plant P, CL trials the closed loop T. Dynamics fit on steady-state-NORMALIZED responses so it carries no gain information; DC reported separately in raw units. **GAIN RESULT, well supported:** steady-state offset |y_ss - ref| smaller in CL in **13 of 15** sessions and mean drive larger in CL in **12 of 15** - exactly the user's prediction that feedback raises the drive to compensate feedforward inaccuracy. Effects are large, not marginal: m5 1.85 -> 0.07, m11 1.90 -> 0.17, m13 1.47 -> 0.22, m1 2.10 -> 0.46 %dF/F. **POLE RESULT, NOT supported:** |z_CL| < |z_OL| in 12 of 15 overall but only **5 of 7** among sessions whose normalized fit is interpretable - **8 of 15 sessions fail the R2 >= 0.80 gate**. A model-free cross-check (time to 63% of each condition's own steady state, no fit at all) is weaker still: CL faster in **8 of 15**, with **identical medians** (OL 0.171 s, CL 0.171 s). **m14 (AL_0048) is degenerate** - mean drive -0.017 V (NEGATIVE), tau_CL 0.012 s with CI [0.000 0.028], and its offset got WORSE (0.70 -> 1.39). This is the third time AL_0048 has shown a sign/convention anomaly (positive fitted DC gain in the TF fits; the bilateral polarity switch) - it needs separate handling, not inclusion in a pooled statement.
-**Why:** User redirected the stability stream away from analytic gain/phase margins toward data-driven per-session LTI identification, to support a control-theoretic reading in the Discussion rather than to test a claim.
-**Next:** **Do not write the pole-shift claim from constant-reference data.** The reason is a resolution limit, not a data defect: the dominant tau is ~0.17 s = ~6 samples at 35 Hz, so one step quantizes tau_63 to ~29 ms steps (~17% of tau) and cannot resolve a modest pole shift. The exponential fit has sub-sample resolution but its monotone 2-exponential class cannot describe 8/15 responses (likely overshoot / the inhibitory transient). **The right instrument already exists**: the Fig-5 sine sessions vary the reference, which is far richer excitation, and the phase lag vs frequency already computed there IS the frequency-domain read on pole location (`sine_combined_phase.pdf`). Route the dynamics half of the control-theoretic argument through those, and keep the constant-reference sessions for the gain half, which they support well. Options if the step route is kept anyway: allow a complex pole pair (captures overshoot, but thin excitation), or fit over 0-1.5 s only. Side note: `PAPER_FINAL` was still true when `load_sessions` ran, so the Fig-3 panels were re-exported; sizes match the manifest and the data was unchanged, so content is identical.
-
-### 2026-10-03 - imp_tf_cv.m V->mW calibration was wrong (and cited a file that defines no conversion)
-**Changed/Found:** `impulse-analysis/imp_tf_cv.m:287` labelled the Fig-2C per-amplitude legend with `S1.amp.uA(a)/3` = 0.3333 mW/V. The project's calibration is **1.8/4.9 = 0.36735** mW/V (0 V = 0 mW, 4.9 V = 1.8 mW), used consistently by `prestim_variance.m` (x2), `spatial_spread.m` (x3) and `presentation/export_ampmaps.m`. `imp_tf_cv.m` was the ONLY `/3` in the repo. Every mW label on that panel was therefore **~9.4% low** (e.g. a 2.7 V amplitude printed 0.90 mW instead of 0.99 mW). The in-line comment also said "see trace_overlay.m" for the factor - `trace_overlay.m` defines no conversion at all, so the citation was wrong too and would have sent the next reader to a dead end. Replaced with a named `vToMW = 1.8/4.9` and a comment recording the correction.
-**Why:** NUMBERS.md resolution-queue item 9; found during the numbers sweep the user asked for.
-**Next:** **Fig 2C IS NOT YET RE-EXPORTED.** `imp_tf_cv.m` is a separate script from `imp_tf_run.m` and was not run this session, so `panels/figure2/tf_cv_single_AL_0033.pdf` still carries the old 0.33 mW/V labels. Run it with `PAPER_FINAL` on before the next Illustrator pass, and re-place 2C. Nothing in the Results or Methods quotes these mW values, so no text change is needed.
-
-### 2026-10-03 - TF re-run: Fig 2E numbers resolved, tau-forest censoring quantified and frozen
-**Changed/Found:** Ran `imp_tf_run.m` (4 session-datasets, 3 mice, 300 bootstrap draws). **Resolves NUMBERS.md item 6** - the model-swap matrix gives **self R2 = 0.991 vs cross-session 0.714** (drop 0.277), the first actual numbers for Fig 2E, which had none anywhere in caption or body. Added to `results.tex` as "self $R^2 = 0.99$ versus cross-session $0.71$". **Tau forest, frozen as-is per the user (reanalysis deferred):** S1 AL_0041 e1 `3p1z0d` tau [0.176 0.148] s, **42%** of bootstrap refits discarded; S2 AL_0041 e2 `4p3z0d` tau [0.540 0.093] s, **50%** discarded; S3 AL_0033 `4p3z0d` tau [0.333 0.150] s, **2%** discarded; S4 AL_0048 `4p2z0d` tau [0.302 0.267 0.143] s, **50%** discarded. Discards are refits returning tau beyond the 0.51 s fit window - right-censoring, so the surviving CI piles at the window edge and is not a usable interval. Slow tau: mean 0.338 s, between-session SD 0.151 s, mean within-session bootstrap SD 0.097 s, ratio **1.55**. Model order is **NOT shared** (np = [3 4 4 4], modes [2 2 2 3]).
-**Why:** User asked for every number that can be pulled automatically, and separately to freeze the tau forest and report it as-is as evidence of how hard stationary LTI identification is.
-**Next:** **The Results sentence "a slower constant (~0.2-0.3 s)" is WRONG** - the slow constants are 0.176 / 0.540 / 0.333 / 0.302 s, a range of 0.18-0.54 s that brackets 0.2-0.3 rather than falling inside it. This is the long-standing TASKS item and is now measured; fix it when the tau forest is untabled. The fast constant claim ("~0.14 s, 0.14-0.15 in three of four sessions") DOES hold: 0.148 / 0.093 / 0.150 / 0.143. Also still open: the caption must state that AL_0041 e1/e2 are the same animal, so the between-session spread mixes within- and between-animal variability.
-
-### 2026-10-03 - Paper pushed: unsupported motion claim cut, rebuilt Figures 1/2/5 pulled in
-**Changed/Found:** Cut from `methods_rewrite.tex`: "Results are reported with and without this exclusion, so that improvements cannot be attributed to motion state." No without-exclusion version exists anywhere in the Results, so the sentence promised an analysis the paper does not contain - exactly the kind of thing a referee checks. Added the Fig 2E transfer numbers to `results.tex`. **Found the user's Illustrator work was not in the manuscript repo:** `Closedloop_edit/images/Figure1.pdf` still dated 2026-05-21 and Figure2/Figure5 dated 2026-10-02, while today's rebuilds sat in `paper/figures_final/` (Figure1 11:34, Figure2 11:33, **Figure5 10:37**). Copied all three in; Figures 3 and 4 are byte-identical to 10-02 and were left alone. Fig 5 was NOT mentioned by the user but had been rebuilt today, so it is included - it is the re-assembly off the locked starless panel. Build clean: 38 pages, 0 undefined references. Committed on `draft` (1b7dff3, a98d11b) and **pushed to origin/draft**.
-**Why:** User: "update and push the paper", then "do paper push first we will table the tau forest".
-**Next:** `draft` is 11 commits ahead of `main`. `main` is the Overleaf-facing branch and the user's own protocol is to review `git diff main..draft` before merging - NOT done, awaiting their review. If Fig 5 should not have gone in, revert a98d11b's Figure5.pdf alone.
-
-### 2026-10-03 - BUG I INTRODUCED: the sham control is now length-mismatched to the response
-**Changed/Found:** `imp_state_trialvar.m:170` computes `Lresp = numel(iOn+2 : iOn + round(0.22*fs))` = **7 samples** - that is the OLD 29-200 ms response window, hardcoded in arithmetic rather than read from the response window. The response statistic is now **8 samples** (0-200 ms, changed earlier today), so the stim-free control at `iSham` (cols 64:70, -1.200 to -1.029 s) is a 7-sample mean compared against an 8-sample mean. The comment on that control reads "same statistic, same length, no stimulus" - the length match is now broken. **Impact is bounded and the published numbers are safe:** the paper quotes only the control's Q4/Q1 RATIO (0.80 / 1.00 / 2.25), which is within-series, so a constant window length applies to every bin and cancels exactly. What is wrong is the control's absolute LEVEL relative to the stimulus - a 7-sample mean is noisier than an 8-sample mean, so the control is slightly inflated. That only becomes visible if the control is ever drawn on the same axis as the stimulus, which is exactly what today's preview did.
-**Why:** Found while tracing how the "no stimulus" series is built, after the user asked where the sham trials come from. Not caught when the window was changed because `Lresp` is written as an expression over `iOn`, not as a reference to the response window, so nothing tied the two together.
-**Next:** Fix `Lresp` to derive from the SAME expression as the response window (one source of truth) rather than restating `iOn+2 : iOn+round(0.22*fs)`. Do it when the sham is revisited - the user has tabled the control overlay, and with the control off the panel nothing currently published depends on it. Re-check the `iSham` assertions afterwards: an 8-sample sham shifts cols 64:70 to 63:70 and the `tAxis(iSham(end)) < -0.5` guard must still hold.
-
-### 2026-10-03 - The amp-0 events are gap-fill placeholders, not catch trials
-**Changed/Found:** User proposed using the data's 0 V amplitude events as the stim-free control instead of the synthetic sham. Checked: they are not catch trials. `load_experiments.m:153` builds `allAmp = [ampDet; zeros(numel(insS),1)];   % inserted => 0 amplitude` - the zeros are stamped on **inserted** events, i.e. stimulations the detector MISSED and that the gap-filler re-inserted. The 0 means "amplitude unknown", not "laser commanded 0 V". Using them as no-stimulus trials would be backwards: those are stimulated trials. Confirmed empirically - zero appears in `uAmp` for exp1 `[0 0.8 1.6 2.4 2.7]` and exp3 `[0 0.5 ... 4.9]` but NOT exp2 `[0.7 ... 2.7]` or exp4 `[0.4 1 1.6]`. A designed catch condition would appear in every session; a detector-dropout artifact appears only where the detector dropped events. **What the control actually is today:** not a trial at all - `iSham` = a 7-sample window at **-1.200 to -1.029 s INSIDE each stimulated trial**, with `dpc = pre - mean(pre)` across trials of the same amplitude (`imp_state_trialvar.m:254-255`). A within-trial pre-stimulus surrogate: the same statistic computed where no stimulus happened. **The user's instinct is still right** - genuine amp-0 catch trials DO exist, but they are invisible here: with no laser onset they never enter the detected onsets, so they must be recovered from the Block file via the Block<->Timeline clock offset. That is already an open TASKS item on the bilateral side ("Recover sham (amp 0) catch trials ... no laser onset -> not in detected onsets"); an impulse-side twin has been added.
-**Why:** User asked how the no-stimulus trial is added and proposed the 0 V events; the premise needed checking before any work was spent on it.
-**Next:** User has TABLED the control overlay and will decide on correct sham trials later. **No action taken on the locked panel** - `panels/figure2/imp_state_var_combined.pdf` was already control-free and stays as built. When the sham is revisited, do the real-catch-trial recovery and the `Lresp` fix (entry above) together, since both change the same control series.
-
-### 2026-10-03 - Fig 2G with the no-stimulus control: two framings, and why they disagree
-**Changed/Found:** New preview script `impulse-analysis/_preview/stv_2g_ctrl_preview.m` (PREVIEW ONLY - writes PNGs to `_preview/`, never the locked PDF) that overlays the stim-free control on all three tiles of the Fig 2G combined panel. **Why this needed new code:** the production panel forces `STVF_UNITS='norm'`, but the control branch in `imp_state_trialvar_fig.m:224` is gated `STV_PLOTCTRL && ~useRaw && ~useNorm` - it only ever draws in raw z-scored SD units. So the combined panel CANNOT show the control as written; the single panels can. **The two series are not on a common scale, and the choice of conversion changes the answer.** (A) SHAPE: `r.sdP` carried into the normalized frame, both curves near 1, drawn control ratios **0.795 / 0.998 / 2.245** = the caption's 0.80 / 1.00 / 2.25 exactly. (B) MAGNITUDE: normalize BOTH by the same per-session `sigSess`, which is legitimate because `T.shmRaw` is deliberately left unscaled upstream - the control then sits **~1.8x above** the stimulus (motion 1.97->1.53 vs 0.995->0.728) with ratios 0.779 / 1.042 / 2.264. Confirmed `shmRaw` is built exactly like `devRaw` (`dpc = pre - mean(pre)` on a matched-length sham window, `imp_state_trialvar.m:255`), so the 1.8x is a REAL magnitude statement - the sham window's trial-to-trial spread genuinely exceeds the stim residual's - not a units artifact. **Sub-trap inside (A):** the per-bin conversion factor `sc = sdRawN./sdB` is 1.000 +/- 0.035 but NOT constant, and multiplying per-bin changes the control's Q4/Q1 by `sc(4)/sc(1)` - up to 3%, which printed abs-delta as **2.32 against the caption's 2.25**. Fixed by using a single scalar `mean(sc)` per state: a pure presentational rescale onto a shared axis that leaves every quoted ratio exact.
-**Why:** User asked to see 2G with the controls alongside motion / rel-delta / abs-delta before deciding whether to replace the control-free panels.
-**Next:** Awaiting the user's go. If (A): add the control to the production combined block in `imp_state_trialvar_fig.m` using the scalar-`sc` conversion, re-export, done - **no caption or Results edit needed**, since the drawn ratios already equal the quoted ones. If (B): the caption's control ratios must change 0.80/1.00/2.25 -> 0.78/1.04/2.26 AND the Results sentence "its stimulus-free control rose at least as steeply" gains a magnitude claim the paper does not currently make - more work, and it invites the question of why the sham spread is larger, which is not addressed anywhere. Either way the legend currently overlaps the motion trace at Q1 and needs moving before export. Neither preview touched `panels/figure2/imp_state_var_combined.pdf`.
-
-### 2026-10-03 - Fig 2G re-run on the 0-200 ms window: numbers drift in the last digit only
-**Changed/Found:** Re-ran `imp_state_trialvar.m` + `imp_state_trialvar_fig.m` on the corrected 0-200 ms evoked window and rebuilt the manifest panel `panels/figure2/imp_state_var_combined.pdf`. Live values from `STV.R`: motion ratio **0.729** [0.618 0.876], rho -0.1228 (p 2.3e-07), LME p **7.31e-07**, 4/4, control 0.795 (rho -0.049, p 0.041); rel-delta **1.022** [0.878 1.191], rho **+0.0933** (p **8.6e-05**), LME p **0.00518**, 3/4, control 0.998 (rho +0.008, p 0.74); abs-delta **2.092** [1.762 2.572], rho +0.4161, LME p <1e-16, 4/4, control 2.245 (rho +0.377). n = 1767 throughout. Against the manuscript this moves only last digits, so six edits went onto `draft` (8ce427d): rel-delta 1.03 -> 1.02 and CI [0.89,1.20] -> [0.88,1.19]; its rho/p +0.09, 1.0e-4 -> +0.093, 8.6e-5; abs-delta 2.10 -> 2.09 and CI [1.77,2.57] -> [1.76,2.57]; motion CI upper 0.87 -> 0.88 (caption copies of 1.03 and 2.10 updated too). **Nothing else moves** - the motion ratio 0.73, all three control ratios (0.80 / 1.00 / 2.25), every LME p-value, every star and every session-agreement fraction are identical before and after. Panel re-exported at **6.53 x 3.46 cm**, byte-for-byte the manifest's recorded size, so the Illustrator link geometry is unchanged and Fig 2 needs no re-placement for this. NUMBERS.md's Fig 2G block replaced with the verified set; the table there had been carrying a stale 0.71 / 1.10 / 1.99 that matched neither the code nor the paper, and the dissenting AL_0048 slope is -0.060 (not -0.062), with the others +0.116 / +0.195 / +0.110.
-**Why:** User: "fix 0-200ms for fig 2a, n code and keep consistent with paper". Fig 2G consumes `Peak_imp` under `peak_mode=3`, so it inherits the window change; leaving it un-run would have put a 29-200 ms panel next to a 0-200 ms one inside the same figure.
-**Next:** Two traps worth recording, both of which silently produced a wrong or missing panel before being caught. (1) `STVF_UNITS` persists in the base workspace: a prior run in the same MATLAB session left it set, which made `STVF_UNITS_EXPLICIT` true, so paper mode did NOT force 'norm' and the combined panel was skipped **with no warning at all** (the "not being built" warning only fires when `STVF_PAPER` is false). `clear STVF_UNITS` before a paper build, or make the explicit-units check also warn when paper mode is on. (2) abs-delta is not in the admissible set, so its CI is bootstrapped inside the combined block rather than reused from pass 1 - expect it to differ by ~1 in the last digit between runs at `STVF_NBOOT = 2000`. Still to re-run on the new window: `lds_ipsi.m` and `bilateral/ol_characterization.m`. The 0-200 vs 29-200 decision flagged in the entry below is still open.
-
-### 2026-10-03 - Evoked-suppression window changed to a TRUE 0-200 ms (8 samples) in both impulse loaders
-**Changed/Found:** User asked that the code reflect 0-200 ms, not just the label. Traced the window and changed it in BOTH paths. `impulse-analysis/load_experiments.m` peak_mode==3: `win3` started at `post_start = winSamp+2` (= onset+1) and ran to `winSamp+round(0.22*fs)` (= onset+7), i.e. **29-200 ms over 7 samples**, while the panel, caption and Methods all said "0-200 ms". Now `win3 = (winSamp+1) : winSamp+1+round(0.2*fs)` = onset..onset+7, **8 samples, exactly 0.0-200.0 ms**. `post_start` is deliberately left alone so the peak_mode 1/2 trough search still excludes the onset sample, which is correct for a trough. **Second path found and fixed:** AL_0048 enters via `load_bilateral_impulse.m`, whose `dipC = winS + (round(dip_win(1)*Fs)+1 : round(dip_win(2)*Fs)) + 1` was ALSO onset+1..onset+7 despite `BLI.dip_win = [0 0.20]`; the stray `+1` on the lower edge is removed, so all four Fig-2A sessions now share one window. Had I only changed load_experiments, the cohort would have been split 3 sessions at 0-200 and 1 at 29-200. Also corrected a stale comment in `imp_state_trialvar.m:153` ("0-220 ms" -> "0-200 ms"); the 0.22 there was an offset from `winSamp`, not from onset. **New dose-response numbers (all four on 0-200 ms):** slopes **-0.3006 / -0.5010 / -0.5151 / -0.8095**, R2 **0.967 / 0.513 / 0.924 / 0.918** (were -0.3435/-0.5726/-0.5886/-0.9574 and 0.967/0.513/0.924/0.912). For the three load_experiments sessions the change is an EXACT x7/8 rescale (ratios 0.8751/0.8750/0.8751) because the onset sample is identically zero by construction there, so every R2 is unchanged and no inference moves - only the effect-size units. AL_0048 scaled by x0.846 with R2 +0.006, so its onset sample is NOT identically zero under the bilateral baselining. Manuscript updated on `draft`: body slopes/R2, the Fig 2A caption range (-0.30 to -0.81), the Methods equation `W = {t_on,...,t_on+7}` and the Methods prose ("the eight samples from 0 to 200 ms after onset, inclusive of the onset sample"). Panel re-exported to `panels/figure2/imp_response.pdf`. Build clean, 38 pp, 0 undefined. NUMBERS.md impulse table updated with the old values recorded alongside.
-**Why:** User: "i want code to reflect 0-200ms as well". The label, caption and Methods prose had all claimed 0-200 ms for some time while the arithmetic delivered 29-200 ms, so the code was the thing out of step.
-**Next:** **FLAG FOR THE USER - this overrode a documented rationale.** The Methods sentence I replaced read: "The onset sample itself is excluded because it straddles the trigger." If that is physically true, the onset sample is neither clean baseline nor clean response, and including it adds a half-stimulated sample to every trial mean - which is exactly why all three load_experiments slopes shrank by 1/8 without any gain in R2. Decide whether to keep 0-200 ms or revert to 29-200 ms; reverting is two one-line edits plus a re-run. Also still to re-run on the new window, since anything using Peak_imp under peak_mode=3 inherits it: the Fig 2G state-dependence panel (`imp_state_var_combined.pdf`, quartile ratios 0.73 / 1.03 / 2.10 and their controls), `imp_state_trialvar.m`, `lds_ipsi.m`, and `bilateral/ol_characterization.m`. The TF fits are NOT affected (they fit the trace, not the window mean).
-
-
-### 2026-10-03 - Figure consistency fixes applied (caption/Methods edits + Fig 2A re-export)
-**Changed/Found:** Worked the audit list the user triaged. **Manuscript (`draft` branch, Closedloop_edit):** (1) Fig 4C caption pool 7 sessions/397 trials -> **11 sessions/613 trials**, matching the panel title, the Results body and Methods S1088. (2) Fig 3A caption closed-loop **green -> blue**. (3) Fig 3A caption "Bottom traces show the ... input signals" -> "Grey traces **above** each response", which is where they actually sit. (4) Methods S1176 "ordinary least-squares predictor" -> **ridge-regularized**, plus a sentence that the penalty is chosen stim-blind from catch windows: `f4_kernel_map.m:21` asserts `strcmp(pmode,'ridge')`, so the CAPTION was right and the Methods was wrong. (5) Fig 4D caption now states the error is per-trial RMSE **z-scored within session** (Methods already said so). (6) Fig 5 caption regained the animal (**AL_0048, right hemisphere, inhibitory opsin**) and the grey/dashed trace key, both of which had been dropped in the 10-02 rewrite while the panels still showed them. (8) Methods latency sentence now carries **n = 200 consecutive loop cycles**, which the Fig 1F caption had been claiming unsupported. Build clean, 38 pp, 0 undefined refs. **Code + panels (brain_paper):** (7) `impulse-analysis/dose_response.m` ylabel **"Inhibition energy (0-200 ms)" -> "Evoked suppression (29-200 ms)"**; re-ran with `PAPER_FINAL` on and mirrored `panels/figure2/imp_response.pdf` (2.89 x 3.10 cm). The 29-200 ms figure is now right: Methods `eq:inhib_energy` was updated to **W = {t_on+1,...,t_on+7}**, so the caption's 29-200 ms is correct and the code's 0-200 ms was the outlier. The re-run also independently reproduced the locked dose-response numbers (slopes -0.3435/-0.5726/-0.5886/-0.9574, R2 0.967/0.513/0.924/0.912, "4 sessions from 3 mice"). (14) Copied `paper/latency_histogram.pdf` into `panels/figure1/` so Fig 1F can be pulled from the locked folder; its producer is `latencyAnalysis.m`. **THREE FINDINGS THAT CHANGE EARLIER CONCLUSIONS.** (a) **Fig 5G's significance brackets were already disabled in code on 2026-10-02** (`SINE_SHOW_STATS=false` in `bilateral/sine_ff_plots_combined.m`), and the LOCKED panel `panels/figure5/sine_5G_rmse_violin_*.pdf` is confirmed starless, while the WORKING copy in `paper/images/figure5/` (08-12) still has stars. The assembled `Figure5.pdf` therefore pulled panel G from `paper/images/` instead of the locked folder -- exactly what the CLAUDE.md rule forbids. No code work needed; the composite must be re-assembled from `figures_final/panels/`. (b) **Fig 4G is NOT a 10-session/2-mouse panel.** Text extraction of the locked `f4_cl_reject_RR.pdf` gives 11 tick labels across 3 mice (Mouse1a-1g, Mouse2a-2c, Mouse3a), matching the caption's n=11 and the 3-level mouse random effect. My earlier flag was a misread of the small rotated labels in the composite -- RETRACTED. (c) **Fig 2's panel letters are Illustrator text, confirmed**: every source panel in `panels/figure2/` contains zero letter glyphs, and `panels/figure1/README.txt` states outright that lettering is Illustrator's job. So the F/G/E scramble cannot be fixed from code. **Model-swap matrix numbers extracted for the user** (rows = model from, cols = applied to): M1a .97/.45/.71/.84 | M1b .09/1.00/.87/.78 | M2 .53/.88/1.00/.95 | M3 .69/.83/.97/1.00; diagonal mean 0.99, off-diagonal mean 0.716 / median 0.805 / range 0.09-0.97, with 6 of 12 off-diagonals >= 0.80.
-**Why:** User moved into writing mode and triaged the panel audit into do-now items (1-8), a Fig 5G redraw (9), numbers-only reporting for the model swap (10), a check on Fig 4G (13), and staging Fig 1 sources for Illustrator (14). Item 11 (Fig 2G control panel) tabled by the user; item 12 (Fig 3G purple trace) withdrawn by the user -- there is no purple trace, my read of the render was wrong.
-**Next:** Three items need Illustrator and cannot be done from code: **re-letter `FIgure2.ai` row 2 to E, F, G**; **re-assemble Figure 5 pulling panel G from `figures_final/panels/figure5/`** (the correct starless panel is already there); and **re-place Fig 2A** with the regenerated `imp_response.pdf`. Also: the user will fill `MANIFEST.txt [figure1]` now that `latency_histogram.pdf` is staged -- note `collect_final_panels.m` DELETES anything unlisted, so add the line before running the collector. Figure 1 D and E have no source files anywhere in the repo and appear to be native Illustrator artwork; nothing to stage for them. Secondary: `imp_response_median_IQR.pdf` (not a paper panel, not in the manifest) still carries the old "Inhibition Energy" label from a second label site in `dose_response.m`.
-
-
-### 2026-10-03 — TF variants extended to a 3.0 s window (caps 2 and 5) + fit-overlay comparison
-**Changed/Found:** Scratch script `tf_variants_3s.m` (imp_tf_run RUN_TFIT = 3.0, RUN_MAXPOLES = 2 / 5;
-CV; panels; PAPER_FINAL off; 0.5 s cache restored). Fits `impulse-analysis/data/imp_tf_fits_tfit3p0_{2p,5p}_2026-10-03.mat`.
-Overlays `scratchpad/tf_variants/tf_fit_compare_0-{3,1}s.png`: each model simulated over 0-3 s against
-the measured amplitude-normalised response (R2 inside its window and over 0-3 s).
-- 3.0 s / <=2p: R2h 0.16/0.47/0.59/0.66, pooled CV R2 0.009; Mouse 1a collapses to 1 pole; misses the dip.
-- 3.0 s / <=5p: R2h 0.74/0.83/0.94/0.89 (best whole-trace description), but UNSTABLE slow pole in 3/4
-  (near-integrator absorbing the late offset), 71-79 % bootstrap discards, pooled CV R2 0.065.
-- R2 over 0-3 s: current 0.5 s fits -0.72/0.24/0.67/0.65 (excellent in window, extrapolate badly:
-  dip below zero after 0.5 s where data stay positive); 1.0 s/<=4p 0.60/0.85/0.71 for 1b/2/3 (M1a unstable).
-- Held-out CV collapses for every 3 s fit: the >1 s part of the trial average is dominated by
-  ongoing activity that the two trial halves do not share, so it is not a reproducible stimulus response.
-**Why:** User: "add comparison by increasing to 3 sec with 2p and 5p limits. this is exploratory, also plot the fits".
-**Next:** USER DECISION. Nothing in the paper changed.
-
-### 2026-10-03 - Panel-by-panel figure/caption/Results/Methods consistency audit (Figs 1-5)
-**Changed/Found:** Audited every panel of all five figures against four sources: the assembled PDF itself (panel letters extracted by coordinate with PyMuPDF, content read visually), the caption, the Results body, and methods_rewrite.tex. **BIGGEST FIND - Figure 2's printed panel letters are scrambled.** Row 2 of Figure2.pdf prints F@x=2.5, G@x=163, E@x=308 (left-to-right F, G, E), while BOTH the caption and MANIFEST.txt say E=model swap, F=timescales, G=state. So every Results citation to 2E/2F/2G lands on the wrong panel: the swap matrix is printed F, timescales printed G, state printed E. Note the MANIFEST is already correct - the defect is in the Illustrator lettering ("Letters in Illustrator" per its own header), so editing MANIFEST.txt cannot fix it; FIgure2.ai must be re-lettered (or caption+manifest flipped, which leaves reading order F,G,E). Figures 1, 3, 4, 5 all letter correctly. **Figure 4C n resolved three-to-one:** the panel itself prints "Unique R2 (n=613, 11 sess)", Results says 11 sess/613 trials, Methods S1088 says "the 11 sessions with motion capture (613 trials)" - only the CAPTION still says 7 sessions/397 trials. Caption is stale; also its "at least 12 trials per state" describes minTr, which gates only the per-session dots, not the pool. **Figure 5 contradicts its own statistical fix:** panel G still displays *** and * significance brackets although the caption now says "no significance tests are reported for this figure" and Results says the same; the stars are also no longer defined anywhere. Figure 5 also LOST its animal identity - "AL_0048, right hemisphere (inhibitory opsin)" was removed from both caption and Results, so the single-mouse/single-hemisphere basis now appears nowhere in Results; and the caption no longer explains the grey (laser command) and dashed-black (reference) traces that B/C/D still show. **Figure 3:** caption A says closed-loop is green but the panel is blue, and says the input traces are at the bottom when they are at the top; caption E claims "points indicate individual trials" but the panel shows only half-violins with a central marker; panel G carries an unexplained purple trace/vertical line; F and G are not independent (G = all_average_sessions shares across-trial variance with F per the locked 2026-08-24 note) and neither caption says so. **Figure 2 content issues:** panel A's y-axis still reads "Inhibition energy (% dF/F, 0-200 ms)" - the rename to evoked suppression and the 29-200 ms window reached caption and Results but not the panel; the model-swap panel UNDERCUTS its claim (diagonal 0.97/1.00/1.00/1.00 but off-diagonals include 0.84/0.87/0.95/0.97, only the M1a-M1b pair is low at 0.09/0.45, so "per-session identification is required" is too strong); and the caption describes stimulus-free control ratios (0.80/1.00/2.25) that are not plotted anywhere. **Figure 4 others:** panel E caption says "ridge weights" while Methods S1175 says "ordinary least-squares predictor" (contradiction still live); panel D's y-axis is z-scored but the caption does not say so; panel G's x-labels read Mouse 1a-1g and 2a-2c, i.e. 2 mice and ~10 sessions, against a caption saying n=11 and a mouse random effect NUMBERS.md puts at 3 levels; and "Mouse 1/Mouse 2" denote DIFFERENT animals in Fig 2 (AL_0041/AL_0033) vs Fig 4, with no key. **Figure 1:** MANIFEST [figure1] lists only 3 source files, so panels D, E and F have no manifest entry - and F is a DATA panel (latency histogram) with no tracked producer; Methods gives the <=47 ms bound but not the n=200 cycles the caption claims; panel D's caption describes a signal flow while the panel is a two-layer block diagram with an undescribed blue-light trigger waveform. **Two clean results:** every caption panel letter in all five figures is cited at least once in the Results (no orphan panels), and no panel's method is described twice or inconsistently in Methods - each appears exactly once. The only Methods-vs-caption conflict is OLS vs ridge (Fig 4E). Discussion deliberately NOT audited (user is writing it).
-**Why:** User moved into writing mode and asked for a panel-by-panel verification that each panel's content is consistently described by its caption, addressed in Results, and mentioned once in Methods. Checked against the rendered PDF rather than against the producer scripts, since the assembled figure is what a reader sees.
-**Next:** Re-letter FIgure2.ai row 2 to E, F, G (the manifest and caption are already right, so nothing else changes). Fix Fig 4C's caption n to 11 sessions / 613 trials. Remove or re-enable the significance brackets in Fig 5G to match the no-tests decision, restore AL_0048/right-hemisphere to the Fig 5 caption or Results, and restore the grey/dashed trace key. Fix Fig 3A's colour (green->blue) and the top/bottom trace-position error, and confirm whether 3E plots individual trials. Re-export Fig 2A with the "Evoked suppression" axis label. Resolve ridge-vs-OLS for Fig 4E. Decide whether Fig 4G is 10 or 11 sessions and 2 or 3 mice. Add a mouse-label key, or renumber, so Fig 2 and Fig 4 do not reuse "Mouse 1/2" for different animals. Add Figure 1's D/E/F to the manifest and find or write a producer for the latency panel. Soften the model-swap claim to match its own numbers.
-
-
-### 2026-10-03 — TF variants: 1.0 s window with pole cap 4 and cap 2 (neither beats the current 0.5 s fit)
-**Changed/Found:** `imp_tf_run.m` with RUN_TFIT = 1.0 and RUN_MAXPOLES = 4 (maxZeros 3) and = 2
-(maxZeros 1); 300-draw bootstrap; CV via `imp_tf_cv.m`; panels drawn with `imp_tf_figs.m`
-(PAPER_FINAL off). Scratch: `scratchpad/tf_variants/` + comparison sheet
-`fig2_tf_variants_comparison.png`. Fits: `impulse-analysis/data/imp_tf_fits_tfit1p0_{4p,2p}_2026-10-0{3}.mat`.
-- 1.0 s / 4p: orders 4p2z1d, 4p3z, 4p3z, 4p3z. Fast tau 65/65/100/100 ms (current 148/93/150/142).
-  AL_0041 e1 slow pole UNSTABLE (tau = 7.5e12 s), 76 % resamples discarded; others 24/4/21 %.
-  Pooled CV R2 0.748 (current 0.86). Swap: M1a column/row fails (negative R2).
-- 1.0 s / 2p: every session misses R2h 0.98 (0.13/0.86/0.79/0.93); AL_0041 e1 degenerates to 1 pole
-  (R2h 0.127, held-out R2 < 0). One tau per session (complex pair): 720/384/243/147 ms; discard
-  0 % in 3 of 4 (47 % e1). Pooled CV R2 0.627. Held-out fit misses the rebound and the onset.
-- 0.5 s / 5p (current): pooled CV R2 0.86, swap diagonal 0.97-1.00, fast tau ~0.14 s in 3/4.
-**Why:** User asked for 1.0 s with a 4-pole cap plus a 2-pole variant, figures reported.
-**Next:** USER DECISION on Fig 2 fit settings; nothing in the paper changed (0.5 s cache restored,
-finals untouched).
-
-### 2026-10-03 — Retired paper/figures_v2; producers now write working copies to paper/images
-**Changed/Found:** Every producer that exported into `paper/figures_v2/<figN>/` now writes its
-working copy to `paper/images/<figN>/`: sine_ff_across_sessions (outDir now from mfilename, was a
-cwd-dependent exist() chain falling back to '.'), sine_ff_plots_combined, f4_1B_equation,
-f4_cl_reject_panel, f4_contra_model, f4_error_decomp, f4_kernel_map, f4_row2_quartiles,
-f4_state_exemplars, step_response, variance_mse (3 exports), dose_response, trace_overlay,
-imp_state_trialvar_fig, imp_tf_run, imp_tf_cv (CV_PANELDIR = CV_OUTDIR), imp_tf_figs (removed the
-copy-into-figures_v2 block; E/F reach figures_final via the mirror), analysisPlots_combined (5),
-jnExport doc example, paper_final_mirror comment. Final panels are unaffected: the mirror takes the
-destination from the MANIFEST section, never from the source path. Docs: CLAUDE.md, PAPER.md (33
-registry paths -> paper/figures_final/panels/), FIGURE_RULEBOOK.md, figures_final README/MANIFEST/
-collector comments. Folder MOVED (not deleted) to `paper/_retired/figures_v2_2026-10-03/` (gitignored).
-PROVENANCE.md and the RESEARCH archives keep their historical figures_v2 mentions.
-**Why:** User: "retire figures_v2 thats not where we are putting plots anymore".
-**Next:** next PAPER_FINAL rebuild of any figure confirms the mirror still lands every panel.
-
-### 2026-10-03 — REJECTED: 1.0 s TF fit window (tried to fix the censored Fig-2F tau CIs)
-**Changed/Found:** Ran `impulse-analysis/imp_tf_run.m` with `RUN_TFIT = 1.0` (all else default:
-5p/4z/3d sweep, AIC + R2h escalation, 300-draw bootstrap, 4 sessions). Result is WORSE on every axis:
-every session hits the 5-pole cap (5p4z/5p4z/5p3z/5p4z, was 3p1z/4p3z/4p3z/4p2z); fast tau
-collapses to 44/17/45/134 ms (was 148/93/150/142 — the "~0.14 s shared fast constant" claim would
-die); slow tau 1829/427/441/379 ms; bootstrap discard (tau > 1.0 s) still 68/55/36/32 %; pooled R2
-0.66/0.32/0.81/0.84 (was 0.74/0.52/0.87/0.94); sdBetween/sdWithin 0.707/0.222. Cause: 0.5-1.0 s
-contains the post-dip REBOUND (mostly gone by ~770 ms), which a low-order decaying model cannot
-represent, so AIC spends poles on it and the poles become non-identifiable.
-RESTORED: 1.0 s fits kept as `data/imp_tf_fits_tfit1p0_2026-10-02.mat`; `data/imp_tf_fits.mat` is
-the 0.5 s cache again (backup `imp_tf_fits_tfit0p5_2026-09-29.mat`); panels tf_model_swap +
-tf_tau_forest (final), tf_shape_across_sessions + tf_pole_spectrum (working) redrawn from it via
-`imp_tf_figs`. Panels 2C/2D and all manuscript text were never touched.
-**Why:** User chose "lengthen the fit window to about 1.0 s" to make the slow tau identifiable.
-**Next:** USER DECISION on 2F: (a) per-pole censoring + CI on fast tau only, slow tau as bare
-point (recommended), or (b) bare points throughout (bareA). Window stays 0.5 s.
 
 <!-- older entries → RESEARCH_archive_2026H2.md (then RESEARCH_archive_2026H1.md) -->
