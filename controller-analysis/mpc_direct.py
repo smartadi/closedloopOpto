@@ -217,15 +217,25 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
     if os.environ.get("MPCD_SNAP"):
         kx, t_snap = (int(v) for v in os.environ["MPCD_SNAP"].split(",")); kx -= 1
     ts, base, snap = onCL[kx] + t_snap, mpc_policy(ctrl[fold[kx]], m_rd), {}
+    # MPCD_SNAP_ALT = "f1,f2,..": extra candidate frames on the same trial (prediction + plan only), for choosing "now"
+    alt = [int(v) for v in os.environ.get("MPCD_SNAP_ALT", "").split(",") if v]
+    altd = {}
     def pol_snap(t, zs, us):
-        if t == ts:
+        if t == ts or t - onCL[kx] in alt:
             m = ctrl[fold[kx]]
             f = m.free(zs[t - np.arange(m.L)], us[t - m.Q + 2:t + 1])
             U = mpc_solve(m, f, us[t] * su, uss, umax, m_rd)
-            snap.update(t=t - onCL[kx], yhat=f + m.G @ U, yfree=f, U=U, ypast=zs[onCL[kx] - pre:t + 1, 0] * sz[0],
-                        upast=us[onCL[kx] - pre:t + 1] * su)
+            if t - onCL[kx] in alt:
+                altd[t - onCL[kx]] = (f + m.G @ U, U)
+            if t == ts:
+                snap.update(t=t - onCL[kx], yhat=f + m.G @ U, yfree=f, U=U, ypast=zs[onCL[kx] - pre:t + 1, 0] * sz[0],
+                            upast=us[onCL[kx] - pre:t + 1] * su)
         return base(t, zs, us)
     ysn, usn = simulate(kx, pol_snap)[:2]
+    if alt:
+        savemat(DATA / f"mpc_direct_snapalt_{sess}.mat", {"t": np.array(sorted(altd)), "k": kx + 1,
+                "yhat": np.column_stack([altd[a][0] for a in sorted(altd)]), "U": np.column_stack([altd[a][1] for a in sorted(altd)]),
+                "ytrue": ysn, "utrue": usn, "Fs": Fs, "ref": REF})
 
     # prediction quality of the controller models on the CL trials, conditional on the recorded future laser
     r2 = {}

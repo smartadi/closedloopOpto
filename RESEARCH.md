@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — S5B schematic: "now" moved to 2.17 s (mid-excursion), no-stim prediction removed, window label "predict"
+**Changed/Found:**
+- `mpc_direct.py`: new `MPCD_SNAP_ALT` option saves the MPC prediction and plan at several candidate frames on the snapshot trial (`data/mpc_direct_snapalt_<sess>.mat`). Frames 70–78 on trial 79 were compared:
+  - frame 76 (2.17 s) sits mid-rise of the 2.1–2.25 s excursion, and the prediction shows the MPC bringing it back to target;
+  - frame 77 (2.20 s) is at the peak, the alternative.
+  - Reran with `MPCD_SNAP=79,76`; the numbers are unchanged (0.652, 108/108).
+- `ctrl_mpc_direct_panels.m`:
+  - removed the laser-off "no stim" prediction and its laser line;
+  - window label "predict 1 s" → "predict";
+  - removed the line label;
+  - the x-range now extends to the horizon end (3.17 s), so the full window shows past the stim window.
+  - Re-exported to figures_final.
+- Manuscript `draft` caption B is updated to match (committed; not pushed).
+**Why:** user: "remove the no stim; move the now window slightly forward to capture a particular feature; on predict window don't say 1 s".
+**Next:** user re-places panel B in Illustrator and re-exports S5. Push main once draft is ready.
+
 ### 2026-10-12 — Fig 3 audit items 1–2: stale scale bars and the representative session
 **Found:**
 - **(1)** The panel files already say "0.2 mW": `figures_final/panels/figure3/panel_A.png` and `panel_C.png` were exported 10-11 11:52. The "1 mW" survives only in the Illustrator assembly: `Figure3.ai` was saved 10-10 and `Figure3.pdf` exported 10-11 17:57 (byte-identical to `Closedloop_edit/images/Figure3.pdf`). Nothing needs regenerating; panels A and C must be re-placed in Illustrator and Figure3.pdf re-exported.
