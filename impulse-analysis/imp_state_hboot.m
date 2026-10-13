@@ -71,5 +71,10 @@ function r = local_ratio(x, y, nb)
 % SD of y in the top state bin over SD in the bottom bin; bins = quantiles of x (as local_qbin)
 e = quantile(x, linspace(0,1,nb+1));
 lo = y(x < e(2));  hi = y(x >= e(end-1));   % same edges as histcounts in local_qbin
-r = std(hi,'omitnan') / max(std(lo,'omitnan'), eps);
+global STV_DVMODE_G %#ok<GVMIS>   % set by imp_state_trialvar; 'l2' -> RMS (y is an error magnitude)
+if strcmp(STV_DVMODE_G,'l2')
+    r = sqrt(mean(hi(isfinite(hi)).^2)) / max(sqrt(mean(lo(isfinite(lo)).^2)), eps);
+else
+    r = std(hi,'omitnan') / max(std(lo,'omitnan'), eps);
+end
 end

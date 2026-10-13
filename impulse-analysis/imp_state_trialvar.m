@@ -181,19 +181,42 @@ end
 % loader) references its response to the mean of the 18 pre-onset frames instead, so its sham is
 % referenced to the 18 frames before the sham (cols 45:62); the reference is detected per amplitude.
 if ~exist('STV_SHAM','var') || isempty(STV_SHAM), STV_SHAM = 'self8'; end
-% SENSITIVITY KNOBS (2026-10-12 review; both OFF = the published analysis):
-%  STV_SKIP_AMP0   drop the 0-amplitude level (AL_0041 e1: 55, AL_0033: 196 trials), whose
-%                  "response" window contains no light -- 251 of the 1767 trials.
-%  STV_REREF_ONSET re-reference AL_0048 to its onset frame (its loader uses the mean of the 18
-%                  pre-onset frames, which lie inside the [-1,0) state window).
-if ~exist('STV_SKIP_AMP0','var')   || isempty(STV_SKIP_AMP0),   STV_SKIP_AMP0   = false; end
+% KNOBS from the 2026-10-12 review:
+%  STV_SKIP_AMP0   (DEFAULT TRUE since 2026-10-12, user: "dont use no light trials") drop the
+%                  0-amplitude level. It is not real trials: load_experiments' gap-fill inserts
+%                  synthetic events every 5 s into laser-off gaps (AL_0041 e1: 55, AL_0033: 196 =
+%                  251 of the old 1767). false reproduces the pre-2026-10-12 trial set.
+%  STV_REREF_ONSET re-reference AL_0048 to its onset frame. A no-op since load_bilateral_impulse
+%                  itself references to the onset frame (2026-10-12); kept as a guard.
+if ~exist('STV_SKIP_AMP0','var')   || isempty(STV_SKIP_AMP0),   STV_SKIP_AMP0   = true;  end
 if ~exist('STV_REREF_ONSET','var') || isempty(STV_REREF_ONSET), STV_REREF_ONSET = false; end
+% DV (user 2026-10-12: "use L2"). The per-trial error of the response:
+%   'l2'   (DEFAULT) e_j = sqrt( mean_t ( x_j(t) - mu_amp(t) )^2 ) over t in [0, STV_L2_WIN) s,
+%          x_j onset-referenced, mu_amp = the trial average at that trial's amplitude. It scores the
+%          whole TIME COURSE, so a trial whose dip comes early or late counts as error even when its
+%          0-200 ms mean is right. Default window 0.5 s = the LTI fit window (18 samples, 0-0.486 s).
+%          The control is the same statistic over an equally long stim-free window (18 samples,
+%          ending one sample before the state window), referenced to its own first frame.
+%          Every spread summary becomes an RMS (sqrt(mean e^2)) instead of an SD, because e >= 0 is
+%          already a distance from the cell mean; see local_ss / local_spr.
+%   'mean' the pre-2026-10-12 DV: the SIGNED deviation of the 0-200 ms mean (Peak_imp) from its
+%          amplitude mean, spread = SD. Reproduces the earlier numbers exactly.
+if ~exist('STV_DV','var')     || isempty(STV_DV),     STV_DV     = 'l2'; end
+if ~exist('STV_L2_WIN','var') || isempty(STV_L2_WIN), STV_L2_WIN = 0.5;  end
+global STV_DVMODE_G  %#ok<GVMIS>  read by the local spread helpers below and by imp_state_hboot
+STV_DVMODE_G = lower(STV_DV);
+assert(any(strcmp(STV_DVMODE_G, {'l2','mean'})), '[STV] STV_DV must be ''l2'' or ''mean''.');
 iOn   = find(tAxis >= 0, 1);
+iL2   = iOn : iOn + floor(STV_L2_WIN*fs - 1e-9);   % [0, STV_L2_WIN) s; 18 samples at 0.5 s
 switch lower(STV_SHAM)
     case 'self8',  Lresp = numel(iOn : iOn + round(0.2*fs));       % 8 samples, as Peak_imp
     case 'onset7', Lresp = numel(iOn+2 : iOn + round(0.22*fs));    % 7 samples (pre-2026-10-12)
     otherwise,     error('[STV] STV_SHAM must be ''self8'' or ''onset7''.');
 end
+if strcmp(STV_DVMODE_G,'l2'), Lresp = numel(iL2); end            % control as long as the response
+fprintf('[STV] DV = %s', upper(STV_DVMODE_G));
+if strcmp(STV_DVMODE_G,'l2'), fprintf(' over %.3f..%.3f s (%d samples)', 0, (iL2(end)-iOn)/fs, numel(iL2)); end
+fprintf('\n');
 if strcmpi(STV_PWR_WIN,'legacy')
     % PRE-2026-10-02: sham pinned at -1.0 s, state window pushed to start after it.
     iSham = find(tAxis >= -1.0, 1) + (0:Lresp-1);
@@ -278,9 +301,14 @@ for e = 1:nExp_s
             pk = mean(df(:, iOn : iOn + round(0.2*fs)), 2, 'omitnan');
         end
 
-        % --- DV: SIGNED deviation from the amplitude mean, scaled by within-amp SD --------------
-        d  = pk - mean(pk,'omitnan');
-        sd = std(d,'omitnan');   if ~isfinite(sd) || sd == 0, continue; end
+        % --- DV: deviation from the amplitude mean, scaled by its within-amp spread -------------
+        if strcmp(STV_DVMODE_G,'l2')
+            x  = df(:, iL2);                                   % onset-referenced (col iOn == 0)
+            d  = sqrt(mean((x - mean(x,1,'omitnan')).^2, 2, 'omitnan'));   % L2 (RMS over t), >= 0
+        else
+            d  = pk - mean(pk,'omitnan');                      % SIGNED, centre 0
+        end
+        sd = local_spr(d);   if ~isfinite(sd) || sd == 0, continue; end
         dev = d / sd;
 
         % --- stim-free control: MATCHED SHAM PEAK (same statistic, same length, no stimulus) -----
@@ -299,9 +327,13 @@ for e = 1:nExp_s
                         labels{e}, nb, iSham(1)-nb, iSham(1)-1); end
             end
         end
-        pre  = mean(shm, 2, 'omitnan');
-        dpc  = pre - mean(pre,'omitnan');
-        sdp  = std(dpc,'omitnan');   if ~isfinite(sdp) || sdp == 0, sdp = eps; end
+        if strcmp(STV_DVMODE_G,'l2')
+            dpc = sqrt(mean((shm - mean(shm,1,'omitnan')).^2, 2, 'omitnan'));
+        else
+            pre = mean(shm, 2, 'omitnan');
+            dpc = pre - mean(pre,'omitnan');
+        end
+        sdp  = local_spr(dpc);   if ~isfinite(sdp) || sdp == 0, sdp = eps; end
         devPre = dpc / sdp;
 
         % --- state markers, all from the SAME pre-onset window -----------------------------------
@@ -365,7 +397,7 @@ for si = 1:numel(uSn_norm)
     for cc = unique(grp(inS)).'
         v = T.devRaw(inS & grp == cc);  v = v(isfinite(v));
         if numel(v) < 3, continue; end
-        num = num + (numel(v)-1)*var(v);  den = den + (numel(v)-1);
+        num = num + local_ss(v);  den = den + local_dof(v);
     end
     if den > 0, sigSess(si) = sqrt(num/den); end
 end
@@ -375,6 +407,34 @@ for si = 1:numel(uSn_norm)
         m = T.sess == uSn_norm(si);  devRawN(m) = T.devRaw(m) / sigSess(si);
     end
 end
+% STIM-FREE CONTROL, same treatment (user 2026-10-12: draw the control in Fig 2G). The sham
+% peak deviation shmRaw is pooled within the same (session x amplitude) cells. STV_CTRL_NORM
+% picks its session normalizer:
+%   'own'  (default) = the control's own session-typical spread, so the two curves compare
+%                      SHAPE (Q4/Q1), which is what the Results text compares;
+%   'resp'           = the RESPONSE's session-typical spread (sigSess), so the two curves also
+%                      compare MAGNITUDE.
+if ~exist('STV_CTRL_NORM','var') || isempty(STV_CTRL_NORM), STV_CTRL_NORM = 'own'; end
+sigSessP = nan(size(uSn_norm));
+for si = 1:numel(uSn_norm)
+    inS = T.sess == uSn_norm(si);
+    num = 0; den = 0;
+    for cc = unique(grp(inS)).'
+        v = T.shmRaw(inS & grp == cc);  v = v(isfinite(v));
+        if numel(v) < 3, continue; end
+        num = num + local_ss(v);  den = den + local_dof(v);
+    end
+    if den > 0, sigSessP(si) = sqrt(num/den); end
+end
+if strcmpi(STV_CTRL_NORM,'resp'), sigCtrl = sigSess; else, sigCtrl = sigSessP; end
+shmRawN = T.shmRaw;
+for si = 1:numel(uSn_norm)
+    if isfinite(sigCtrl(si)) && sigCtrl(si) > 0
+        m = T.sess == uSn_norm(si);  shmRawN(m) = T.shmRaw(m) / sigCtrl(si);
+    end
+end
+fprintf('[STV] control normalizer = %s | control/response session SD ratio %s\n', ...
+        STV_CTRL_NORM, mat2str(sigSessP./sigSess, 2));
 
 for k = 1:nMK
     v = double(T.(MK{k,1})(:));
@@ -452,8 +512,8 @@ for k = 1:nMK
 
     % --- binned SD curve + Brown-Forsythe ------------------------------------------------------
     g   = local_qbin(x, STV_NBIN);
-    sdB = arrayfun(@(b) std(y(g==b), 'omitnan'),  1:STV_NBIN);
-    sdP = arrayfun(@(b) std(yp(g==b),'omitnan'),  1:STV_NBIN);
+    sdB = arrayfun(@(b) local_spr(y(g==b)),  1:STV_NBIN);
+    sdP = arrayfun(@(b) local_spr(yp(g==b)),  1:STV_NBIN);
     bf  = local_bftest(y,  g);
     bfP = local_bftest(yp, g);
 
@@ -481,8 +541,8 @@ for k = 1:nMK
             v = T.devRaw(inB & grp == cc);
             v = v(isfinite(v));
             if numel(v) < 3, continue; end
-            num = num + (numel(v)-1) * var(v);
-            den = den + (numel(v)-1);
+            num = num + local_ss(v);
+            den = den + local_dof(v);
         end
         if den > 0, sdRaw(b) = sqrt(num/den); end
     end
@@ -495,7 +555,7 @@ for k = 1:nMK
         for cc = unique(grp(inB)).'
             v = devRawN(inB & grp == cc);  v = v(isfinite(v));
             if numel(v) < 3, continue; end
-            num = num + (numel(v)-1)*var(v);  den = den + (numel(v)-1);
+            num = num + local_ss(v);  den = den + local_dof(v);
         end
         if den > 0, sdRawN(b) = sqrt(num/den); end
     end
@@ -506,16 +566,23 @@ for k = 1:nMK
     gFull = zeros(numel(T.sess),1);  gFull(ok) = g;   % T is a struct of columns, not a table
     uSN = unique(T.sess(ok)).';
     sdRawNs = nan(numel(uSN), STV_NBIN);
+    sdPNs   = nan(numel(uSN), STV_NBIN);   % stim-free control, same bins/cells (Fig 2G dashed)
     for ii = 1:numel(uSN)
         for b = 1:STV_NBIN
             inB = (gFull == b) & (T.sess == uSN(ii));
-            num = 0; den = 0;
+            num = 0; den = 0;  numP = 0; denP = 0;
             for cc = unique(grp(inB)).'
                 v = devRawN(inB & grp == cc);  v = v(isfinite(v));
-                if numel(v) < 3, continue; end
-                num = num + (numel(v)-1)*var(v);  den = den + (numel(v)-1);
+                if numel(v) >= 3
+                    num = num + local_ss(v);  den = den + local_dof(v);
+                end
+                v = shmRawN(inB & grp == cc);  v = v(isfinite(v));
+                if numel(v) >= 3
+                    numP = numP + local_ss(v);  denP = denP + local_dof(v);
+                end
             end
-            if den > 0, sdRawNs(ii,b) = sqrt(num/den); end
+            if den  > 0, sdRawNs(ii,b) = sqrt(num/den);   end
+            if denP > 0, sdPNs(ii,b)   = sqrt(numP/denP); end
         end
     end
     trend  = corr((1:STV_NBIN).', sdB(:), 'type','Spearman');
@@ -528,7 +595,7 @@ for k = 1:nMK
     for b = 1:STV_NBOOT
         s  = randi(nO, nO, 1);
         gb = local_qbin(x(s), STV_NBIN);
-        lo = std(y(s(gb==1)),'omitnan');  hi = std(y(s(gb==STV_NBIN)),'omitnan');
+        lo = local_spr(y(s(gb==1)));  hi = local_spr(y(s(gb==STV_NBIN)));
         bs(b) = hi/max(lo,eps);
     end
     ci = quantile(bs, [0.025 0.975]);
@@ -574,6 +641,10 @@ for k = 1:nMK
     R(k).sdRaw = sdRaw;    % same curve in %dF/F -- see the PREDICTION UNCERTAINTY block above
     R(k).sdRawN = sdRawN;  % same curve, per-session normalized (x session-typical error, ~1)
     R(k).sdRawNs = sdRawNs;  % one row per session (Fig 2G thin lines); mean over rows = bold line
+    R(k).sdPNs   = sdPNs;    % stim-free control, same layout; mean over rows = Fig 2G dashed line
+    R(k).ratioP  = sdP(end)/max(sdP(1),eps);   % control Q4/Q1, pooled trials (Results quotes it)
+    R(k).ctlRespSD = sigSessP ./ sigSess;      % per session: control spread / response spread
+    R(k).dvMode  = STV_DVMODE_G;  R(k).l2Win = STV_L2_WIN;
     R(k).trend=trend; R(k).trendP=trendP; R(k).ratio=rat; R(k).ci=ci;
     R(k).verdict=verdict; R(k).x=x; R(k).y=y; R(k).n=nnz(ok);
     R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;
@@ -608,8 +679,8 @@ if STV_MOTEXCL || ~any(hiM)
     fprintf('\n[STV] motion threshold split SKIPPED (no trials above z > %.1f).\n', STV_MOTTHR);
 else
 MTS = struct('thr',STV_MOTTHR,'nLo',nnz(~hiM),'nHi',nnz(hiM));
-MTS.sdLo   = std(T.dev(~hiM),'omitnan');     MTS.sdHi   = std(T.dev(hiM),'omitnan');
-MTS.sdLoP  = std(T.devPre(~hiM),'omitnan');  MTS.sdHiP  = std(T.devPre(hiM),'omitnan');
+MTS.sdLo   = local_spr(T.dev(~hiM));     MTS.sdHi   = local_spr(T.dev(hiM));
+MTS.sdLoP  = local_spr(T.devPre(~hiM));  MTS.sdHiP  = local_spr(T.devPre(hiM));
 MTS.ratio  = MTS.sdHi/max(MTS.sdLo,eps);     MTS.ratioP = MTS.sdHiP/max(MTS.sdLoP,eps);
 MTS.p  = local_bftest(T.dev,    double(hiM));
 MTS.pP = local_bftest(T.devPre, double(hiM));
@@ -637,12 +708,15 @@ end
 %  obs ~ b*sham on the LOW-motion trials, apply that b to both groups, and compare the RESIDUAL
 %  variance -- what is left of the response once the part predictable from a stim-free window is
 %  removed. All in RAW dF/F, because the SD-normalised copies are 1 by construction.
+if strcmp(STV_DVMODE_G,'l2')
+    fprintf('   (L2 DV: decomposition uses mean squares; regressing one error magnitude on another is a rough diagnostic only)\n');
+end
 bSham = T.shmRaw(~hiM) \ T.devRaw(~hiM);
 resid = T.devRaw - bSham * T.shmRaw;
 MTS.bSham = bSham;
-MTS.vObs  = [var(T.devRaw(~hiM)) var(T.devRaw(hiM))];
-MTS.vShm  = [var(T.shmRaw(~hiM)) var(T.shmRaw(hiM))];
-MTS.vRes  = [var(resid(~hiM))    var(resid(hiM))];
+MTS.vObs  = [local_var(T.devRaw(~hiM)) local_var(T.devRaw(hiM))];
+MTS.vShm  = [local_var(T.shmRaw(~hiM)) local_var(T.shmRaw(hiM))];
+MTS.vRes  = [local_var(resid(~hiM))    local_var(resid(hiM))];
 fprintf(['\n   VARIANCE DECOMPOSITION (raw dF/F, sham peak at %.2f s, b = %.3f)\n' ...
          '   %-14s %10s %10s %10s\n'], tAxis(iSham(1)), bSham, 'group','var(obs)','var(sham)','var(resid)');
 fprintf('   %-14s %10.3f %10.3f %10.3f\n', 'low motion',  MTS.vObs(1), MTS.vShm(1), MTS.vRes(1));
@@ -658,7 +732,7 @@ MTS.resPerSess = nan(numel(unique(T.sess)),1);
 for i = 1:numel(unique(T.sess))
     uu = unique(T.sess); kk = T.sess == uu(i);
     if nnz(kk & hiM) < 8, continue; end
-    MTS.resPerSess(i) = var(resid(kk & hiM)) / max(var(resid(kk & ~hiM)), eps);
+    MTS.resPerSess(i) = local_var(resid(kk & hiM)) / max(local_var(resid(kk & ~hiM)), eps);
 end
 fprintf('   per session residual ratio: %s\n', ...
         strjoin(compose('%.2f', MTS.resPerSess(isfinite(MTS.resPerSess))).', '  '));
@@ -668,7 +742,7 @@ uSm = unique(T.sess).';
 for i = 1:numel(uSm)
     kk = T.sess == uSm(i);
     if nnz(kk & hiM) < 8, continue; end
-    MTS.perSess(i) = std(T.dev(kk & hiM),'omitnan') / max(std(T.dev(kk & ~hiM),'omitnan'), eps);
+    MTS.perSess(i) = local_spr(T.dev(kk & hiM)) / max(local_spr(T.dev(kk & ~hiM)), eps);
 end
 end   % STV_MOTEXCL / no high-motion trials -> whole split block skipped
 
@@ -852,11 +926,47 @@ for u = unique(s(:)).'
 end
 end
 
+function s = local_spr(v)
+% Spread of a deviation vector. 'mean' DV: the SD (signed deviations about a centre).
+% 'l2' DV: the RMS, sqrt(mean(v.^2)) -- v is already a non-negative distance from the cell mean,
+% so its SD would measure how UNEQUAL the errors are, not how LARGE they are.
+global STV_DVMODE_G %#ok<GVMIS>
+v = v(isfinite(v));
+if isempty(v), s = NaN; return; end
+if strcmp(STV_DVMODE_G,'l2'), s = sqrt(mean(v.^2)); else, s = std(v); end
+end
+
+function w = local_var(v)
+% Variance for the signed DV; mean square for the L2 DV (see local_spr).
+global STV_DVMODE_G %#ok<GVMIS>
+v = v(isfinite(v));
+if strcmp(STV_DVMODE_G,'l2'), w = mean(v.^2); else, w = var(v); end
+end
+
+function ss = local_ss(v)
+% Pooled-spread numerator: (n-1)*var for the signed DV, sum of squares for L2.
+global STV_DVMODE_G %#ok<GVMIS>
+if strcmp(STV_DVMODE_G,'l2'), ss = sum(v.^2); else, ss = (numel(v)-1)*var(v); end
+end
+
+function df = local_dof(v)
+% Pooled-spread denominator matching local_ss.
+global STV_DVMODE_G %#ok<GVMIS>
+if strcmp(STV_DVMODE_G,'l2'), df = numel(v); else, df = numel(v)-1; end
+end
+
 function p = local_bftest(y, g)
 %LOCAL_BFTEST  Brown-Forsythe (median-centred Levene, so no normality assumption). NaN if undefined.
+% Under the L2 DV, y is already a non-negative error magnitude, so "does spread differ across
+% bins" becomes "does the error differ across bins": Kruskal-Wallis on y.
+global STV_DVMODE_G %#ok<GVMIS>
 p = NaN;
 try
-    p = vartestn(y, g, 'TestType','BrownForsythe', 'Display','off');
+    if strcmp(STV_DVMODE_G,'l2')
+        p = kruskalwallis(y, g, 'off');
+    else
+        p = vartestn(y, g, 'TestType','BrownForsythe', 'Display','off');
+    end
 catch
 end
 end

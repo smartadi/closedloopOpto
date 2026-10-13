@@ -1,16 +1,20 @@
 id,figure,claim,effect,unit,ci_lo,ci_hi,test,stat_name,stat,df,p,sided,n,n_unit,source
-2G_MOT_ratio,2G,"Q4/Q1 SD ratio, motion",0.7207189,ratio,0.5188646,0.8915148,"bootstrap",,,NaN,NaN,,1767,trials,imp_state_trialvar
-2G_MOT_lmm,2G,"|dev| ~ state, motion (4/4 sessions agree)",-0.295665,SD per unit state,-0.4819224,-0.1094077,"LMM |dev|~state+(1|sess)",t,-5.051818,3,0.01496313,2,4,sessions,imp_state_trialvar
-2G_MOT_rho,2G,"Spearman |dev| vs state (pooled trials), motion",-0.1156889,rho,NaN,NaN,"Spearman",,,NaN,1.082576e-06,2,1767,trials,imp_state_trialvar
-2G_MOT_ctrl,2G,"stimulus-free control, motion",-0.1494896,rho,NaN,NaN,"Spearman",,,NaN,2.702142e-10,2,1767,trials,imp_state_trialvar
-2G_DPr_ratio,2G,"Q4/Q1 SD ratio, relative 2-4 Hz",1.006235,ratio,0.8065867,1.444022,"bootstrap",,,NaN,NaN,,1767,trials,imp_state_trialvar
-2G_DPr_lmm,2G,"|dev| ~ state, relative 2-4 Hz (3/4 sessions agree)",0.177239,SD per unit state,-0.009879038,0.3643571,"LMM |dev|~state+(1|sess)",t,3.014427,3,0.05701082,2,4,sessions,imp_state_trialvar
-2G_DPr_rho,2G,"Spearman |dev| vs state (pooled trials), relative 2-4 Hz",0.09552484,rho,NaN,NaN,"Spearman",,,NaN,5.775222e-05,2,1767,trials,imp_state_trialvar
-2G_DPr_ctrl,2G,"stimulus-free control, relative 2-4 Hz",0.04607193,rho,NaN,NaN,"Spearman",,,NaN,0.05282811,2,1767,trials,imp_state_trialvar
-2G_DPa_ratio,2G,"Q4/Q1 SD ratio, absolute 2-4 Hz",2.187034,ratio,1.603323,2.908155,"bootstrap",,,NaN,NaN,,1767,trials,imp_state_trialvar
-2G_DPa_lmm,2G,"|dev| ~ state, absolute 2-4 Hz (4/4 sessions agree)",0.9492613,SD per unit state,0.7759907,1.122532,"LMM |dev|~state+(1|sess)",t,17.435,3,0.0004112305,2,4,sessions,imp_state_trialvar
-2G_DPa_rho,2G,"Spearman |dev| vs state (pooled trials), absolute 2-4 Hz",0.4048328,rho,NaN,NaN,"Spearman",,,NaN,0,2,1767,trials,imp_state_trialvar
-2G_DPa_ctrl,2G,"stimulus-free control, absolute 2-4 Hz",0.3897216,rho,NaN,NaN,"Spearman",,,NaN,0,2,1767,trials,imp_state_trialvar
+2G_MOT_ratio,2G,"Q4/Q1 RMS ratio, motion",0.6425329,ratio,0.470612,0.8153417,"hierarchical bootstrap",,,NaN,NaN,,1516,trials,imp_state_trialvar
+2G_MOT_lmm,2G,"L2 error (0-0.5 s) ~ state, motion (4/4 sessions agree)",-0.3918366,RMS per unit state,-0.5619211,-0.2217522,"LMM L2 error (0-0.5 s)~state+(1|sess)",t,-7.331646,3,0.005242265,2,4,sessions,imp_state_trialvar
+2G_MOT_rho,2G,"Spearman L2 error (0-0.5 s) vs state (pooled trials), motion",-0.2227608,rho,NaN,NaN,"Spearman",,,NaN,1.68291e-18,2,1516,trials,imp_state_trialvar
+2G_MOT_ctrl,2G,"stimulus-free control, motion",-0.2283256,rho,NaN,NaN,"Spearman",,,NaN,2.218781e-19,2,1516,trials,imp_state_trialvar
+2G_MOT_ctrlratio,2G,"stimulus-free control Q4/Q1 RMS ratio, motion",0.6563938,ratio,NaN,NaN,"point estimate",,,NaN,NaN,,1516,trials,imp_state_trialvar
+2G_DPr_ratio,2G,"Q4/Q1 RMS ratio, relative 2-4 Hz",1.028436,ratio,0.8545018,1.22598,"hierarchical bootstrap",,,NaN,NaN,,1516,trials,imp_state_trialvar
+2G_DPr_lmm,2G,"L2 error (0-0.5 s) ~ state, relative 2-4 Hz (4/4 sessions agree)",0.1932036,RMS per unit state,0.02084897,0.3655582,"LMM L2 error (0-0.5 s)~state+(1|sess)",t,3.567413,3,0.0376212,2,4,sessions,imp_state_trialvar
+2G_DPr_rho,2G,"Spearman L2 error (0-0.5 s) vs state (pooled trials), relative 2-4 Hz",0.1481772,rho,NaN,NaN,"Spearman",,,NaN,6.764354e-09,2,1516,trials,imp_state_trialvar
+2G_DPr_ctrl,2G,"stimulus-free control, relative 2-4 Hz",0.1270555,rho,NaN,NaN,"Spearman",,,NaN,6.939148e-07,2,1516,trials,imp_state_trialvar
+2G_DPr_ctrlratio,2G,"stimulus-free control Q4/Q1 RMS ratio, relative 2-4 Hz",1.084526,ratio,NaN,NaN,"point estimate",,,NaN,NaN,,1516,trials,imp_state_trialvar
+2G_DPa_ratio,2G,"Q4/Q1 RMS ratio, absolute 2-4 Hz",2.314453,ratio,1.850499,2.753397,"hierarchical bootstrap",,,NaN,NaN,,1516,trials,imp_state_trialvar
+2G_DPa_lmm,2G,"L2 error (0-0.5 s) ~ state, absolute 2-4 Hz (4/4 sessions agree)",1.004464,RMS per unit state,0.8521076,1.156821,"LMM L2 error (0-0.5 s)~state+(1|sess)",t,20.9814,3,0.0002368249,2,4,sessions,imp_state_trialvar
+2G_DPa_rho,2G,"Spearman L2 error (0-0.5 s) vs state (pooled trials), absolute 2-4 Hz",0.5505683,rho,NaN,NaN,"Spearman",,,NaN,0,2,1516,trials,imp_state_trialvar
+2G_DPa_ctrl,2G,"stimulus-free control, absolute 2-4 Hz",0.5734344,rho,NaN,NaN,"Spearman",,,NaN,0,2,1516,trials,imp_state_trialvar
+2G_DPa_ctrlratio,2G,"stimulus-free control Q4/Q1 RMS ratio, absolute 2-4 Hz",2.713358,ratio,NaN,NaN,"point estimate",,,NaN,NaN,,1516,trials,imp_state_trialvar
+2G_ctl_resp_spread,2G,"control/response within-session RMS, range over sessions",0.9993004,ratio,0.9187697,1.05868,"per-session range (min-max)",,,NaN,NaN,,4,sessions,imp_state_trialvar
 3_rmse_full_lmm,3,"CL-OL gap, RMSE 0-3 s",-0.6325779,%dF/F,-0.7588511,-0.5063047,"LMM y~cond+(1+cond|sess)+(1|mouse)",t,-10.7493075535624,13.9337919559345,3.969094e-08,2,15,sessions,fig3_olcl_stats
 3_rmse_full_sr,3,"per-session signed-rank, RMSE 0-3 s (15/15 sessions CL<OL)",1.230281,median OL/CL,NaN,NaN,"Wilcoxon signed-rank",V,120,NaN,6.103516e-05,2,15,sessions,fig3_olcl_stats
 3_rmse_early_lmm,3,"CL-OL gap, RMSE 0-1 s",-0.4640878,%dF/F,-0.619855,-0.3083206,"LMM y~cond+(1+cond|sess)+(1|mouse)",t,-6.39010928246431,14,1.681939e-05,2,15,sessions,fig3_olcl_stats

@@ -21,17 +21,32 @@ rows = cell(0,16);
 % ---------------- Figure 2G : impulse-response deviation vs pre-stimulus state ----------------
 S = load(fullfile(dd,'fig2g_state_stats.mat')); R = S.STV_R;
 lab = struct('MOT','motion','DPr','relative 2-4 Hz','DPa','absolute 2-4 Hz');
+% DV label follows the producer's mode (2026-10-12: L2 time-course error is the paper DV).
+if isfield(R,'dvMode') && strcmp(R(1).dvMode,'l2')
+    dvS = sprintf('L2 error (0-%.1f s)', R(1).l2Win);  spS = 'RMS';
+else
+    dvS = '|dev|';  spS = 'SD';
+end
 for t = {'MOT','DPr','DPa'}
     r = R(strcmp({R.tag},t{1}));
-    add(['2G_' t{1} '_ratio'],'2G',['Q4/Q1 SD ratio, ' lab.(t{1})],r.ratio,'ratio',r.ci, ...
-        'bootstrap','','',NaN,NaN,'',r.n,'trials','imp_state_trialvar');
-    add(['2G_' t{1} '_lmm'],'2G',sprintf('|dev| ~ state, %s (%d/%d sessions agree)',lab.(t{1}),r.nSessAgree,r.nSess), ...
-        r.bLME,'SD per unit state',r.ciLME,'LMM |dev|~state+(1|sess)','t',r.tLME,r.dfLME,r.pLME,'2', ...
+    add(['2G_' t{1} '_ratio'],'2G',['Q4/Q1 ' spS ' ratio, ' lab.(t{1})],r.ratio,'ratio',r.ci, ...
+        'hierarchical bootstrap','','',NaN,NaN,'',r.n,'trials','imp_state_trialvar');
+    add(['2G_' t{1} '_lmm'],'2G',sprintf('%s ~ state, %s (%d/%d sessions agree)',dvS,lab.(t{1}),r.nSessAgree,r.nSess), ...
+        r.bLME,[spS ' per unit state'],r.ciLME,['LMM ' dvS '~state+(1|sess)'],'t',r.tLME,r.dfLME,r.pLME,'2', ...
         r.nSess,'sessions','imp_state_trialvar');
-    add(['2G_' t{1} '_rho'],'2G',['Spearman |dev| vs state (pooled trials), ' lab.(t{1})],r.rho,'rho',[NaN NaN], ...
+    add(['2G_' t{1} '_rho'],'2G',['Spearman ' dvS ' vs state (pooled trials), ' lab.(t{1})],r.rho,'rho',[NaN NaN], ...
         'Spearman','','',NaN,r.p,'2',r.n,'trials','imp_state_trialvar');
     add(['2G_' t{1} '_ctrl'],'2G',['stimulus-free control, ' lab.(t{1})],r.rhoP,'rho',[NaN NaN], ...
         'Spearman','','',NaN,r.pP,'2',r.n,'trials','imp_state_trialvar');
+    if isfield(r,'ratioP')
+        add(['2G_' t{1} '_ctrlratio'],'2G',['stimulus-free control Q4/Q1 ' spS ' ratio, ' lab.(t{1})],r.ratioP,'ratio',[NaN NaN], ...
+            'point estimate','','',NaN,NaN,'',r.n,'trials','imp_state_trialvar');
+    end
+end
+if isfield(R,'ctlRespSD')
+    v = R(1).ctlRespSD;
+    add('2G_ctl_resp_spread','2G',sprintf('control/response within-session %s, range over sessions', spS), ...
+        median(v),'ratio',[min(v) max(v)],'per-session range (min-max)','','',NaN,NaN,'',numel(v),'sessions','imp_state_trialvar');
 end
 
 % ---------------- Figure 3 : OL vs CL ---------------------------------------------------------

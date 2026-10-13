@@ -395,9 +395,16 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
         if ~isfield(R,'sdRawNs')
             error('[STVF] R.sdRawNs missing -- rerun imp_state_trialvar.m (2026-10-10 or later).');
         end
-        C_thin = [0.62 0.62 0.62];  C_mean = [0 0 0];   % user 2026-10-10: grey sessions, black mean
+        if ~isfield(R,'sdPNs')
+            error('[STVF] R.sdPNs (stim-free control) missing -- rerun imp_state_trialvar.m (2026-10-12 or later).');
+        end
+        C_thin = [0.78 0.78 0.78];  C_mean = [0 0 0];   % user 2026-10-10: grey sessions, black mean
+        C_ctl  = [0.30 0.30 0.30];   % user 2026-10-12: stim-free control, dashed, open markers (sessions lightened to 0.78 so it stands out)
         allC = [];
-        for m = 1:numel(idx), v = R(idx(m)).sdRawNs; allC = [allC v(isfinite(v)).']; end %#ok<AGROW>
+        for m = 1:numel(idx)
+            v = R(idx(m)).sdRawNs;                 allC = [allC v(isfinite(v)).']; %#ok<AGROW>
+            v = mean(R(idx(m)).sdPNs, 1, 'omitnan'); allC = [allC v(isfinite(v))];  %#ok<AGROW>
+        end
         yLimC = [floor(min(allC)*10)/10, ceil(max(allC)*10)/10];
         for m = 1:numel(idx)
             k = idx(m);  r = R(k);
@@ -408,7 +415,15 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
                 plot(ax, xb, Ys(ii,:), '-o', 'Color', C_thin, 'MarkerFaceColor', C_thin, ...
                      'MarkerEdgeColor','none', 'MarkerSize', 1.6, 'LineWidth', PS.lw_trial*1.5, 'HandleVisibility','off');
             end
-            plot(ax, xb, yv, '-o', 'Color', C_mean, 'MarkerFaceColor', C_mean, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
+            yc = mean(r.sdPNs, 1, 'omitnan');   % equal-weight session mean of the stim-free control
+            hC = plot(ax, xb, yc, '--o', 'Color', C_ctl, 'MarkerFaceColor', 'w', 'MarkerEdgeColor', C_ctl, ...
+                      'LineWidth', PS.lw_mean*0.7, 'MarkerSize', 2.2);
+            hS = plot(ax, xb, yv, '-o', 'Color', C_mean, 'MarkerFaceColor', C_mean, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
+            if m == 2   % legend in the rel-delta tile: its lower half is empty
+                lg = legend(ax, [hS hC], {'Stim','No stim'}, 'Location','south', 'Box','off', ...
+                            'FontSize', PS.fs, 'FontWeight', PS.fw);
+                lg.ItemTokenSize = [6 6];
+            end
             xticks(ax, 0.125:0.25:0.875);  xticklabels(ax, {'Q1','Q2','Q3','Q4'});
             xtickangle(ax, 0);
             xlim(ax, [0 1]);  ylim(ax, yLimC);
@@ -422,11 +437,13 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
             text(ax, 0.5, 0.99, sprintf('%s  %d/%d', ss, r.nSessAgree, r.nSess), 'Units','normalized', ...
                  'HorizontalAlignment','center', 'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
             if m > 1, set(ax, 'YTickLabel', [], 'YTick', [], 'YColor', 'none'); end   % one y-axis (leftmost) serves all three
-            fprintf('[STVF] 2G %-16s session-mean Q4/Q1 %.2f | per session %s\n', r.tag, yv(end)/yv(1), ...
-                    mat2str(Ys(:,end)./Ys(:,1), 2));
+            fprintf('[STVF] 2G %-16s session-mean Q4/Q1 %.2f | per session %s | no-stim control Q4/Q1 %.2f\n', ...
+                    r.tag, yv(end)/yv(1), mat2str(Ys(:,end)./Ys(:,1), 2), yc(end)/yc(1));
         end
         linkaxes(axc, 'y');  ylim(axc(1), yLimC);
-        ylabel(axc(1), {'Prediction error','(session-normalized)'}, 'FontSize', PS.fs, 'FontWeight', PS.fw);
+        % user 2026-10-12: the old label ('Prediction error (session-normalized)') did not say
+        % it is a SPREAD or what it is relative to; 1 = a session-typical trial.
+        ylabel(axc(1), {'Trial-to-trial variability','(\times session typical)'}, 'FontSize', PS.fs, 'FontWeight', PS.fw);
         title(tl, 'State dependence of stimulation response', 'FontSize', PS.fs, 'FontWeight', PS.fw);
         pdfDir = fullfile(paperRoot,'images','figure2');
         if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
