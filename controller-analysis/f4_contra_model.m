@@ -38,7 +38,7 @@ xlabel(axD,'time from stim (s)','FontSize',PS.fs,'FontWeight',PS.fw); ylabel(axD
 lg=legend(axD,[hA hG],{'Actual','Global (contra pred.)'},'Box','off','Location','northeast','FontSize',PS.fs); lg.ItemTokenSize=[8 8];
 [~,im]=min(A); text(axD,t(im)+0.2,(A(im)+G(im))/2,{'Local','= A - G'},'Color',colL,'FontSize',PS.fs,'FontWeight','bold','VerticalAlignment','middle');
 text(axD,xl(1)+0.1,yl(1)*0.92,sprintf('R^2_{te} = %.2f',R2),'Color',colG,'FontSize',PS.fs,'FontWeight','bold');
-title(axD,'Global predicts the counterfactual','FontSize',PS.fs,'FontWeight','bold');
+title(axD,'Actual = Global + Local','FontSize',PS.fs,'FontWeight','bold');
 
 jnAxes(axD);
 paperExport(f,fullfile(outfig,'f4_agl.pdf'));

@@ -16,6 +16,38 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — Fig 4F retitled "Actual = Global + Local"
+**Changed/Found:** `f4_contra_model.m`: the panel title changed from "Global predicts the counterfactual". Re-exported with PAPER_FINAL to `figures_final/panels/figure4/f4_agl.pdf` (R²_te = 0.75 unchanged).
+**Why:** reviewer M7. A no-controller trial is never observed, so the old title overclaimed (user's choice).
+**Next:** re-place 4F in the Illustrator Figure 4, together with 4C.
+
+### 2026-10-12 — Manuscript framing: intro, abstract, 2G in Discussion, scope limitation (user-approved drafts)
+**Changed/Found:**
+- `introduction.tex` L44: single trials "scattered around [the model] by an amount that varied with … state, as ongoing activity did".
+- `discussion.tex`:
+  - 2G sentence added to "Disturbance rejection…";
+  - a "Fifth" scope limitation added: n = 4 impulse sessions / 3 mice, inhibition only, one area, Local as a residual, Fig 5 n = 3.
+- `main.tex` abstract: "inhibitory … 15 sessions from 4 mice"; "stationary" → "approximately linear, time-invariant".
+- `results.tex` L13 "stationary" → "within each session … time-invariant".
+- The L109 gains non-sequitur is replaced by a pointer to Table gains.
+
+The PDF is now 42 pp, clean.
+**Why:** reviewer M12 and the L109 nit. The new 2G framing had made the intro and the "stationary" wording contradict Results (cross-session R² 0.69 shows the dynamics are session-specific).
+**Next:** none.
+
+### 2026-10-12 — Manuscript: per-figure signal stated; hemodynamic limitation added (user decision)
+**Changed/Found:** The code shows two different signals:
+- Fig 2 uses hemodynamic-corrected SVDs (`loadUVt_hemo`).
+- Figs 3–5 use the uncorrected blue channel: `getpixel_dFoF`'s SVD branch always loads blue-only V (the "corrected file not found" print is unconditional), and `load_bilateral` routes through it.
+
+Text changes:
+- `methods_rewrite.tex` FILL at line 208 is replaced by that statement.
+- `discussion.tex` gets a "Fourth" limitation: the controller and closed-loop analyses use the uncorrected signal, so 2–4 Hz state power may be partly vascular. The corrected impulse 2G still shows abs δ in 4/4 sessions.
+- "Three factors" becomes "Four".
+
+**Why:** reviewer M10. This is the most likely referee question on the 2–4 Hz result. The user chose "state it + limitation", with no new control analysis.
+**Next:** none, unless a referee asks for the corrected-signal Fig 4 control.
+
 ### 2026-10-12 — Fig 2G inference switched to per-session slopes (user decision)
 **Changed/Found:**
 - New `utils/stv_sess_slopes.m`: within-session OLS slope of |z| on state (z-scored per session), then a one-sample t-test across sessions with df = 3.
