@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Methods: second-opsin and feedback-sign language removed (user decision)
+**Changed/Found:** `methods_rewrite.tex`:
+- "AL_0048/AL_0051 additionally expressed a second, spectrally distinct opsin" is replaced with a neutral sentence: stimulated at 638/594 nm through an interneuron-expressed opsin, giving suppression as in the other mice.
+- The σ feedback sign is removed: Eq. error is now e_t = y_t + R = y_t − y_ref, the preview error is e_k = y_k + r̃_k, and the subsection is renamed "Tracking error".
+- "different opsins" → "stimulation wavelength".
+- "Titers … in Table" → "Per-animal details" (the table has no titer column).
+
+Alyx gives AL_0051's construct as "PHP S5E2 C1V1" (interneuron-driven). It is unconfirmed, so it is left as a FILL comment and not named in the body.
+**Why:** reviewer M13. The user said not to mention AL_0048's excitatory second opsin anywhere.
+**Next:** if wanted, name the AL_0048/AL_0051 inhibitory constructs once confirmed from injection records.
+
 ### 2026-10-13 — Methods tuning section limited to the S2 grid + auto-tune run; facts corrected from rig logs
 **Changed/Found:** `methods_rewrite.tex` "Gain-grid sweep" and "Online gain search" now describe only:
 - grid AL_0033 2025-03-05 (10 nodes, min (0.05, 0.10), Ĵ = 16.1);
