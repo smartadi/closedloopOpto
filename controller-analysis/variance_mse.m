@@ -536,6 +536,16 @@ for k = 1:length(fields)
     r_late_g2r(ki_r)  = mean(enc_w)    / mean(ewc_w);
     r_post_g2r(ki_r)  = mean(enc_post) / mean(ewc_post);
 end
+% Per-window signed-rank on log OL/CL RMSE ratio (panel 3H; 2026-10-12 reviewer: the "above one
+% during stimulation but not before or after" claim needs its own test). Saved for paper_stats_table.
+F3Hr = struct();
+g2r_w = {'pre',r_pre_g2r; 'early',r_early_g2r; 'late',r_late_g2r; 'post',r_post_g2r};
+for iw = 1:size(g2r_w,1)
+    rr = g2r_w{iw,2}(:);  [pw,~,sw] = signrank(log(rr));
+    F3Hr.(g2r_w{iw,1}) = struct('n',numel(rr),'medRatio',median(rr),'nAbove1',sum(rr>1), ...
+                                'V',sw.signedrank,'p',pw);
+end
+try, save(fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','fig3h_rmse_ratio_signrank.mat'),'F3Hr'); catch, end
 
 % Compressed to match panel I (4.5x3.6); I and J now sit side by side (user 2026-09-23).
 fig_G2r = paperFig(3.6, 2.72);  % 4.5 x 3.4 scaled down 20% (user 2026-10-10)

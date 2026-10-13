@@ -16,6 +16,63 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — Fig 4 contra→ipsi R² in text updated to the ridge test value (0.75)
+**Changed/Found:** `results.tex` L183. Changed "R² = 0.85 OL / 0.89 CL" to "R² = 0.75 representative session (Fig 4F), median 0.76, range 0.44–0.98 over 13 sessions", read from the `R2_te` field of `controller-analysis/data/ctrl_ols_ol_stimblind_ridge_*.mat`.
+**Why:** NUMBERS.md §5.4 had flagged a three-way R² conflict. The panel's 0.75 is the current ridge predictor; 0.85/0.89 were stale.
+**Next:** NUMBERS.md §5.4 L151 "0.85 OL / 0.78 CL" reconstruction R² and the nested nulls are still unverified.
+
+### 2026-10-12 — Fig 4C bar/text mismatch traced to stale Illustrator assembly
+**Changed/Found:** the locked panel `figures_final/panels/figure4/f4_decomp_unique_sep.pdf` (session-level, 2026-10-11) matches the text (0.53→0.03, 0.05→0.03, 0.11/0.11). The assembled `Figure4.pdf` still holds the old pooled 4C ("n=613").
+**Why:** reviewer M2 flagged the mismatch between the text and the bars.
+**Next:** the user re-places 4C (and checks the 4D stars) in Illustrator, then copies Figure4.pdf to `Closedloop_edit/images`.
+
+### 2026-10-12 — Fig 3H pre/post RMSE ratio now tested; 3H/3I labels fixed
+**Changed/Found:**
+- `variance_mse.m` (G2r block): adds a signed-rank test on the log OL/CL RMSE ratio per window and saves `data/fig3h_rmse_ratio_signrank.mat`. Values were computed from the 15 caches with identical windows:
+  - pre: 0.99, V = 56, p = 0.85
+  - 0–1 s: 1.14, V = 120, p = 6.1e-5
+  - 1–3 s: 1.39, V = 120, p = 6.1e-5
+  - post: 1.01, V = 66, p = 0.76
+- `paper_stats_table.m`: adds rows `3H_*` (RMSE ratio). The variance-ratio rows are relabelled `3I_*`, confirmed against the assembled Figure3.pdf. STATS_TABLE now has 62 rows.
+- PAPER.md registry: 3H/3I rows swapped.
+- `results.tex` L108: now quotes these numbers.
+
+**Why:** reviewer M5. The "above one during stimulation but not before or after" claim had no test, and STATS_TABLE called the variance-ratio rows 3H.
+**Next:** none.
+
+### 2026-10-12 — Mechanical manuscript fixes from the reviewer pass (Closedloop_edit draft)
+**Changed/Found:**
+- `methods_rewrite.tex`:
+  - removed the 15 printing `[RIG]` tags;
+  - "Validation blocks were 100 trials" → "30–200 (Table gains)";
+  - steady-state window stated for all Fig 4 state analyses (D, G, table), matching `f4_row2_pool.m:12`; the lead-in is now described as 3 s;
+  - the 1 s boundary is justified against the dip and rebound τ;
+  - 2G window is "18 samples, 0–0.49 s";
+  - unused pooled rank-sum replaced with a note that the RR tests are one-sided.
+- `discussion.tex`:
+  - K_p e_t sign;
+  - the identification sentence no longer contradicts the LTI fits.
+- `results.tex`:
+  - 2G caption no longer defines the L2 error circularly;
+  - dip-τ sentence names its mice;
+  - abs δ 1–4 vs 2–4 Hz note added.
+
+The PDF builds (41 pp, no undefined refs).
+**Why:** these were the reviewer items needing no judgement call. Discussion "13 sessions in 2025" was checked and is correct (15 = 13 + 2 from 2026), and the Fig 4G "all eleven medians < 1" claim is confirmed (0.34–0.93).
+**Next:** the items needing user input are taken one by one.
+
+### 2026-10-12 — Final reviewer pass: 14 MAJOR / 23 MINOR issues found (no edits yet)
+**Changed/Found:** `paper-writing/REVIEW_2026-10-12.md`. Three read-only reviewers were merged into one list. Key findings:
+- 15 `[RIG]` tags and "URL" placeholders print in the Methods PDF.
+- The Fig 4C text numbers don't match the bars, and 4C has no STATS_TABLE rows.
+- The Fig 2G LMM has no random state slope, which is anti-conservative per the paper's own simulation (FPR 0.115–0.645).
+- Methods states a 0–3 s window, but `f4_row2_pool.m:12` scores Fig 4D on [+1, +3] s.
+- The STATS_TABLE `3H_pre/post` rows are actually Fig 3I.
+- Methods says validation blocks were "100 trials"; `tab:gains` gives 30–200.
+
+**Why:** the user asked for a final reviewer pass before finishing the paper. Items that conflict with locked decisions were excluded: the 2G heading, Fig 3 "1 mW", naming the representative session, and S5.
+**Next:** the user picks which fixes to apply. M3 (2G inference) weakens the p-values and needs the user's sign-off.
+
 ### 2026-10-12 — S5B: prediction phase drawn solid magenta instead of dashed purple
 **Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m` — the predicted signal, the planned laser, the first-move dot and the "predict" / "plan" / "apply 1st" labels now use C.p = [0.85 0.25 0.55], solid instead of dashed.
 - Light purple stays reserved for perfect MPC (panels C–F).

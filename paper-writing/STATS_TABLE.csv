@@ -27,10 +27,14 @@ id,figure,claim,effect,unit,ci_lo,ci_hi,test,stat_name,stat,df,p,sided,n,n_unit,
 3_var_early_sr,3,"per-session signed-rank, log variance 0-1 s (14/15 sessions CL<OL)",1.600802,median OL/CL,NaN,NaN,"Wilcoxon signed-rank",V,116,NaN,0.0004272461,2,15,sessions,fig3_olcl_stats
 3_var_late_lmm,3,"CL-OL gap, log variance 1-3 s",-0.5239706,log units,-0.6673355,-0.3806057,"LMM y~cond+(1+cond|sess)+(1|mouse)",t,-7.83877450234013,14,1.734292e-06,2,15,sessions,fig3_olcl_stats
 3_var_late_sr,3,"per-session signed-rank, log variance 1-3 s (15/15 sessions CL<OL)",1.866718,median OL/CL,NaN,NaN,"Wilcoxon signed-rank",V,120,NaN,6.103516e-05,2,15,sessions,fig3_olcl_stats
-3H_pre,3H,"OL/CL variance ratio, window pre",0.9860792,median ratio,NaN,NaN,"Wilcoxon signed-rank",V,56,NaN,0.8469238,2,15,sessions,variance_mse
-3H_early,3H,"OL/CL variance ratio, window early",1.600802,median ratio,NaN,NaN,"Wilcoxon signed-rank",V,116,NaN,0.0004272461,2,15,sessions,variance_mse
-3H_late,3H,"OL/CL variance ratio, window late",1.866718,median ratio,NaN,NaN,"Wilcoxon signed-rank",V,120,NaN,6.103516e-05,2,15,sessions,variance_mse
-3H_post,3H,"OL/CL variance ratio, window post",1.004224,median ratio,NaN,NaN,"Wilcoxon signed-rank",V,54,NaN,0.7615356,2,15,sessions,variance_mse
+3H_pre,3H,"OL/CL RMSE ratio, window pre (7/15 sessions >1)",0.9916179,median ratio,NaN,NaN,"Wilcoxon signed-rank on log ratio",V,56,NaN,0.8469238,2,15,sessions,variance_mse
+3H_early,3H,"OL/CL RMSE ratio, window early (15/15 sessions >1)",1.139683,median ratio,NaN,NaN,"Wilcoxon signed-rank on log ratio",V,120,NaN,6.103516e-05,2,15,sessions,variance_mse
+3H_late,3H,"OL/CL RMSE ratio, window late (15/15 sessions >1)",1.385329,median ratio,NaN,NaN,"Wilcoxon signed-rank on log ratio",V,120,NaN,6.103516e-05,2,15,sessions,variance_mse
+3H_post,3H,"OL/CL RMSE ratio, window post (9/15 sessions >1)",1.008998,median ratio,NaN,NaN,"Wilcoxon signed-rank on log ratio",V,66,NaN,0.7615356,2,15,sessions,variance_mse
+3I_pre,3I,"OL/CL variance ratio, window pre",0.9860792,median ratio,NaN,NaN,"Wilcoxon signed-rank",V,56,NaN,0.8469238,2,15,sessions,variance_mse
+3I_early,3I,"OL/CL variance ratio, window early",1.600802,median ratio,NaN,NaN,"Wilcoxon signed-rank",V,116,NaN,0.0004272461,2,15,sessions,variance_mse
+3I_late,3I,"OL/CL variance ratio, window late",1.866718,median ratio,NaN,NaN,"Wilcoxon signed-rank",V,120,NaN,6.103516e-05,2,15,sessions,variance_mse
+3I_post,3I,"OL/CL variance ratio, window post",1.004224,median ratio,NaN,NaN,"Wilcoxon signed-rank",V,54,NaN,0.7615356,2,15,sessions,variance_mse
 4D_initdev_gap,4D,"CL-OL gap at mean state, initial deviation",-0.7376656,%dF/F RMSE,-0.9009992,-0.574332,"LMM y~cond*state+(1+cond|sess)+(state-1|sess)+(1|mouse)",t,-9.7009746644405,13.7811931995041,1.556175e-07,2,15,sessions,f4_row2_quartiles
 4D_initdev_pred,4D,"predictability (OL slope), initial deviation",0.1760801,%dF/F RMSE per SD of state,0.04132875,0.3108315,"LMM y~cond*state+(1+cond|sess)+(state-1|sess)+(1|mouse)",t,2.8026007897158,14,0.01410792,2,15,sessions,f4_row2_quartiles
 4D_initdev_reg,4D,"regularizability (CL slope), initial deviation",0.1543868,%dF/F RMSE per SD of state,0.01952541,0.2892483,"LMM y~cond*state+(1+cond|sess)+(state-1|sess)+(1|mouse), CL reference",t,2.45531159268607,14,0.02775864,2,15,sessions,f4_row2_quartiles

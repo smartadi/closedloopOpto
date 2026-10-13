@@ -60,10 +60,16 @@ for m = fieldnames(lab3)'
     add(['3_' m{1} '_sr'],'3',sprintf('per-session signed-rank, %s (%d/%d sessions CL<OL)',lab3.(m{1}),g.nAgree,g.nSess), ...
         g.medRatio,'median OL/CL',[NaN NaN],'Wilcoxon signed-rank','V',g.sr_V,NaN,g.sr_p,'2',g.nSess,'sessions','fig3_olcl_stats');
 end
+S = load(fullfile(dd,'fig3h_rmse_ratio_signrank.mat')); F = S.F3Hr;
+for w = {'pre','early','late','post'}
+    f = F.(w{1});
+    add(['3H_' w{1}],'3H',sprintf('OL/CL RMSE ratio, window %s (%d/%d sessions >1)',w{1},f.nAbove1,f.n),f.medRatio,'median ratio',[NaN NaN], ...
+        'Wilcoxon signed-rank on log ratio','V',f.V,NaN,f.p,'2',f.n,'sessions','variance_mse');
+end
 S = load(fullfile(dd,'fig3h_ratio_signrank.mat')); F = S.F3H;
 for w = {'pre','early','late','post'}
     f = F.(w{1});
-    add(['3H_' w{1}],'3H',['OL/CL variance ratio, window ' w{1}],f.medRatio,'median ratio',[NaN NaN], ...
+    add(['3I_' w{1}],'3I',['OL/CL variance ratio, window ' w{1}],f.medRatio,'median ratio',[NaN NaN], ...
         'Wilcoxon signed-rank','V',f.V,NaN,f.p,'2',f.n,'sessions','variance_mse');
 end
 
