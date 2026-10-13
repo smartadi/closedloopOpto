@@ -16,6 +16,26 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — Fig 2G inference switched to per-session slopes (user decision)
+**Changed/Found:**
+- New `utils/stv_sess_slopes.m`: within-session OLS slope of |z| on state (z-scored per session), then a one-sample t-test across sessions with df = 3.
+- `imp_state_trialvar.m` stores the result as `R(k).SL`. The intercept-only LME is kept for reference only.
+- `imp_state_trialvar_fig.m`: stars and fractions now come from SL, via the local `stvf_infer`.
+- `paper_stats_table.m`: the `2G_*_lmm` rows are replaced by `2G_*_slope`. The pooled-trial Spearman rows are kept as effect sizes with no p.
+- The panel was rebuilt with PAPER_FINAL, and `data/fig2g_state_stats.mat` was re-saved.
+
+Results by state:
+
+| State | Old LME t(3) | Old p | Per-session t(3) | New p | Sessions agreeing |
+|---|---|---|---|---|---|
+| Motion | −7.33 | 0.0052 | −3.90 | 0.030 | 4/4 |
+| Abs δ | 21.0 | 2.4e-4 | 14.3 | 7.4e-4 | 4/4 |
+| Rel δ | 3.57 | 0.038 | 1.81 | 0.17 (n.s.) | 3/4 |
+
+Only abs δ clears the 3-test Bonferroni threshold. Ratios and CIs are unchanged. As a check, a full random-slope LME gives p = 0.16, 0.038 and 0.28. In `results.tex`, the L76 paragraph and the 2G caption stars were rewritten. In `methods_rewrite.tex`, both 2G inference passages were rewritten.
+**Why:** the user thought the test was already per-session, but the code used `(1|sess)` with a trial-based SE. The Methods simulation shows that is anti-conservative (FPR 0.115–0.645), and the reviewer flagged it as M3.
+**Next:** Illustrator re-place of 2G in Figure 2. The rel δ "candidate power-independent state" framing at L78 still stands, but rel δ no longer shows an impulse effect.
+
 ### 2026-10-12 — Fig 4 contra→ipsi R² in text updated to the ridge test value (0.75)
 **Changed/Found:** `results.tex` L183. Changed "R² = 0.85 OL / 0.89 CL" to "R² = 0.75 representative session (Fig 4F), median 0.76, range 0.44–0.98 over 13 sessions", read from the `R2_te` field of `controller-analysis/data/ctrl_ols_ol_stimblind_ridge_*.mat`.
 **Why:** NUMBERS.md §5.4 had flagged a three-way R² conflict. The panel's 0.75 is the current ridge predictor; 0.85/0.89 were stale.

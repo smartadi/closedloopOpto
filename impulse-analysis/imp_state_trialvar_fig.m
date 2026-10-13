@@ -262,14 +262,15 @@ for i = 1:numel(adm)
     % move in the group direction. Toggle with STVF_STATTXT=false.
     if ~exist('STVF_STATTXT','var') || isempty(STVF_STATTXT), STVF_STATTXT = true; end
     if STVF_STATTXT && isfield(r,'pLME')
-        if     isnan(r.pLME), stStar = '';
-        elseif r.pLME < 1e-3, stStar = '***';
-        elseif r.pLME < 1e-2, stStar = '**';
-        elseif r.pLME < 0.05, stStar = '*';
+        [pI, nAg] = stvf_infer(r);   % per-session slopes when present (2026-10-12)
+        if     isnan(pI), stStar = '';
+        elseif pI < 1e-3, stStar = '***';
+        elseif pI < 1e-2, stStar = '**';
+        elseif pI < 0.05, stStar = '*';
         else,                 stStar = 'n.s.'; end
         % Star + session-count only (user 2026-09-22): the exact p goes in the caption/Results,
         % not on the panel. Console print below still carries the full p for the caption.
-        txt = sprintf('%s   %d/%d sess', stStar, r.nSessAgree, r.nSess);
+        txt = sprintf('%s   %d/%d sess', stStar, nAg, r.nSess);
         text(ax, 0.5, 0.99, txt, 'Units','normalized', 'HorizontalAlignment','center', ...
              'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
         % The "power confound" framing for non-admissible states (abs delta, pre-stim var) is NOT
@@ -429,12 +430,13 @@ if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
             xlim(ax, [0 1]);  ylim(ax, yLimC);
             set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
             xlabel(ax, r.name, 'FontSize', PS.fs, 'FontWeight', PS.fw);
-            if     isnan(r.pLME),  ss = '';
-            elseif r.pLME < 1e-3,  ss = '***';
-            elseif r.pLME < 1e-2,  ss = '**';
-            elseif r.pLME < 0.05,  ss = '*';
-            else,                  ss = 'n.s.'; end
-            text(ax, 0.5, 0.99, sprintf('%s  %d/%d', ss, r.nSessAgree, r.nSess), 'Units','normalized', ...
+            [pI, nAg] = stvf_infer(r);   % per-session slopes when present (2026-10-12)
+            if     isnan(pI),  ss = '';
+            elseif pI < 1e-3,  ss = '***';
+            elseif pI < 1e-2,  ss = '**';
+            elseif pI < 0.05,  ss = '*';
+            else,              ss = 'n.s.'; end
+            text(ax, 0.5, 0.99, sprintf('%s  %d/%d', ss, nAg, r.nSess), 'Units','normalized', ...
                  'HorizontalAlignment','center', 'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
             if m > 1, set(ax, 'YTickLabel', [], 'YTick', [], 'YColor', 'none'); end   % one y-axis (leftmost) serves all three
             fprintf('[STVF] 2G %-16s session-mean Q4/Q1 %.2f | per session %s | no-stim control Q4/Q1 %.2f\n', ...
@@ -606,4 +608,14 @@ end
 
 function v = local_tern(c, a, b)
 if c, v = a; else, v = b; end
+end
+
+function [p, nAg] = stvf_infer(r)
+% Inference used for the 2G stars: per-session slopes (r.SL, utils/stv_sess_slopes.m) when the
+% producer stored them, else the legacy intercept-only LME + Spearman sign agreement.
+if isfield(r,'SL') && ~isempty(r.SL) && isfinite(r.SL.p)
+    p = r.SL.p;  nAg = r.SL.nAgree;
+else
+    p = r.pLME;  nAg = r.nSessAgree;
+end
 end

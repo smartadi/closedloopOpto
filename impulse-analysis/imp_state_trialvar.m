@@ -498,6 +498,10 @@ for k = 1:nMK
     catch MEl
         fprintf('   [STV] LME failed for %s: %s\n', MK{k,2}, MEl.message);
     end
+    % --- PRIMARY inference (2026-10-12, user): per-session slopes, t-test across sessions --------
+    % The intercept-only LME above has a trial-based slope SE (anti-conservative per the Methods
+    % simulation); it is kept for reference only. Stars, STATS_TABLE and the text use SL.
+    SL = stv_sess_slopes(abs(y), x, T.sess(ok));
 
     % --- POWER-PARTIALLED rho: what survives once signal amplitude is removed ------------------
     % log(pre-trial variance) is the gain axis. Absolute delta partials to ~0 here because it IS
@@ -649,6 +653,7 @@ for k = 1:nMK
     R(k).verdict=verdict; R(k).x=x; R(k).y=y; R(k).n=nnz(ok);
     R(k).rhoStrat=rhoStrat; R(k).rhoPerSess=rs; R(k).nSessAgree=nSessAgree;
     R(k).pLME=pLME; R(k).bLME=bLME; R(k).tLME=tLME; R(k).pLMEsat=pLMEsat; R(k).dfLME=dfLME; R(k).ciLME=ciLME; R(k).nSess=numel(rs);   % session-clustered scale test
+    R(k).SL=SL;   % PRIMARY 2G inference: per-session slopes (stv_sess_slopes)
     R(k).rhoPow=rhoPow; R(k).pPow=pPow; R(k).rhoPowC=rhoPowC; R(k).pPowC=pPowC;
     R(k).binMed = arrayfun(@(b) median(x(g==b),'omitnan'), 1:STV_NBIN);   % raw value per bin
     R(k).gbin   = g;    % bin index per trial -- so imp_state_trialvar_fig can bootstrap per-bin CIs
