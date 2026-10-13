@@ -13,7 +13,7 @@ function f4_cl_reject_lmm()
 % third of its settled residual energy, biasFrac = (Aset-ref)^2 / mean msErr > 1/3.
 % That is the direct form of the rule the Methods already state (the residual is
 % "dominated by a standing setpoint error rather than by disturbance rejection").
-% It excludes AL_0051 (73%) and AL_0033_0212 (47%) and keeps AL_0048 (17%), which the
+% It excludes AL_0051 (59%) and AL_0033_0212 (38%) and keeps AL_0048 (17%), which the
 % old gate could not: in %dF/F those sessions sit 1.44 and 1.33 from the reference, so
 % no threshold on the settled mean separates them. AL_0048 has a large offset but an
 % even larger disturbance, so its RR is a genuine rejection measurement.

@@ -16,6 +16,19 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Methods claims checked against code; six corrected (Closedloop_edit draft)
+**Changed/Found:** in `methods_rewrite.tex`:
+- **Motion exclusion:** removed "30 of 1190 excluded". `motThresh` is used only in `trial_state_mse.m` / `f4_lowfreq_examples.m`, neither of which is a manifest panel, and Fig 4D uses all 1190 trials. Methods now says no trial is excluded on motion.
+- **Predictor bullet:** added the 15→13 predictor-availability bullet.
+- **2G trial counts:** the "<8 trials" rule never fires; the minimum is 44 per session × amplitude, counted from STV.T.
+- **Bootstrap:** the mouse→session→trial claim was replaced with the actual session→trial bootstrap (`imp_state_hboot`), with the caveat of 35 distinct draws.
+- **Anti-windup:** windup is bounded by the 3 s reset window; the 5 V term clamps sit above u_max.
+- **Welch:** the "Power spectra" subsection was removed. No figure shows a Welch spectrum, and every band power comes from the Hann periodogram.
+
+In code, the stale offset-share comment in `f4_cl_reject_lmm.m:16` (47/73%) was corrected to the data values (38/59%), which match Methods.
+**Why:** reviewer M9, m1, m7, m8, m9 and M14 items. Each was resolved from the code or data, not by judgement.
+**Next:** kernel size. Logged `d.params.kernel = 10`; offline extraction uses ±10 (21×21). The rig's own interpretation still needs confirming.
+
 ### 2026-10-12 — Fig 4F retitled "Actual = Global + Local"
 **Changed/Found:** `f4_contra_model.m`: the panel title changed from "Global predicts the counterfactual". Re-exported with PAPER_FINAL to `figures_final/panels/figure4/f4_agl.pdf` (R²_te = 0.75 unchanged).
 **Why:** reviewer M7. A no-controller trial is never observed, so the old title overclaimed (user's choice).
