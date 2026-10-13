@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — Fig 3 laser scale bar back to "1 mW" (revert of the 10-11 V/3 relabel for Fig 3)
+**Changed:** `utils/analysisPlots_combined.m`: reverse-applied the Fig 3 hunks of 160e8d8. Panel A is back to OL laser gain 5, a [6 8] bar and the "1 mW" label; panel C (`ax_E`) is back to YLength 2 and "1 mW". A comment now explains why.
+**Why:** User: on the closed-loop controller trials the rig modifies the stim voltage, so "1 mW" is correct for Fig 3. The mW = V/3 correction holds only for the impulse experiments (dose_response, imp_tf_cv, imp_spatial_panels), which have no such modification. The assembled Figure3.pdf already shows 1 mW and is correct. My earlier audit flag ("stale 1 mW") was wrong.
+**Next:** The panel files in `figures_final/panels/figure3/` still carry the 0.2 mW labels from 10-11 and need a regen with PAPER_FINAL on when the controller data is loaded. Assembly is unaffected. Ask the user whether `controller-analysis/ctrl_mpc_direct_panels.m` (S5, controller-session voltages), which got the same V/3 relabel on 10-11 ("0.5 mW = 1.5 V"), should also be reverted.
+
 ### 2026-10-12 — S5B schematic: "now" moved to 2.17 s (mid-excursion), no-stim prediction removed, window label "predict"
 **Changed/Found:**
 - `mpc_direct.py`: new `MPCD_SNAP_ALT` option saves the MPC prediction and plan at several candidate frames on the snapshot trial (`data/mpc_direct_snapalt_<sess>.mat`). Frames 70–78 on trial 79 were compared:
