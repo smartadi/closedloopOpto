@@ -16,6 +16,176 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — S5B schematic shows the no-stimulation vs planned prediction; MPC prose checked against results
+**Changed/Found:**
+- `mpc_direct.py` now saves `snap_yfree`, the free response with the laser off from "now", next to `snap_yhat`, the prediction under the plan. Rerun gave identical numbers: MPC/PI 0.652 (108/108), perfect 0.224, medians 1.46 / 0.82 / 0.27.
+- `ctrl_mpc_direct_panels.m` now draws both predictions on trial 79 at 2.0 s:
+  - "no stim" (light purple, laser 0): the model predicts a rebound to above baseline within the 1 s;
+  - "with plan" (purple): holds the signal at target.
+  - Re-exported to figures_final.
+- Timing kept at lag 0. The user decided the current timing is correct, which supersedes the 10-10 audit's suggestion to use lag 1.
+- Manuscript `draft` (`Closedloop_edit`), MPC prose fixes:
+  - Discussion: "ahead of the loop delay" became "over the next second". The variance reduction is now tied to the 1–3 s window. The upper bound now also says the laser acts identically in every brain state. The last sentence no longer claims a comparison with gain tuning that S5 does not show.
+  - Caption A: the command bound is now "the range of commands the rig delivered" (u_max is the largest recorded command).
+  - Caption B: rewritten for the two predictions.
+  - Builds cleanly.
+- NOT pushed. Local `draft` also carries `1f3ed30` (abstract) and uncommitted `results.tex` / `methods_rewrite.tex` edits that are not from this session.
+**Why:** user: "keep current timing, check numbers and claims and write; show MPC prediction without stimulation then add stimulation".
+**Next:**
+- User re-places panel B in Illustrator (same size) and re-exports S5.
+- Push main once the abstract commit and the uncommitted edits are cleared.
+
+### 2026-10-12 — Fig 2G candidate: L2 (time-course RMS) error instead of SD of the 0–200 ms mean
+**Found:** I wrote a scratch script (`stv_l2_panel.m`, session scratchpad, not in repo). It uses the same 1516 trials and state quartiles as `imp_state_trialvar`. The per-trial error is e = RMS over t of (trace − amp-mean trace), with the trace onset-referenced. The control uses an equally long stim-free window ending at −1.03 s, referenced to its own first frame. Per bin: sqrt(mean e²) ÷ session RMS.
+
+| Window | State | Q4/Q1 resp | Q4/Q1 ctrl | LME t(3) | p | Agree |
+|---|---|---|---|---|---|---|
+| 0–200 ms | motion | 0.57 | 0.61 | −6.60 | 0.007 | 4/4 |
+| 0–200 ms | rel δ | 1.12 | 1.09 | +3.81 | 0.032 | 4/4 |
+| 0–200 ms | abs δ | 2.45 | 2.95 | +19.2 | 3.1e-4 | 4/4 |
+| 0–500 ms | motion | 0.59 | 0.63 | −7.33 | 0.005 | 4/4 |
+| 0–500 ms | rel δ | 1.04 | 1.07 | +3.70 | 0.034 | 4/4 |
+| 0–500 ms | abs δ | 2.31 | 2.61 | +21.5 | 2.2e-4 | 4/4 |
+
+Control/response session RMS ratio: 0.82–1.10 (200 ms window), 0.93–1.00 (500 ms window). Same conclusions as the current panel, slightly stronger tests; the control tracks the response even more tightly at 500 ms.
+**Why:** The user asked for an L2-error version of 2G to judge as a replacement.
+**Next:** If approved, port the computation into `imp_state_trialvar.m`/`_fig.m` behind a knob, add STATS_TABLE rows, and update the Results numbers + Methods definition. Until then the current panel stays.
+
+### 2026-10-12 — Fig 2G y-label → "Trial-to-trial variability"; Fig 4 cross-reference updated
+**Changed:**
+- `imp_state_trialvar_fig.m`: the y-label changes from "Trial-to-trial spread" to "Trial-to-trial variability (× session typical)". Re-exported with PAPER_FINAL.
+- `Closedloop_edit/results.tex` Fig 4 state paragraph: the sentence "The prediction error in Fig 2G asks how well the LTI model reproduces the response to the stimulus itself… better described by the impulse model" is rewritten. It now says 2G asks how far single impulse responses scatter around their per-amplitude mean.
+
+**Why:** The user objected that "spread" is a new term needing explanation everywhere. "Trial-to-trial variability" is already the paper's term: the Fig 3 section title, Discussion L3 and the abstract use it. The old Fig 4 sentence was the only downstream use of "prediction error" for 2G, and it contradicted the reframe that state acts on ongoing activity rather than on the stimulus response.
+**Next:** none.
+
+### 2026-10-12 — Manuscript: Fig 2G reframed as "consistent with ongoing activity"
+**Changed:** `Closedloop_edit/results.tex`, `methods_rewrite.tex` (uncommitted on `draft`; latexmk builds clean):
+- **Section title** is kept: "Stimulation response is state dependent".
+- **Results L74** now says the deviation is from the per-amplitude mean response, not the "model prediction".
+- **Removed** the claim that motion "alters the evoked response itself".
+- **New paragraph:** the control follows the response in every state (ratios and ρ per state), and the stim-free window's within-session SD is 0.80–1.10× the response's. It concludes the effect is "consistent with a fixed stimulus effect superimposed on state-dependent ongoing activity", not a demonstration, and links to Fig 4 (state as disturbance, feedback rejects it).
+- **2G caption:**
+  - y definition rewritten;
+  - dotted line = 1 (typical trial);
+  - dashed control described;
+  - agreement fraction now uses the trial-weighted mean ρ (the old "pooled" was wrong).
+- **Methods:** one sentence added on how the control curve is scaled.
+
+**Why:** User: the response IS state dependent, but the likely source is the baseline (ongoing cortical activity), so not beating the control is expected, not a weakness.
+**Next:** The 0.80–1.10 SD ratio is printed by `imp_state_trialvar` ("control/response session SD ratio") but is NOT in STATS_TABLE.csv; add it via paper_stats_table.m. No existing 2G number changed.
+
+### 2026-10-12 — Fig 2G: stim-free control drawn; y-label clarified
+**Changed:**
+- `imp_state_trialvar.m` adds `R(k).sdPNs`: the sham deviation pooled within the same (session × amp) cells and bins as `sdRawNs`. It is normalized by the control's own session SD by default (`STV_CTRL_NORM='own'`; `'resp'` uses the response's SD).
+- `imp_state_trialvar_fig.m` combined block:
+  - dashed dark-grey open-circle control curve (equal-weight session mean);
+  - legend "Stim / No stim" in the rel-δ tile;
+  - session lines lightened to 0.78;
+  - y-label changed from "Prediction error (session-normalized)" to "Trial-to-trial spread (× session typical)".
+- Re-exported `imp_state_var_combined.pdf` with PAPER_FINAL on (figures_final + images).
+
+**Found:**
+- The plotted equal-weight Q4/Q1 for response vs control is: motion 0.55 vs 0.58, rel δ 1.14 vs 1.07, abs δ 2.71 vs 3.04. The control tracks the response in all three states.
+- The control/response session SD ratio is [1.1 0.95 0.8 0.91], so stim-free 200 ms windows vary about as much as the response.
+- The stats are unchanged (n=1516; same ratios, t, p).
+
+**Why:** User asked to draw the control so the "response ≈ control" comparison is visible. The old y-label didn't say it is a spread or what it is relative to.
+**Next:** Nudge the legend in Illustrator if it touches the rel-δ session line at Q1.
+
+### 2026-10-12 — Results: state the selected LTI model orders (Fig 2C–D)
+**Changed:** `Closedloop_edit/results.tex` (after "fit LTI models…"): added the selected orders. Mouse 1a has 3 poles and 1 zero, Mice 1b and 2 have 4 and 3, Mouse 3 has 5 and 4, and none has a delay. Also added that the order is picked once on all trials and held fixed in CV. Not committed (results.tex already had uncommitted user edits on `draft`).
+**Why:** User asked for it; Results only said "low-order". Mouse 3 uses the **seeded** pick (5p4z0d, fit-only check above). The other numbers in the paragraph (0.85, 0.99/0.68, τ) are still from the pre-fix 4p2z0d run, so the paragraph is mixed until the rerun.
+**Next:** Full seeded rerun (`imp_tf_run`, `imp_tf_cv`, 2-pole CV), then confirm the orders and update the held-out R², swap and τ numbers.
+
+### 2026-10-12 — MANIFEST + PAPER.md: Fig 2 A/B letters swapped to match the caption
+**Changed:** `paper/figures_final/MANIFEST.txt` [figure2] comment block + line order, and `PAPER.md` registry rows 2A/2B. A is now `imp_single_AL_0041_2025-12-02_en2.pdf` (traces) and B is `imp_response.pdf` (dose-response).
+**Why:** results.tex caption, Results text, producer comments (`trace_overlay.m` "2A", `dose_response.m` "2B") and the user's story all had A = traces; the manifest said the opposite while claiming to follow the caption.
+**Next:** Check the Illustrator assembly uses this order. Basenames are unchanged, so no producer rerun is needed.
+
+### 2026-10-12 — Fig 3 story/code consistency audit (read-only)
+**Found:** Letters A–I ↔ files match the assembled Figure3.pdf; every number in Results l.105–116 matches STATS_TABLE; the LMM, windows and the 15 sessions / 4 mice all check out. Problems: (1) the assembled PDF still shows "1 mW" scale bars in A/C, while `analysisPlots_combined.m:84,211` now says 0.2 mW; (2) the representative session is ambiguous (code `selField=10` = AL_0039 0419; the README says AL_0033 0419; the gains in Results l.106 come from AL_0033 0226 per NUMBERS.md:181); (3) PAPER.md:95-99 and STATS_TABLE `3H_*` rows use the old letters (the variance ratio is now **I**); (4) Results claims no RMSE effect pre/post, but there is no pre/post RMSE test in STATS_TABLE; (5) "2.56 vs 2.04" medians and "between-mouse variance negligible" are not in STATS_TABLE; (6) Methods does not define log mean-squared-deviation variance metric; (7) Methods lists motion exclusion (30/1190) under "All exclusions", but Fig 3 applies none; (8) G is RMS across trials, and Results says the gap "persisted for the rest of the trial" though it only persists for the rest of the stim window; (9) stale p's in NUMBERS.md:182-183 and in `variance_mse.m:128,565` comments.
+**Why:** Pre-submission story ↔ code check requested by the user.
+**Next:** Re-export Fig 3 A/C and re-assemble; confirm the representative session and its gains; fix PAPER.md/STATS_TABLE letters; add the pre/post RMSE test or soften the claim; fix the Methods variance definition and motion-exclusion scope.
+
+### 2026-10-12 — Fig 2 story/code consistency audit (read-only)
+**Found:** (A/B) Onset referencing, the 0–200 ms 8-sample mean, SEM, slopes and R² all match. MANIFEST.txt:36-37 + PAPER.md:83-84 have **A/B swapped** relative to the caption (A = traces, B = dose). "0 to 1.6 mW" is wrong (amp-0 is synthetic and excluded; the lowest real level is ≈0.13 mW). The panel-A gray band spans [−0.2, 0.5] s, while the fit window is [0, 0.5] s. Methods does not say the dose fit is OLS on per-amp means with intercept. 2B slopes are not in STATS_TABLE. (C–F) The seeded-fit edits are uncommitted and no panel has been rerun since; the text numbers (0.85, 0.99/0.68, rebound 0.30 s Mouse 3, 43–73%) come from the pre-fix hemo_pass.log and match neither the current E/F (self 0.978/cross 0.687) nor the pending seeded run (Mouse 3 rebound → beyond the window). Results never states the selected model order (pre-fix: 3p1z / 4p3z / 4p3z / 4p2z, no delay). Results calls the dip a "damped 2.4–4.2 Hz oscillation", but code takes min τ regardless of oscillation. The model-swap diagonal is in-sample and is not labelled as such. (G) Numbers match STATS_TABLE (n=1516, which requires the uncommitted STV_SKIP_AMP0=true); the **stimulus-free control is not drawn** in the panel; caption "same sign as pooled" should say the trial-weighted mean within-session ρ; the "dotted line = session mean error" label is really the pooled within-cell SD; control ratios 0.69/1.19/2.74 and the δ ρ=0.47 are not in STATS_TABLE.
+**Why:** Pre-submission story ↔ code check requested by the user.
+**Next:** Commit the seeded TF + STV_SKIP_AMP0 + AL_0048 reref changes together; rerun imp_tf_run/imp_tf_cv; then update the Fig 2 text numbers, add the model order to Results, draw the control in 2G, and fix the manifest letters.
+
+### 2026-10-12 — TF fit: one seeded candidate per session; warm-started refits when it wins (user chose option B)
+**Changed:** `utils/imp_tf_fit_session.m`, `utils/imp_tf_cv_session.m`, `impulse-analysis/imp_tf_run.m`:
+- New option `seedOffset` (default false; `imp_tf_run` sets it via `RUN_SEED`, default true). It adds one candidate to the sweep:
+  - m = the amp²-weighted pre-onset mean of DF/uA over [−0.5, 0) s;
+  - sweep h − m as usual;
+  - add `m/(s+1e-3)` to that AIC winner;
+  - refit the sum by `tfest` on h itself.
+- Selection is unchanged (AIC, then the R²h < 0.98 rule). `T.seeded` records whether the seeded candidate won.
+- When it wins, LOAO, per-amplitude, bootstrap and the CV half-split refits are warm-started from `T.sys`. The CV guard requires the order to match.
+- Fit-only check (no bootstrap): Mice 1a, 1b and 2 are unchanged (same order, R²h, AIC; seeded = 0). Mouse 3 selects the seeded 5p4z0d at R²h 0.994 and AIC −6.06, versus the sweep pick 3p1z0d at R²h 0.938 and AIC −3.14.
+- Mouse 3's τ: 1768 s (offset pole), 0.500, 0.187, and a dip pair of 0.1435 s.
+
+**Why:** user decision (option B, "use the better fit"). The default `tfest` start cannot reach Mouse 3's best model after the onset-frame reference (entry below).
+**Next:** the full `imp_tf_run` + `imp_tf_cv` + 2-pole CV rerun, then update the manuscript TF numbers and add a Methods sentence on the seeded start.
+
+### 2026-10-12 — Found: after the onset-frame fix, the TF sweep misses Mouse 3's best model (optimizer, not data)
+**Found:** `imp_tf_run` (300 boot, PAPER_FINAL on) left Mice 1a, 1b and 2 bit-identical (R²h 0.978 / 1.000 / 0.998, same τ). For Mouse 3:
+- AIC picked 4p2z0d at R²h 0.924. The <0.98 rule re-picked 3p1z0d at R²h 0.938: τ 0.243 s (2.14 Hz pair) plus 0.017 s.
+- The bootstrap censoring is 36%. Swap self/cross is 0.978 / 0.687.
+
+Diagnosis:
+- The new Mouse 3 h(t) is exactly the old h + 0.098 (SD 0). The shape is the same; there is a sustained +0.4 tail at 0.5 s.
+- Every sweep fit tops out at R²h 0.94. `tfest` `InitializeMethod` 'all' on 5p4z0d also gives 0.94, and 40 random-init restarts give at best 0.13.
+- Seeded from the pre-fix 4p2z0d model plus a slow pole, 5p4z0d reaches R²h 0.993 with AIC −5.55. That beats every sweep candidate (pick −3.14), so the published AIC rule would select it.
+- Its poles: τ 2044 s (DC-like), 0.41 s, 0.20 s, and a dip pair of 0.144 s at 3.25 Hz (before the fix: 0.1425 s at 3.23 Hz).
+
+The tf_tau_forest and tf_model_swap panels exported by this run use the poor 3p1z0d fit.
+
+**Why:** the rerun after the Mouse 3 re-reference.
+**Next:** the user decides:
+- (A) keep the sweep result;
+- (B) adopt the warm-start fit, with a Methods sentence and a warm-started bootstrap;
+- (C) drop Mouse 3 from 2D–2F.
+
+Then run `imp_tf_cv` and the 2-pole CV, and update the manuscript TF numbers. 2B, 2G and STATS_TABLE are already updated.
+
+### 2026-10-12 — Fig 2G after the Mouse 3 fix and the amp-0 drop (n 1516)
+**Found:** `imp_state_trialvar` (`STV_SKIP_AMP0` true, onset-referenced Mouse 3):
+
+| State | Response ratio | LME t(3) | p | Agree | ρ | Control ratio | Control ρ |
+|---|---|---|---|---|---|---|---|
+| Motion | 0.634 [0.438, 0.857] | −5.54 | 0.0116 | 4/4 | −0.137 | 0.69 | −0.120 |
+| Rel δ | 1.090 [0.880, 1.506] | 3.58 | 0.037 | 4/4 | +0.127 | 1.19 | +0.065 (p 0.011) |
+| Abs δ | 2.562 [2.136, 3.089] | 16.8 | 4.6e-4 | — | +0.397 | 2.74 | +0.373 |
+
+- ρ(DPa, DPr) = 0.471.
+- Motion now beats its control on both the ratio and ρ, so the verdict is PASS.
+- Panel stars are *, *, ***. The panel and STATS_TABLE were re-exported.
+- Manuscript draft:
+  - 2B Mouse 3 now −3.11 per mW, R² 0.88;
+  - 2G paragraph, caption and Methods updated: motion again "fell more steeply than its control"; one onset reference for all sessions; "only nonzero amplitudes"; n 1516.
+
+**Why:** the user's go on decisions 1 and 2.
+**Next:** the TF decision above. Also recheck the heading, intro and L148; under the new result they are consistent again, because motion's effect exceeds its control.
+
+### 2026-10-12 — Fig 2B rerun after the Mouse 3 fix: only Mouse 3 moves
+**Found:** `f2_slope_ci` + `dose_response` (PAPER_FINAL on, new hemo correction for sessions 1–3).
+- Mouse 3 slope: −1.035 %ΔF/F per V, CI [−5.85, 3.78] mean-fit, [−1.46, −0.61] raw-fit, R² 0.882. That is −3.11 per mW. It was −0.810 per V (−2.43 per mW), R² 0.92.
+- Mice 1a, 1b and 2 are unchanged: −0.295 / −0.438 / −0.510 per V, R² 0.971 / 0.732 / 0.882.
+- `panels/figure2/imp_response.pdf` was re-exported.
+
+**Why:** the Mouse 3 onset-frame reference, per the user's go.
+**Next:** TF fit / CV / 2G rerun, then the manuscript numbers.
+
+### 2026-10-12 — Mouse 3 re-referenced to its onset frame; Fig 2G drops the synthetic amp-0 events by default
+**Changed:**
+- `impulse-analysis/load_bilateral_impulse.m`: `trM = trM - trM(:, relW == 0)` replaces the 18-frame pre-onset mean, with a comment giving the history. The header note says the quoted energies are historical. The onset-frame pick (L150) is left alone, per the investigation.
+- `impulse-analysis/imp_state_trialvar.m`: `STV_SKIP_AMP0` now defaults to true. `STV_REREF_ONSET` is a no-op guard.
+
+**Verified:** after `load_experiments`, `max|col106| = 0` in all four sessions.
+**Why:** user, 2026-10-12: "mouse 3 refernce needs to be correct to match the onset frame only" and "dont use no light trials". Mouse 3's hemo correction is left as is; nothing about it goes in Methods yet (the user will decide).
+**Next:** rerun the Fig 2 chain. The no-light catch-trial control (decision 3) is not built; 2G keeps the within-trial `self8` control.
+
 ### 2026-10-12 — Found: Mouse 3 (AL_0048) is on an older hemo correction, and its t = 0 frame is picked by a different rule
 **Found:** from the read-only investigation workflow wf_ebe82208-64e (4 investigators, each with a skeptic).
 - **Correction version:** AL_0048 2026-07-15/1 `corr/` was written 2026-07-15 and is not in the lab's recompute list. It is the May-2021 aligned version (d836449). That version resamples blue onto violet times and applies a one-direction band-stop, which delays 1–5 Hz by about 13–21 ms (per the lab notes, as quoted by the verifiers). Sessions 1–3 are on the 2026-10-11 recompute.

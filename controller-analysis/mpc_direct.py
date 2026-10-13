@@ -222,7 +222,7 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
             m = ctrl[fold[kx]]
             f = m.free(zs[t - np.arange(m.L)], us[t - m.Q + 2:t + 1])
             U = mpc_solve(m, f, us[t] * su, uss, umax, m_rd)
-            snap.update(t=t - onCL[kx], yhat=f + m.G @ U, U=U, ypast=zs[onCL[kx] - pre:t + 1, 0] * sz[0],
+            snap.update(t=t - onCL[kx], yhat=f + m.G @ U, yfree=f, U=U, ypast=zs[onCL[kx] - pre:t + 1, 0] * sz[0],
                         upast=us[onCL[kx] - pre:t + 1] * su)
         return base(t, zs, us)
     ysn, usn = simulate(kx, pol_snap)[:2]
@@ -286,7 +286,7 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
             "rPI": rPI, "Fs": Fs, "ref": REF, "pre": pre, "ext": EXT,
             "Yx": np.stack([np.column_stack([s[2] for s in res[n][0]]) for n in names], 2),  # (EXT+N+EXT) x nT x model
             "Ux": np.stack([np.column_stack([s[3] for s in res[n][0]]) for n in names], 2),
-            "snap_k": kx + 1, "snap_t": snap["t"], "snap_yhat": snap["yhat"], "snap_U": snap["U"],
+            "snap_k": kx + 1, "snap_t": snap["t"], "snap_yhat": snap["yhat"], "snap_yfree": snap["yfree"], "snap_U": snap["U"],
             "snap_ypast": snap["ypast"], "snap_upast": snap["upast"], "snap_ytrue": ysn, "snap_utrue": usn})
 
 

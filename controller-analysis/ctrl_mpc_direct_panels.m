@@ -64,7 +64,10 @@ ytrue = D.snap_ytrue(:); utrue = D.snap_utrue(:); ifu = (st+1:N).'; tfu = (ifu-1
 fig = jnFig(W2, 3.8);
 ax1 = axes(fig, 'Units','centimeters', 'Position', [0.7 1.45 W2-1.6 2.15]); hold(ax1,'on');
 ax2 = axes(fig, 'Units','centimeters', 'Position', [0.7 0.2 W2-1.6 0.75]); hold(ax2,'on');
-yl1 = [min([yp; D.snap_yhat(:); ytrue; ref]) max([yp; D.snap_yhat(:); ytrue; ref])] + [-0.8 1.6]; yl2 = [-0.1 3.2];
+% two predictions from the same moment (user 2026-10-12: "MPC prediction without stimulation, then add
+% stimulation"): the free response (laser off from now on) and the prediction under the chosen plan
+yfree = D.snap_yfree(:);
+yl1 = [min([yp; D.snap_yhat(:); yfree; ytrue; ref]) max([yp; D.snap_yhat(:); yfree; ytrue; ref])] + [-0.8 1.6]; yl2 = [-0.1 3.2];
 for a = {ax1, yl1; ax2, yl2}.'
     stimBox(a{1}, 0, dur, a{2}, C);
     patch(a{1}, [tnow tf(end) tf(end) tnow], a{2}([1 1 2 2]), C.m, 'FaceAlpha', 0.10, 'EdgeColor','none');
@@ -74,14 +77,18 @@ plot(ax1, [-pre/Fs dur], [0 0], '-', 'Color', C.k, 'LineWidth', 0.4);
 plot(ax1, [0 dur], [ref ref], '--', 'Color', C.ref, 'LineWidth', S.lw_ref);
 plot(ax1, [tnow; tfu], [yp(end); ytrue(ifu)], '-', 'Color', C.g, 'LineWidth', S.lw_ind+0.2);
 plot(ax1, tp, yp, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
+plot(ax1, [tnow; tf], [yp(end); yfree], '--', 'Color', C.o, 'LineWidth', S.lw_mean);
 plot(ax1, [tnow; tf], [yp(end); D.snap_yhat(:)], '--', 'Color', C.m, 'LineWidth', S.lw_mean);
 plot(ax1, tnow, yp(end), 'o', 'MarkerSize', 3, 'MarkerFaceColor', C.m, 'MarkerEdgeColor', 'w', 'LineWidth', 0.4);
+text(ax1, tf(end)-0.03, yfree(end)-0.2, 'no stim', 'FontSize', S.fs_annot, 'Color', C.o, 'HorizontalAlignment','right', 'VerticalAlignment','top');
+text(ax1, tf(end)-0.03, D.snap_yhat(end), 'with plan', 'FontSize', S.fs_annot, 'Color', C.m, 'HorizontalAlignment','right', 'VerticalAlignment','top');
 text(ax1, tnow-0.04, yl1(2), 'now', 'FontSize', S.fs_annot, 'VerticalAlignment','top', 'HorizontalAlignment','right', 'Color', C.m);
 text(ax1, mean([tnow tf(end)]), yl1(2), 'predict 1 s', 'FontSize', S.fs_annot, 'VerticalAlignment','top', 'HorizontalAlignment','center', 'Color', C.m);
 text(ax1, dur+0.05, ref, 'target', 'FontSize', S.fs_annot, 'VerticalAlignment','middle', 'Color', C.ref, 'Clipping','off');
 text(ax1, dur+0.05, ref-1.1, 'actual', 'FontSize', S.fs_annot, 'Color', C.g, 'VerticalAlignment','middle', 'Clipping','off');
 stairs(ax2, [tnow; tfu], [up(end); utrue(ifu)], '-', 'Color', C.g, 'LineWidth', S.lw_ind+0.2);
 stairs(ax2, tp, up, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
+plot(ax2, [tnow tf(end)], [0 0], '--', 'Color', C.o, 'LineWidth', S.lw_mean);
 stairs(ax2, [tnow; tf], [up(end); D.snap_U(:)], '--', 'Color', C.m, 'LineWidth', S.lw_mean);
 plot(ax2, tf(1), D.snap_U(1), 'o', 'MarkerSize', 3, 'MarkerFaceColor', C.m, 'MarkerEdgeColor','w', 'LineWidth', 0.4);
 text(ax2, mean([tnow tf(end)]), yl2(2), 'plan', 'FontSize', S.fs_annot, 'HorizontalAlignment','center', 'VerticalAlignment','top', 'Color', C.m);
