@@ -1,22 +1,22 @@
 function labs = imp_mouse_label(mnList, style)
-%IMP_MOUSE_LABEL  Per-ANIMAL legend labels for a set of sessions: "Mouse 1a", "Mouse 2", ...
+%IMP_MOUSE_LABEL  Per-ANIMAL legend labels for a set of sessions: "Mouse 5a", "Mouse 1", ...
 %
-% style (optional): 'full' (default) -> "Mouse 1a"; 'short' -> "M1a" (for cramped axis
-% ticks / inline labels; user 2026-09-22: shorthand M1a,M1b,M2,M3 except inside a legend box).
+% style (optional): 'full' (default) -> "Mouse 5a"; 'short' -> "M5a" (for cramped axis
+% ticks / inline labels; user 2026-09-22: shorthand except inside a legend box).
 %
-% Sessions are NOT mice: the impulse set is AL_0041 e1, AL_0041 e2, AL_0033 e1, AL_0048 e1,
-% so a bare "Mouse 1..4" would claim four animals where there are three. This numbers the
-% UNIQUE mouse names in order of appearance and suffixes a/b/... when one animal contributes
-% more than one session (AL_0041 -> Mouse 1a, Mouse 1b).
-%
-% Shared helper so EVERY figure labels the same session the same way (user, 2026-08-24:
-% "legends across the figures must consistently use mouse instead of session"). The logic was
-% previously inlined in dose_response.m only; it now lives here and dose_response calls it.
+% GLOBAL NUMBERING (user 2026-10-13): one ID per animal across the whole paper, matching the
+% cohort table order -- Mouse 1 = AL_0033, 2 = AL_0039, 3 = AL_0048, 4 = AL_0051, 5 = AL_0041.
+% (Before 2026-10-13 mice were numbered by order of first appearance in each panel, so Fig 2
+% and Fig 4G gave the same animal different numbers.) Unknown mice get 6, 7, ... in order of
+% appearance. A suffix a/b/... is added when one animal contributes more than one session to
+% the list (the impulse set: AL_0041 e1/e2 -> Mouse 5a, Mouse 5b).
 %
 % INPUT  mnList  cell/string array of mouse names, one per session, IN PANEL ORDER
 %                (e.g. {'AL_0041','AL_0041','AL_0033','AL_0048'}), OR a cell array of session
 %                structs each with a .mn field.
 % OUTPUT labs    cell array of char labels, same length and order as the input.
+
+GLOBAL_ID = {'AL_0033', 'AL_0039', 'AL_0048', 'AL_0051', 'AL_0041'};
 
 n = numel(mnList);
 mn = strings(n,1);
@@ -29,14 +29,22 @@ switch lower(style)
     case 'short', pre = 'M';
     otherwise,    pre = 'Mouse ';
 end
-[~, ~, mIdx] = unique(mn, 'stable');           % unique animals, in order of first appearance
+id = zeros(n,1);  nextId = numel(GLOBAL_ID) + 1;
+for i = 1:n
+    k = find(strcmp(GLOBAL_ID, mn(i)), 1);
+    if isempty(k)
+        j = find(mn(1:i-1) == mn(i), 1);
+        if isempty(j), k = nextId; nextId = nextId + 1; else, k = id(j); end
+    end
+    id(i) = k;
+end
 labs = cell(n,1);
 for i = 1:n
-    sib = find(mIdx == mIdx(i));               % all sessions from this animal
+    sib = find(mn == mn(i));                   % all sessions from this animal
     if numel(sib) > 1
-        labs{i} = sprintf('%s%d%c', pre, mIdx(i), char('a' + find(sib == i) - 1));
+        labs{i} = sprintf('%s%d%c', pre, id(i), char('a' + find(sib == i) - 1));
     else
-        labs{i} = sprintf('%s%d', pre, mIdx(i));
+        labs{i} = sprintf('%s%d', pre, id(i));
     end
 end
 end
