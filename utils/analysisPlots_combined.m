@@ -289,11 +289,13 @@ plot(ax_mse, k_pos + 0.1, mean(data.er_wcDfk), '*', 'Color', colCL, ...
     'MarkerSize', 5, 'LineWidth', 1, 'HandleVisibility','off');
 hold(ax_mse, 'off');
 
-text(ax_mse, -0.12, 0.5, 'Trial RMSE', ...
+text(ax_mse, -0.12, 0.74, 'Trial RMSE', ...   % raised above the y scale-bar label (2026-10-13)
     'Units','normalized', 'Rotation', 90, ...
     'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
     'Color','k', 'Clipping','off');
-paperAxes(ax_mse);
+% y scale bar (reviewer 2026-10-12, user: "add a scale bar") -- the panel had no y scale at all,
+% so the RMSE distributions could not be read; matches the scale-bar style of panels A-D.
+paperAxes(ax_mse, 'XLength', 0, 'YLength', 1, 'XLabel', '', 'YLabel', '1% dF/F');
 
 paperExport(fig_E, 'paper/images/figure3/panel_E.pdf');
 

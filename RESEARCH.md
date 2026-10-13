@@ -16,6 +16,24 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Fig 3F gets a y scale bar; Fig 3 panels A–E regenerated (1 mW bars now on disk)
+**Changed/Found:** `utils/analysisPlots_combined.m` panel E (paper 3F, trial-RMSE half-violins) had no y scale at all. It now has a y-only "1% dF/F" bar (XLength 0), and the "Trial RMSE" label is raised to 0.74 so it clears the bar label. All five panels were regenerated with PAPER_FINAL from the m10 cache (`data/AL_0039ctrl04191.mat`) via `matlab -batch`. This also writes the restored "1 mW" bars on panels A/C to `figures_final`, closing the "panels still carry 0.2 mW" item.
+**Why:** reviewer m19. The user chose a scale bar.
+**Next:** re-place Fig 3 panels in Illustrator.
+
+### 2026-10-13 — Fig 2C/2D CV panels re-rendered with global mouse labels (background batch)
+**Changed/Found:** `matlab -batch` ran `load_experiments` and then `imp_tf_cv` with PAPER_FINAL, writing `tf_cv_2D_sidebar` and `tf_cv_single_AL_0033` at 02:54. The seeded results reproduced exactly: held-out R² 0.561 / 0.833 / 0.950 / 0.845, pooled 0.846 (shape 0.864).
+**Why:** global numbering (see the entry below).
+**Next:** 2B (`dose_response`) is re-rendering in a second batch.
+
+### 2026-10-13 — Minor manuscript fixes: Fig 5 attribution softened; Gupta & Murphy year
+**Changed/Found:**
+- `results.tex` L221: "therefore attributable to feedback…" (n = 3) → "pattern is consistent with…".
+- `refs.bib` Gupta2026: year 2026 → 2025 (eLife 14:RP105070, checked online). The key name is kept.
+
+**Why:** reviewer m21/m23.
+**Next:** none.
+
 ### 2026-10-13 — Methods: disturbance-predictor details and Fig 3 variance metric written from code
 **Changed/Found:** `methods_rewrite.tex`:
 - **Predictor:** the undefined "grid / catch windows / target-independent split" text was replaced with values from `ctrl_ols_spont.m` / `ctrl_ridge_path.m`:
