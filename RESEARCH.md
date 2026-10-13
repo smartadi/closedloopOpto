@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Readout box size does not affect the offline signal (checked against rig states.csv)
+**Changed/Found:**
+- **The question:** rig code (`rainier/StLab_Rainier/backup/Main_PID_serial.py`, `img[p-s:p+s]` with s = 5, logged as `kernel = 2*s = 10`; `experiment_core/base_controller.py` ROI_HALF = 5) suggests a 10×10 online box. The user says the csv kernel is a half-width. Offline, `getpixel_dFoF` uses ±kernel (21×21).
+- **The test:** on AL_0039 2025-04-19, the box mean was rebuilt from the blue SVD (500 comps). ΔF/F used a trailing 1400-sample mean. The result was compared to `d.states`, whose nonzero span equals the V length exactly.
+- **The result:** 10×10, 11×11 and 21×21 give r = 0.995 (lag 0), high-pass r = 0.876, and SD 3.00–3.02 vs the rig's 3.04. The boxes are indistinguishable.
+- **Text:** `methods_rewrite.tex` keeps 10×10 and adds one sentence that the offline re-extraction reproduces the online signal (r = 0.995) independent of box size. The CHECK comment was replaced.
+
+**Why:** reviewer m6 raised the kernel size. The user asked for the states.csv comparison and had previously found that the box doesn't change the data; this test confirms it.
+**Next:** none. Not changing `getpixel_dFoF`.
+
 ### 2026-10-13 — Methods claims checked against code; six corrected (Closedloop_edit draft)
 **Changed/Found:** in `methods_rewrite.tex`:
 - **Motion exclusion:** removed "30 of 1190 excluded". `motThresh` is used only in `trial_state_mse.m` / `f4_lowfreq_examples.m`, neither of which is a manifest panel, and Fig 4D uses all 1190 trials. Methods now says no trial is excluded on motion.
