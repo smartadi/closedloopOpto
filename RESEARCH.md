@@ -16,6 +16,20 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-12 — Fig 3 audit items 1–2: stale scale bars and the representative session
+**Found:**
+- **(1)** The panel files already say "0.2 mW": `figures_final/panels/figure3/panel_A.png` and `panel_C.png` were exported 10-11 11:52. The "1 mW" survives only in the Illustrator assembly: `Figure3.ai` was saved 10-10 and `Figure3.pdf` exported 10-11 17:57 (byte-identical to `Closedloop_edit/images/Figure3.pdf`). Nothing needs regenerating; panels A and C must be re-placed in Illustrator and Figure3.pdf re-exported.
+- **(2)** The representative session is m10 = AL_0039 2025-04-19 e1 (`load_sessions.m` `selField = 10`), and its gains are Kr 0.1, Kp 0.07, Ki 0.1. The Results sentence (L109) is correct, as an archived entry already established.
+
+**Changed:** Corrected three stale labels:
+- `NUMBERS.md:181` row read "AL_0033 2025-02-26";
+- `pyFigure3/README.md:45` example read AL_0033ctrl04191;
+- `pyFigure3/figure3.py:8` docstring example read AL_0033ctrl02242.
+
+All three now point to AL_0039ctrl04191.
+**Why:** Fig 3 audit item 2. Three sources disagreed on which session Fig 3A–D/F shows.
+**Next:** User: re-place panel_A/panel_C in Figure3.ai and re-export. Optional: name the session in the Fig 3 caption ("Mouse 2" in the Fig 4G numbering).
+
 ### 2026-10-12 — Manuscript Fig 2B–F: Results/Methods/Discussion made consistent (Closedloop_edit 8db98b1, draft, not pushed)
 **Changed:** `results.tex`, `methods_rewrite.tex`, `discussion.tex` via `apply_ms_1012g.py` (14 edits). The three-lens verify (wf_42b24b7c-583) found the problems. Every number was re-checked in MATLAB against `imp_tf_fits.mat` (exact modal decomposition, residual < 2e-15) and the logs (cvfree, cv2p_new, bootsplit).
 - Mouse 3's slowest pole (τ = 1768 s) contributes **+0.003 against a trough of −1.777 (< 0.2%)**. Dropping it changes R² only from 0.9936 to 0.9932.

@@ -178,7 +178,7 @@ that set predates both the pseudoreplication fix and the window fix — do not q
 |---|---|---|
 | Cohort | 15 sessions / 4 mice | ✅ §1.1 |
 | Reference | −5 % ΔF/F, 3 s stimulation window | ✅ project default |
-| Gains, AL_0033 2025-02-26 | Kr 0.1, Kp 0.07, Ki 0.1 | ✅ |
+| Gains, AL_0039 2025-04-19 (m10, Fig 3A–D/F session) | Kr 0.1, Kp 0.07, Ki 0.1 | ✅ (row was mislabelled AL_0033 2025-02-26 until 2026-10-12) |
 | LMM p, cross-trial variance | 2e-7 (0–1 s), 5.6e-14 (1–3 s); n.s. pre and post | ✅ draft caption |
 | LMM p, tracking RMSE | 5.4e-9 (0–1 s), 2.5e-18 (1–3 s) | ✅ draft caption |
 | 15-session variance slopes | pre −0.23 / during −0.53 / post +0.18 | ✅ `variance_mse.m` (RESEARCH 2026-09-08) |

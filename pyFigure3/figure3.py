@@ -5,7 +5,7 @@ Usage (real data, on the lab PC where data/ caches live):
     from pyFigure3 import figure3
     figure3.make_figure3(
         cache_paths=["data/AL_0033ctrl01203.mat", ...],
-        rep_path="data/AL_0033ctrl02242.mat",   # representative session for A-E
+        rep_path="data/AL_0039ctrl04191.mat",   # representative session for A-E (MATLAB selField=10)
         outdir="paper/images/figure3",
     )
 

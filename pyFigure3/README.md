@@ -42,7 +42,7 @@ figure3.make_figure3(
         "data/AL_0033ctrl02122.mat",
         # ... the 13 controller sessions ...
     ],
-    rep_path="data/AL_0033ctrl04191.mat",   # representative session for A–E (selField=10)
+    rep_path="data/AL_0039ctrl04191.mat",   # representative session for A–E (selField=10 = m10, AL_0039 2025-04-19)
     outdir="paper/images/figure3",
 )
 ```
