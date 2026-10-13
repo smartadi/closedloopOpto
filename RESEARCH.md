@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Methods tuning section limited to the S2 grid + auto-tune run; facts corrected from rig logs
+**Changed/Found:** `methods_rewrite.tex` "Gain-grid sweep" and "Online gain search" now describe only:
+- grid AL_0033 2025-03-05 (10 nodes, min (0.05, 0.10), Ĵ = 16.1);
+- auto-tune AL_0033 2025-03-17 (136 trials, 9 iterations × 15 trials per candidate, online cost 16.6→15.1→12.3, end (0.068, 0.064)). These come from `input_params` run lengths and `Kdata`/`Kval`.
+
+Other changes in the same file:
+- Algorithm block: N = 15, I = 9 (was the code default 5/5).
+- The contradictory "required Ĵ(K) ≤ Ĵ(0)" sentence is dropped.
+- The AL_0034 row is removed from `tab:cohort`; the caption names the S2 sessions.
+- "Lists every animal and session" is scoped down.
+
+The old text had wrong end gains for AL_0034 e1: logged (0.10, 0.22), written as (0.20, 0.20). The AL_0033 12-19 run had a dead online cost (Kval ≡ 0), so it was a random walk, not a search.
+**Why:** reviewer m2/m3. The user said Methods should describe only the grid search and auto-tuning presented in S2.
+**Next:** none.
+
 ### 2026-10-13 — Readout box size does not affect the offline signal (checked against rig states.csv)
 **Changed/Found:**
 - **The question:** rig code (`rainier/StLab_Rainier/backup/Main_PID_serial.py`, `img[p-s:p+s]` with s = 5, logged as `kernel = 2*s = 10`; `experiment_core/base_controller.py` ROI_HALF = 5) suggests a 10×10 online box. The user says the csv kernel is a half-width. Offline, `getpixel_dFoF` uses ±kernel (21×21).
