@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-13 — Manuscript: captions de-numbered, Results to one primary test per claim
+**Changed/Found:** `Closedloop_edit/results.tex`, `methods_rewrite.tex` (draft 37280b9). Captions for Figs 2/3/4 now carry only what is drawn, n and star definitions (words 494→371, 393→323, 505→354; Fig 2 numbers 53→38, Fig 4 52→36). The τ bootstrap fractions (39/72/3/100%) went into Methods (time constants). Results now gives each claim one primary test. 2G: per-session slope t-tests. Fig 3: the mixed model for the full, transient and steady-state windows, plus Wilcoxon for pre/post. The redundant "We tested every OL vs CL…" paragraph is deleted. Fig 4D now leads with two messages, motion rejected and abs δ not held; rel δ gets one sentence saying it does not survive correction. The 4G mouse-level 1.2-df model moved to Methods. A new Methods paragraph, "Corroborating tests", holds the Wilcoxon, Spearman and per-session-OLS checks. The multiple-comparison paragraph now states once which effects clear Bonferroni (abs power in every family, motion only for attenuation). Results p-values went 37→25 and Results words 4562→4007. No number changed.
+**Why:** User critique: captions read as results, and the Results looked statistically forced, with repeated Bonferroni/uncorrected hedging and redundant corroborating tests.
+**Next:** User reads it on Overleaf after the ff push to main. The captions are still ~320–370 words for the 7-panel figures; further trimming would mean dropping drawn-content description.
+
 ### 2026-10-13 — Manuscript pushed to Overleaf with re-exported Figures 2–4
 **Changed/Found:**
 - Copied the user's re-exported `figures_final/Figure{2,3,4}.pdf` to `Closedloop_edit/images`. Figure 2 has the global mouse labels and the new 2G stars; Figure 3 has the 3F bar; Figure 4 has the session-level 4C and the 4F title.
