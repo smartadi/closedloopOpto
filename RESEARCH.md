@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-15 — Supp prototype v1: state-quartile prediction-error panels (JN style)
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` (new producer) → `paper/images/supplementary/state_quartile/sq_<mot|dpr|dpa>_<rms|ratio|dist|var>.pdf` + `sq_legend.pdf` + `sq_stats.csv`. JN style (jnFig/jnAxes/jnExport), 4.0 × 3.3 cm tiles, one row per Fig-2G state (motion, rel δ, abs δ; pre-var left out as the power confound). Each tile carries its test as a one-line annotation. Sessions are named S1–4 = Mouse 1a/1b (AL_0041 e1/e2), Mouse 2 (AL_0033), Mouse 3 (AL_0048), from the load_experiments order. Numbers match imp_state_quartile_profile.m.
+**Why:** User wants the per-quartile/per-session variance view as a supplementary figure, assembled in Illustrator, with stats per row.
+**Next:** Iterate on layout with the user. Not yet in MANIFEST.txt/PAPER.md: register it once the user locks it. The variance column still has no stim-free control (needs per-trial yp saved by imp_state_trialvar.m).
+
 ### 2026-10-15 — Fig 2G quartile profile: per-session VARIANCE of trial error added
 **Changed/Found:** `impulse-analysis/imp_state_quartile_profile.m` — new 4th column: var(per-trial error y) in each quartile × session, 95% trial-bootstrap CI, within-session Brown–Forsythe (Stouffer), session t on log(var Q4/Q1–3); table → `paper/images/figure2/imp_state_quartile_var.csv`. Motion: var flat ~0.35–0.45 in Q1–3, falls to 0.09–0.22 in Q4 in 4/4 sessions (BF p ≤ 0.005 each, Stouffer 2e-11; Q4/Q1–3 = 0.40, p = 0.018). Pre-var: rises 0.05–0.15 → 0.41–0.62 (4/4, p = 0.023). Abs δ: rises in 3/4 sessions (S4 BF p = 0.13; session p = 0.11). Rel δ: no effect (BF Stouffer p = 0.32; only S4 p = 0.045).
 **Why:** User: the plot lacked the variance of the trial prediction error per quartile × state × session, wanted for a possible supplementary figure.
