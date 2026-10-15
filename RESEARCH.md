@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-15 — Fig 2G quartile profile: per-session VARIANCE of trial error added
+**Changed/Found:** `impulse-analysis/imp_state_quartile_profile.m` — new 4th column: var(per-trial error y) in each quartile × session, 95% trial-bootstrap CI, within-session Brown–Forsythe (Stouffer), session t on log(var Q4/Q1–3); table → `paper/images/figure2/imp_state_quartile_var.csv`. Motion: var flat ~0.35–0.45 in Q1–3, falls to 0.09–0.22 in Q4 in 4/4 sessions (BF p ≤ 0.005 each, Stouffer 2e-11; Q4/Q1–3 = 0.40, p = 0.018). Pre-var: rises 0.05–0.15 → 0.41–0.62 (4/4, p = 0.023). Abs δ: rises in 3/4 sessions (S4 BF p = 0.13; session p = 0.11). Rel δ: no effect (BF Stouffer p = 0.32; only S4 p = 0.045).
+**Why:** User: the plot lacked the variance of the trial prediction error per quartile × state × session, wanted for a possible supplementary figure.
+**Next:** No per-trial control error in the saved stats, so this column is stim-only. Add the per-trial control vector (yp) to STV_R in `imp_state_trialvar.m` if the supplement needs a variance-vs-control comparison. Session labels are S1–S4 by index; map them to mouse/date before any supplement.
+
 ### 2026-10-15 — Fig 2G full per-quartile profile of prediction-error spread
 **Changed/Found:** `impulse-analysis/imp_state_quartile_profile.m` (new; reads `data/fig2g_state_stats.mat`, no reload) → `paper/images/figure2/imp_state_quartile_profile.png`. Per-session RMS error Q1..Q4 (mean of 4 sessions). Motion: 1.12/1.04/1.10/**0.65**, a step at Q4 only, not a trend. Q4/mean(Q1–3) = 0.60 (4/4 sessions, t p=0.002), Friedman p=0.038. But the control steps the same way (0.69 at Q4); beyond control 0.92, p=0.22. Pre-var and abs δ: monotone 0.54→1.43 and 0.58→1.35, matched by the control (beyond control ≈0.95, p≈0.57; power confound as before). Rel δ: flat, 0.96/1.00/1.02/0.99, Friedman p=0.61, Q4 contrast p=0.91. Within-session Kruskal–Wallis is significant for every state (Stouffer), but session-level tests are not for rel δ.
 **Why:** User asked whether the spread changes quartile-to-quartile in a way the Q4/Q1 + linear-slope summary misses.
