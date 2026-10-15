@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-15 — Supp state-quartile panels v2: smaller tiles for row whitespace
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — tiles 4.0×3.3 → 3.6×2.8 cm. Axes Position fixed to [0.22 0.27 0.74 0.55] so labels and the 2-line note fit the canvas. At the smaller size these clipped: y-labels ("RMS error (× typical)", "Variance of trial error"), right-hand notes and the "Absolute δ power quartile" x-label. Shortened to "Norm. RMS error", "Stim / control RMS", "Trial error", "Error variance", "Rel./Abs. δ quartile". The variance note is now 2 lines (BF n/4 sessions; Q4/Q1–3 ratio, p). p shown with 2 significant figures. Unicode δ with Interpreter none (tex bold had spread the words apart).
+**Why:** User wants smaller panels to add whitespace between rows in Illustrator.
+**Next:** User assembles in Illustrator. Register in MANIFEST.txt/PAPER.md when locked.
+
 ### 2026-10-15 — Supp prototype v1: state-quartile prediction-error panels (JN style)
 **Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` (new producer) → `paper/images/supplementary/state_quartile/sq_<mot|dpr|dpa>_<rms|ratio|dist|var>.pdf` + `sq_legend.pdf` + `sq_stats.csv`. JN style (jnFig/jnAxes/jnExport), 4.0 × 3.3 cm tiles, one row per Fig-2G state (motion, rel δ, abs δ; pre-var left out as the power confound). Each tile carries its test as a one-line annotation. Sessions are named S1–4 = Mouse 1a/1b (AL_0041 e1/e2), Mouse 2 (AL_0033), Mouse 3 (AL_0048), from the load_experiments order. Numbers match imp_state_quartile_profile.m.
 **Why:** User wants the per-quartile/per-session variance view as a supplementary figure, assembled in Illustrator, with stats per row.

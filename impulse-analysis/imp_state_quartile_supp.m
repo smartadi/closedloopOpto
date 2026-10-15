@@ -29,8 +29,8 @@ outDir = fullfile(root,'paper','images','supplementary','state_quartile');
 if ~exist(outDir,'dir'), mkdir(outDir); end
 
 if ~exist('SQ_STATES','var') || isempty(SQ_STATES), SQ_STATES = {'MOT','DPr','DPa'}; end
-if ~exist('SQ_W','var')      || isempty(SQ_W),      SQ_W = 4.0;  end   % panel width  (cm)
-if ~exist('SQ_H','var')      || isempty(SQ_H),      SQ_H = 3.3;  end   % panel height (cm)
+if ~exist('SQ_W','var')      || isempty(SQ_W),      SQ_W = 3.6;  end   % panel width  (cm); 3.6 x 2.8 leaves room for row gaps (user 2026-10-15)
+if ~exist('SQ_H','var')      || isempty(SQ_H),      SQ_H = 2.8;  end   % panel height (cm)
 SESS_LAB = {'Mouse 1a','Mouse 1b','Mouse 2','Mouse 3'};
 STATE_LAB = struct('MOT','Motion','PVv','Pre-trial variance','DPa','Absolute δ power', ...
                    'DPr','Relative δ power');   % unicode + Interpreter none: tex bold spaces words apart
@@ -77,8 +77,8 @@ for iS = 1:numel(SQ_STATES)
     plot(ax, 1:nB, mean(sd,1),  '-o', 'Color', C_stim, 'LineWidth', J.lw_mean, ...
          'MarkerSize', J.marker, 'MarkerFaceColor', C_stim);
     yline(ax, 1, ':', 'Color', [.6 .6 .6], 'LineWidth', J.lw_ref);
-    local_ax(ax, nB, qlab, lab, 'RMS error (× typical)');
-    local_note(ax, J, sprintf('Q4/Q1–3 %.2f, p = %s', exp(mean(q4)), local_p(pQ4)));
+    local_ax(ax, nB, qlab, lab, 'Norm. RMS error');
+    local_note(ax, J, sprintf('Q4/Q1–3 %.2f, p=%s', exp(mean(q4)), local_p(pQ4)));
     jnAxes(ax);  jnExport(f, fullfile(outDir, sprintf('sq_%s_rms.pdf', tg)));  close(f);
 
     % ---- (2) stim / control -------------------------------------------------------------------
@@ -87,8 +87,8 @@ for iS = 1:numel(SQ_STATES)
     plot(ax, 1:nB, mean(rr,1), '-o', 'Color', 'k', 'LineWidth', J.lw_mean, ...
          'MarkerSize', J.marker, 'MarkerFaceColor', 'k');
     yline(ax, 1, ':', 'Color', [.6 .6 .6], 'LineWidth', J.lw_ref);
-    local_ax(ax, nB, qlab, lab, 'Stim / no-stim RMS');
-    local_note(ax, J, sprintf('beyond control %.2f, p = %s', exp(mean(q4c)), local_p(pQ4c)));
+    local_ax(ax, nB, qlab, lab, 'Stim / control RMS');
+    local_note(ax, J, sprintf('vs control %.2f, p=%s', exp(mean(q4c)), local_p(pQ4c)));
     jnAxes(ax);  jnExport(f, fullfile(outDir, sprintf('sq_%s_ratio.pdf', tg)));  close(f);
 
     % ---- (3) trial-error distributions ---------------------------------------------------------
@@ -105,7 +105,7 @@ for iS = 1:numel(SQ_STATES)
         end
     end
     xlim(ax, [0.45 nB+0.55]);
-    local_ax(ax, nB, qlab, lab, 'Trial error (scaled)');  xlim(ax, [0.45 nB+0.55]);
+    local_ax(ax, nB, qlab, lab, 'Trial error');  xlim(ax, [0.45 nB+0.55]);
     jnAxes(ax);  jnExport(f, fullfile(outDir, sprintf('sq_%s_dist.pdf', tg)));  close(f);
 
     % ---- (4) variance of trial error -----------------------------------------------------------
@@ -116,9 +116,9 @@ for iS = 1:numel(SQ_STATES)
                  'MarkerFaceColor', C_sess(i,:), 'MarkerSize', J.marker-1, 'LineWidth', J.lw_ind, 'CapSize', 0);
     end
     plot(ax, 1:nB, mean(vv,1), '-', 'Color', 'k', 'LineWidth', J.lw_mean);
-    local_ax(ax, nB, qlab, lab, 'Variance of trial error');
+    local_ax(ax, nB, qlab, lab, 'Error variance');
     ylim(ax, [0 max(ylim(ax))]);
-    local_note(ax, J, sprintf('Q4/Q1–3 %.2f, p = %s, BF %d/%d', exp(mean(q4v)), local_p(pQ4v), nBF, nS));
+    local_note(ax, J, {sprintf('BF %d/%d sessions', nBF, nS), sprintf('Q4/Q1–3 %.2f, p=%s', exp(mean(q4v)), local_p(pQ4v))});
     jnAxes(ax);  jnExport(f, fullfile(outDir, sprintf('sq_%s_var.pdf', tg)));  close(f);
 end
 
@@ -142,7 +142,8 @@ fprintf('[SQ] panels in %s\n', outDir);
 % =================================================================================================
 function local_ax(ax, nB, qlab, lab, yl)
 xlim(ax, [0.6 nB+0.4]);  xticks(ax, 1:nB);  xticklabels(ax, qlab);
-xlabel(ax, sprintf('%s quartile', lab), 'Interpreter','none');  ylabel(ax, yl, 'Interpreter','none');
+set(ax, 'Units','normalized', 'Position',[0.22 0.27 0.74 0.55]);   % fixed margins: room for labels + 2-line note
+xlabel(ax, sprintf('%s quartile', strrep(strrep(strrep(lab,'Absolute','Abs.'),'Relative','Rel.'),' power','')), 'Interpreter','none');  ylabel(ax, yl, 'Interpreter','none');
 end
 
 function local_note(ax, J, str)
@@ -151,5 +152,5 @@ text(ax, 0.02, 1.0, str, 'Units','normalized', 'VerticalAlignment','bottom', ...
 end
 
 function s = local_p(p)
-if p < 0.001, s = sprintf('%.1e', p); else, s = sprintf('%.3f', p); end
+if p < 0.001, s = sprintf('%.0e', p); else, s = sprintf('%.2g', p); end
 end
