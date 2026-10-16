@@ -98,10 +98,17 @@ ctrl_mpc_export(fig, fullfile(figDir, 'mpcs_K_rmse_compare.png')); close(fig);
 rows = cellstr(D.summary_rows); su = D.summary;
 lag = cellfun(@(l) su(strcmp(rows, l), 2), {'rec OL','rec CL+p','MPC on CL+p','perfect on CL+p'});
 fig = jnFig(W1, H); ax = axes(fig, 'Units','centimeters', 'Position', [0.95 0.75 W1-1.05 2.05]); hold(ax,'on');
-for i = 1:numel(lag), bar(ax, i, lag(i), 0.6, 'FaceColor', col4(i,:), 'EdgeColor', 'none'); end
+% Scaled to the CL+p vs MPC differences (user 2026-10-16); OL (~71 deg) runs off the top, drawn truncated
+% with a white break mark -- its value is given in the caption.
+yl = [-2.5 3];
+for i = 1:numel(lag), bar(ax, i, min(lag(i), yl(2)), 0.6, 'FaceColor', col4(i,:), 'EdgeColor', 'none'); end
+for i = find(lag > yl(2))
+    for dy = [-0.55 -0.25]
+        plot(ax, i + [-0.36 0.36], yl(2) + dy + [-0.12 0.12], '-', 'Color', 'w', 'LineWidth', 1.2);
+    end
+end
 plot(ax, [0.4 numel(lag)+0.6], [0 0], '-', 'Color', C.k, 'LineWidth', 0.4);
-yt = 15*[floor(min([lag 0])/15) ceil(max(lag)/15)];
-set(ax, 'XTick', 1:numel(lag), 'XTickLabel', nam4, 'YTick', unique([yt 0])); xlim(ax, [0.4 numel(lag)+0.6]); ylim(ax, yt + [-2 2]);
+set(ax, 'XTick', 1:numel(lag), 'XTickLabel', nam4, 'YTick', [-2 0 2]); xlim(ax, [0.4 numel(lag)+0.6]); ylim(ax, yl);
 ylabel(ax, 'phase lag (\circ)'); jnAxes(ax); set(ax, 'XTickLabelRotation', 45);
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcs_L_phase_lag.png')); close(fig);
 

@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 6L rescaled to the CL+p vs MPC differences
+**Changed/Found:** `controller-analysis/ctrl_mpc_sine_panels.m`: L's y-axis is now [−2.5 3]° with ticks at −2/0/2. The OL bar (70.7°) is truncated with a white break mark, and the caption on Closedloop draft (results.tex) states it as 71°, truncated. Re-exported with PAPER_FINAL.
+**Why:** User: emphasise the difference between CL+p (1.7°) and the MPCs (−0.6°, −1.6°), which was invisible on a 0–75° scale.
+**Next:** none.
+
 ### 2026-10-16 — Fig 6 I–M resized to fit one row (17.6 cm)
 **Changed/Found:**
 - **Sizes:** in `controller-analysis/ctrl_mpc_sine_panels.m`, panel I is now 5.2×3.0 cm and J–M are 2.8×3.0 cm each (was 8.43 / 4.13 × 3.3). The row is 15.6 cm with 0.3 cm gaps (preview: `paper/images/supp_mpc/_row_preview_mpcs.png`).
