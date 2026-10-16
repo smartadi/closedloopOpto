@@ -15,8 +15,9 @@
 % Writes paper/images/supplementary/state_quartile/sq_<state>_<panel>.pdf (+ .png), via jnExport.
 %
 % Sessions (STV_R.sess = allExperiments index, load_experiments.m order):
-%   1 AL_0041 2025-12-02 e1 = Mouse 1a, 2 AL_0041 e2 = Mouse 1b, 3 AL_0033 2025-01-29 = Mouse 2,
-%   4 AL_0048 = Mouse 3.
+%   1 AL_0041 2025-12-02 e1 = Mouse 5a, 2 AL_0041 e2 = Mouse 5b, 3 AL_0033 2025-01-29 = Mouse 1,
+%   4 AL_0048 = Mouse 3. These are the PAPER's names (stats Table 3, Fig 2B/D/E); the first
+%   export (2026-10-15) used 1a/1b/2/3 and was fixed 2026-10-16.
 % States: the three Fig-2G states (motion, relative delta, absolute delta). Pre-trial variance is
 % the retracted power confound and is not drawn (SQ_STATES to override, e.g. {'MOT','PVv','DPa','DPr'}).
 %
@@ -33,7 +34,7 @@ if ~exist(outDir,'dir'), mkdir(outDir); end
 if ~exist('SQ_STATES','var') || isempty(SQ_STATES), SQ_STATES = {'MOT','DPr','DPa'}; end
 if ~exist('SQ_W','var')      || isempty(SQ_W),      SQ_W = 3.6;  end   % panel width  (cm); 3.6 x 2.8 leaves room for row gaps (user 2026-10-15)
 if ~exist('SQ_H','var')      || isempty(SQ_H),      SQ_H = 2.8;  end   % panel height (cm)
-SESS_LAB = {'Mouse 1a','Mouse 1b','Mouse 2','Mouse 3'};
+SESS_LAB = {'Mouse 5a','Mouse 5b','Mouse 1','Mouse 3'};
 STATE_LAB = struct('MOT','Motion','PVv','Pre-trial variance','DPa','Absolute δ power', ...
                    'DPr','Relative δ power');   % unicode + Interpreter none: tex bold spaces words apart
 C_stim = J.col_ol;  C_ctl = [0.55 0.55 0.55];
