@@ -129,15 +129,17 @@ end
 % Drawn as REAL line + text objects on a cm-scaled axes, not legend(): a legend() fed NaN
 % placeholder lines on an invisible axes exports its text but drops the colour swatches from the
 % vector PDF (user 2026-10-16: "legend pdf did not contain the colors only text").
-f = jnFig(J.W_double, 0.5);
+f = jnFig(J.W_double, 0.8);
 ax = axes(f, 'Units','normalized', 'Position',[0 0 1 1]);  hold(ax,'on');
-axis(ax, [0 J.W_double 0 0.5]);  axis(ax, 'off');
+axis(ax, [0 J.W_double 0 0.8]);  axis(ax, 'off');
 items = [ cellfun(@(lb,c) {lb, c, '-', 'none', J.lw_mean}, SESS_LAB, num2cell(C_sess,2).', 'UniformOutput', false), ...
           {{'Session mean', C_stim, '-', 'o', J.lw_mean}}, ...
           {{'Mean (stim/control, variance)', [0 0 0], '-', 'o', J.lw_mean}}, ...
           {{'No-stimulus control', C_ctl, '--', 'none', J.lw_mean}} ];
-x = 0.1;  yc = 0.25;  tok = 0.25;   % short swatch (user 2026-10-16)
+% Two rows (user 2026-10-16: "half its length"): mice on top, summary lines below.
+x = 0.1;  yc = 0.6;  tok = 0.25;   % short swatch (user 2026-10-16)
 for it = 1:numel(items)
+    if it == numel(SESS_LAB) + 1,  x = 0.1;  yc = 0.2;  end
     [lb, c, ls, mk, lw] = items{it}{:};
     plot(ax, x + [0 tok], [yc yc], 'LineStyle', ls, 'Color', c, 'LineWidth', lw);
     if ~strcmp(mk,'none')

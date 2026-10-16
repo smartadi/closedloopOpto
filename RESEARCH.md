@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 legend wrapped to two rows (half length)
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — the legend now has two rows: Mouse 5a/5b/1/3 on top; session mean, stim/control mean and no-stim control below. Canvas height 0.5 → 0.8 cm. `sq_legend.pdf` is now 7.5 × 0.74 cm (it was 13.4 × 0.3). The first re-export silently used the cached old script; `clear` + `rehash` fixed it.
+**Why:** User: "the legend is much too big, half its length". Shorter swatches alone only got it to 13.4 cm; the text sets the length.
+**Next:** User re-places sq_legend in Illustrator.
+
 ### 2026-10-16 — Fig S2 (state quartiles) legend shortened
 **Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — legend swatch 0.5 → 0.25 cm, swatch–text gap 0.10 → 0.07 cm, gap between items 0.35 → 0.25 cm. Re-exported with PAPER_FINAL, so `sq_legend.pdf` is now 13.4 × 0.3 cm (it was full-width). The stats table is unchanged.
 **Why:** User: "make the legend length smaller and the color bar too". The state-quartile figure has no colorbar, so I read "color bar" as the coloured line swatches.
