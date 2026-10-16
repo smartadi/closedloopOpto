@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Per-amplitude state-sorted rasters (exploratory)
+**Changed/Found:** new `impulse-analysis/imp_state_raster_peramp.m` — one PNG per session in `paper/images/supplementary/state_raster_peramp/`. Rows are the 3 states and columns are amplitudes; each cell is Activity (−0.2 to 0.49 s) next to deviation from that amplitude's mean, in raw % ΔF/F at ±5, trials sorted by state, quartile edges marked. Looked at Mouse 1, Mouse 3 and Mouse 5b (Mouse 5a was written but not viewed). Results: (1) the stimulus dip is a clean dark band at the session's top amplitudes (Mouse 1 ≥ 2.7 V, Mouse 3 1.0/1.6 V), invisible at the lowest. (2) Single-trial fluctuations of ±5 % swamp low amplitudes. (3) The state effect is visible by eye only in places: abs δ Q1 rows are calmer than Q4 in Mouse 5b at 2.6/2.7 V. Elsewhere it is not obvious, which fits a pooled effect that is small within any one session × amplitude (11–25 trials per quartile).
+**Why:** User wanted per-amplitude rasters (no amplitude mixing) and a rule-chosen representative for Fig S2.
+**Next:** User picks the representative (rule: highest amplitude of the largest session = Mouse 1 at 4.9 V; cleanest dip = Mouse 3 at 1.6 V) and decides whether the full set becomes its own supplementary figure.
+
 ### 2026-10-16 — Found: raster normalization downscales; single-trial noise ≫ mean dip
 **Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` (no code change) — the per-session divisor (response RMS L2 error) is 2.86 / 2.68 / 4.14 / 2.93 % ΔF/F (M5a / M5b / M1 / M3), so the rasters are shrunk 3–4×, not upscaled. In raw units the mean dip (0.06–0.17 s) is only −0.8 to −1.6 % ΔF/F, while single-trial |activity| and |deviation| reach 5.7 % at the 90th percentile and about 11 % at the 98th. That is why signed single-trial maps look grainy grey.
 **Why:** User asked whether the raster normalization upscales. Normalization isn't needed for the rasters: sorting is by within-session percentile, so every quartile has the same session mix.
