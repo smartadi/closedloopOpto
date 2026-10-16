@@ -222,7 +222,7 @@ drift to be "unified"; do not reconcile them.
 - Error metric = **RMSE** (root-mean-squared error, sample-normalised, in %ΔF/F) — decided 2026-07-16, supersedes the old "MSE" naming. `controllerData.m` now stores `er_ncDfk`/`er_wcDfk` as `norm(seg-ref)/sqrt(numel(seg))` (was un-normalised `norm()` = ‖e‖₂ = RMSE·√N). Label every axis/caption "RMSE"; the theory cost in Methods stays a squared cost (√ is monotone → same minimiser). **All Fig-3 error panels are now RMSE** — the former MAE exception (`all_average_sessions`, `step_response.m` `fig_H`) was switched to RMSE on 2026-08-24 (user: "everything else has RMSE"); ⚠ note it now shares across-trial variance with panel 3F.
 - RMSE window: **t = 0 s to +3 s** for trial RMSE analysis, **t = +1 s to +3 s** only for disturbance rejection in one panel, post-laser onset (skips inhibitory transient)
 - Power spectra: **absolute (ΔF/F)² Hz⁻¹** only — no normalization, no z-scoring at any stage
-- Motion exclusion threshold: `motThresh = 1.5` (z-scored motion)
+- Motion exclusion: **none in the paper** (user 2026-10-16). `motThresh = 1.5` (z-scored motion) survives only as a script default; no paper analysis excludes or splits trials on it.
 - Step response sessions: `custom_idx = [4 9 11]` (m4=AL_0033 2025-02-26, m9/m11=AL_0039)
 
 ### Figure style
