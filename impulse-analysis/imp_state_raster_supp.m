@@ -187,15 +187,18 @@ if RS_ROWS && isempty(RS_SESS)
     end
 
     % ---- colour key (shared, place once) --------------------------------------------------------
-    f = jnFig(3.0, 0.9);
-    axK = axes(f, 'Units','centimeters', 'Position', [0.3 0.75 2.4 0.001], 'Visible','off');
+    % User 2026-10-16: smaller, no long label -- just the end values. Units are dF/F divided by
+    % the session's typical error, so ends read -3 / +3 with a short "norm. dF/F" (caption defines it);
+    % a bare "3 dF/F" would read as 3 % dF/F, which these values are not.
+    f = jnFig(1.9, 0.55);
+    axK = axes(f, 'Units','centimeters', 'Position', [0.25 0.35 1.4 0.001], 'Visible','off');
     colormap(axK, cm);  clim(axK, [-1 1]*RS_CLIM);
     cb = colorbar(axK, 'Location','south', 'Units','centimeters');
-    cb.Position = [0.3 0.55 2.4 0.12];
-    cb.Ticks = [-RS_CLIM 0 RS_CLIM];  cb.TickLabels = {sprintf('-%g',RS_CLIM), '0', sprintf('+%g',RS_CLIM)};
+    cb.Position = [0.25 0.3 1.4 0.08];
+    cb.Ticks = [-RS_CLIM RS_CLIM];  cb.TickLabels = {sprintf('-%g',RS_CLIM), sprintf('+%g',RS_CLIM)};
     cb.TickLength = 0;  cb.Box = 'off';  cb.AxisLocation = 'in';
-    cb.Label.String = 'ΔF/F (× session typical error)';  cb.Label.Interpreter = 'none';
-    set(cb, 'FontSize', J.fs_tick, 'FontName', J.font);  cb.Label.FontSize = J.fs_tick;
+    cb.Label.String = 'norm. ΔF/F';  cb.Label.Interpreter = 'none';
+    set(cb, 'FontSize', 5, 'FontName', J.font);  cb.Label.FontSize = 5;
     jnExport(f, fullfile(rDir, 'sq_raster_cbar.pdf'));  close(f);
 
     % ---- "Pooled trials" demarcation: header over the raster strip + vertical separator ---------

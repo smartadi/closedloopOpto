@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 legend: one row at 7.5 cm, 5 pt
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — the two-row legend is reverted to one row on a 7.5 cm canvas. Text is 5 pt (was 6) and labels are shorter: M5a/M5b/M1/M3 (Fig 2 style), "Mean (RMS)", "Mean (ratio, var.)", "No-stim control". The producer prints the row width (7.47 cm). Final PDF: 7.58 × 0.28 cm.
+**Why:** User: "legend is even worse now, i want it this width but ... smaller text to fit in one row". Shrinking the text alone would have needed about 3 pt, so I also shortened the labels.
+**Next:** User re-places sq_legend in Illustrator. The dashed no-stim swatch still reads almost solid at 0.25 cm.
+
+### 2026-10-16 — Fig S2 raster colour key: end values only, smaller
+**Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` — the colour key is now 1.4 cm wide (was 2.4) and 0.08 cm tall. Ticks are −3 / +3 only, at 5 pt. The label "ΔF/F (× session typical error)" became "norm. ΔF/F". Only the key was re-exported (block run on its own, no data reload). The figures_final copy was stale until `clear paper_final_mirror jnExport; rehash`.
+**Why:** User: "not have long label jst put -3df/F to +3df/f also make it smaller". I kept "norm." because the values are ΔF/F divided by the session's typical error. A bare "3 ΔF/F" would read as 3 % ΔF/F, which is wrong.
+**Next:** The caption must define "norm. ΔF/F". Ask the user how to make the raster effect stand out (proposals: |deviation| on a sequential map, a tighter colour range, a running-RMS margin).
+
 ### 2026-10-16 — Fig S2 legend wrapped to two rows (half length)
 **Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — the legend now has two rows: Mouse 5a/5b/1/3 on top; session mean, stim/control mean and no-stim control below. Canvas height 0.5 → 0.8 cm. `sq_legend.pdf` is now 7.5 × 0.74 cm (it was 13.4 × 0.3). The first re-export silently used the cached old script; `clear` + `rehash` fixed it.
 **Why:** User: "the legend is much too big, half its length". Shorter swatches alone only got it to 13.4 cm; the text sets the length.
