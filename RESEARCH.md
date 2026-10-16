@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — mpc_solve takes a reference trajectory; static Fig 6 numbers re-confirmed
+**Changed/Found:** `controller-analysis/mpc_direct.py` — `mpc_solve(..., ref=REF)` now accepts a scalar or the future reference r(t+1..t+Hp). The default is the static −5, so no static call site changed. Re-ran the static case (`MPCD_RD=0.1 MPCD_ORD=0.1 MPCD_SNAP=79,76`, tag `_lam01_check`): PI 1.457, MPC 0.823 (0.652×, 108/108), perfect 0.224× PI. Identical to the canonical `_lam01`. That run then hit KeyError 'MPC rd=1' at the snapshot step, because the canonical invocation also sets `MPCD_REF="MPC rd=0.1"`. No files were written.
+**Why:** The sine replay (Fig 6 I–M) needs a time-varying target with natural preview. Generalised behind a default argument so the static numbers cannot move.
+**Next:** none (`_lam01` stays canonical).
+
+### 2026-10-16 — Sine MPC exporter: AL_0048 07-14/1 y = rig states.csv; two clock/reference gotchas
+**Changed/Found:** new `controller-analysis/ctrl_mpc_sine_export.m` → `data/ctrl_mpc_arx_in_AL_0048_0714_e1.mat` and `ctrl_mpc_wb_in_AL_0048_0714_e1_n100.mat`, with the same fields as the static exporters plus `r`, `on`, `cond`, `fold`. Found:
+- (1) `states.csv` row k holds frame k−1. It matches the offline 40 s-rolling dF/F at pixel [410 346] with r = 0.988 at that shift (0.95 at ±1; mode-1 F/mI only 0.84). So y(k) = states(k+1), and the onset frame = onset row − 1.
+- (2) In the two PREVIEW modes `reference.csv` is the lookahead copy, advanced by 5 frames (r starts at −0.75, not 0). `reference_raw.csv` is the un-advanced target in all modes. So r = −reference_raw(k+1). `error.csv` = states + reference exactly.
+- (3) Otsu on the mean image kept only the brighter hemisphere. The mask is 0.65× Otsu, eroded 6 px (QC PNG `paper/images/mpc_arx/mpc_sine_spots_*.png`).
+- s2 has no galvo sign flip: params.pixel [410 346] and galvo_x +2.128 are both right side.
+- 200 sine trials: CL+p 57, OL+p 46, OL 51, CL 46.
+**Why:** The MPC replay must use the signal and target the rig's PI actually used. The y and r definitions are the controller's own.
+**Next:** Fig 5 pairs `dFoF(i0)` with `ref_raw(i0)`, i.e. row = frame. That is one frame (≈10° at 1 Hz) off the rig's own pairing, so Fig 6 sine lags are not numerically identical to Fig 5H. Flag this if the two are ever compared in prose.
+
 ### 2026-10-16 — Standalone state-raster PNG retired (S2 carries it)
 **Changed/Found:** `paper/figures_final/MANIFEST.txt` — `supplementary/supp_state_raster.png` commented out as RETIRED. Deleted `panels/supplementary/supp_state_raster.png`. PAPER.md row marked retired, pointing to the S2 strips. `collect_final_panels('dry')` also listed 8 tabled `s4_reject_trials_*` files (commented out 2026-10-10) for pruning, so I did NOT run the live collector. Only the raster was deleted, by hand; the dry run now shows 121 present, 0 missing, 8 pending.
 **Why:** User: S2 now carries the raster, so retire the standalone and prune it. The S4 prune was not requested.

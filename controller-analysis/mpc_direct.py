@@ -74,11 +74,12 @@ class VX:
         return self._roll(self.W, zh, uf, HP + lat, innov)[lat:, 0] * self.sz[0]
 
 
-def mpc_solve(m, f, u_prev, uss, umax, rd):
+def mpc_solve(m, f, u_prev, uss, umax, rd, ref=REF):
+    """ref: scalar (static -5) or the future reference r(t+1..t+HP) (sine replay, mpc_direct_sine.py)."""
     D = np.eye(HP) - np.eye(HP, k=-1)   # rd = 0 allowed (pure tracking + tiny r)
     Aq = np.vstack([m.G, np.sqrt(R_U) * np.eye(HP), np.sqrt(rd) * D])
     e0 = np.zeros(HP); e0[0] = u_prev
-    bq = np.concatenate([REF - f, np.sqrt(R_U) * uss * np.ones(HP), np.sqrt(rd) * e0])
+    bq = np.concatenate([ref - f, np.sqrt(R_U) * uss * np.ones(HP), np.sqrt(rd) * e0])
     return lsq_linear(Aq, bq, bounds=(0.0, umax), method="bvls").x
 
 
