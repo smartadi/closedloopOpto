@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-15 — Fig 3H/3I final panels re-exported (trace layout)
+**Changed/Found:** `controller-analysis/variance_mse.m` Fr + G2r re-run with PAPER_FINAL on, after the user closed the locked panels in Illustrator. figures_final/panels/figure3/MSE_ratio_by_window.pdf (3.56 x 2.65 cm) and variance_ratio_by_window.pdf (3.67 x 2.65 cm) now show the trace layout; stats unchanged.
+**Why:** The previous export skipped both panels because the PDFs were locked.
+**Next:** re-place 3H/3I in Illustrator; main session rewrites the Fig 3 Results/caption/Methods.
+
 ### 2026-10-15 — Fig 3H/3I restored to the old trace layout (user)
 **Changed/Found:** `utils/plot_ratio_windows.m` — dropped the jittered point clouds; each session is again a grey trace across the 4 windows (markers aligned in columns), black = geometric-mean trace with 95% CI bars. Metrics unchanged (CL/OL, log y). Working copies in paper/images/figure3 re-exported; the figures_final panels were LOCKED (open in Illustrator) and NOT updated.
 **Why:** User: the old layout was cleaner, and the traces show session continuity.
