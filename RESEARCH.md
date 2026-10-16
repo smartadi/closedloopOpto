@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Legend still broken in the pull folder: fix had not been mirrored
+**Changed/Found:** `paper/figures_final/panels/supp_state_quartile/` — the panels were locked into MANIFEST and mirrored at 11:17. The legend fix was re-exported at 11:21 with PAPER_FINAL off, so only `paper/images/supplementary/state_quartile/` got the fixed legend and the Illustrator pull folder kept the swatch-less copy. Re-ran `imp_state_quartile_supp.m` with `global PAPER_FINAL; PAPER_FINAL = true`. All 13 panels re-mirrored (11:25), and the pull-folder `sq_legend.pdf` was verified by rendering: 12 paths, all 7 colours.
+**Why:** User verified in Illustrator (pull folder) that the legend was still text-only. My previous check had rendered the working copy, not the pull-folder copy.
+**Next:** Once a panel is in MANIFEST, every re-export must run with PAPER_FINAL on, and the check must be made on the figures_final copy.
+
 ### 2026-10-16 — Supp state-quartile legend PDF lost its colour swatches
 **Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — `sq_legend.pdf` held only text. legend() fed NaN placeholder lines on an invisible axes drops the swatches from exportgraphics' vector PDF (the PNG looked fine). Legend is now drawn as real line/marker/text objects on a cm-scaled axes with axis off. Also added a black "Mean (stim/control, variance)" item for the ratio and variance tiles. Verified by rendering the PDF (PyMuPDF): 12 vector paths in all 7 colours.
 **Why:** User found the legend PDF had no colours in Illustrator.
