@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Manuscript: MPC promoted from supplement to Results (Figure 6), with a slot reserved for sine panels
+**Changed/Found:** `Closedloop_edit/results.tex` — new last Results section "Model-predictive control rejects disturbances in a replay of recorded trials". It covers the motivation, the VARX model, the MPC, the replay construction (recorded residuals; PI baseline = recorded trial), the result (RMSE 1.46 → 0.82 on 108/108 trials, variance −39%, perfect prediction 0.27, holds across λ) and one caveat sentence ("bounds rather than measures"). `fig:mpc_direct` moved here from `supplementary.tex` and is retitled; `images/supplementary/S_mpc.pdf` was git-mv'd to `images/Figure6.pdf`. LaTeX comments reserve room for the sinusoidal MPC panels and paragraph. `discussion.tex` — the MPC paragraph no longer repeats the Results numbers; it keeps the R² comparison and the interpretation. Build clean; MPC = Figure 6. Supplementary numbering is unchanged (MPC was last).
+**Why:** User: promote MPC to Results without overselling it. It must read as a study on recorded data, not a live run, while showing the improvement. Sine-wave MPC panels will come from another session.
+**Next:** (1) Methods has no MPC subsection; add one in the Methods restructure. (2) The R² 0.42 / 0.10 / 0.02 (Discussion) is still not table-backed (STATS_AUDIT §D); the Results avoid quoting it. (3) Illustrator: the MPC assembly is `figures_final/S5.ai`; rename it to Figure 6 when the sine panels are added.
+
+### 2026-10-16 — paper_stats_table.m: Figure 6 (MPC replay) rows
+**Changed/Found:** New block reading `controller-analysis/data/mpc_direct_AL_0033_0226_e2_lam01.mat` (λ = 0.1, timing lag 0 per the user decision of 2026-10-12). It writes rows `6_rmse_{1,2,3}` (median RMSE 1–3 s: PI recorded 1.457, MPC 0.823, perfect-prediction 0.268), `6_ratio` (MPC/PI median 0.652, 108/108 lower) and `6_var` (across-trial variance 1–3 s, MPC/PI 0.609 → "39% lower"; this verifies the Discussion's former "about 40%"). Checked: the 10-09 file's PI median 1.12 is the dropped idealised re-tuned PI, not the rig; 1.46 is the recorded PI and is correct.
+**Why:** The MPC numbers move into the Results, so they must be table-backed (NUMBERS rule).
+**Next:** add the sine-wave MPC rows when that analysis lands.
+
 ### 2026-10-16 — Fig S2 gains the pooled-trial raster strip (right of the quartile tiles)
 **Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` — new `RS_ROWS` block (default on). Writes one vector strip per state, `sq_<mot|dpr|dpa>_raster.pdf` (activity | deviation | no-stim control, 1.25 cm columns, 4.6 cm strip). Uses the same axes band as the S2 tiles (bottom 0.27·H, height 0.55·H) so heatmaps line up row by row. Column titles appear on the top row only, x ticks are 0/0.4, and "No-stim control" is split over 2 lines. Also writes `sq_raster_cbar.pdf`, `sq_pooled_header.pdf` ("Pooled trials (n = 1516, all sessions)" with a bracket) and `sq_divider.pdf` (vertical separator). All are in MANIFEST [supp_state_quartile] and mirrored to figures_final.
 **Why:** User: Fig S2 should also contain the state-sorted raster (supp_state_raster.png), as a PDF to the right with a "pooled trials" demarcation.

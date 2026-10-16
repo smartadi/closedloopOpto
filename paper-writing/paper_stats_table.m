@@ -171,6 +171,24 @@ for i = 1:size(pairs,1)
         'V',st.signedrank,NaN,p1,'1',nK,'sessions','f4_rr_denominator_check');
 end
 
+% ---------------- Figure 6 (MPC replay, promoted from supplement 2026-10-16) -------------------
+% SIMULATION on one session (AL_0033 2025-02-26, 108 CL trials): descriptive only, no tests.
+% Source: controller-analysis/mpc_direct.py run with MPCD_RD=0.1 MPCD_ORD=0.1 MPCD_TAG=_lam01
+% (timing lag 0, user decision 2026-10-12). Columns of rmse/Y: PI (recorded) | MPC | perfect-prediction MPC.
+S = load(fullfile(root,'controller-analysis','data','mpc_direct_AL_0033_0226_e2_lam01.mat'));
+nm = cellstr(S.names);  rr = S.rmse;  nT = size(rr,1);
+for j = 1:numel(nm)
+    add(sprintf('6_rmse_%d',j),'6',sprintf('median per-trial RMSE 1-3 s, %s',nm{j}),median(rr(:,j)),'%dF/F',[NaN NaN], ...
+        'median (simulation, descriptive)','','',NaN,NaN,'',nT,'trials','mpc_direct');
+end
+q = rr(:,2) ./ rr(:,1);
+add('6_ratio','6',sprintf('MPC/PI RMSE ratio, median; MPC lower on %d/%d trials',nnz(q<1),nT),median(q),'ratio',[NaN NaN], ...
+    'median (simulation, descriptive)','','',NaN,NaN,'',nT,'trials','mpc_direct');
+w = round(S.Fs)+1 : size(S.Y,1);                      % 1-3 s after onset (Y starts at onset)
+v = squeeze(mean(var(S.Y(w,:,:),0,2),1));
+add('6_var','6','across-trial variance 1-3 s, MPC / PI',v(2)/v(1),'ratio',[NaN NaN], ...
+    'mean over window of across-trial variance (simulation, descriptive)','','',NaN,NaN,'',nT,'trials','mpc_direct');
+
 T = cell2table(rows,'VariableNames',{'id','figure','claim','effect','unit','ci_lo','ci_hi','test', ...
     'stat_name','stat','df','p','sided','n','n_unit','source'});
 out = fullfile(root,'paper-writing','STATS_TABLE.csv');
