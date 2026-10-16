@@ -413,3 +413,35 @@ Once this paragraph exists, the caption's closing method paragraph (results:316�
 12. **Time-constant per-mouse numbers** (822–839). Move them to Results:81–82, or drop them? They are results, but Results currently cites Methods for them.
 13. **Fig 3 note on m4.** The gains table says m4 interleaved three K_p values, and m4 is also the MPC session and the Fig 3 step-response session. Is a sentence needed anywhere about pooling over K_p within m4?
 14. **Unresolved FILL/CHECK comments** affecting what remains: titers (60–62), IACUC number (63), AL_0051 construct (89–96), exposure and illumination power (182–184, 196), coordinates (241–243), session re-calibration (250–251), 1 mW per 3 V source (280), video frame rate / ROI / sync (303–306), repo URL (335), K_r route per session (548–549), clamp values (590), sine-session gains (684), RMSE-vs-RMS minimizer check (871–872), counts provenance (998–1001), blinding confirmation (1305–1306).
+
+---
+
+## 9. Author answers (2026-10-16) — these OVERRIDE the plan where they differ
+
+- **Q1 Matveev2024 coverage:** ALL of these are covered and can be cited away: 3x3 binning/pypylon/LED ramps; atlas registration + 50 SVD components; galvo calibration; light-blocking cone; Jackson stock numbers; sucrose reward schedule; face camera. EXCEPTION: keep the motion-energy definition in our Methods exactly as we compute it (squared frame difference, z-scored within session, the statistic used).
+- **Q2 Surgery:** drug names, no doses (isoflurane, carprofen; cleared-skull chamber + headpost as in Matveev2024; >=1 week recovery).
+- **Q3 Rig build:** DROP the "different rig build and stimulation wavelength / absolute RMSE not comparable" caveat entirely (~methods 1021-1024). Never mention earlier/later system versions.
+- **Q4 Galvo:** galvos do not move (fixed target), so no galvo-sound delay is needed. State instead that laser onset times were randomly jittered to avoid adaptation (keep/merge with the existing ITI jitter sentence). Remove the FILL at 252-258.
+- **Q5 4 s session:** DROP the 4 s sentence (~891) and its FILL (~388-389). All reported sessions used 3 s trials.
+- **Q6 Gains:** both true. Methods states once: initial gains for each mouse set by hand within the range the grid had explored, then carried to later sessions with small start-of-session adjustments. (Q14j adds: K_r from a least-squares fit to the impulse response, then manual per-session tuning.)
+- **Q7 Floats:** KEEP the Algorithm box in Methods (overrides plan B "cut Algorithm box"; you may tighten the prose around it so it does not repeat the box). MOVE the PI gains table (`tab:gains`) to supplementary.tex (keep the label; Methods points to it).
+- **Q8 Spectral:** keep both band-power estimators (Fig 2 native bins; Fig 4 continuous), one sentence each, keep why Fig 4 uses continuous.
+- **Q9 Motion threshold 1.5:** not used in the paper. Methods keeps "no trial was excluded on motion"; no 1.5 anywhere.
+- **Q10 MPC paragraph facts:** 100 sites = evenly spaced grid of 5x5-pixel boxes over the brain mask; ridge penalty 100 chosen on validation data from 1-10^4; small penalty pulling the command toward the median recorded closed-loop command; commands bounded between 0 and the largest command the rig delivered. Do NOT state timing/latency or quantization. Do NOT add a sentence about m4's interleaved K_p.
+- **Q11 Fig 4 analyses:** DROP the per-session slope description ("First, we regressed per-trial RMSE on each state..."). Describe the Fig 4D mixed model properly as the test of predictability (OL slope) and regularizability (CL slope) for every state (and attenuation). The motion "OL slope > CL slope in 11/11 sessions" in Results is an observation; at most a clause in Methods for the per-session count.
+- **Q12 Time constants:** Methods keeps only the method (tau definition, fit-window rule, bootstrap identifiability procedure). MOVE the per-mouse numbers (mode contributions 60-68%, Mouse 5a 6% sustained term, order-dependence 0.117 vs 0.106 s / 0.154 vs 0.114 s, bootstrap fractions 39%/72%/all/3%) into the Results timescale paragraph (results.tex ~80-82), concisely.
+- **Q14 FILLs:**
+  - a titers, b IACUC: keep FILL (author confirming with Anna).
+  - c AL_0051 different opsin/construct and its 594 nm wavelength: REMOVE the mention entirely; not addressed in the paper.
+  - d exposure/illumination power: cite Matveev2024; leave a FILL comment for exposure (author said "14 microseconds" -- to be confirmed, possibly ms) and power unknown. Do not print a value.
+  - e target coordinates: keep as is / FILL.
+  - f power calibration: once a month (state it, cite Matveev2024 for the procedure).
+  - g 1 mW per 3 V source: do not mention the calibration file; cite Matveev2024.
+  - h video frame rate/ROI/sync: syncing is in Matveev2024; cite it; drop the FILL.
+  - i code URL: leave a visible placeholder.
+  - j K_r route: least-squares fit to the impulse response, then manual per-session tuning.
+  - k integral clamp: integral term clamped at 1 V on the microcontroller.
+  - l sine-session gains: keep FILL.
+  - m RMSE vs RMS minimizer: confirmed identical; remove the CHECK comment.
+  - n counts provenance: regenerate/verify from saved outputs (paper-writing/STATS_TABLE.csv, data/fig2b_trial_counts.csv) and remove the FILL if consistent.
+  - o blinding: "Analyses were not blinded to condition; all analyses were automated and applied identically to every condition."
