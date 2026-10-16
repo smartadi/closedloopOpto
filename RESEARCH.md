@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Manuscript: Fig 6 sine paragraph + caption I–M (Closedloop draft 15df1e2)
+**Changed/Found:** `Closedloop_edit/results.tex` (draft only, not pushed). One paragraph replaces the ROOM RESERVED comment, and the Fig 6 caption now says A–H = AL_0033 and I–M = AL_0048, with I–M described. Numbers are from STATS_TABLE `6s_*`. The paragraph states the one-sided-laser ceiling and the caveats (one session, same model class, state-independent laser), and says the values use the controller's own signal and timing, so they differ from Fig 5. methods_rewrite.tex was not touched. latexmk builds clean.
+**Why:** User asked to fill the two reserved spots only.
+**Next:** User reviews `git diff main..draft`, assembles Figure6.pdf with I–M, and gives the go to ff main + push.
+
 ### 2026-10-16 — Fig 6 sine block in paper_stats_table
 **Changed/Found:** `paper-writing/paper_stats_table.m`: new "Figure 6 sine" block (ids `6s_*`) reading `mpc_direct_sine_AL_0048_0714_e1.mat`. For every summary row it adds median RMSE, lag and variance. For each baseline (CL, CL+p) it adds the MPC and perfect RMSE ratios, with the n-lower count in the claim, and the variance ratios. STATS_TABLE.csv now has 140 rows.
 **Why:** Manuscript numbers must come from the saved .mat via the table, not be typed by hand.
