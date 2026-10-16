@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-15 — Fig 3H/3I restored to the old trace layout (user)
+**Changed/Found:** `utils/plot_ratio_windows.m` — dropped the jittered point clouds; each session is again a grey trace across the 4 windows (markers aligned in columns), black = geometric-mean trace with 95% CI bars. Metrics unchanged (CL/OL, log y). Working copies in paper/images/figure3 re-exported; the figures_final panels were LOCKED (open in Illustrator) and NOT updated.
+**Why:** User: the old layout was cleaner, and the traces show session continuity.
+**Next:** close the two panels in Illustrator, re-run variance_mse.m Fr + G2r with PAPER_FINAL on, then re-place them.
+
 ### 2026-10-15 — Fig 3H/3I Satterthwaite df collapses for the full 0-3 s window (4 mice)
 **Changed/Found:** `utils/ratio_session_stats.m` — the primary LMM log(r) ~ 1 + (1|mouse) is fine for the panel windows (RMSE 0-1/1-3 s df 14, p 2.0e-5 / 1.1e-6; variance df 6.0 / 8.0, p 0.0039 / 5.4e-5), but for the stats-only full 0-3 s window the mouse variance sits off zero and Satterthwaite df collapses: RMSE 0-3 s t=-7.48, df 0.97, p=0.089 (t-test p=9.2e-8, 15/15 sessions < 1); variance 0-3 s df 0 -> p NaN (project fallback df=n-1 gives p=1.3e-5). Pre RMSE df also 2.7.
 **Why:** 4 mice, two of them single-session (AL_0048, AL_0051), so the mouse-variance estimate is at the boundary and Satterthwaite is unstable; it is not a data effect (early and late windows, which make up 0-3 s, are both highly significant).

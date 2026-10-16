@@ -3,21 +3,22 @@ function plot_ratio_windows(ax, ST, xlab)
 %   plot_ratio_windows(ax, ST, xlab)
 % ST   : 1 x W struct array from utils/ratio_session_stats.m (one per window, plotted left->right)
 % xlab : 1 x W cellstr of tick labels
-% Sessions = grey points (deterministic jitter); black = geometric mean +/- 95% CI (t-based,
-% session level); dashed line at 1 (no difference). Below 1 = closed loop better.
+% Sessions = grey traces across windows (same column per window, as the pre-2026-10-15 panels);
+% black = geometric mean +/- 95% CI (t-based, session level); dashed line at 1. Below 1 = CL better.
 nW = numel(ST);
+R  = [ST.r];                                              % nSess x nW, same session order
+G  = [ST.geo];  C = vertcat(ST.geoCI);                    % nW x 2
 hold(ax, 'on');
 yline(ax, 1, 'k--', 'LineWidth', 0.75, 'HandleVisibility', 'off');
-for w = 1:nW
-    r  = ST(w).r;  n = numel(r);
-    jx = w - 0.22 + 0.12*((0:n-1)'/max(n-1,1) - 0.5);    % fixed spread, left of the mean
-    [~, o] = sort(r);  jx(o) = jx;                        % spread ordered by value
-    plot(ax, jx, r, 'o', 'MarkerSize', 2, 'Color', [0.6 0.6 0.6], ...
-        'MarkerFaceColor', [0.6 0.6 0.6], 'LineStyle', 'none', 'HandleVisibility', 'off');
-    plot(ax, [w w], ST(w).geoCI, 'k-', 'LineWidth', 1.0, 'HandleVisibility', 'off');
-    plot(ax, w, ST(w).geo, 'ko', 'MarkerSize', 3.5, 'MarkerFaceColor', 'k', ...
-        'HandleVisibility', 'off');
+for s = 1:size(R, 1)                                      % one grey trace per session
+    plot(ax, 1:nW, R(s, :), '-o', 'Color', [0.6 0.6 0.6], 'MarkerSize', 2, ...
+        'MarkerFaceColor', [0.6 0.6 0.6], 'LineWidth', 0.6, 'HandleVisibility', 'off');
 end
+for w = 1:nW                                              % 95% CI on the geometric mean
+    plot(ax, [w w], C(w, :), 'k-', 'LineWidth', 1.0, 'HandleVisibility', 'off');
+end
+plot(ax, 1:nW, G, 'k-o', 'LineWidth', 1.5, 'MarkerSize', 3.5, 'MarkerFaceColor', 'k', ...
+    'HandleVisibility', 'off');
 hold(ax, 'off');
 set(ax, 'YScale', 'log');
 allr = vertcat(ST.r);  allc = vertcat(ST.geoCI);
