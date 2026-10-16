@@ -363,96 +363,11 @@ for i = 1:numel(adm)
     end
 end
 
-%% ---- COMBINED state panel: motion | rel-delta | abs-delta, shared y (user 2026-09-22) ----------
-% One Fig-2 panel with three subplots on a COMMON y-axis (only the leftmost carries the y-label +
-% ticks). Replaces the three separate imp_state_var_* panels in the row-2 layout. y-label split
-% over two lines so it fits the small panel. Star + session-count only (p in caption/text).
+%% ---- COMBINED state panel (Fig 2G): motion | rel-delta | abs-delta, shared y ------------------
+% Moved to imp_state_var_combined.m (2026-10-16) so 2G rebuilds from data/fig2g_state_stats.mat
+% without a data reload. Descriptive since 2026-10-16: no stars or k/N on the panel.
 if STVF_PAPER && strcmpi(STVF_UNITS,'norm')
-    mkOrder = {'MOT','DPr','DPa'};                       % motion | rel-delta | abs-delta
-    idx = arrayfun(@(t) find(strcmpi({R.tag}, t{1}), 1), mkOrder, 'UniformOutput', false);
-    idx = [idx{:}];
-    if numel(idx) >= 2
-        wC  = 7.0;                                     % panel G: 3 tiles sharing one y-axis;
-        % narrowed 11.2 -> 8.3 -> 7.0 cm as panels were added to the figure; only the leftmost
-        % tile carries y ticks, so the tiles lose nothing but width.
-        % model-swap grid joins the figure -- only the leftmost tile carries y ticks anyway.
-        % Canvas raised 3.4 -> 3.7 (user 2026-09-30: 'appears smaller than others').
-        % The tiled layout crops tighter than a single-axes panel, so an equal canvas
-        % lands ~0.4 cm shorter than A-E; the extra height equalises the CROPPED size.
-        fC  = paperFig(wC, PS.f2h * 1.12);
-        tl  = tiledlayout(fC, 1, numel(idx), 'TileSpacing','compact', 'Padding','compact');
-        axc = gobjects(numel(idx),1);
-        % Bootstrap a CI for any marker pass 1 skipped. Pass 1 only covers `adm` (the
-        % ADMISSIBLE markers), but this panel draws abs-delta too, and the old fallback
-        % `ciLo = ciHi = yv` silently drew a zero-width band -- the tile looked like it
-        % had no uncertainty at all. Collect the drawn values + CIs so the shared y-axis
-        % is set by what is on the page, not by the admissible subset (abs-delta's Q4 was
-        % landing outside it).
-        % SESSION-LEVEL PANEL (user 2026-10-10). Thin lines = each session's own quartile curve
-        % (normalized to that session's typical error); bold = their EQUAL-WEIGHT mean, not the
-        % trial-pooled curve, so sessions with more trials do not dominate and the picture counts
-        % the same units as the session-level test beside it. No CI band: with four sessions the
-        % individual curves ARE the uncertainty, and an SEM over n = 4 would say less.
-        if ~isfield(R,'sdRawNs')
-            error('[STVF] R.sdRawNs missing -- rerun imp_state_trialvar.m (2026-10-10 or later).');
-        end
-        if ~isfield(R,'sdPNs')
-            error('[STVF] R.sdPNs (stim-free control) missing -- rerun imp_state_trialvar.m (2026-10-12 or later).');
-        end
-        C_thin = [0.78 0.78 0.78];  C_mean = [0 0 0];   % user 2026-10-10: grey sessions, black mean
-        C_ctl  = [0.30 0.30 0.30];   % user 2026-10-12: stim-free control, dashed, open markers (sessions lightened to 0.78 so it stands out)
-        allC = [];
-        for m = 1:numel(idx)
-            v = R(idx(m)).sdRawNs;                 allC = [allC v(isfinite(v)).']; %#ok<AGROW>
-            v = mean(R(idx(m)).sdPNs, 1, 'omitnan'); allC = [allC v(isfinite(v))];  %#ok<AGROW>
-        end
-        yLimC = [floor(min(allC)*10)/10, ceil(max(allC)*10)/10];
-        for m = 1:numel(idx)
-            k = idx(m);  r = R(k);
-            xb = r.binMed(:).';  Ys = r.sdRawNs;  yv = mean(Ys, 1, 'omitnan');
-            ax = nexttile(tl);  hold(ax,'on');  axc(m) = ax;
-            hR = yline(ax, 1, ':', 'Color',[.55 .55 .55], 'LineWidth', PS.lw_zero); hR.HandleVisibility='off';
-            for ii = 1:size(Ys,1)
-                plot(ax, xb, Ys(ii,:), '-o', 'Color', C_thin, 'MarkerFaceColor', C_thin, ...
-                     'MarkerEdgeColor','none', 'MarkerSize', 1.6, 'LineWidth', PS.lw_trial*1.5, 'HandleVisibility','off');
-            end
-            yc = mean(r.sdPNs, 1, 'omitnan');   % equal-weight session mean of the stim-free control
-            hC = plot(ax, xb, yc, '--o', 'Color', C_ctl, 'MarkerFaceColor', 'w', 'MarkerEdgeColor', C_ctl, ...
-                      'LineWidth', PS.lw_mean*0.7, 'MarkerSize', 2.2);
-            hS = plot(ax, xb, yv, '-o', 'Color', C_mean, 'MarkerFaceColor', C_mean, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
-            if m == 2   % legend in the rel-delta tile: its lower half is empty
-                lg = legend(ax, [hS hC], {'Stim','No stim'}, 'Location','south', 'Box','off', ...
-                            'FontSize', PS.fs, 'FontWeight', PS.fw);
-                lg.ItemTokenSize = [6 6];
-            end
-            xticks(ax, 0.125:0.25:0.875);  xticklabels(ax, {'Q1','Q2','Q3','Q4'});
-            xtickangle(ax, 0);
-            xlim(ax, [0 1]);  ylim(ax, yLimC);
-            set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
-            xlabel(ax, r.name, 'FontSize', PS.fs, 'FontWeight', PS.fw);
-            [pI, nAg] = stvf_infer(r);   % per-session slopes when present (2026-10-12)
-            if     isnan(pI),  ss = '';
-            elseif pI < 1e-3,  ss = '***';
-            elseif pI < 1e-2,  ss = '**';
-            elseif pI < 0.05,  ss = '*';
-            else,              ss = 'n.s.'; end
-            text(ax, 0.5, 0.99, sprintf('%s  %d/%d', ss, nAg, r.nSess), 'Units','normalized', ...
-                 'HorizontalAlignment','center', 'VerticalAlignment','top', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Color',[0.12 0.12 0.12]);
-            if m > 1, set(ax, 'YTickLabel', [], 'YTick', [], 'YColor', 'none'); end   % one y-axis (leftmost) serves all three
-            fprintf('[STVF] 2G %-16s session-mean Q4/Q1 %.2f | per session %s | no-stim control Q4/Q1 %.2f\n', ...
-                    r.tag, yv(end)/yv(1), mat2str(Ys(:,end)./Ys(:,1), 2), yc(end)/yc(1));
-        end
-        linkaxes(axc, 'y');  ylim(axc(1), yLimC);
-        % user 2026-10-12: the old label ('Prediction error (session-normalized)') did not say
-        % it is a SPREAD or what it is relative to; 1 = a session-typical trial.
-        ylabel(axc(1), {'Trial-to-trial variability','(\times session typical)'}, 'FontSize', PS.fs, 'FontWeight', PS.fw);
-        title(tl, 'State dependence of stimulation response', 'FontSize', PS.fs, 'FontWeight', PS.fw);
-        pdfDir = fullfile(paperRoot,'images','figure2');
-        if ~exist(pdfDir,'dir'), mkdir(pdfDir); end
-        jnAxesAll(fC);   % rule-book font/axis pass
-        paperExport(fC, fullfile(pdfDir, 'imp_state_var_combined.pdf'));
-        fprintf('[STVF] combined state panel -> imp_state_var_combined.pdf (%s)\n', strjoin(mkOrder,' | '));
-    end
+    imp_state_var_combined(R, paperRoot);
 end
 
 %% ---- 2G REBUILD: per-session |dev| vs rel-delta, all sessions on one axis ----------------------

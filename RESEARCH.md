@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Manuscript: Fig 2G Results/caption/Methods made descriptive (Closedloop_edit draft)
+**Changed/Found:** `results.tex` — 2G Results now report per-session patterns with no p-values: motion drop at Q4 (0.57–0.71, 4/4), abs δ rising in 4/4 (2.35, 1.70–2.71), rel δ no consistent pattern, and response/control Q4/Q1 0.98 / 0.95 / 0.87 (Fig S2B). Caption: the star/fraction sentence is replaced by "Descriptive panel; … supporting tests in Table". The hand-off to Fig 4 is reworded to "we test this directly in closed loop". `methods_rewrite.tex` — the inference paragraph is now "This analysis is descriptive … supporting test in Table"; the "Per-quartile tests" paragraph is rewritten as "Per-session view"; the stats-section sentence is reworded; the "attribute an effect only when it exceeds its control" rule is dropped. Also fixed a pre-existing broken `\ref` (a CR had replaced the "\r" of `\ref`, so it rendered as "Fig. ef{…}G") at the old line 1162. `supplementary.tex` — the Fig S2 caption describes the descriptive annotations. `paper_stats_table.m` — new rows `2G_*_stimctrl` (response/control Q4/Q1, geometric mean + range). `paper_stats_tex.m` — Table 4 caption marks the slope tests as supporting; the footnote gives response/control ratios plus the supporting top-vs-rest p. Build clean, no undefined refs.
+**Why:** User: Fig 2 is groundwork, Fig 3 carries the paper's weight; keep the p-values only in the stats table "just in case".
+**Next:** user re-assembles Fig 2 (2G) and Fig S2 in Illustrator; then review draft, ff main + push on their go.
+
+### 2026-10-16 — Fig S2 panels re-exported with descriptive annotations
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — the panel notes no longer show "Q4/Q1–3 x, p=…" or "BF k/4". Columns A, B and D now show "Q4/Q1 GM (min–max)" via the new `local_rr`. The tests are still computed and written to `sq_stats.csv` for the stats table. Re-exported with PAPER_FINAL → 13 panels in `panels/supp_state_quartile/`. Found: response/control Q4/Q1 is motion 0.98 (0.93–1.06), rel δ 0.95 (0.90–1.02), abs δ 0.87 (0.66–0.99). The abs-δ value sits below 1 in all 4 sessions because Q1 response > control, so the response varies slightly LESS with abs δ than ongoing activity does. The Results now say this; it is consistent with a fixed stimulus effect diluting the state dependence.
+**Why:** Same descriptive decision; S2 must match the main figure. Q4/Q1 replaces Q4 vs mean(Q1–3), so the paper uses a single ratio definition.
+**Next:** user assembles S_state_quartile.pdf.
+
+### 2026-10-16 — Fig 2G re-exported as a descriptive panel (no stars, no k/N)
+**Changed/Found:** new `impulse-analysis/imp_state_var_combined.m` holds the Fig-2G combined-panel code (it used to be inline in `imp_state_trialvar_fig.m`, which now calls it). It reads `data/fig2g_state_stats.mat` when called with no arguments, so 2G rebuilds without a data reload. The star + "k/4" text is removed; the drawing is otherwise unchanged. Re-exported with PAPER_FINAL → `panels/figure2/imp_state_var_combined.pdf` (6.46 × 3.46 cm, same as before).
+**Why:** User: Fig 2 is groundwork, so it is reported descriptively; Fig 3 carries the paper's claims. The per-session slope test stays only in stats Table 4, marked as supporting.
+**Next:** user re-places 2G in Illustrator.
+
 ### 2026-10-16 — Legend still broken in the pull folder: fix had not been mirrored
 **Changed/Found:** `paper/figures_final/panels/supp_state_quartile/` — the panels were locked into MANIFEST and mirrored at 11:17. The legend fix was re-exported at 11:21 with PAPER_FINAL off, so only `paper/images/supplementary/state_quartile/` got the fixed legend and the Illustrator pull folder kept the swatch-less copy. Re-ran `imp_state_quartile_supp.m` with `global PAPER_FINAL; PAPER_FINAL = true`. All 13 panels re-mirrored (11:25), and the pull-folder `sq_legend.pdf` was verified by rendering: 12 paths, all 7 colours.
 **Why:** User verified in Illustrator (pull folder) that the legend was still text-only. My previous check had rendered the working copy, not the pull-folder copy.

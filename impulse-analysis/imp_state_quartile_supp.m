@@ -6,7 +6,9 @@
 %   ratio stim RMS / control RMS per quartile -> does the state effect exceed ongoing activity?
 %   dist  per-trial error distribution per quartile and session (box 25-75, whisker 10-90, median)
 %   var   VARIANCE of the per-trial error per quartile and session, 95% trial-bootstrap CI
-% Each panel carries its own test in a one-line annotation (stats per row, user request).
+% Each panel carries a descriptive note: Q4/Q1, geometric mean over sessions (min-max). Since
+% 2026-10-16 (user: Fig 2 is descriptive groundwork) no p-values are drawn; the session-level
+% tests are still computed and written to sq_stats.csv for the supporting stats table.
 %
 % Exploratory sibling (one big montage, more tests printed): imp_state_quartile_profile.m.
 % Reads  data/fig2g_state_stats.mat (STV_R from imp_state_trialvar.m). No data reload.
@@ -78,7 +80,7 @@ for iS = 1:numel(SQ_STATES)
          'MarkerSize', J.marker, 'MarkerFaceColor', C_stim);
     yline(ax, 1, ':', 'Color', [.6 .6 .6], 'LineWidth', J.lw_ref);
     local_ax(ax, nB, qlab, lab, 'Norm. RMS error');
-    local_note(ax, J, sprintf('Q4/Q1–3 %.2f, p=%s', exp(mean(q4)), local_p(pQ4)));
+    local_note(ax, J, local_rr(sd));   % descriptive (user 2026-10-16): no p on the panel
     jnAxes(ax);  jnExport(f, fullfile(outDir, sprintf('sq_%s_rms.pdf', tg)));  close(f);
 
     % ---- (2) stim / control -------------------------------------------------------------------
@@ -88,7 +90,7 @@ for iS = 1:numel(SQ_STATES)
          'MarkerSize', J.marker, 'MarkerFaceColor', 'k');
     yline(ax, 1, ':', 'Color', [.6 .6 .6], 'LineWidth', J.lw_ref);
     local_ax(ax, nB, qlab, lab, 'Stim / control RMS');
-    local_note(ax, J, sprintf('vs control %.2f, p=%s', exp(mean(q4c)), local_p(pQ4c)));
+    local_note(ax, J, local_rr(rr));
     jnAxes(ax);  jnExport(f, fullfile(outDir, sprintf('sq_%s_ratio.pdf', tg)));  close(f);
 
     % ---- (3) trial-error distributions ---------------------------------------------------------
@@ -118,7 +120,7 @@ for iS = 1:numel(SQ_STATES)
     plot(ax, 1:nB, mean(vv,1), '-', 'Color', 'k', 'LineWidth', J.lw_mean);
     local_ax(ax, nB, qlab, lab, 'Error variance');
     ylim(ax, [0 max(ylim(ax))]);
-    local_note(ax, J, {sprintf('BF %d/%d sessions', nBF, nS), sprintf('Q4/Q1–3 %.2f, p=%s', exp(mean(q4v)), local_p(pQ4v))});
+    local_note(ax, J, local_rr(vv));
     jnAxes(ax);  jnExport(f, fullfile(outDir, sprintf('sq_%s_var.pdf', tg)));  close(f);
 end
 
@@ -160,6 +162,13 @@ end
 function local_note(ax, J, str)
 text(ax, 0.02, 1.0, str, 'Units','normalized', 'VerticalAlignment','bottom', ...
      'FontSize', J.fs_annot, 'FontName', J.font, 'Color', [0.15 0.15 0.15], 'Interpreter','none');
+end
+
+function s = local_rr(M)
+% Descriptive panel note: Q4/Q1 per session (rows of M), geometric mean and min-max range.
+% Same summary as the Fig 2G Results text; the session tests stay in sq_stats.csv / Table 4.
+r = M(:,end) ./ M(:,1);  r = r(isfinite(r));
+s = sprintf('Q4/Q1 %.2f (%.2f–%.2f)', exp(mean(log(r))), min(r), max(r));
 end
 
 function s = local_p(p)
