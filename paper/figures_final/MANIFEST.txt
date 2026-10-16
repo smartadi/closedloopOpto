@@ -180,6 +180,25 @@ supplementary/supp_spatial_map_09.png
 # Source: impulse-analysis/imp_state_raster_supp.m (after imp_state_trialvar, STV_DV='l2').
 supplementary/supp_state_raster.png
 
+[supp_state_quartile]
+# Supplementary Fig "Single-trial variability by state quartile" (LaTeX label fig:state_quartile),
+# locked 2026-10-16 (user: cite it from Fig 2G and blend it into the Results). Rows = motion,
+# rel delta, abs delta; columns A-D = rms, ratio (stim/control), dist, var. 3.6 x 2.8 cm tiles.
+# Source: impulse-analysis/imp_state_quartile_supp.m (reads data/fig2g_state_stats.mat).
+supplementary/state_quartile/sq_mot_rms.pdf
+supplementary/state_quartile/sq_mot_ratio.pdf
+supplementary/state_quartile/sq_mot_dist.pdf
+supplementary/state_quartile/sq_mot_var.pdf
+supplementary/state_quartile/sq_dpr_rms.pdf
+supplementary/state_quartile/sq_dpr_ratio.pdf
+supplementary/state_quartile/sq_dpr_dist.pdf
+supplementary/state_quartile/sq_dpr_var.pdf
+supplementary/state_quartile/sq_dpa_rms.pdf
+supplementary/state_quartile/sq_dpa_ratio.pdf
+supplementary/state_quartile/sq_dpa_dist.pdf
+supplementary/state_quartile/sq_dpa_var.pdf
+supplementary/state_quartile/sq_legend.pdf
+
 [supp_tuning]
 # S3 = controller gain tuning. Source: controller-tuning/tune_supp_panels.m.
 # Run load_grid.m first, then that script with PAPER_FINAL on.

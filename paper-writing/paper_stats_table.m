@@ -29,8 +29,15 @@ else
 end
 for t = {'MOT','DPr','DPa'}
     r = R(strcmp({R.tag},t{1}));
-    add(['2G_' t{1} '_ratio'],'2G',['Q4/Q1 ' spS ' ratio, ' lab.(t{1})],r.ratio,'ratio',r.ci, ...
-        'hierarchical bootstrap','','',NaN,NaN,'',r.n,'trials','imp_state_trialvar');
+    % Q4/Q1 ratio (user 2026-10-16): one ratio per session from the drawn per-session curves
+    % (sdRawNs), summarised as their geometric mean with the per-session range. Replaces the
+    % pooled-trial ratio + hierarchical-bootstrap CI: 4 sessions give only 35 session draws,
+    % and the pooled ratio did not match the panel's equal-weight session mean (motion 0.64 vs 0.58).
+    rs = r.sdRawNs(:,end) ./ r.sdRawNs(:,1);
+    add(['2G_' t{1} '_ratio'],'2G',sprintf('Q4/Q1 %s ratio, %s (%d/%d sessions on the side of 1 of the mean)', ...
+        spS, lab.(t{1}), nnz(sign(log(rs)) == sign(mean(log(rs)))), numel(rs)), ...
+        exp(mean(log(rs))),'ratio',[min(rs) max(rs)], ...
+        'geometric mean of per-session ratios (range = min-max)','','',NaN,NaN,'',numel(rs),'sessions','imp_state_trialvar');
     % PRIMARY (2026-10-12, user): per-session slopes, one-sample t across sessions. The old
     % intercept-only LMM is anti-conservative (trial-based SE) and is no longer tabulated.
     sl = r.SL;
@@ -42,9 +49,29 @@ for t = {'MOT','DPr','DPa'}
         'Spearman (no p: trials not independent)','','',NaN,NaN,'',r.n,'trials','imp_state_trialvar');
     add(['2G_' t{1} '_ctrl'],'2G',['stimulus-free control (descriptive), ' lab.(t{1})],r.rhoP,'rho',[NaN NaN], ...
         'Spearman (no p: trials not independent)','','',NaN,NaN,'',r.n,'trials','imp_state_trialvar');
-    if isfield(r,'ratioP')
-        add(['2G_' t{1} '_ctrlratio'],'2G',['stimulus-free control Q4/Q1 ' spS ' ratio, ' lab.(t{1})],r.ratioP,'ratio',[NaN NaN], ...
-            'point estimate','','',NaN,NaN,'',r.n,'trials','imp_state_trialvar');
+    if isfield(r,'sdPNs')
+        rp = r.sdPNs(:,end) ./ r.sdPNs(:,1);
+        add(['2G_' t{1} '_ctrlratio'],'2G',['stimulus-free control Q4/Q1 ' spS ' ratio, ' lab.(t{1})], ...
+            exp(mean(log(rp))),'ratio',[min(rp) max(rp)], ...
+            'geometric mean of per-session ratios (range = min-max)','','',NaN,NaN,'',numel(rp),'sessions','imp_state_trialvar');
+    end
+end
+% Supplementary state-quartile figure (imp_state_quartile_supp.m -> sq_stats.csv). Session-level
+% tests on per-session quartile curves: Q4 vs mean(Q1-3), and the same contrast on the
+% response/control ratio ("beyond control"), each a one-sample t on 4 session log ratios.
+sqf = fullfile(root,'paper','images','supplementary','state_quartile','sq_stats.csv');
+if exist(sqf,'file')
+    SQ = readtable(sqf, 'TextType','string');
+    sqTag = struct('MOT',"Motion",'DPr',"Relative δ power",'DPa',"Absolute δ power");
+    for t = {'MOT','DPr','DPa'}
+        q = SQ(SQ.state == sqTag.(t{1}), :);
+        if isempty(q), continue; end
+        add(['2G_' t{1} '_q4'],'S-SQ',['Q4 / mean(Q1-3) RMS, per-session curves, ' lab.(t{1})], ...
+            q.rmsQ4,'ratio',[NaN NaN],'one-sample t on per-session log ratios','','',3,q.p_rmsQ4,'2', ...
+            4,'sessions','imp_state_quartile_supp');
+        add(['2G_' t{1} '_beyondctrl'],'S-SQ',['response/control RMS, Q4 vs mean(Q1-3), ' lab.(t{1})], ...
+            q.beyondCtrl,'ratio',[NaN NaN],'one-sample t on per-session log ratios','','',3,q.p_beyondCtrl,'2', ...
+            4,'sessions','imp_state_quartile_supp');
     end
 end
 if isfield(R,'ctlRespSD')
