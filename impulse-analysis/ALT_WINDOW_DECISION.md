@@ -1,6 +1,6 @@
-# Decision pending: Fig 2 impulse TF window (0–0.5 s vs −0.5 to +1.0 s)
+# DECIDED: Fig 2 impulse TF window stays 0–0.5 s (alternative −0.5 to +1.0 s rejected)
 
-*Written 2026-10-15. Status: **OPEN**, waiting on Aditya. Nothing in Fig 2 has changed. Current recommendation (after the OL step check, below): keep 0–0.5 s.*
+*Written 2026-10-15. **Status: DECIDED 2026-10-15 (Aditya): keep the 0–0.5 s window, change nothing in Fig 2.** Deciding evidence: the open-loop step check below (the alternative fits predict 96–110 % relaxation of sustained suppression within 1 s; measured 7 %). Everything below is kept as the record.*
 
 ## The question
 Should the Fig 2 TF fits (2C/2D/2F, model swap, tau forest) move from the current

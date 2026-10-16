@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-15 — DECIDED: Fig 2 impulse TF window stays 0–0.5 s; −0.5..+1.0 s alternative not adopted
+**Changed/Found:** No code, cache, panel or manuscript change. `impulse-analysis/ALT_WINDOW_DECISION.md` marked DECIDED. `data/imp_tf_fits.mat`, the Fig 2 C–F producers and finals stay as they are. The alternative cache (`data/imp_tf_fits_win_m0p5_1p0.mat`), the engine knobs and the exploratory scripts (`imp_tf_altwin*.m`, `imp_tf_modes.m`, `imp_tf_ol_stepcheck.m`) stay as the record.
+**Why:** User: "keep the 0-0.5 s window dont change anything". The longer window's main gain is a rebound mode, and the open-loop 3 s step check showed that mode predicts sustained input wrongly (96–110 % relaxation by 1 s vs 7 % measured). The rebound is an offset effect, so it is described empirically, not as a plant mode.
+**Next:** none for the window. The Results sentences drafted in the decision note (dip energy share; rebound as an offset effect with OL relaxation numbers) are optional text for the user.
+
 ### 2026-10-15 — Manuscript language/flow pass, Results Figs 1-4 (Closedloop_edit draft 68250de)
 **Changed/Found:** `Closedloop_edit/results.tex`, `methods_rewrite.tex` after ff-pulling the user's Overleaf push (52e2591). Fig 2: section opener, split-half CV wording (fit and score on trial averages of random halves), caption C/D CV detail. Fig 2G Methods: "L2 error" -> "trial-to-trial variability", "stimulus-free control" -> "stimulus-free window". Fig 3: H/I sentences now state the ratio direction (OL/CL, >1 = CL better) and quote the during-stimulation medians (RMSE 1.14/1.39, variance 1.60/1.87) before pre/post; Methods sentence explains why model % (24/41%) differs from the window-variance ratio. Fig 4: section rewritten (state definitions merged, decomposition described per caption C — rel and abs power in separate models, abs 0.07 when both in; predictability/regularizability sign convention); `tab:fig4_state_stats` moved to Methods after "Multiple comparisons". Every Fig 3/Fig 4 number checked against STATS_TABLE and fig3h_*_signrank.mat — all match. Build clean, 41 pp. Committed on draft, not pushed.
 **Why:** User-led language and flow review for concision, correct numbers and consistent single-session vs pooled panel references.
