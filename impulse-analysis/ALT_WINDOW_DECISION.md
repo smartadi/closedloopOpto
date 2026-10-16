@@ -57,6 +57,42 @@ pole pair; "rebound" = slowest mode.
   to set against Fig 2D's 0.86.
 - Switching changes every Fig 2C–F number and the Methods text (window, reference, selection rule).
 
+## Added 2026-10-15: how much does each mode matter? (`imp_tf_modes.m`)
+Both fit sets, partial-fraction decomposed. Dip = fastest complex pair; offset = tau > 10 s (old M5a,
+old M3), excluded; rebound = slowest remaining mode. Figures: `alt_window/modes_overlay.png`, `modes_step.png`.
+
+| | M5a | M5b | M1 | M3 |
+|---|---|---|---|---|
+| Dip τ / freq, current → alt | 0.106 s 2.4 Hz → 0.073 s 1.8 Hz | 0.112 s 4.1 Hz → 0.093 s 2.1 Hz | 0.114 s 4.2 Hz → 0.095 s 3.8 Hz | 0.144 s 3.2 Hz → 0.100 s 3.5 Hz |
+| Rebound τ [CI], alt | 1.51 [0.18–0.99] | 0.68 [0.15–0.96] | 0.32 [0.17–0.82] | 0.18 [0.15–0.97] |
+| Modal energy dip/rebound, current → alt | 100/– → 76/20 | 11/89 → 65/35 | 26/74 → 9/25 | 7/33 → 33/67 |
+| Cancellation index, current → alt | 1.0 → 2.1 | 1.0 → 1.0 | 1.7 → 8.9 | 7.1 → 2.4 |
+| **Measured** energy in 0–0.25 s (of 0–1 s), pre-mean / onset ref | 80 / 72% | 65 / 39% | 76 / 67% | 88 / 79% |
+| **Measured** rebound peak, % of dip trough, pre-mean / onset ref | 18 / 6% | 45 / 68% | 29 / 35% | 28 / 35% |
+| **Data-predicted** step: relaxation by 1 s | 0% (still deepening) | 111% | 117% | 59% |
+| Model step relaxation by 1 s, current / alt | 12 / 0% | 66 / 118% | 76 / 116% | 130 / 59% |
+| Model 3 s step: relaxation / offset overshoot, alt | 23 / 23% | 93 / 94% | 132 / 132% | 58 / 58% |
+
+**What it says:**
+1. **Per-mode energy shares are not usable.** Modes cancel (DC shares up to ±1800%,
+   cancellation index up to 8.9) and the split flips between fit sets (M1 dip 26% → 9%, M3 7% → 33%).
+   For "dominated by the dip", use the model-free number: 65–88% (median 78%) of h(t) energy in the first 250 ms.
+2. **The "slow drift removed by the integral term" claim is not what the impulse data predict.**
+   The rebound is small in amplitude (18–45%) but long, so its area offsets most of the dip's area.
+   Under LTI, a sustained input's suppression peaks at ~0.2 s and relaxes 59–117% within 1 s in
+   3 of 4 sessions (M5a is the exception). That is fast relaxation, not gradual drift. The alt models
+   reproduce this data-derived number; the current models do not.
+3. **But the closed loop holds a sustained −5% for 3 s,** which needs non-zero plant DC gain. So the
+   impulse data probably do not constrain sustained behaviour: the rebound may be an offset
+   (post-inhibitory) effect rather than a linear mode, or the DC gain is simply not identifiable from
+   a ≤1 s impulse window. **Check before writing the sentence:** compare open-loop sustained-stim trial
+   averages (Fig 3 OL trials) with the impulse-model step prediction.
+4. **Dip τ moves ~20% shorter with the longer window** (median 0.113 → 0.094 s), and the dip frequency
+   drops in M5a/M5b (4.1 → 2.1 Hz). The old "2.4–4.2 Hz pair, τ ~0.11 s" partly absorbed the rebound.
+   Consistent across sessions within each set, not invariant to the window.
+5. **Rebound τ is still not identified** (CI upper ends at the 1 s window edge; 42/50% of draws
+   beyond the window in M5a/M5b).
+
 ## If switching, still to do
 1. Add a `preData_s` / `refMode` path to `imp_tf_cv` (+ `imp_tf_cv_session`) and rerun CV.
 2. Decide what 2F shows for the rebound: drop it, show censored, or report dip only.
