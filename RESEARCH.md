@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-15 — Manuscript Figure 3 composite updated with the new 3H/3I
+**Changed/Found:** `Closedloop_edit/images/Figure3.pdf` replaced by the user's Illustrator re-export (`paper/figures_final/Figure3.pdf`, 23:24) showing the CL/OL log-axis 3H/3I; latexmk builds clean (0 errors). Committed on draft (dbf92a9), not pushed.
+**Why:** User asked to update the figure PDF in the paper.
+**Next:** the Fig 3 caption/Results/Methods still describe OL/CL ratios with "above one" — they now contradict the figure until the text rewrite; push draft/main only on the user's go.
+
 ### 2026-10-15 — Fig 3H/3I final panels re-exported (trace layout)
 **Changed/Found:** `controller-analysis/variance_mse.m` Fr + G2r re-run with PAPER_FINAL on, after the user closed the locked panels in Illustrator. figures_final/panels/figure3/MSE_ratio_by_window.pdf (3.56 x 2.65 cm) and variance_ratio_by_window.pdf (3.67 x 2.65 cm) now show the trace layout; stats unchanged.
 **Why:** The previous export skipped both panels because the PDFs were locked.
