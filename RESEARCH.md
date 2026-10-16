@@ -16,6 +16,22 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — State rasters: onsets aligned; the "no effect" look is the error-normalised colour scale
+**Changed/Found:** Checked `impulse-analysis/imp_state_raster_supp.m` (Fig S2 pooled raster strips) after loading `load_experiments` and `imp_state_trialvar` (4 sessions, 1516 trials).
+- **Alignment is correct.** In every session and amplitude the trial-average trough is at 86–114 ms with no pre-onset dip; `dfImp` is referenced to the onset frame (that column is exactly 0).
+  - Minor bias: the onset frame already carries the start of the response. The mean of frames −3..−1 sits 0.1–0.4 %dF/F above it at strong amplitudes, so referencing to that frame trims a few tenths of a percent from the response.
+- **Cause of the weak look.** The Activity column divides each trial by its session's typical L2 single-trial error, k = 2.82 / 2.68 / 4.19 / 2.93 %dF/F (AL_0041 e1, AL_0041 e2, AL_0033, AL_0048).
+  - That error is as large as the evoked response: mean troughs are −0.5…−1.7 (AL_0041), −0.9…−4.2 (AL_0033) and −0.5…−2.7 (AL_0048).
+  - So the normalised trough is −0.1…−1.0 on a ±3 colour scale, i.e. near mid-grey.
+- **Contributing factors:**
+  - Near-subthreshold amplitudes are pooled in (AL_0041 0.7: −0.13; AL_0033 0.5: −0.05; AL_0048 0.4: −0.54).
+  - The dip is only ~150 ms wide, a 4–5-frame band at the left edge of the 0–0.49 s window.
+- **Diagnostics** (gitignored): `paper/images/supplementary/_diag_raster_by_amp.png` (raw %, sorted by amplitude, per-amp means) and `_diag_raster_scaling.png` (current vs raw ±4 % vs trough-normalised).
+  - Raw %dF/F at ±4 shows a clear 50–200 ms band in every motion quartile.
+  - Normalising by each amplitude's mean trough blows up on the subthreshold amplitudes: rejected.
+**Why:** User: the rasters barely show the stimulation effect that we know exists; asked to check onset alignment and amplitude normalisation.
+**Next:** Proposed to the user, not yet applied: Activity column in raw %dF/F with its own scale (±4 %), window −0.2..0.5 s so the onset edge shows. Deviation and control columns keep the session-error units, since comparing them is their purpose. Optionally drop the subthreshold lowest amplitude from the display only.
+
 ### 2026-10-16 — Fig S2 rasters: grayscale, single time label, one-line 5 pt titles
 **Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` — the colour map is now `gray(256)`: black = negative, mid-grey = 0, white = positive (was purple-white-orange). This also covers the colour key. "Time (s)" now appears once, under the middle column of the abs-δ (bottom) strip. Column titles on the motion strip are one line at 5 pt bold ("Activity", "Deviation", "No-stim ctrl"). They are drawn with `text()` because jnAxes/jnAxesAll force `title()` back to 7 pt. Re-ran load_experiments → imp_state_trialvar (STV_PLOT off) → raster with PAPER_FINAL. All 6 raster-strip files were re-mirrored.
 **Why:** User: "grayscale colorscheme"; time axis "only the one on abs delta at the bottom really needs it ... mentioned only once"; motion titles "too big ... one row".
