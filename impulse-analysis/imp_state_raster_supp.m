@@ -124,6 +124,97 @@ out = fullfile(RS_OUT, ['supp_state_raster' sfx '.png']);
 paperExport(f, out, 300);   % 300-dpi PNG (heatmap rule); mirrors to figures_final if in MANIFEST
 fprintf('[RS] %s (%d trials, clim +/-%g, smooth %d) -> %s\n', labS, nnz(keep), RS_CLIM, RS_SMOOTH, out);
 
+%% ---- Fig S2 ROW STRIPS: one vector PDF per state, to sit right of the quartile tiles ----------
+% (user 2026-10-16: "figure 2 S2 should contain this too ... fit the pdf version of this png to the
+% right with a demarcation saying pooled trials".) Each strip = the 3 heatmaps of one state, at the
+% S2 tile height with the SAME axes band (bottom 0.27*H, height 0.55*H) as imp_state_quartile_supp,
+% so heatmaps line up with the quartile tiles row by row. Pooled trials (all sessions).
+% HEATMAP FIDELITY: exportgraphics' vector PDF resamples every image to the on-screen pixel size
+% (1516 trials -> a 125 x 106 JPEG, tested 2026-10-16). So each heatmap is ALSO written as a
+% native PNG (one pixel per trial x sample, colour-mapped, lossless) and utils/pdf_swap_images.py
+% swaps it into the PDF in place -- vector axes/text, exact placement, every trial kept.
+if ~exist('RS_ROWS','var') || isempty(RS_ROWS), RS_ROWS = true; end
+if RS_ROWS && isempty(RS_SESS)
+    J   = jnStyle();
+    if ~exist('SQ_H','var') || isempty(SQ_H), SQ_H = 2.4; end
+    rDir = fullfile(RS_OUT, 'state_quartile');                        % next to the S2 quartile tiles
+    global PAPER_FINAL %#ok<GVMIS,TLEV>
+    nDir = fullfile(rDir, '_native');  if ~exist(nDir,'dir'), mkdir(nDir); end
+    tagF = {'mot','dpr','dpa'};
+    colS = {'Activity', 'Deviation', {'No-stim','control'}};   % 2-line title: fits a 1.25 cm column
+    W = 4.6;  H = SQ_H;  pw = 1.25;  gp = 0.12;  x0 = 0.45;   % 4 x 2.9 tiles + 4.6 strip fits 17.6 cm         % cm
+    pyBin = 'python';
+    swp = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'utils', 'pdf_swap_images.py');
+    for k = 1:3
+        st  = T.([tags{k} 'z']);
+        idx = find(keep & isfinite(st));
+        [stS, o] = sort(st(idx));  idx = idx(o);  nT = numel(idx);
+        qEdge = arrayfun(@(p) find(stS >= quantile(stS,p), 1), [0.25 0.5 0.75]);
+        qMid  = [1, qEdge, nT+1];  qMid = (qMid(1:end-1) + qMid(2:end))/2;
+        panels = {X(idx,:), D(idx,:), C(idx,:)};  tx = {tA, tL, tL};
+        f = jnFig(W, H);  pngs = cell(1,3);
+        for j = 1:3
+            M = panels{j};
+            if RS_SMOOTH > 1, M = movmean(M, RS_SMOOTH, 1, 'omitnan'); end
+            ax = axes(f, 'Units','centimeters', 'Position', [x0+(j-1)*(pw+gp), 0.27*H, pw, 0.55*H]);
+            imagesc(ax, tx{j}, 1:nT, M);  colormap(ax, cm);  clim(ax, [-1 1]*RS_CLIM);  hold(ax,'on');
+            for q = qEdge, plot(ax, tx{j}([1 end]) + [-0.5 0.5]*mean(diff(tx{j})), [q q], '-', ...
+                                'Color', [0 0 0], 'LineWidth', J.lw_ind); end
+            set(ax, 'YDir','normal', 'Layer','top', 'YTick', qMid, 'YTickLabel', {'Q1','Q2','Q3','Q4'}, ...
+                    'XTick', [0 0.4], 'XTickLabelRotation', 0);   % 2 ticks: 3 rotate at 1.25 cm
+            if j > 1, set(ax, 'YTickLabel', []); end
+            if k == 1, title(ax, colS{j}); end   % column titles once, on the top row
+            xlabel(ax, 'Time (s)');
+            jnAxes(ax);  set(ax, 'TickLength', [0.03 0.03]);
+            % native heatmap: row 1 = lowest state at the BOTTOM (YDir normal) -> top PNG row = last trial
+            ci  = round((min(max(M, -RS_CLIM), RS_CLIM) + RS_CLIM) / (2*RS_CLIM) * (size(cm,1)-1)) + 1;
+            ci(~isfinite(M)) = round(size(cm,1)/2);
+            rgb = ind2rgb(flipud(ci), cm);
+            pngs{j} = fullfile(nDir, sprintf('sq_%s_raster_%d.png', tagF{k}, j));
+            imwrite(rgb, pngs{j});
+        end
+        pdfOut = fullfile(rDir, sprintf('sq_%s_raster.pdf', tagF{k}));
+        jnExport(f, pdfOut);  close(f);
+        targets = {pdfOut};
+        fin = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'paper','figures_final','panels', ...
+                       'supp_state_quartile', sprintf('sq_%s_raster.pdf', tagF{k}));
+        if ~isempty(PAPER_FINAL) && PAPER_FINAL && exist(fin,'file'), targets{end+1} = fin; end %#ok<AGROW>
+        for t = 1:numel(targets)
+            cmd = sprintf('"%s" -I "%s" "%s" %s', pyBin, swp, targets{t}, strjoin(strcat('"', pngs, '"'), ' '));
+            [rc, msg] = system(cmd);  fprintf('%s', msg);
+            assert(rc == 0, '[RS] image swap failed for %s', targets{t});
+        end
+    end
+
+    % ---- colour key (shared, place once) --------------------------------------------------------
+    f = jnFig(3.0, 0.9);
+    axK = axes(f, 'Units','centimeters', 'Position', [0.3 0.75 2.4 0.001], 'Visible','off');
+    colormap(axK, cm);  clim(axK, [-1 1]*RS_CLIM);
+    cb = colorbar(axK, 'Location','south', 'Units','centimeters');
+    cb.Position = [0.3 0.55 2.4 0.12];
+    cb.Ticks = [-RS_CLIM 0 RS_CLIM];  cb.TickLabels = {sprintf('-%g',RS_CLIM), '0', sprintf('+%g',RS_CLIM)};
+    cb.TickLength = 0;  cb.Box = 'off';  cb.AxisLocation = 'in';
+    cb.Label.String = 'ΔF/F (× session typical error)';  cb.Label.Interpreter = 'none';
+    set(cb, 'FontSize', J.fs_tick, 'FontName', J.font);  cb.Label.FontSize = J.fs_tick;
+    jnExport(f, fullfile(rDir, 'sq_raster_cbar.pdf'));  close(f);
+
+    % ---- "Pooled trials" demarcation: header over the raster strip + vertical separator ---------
+    f = jnFig(W, 0.6);
+    ax = axes(f, 'Units','normalized', 'Position', [0 0 1 1]);  hold(ax,'on');  axis(ax, [0 W 0 0.6]);  axis(ax,'off');
+    plot(ax, [x0 W-0.1], [0.12 0.12], '-', 'Color', [0.35 0.35 0.35], 'LineWidth', J.lw_ref);
+    plot(ax, [x0 x0], [0.12 0.22], '-', 'Color', [0.35 0.35 0.35], 'LineWidth', J.lw_ref);
+    plot(ax, [W-0.1 W-0.1], [0.12 0.22], '-', 'Color', [0.35 0.35 0.35], 'LineWidth', J.lw_ref);
+    text(ax, (x0+W-0.1)/2, 0.3, sprintf('Pooled trials (n = %d, all sessions)', nnz(keep)), ...
+         'HorizontalAlignment','center', 'VerticalAlignment','bottom', 'FontName', J.font, ...
+         'FontSize', J.fs_label, 'FontWeight', 'bold', 'Interpreter','none');
+    jnExport(f, fullfile(rDir, 'sq_pooled_header.pdf'));  close(f);
+
+    f = jnFig(0.3, 3*SQ_H + 1.2);            % hairline separator, full S2 height; trim in Illustrator
+    ax = axes(f, 'Units','normalized', 'Position', [0 0 1 1]);  axis(ax, [0 1 0 1]);  axis(ax,'off');  hold(ax,'on');
+    plot(ax, [0.5 0.5], [0.01 0.99], '-', 'Color', [0.55 0.55 0.55], 'LineWidth', J.lw_ref);
+    jnExport(f, fullfile(rDir, 'sq_divider.pdf'));  close(f);
+end
+
 function cm = local_puor(n)
 % Diverging purple (negative) - white - orange (positive).
 a = [0.33 0.15 0.53];  w = [1 1 1];  b = [0.70 0.35 0.02];

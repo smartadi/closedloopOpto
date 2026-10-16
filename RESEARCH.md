@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 gains the pooled-trial raster strip (right of the quartile tiles)
+**Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` — new `RS_ROWS` block (default on). Writes one vector strip per state, `sq_<mot|dpr|dpa>_raster.pdf` (activity | deviation | no-stim control, 1.25 cm columns, 4.6 cm strip). Uses the same axes band as the S2 tiles (bottom 0.27·H, height 0.55·H) so heatmaps line up row by row. Column titles appear on the top row only, x ticks are 0/0.4, and "No-stim control" is split over 2 lines. Also writes `sq_raster_cbar.pdf`, `sq_pooled_header.pdf` ("Pooled trials (n = 1516, all sessions)" with a bracket) and `sq_divider.pdf` (vertical separator). All are in MANIFEST [supp_state_quartile] and mirrored to figures_final.
+**Why:** User: Fig S2 should also contain the state-sorted raster (supp_state_raster.png), as a PDF to the right with a "pooled trials" demarcation.
+**Next:** User assembles in Illustrator. The standalone `supplementary/supp_state_raster.png` is still listed under MANIFEST [supplementary]; retire it if S2 now carries the raster.
+
+### 2026-10-16 — exportgraphics vector PDF destroys heatmaps; fixed by swapping in native PNGs
+**Changed/Found:** new `utils/pdf_swap_images.py` (PyMuPDF). exportgraphics(...,'vector') re-encoded the 1516 × 18 raster as a **125 × 106 JPEG** (`print -vector` gave 68 × 106). Most trials were averaged away and the colours were JPEG-smeared. The producer now also writes each heatmap as a native colour-mapped PNG (`_native/`, one pixel per trial × sample, flipud for YDir normal) and swaps it into the PDF's image XObject, in both the images copy and the figures_final copy. Verified: pull-folder PDFs hold 18 × 1516 Flate (lossless) images, 3 placed per strip, and the render shows the correct panel order (activity onset dip in col 1 only). Gotchas: Qt nests the images in Form XObjects (get_image_info xref = 0), so xrefs are taken in document order; incremental save is refused, so the script does a full rewrite plus os.replace. MATLAB `system` is shadowed by a Rigbox mock that warns but still calls the builtin.
+**Why:** The user wanted a PDF version of the raster; a straight vector export would have shipped an unreadable heatmap.
+**Next:** Reuse pdf_swap_images.py for any other heatmap panel that has to be a PDF (the supp_spatial maps went PNG for this same reason).
+
+### 2026-10-16 — Fig S2 quartile tiles shrunk to 2.7 × 2.4 cm, 2-line notes
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — SQ_W/H 3.6×2.8 → 2.7×2.4 cm. Tile content is ~3.05 cm because the y-label overhangs the canvas; jnExport's tight crop keeps it, nothing clips. The descriptive note (local_rr) now takes 2 lines ("Q4/Q1 x" / "range a–b"). Full S2 row = 4 tiles + divider + raster strip ≈ 17.9 cm with loose preview gaps, so it fits 17.6 cm once tightened.
+**Why:** User: make the existing panels smaller to make room for the raster strip.
+**Next:** none
+
 ### 2026-10-16 — Closedloop main fast-forwarded to bece569 and pushed (Fig 2 descriptive + Fig S2)
 **Changed/Found:** User re-exported `FIgure2_supp.pdf` with the corrected legend (Mouse 5a/5b/1/3, checked by rendering). Copied to `images/supplementary/S_state_quartile.pdf`; the build is clean. main ff'd from draft: b2212d3 (Statistical tables section), 7c31560, 7e54b60, 1320962, bece569. Pushed main + draft to GitHub smartadi/Closedloop.
 **Why:** User: "update and push" after re-assembling Fig 2 and Fig S2.

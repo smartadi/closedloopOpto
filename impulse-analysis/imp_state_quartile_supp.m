@@ -32,8 +32,8 @@ outDir = fullfile(root,'paper','images','supplementary','state_quartile');
 if ~exist(outDir,'dir'), mkdir(outDir); end
 
 if ~exist('SQ_STATES','var') || isempty(SQ_STATES), SQ_STATES = {'MOT','DPr','DPa'}; end
-if ~exist('SQ_W','var')      || isempty(SQ_W),      SQ_W = 3.6;  end   % panel width  (cm); 3.6 x 2.8 leaves room for row gaps (user 2026-10-15)
-if ~exist('SQ_H','var')      || isempty(SQ_H),      SQ_H = 2.8;  end   % panel height (cm)
+if ~exist('SQ_W','var')      || isempty(SQ_W),      SQ_W = 2.7;  end   % panel width  (cm); 2.7 x 2.4 (content ~3.05 cm with the y-label overhang) makes room for the pooled-trial raster strip at right (user 2026-10-16; was 3.6 x 2.8)
+if ~exist('SQ_H','var')      || isempty(SQ_H),      SQ_H = 2.4;  end   % panel height (cm)
 SESS_LAB = {'Mouse 5a','Mouse 5b','Mouse 1','Mouse 3'};
 STATE_LAB = struct('MOT','Motion','PVv','Pre-trial variance','DPa','Absolute δ power', ...
                    'DPr','Relative δ power');   % unicode + Interpreter none: tex bold spaces words apart
@@ -169,7 +169,7 @@ function s = local_rr(M)
 % Descriptive panel note: Q4/Q1 per session (rows of M), geometric mean and min-max range.
 % Same summary as the Fig 2G Results text; the session tests stay in sq_stats.csv / Table 4.
 r = M(:,end) ./ M(:,1);  r = r(isfinite(r));
-s = sprintf('Q4/Q1 %.2f (%.2f–%.2f)', exp(mean(log(r))), min(r), max(r));
+s = {sprintf('Q4/Q1 %.2f', exp(mean(log(r)))), sprintf('range %.2f–%.2f', min(r), max(r))};   % 2 lines: fits a 2.9 cm tile
 end
 
 function s = local_p(p)
