@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — PROTOTYPE supp figure: how the VARX is built and how well it predicts
+**Changed/Found:** new `controller-analysis/mpc_varx_supp.py` (compute), `ctrl_mpc_varx_supp_panels.m` (panels → `paper/images/supp_varx/varx_*.png`, draft layout `_draft_layout_supp_varx.png`) and `varx_construction_diagram.tex` (TikZ, panel B). Static session AL_0033 0226 e2. It is the same model as the MPC (L 10, Q 35, ridge 100) with the held-out OL protocol of `mpc_varx_embed`, and it reproduces Fig 6G's R² exactly (0.952 … 0.046).
+- New ablation, site + laser only (no cortical spots): R² 0.639 vs 0.687 at 86 ms, 0.364 vs 0.418 at 200 ms, 0.135 vs 0.218 at 486 ms. The 100 spots carry real predictive skill.
+- Learned laser response vs the measured OL trial average: R² 0.98 (peak −4.82 vs −4.89 %).
+- One-step residuals are near white: ACF lag 1 −0.08 and lag 5 0.00, vs 0.95 / 0.65 for y. This supports the innovation replay used as the simulated cortex.
+- L × λ validation landscape (from `mpc_pred200_sweep`): chosen (10, 100) 0.640, best 0.647, range 0.568–0.647, i.e. a broad plateau.
+- In the one-step y equation the site's self-weight is 1.62 vs 0.16 for the strongest spot.
+Not in MANIFEST, no PDFs: awaiting user approval.
+**Why:** User: the VARX carries a lot of weight in Fig 6 and needs its own supplementary demo of construction and prediction. Prototype for approval.
+**Next:** Remaining polish: E colorbar ticks clipped; the `t` label overlaps "286 ms)" in B; A's spot map shows the session's cached outline (both ROIs). On approval: add to MANIFEST, export PDFs, write the caption and a Methods pointer (not methods_rewrite.tex while the other session restructures it).
+
 ### 2026-10-16 — Fig 6L rescaled to the CL+p vs MPC differences
 **Changed/Found:** `controller-analysis/ctrl_mpc_sine_panels.m`: L's y-axis is now [−2.5 3]° with ticks at −2/0/2. The OL bar (70.7°) is truncated with a white break mark, and the caption on Closedloop draft (results.tex) states it as 71°, truncated. Re-exported with PAPER_FINAL.
 **Why:** User: emphasise the difference between CL+p (1.7°) and the MPCs (−0.6°, −1.6°), which was invisible on a 0–75° scale.
