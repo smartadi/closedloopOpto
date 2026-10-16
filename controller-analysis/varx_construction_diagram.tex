@@ -34,11 +34,11 @@
 \node[sm, anchor=east] at (-0.05,0.75) {100 cortical sites $x_1..x_{100}$};
 \node[sm, anchor=east, text=las] at (-0.05,-0.22) {laser command $u$};
 % history windows
-\fill[mpc, opacity=0.15] (\tnow-0.75,0.05) rectangle (\tnow,1.78);
-\fill[las, opacity=0.10] (\tnow-2.6,-0.45) rectangle (\tnow+0.1,0.02);
-\draw[decorate, decoration={brace, amplitude=2.5pt}, line width=0.5pt, mpc] (\tnow-0.75,1.86) -- (\tnow,1.86)
-      node[midway, above=2pt, sm, text=mpc, xshift=-0.45cm] {$L$ = 10 frames (286 ms)};
-\draw[decorate, decoration={brace, mirror, amplitude=2.5pt}, line width=0.5pt, las] (\tnow-2.6,-0.52) -- (\tnow+0.1,-0.52)
+\fill[mpc, opacity=0.15] (\tnow-2.5,0.05) rectangle (\tnow,1.78);
+\fill[las, opacity=0.10] (\tnow-2.5,-0.45) rectangle (\tnow+0.1,0.02);
+\draw[decorate, decoration={brace, amplitude=2.5pt}, line width=0.5pt, mpc] (\tnow-2.5,1.86) -- (\tnow,1.86)
+      node[midway, above=2pt, sm, text=mpc] {$L$ = 35 frames (1 s)};
+\draw[decorate, decoration={brace, mirror, amplitude=2.5pt}, line width=0.5pt, las] (\tnow-2.5,-0.52) -- (\tnow+0.1,-0.52)
       node[midway, below=2pt, sm, text=las] {$Q$ = 35 frames (1 s), up to $u_{t+1}$};
 \draw[black!40, dashed, line width=0.4pt] (\tnow,-0.45) -- (\tnow,1.86);
 \node[sm] at (\tnow+0.12,2.0) {$t$};

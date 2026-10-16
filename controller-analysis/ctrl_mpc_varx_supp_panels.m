@@ -1,13 +1,14 @@
 function ctrl_mpc_varx_supp_panels(sess)
 %CTRL_MPC_VARX_SUPP_PANELS  PROTOTYPE supplementary figure: the VARX that the Fig 6 MPC uses -- how it is built and
 %   how well it predicts (user 2026-10-16). Static session AL_0033 2025-02-26 e2; same model as the MPC
-%   (L = 10, Q = 35, ridge 100). Held-out OL protocol of mpc_varx_embed.py. Data: mpc_varx_supp.py.
+%   (L = Q = 35, 1 s of history for cortex and laser, ridge 100). Held-out OL protocol of mpc_varx_embed.py.
+%   Data: mpc_varx_supp.py, mpc_varx_lq_sweep.py.
 %   Panels (draft letters):
 %     A inputs: brain map, 100 spots coloured by their weight in the one-step y equation, controlled site
 %     B construction diagram (TikZ, varx_construction_diagram.tex)
 %     C rolling 1 s forecasts on a held-out OL trial          D R^2 vs lead: VARX | site + laser only | AR | naive
-%     E validation R^2 (200 ms) over lags L x ridge lambda      F learned laser response vs measured OL average
-%     H whiteness: autocorrelation of one-step residuals vs the signal
+%     E validation R^2 (200 ms) over history L = Q x ridge lambda      F learned laser response vs measured OL average
+%   (H residual whiteness DROPPED, user 2026-10-16: kept as a Methods sentence.)
 %   OUT paper/images/supp_varx/varx_*.png (+ PDF with PAPER_FINAL) and _draft_layout_supp_varx.png
 if nargin < 1, sess = 'AL_0033_0226_e2'; end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data'); addpath(genpath(fullfile(here,'..','utils')));
@@ -86,24 +87,21 @@ for j = 1:4, text(ax, 0.98, 0.98 - 0.1*(j-1), nm{j}, 'Units','normalized', 'Colo
         'FontWeight','bold', 'HorizontalAlignment','right', 'VerticalAlignment','top'); end
 exp_(fig, 'varx_D_r2_lead'); close(fig);
 
-% ---- E: validation landscape over L x lambda (200 ms) --------------------------------------------------------------
-nmS = cellstr(D.sweep_names); r200 = double(D.sweep_r2_200(:));
-tk = regexp(nmS, '^L=(\d+) lambda=([\d.e+]+)$', 'tokens', 'once'); ok = ~cellfun(@isempty, tk);
-Lv = cellfun(@(c) str2double(c{1}), tk(ok)); lv = cellfun(@(c) str2double(c{2}), tk(ok)); rv = r200(ok);
-Ls = unique(Lv); ls = unique(lv); M = nan(numel(Ls), numel(ls));
-for i = 1:numel(rv), M(Ls == Lv(i), ls == lv(i)) = rv(i); end
+% ---- E: validation landscape, equal history L = Q x ridge lambda (200 ms), mpc_varx_lq_sweep.py ------------------
+Sw = load(fullfile(dataDir, sprintf('mpc_varx_lq_sweep_%s.mat', sess))); Rs = double(Sw.R);
+Ls = unique(Rs(:,1)); ls = unique(Rs(:,2)); M = nan(numel(Ls), numel(ls));
+for i = 1:size(Rs,1), M(Ls == Rs(i,1), ls == Rs(i,2)) = Rs(i,4); end
 fig = jnFig(W1, H); ax = axes(fig, 'Units','centimeters', 'Position', [0.8 0.95 W1-1.3 1.6]); hold(ax,'on');
 imagesc(ax, 1:numel(ls), 1:numel(Ls), M); colormap(ax, interp1([0 1], [1 1 1; C.m], linspace(0,1,64)));
-caxis(ax, [0.55 0.65]); axis(ax, 'ij', 'tight');
-plot(ax, find(ls == 100), find(Ls == 10), 's', 'MarkerSize', 5, 'MarkerEdgeColor', C.k, 'LineWidth', 0.6);
+cl = [floor(min(M(:))*50)/50 ceil(max(M(:))*50)/50]; caxis(ax, cl); axis(ax, 'ij', 'tight');
+plot(ax, find(ls == 100), find(Ls == 35), 's', 'MarkerSize', 5, 'MarkerEdgeColor', C.k, 'LineWidth', 0.6);
 set(ax, 'XTick', 1:numel(ls), 'XTickLabel', arrayfun(@(v) sprintf('10^{%d}', round(log10(v))), ls, 'uni', 0), ...
     'YTick', 1:numel(Ls), 'YTickLabel', Ls);
-xlabel(ax, 'ridge \lambda'); ylabel(ax, 'lags L'); jnAxes(ax);
-cb = colorbar(ax, 'Units','centimeters', 'Position', [W1-0.45 0.95 0.12 1.6], 'Ticks', [0.55 0.65]); cb.FontSize = S.fs_tick; cb.Box = 'off';
+xlabel(ax, 'ridge \lambda'); ylabel(ax, 'history L = Q (frames)'); jnAxes(ax);
+cb = colorbar(ax, 'Units','centimeters', 'Position', [W1-0.45 0.95 0.12 1.6], 'Ticks', cl); cb.FontSize = S.fs_tick; cb.Box = 'off';
 title(ax, 'validation R^2, 200 ms', 'FontSize', S.fs_annot, 'FontWeight', 'bold');
 exp_(fig, 'varx_E_sweep'); close(fig);
-fprintf('[VARX-P] sweep: chosen (L 10, lam 100) %.3f | best %.3f | range %.3f-%.3f\n', M(Ls==10, ls==100), max(M(:)), min(M(:)), max(M(:)));
-
+fprintf('[VARX-P] sweep: chosen (L=Q 35, lam 100) %.3f | best %.3f | range %.3f-%.3f\n', M(Ls==35, ls==100), max(M(:)), min(M(:)), max(M(:)));
 % ---- F: learned laser response vs measured OL trial average ---------------------------------------------------------
 tr = double(D.resp_t(:)); mm = double(D.resp_meas(:)); se = double(D.resp_sem(:)); md = double(D.resp_model(:));
 fig = jnFig(W1, H);
@@ -124,16 +122,5 @@ text(ax1, 0.62, 1.02, 'VARX', 'Units','normalized', 'Color', C.m, 'FontSize', S.
 exp_(fig, 'varx_F_laser_response'); close(fig);
 fprintf('[VARX-P] laser response: R^2(model vs measured OL mean) %.3f\n', 1 - sum((mm-md).^2)/sum((mm-mean(mm)).^2));
 
-% ---- H: whiteness -----------------------------------------------------------------------------------------------------
-lagms = (0:numel(D.acf_y)-1).' * 1000 / Fs;
-fig = jnFig(W1, H); ax = axes(fig, 'Units','centimeters', 'Position', [0.85 0.7 W1-0.95 2.05]); hold(ax,'on');
-plot(ax, [0 1000], [0 0], '-', 'Color', C.g, 'LineWidth', S.lw_axis);
-plot(ax, lagms, D.acf_y, '-', 'Color', C.k, 'LineWidth', S.lw_mean);
-plot(ax, lagms, D.acf_res, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
-set(ax, 'XTick', [0 500 1000], 'YTick', [0 0.5 1]); xlim(ax, [0 1000]); ylim(ax, [-0.2 1]);
-xlabel(ax, 'lag (ms)'); ylabel(ax, 'autocorrelation'); jnAxes(ax);
-text(ax, 0.95, 0.95, 'signal y', 'Units','normalized', 'Color', C.k, 'FontSize', S.fs_annot, 'FontWeight','bold', 'HorizontalAlignment','right', 'VerticalAlignment','top');
-text(ax, 0.95, 0.82, 'VARX residual', 'Units','normalized', 'Color', C.m, 'FontSize', S.fs_annot, 'FontWeight','bold', 'HorizontalAlignment','right', 'VerticalAlignment','top');
-exp_(fig, 'varx_H_whiteness'); close(fig);
 fprintf('[VARX-P] panels -> %s\n', figDir);
 end

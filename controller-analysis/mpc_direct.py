@@ -1,7 +1,7 @@
 """MPC that predicts the controlled signal DIRECTLY with the VARX -- no disturbance proxy (user 2026-10-09: "we never
 wanted to use the d ... get away from disturbance, just directly predict and play MPC").
 
-MODEL   delay-embedded VARX on z = [controlled spot y (rig online dF/F), 100 brain spots], L = 10 lags, Q = 35 laser
+MODEL   delay-embedded VARX on z = [controlled spot y (rig online dF/F), 100 brain spots], L = 35 lags, Q = 35 laser
         lags, ridge lambda = 100 (mpc_pred200_sweep.Model). Trained on EVERY valid frame -- spontaneous stretches
         between trials, OL trials and CL trials -- except the test fold's CL-trial windows (5 CL folds, as before).
 MPC     at frame t (y(t) observed) choose U = u(t+1..t+Hp). The VARX is affine in the future laser, so
@@ -36,7 +36,9 @@ from mpc_pred200_sweep import Model, BASE  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 DATA, FIG = HERE / "data", HERE.parent / "paper" / "images" / "mpc_arx"
-CFG = dict(L=10, lam=100.0, Q=35)
+# L = Q = 35 (1 s of history for cortex AND laser; user 2026-10-16 -- was L = 10, Q = 35). Env overrides for reviews.
+CFG = dict(L=int(os.environ.get("MPCD_L", "35")), lam=float(os.environ.get("MPCD_LAM", "100")),
+           Q=int(os.environ.get("MPCD_Q", "35")))
 HP, REF, R_U, HIST = 35, -5.0, 1e-3, 70
 EXT = 70                                           # 2 s pre/post context saved for the Fig-3-style panels (laser off after stim)
 REF_RD = os.environ.get("MPCD_REF", "MPC rd=1")   # the MPC row shown in the example-trial figure

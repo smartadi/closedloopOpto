@@ -1,6 +1,6 @@
 """Supplementary VARX figure (PROTOTYPE, user 2026-10-16: "the VARX model needs a demo of its own ... show how well it
 predicts and also how it's constructed"). Static session AL_0033 2025-02-26 e2 (Fig 6 A-H), the SAME model as the MPC:
-z = [controlled site y, 100 brain spots], L = 10 lags, Q = 35 laser lags, ridge 100. Held-out OL protocol of
+z = [controlled site y, 100 brain spots], L = 35 lags, Q = 35 laser lags (1 s each), ridge 100. Held-out OL protocol of
 mpc_varx_embed.py (5 folds over the 92 OL trials; training = spontaneous frames + training-fold OL trials).
 
 Computes
@@ -20,10 +20,14 @@ import numpy as np
 from scipy.io import loadmat, savemat
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from mpc_varx_embed import fit, solve, iterate, r2, Q, POST, PAD, HMAX, LEADS  # noqa: E402
+import os  # noqa: E402
+import mpc_varx_embed as E  # noqa: E402
+from mpc_varx_embed import fit, solve, iterate, r2, POST, PAD, HMAX, LEADS  # noqa: E402
+Q = E.Q = int(os.environ.get("VARX_Q", "35"))                              # embed's phi/iterate read E.Q
 
 DATA = Path(__file__).resolve().parent / "data"
-L, LAM = 10, 100.0
+L, LAM = int(os.environ.get("VARX_L", "35")), float(os.environ.get("VARX_LAM", "100"))
+TAG = os.environ.get("VARX_TAG", "")
 
 
 def main(sess="AL_0033_0226_e2"):
@@ -86,19 +90,27 @@ def main(sess="AL_0033_0226_e2"):
     ytrace = yr[o - 2 * pre:o + N + 2 * pre]; utrace = ur[o - 2 * pre:o + N + 2 * pre]
     print(f"[VARX-S] example OL trial {kx + 1} (fold {fold[kx]})", flush=True)
 
-    # ---- F: learned laser response vs measured OL trial average ----------------------------------------------
-    Uol = np.column_stack([ur[x - pre:x + N + 2 * pre] for x in onOL]).mean(1)       # mean OL command, -1..5 s
-    Yol = np.column_stack([yr[x - pre:x + N + 2 * pre] - yr[x - pre:x].mean() for x in onOL])
-    Wall = Wf[1]                                                              # fold-1 model (never saw fold-1 OL trials)
-    zl = np.zeros((1, L, Z.shape[1])); M = Uol.size
-    def roll(uu):
-        hist = zl.copy(); out = np.empty(M); upad = np.concatenate([np.zeros(Q), uu / su])
-        for h in range(M):
+    # ---- F: learned laser response vs measured OL trial average -- HELD OUT: each fold's model is driven by the mean
+    # command of ITS test trials and compared with those trials' mean (it never saw them); then averaged over folds.
+    seg = lambda v, x: v[x - pre:x + N + 2 * pre]
+    zl = np.zeros((1, L, Z.shape[1]))
+    def roll(uu, W):
+        hist = zl.copy(); out = np.empty(uu.size); upad = np.concatenate([np.zeros(Q), uu / su])
+        for h in range(uu.size):
             a = np.hstack([hist.reshape(1, -1), upad[None, Q + h - np.arange(Q)], [[1.0]]])   # z(h) uses u(h..h-Q+1)
-            nxt = a @ Wall; out[h] = nxt[0, 0]; hist = np.concatenate([nxt[:, None, :], hist[:, :-1, :]], 1)
+            nxt = a @ W; out[h] = nxt[0, 0]; hist = np.concatenate([nxt[:, None, :], hist[:, :-1, :]], 1)
         return out * sy
-    resp = roll(Uol) - roll(np.zeros_like(Uol))
-    print(f"[VARX-S] laser response: model min {resp.min():.2f} vs measured OL mean min {Yol.mean(1).min():.2f}", flush=True)
+    Rm, Ym, Um = [], [], []
+    for f in range(1, 6):
+        te = np.flatnonzero(fold == f)
+        Uf = np.column_stack([seg(ur, onOL[k]) for k in te]).mean(1)
+        Ym.append(np.column_stack([seg(yr, onOL[k]) - yr[onOL[k] - pre:onOL[k]].mean() for k in te]).mean(1))
+        Rm.append(roll(Uf, Wf[f]) - roll(np.zeros_like(Uf), Wf[f])); Um.append(Uf)
+    resp, Ymeas = np.mean(Rm, 0), np.mean(Ym, 0)
+    Yol = np.column_stack([seg(yr, x) - yr[x - pre:x].mean() for x in onOL])            # for the SEM band only
+    Uol = np.mean(Um, 0)
+    r2F = 1 - np.sum((Ymeas - resp) ** 2) / np.sum((Ymeas - Ymeas.mean()) ** 2)
+    print(f"[VARX-S] held-out laser response: model min {resp.min():.2f} vs measured min {Ymeas.min():.2f} | R2 {r2F:.3f}", flush=True)
 
     # ---- G: channel weights in the y equation (fold-1 model; mean over folds) ------------------------------------
     nC = Z.shape[1]
@@ -117,10 +129,10 @@ def main(sess="AL_0033_0226_e2"):
 
     Em = loadmat(DATA / f"mpc_varx_embed_{sess}.mat", squeeze_me=True)
     Sw = loadmat(DATA / f"mpc_pred200_sweep_{sess}.mat", squeeze_me=True)
-    savemat(DATA / f"mpc_varx_supp_{sess}.mat", {
+    savemat(DATA / f"mpc_varx_supp_{sess}{TAG}.mat", {
         "lead_ms": LEADS * 1000 / Fs, "R2_varx": R2v, "R2_site": R2s, "R2_ar": Em["R2_ar"], "R2_naive": Em["R2_persist"],
         "R2_embed": Em["R2"], "ex_k": kx + 1, "ex_org": (org_ex - o) / Fs, "ex_fc": fc_ex, "ex_y": ytrace, "ex_u": utrace,
-        "ex_t": np.arange(-2 * pre, N + 2 * pre) / Fs, "resp_model": resp, "resp_meas": Yol.mean(1),
+        "ex_t": np.arange(-2 * pre, N + 2 * pre) / Fs, "resp_model": resp, "resp_meas": Ymeas, "resp_r2": r2F,
         "resp_sem": Yol.std(1, ddof=1) / np.sqrt(nO), "resp_u": Uol, "resp_t": np.arange(-pre, N + 2 * pre) / Fs,
         "w_chan": wy, "w_laser": wl, "rc": Wb["rc"], "site_rc": Wb["site_rc"], "mask": Wb["mask"], "mimg": Wb["mimg"],
         "acf_res": acf_r, "acf_y": acf_y, "sweep_names": Sw["names"], "sweep_r2_86": Sw["val_r2_86"],

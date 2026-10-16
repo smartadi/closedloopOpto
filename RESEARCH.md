@@ -16,6 +16,33 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — VARX relocked to 1 s history for cortex AND laser (L = Q = 35); Fig 6 A–M + supp regenerated
+**Changed/Found:**
+- **Code:** `mpc_direct.py` CFG default is L = Q = 35 (was L = 10, Q = 35), with env overrides `MPCD_L/Q/LAM`. Also changed: `mpc_direct_sine.py` (inherits CFG), `mpc_varx_supp.py` (defaults 35, `VARX_*` env), the Fig 6G panel (now reads the L = Q = 35 held-out R² from `mpc_varx_supp`; AR/naive from embed), and the supp diagram (equal 1 s windows).
+- **Canonical .mat:** regenerated. The old L = 10 copies are kept as `*_L10bak.mat`; `_LQ10` / `_LQ35` comparison runs are also kept.
+- **Comparison (static):**
+
+  | | held-out R² 86 / 200 / 1000 ms | MPC/PI | perfect |
+  |---|---|---|---|
+  | L = 10, Q = 35 | 0.687 / 0.418 / 0.046 | 0.652 (108/108) | 0.224 |
+  | L = Q = 10 | 0.686 / 0.415 / 0.050 | 0.642 (108/108) | 0.205 |
+  | L = Q = 35 | 0.681 / 0.408 / 0.084 | 0.662 (107/108) | 0.223 |
+
+- **Comparison (sine, MPC/CL+p):** 0.885 (L = Q = 10), 0.887 (L = Q = 35), both 56/57.
+- **λ check:** validated on validation rows only for L = Q = 35. Flat: 86 ms 0.757 / 0.759 / 0.759 at λ = 100 / 300 / 1000, so λ = 100 is kept. New `mpc_varx_lq_sweep.py`: L = Q ∈ {5, 10, 20, 35} × λ. 200 ms R² ranges 0.588–0.634; 35/100 scores 0.626.
+- **New canonical numbers:**
+  - Static: PI 1.457, MPC 0.844 (0.662×, 107/108), perfect 0.270 (0.223×). Variance over 1–3 s: 4.29 / 2.63 / 1.47 (−39%).
+  - λ sweep (MPC/PI): 0 0.649, 0.01 0.645, 0.03 0.650, 0.1 0.662, 1 0.711, 10 0.796.
+  - Robustness: same world 0.662 (107), other world 0.680 (107), ±20% gain 0.684 (102), both 0.693 (102).
+  - Sine: MPC 2.61 vs CL+p 3.00 (0.887×, 56/57), lag −1.1°, variance 0.67×, perfect 0.767×. The upper-half-cycle share of squared error is 0.63, and the laser is off 79% of that time.
+- **Supp prototype:**
+  - Panel F is now held out per fold (R² 0.974).
+  - Panel H (residual ACF) is dropped. Residual lag-1 ACF is −0.054, kept for a Methods sentence.
+  - Panel E is the L = Q grid.
+- **Stats table** is regenerated, and the Closedloop draft (13494e9) carries the numbers plus "using the past second of every channel and of the laser".
+**Why:** User: the 10-frame cortex / 1 s laser asymmetry has no principled basis; use 1 s for both. In the earlier sweep Q = 10 was as good as Q = 35, because the AR terms carry the laser response forward.
+**Next:** The MPC laser command at rd = 0.1 is visibly more jagged with the bigger model (C1/C2 lower traces); raise it with the user. Then the reviewer analyses proposed to the user, still awaiting a go: error-growth test, nonlinear predictor, no re-planning, clipped LQR, nonlinear-world replay.
+
 ### 2026-10-16 — Fig S2 legend: one row at 7.5 cm, 5 pt
 **Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — the two-row legend is reverted to one row on a 7.5 cm canvas. Text is 5 pt (was 6) and labels are shorter: M5a/M5b/M1/M3 (Fig 2 style), "Mean (RMS)", "Mean (ratio, var.)", "No-stim control". The producer prints the row width (7.47 cm). Final PDF: 7.58 × 0.28 cm.
 **Why:** User: "legend is even worse now, i want it this width but ... smaller text to fit in one row". Shrinking the text alone would have needed about 3 pt, so I also shortened the labels.

@@ -5,7 +5,7 @@ trajectory r(t), and the MPC cost uses its future r(t+1..t+Hp) -- the natural pr
 SESSION AL_0048 2026-07-14/1 (Fig 5's representative session), right hemisphere (inhibitory), 1 Hz sine 0..-4 %dF/F,
         4 s window, 4 interleaved modes OL / OL+p / CL / CL+p (rig PI Kp 0.08, Ki 0, preview 5 frames).
         Inputs from ctrl_mpc_sine_export.m (y = rig online dF/F states.csv on the frame clock, r = -reference_raw).
-MODEL   VARX on z = [y, 100 brain spots], L = 10, Q = 35, ridge 100; 5-fold held-out controller models (folds
+MODEL   VARX on z = [y, 100 brain spots], L = Q = 35 (1 s), ridge 100; 5-fold held-out controller models (folds
         interleaved over all 200 sine trials; a test fold's trial windows are cut out of training).
 WORLD   VARX on all valid frames + each trial's recorded one-step innovations: under the recorded laser it reproduces
         every recorded trial exactly (asserted for all 200).

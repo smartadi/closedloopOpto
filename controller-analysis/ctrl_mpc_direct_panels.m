@@ -96,7 +96,9 @@ paperAxes(ax2, 'XLength', 0, 'YLength', 1.5, 'YLabel', '0.5 mW');
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_0_schematic.png')); close(fig);
 
 %% B -- prediction R^2 vs lead (held-out OL trials): VARX / AR / naive
-V = load(fullfile(dataDir, sprintf('mpc_varx_embed_%s.mat', sess)));
+V = load(fullfile(dataDir, sprintf('mpc_varx_embed_%s.mat', sess)));                  % AR + naive baselines
+Vs = load(fullfile(dataDir, sprintf('mpc_varx_supp_%s.mat', sess)));                  % VARX = the MPC's model,
+assert(max(abs(Vs.lead_ms(:) - V.lead_ms(:))) < 1e-9); V.R2 = Vs.R2_varx;             % L = Q = 35 (2026-10-16)
 fig = jnFig(W1, H); ax = axes(fig); hold(ax,'on');
 for x = [200 1000], plot(ax, [x x], [-0.25 1], ':', 'Color', C.g, 'LineWidth', S.lw_axis); end
 plot(ax, [25 1100], [0 0], '-', 'Color', C.g, 'LineWidth', S.lw_axis);
