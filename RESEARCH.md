@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Found: raster normalization downscales; single-trial noise ≫ mean dip
+**Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` (no code change) — the per-session divisor (response RMS L2 error) is 2.86 / 2.68 / 4.14 / 2.93 % ΔF/F (M5a / M5b / M1 / M3), so the rasters are shrunk 3–4×, not upscaled. In raw units the mean dip (0.06–0.17 s) is only −0.8 to −1.6 % ΔF/F, while single-trial |activity| and |deviation| reach 5.7 % at the 90th percentile and about 11 % at the 98th. That is why signed single-trial maps look grainy grey.
+**Why:** User asked whether the raster normalization upscales. Normalization isn't needed for the rasters: sorting is by within-session percentile, so every quartile has the same session mix.
+**Next:** Waiting on the user: proposed switching both raster columns to raw % ΔF/F at ±5 % (colour bar "−5 / +5 % ΔF/F").
+
 ### 2026-10-16 — Fig S2 rasters: two signed columns, activity from −0.2 s
 **Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` — the strip is now two columns: Activity and "Deviation from mean". Both are signed on one grey scale (±2 norm. ΔF/F, black = negative); columns are 1.97 cm wide. The no-stim control is dropped from the strip. The running-RMS display (entry below) is reverted and its key `sq_raster_cbar_rms` is removed from MANIFEST and deleted from disk. Activity now starts at −0.2 s (`RS_PRE`), with a white dashed onset marker, so the stim-evoked dip shows against pre-stim baseline. Deviation stays at 0–0.486 s. "Time (s)" appears once, centred under the bottom (abs δ) strip.
 **Why:** User: "keep only two things, activity and deviation from av, not rms, we will figure out other route for effect prominence"; then "activity slightly prior to stim too to show effect of stim on activity". Col B (stim/control) already carries the control comparison.
