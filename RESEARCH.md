@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 6I example switched to CL+p trial 161 (large MPC gain)
+**Changed/Found:** `controller-analysis/ctrl_mpc_sine_panels.m` has a new 2nd argument `kEx`, default 161; `[]` gives the median trial, which is 87. Candidates were the top 5 CL+p trials by RMSE drop: 104 (4.74→2.70), 141 (2.79→1.63), 184, 27 and 161 (1.58→0.83, perfect 0.53). I chose 161 by eye: MPC tracks the sine across the whole window while CL+p overshoots each rise. 104 and 141 gain mostly in the onset transient. Re-exported with PAPER_FINAL. The caption on Closedloop draft (b96f099) now says "a CL+p trial on which the MPC improved tracking markedly".
+**Why:** User: show a trial where MPC does really well, instead of the median one.
+**Next:** none.
+
 ### 2026-10-16 — Fig 6 I–M recut: CL+p vs the two MPCs only; J = RMSE over time
 **Changed/Found:** `controller-analysis/ctrl_mpc_sine_panels.m`: CL is dropped everywhere. MPC and perfect now come from the 57 CL+p trials, paired with those recordings.
 - I: CL+p trial 87 at the median of MPC − CL+p (RMSE 3.61 / 3.32 / 2.98).

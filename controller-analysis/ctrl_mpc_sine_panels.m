@@ -1,4 +1,4 @@
-function ctrl_mpc_sine_panels(sess)
+function ctrl_mpc_sine_panels(sess, kEx)
 %CTRL_MPC_SINE_PANELS  Fig 6 I-M: the direct-prediction MPC replayed on a SINE reference (mpc_direct_sine.py),
 %   AL_0048 2026-07-14/1 right hemisphere (Fig 5's representative session), 1 Hz sine 0..-4 %dF/F, 4 s window.
 %   Same look as ctrl_mpc_direct_panels (Fig 6 A-H): Fig-3 stim box, corner scale bars, colour-named conditions,
@@ -6,11 +6,15 @@ function ctrl_mpc_sine_panels(sess)
 %   purple. SIMULATION -> descriptive only, no tests, no stars.
 %   COMPARISON SET (user 2026-10-16): CL+p against the two MPCs only (no CL); OL as the uncontrolled reference.
 %   MPC / perfect = the replays on the 57 CL+p trials, each paired with the recorded CL+p trial it replays.
-%   Panels: I example CL+p trial (median of MPC - CL+p) | J RMSE over time (Fig 5F definition: sqrt of the
+%   Panels: I example CL+p trial (large MPC gain, kEx) | J RMSE over time (Fig 5F definition: sqrt of the
 %           across-trial mean squared error, +/- SEM) | K per-trial RMSE, paired | L phase lag of the trial average
 %           (1 Hz fundamental, Fig 5H) | M across-trial variance vs time.
 %   IN  data/mpc_direct_sine_<sess>.mat.   OUT paper/images/supp_mpc/mpcs_*.png (+ PDF + mirror with PAPER_FINAL)
-if nargin < 1, sess = 'AL_0048_0714_e1'; end
+if nargin < 1 || isempty(sess), sess = 'AL_0048_0714_e1'; end
+% Example trial (1-based, all-sine index). 161 = picked by eye (user 2026-10-16: "show a trial where MPC does really
+% well") from the top 5 CL+p trials by RMSE drop (104, 141, 184, 27, 161): MPC tracks the sine over the whole window
+% while CL+p overshoots each rise (RMSE 1.58 -> 0.83). 104/141 gain mostly in the onset transient. [] = median trial.
+if nargin < 2, kEx = 161; end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data'); addpath(genpath(fullfile(here,'..','utils')));
 figDir = fullfile(here,'..','paper','images','supp_mpc');
 PS = paperStyle(); S = jnStyle();
@@ -35,8 +39,10 @@ for p = {'mpcs_J_trial_average'}                                                
     old = dir(fullfile(figDir, [p{1} '.*'])); for i = 1:numel(old), delete(fullfile(figDir, old(i).name)); end
 end
 
-% ---- I: example CL+p trial at the median MPC improvement ------------------------------------------------------
-iC = find(isCLp); [~, s] = sort(rM(iC) - rRec(iC)); k = iC(s(round(0.5*(numel(iC)-1))+1));
+% ---- I: example CL+p trial with a large MPC improvement ---------------------------------------------------------
+iC = find(isCLp); [~, s] = sort(rM(iC) - rRec(iC)); kMed = iC(s(round(0.5*(numel(iC)-1))+1));
+k = kMed; if ~isempty(kEx), k = kEx; end
+fprintf('[MPCS-P] median-improvement CL+p trial would be %d\n', kMed);
 fprintf('[MPCS-P] example trial %d (CL+p): RMSE CL+p %.2f | MPC %.2f | perfect %.2f\n', k, rRec(k), rM(k), rO(k));
 Yk = [D.Yrecx(keep,k) D.Yx(keep,k,iM) D.Yx(keep,k,iO)]; Uk = v2mw([D.Urecx(keep,k) D.Ux(keep,k,iM) D.Ux(keep,k,iO)]);
 col3 = [C.clp; C.m; C.o]; nam3 = {'CL+p','MPC','perfect MPC'};
