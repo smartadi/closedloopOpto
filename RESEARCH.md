@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-15 — Manuscript language/flow pass, Results Figs 1-4 (Closedloop_edit draft 68250de)
+**Changed/Found:** `Closedloop_edit/results.tex`, `methods_rewrite.tex` after ff-pulling the user's Overleaf push (52e2591). Fig 2: section opener, split-half CV wording (fit and score on trial averages of random halves), caption C/D CV detail. Fig 2G Methods: "L2 error" -> "trial-to-trial variability", "stimulus-free control" -> "stimulus-free window". Fig 3: H/I sentences now state the ratio direction (OL/CL, >1 = CL better) and quote the during-stimulation medians (RMSE 1.14/1.39, variance 1.60/1.87) before pre/post; Methods sentence explains why model % (24/41%) differs from the window-variance ratio. Fig 4: section rewritten (state definitions merged, decomposition described per caption C — rel and abs power in separate models, abs 0.07 when both in; predictability/regularizability sign convention); `tab:fig4_state_stats` moved to Methods after "Multiple comparisons". Every Fig 3/Fig 4 number checked against STATS_TABLE and fig3h_*_signrank.mat — all match. Build clean, 41 pp. Committed on draft, not pushed.
+**Why:** User-led language and flow review for concision, correct numbers and consistent single-session vs pooled panel references.
+**Next:** Fig 3 text will be rewritten again after the CL/OL log-ratio rerun. The L84 rebound sentence conflicts with the OL step-check finding (rebound = offset effect); the L100 rel-δ sentence conflicts with the lit review (b). Both await the user's decision. Push only on the user's go.
+
+### 2026-10-15 — Fig 2 caption numbers were wrong (found in chat review)
+**Changed/Found:** Fig 2A caption said 0.23–0.90 mW, but `trace_overlay.m` draws odd amplitude indices of AL_0041 e2 = 0.23/0.63/0.87 mW. Fig 2B said "100 trials per amplitude", but `stim_vars_*.mat` gives 19–84 (5b: 53/58/26/19/50/54). The user applied both fixes on Overleaf. Verified in the same pass: 2G n = 1516 (208/260/748/300), stars (motion p 0.030, rel 0.17, abs 7.4e-4), sign fractions 4/4, 3/4, 4/4; the 2D CV is a stratified split-half with 100 splits in both directions.
+**Why:** Pre-submission number audit requested by the user.
+**Next:** Confirm 0.87 against the rendered 2A legend. Mouse 3 rebound text vs caption is reconciled ("at the edge of the 0.5 s window").
+
 ### 2026-10-15 — Lit review of absolute vs relative δ as state variables; Fig 2 rel-δ denominator is effectively 1–10 Hz
 **Changed/Found:** NEW `paper-writing/lit_delta_state_2026-10-15.md`, a literature report with 61 verified references. Framing verdicts:
 - (a) "absolute δ = disturbance amplitude" is defensible as an operational, additive framing. Precedent: Arieli 1996; Shimaoka 2019 (mouse wide-field, "interacted additively"); Bolus 2021 (brain state as unmeasured disturbance). Our stimulus-free control is our own evidence for it.
