@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Closedloop main fast-forwarded to bece569 and pushed (Fig 2 descriptive + Fig S2)
+**Changed/Found:** User re-exported `FIgure2_supp.pdf` with the corrected legend (Mouse 5a/5b/1/3, checked by rendering). Copied to `images/supplementary/S_state_quartile.pdf`; the build is clean. main ff'd from draft: b2212d3 (Statistical tables section), 7c31560, 7e54b60, 1320962, bece569. Pushed main + draft to GitHub smartadi/Closedloop.
+**Why:** User: "update and push" after re-assembling Fig 2 and Fig S2.
+**Next:** pull on Overleaf (GitHub sync). Supplementary numbering is now S1 spatial, S2 state quartiles, S3 tuning, S4 exemplars; check any talk/notes that cite the old numbers.
+
 ### 2026-10-16 — Fig 2 + Fig S2 assemblies placed; S2 mouse labels were wrong (fixed in producer)
 **Changed/Found:** Copied `figures_final/Figure2.pdf` → `Closedloop_edit/images/Figure2.pdf` and `figures_final/FIgure2_supp.pdf` → `images/supplementary/S_state_quartile.pdf`. Uncommented the S2 `\includegraphics`. The user's assembly letters ROWS A–C (motion / rel δ / abs δ), so the S2 caption was rewritten by row, and the Results "Figure S2B" (stim/control) became "second column". FOUND: the S2 legend said Mouse 1a/1b/2/3, but the paper names these sessions Mouse 5a/5b/1/3 (stats Table 3, Fig 2B/D/E). Fixed `SESS_LAB` in `imp_state_quartile_supp.m` and re-exported (`sq_legend.pdf` now reads 5a/5b/1/3); the caption also said "Mouse 1a and 1b".
 **Why:** User re-exported both figures and asked to update and push. The naming mismatch would show the same mice under two names in one paper.
