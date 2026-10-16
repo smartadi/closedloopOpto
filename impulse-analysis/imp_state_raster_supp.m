@@ -141,7 +141,16 @@ if RS_ROWS && isempty(RS_SESS)
     global PAPER_FINAL %#ok<GVMIS,TLEV>
     nDir = fullfile(rDir, '_native');  if ~exist(nDir,'dir'), mkdir(nDir); end
     tagF = {'mot','dpr','dpa'};
-    colS = {'Activity', 'Deviation', 'No-stim ctrl'};   % one line at 5 pt fits a 1.25 cm column
+    colS = {'Activity', 'Deviation RMS', 'No-stim RMS'};   % one line at 5 pt fits a 1.25 cm column
+    % COLOUR (user 2026-10-16: "everything appears gray"; the state effect is in the SPREAD, which a
+    % signed per-trial map cannot show -- neighbouring trials' +/- deviations average to mid-grey).
+    %   Activity       signed, grey, +/-RS_ACLIM (black = dip): high-state rows read streakier.
+    %   Deviation/ctrl running RMS over RS_RMSWIN state-sorted trials, white (0) -> black (RS_RMAX):
+    %                  the per-quartile spread of Fig S2 col A, as a gradient up the sorted trials.
+    if ~exist('RS_ACLIM','var')  || isempty(RS_ACLIM),  RS_ACLIM  = 2;   end
+    if ~exist('RS_RMSWIN','var') || isempty(RS_RMSWIN), RS_RMSWIN = 51;  end
+    if ~exist('RS_RMAX','var')   || isempty(RS_RMAX),   RS_RMAX   = 1.6; end
+    cmA = gray(256);  cmR = flipud(gray(256));
     W = 4.6;  H = SQ_H;  pw = 1.25;  gp = 0.12;  x0 = 0.45;   % 4 x 2.9 tiles + 4.6 strip fits 17.6 cm         % cm
     pyBin = 'python';
     swp = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'utils', 'pdf_swap_images.py');
@@ -155,11 +164,17 @@ if RS_ROWS && isempty(RS_SESS)
         f = jnFig(W, H);  pngs = cell(1,3);
         for j = 1:3
             M = panels{j};
-            if RS_SMOOTH > 1, M = movmean(M, RS_SMOOTH, 1, 'omitnan'); end
+            if j == 1, cmj = cmA;  lim = [-1 1]*RS_ACLIM;
+            else,      M = sqrt(movmean(M.^2, RS_RMSWIN, 1, 'omitnan'));  cmj = cmR;  lim = [0 RS_RMAX];
+            end
             ax = axes(f, 'Units','centimeters', 'Position', [x0+(j-1)*(pw+gp), 0.27*H, pw, 0.55*H]);
-            imagesc(ax, tx{j}, 1:nT, M);  colormap(ax, cm);  clim(ax, [-1 1]*RS_CLIM);  hold(ax,'on');
-            for q = qEdge, plot(ax, tx{j}([1 end]) + [-0.5 0.5]*mean(diff(tx{j})), [q q], '-', ...
-                                'Color', [0 0 0], 'LineWidth', J.lw_ind); end
+            imagesc(ax, tx{j}, 1:nT, M);  colormap(ax, cmj);  clim(ax, lim);  hold(ax,'on');
+            % quartile boundaries: white core on a black casing, visible on any grey
+            xq = tx{j}([1 end]) + [-0.5 0.5]*mean(diff(tx{j}));
+            for q = qEdge
+                plot(ax, xq, [q q], '-', 'Color', [0 0 0], 'LineWidth', 1.0);
+                plot(ax, xq, [q q], '-', 'Color', [1 1 1], 'LineWidth', 0.4);
+            end
             set(ax, 'YDir','normal', 'Layer','top', 'YTick', qMid, 'YTickLabel', {'Q1','Q2','Q3','Q4'}, ...
                     'XTick', [0 0.4], 'XTickLabelRotation', 0);   % 2 ticks: 3 rotate at 1.25 cm
             if j > 1, set(ax, 'YTickLabel', []); end
@@ -173,9 +188,9 @@ if RS_ROWS && isempty(RS_SESS)
                      'FontWeight','bold', 'Interpreter','none', 'Clipping','off');
             end
             % native heatmap: row 1 = lowest state at the BOTTOM (YDir normal) -> top PNG row = last trial
-            ci  = round((min(max(M, -RS_CLIM), RS_CLIM) + RS_CLIM) / (2*RS_CLIM) * (size(cm,1)-1)) + 1;
-            ci(~isfinite(M)) = round(size(cm,1)/2);
-            rgb = ind2rgb(flipud(ci), cm);
+            ci  = round((min(max(M, lim(1)), lim(2)) - lim(1)) / diff(lim) * (size(cmj,1)-1)) + 1;
+            ci(~isfinite(M)) = round(size(cmj,1)/2);
+            rgb = ind2rgb(flipud(ci), cmj);
             pngs{j} = fullfile(nDir, sprintf('sq_%s_raster_%d.png', tagF{k}, j));
             imwrite(rgb, pngs{j});
         end
@@ -196,16 +211,20 @@ if RS_ROWS && isempty(RS_SESS)
     % User 2026-10-16: smaller, no long label -- just the end values. Units are dF/F divided by
     % the session's typical error, so ends read -3 / +3 with a short "norm. dF/F" (caption defines it);
     % a bare "3 dF/F" would read as 3 % dF/F, which these values are not.
-    f = jnFig(1.9, 0.55);
-    axK = axes(f, 'Units','centimeters', 'Position', [0.25 0.35 1.4 0.001], 'Visible','off');
-    colormap(axK, cm);  clim(axK, [-1 1]*RS_CLIM);
-    cb = colorbar(axK, 'Location','south', 'Units','centimeters');
-    cb.Position = [0.25 0.3 1.4 0.08];
-    cb.Ticks = [-RS_CLIM RS_CLIM];  cb.TickLabels = {sprintf('-%g',RS_CLIM), sprintf('+%g',RS_CLIM)};
-    cb.TickLength = 0;  cb.Box = 'off';  cb.AxisLocation = 'in';
-    cb.Label.String = 'norm. ΔF/F';  cb.Label.Interpreter = 'none';
-    set(cb, 'FontSize', 5, 'FontName', J.font);  cb.Label.FontSize = 5;
-    jnExport(f, fullfile(rDir, 'sq_raster_cbar.pdf'));  close(f);
+    keys = {'sq_raster_cbar.pdf',     cmA, [-1 1]*RS_ACLIM, {sprintf('-%g',RS_ACLIM), sprintf('+%g',RS_ACLIM)}, 'Activity (norm. ΔF/F)'; ...
+            'sq_raster_cbar_rms.pdf', cmR, [0 RS_RMAX],     {'0', sprintf('%g',RS_RMAX)},                      'RMS (norm. ΔF/F)'};
+    for kk = 1:size(keys,1)
+        f = jnFig(1.9, 0.55);
+        axK = axes(f, 'Units','centimeters', 'Position', [0.25 0.35 1.4 0.001], 'Visible','off');
+        colormap(axK, keys{kk,2});  clim(axK, keys{kk,3});
+        cb = colorbar(axK, 'Location','south', 'Units','centimeters');
+        cb.Position = [0.25 0.3 1.4 0.08];
+        cb.Ticks = keys{kk,3};  cb.TickLabels = keys{kk,4};
+        cb.TickLength = 0;  cb.Box = 'on';  cb.AxisLocation = 'in';  cb.LineWidth = 0.25;
+        cb.Label.String = keys{kk,5};  cb.Label.Interpreter = 'none';
+        set(cb, 'FontSize', 5, 'FontName', J.font);  cb.Label.FontSize = 5;
+        jnExport(f, fullfile(rDir, keys{kk,1}));  close(f);
+    end
 
     % ---- "Pooled trials" demarcation: header over the raster strip + vertical separator ---------
     f = jnFig(W, 0.6);

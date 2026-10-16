@@ -16,6 +16,12 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 rasters: running-RMS deviation so the state effect is visible
+**Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` — the Deviation and No-stim columns now show the running RMS over 51 state-sorted trials (`RS_RMSWIN`) on a white (0) → black (`RS_RMAX` = 1.6) grey scale. Titles: "Deviation RMS", "No-stim RMS". Activity stays signed grey, tightened ±3 → ±2 (`RS_ACLIM`). There are now two colour keys: `sq_raster_cbar.pdf` (activity ±2) and the new `sq_raster_cbar_rms.pdf` (0–1.6), which is added to MANIFEST. Quartile boundaries are drawn white on a black casing so they show on any grey.
+Pooled deviation RMS by quartile (Q1→Q4): motion 1.05 / 1.09 / 1.09 / 0.63; rel δ 0.99 / 0.96 / 1.03 / 1.02; abs δ 0.57 / 0.80 / 1.17 / 1.35. Abs δ now shows a clear light→dark gradient up the trials and motion a light Q4; the no-stim RMS also rises with abs δ (as in col B, stim/control ≈ 1).
+**Why:** User: "everything appears gray". A signed per-trial map can't show a change in spread, because neighbouring trials' ± deviations blend to mid-grey. Prototyped raw / running-mean / running-RMS on the loaded data; running RMS was the only one where the gradient reads.
+**Next:** The Fig S2 caption must define running RMS (51 trials) and norm. ΔF/F. User re-places the strips and both keys.
+
 ### 2026-10-16 — State rasters: onsets aligned; the "no effect" look is the error-normalised colour scale
 **Changed/Found:** Checked `impulse-analysis/imp_state_raster_supp.m` (Fig S2 pooled raster strips) after loading `load_experiments` and `imp_state_trialvar` (4 sessions, 1516 trials).
 - **Alignment is correct.** In every session and amplitude the trial-average trough is at 86–114 ms with no pre-onset dip; `dfImp` is referenced to the onset frame (that column is exactly 0).

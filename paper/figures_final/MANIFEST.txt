@@ -209,6 +209,7 @@ supplementary/state_quartile/sq_mot_raster.pdf
 supplementary/state_quartile/sq_dpr_raster.pdf
 supplementary/state_quartile/sq_dpa_raster.pdf
 supplementary/state_quartile/sq_raster_cbar.pdf
+supplementary/state_quartile/sq_raster_cbar_rms.pdf
 supplementary/state_quartile/sq_pooled_header.pdf
 supplementary/state_quartile/sq_divider.pdf
 
