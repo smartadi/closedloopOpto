@@ -18,7 +18,7 @@
 % session), so 1 = that session's typical error and sessions with small responses (Mouse 1a/1b,
 % ~1-2 %dF/F) are not washed out by Mouse 2. The control uses the SAME divisor, so col 2 and col 3
 % compare magnitudes directly. One symmetric colour scale (RS_CLIM) for all nine panels.
-% Diverging purple-white-orange map (red/blue are locked to OL/CL conditions).
+% Grayscale map (user 2026-10-16): black = negative, mid-grey = 0, white = positive.
 % Heatmaps -> 300-dpi PNG (CLAUDE.md export rule); not in MANIFEST until the user approves.
 %
 % RUN (base workspace, after load_experiments + imp_state_trialvar):
@@ -71,7 +71,7 @@ if ~isempty(RS_SESS), L = imp_mouse_label({allExperiments.mn}); labS = L{RS_SESS
 %% ---- figure -----------------------------------------------------------------------------------
 PS   = paperStyle();
 tags = {'MOT','DPr','DPa'};  names = {'Motion','Rel \delta','Abs \delta power'};
-cm   = local_puor(256);
+cm   = gray(256);                 % user 2026-10-16: grayscale (was purple-white-orange)
 f    = paperFig(8, 14);    % user 2026-10-12: x squished (17 -> 11 -> 8 cm) so the 18-frame columns read less blocky
 tl   = tiledlayout(f, 3, 3, 'TileSpacing','compact', 'Padding','compact');
 colT = {'Activity','Deviation','No-stim control'};   % short: 11 cm wide (caption defines each)
@@ -141,7 +141,7 @@ if RS_ROWS && isempty(RS_SESS)
     global PAPER_FINAL %#ok<GVMIS,TLEV>
     nDir = fullfile(rDir, '_native');  if ~exist(nDir,'dir'), mkdir(nDir); end
     tagF = {'mot','dpr','dpa'};
-    colS = {'Activity', 'Deviation', {'No-stim','control'}};   % 2-line title: fits a 1.25 cm column
+    colS = {'Activity', 'Deviation', 'No-stim ctrl'};   % one line at 5 pt fits a 1.25 cm column
     W = 4.6;  H = SQ_H;  pw = 1.25;  gp = 0.12;  x0 = 0.45;   % 4 x 2.9 tiles + 4.6 strip fits 17.6 cm         % cm
     pyBin = 'python';
     swp = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'utils', 'pdf_swap_images.py');
@@ -163,9 +163,15 @@ if RS_ROWS && isempty(RS_SESS)
             set(ax, 'YDir','normal', 'Layer','top', 'YTick', qMid, 'YTickLabel', {'Q1','Q2','Q3','Q4'}, ...
                     'XTick', [0 0.4], 'XTickLabelRotation', 0);   % 2 ticks: 3 rotate at 1.25 cm
             if j > 1, set(ax, 'YTickLabel', []); end
-            if k == 1, title(ax, colS{j}); end   % column titles once, on the top row
-            xlabel(ax, 'Time (s)');
+            % user 2026-10-16: x label ONCE (bottom row, middle column); column titles one line, 5 pt.
+            % Titles are text(), not title(): jnAxes/jnAxesAll force title() back to 7 pt bold.
+            if k == 3 && j == 2, xlabel(ax, 'Time (s)'); end
             jnAxes(ax);  set(ax, 'TickLength', [0.03 0.03]);
+            if k == 1
+                text(ax, mean(tx{j}), nT + 0.04*nT, colS{j}, 'HorizontalAlignment','center', ...
+                     'VerticalAlignment','bottom', 'FontName', J.font, 'FontSize', 5, ...
+                     'FontWeight','bold', 'Interpreter','none', 'Clipping','off');
+            end
             % native heatmap: row 1 = lowest state at the BOTTOM (YDir normal) -> top PNG row = last trial
             ci  = round((min(max(M, -RS_CLIM), RS_CLIM) + RS_CLIM) / (2*RS_CLIM) * (size(cm,1)-1)) + 1;
             ci(~isfinite(M)) = round(size(cm,1)/2);

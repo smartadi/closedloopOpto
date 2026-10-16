@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 rasters: grayscale, single time label, one-line 5 pt titles
+**Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` — the colour map is now `gray(256)`: black = negative, mid-grey = 0, white = positive (was purple-white-orange). This also covers the colour key. "Time (s)" now appears once, under the middle column of the abs-δ (bottom) strip. Column titles on the motion strip are one line at 5 pt bold ("Activity", "Deviation", "No-stim ctrl"). They are drawn with `text()` because jnAxes/jnAxesAll force `title()` back to 7 pt. Re-ran load_experiments → imp_state_trialvar (STV_PLOT off) → raster with PAPER_FINAL. All 6 raster-strip files were re-mirrored.
+**Why:** User: "grayscale colorscheme"; time axis "only the one on abs delta at the bottom really needs it ... mentioned only once"; motion titles "too big ... one row".
+**Next:** The strip PDFs are cropped to content, so their heights now differ (2.22 / 2.01 / 2.36 cm). Align them in Illustrator by the heatmaps, not the page edges. The effect is still faint at ±3; the |deviation| / tighter-range proposals are still open.
+
 ### 2026-10-16 — VARX relocked to 1 s history for cortex AND laser (L = Q = 35); Fig 6 A–M + supp regenerated
 **Changed/Found:**
 - **Code:** `mpc_direct.py` CFG default is L = Q = 35 (was L = 10, Q = 35), with env overrides `MPCD_L/Q/LAM`. Also changed: `mpc_direct_sine.py` (inherits CFG), `mpc_varx_supp.py` (defaults 35, `VARX_*` env), the Fig 6G panel (now reads the L = Q = 35 held-out R² from `mpc_varx_supp`; AR/naive from embed), and the supp diagram (equal 1 s windows).
