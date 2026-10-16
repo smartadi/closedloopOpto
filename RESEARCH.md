@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 2B caption: explicit trial counts per amplitude
+**Changed/Found:** `Closedloop_edit/results.tex` Fig 2B caption — "19--84 trials per amplitude" replaced by the explicit counts, lowest to highest amplitude, from `load_experiments` (allExperiments.groupLabels, non-NaN, nonzero amps): Mouse 5a (AL_0041 e1) 44/49/59/56 = 208; Mouse 5b (AL_0041 e2) 53/58/45/50/54 = 260; Mouse 1 (AL_0033 0129) 84/84/82/85/81/84/82/82/84 = 748; Mouse 3 (AL_0048 0715 R) 100/100/100 = 300; total 1516. The old "19" came from RESEARCH L51's mW binning, which split the 45 trials into 26+19; the panel bins by command voltage. Builds clean; draft commit, not pushed.
+**Why:** User: "on trial counts, dont use range, just explicitly state". The caption range contradicted the Methods' "at least 44".
+**Next:** Methods L725/L1176 "at least 44" is now consistent and left as is. AL_0041 e1 0.53 mW has 49 usable trials (stim_vars lists 50; one is NaN).
+
 ### 2026-10-15 — Stats-to-paper audit of the full manuscript (read-only)
 **Changed/Found:** `paper-writing/STATS_AUDIT_2026-10-15.md` — checked every statistical number in the built manuscript files against STATS_TABLE.csv and saved outputs. Figs 2/4 and the supplementary are clean (~65 matches). Fig 3H/3I text and Methods are stale against the CL/OL scheme. Wrong in the current text: RMSE pre p 0.85 (should be 0.095), variance post p 0.76 (should be 0.64), variance 0-1 s p 4.3e-4 is the trial-level signed-rank. Also: Fig 2B trial counts (caption 19-84 vs Methods >=44), Discussion leans on the relative-delta p=0.044 that Results disclaims, 4G Methods leads with the nested model, the df-fallback is called conservative, and an unfulfilled "every mouse" promise. Unsourced numbers listed (47 ms loop delay, 2B slopes, leak %, Discussion MPC R2).
 **Why:** User asked for a stats-to-paper consistency check including captions.
