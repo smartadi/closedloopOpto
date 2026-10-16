@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Strip mouse IDs from cohort table and stats Table 3
+**Changed/Found:** `Closedloop_edit/methods_rewrite.tex` — cohort table rows are now Mouse 1–5 (no AL IDs); caption drops the AL↔Mouse map and lists the extra sessions as "two sessions of Mouse 1" and so on. `paper-writing/paper_stats_tex.m` — Table 3's "Recording" column (AL ID + date) is now "Date"; stat_tables.tex regenerated. I checked the rendered Figs 1–6 and S1–S3 by eye: no AL IDs in the figures (Fig 2/4G already use Mouse labels; S3 uses S01–S11).
+**Why:** User: mouse naming "plagues a lot of captions including supplementary figures"; the paper convention is Mouse N only.
+**Next:** none. AL IDs remain only in TeX comments and in the dead methods_edit.tex.
+
 ### 2026-10-16 — Collector run live: 8 tabled S4 rejection-trial panels pruned
 **Changed/Found:** `paper/figures_final/collect_final_panels.m` run live. It pruned the 8 `s4_reject_trials_*` .pdf/.png files ([supp_reject], tabled 2026-10-10). Follow-up dry run: 126 present, 0 missing, 0 to prune; the pull folder now matches MANIFEST exactly.
 **Why:** User approved the prune after the dry run listed them.

@@ -36,14 +36,14 @@ add('\begin{table}[!ht]', '\centering', '\small', ...
         '\caption{\textbf{Impulse-response trials per session and stimulation amplitude} (Figure~\ref{fig:figure2}B and G). Amplitude, command voltage converted at 1\,mW per 3\,V. Trials, trials with a valid evoked-suppression value; every nonzero amplitude was analyzed.}', ...
         '\label{tab:stat_counts}', ...
         '\begin{tabular}{llrr}', '\toprule', ...
-        'Session & Recording & Amplitude (mW) & Trials \\', '\midrule');
+        'Session & Date & Amplitude (mW) & Trials \\', '\midrule');
 [us,~,is] = unique(C.label, 'stable');
 for s = 1:numel(us)
     k = find(is == s);
     for j = 1:numel(k)
         r = C(k(j),:);
         if j == 1
-            c1 = char(r.label);  c2 = sprintf('%s, %s', r.mouse, r.date);
+            c1 = char(r.label);  c2 = char(r.date);
         else
             c1 = '';  c2 = '';
         end
