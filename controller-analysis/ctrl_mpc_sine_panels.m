@@ -2,11 +2,13 @@ function ctrl_mpc_sine_panels(sess)
 %CTRL_MPC_SINE_PANELS  Fig 6 I-M: the direct-prediction MPC replayed on a SINE reference (mpc_direct_sine.py),
 %   AL_0048 2026-07-14/1 right hemisphere (Fig 5's representative session), 1 Hz sine 0..-4 %dF/F, 4 s window.
 %   Same look as ctrl_mpc_direct_panels (Fig 6 A-H): Fig-3 stim box, corner scale bars, colour-named conditions,
-%   no numbers in the panels. Colours: Fig 5 modes (OL red, OL+p orange, CL blue, CL+p green), MPC purple,
-%   perfect-prediction MPC light purple. SIMULATION -> descriptive only, no tests, no stars.
-%   MPC / perfect = replayed on every closed-loop trial (46 CL + 57 CL+p); each is paired with its recorded trial.
-%   Panels: I example trial (median MPC - CL, CL trials) | J trial average +/- SD | K per-trial RMSE, paired |
-%           L phase lag of the trial average (1 Hz fundamental, Fig 5H) | M across-trial variance vs time.
+%   no numbers in the panels. Colours: Fig 5 modes (OL red, CL+p green), MPC purple, perfect-prediction MPC light
+%   purple. SIMULATION -> descriptive only, no tests, no stars.
+%   COMPARISON SET (user 2026-10-16): CL+p against the two MPCs only (no CL); OL as the uncontrolled reference.
+%   MPC / perfect = the replays on the 57 CL+p trials, each paired with the recorded CL+p trial it replays.
+%   Panels: I example CL+p trial (median of MPC - CL+p) | J RMSE over time (Fig 5F definition: sqrt of the
+%           across-trial mean squared error, +/- SEM) | K per-trial RMSE, paired | L phase lag of the trial average
+%           (1 Hz fundamental, Fig 5H) | M across-trial variance vs time.
 %   IN  data/mpc_direct_sine_<sess>.mat.   OUT paper/images/supp_mpc/mpcs_*.png (+ PDF + mirror with PAPER_FINAL)
 if nargin < 1, sess = 'AL_0048_0714_e1'; end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data'); addpath(genpath(fullfile(here,'..','utils')));
@@ -14,22 +16,30 @@ figDir = fullfile(here,'..','paper','images','supp_mpc');
 PS = paperStyle(); S = jnStyle();
 C.m = [0.45 0.20 0.60]; C.o = [0.78 0.66 0.90]; C.g = [0.62 0.62 0.62]; C.k = [0 0 0];
 C.edge = [0.45 0.45 0.45]; C.ref = [0.25 0.25 0.25];
-MC = [0 0.50 0; 1 0.55 0.25; 1 0 0; 0 0.40 0.85];   % ff_cond 0..3 = CL+p, OL+p, OL, CL (Fig 5 MODE_COLS)
+C.ol = [1 0 0]; C.clp = [0 0.50 0];                  % Fig 5 MODE_COLS: OL red, CL+p green
 W1 = 4.13; W2 = 8.43; H = 3.3;
 D = load(fullfile(dataDir, sprintf('mpc_direct_sine_%s.mat', sess)));
 cond = double(D.cond(:)); Fs = double(D.Fs); N = double(D.N); ext = double(D.ext); dur = (N-1)/Fs;
 tx = (-ext:N+ext-1).'/Fs; keep = tx >= -1 - 1e-9 & tx <= dur + 1 + 1e-9; tx = tx(keep);   % -1 .. 5 s
 sn = cellstr(D.sim_names); iM = find(strcmp(sn,'MPC')); iO = find(strcmp(sn,'perfect'));
-closed = ismember(cond, [0 3]); isCL = cond == 3; isCLp = cond == 0;
+isOL = cond == 2; isCLp = cond == 0;
 rRec = D.rmse_rec(:); rM = D.rmse_sim(:,iM); rO = D.rmse_sim(:,iO);
 Rref = mean(D.R, 2); tw = (0:N-1).'/Fs;
 v2mw = @(v) laser_v2mw(v, '2026-07-14', 638);
+% the four conditions of J/L/M: recorded OL, recorded CL+p, MPC and perfect MPC on the CL+p trials
+col4 = [C.ol; C.clp; C.m; C.o]; nam4 = {'OL','CL+p','MPC','perfect'};
+Yw = {D.Yrec(:,isOL), D.Yrec(:,isCLp), D.Ysim(:,isCLp,iM), D.Ysim(:,isCLp,iO)};        % stim window, N x n
+Rw = {D.R(:,isOL), D.R(:,isCLp), D.R(:,isCLp), D.R(:,isCLp)};
+Yx = {D.Yrecx(keep,isOL), D.Yrecx(keep,isCLp), D.Yx(keep,isCLp,iM), D.Yx(keep,isCLp,iO)};   % -1 .. 5 s
+for p = {'mpcs_J_trial_average'}                                                            % replaced panels
+    old = dir(fullfile(figDir, [p{1} '.*'])); for i = 1:numel(old), delete(fullfile(figDir, old(i).name)); end
+end
 
-% ---- I: example CL trial at the median MPC improvement --------------------------------------------------------
-iCL = find(isCL); [~, s] = sort(rM(iCL) - rRec(iCL)); k = iCL(s(round(0.5*(numel(iCL)-1))+1));
-fprintf('[MPCS-P] example trial %d (CL): RMSE CL %.2f | MPC %.2f | perfect %.2f\n', k, rRec(k), rM(k), rO(k));
+% ---- I: example CL+p trial at the median MPC improvement ------------------------------------------------------
+iC = find(isCLp); [~, s] = sort(rM(iC) - rRec(iC)); k = iC(s(round(0.5*(numel(iC)-1))+1));
+fprintf('[MPCS-P] example trial %d (CL+p): RMSE CL+p %.2f | MPC %.2f | perfect %.2f\n', k, rRec(k), rM(k), rO(k));
 Yk = [D.Yrecx(keep,k) D.Yx(keep,k,iM) D.Yx(keep,k,iO)]; Uk = v2mw([D.Urecx(keep,k) D.Ux(keep,k,iM) D.Ux(keep,k,iO)]);
-col3 = [MC(4,:); C.m; C.o]; nam3 = {'CL','MPC','perfect MPC'};
+col3 = [C.clp; C.m; C.o]; nam3 = {'CL+p','MPC','perfect MPC'};
 fig = jnFig(W2, 3.6);
 ax1 = axes(fig, 'Units','centimeters', 'Position', [0.7 1.45 W2-1.0 2.0]); hold(ax1,'on');
 ax2 = axes(fig, 'Units','centimeters', 'Position', [0.7 0.5 W2-1.0 0.6]); hold(ax2,'on');
@@ -47,81 +57,65 @@ paperAxes(ax2, 'XLength', 0, 'YLength', 0.5, 'YLabel', '0.5 mW');
 nameRow(fig, W2, col3, nam3, C);
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcs_I_example.png')); close(fig);
 
-% ---- J: trial average +/- SD, one axes per condition -----------------------------------------------------------
-grp = {D.Yrecx(keep, cond == 2), D.Yrecx(keep, isCL), D.Yrecx(keep, isCLp), D.Yx(keep, closed, iM), D.Yx(keep, closed, iO)};
-colJ = [MC(3,:); MC(4,:); MC(1,:); C.m; C.o]; namJ = {'OL','CL','CL+p','MPC','perfect'};
-nJ = numel(grp); fig = jnFig(W2, 3.0); wA = (W2-1.1)/nJ - 0.12;
-mx = -inf; mn = inf;
-for j = 1:nJ, m = mean(grp{j},2); sd = std(grp{j},0,2); mx = max(mx, max(m+sd)); mn = min(mn, min(m-sd)); end
-yl = [min(mn, min(Rref)) mx] + [-0.3 0.3];
-for j = 1:nJ
-    ax = axes(fig, 'Units','centimeters', 'Position', [0.9+(j-1)*(wA+0.12) 0.5 wA 2.1]); hold(ax,'on');
-    m = mean(grp{j},2); sd = std(grp{j},0,2);
-    stimBox(ax, 0, dur, yl, C);
-    fill(ax, [tx; flipud(tx)], [m+sd; flipud(m-sd)], colJ(j,:), 'FaceAlpha', 0.25, 'EdgeColor','none');
-    plot(ax, tx([1 end]), [0 0], '-', 'Color', C.k, 'LineWidth', 0.4);
-    plot(ax, tw, Rref, '--', 'Color', C.ref, 'LineWidth', S.lw_ref);
-    plot(ax, tx, m, '-', 'Color', colJ(j,:), 'LineWidth', S.lw_mean);
-    xlim(ax, tx([1 end])); ylim(ax, yl);
-    text(ax, mean(tx([1 end])), yl(2), namJ{j}, 'Color', colJ(j,:), 'FontSize', S.fs_label, 'FontWeight','bold', ...
-        'HorizontalAlignment','center', 'VerticalAlignment','bottom', 'Clipping','off');
-    if j == 1, paperAxes(ax, 'XLength', 1, 'YLength', 2, 'XLabel', '1 s', 'YLabel', '2% \DeltaF/F');
-    else, paperAxes(ax); set(ax, 'XColor','none', 'YColor','none'); end
+% ---- J: RMSE over time, trial-averaged (Fig 5F definition) -----------------------------------------------------
+fig = jnFig(W1, H); ax = axes(fig, 'Units','centimeters', 'Position', [1.1 0.6 W1-2.15 2.2]); hold(ax,'on');
+mx = 0;
+for j = [1 2 4 3]
+    E = (Yw{j} - Rw{j}).^2; mu = mean(E, 2); se = std(E, 0, 2) / sqrt(size(E, 2));
+    lo = sqrt(max(mu - se, 0)); hi = sqrt(mu + se); mx = max(mx, max(hi));
+    fill(ax, [tw; flipud(tw)], [hi; flipud(lo)], col4(j,:), 'FaceAlpha', 0.25, 'EdgeColor', 'none');
+    plot(ax, tw, sqrt(mu), '-', 'Color', col4(j,:), 'LineWidth', S.lw_mean);
 end
-ctrl_mpc_export(fig, fullfile(figDir, 'mpcs_J_trial_average.png')); close(fig);
+xlim(ax, [0 dur]); ylim(ax, [0 mx*1.02]);
+paperAxes(ax, 'XLength', 1, 'YLength', 1, 'XLabel', '1 s', 'YLabel', '1% \DeltaF/F');
+text(ax, 0.5, 1.02, 'RMSE across trials', 'Units','normalized', 'FontSize', S.fs_annot, ...
+    'FontWeight','bold', 'HorizontalAlignment','center', 'VerticalAlignment','bottom', 'Clipping','off');
+nameCol(ax, col4, nam4, S);
+ctrl_mpc_export(fig, fullfile(figDir, 'mpcs_J_rmse_time.png')); close(fig);
 
-% ---- K: per-trial RMSE, paired with the recorded trial ---------------------------------------------------------
+% ---- K: per-trial RMSE, paired with the recorded CL+p trial ----------------------------------------------------
 fig = jnFig(W1, H); ax = axes(fig); hold(ax,'on'); rng(1);
-blk = {isCL, MC(4,:), 'CL'; isCLp, MC(1,:), 'CL+p'}; xt = []; xl = {};
-for b = 1:2
-    msk = blk{b,1}; Rb = [rRec(msk) rM(msk) rO(msk)]; x0 = (b-1)*3.6; xs = x0 + (1:3);
-    jx = (rand(nnz(msk),1)-0.5)*0.36;
-    plot(ax, xs' + [jx jx jx]', Rb', '-', 'Color', [C.g 0.12], 'LineWidth', 0.25);
-    cb = [blk{b,2}; C.m; C.o];
-    for i = 1:3
-        scatter(ax, xs(i) + jx, Rb(:,i), 4, cb(i,:), 'filled', 'MarkerFaceAlpha', 0.5);
-        plot(ax, xs(i) + [-0.28 0.28], median(Rb(:,i))*[1 1], '-', 'Color', C.k, 'LineWidth', 1.2);
-    end
-    xt = [xt xs]; xl = [xl {blk{b,3}, 'MPC', 'perfect'}]; %#ok<AGROW>
+Rb = [rRec(isCLp) rM(isCLp) rO(isCLp)]; jx = (rand(nnz(isCLp),1)-0.5)*0.36;
+plot(ax, (1:3)' + [jx jx jx]', Rb', '-', 'Color', [C.g 0.12], 'LineWidth', 0.25);
+for i = 1:3
+    scatter(ax, i + jx, Rb(:,i), 4, col3(i,:), 'filled', 'MarkerFaceAlpha', 0.5);
+    plot(ax, i + [-0.28 0.28], median(Rb(:,i))*[1 1], '-', 'Color', C.k, 'LineWidth', 1.2);
 end
-mxr = ceil(max([rRec(closed); rM(closed)]));
-set(ax, 'XTick', xt, 'XTickLabel', xl, 'YTick', [0 mxr]); xlim(ax, [0.4 xt(end)+0.6]); ylim(ax, [0 mxr]);
-ylabel(ax, 'trial RMSE (%)'); jnAxes(ax); set(ax, 'XTickLabelRotation', 45);
+mxr = ceil(max(Rb(:)));
+set(ax, 'XTick', 1:3, 'XTickLabel', {'CL+p','MPC','perfect'}, 'YTick', [0 mxr]); xlim(ax, [0.4 3.6]); ylim(ax, [0 mxr]);
+ylabel(ax, 'trial RMSE (%)'); jnAxes(ax);
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcs_K_rmse_compare.png')); close(fig);
 
 % ---- L: phase lag of the trial average (1 Hz fundamental fit, Fig 5H definition) ------------------------------
 rows = cellstr(D.summary_rows); su = D.summary;
-lab = {'rec OL','rec OL+p','rec CL','rec CL+p','MPC on CL+CL+p','perfect on CL+CL+p'};
-colL = [MC(3,:); MC(2,:); MC(4,:); MC(1,:); C.m; C.o]; namL = {'OL','OL+p','CL','CL+p','MPC','perfect'};
-lag = cellfun(@(l) su(strcmp(rows, l), 2), lab);
+lag = cellfun(@(l) su(strcmp(rows, l), 2), {'rec OL','rec CL+p','MPC on CL+p','perfect on CL+p'});
 fig = jnFig(W1, H); ax = axes(fig); hold(ax,'on');
-for i = 1:numel(lag), bar(ax, i, lag(i), 0.6, 'FaceColor', colL(i,:), 'EdgeColor', 'none'); end
+for i = 1:numel(lag), bar(ax, i, lag(i), 0.6, 'FaceColor', col4(i,:), 'EdgeColor', 'none'); end
 plot(ax, [0.4 numel(lag)+0.6], [0 0], '-', 'Color', C.k, 'LineWidth', 0.4);
 yt = 15*[floor(min([lag 0])/15) ceil(max(lag)/15)];
-set(ax, 'XTick', 1:numel(lag), 'XTickLabel', namL, 'YTick', unique([yt 0])); xlim(ax, [0.4 numel(lag)+0.6]); ylim(ax, yt + [-2 2]);
-ylabel(ax, 'phase lag (\circ)'); jnAxes(ax); set(ax, 'XTickLabelRotation', 45);
+set(ax, 'XTick', 1:numel(lag), 'XTickLabel', nam4, 'YTick', unique([yt 0])); xlim(ax, [0.4 numel(lag)+0.6]); ylim(ax, yt + [-2 2]);
+ylabel(ax, 'phase lag (\circ)'); jnAxes(ax);
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcs_L_phase_lag.png')); close(fig);
 
 % ---- M: across-trial variance vs time (Fig-3 variance look) ----------------------------------------------------
-% 5-frame (143 ms) running mean on the variance traces only: 46-103 trials per condition make the raw
-% per-frame variance too ragged to compare five overlaid curves (window means below are unsmoothed).
+% 5-frame (143 ms) running mean on the variance traces only: 51-57 trials per condition make the raw
+% per-frame variance too ragged to compare four overlaid curves (window means below are unsmoothed).
 fig = jnFig(W1, H); ax = axes(fig, 'Units','centimeters', 'Position', [1.1 0.6 W1-2.15 2.2]); hold(ax,'on');
-Vraw = cell2mat(cellfun(@(Y) var(Y, 0, 2), grp, 'uni', 0)); Vx = movmean(Vraw, 5, 1);
+Vraw = cell2mat(cellfun(@(Y) var(Y, 0, 2), Yx, 'uni', 0)); Vx = movmean(Vraw, 5, 1);
 yl = [0 max(Vx(:))*1.05];
 stimBox(ax, 0, dur, yl, C);
-for j = [5 1 3 2 4], plot(ax, tx, Vx(:,j), '-', 'Color', colJ(j,:), 'LineWidth', S.lw_mean); end
+for j = [1 2 4 3], plot(ax, tx, Vx(:,j), '-', 'Color', col4(j,:), 'LineWidth', S.lw_mean); end
 xlim(ax, tx([1 end])); ylim(ax, yl);
 paperAxes(ax, 'XLength', 1, 'YLength', 2, 'XLabel', '1 s', 'YLabel', '2 (%\DeltaF/F)^2');
 text(ax, 0.5, 1.02, 'Variance across trials', 'Units','normalized', 'FontSize', S.fs_annot, ...
     'FontWeight','bold', 'HorizontalAlignment','center', 'VerticalAlignment','bottom', 'Clipping','off');
-for j = 1:nJ
-    text(ax, 1.04, 1.0 - 0.13*(j-1), namJ{j}, 'Units','normalized', 'Color', colJ(j,:), 'FontSize', S.fs_annot, ...
-        'FontWeight','bold', 'HorizontalAlignment','left', 'VerticalAlignment','top', 'Clipping','off');
-end
+nameCol(ax, col4, nam4, S);
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcs_M_variance.png')); close(fig);
 win = tx >= 0 & tx <= dur + 1e-9;
-fprintf('[MPCS-P] variance over the 4 s window (OL/CL/CL+p/MPC/perfect): %s\n', mat2str(round(mean(Vraw(win,:)),2)));
-fprintf('[MPCS-P] phase lag (OL/OL+p/CL/CL+p/MPC/perfect): %s deg\n', mat2str(round(lag,1)));
+fprintf('[MPCS-P] variance over the 4 s window (OL/CL+p/MPC/perfect): %s\n', mat2str(round(mean(Vraw(win,:)),2)));
+fprintf('[MPCS-P] RMSE over time, window mean of sqrt(mean sq err) (OL/CL+p/MPC/perfect): %s\n', ...
+    mat2str(round(cellfun(@(Y,R) mean(sqrt(mean((Y-R).^2, 2))), Yw, Rw), 2)));
+fprintf('[MPCS-P] phase lag (OL/CL+p/MPC/perfect): %s deg\n', mat2str(round(lag,1)));
 fprintf('[MPCS-P] panels -> %s\n', figDir);
 end
 
@@ -129,6 +123,14 @@ function stimBox(ax, x1, x2, yl, C)
 patch(ax, [x1 x2 x2 x1], yl([1 1 2 2]), [0.9 0.9 0.9], 'FaceAlpha', 0.4, 'EdgeColor','none');
 plot(ax, [x1 x1], yl, '-', 'Color', C.edge, 'LineWidth', 0.6);
 plot(ax, [x2 x2], yl, '-', 'Color', C.edge, 'LineWidth', 0.6);
+end
+
+function nameCol(ax, cols, names, S)
+% condition names stacked to the right of the axes, in their colours
+for j = 1:numel(names)
+    text(ax, 1.04, 1.0 - 0.13*(j-1), names{j}, 'Units','normalized', 'Color', cols(j,:), 'FontSize', S.fs_annot, ...
+        'FontWeight','bold', 'HorizontalAlignment','left', 'VerticalAlignment','top', 'Clipping','off');
+end
 end
 
 function nameRow(fig, W, cols, names, C)

@@ -364,7 +364,7 @@ supp_mpc/mpcd_F_lambda.pdf
 # right hemisphere (Fig 5's session). Producer: controller-analysis/ctrl_mpc_sine_panels.m (data from
 # mpc_direct_sine.py, MPCD_RD=0.1). Simulation -> descriptive only.
 supp_mpc/mpcs_I_example.pdf
-supp_mpc/mpcs_J_trial_average.pdf
+supp_mpc/mpcs_J_rmse_time.pdf
 supp_mpc/mpcs_K_rmse_compare.pdf
 supp_mpc/mpcs_L_phase_lag.pdf
 supp_mpc/mpcs_M_variance.pdf

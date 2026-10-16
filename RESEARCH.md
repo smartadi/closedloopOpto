@@ -16,6 +16,23 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 6 I–M recut: CL+p vs the two MPCs only; J = RMSE over time
+**Changed/Found:** `controller-analysis/ctrl_mpc_sine_panels.m`: CL is dropped everywhere. MPC and perfect now come from the 57 CL+p trials, paired with those recordings.
+- I: CL+p trial 87 at the median of MPC − CL+p (RMSE 3.61 / 3.32 / 2.98).
+- J: `mpcs_J_rmse_time` (Fig 5F definition: √ of the across-trial mean squared error ± SEM) for OL, CL+p, MPC and perfect. It replaces `mpcs_J_trial_average`; MANIFEST is updated and the old final panel deleted.
+- K: CL+p / MPC / perfect only.
+- L and M: OL, CL+p, MPC and perfect.
+
+Numbers:
+- Variance over 0–4 s: 11.8 / 8.85 / 6.01 / 5.05.
+- RMSE-over-time window mean: 3.96 / 3.11 / 2.72 / 2.39.
+- Lag: 70.7 / 1.7 / −0.6 / −1.6°.
+- Upper-half-cycle share of squared error: CL+p 0.57, MPC 0.64, perfect 0.66. The laser is off 80% of the upper half-cycle under MPC.
+
+Closedloop draft a72eed2 rewrites the sine paragraph and the I–M caption to match.
+**Why:** User: compare CL+p against the two MPCs only, and replace the all-controller trial-average panel with a trial-averaged RMSE comparison of OL, CL+p and the MPCs.
+**Next:** User assembles I–M in Illustrator. The stats table still carries the CL rows too (a superset; harmless).
+
 ### 2026-10-16 — Manuscript: Fig 6 sine paragraph + caption I–M (Closedloop draft 15df1e2)
 **Changed/Found:** `Closedloop_edit/results.tex` (draft only, not pushed). One paragraph replaces the ROOM RESERVED comment, and the Fig 6 caption now says A–H = AL_0033 and I–M = AL_0048, with I–M described. Numbers are from STATS_TABLE `6s_*`. The paragraph states the one-sided-laser ceiling and the caveats (one session, same model class, state-independent laser), and says the values use the controller's own signal and timing, so they differ from Fig 5. methods_rewrite.tex was not touched. latexmk builds clean.
 **Why:** User asked to fill the two reserved spots only.
