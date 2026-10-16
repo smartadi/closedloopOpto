@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Methods restructure plan written (no .tex edited)
+**Changed/Found:** new `paper-writing/METHODS_RESTRUCTURE_PLAN.md` (full read of `methods_rewrite.tex`). Methods is ~10,550 rendered words (1,478 lines, ~190 of them `%%` comments), about 1.6× Results. Proposed target ~6,100 words (−42%). It works by citing the system to Matveev2024 (~1,630 → ~520 w), cutting implementation detail (semaphore/ring buffer, tfest, Algorithm box, input_params), removing 38 redundancy pairs, and adding a new MPC Methods paragraph. Ref risks: `eq:kr` and `sec:pi_controller_design` (Discussion), `sec:stats` (stat_tables), and S3's plain-text section name. Also found: `paper-writing/CLAUDE.md` still names `methods_edit.tex` as live (it is `methods_rewrite.tex`).
+**Why:** User: Methods too big; cite the mesoscale system paper and cut detail without losing meaning.
+**Next:** user approves the plan and answers the open questions (what Matveev2024 covers, surgery doses, gain-setting story), then apply in Closedloop_edit on draft.
+
 ### 2026-10-16 — Manuscript: MPC promoted from supplement to Results (Figure 6), with a slot reserved for sine panels
 **Changed/Found:** `Closedloop_edit/results.tex` — new last Results section "Model-predictive control rejects disturbances in a replay of recorded trials". It covers the motivation, the VARX model, the MPC, the replay construction (recorded residuals; PI baseline = recorded trial), the result (RMSE 1.46 → 0.82 on 108/108 trials, variance −39%, perfect prediction 0.27, holds across λ) and one caveat sentence ("bounds rather than measures"). `fig:mpc_direct` moved here from `supplementary.tex` and is retitled; `images/supplementary/S_mpc.pdf` was git-mv'd to `images/Figure6.pdf`. LaTeX comments reserve room for the sinusoidal MPC panels and paragraph. `discussion.tex` — the MPC paragraph no longer repeats the Results numbers; it keeps the R² comparison and the interpretation. Build clean; MPC = Figure 6. Supplementary numbering is unchanged (MPC was last).
 **Why:** User: promote MPC to Results without overselling it. It must read as a study on recorded data, not a live run, while showing the improvement. Sine-wave MPC panels will come from another session.
