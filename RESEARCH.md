@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Standalone state-raster PNG retired (S2 carries it)
+**Changed/Found:** `paper/figures_final/MANIFEST.txt` — `supplementary/supp_state_raster.png` commented out as RETIRED. Deleted `panels/supplementary/supp_state_raster.png`. PAPER.md row marked retired, pointing to the S2 strips. `collect_final_panels('dry')` also listed 8 tabled `s4_reject_trials_*` files (commented out 2026-10-10) for pruning, so I did NOT run the live collector. Only the raster was deleted, by hand; the dry run now shows 121 present, 0 missing, 8 pending.
+**Why:** User: S2 now carries the raster, so retire the standalone and prune it. The S4 prune was not requested.
+**Next:** User to decide whether to prune the 8 tabled S4 files (the producer can regenerate them). `figures_final/S_state_raster.png` (root-level copy next to S1–S5) is untouched; the collector does not manage the root.
+
 ### 2026-10-16 — Methods restructure plan written (no .tex edited)
 **Changed/Found:** new `paper-writing/METHODS_RESTRUCTURE_PLAN.md` (full read of `methods_rewrite.tex`). Methods is ~10,550 rendered words (1,478 lines, ~190 of them `%%` comments), about 1.6× Results. Proposed target ~6,100 words (−42%). It works by citing the system to Matveev2024 (~1,630 → ~520 w), cutting implementation detail (semaphore/ring buffer, tfest, Algorithm box, input_params), removing 38 redundancy pairs, and adding a new MPC Methods paragraph. Ref risks: `eq:kr` and `sec:pi_controller_design` (Discussion), `sec:stats` (stat_tables), and S3's plain-text section name. Also found: `paper-writing/CLAUDE.md` still names `methods_edit.tex` as live (it is `methods_rewrite.tex`).
 **Why:** User: Methods too big; cite the mesoscale system paper and cut detail without losing meaning.

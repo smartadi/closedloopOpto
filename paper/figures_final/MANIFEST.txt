@@ -178,7 +178,8 @@ supplementary/supp_spatial_map_09.png
 # State-sorted trial rasters behind Fig 2G (user 2026-10-12: pooled, all columns 0-0.5 s).
 # 3 states x {activity, deviation from amplitude mean, no-stim control}. Heatmap -> 300-dpi PNG.
 # Source: impulse-analysis/imp_state_raster_supp.m (after imp_state_trialvar, STV_DV='l2').
-supplementary/supp_state_raster.png
+# RETIRED 2026-10-16 (user): supplementary/supp_state_raster.png -- Fig S2 now carries the raster as
+# per-state vector strips (supplementary/state_quartile/sq_*_raster.pdf, see [supp_state_quartile]).
 
 [supp_state_quartile]
 # Supplementary Fig "Single-trial variability by state quartile" (LaTeX label fig:state_quartile),
