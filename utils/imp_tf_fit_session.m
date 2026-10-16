@@ -81,16 +81,35 @@ if nargin < 4, opts = struct(); end
 % that window). See the rejection block near the bootstrap for why this exists.
 def = struct('maxPoles',5,'maxZeros',4,'maxDelay',3,'tFit_s',0.5,'per_amp_fit',true, ...
              'verbose',true,'ampRange',[],'nBoot',0,'select','aic','minR2h',0.98,'tauMax',NaN, ...
-             'forceOrder',[],'preShow_s',0.15,'seedOffset',false,'seedPre_s',0.5);
+             'forceOrder',[],'preShow_s',0.15,'seedOffset',false,'seedPre_s',0.5, ...
+             'preData_s',0,'refMode','onset','refPre_s',0.5,'enforceStab',false);
 fn = fieldnames(def);
 for i = 1:numel(fn), if ~isfield(opts,fn{i}) || isempty(opts.(fn{i})), opts.(fn{i}) = def.(fn{i}); end, end
+% ---- ALTERNATIVE-WINDOW KNOBS (2026-10-15, exploratory; defaults reproduce the 0-0.5 s fit) ----
+%   preData_s    > 0 fits REAL pre-onset samples [-preData_s, 0) in place of the synthetic zero
+%                lead-in (nPre zeros). tfest still assumes zero initial conditions, which is only
+%                honest if the pre-onset data sit at a steady baseline -- hence refMode.
+%   refMode      'onset'   (default) trials as built by load_experiments: dF minus the ONSET FRAME.
+%                'premean' re-reference every trial to its own mean over [-refPre_s, 0). One noisy
+%                frame then no longer sets a constant offset on the whole trace, and the pre-onset
+%                segment is zero-mean, so zero initial conditions hold by construction on average.
+%   enforceStab  tfestOptions EnforceStability. The 1.0 s window run of 2026-10-03 returned unstable
+%                slow poles (tau 7.5e12 s); a plant model with an unstable pole is not a candidate.
+%   select       adds 'bic' (BIC in place of AIC; heavier per-parameter penalty for ~50-sample traces).
+if opts.preData_s > 0 && opts.seedOffset
+    % The seed exists to absorb the onset-frame offset (see SEEDED CANDIDATE); its helpers build
+    % synthetic-zero lead-ins. Not combined with real pre-onset data.
+    if opts.verbose, fprintf('  [TF] preData_s > 0: seedOffset disabled (onset-offset fix not needed)\n'); end
+    opts.seedOffset = false;
+end
 
 % Identity fields are carried SEPARATELY from `label`. `label` is a display string
 % (axis ticks, printouts); callers that need the mouse -- e.g. counting how many
 % ANIMALS the sessions come from, which the caption must state -- must not have to
 % parse it back out.
 T = struct('label',sprintf('%s %s e%d', A.mn, A.td, A.en), ...
-           'mn',A.mn, 'td',A.td, 'en',A.en, 'ok',false, 'seeded',false);
+           'mn',A.mn, 'td',A.td, 'en',A.en, 'ok',false, 'seeded',false, ...
+           'refMode',opts.refMode, 'preData_s',opts.preData_s);
 Ts = 1/fs;
 
 DF   = A.DF_imp;
@@ -99,6 +118,20 @@ nAmp = numel(uA);
 t_full = -tWin : Ts : tWin;
 iPost  = find(t_full >= 0 & t_full <= opts.tFit_s);
 nPost  = numel(iPost);
+% Re-reference (refMode 'premean'). Applied to the amp-averages AND the per-trial traces the
+% bootstrap resamples, so every refit below sees the same reference.
+if strcmpi(opts.refMode, 'premean')
+    iRef = find(t_full >= -opts.refPre_s & t_full < 0);
+    DF   = DF - mean(DF(:, iRef), 2, 'omitnan');
+    if isfield(A,'imp') && isfield(A.imp,'dfImp')
+        for a = 1:numel(A.imp.dfImp)
+            x = A.imp.dfImp{a};
+            if ~isempty(x), A.imp.dfImp{a} = x - mean(x(:, iRef), 2, 'omitnan'); end
+        end
+    end
+end
+iPreD = [];                                       % real pre-onset samples fitted (preData_s > 0)
+if opts.preData_s > 0, iPreD = find(t_full >= -opts.preData_s & t_full < 0); end
 
 % ---- amplitude-normalised impulse response h(t) --------------------------------------------
 % Dividing each amplitude's trial-average by its input voltage is ALREADY the LTI assumption: if
@@ -128,6 +161,13 @@ if nT_h < opts.maxPoles + 3
 end
 
 nPre = opts.maxPoles + opts.maxZeros + 2;        % toolbox wants lead-in zeros for transient data
+hPre = [];                                       % [] = synthetic zero lead-in (default path)
+if ~isempty(iPreD)
+    nPre = numel(iPreD);
+    hPre = sum((DF(validAmp, iPreD) ./ uA(validAmp)) .* w_amp, 1, 'omitnan').';
+    T.h_measPreFit = hPre;  T.tPreFit = t_full(iPreD).';
+end
+opts.hPre = hPre;                                % carried to the sweep via opts
 [best, res] = local_sweep(h_norm(validT), nPre, Ts, opts);
 if isempty(best)
     if opts.verbose, fprintf('  [TF] %s: every order failed or was rejected as unsafe\n', T.label); end
@@ -283,7 +323,8 @@ for k = 1:numel(validIdx)
         mLo   = sum(mean(DF(trainIdx, iPreSeed) ./ uA(trainIdx), 2, 'omitnan') .* w, 'omitnan');
         sysLo = local_fit_seeded(hn(vt), mLo, T.seedAlt, nPre, Ts);
     else
-        sysLo = local_fit_one(hn(vt), nPre, Ts, best.np, best.nz, best.nd);
+        pLo = [];  if ~isempty(iPreD), pLo = sum((DF(trainIdx, iPreD) ./ uA(trainIdx)) .* w, 1, 'omitnan').'; end
+        sysLo = local_fit_one(hn(vt), nPre, Ts, best.np, best.nz, best.nd, [], pLo, opts.enforceStab);
     end
     if isempty(sysLo), continue; end
     hLo = local_unit_response(sysLo, nPre, nPost, Ts);
@@ -303,7 +344,8 @@ if opts.per_amp_fit
         if uA(a) <= 0, continue; end
         y = DF(a, iPost).'/uA(a);  v = isfinite(y);
         if nnz(v) < opts.maxPoles + 3, continue; end
-        sysA = local_fit_one(y(v), nPre, Ts, best.np, best.nz, best.nd, initRef);
+        pA = [];  if ~isempty(iPreD), pA = DF(a, iPreD).'/uA(a); end
+        sysA = local_fit_one(y(v), nPre, Ts, best.np, best.nz, best.nd, initRef, pA, opts.enforceStab);
         if isempty(sysA), continue; end
         p = pole(sysA);  tt = sort(-1./real(p(real(p) < 0)), 'descend');
         tau_amp(a, 1:min(numel(tt), opts.maxPoles)) = tt(1:min(numel(tt), opts.maxPoles)).';
@@ -322,7 +364,7 @@ if opts.nBoot > 0
     if ~isfield(A,'imp') || ~isfield(A.imp,'dfImp')
         if opts.verbose, fprintf('  [TF] %s: no per-trial dfImp -- bootstrap skipped\n', T.label); end
     else
-        T.tauBoot = local_boot_tau(A.imp.dfImp, uA, validAmp, iPost, nPre, Ts, best, opts, initRef);
+        T.tauBoot = local_boot_tau(A.imp.dfImp, uA, validAmp, iPost, nPre, Ts, best, opts, initRef, iPreD);
         % ---- DISCARD NON-IDENTIFIABLE RESAMPLES (2026-08-12) -------------------------------
         % A resample whose slowest pole lands marginally stable (real part -> 0-) returns
         % tau -> Inf. Measured on the 4-session set: 25% of resamples above 1000 s in
@@ -447,27 +489,31 @@ end
 end
 
 % =================================================================================================
-function tb = local_boot_tau(dfImp, uA, validAmp, iPost, nPre, Ts, best, opts, initRef)
+function tb = local_boot_tau(dfImp, uA, validAmp, iPost, nPre, Ts, best, opts, initRef, iPreD)
 % Trial bootstrap: for each draw, resample trials WITH REPLACEMENT within every fitted amplitude,
 % rebuild that amplitude's trial average, rebuild the amp^2-weighted h(t), refit at the fixed
 % selected order, and take the time constants. Draws whose refit fails or is unsafe come back NaN.
+% iPreD non-empty: the resampled trials' own pre-onset samples are fitted too (preData_s > 0).
+if nargin < 10, iPreD = []; end
 idx = find(validAmp);
 tb  = nan(opts.nBoot, opts.maxPoles);
 w   = uA(idx).^2;  w = w/sum(w);
+iCol = [iPreD(:); iPost(:)].';  nPd = numel(iPreD);
 for b = 1:opts.nBoot
-    DFb = nan(numel(idx), numel(iPost));
+    DFb = nan(numel(idx), numel(iCol));
     bad = false;
     for j = 1:numel(idx)
         tr = dfImp{idx(j)};
         if isempty(tr) || size(tr,1) < 2, bad = true; break; end
         pick = randi(size(tr,1), size(tr,1), 1);
-        DFb(j,:) = mean(tr(pick, iPost), 1, 'omitnan');
+        DFb(j,:) = mean(tr(pick, iCol), 1, 'omitnan');
     end
     if bad, continue; end
-    hn = sum((DFb ./ uA(idx)) .* w, 1, 'omitnan').';
+    hAll = sum((DFb ./ uA(idx)) .* w, 1, 'omitnan').';
+    hn = hAll(nPd+1:end);  pB = [];  if nPd > 0, pB = hAll(1:nPd); end
     vt = isfinite(hn);
     if nnz(vt) < best.np + 3, continue; end
-    sysB = local_fit_one(hn(vt), nPre, Ts, best.np, best.nz, best.nd, initRef);
+    sysB = local_fit_one(hn(vt), nPre, Ts, best.np, best.nz, best.nd, initRef, pB, opts.enforceStab);
     if isempty(sysB), continue; end
     p  = pole(sysB);
     tt = sort(-1./real(p(real(p) < 0)), 'descend');
@@ -484,11 +530,10 @@ function [best, res] = local_sweep(h, nPre, Ts, opts)
 % the model say so is cheaper (one integer) than making relative degree absorb it with poles.
 % R2h/nPar are declared here so the array carries them even when the sweep returns empty.
 best = [];  res = struct('np',{},'nz',{},'nd',{},'AIC',{},'sys',{},'R2h',{},'nPar',{});
-nT = numel(h);
-u  = [zeros(nPre,1); 1; zeros(nT-1,1)];
-y  = [zeros(nPre,1); h(:)];
-d  = iddata(y, u, Ts);  d.Tstart = -nPre*Ts;
-tfOpt = tfestOptions('EnforceStability', false, 'Display', 'off');
+hPre = [];  if isfield(opts,'hPre'), hPre = opts.hPre; end
+d  = local_iddata(h, nPre, Ts, hPre);
+tfOpt = tfestOptions('EnforceStability', isfield(opts,'enforceStab') && opts.enforceStab, 'Display', 'off');
+useBIC = strcmpi(opts.select, 'bic');            % res.AIC then holds BIC (field name kept)
 ri = 0;
 % opts.forceOrder = [np nz nd] collapses the sweep to a SINGLE fit at that order.
 % Added 2026-08-14 for the fit-window scoping test: the sweep is ~100 tfest calls per
@@ -514,7 +559,8 @@ for nd = ndList
             if ~tf_ok(s, Ts), continue; end
             ri = ri+1;
             res(ri).np = np; res(ri).nz = nz; res(ri).nd = nd;
-            res(ri).AIC = aic(s); res(ri).sys = s;
+            if useBIC, res(ri).AIC = aic(s,'BIC'); else, res(ri).AIC = aic(s); end
+            res(ri).sys = s;
         end
     end
 end
@@ -524,18 +570,19 @@ best = res(ib);
 end
 
 % -------------------------------------------------------------------------------------------------
-function sys = local_fit_one(h, nPre, Ts, np, nz, nd, init)
+function sys = local_fit_one(h, nPre, Ts, np, nz, nd, init, yPre, stab)
 % Refit ONE fixed order (used by LOAO and the per-amplitude fits). Returns [] on failure or on an
 % unsafe fit, so callers record NaN rather than crashing MATLAB in sssim. A non-empty init (an
 % idtf of that order) warm-starts tfest from it instead of the default initialisation.
+% yPre: real pre-onset samples (length nPre) or [] for the synthetic zero lead-in.
+if nargin < 8, yPre = []; end
+if nargin < 9 || isempty(stab), stab = false; end
 sys = [];
 nT = numel(h);
 if nT < np + 3, return; end
-u = [zeros(nPre,1); 1; zeros(nT-1,1)];
-y = [zeros(nPre,1); h(:)];
-d = iddata(y, u, Ts);  d.Tstart = -nPre*Ts;
+d = local_iddata(h, nPre, Ts, yPre);
 try
-    tfOpt = tfestOptions('EnforceStability',false,'Display','off');
+    tfOpt = tfestOptions('EnforceStability',stab,'Display','off');
     if nargin >= 7 && ~isempty(init)
         s = tfest(d, init, tfOpt);
     else
@@ -596,6 +643,16 @@ catch
     return
 end
 if tf_ok(s, Ts), sys = s; end
+end
+
+% -------------------------------------------------------------------------------------------------
+function d = local_iddata(h, nPre, Ts, yPre)
+% Impulse at t = 0 after an nPre-sample lead-in. yPre empty -> synthetic zeros (the 0-0.5 s
+% default); otherwise the measured pre-onset samples, fitted under zero initial conditions.
+nT = numel(h);
+if nargin < 4 || isempty(yPre), yPre = zeros(nPre,1); end
+yPre = yPre(:);  yPre(~isfinite(yPre)) = 0;
+d = iddata([yPre; h(:)], [zeros(nPre,1); 1; zeros(nT-1,1)], Ts);  d.Tstart = -nPre*Ts;
 end
 
 % -------------------------------------------------------------------------------------------------
