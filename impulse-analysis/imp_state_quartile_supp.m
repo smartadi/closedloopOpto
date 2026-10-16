@@ -123,16 +123,27 @@ for iS = 1:numel(SQ_STATES)
 end
 
 % ---- shared legend panel (place once in Illustrator) ------------------------------------------
-f = jnFig(J.W_double, 0.6);  ax = axes(f, 'Visible','off');  hold(ax,'on');
-h = gobjects(0);
-for i = 1:numel(SESS_LAB)
-    h(end+1) = plot(ax, nan, nan, '-', 'Color', C_sess(i,:), 'LineWidth', 1, 'DisplayName', SESS_LAB{i}); %#ok<SAGROW>
+% Drawn as REAL line + text objects on a cm-scaled axes, not legend(): a legend() fed NaN
+% placeholder lines on an invisible axes exports its text but drops the colour swatches from the
+% vector PDF (user 2026-10-16: "legend pdf did not contain the colors only text").
+f = jnFig(J.W_double, 0.5);
+ax = axes(f, 'Units','normalized', 'Position',[0 0 1 1]);  hold(ax,'on');
+axis(ax, [0 J.W_double 0 0.5]);  axis(ax, 'off');
+items = [ cellfun(@(lb,c) {lb, c, '-', 'none', J.lw_mean}, SESS_LAB, num2cell(C_sess,2).', 'UniformOutput', false), ...
+          {{'Session mean', C_stim, '-', 'o', J.lw_mean}}, ...
+          {{'Mean (stim/control, variance)', [0 0 0], '-', 'o', J.lw_mean}}, ...
+          {{'No-stimulus control', C_ctl, '--', 'none', J.lw_mean}} ];
+x = 0.1;  yc = 0.25;  tok = 0.5;
+for it = 1:numel(items)
+    [lb, c, ls, mk, lw] = items{it}{:};
+    plot(ax, x + [0 tok], [yc yc], 'LineStyle', ls, 'Color', c, 'LineWidth', lw);
+    if ~strcmp(mk,'none')
+        plot(ax, x + tok/2, yc, mk, 'Color', c, 'MarkerFaceColor', c, 'MarkerSize', J.marker);
+    end
+    t = text(ax, x + tok + 0.1, yc, lb, 'FontSize', J.fs_annot, 'FontName', J.font, ...
+             'VerticalAlignment','middle', 'Interpreter','none');
+    x = t.Extent(1) + t.Extent(3) + 0.35;
 end
-h(end+1) = plot(ax, nan, nan, '-o', 'Color', C_stim, 'MarkerFaceColor', C_stim, 'MarkerSize', J.marker, ...
-                'LineWidth', J.lw_mean, 'DisplayName', 'Session mean');
-h(end+1) = plot(ax, nan, nan, '--', 'Color', C_ctl, 'LineWidth', J.lw_mean, 'DisplayName', 'No-stimulus control');
-lg = legend(ax, h, 'NumColumns', 6, 'Box','off', 'FontSize', J.fs_annot, 'Location','north');
-lg.ItemTokenSize = J.itemtoken*1.5;
 jnExport(f, fullfile(outDir, 'sq_legend.pdf'));  close(f);
 
 disp(ST);

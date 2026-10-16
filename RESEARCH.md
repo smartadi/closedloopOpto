@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Supp state-quartile legend PDF lost its colour swatches
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — `sq_legend.pdf` held only text. legend() fed NaN placeholder lines on an invisible axes drops the swatches from exportgraphics' vector PDF (the PNG looked fine). Legend is now drawn as real line/marker/text objects on a cm-scaled axes with axis off. Also added a black "Mean (stim/control, variance)" item for the ratio and variance tiles. Verified by rendering the PDF (PyMuPDF): 12 vector paths in all 7 colours.
+**Why:** User found the legend PDF had no colours in Illustrator.
+**Next:** Avoid legend()+NaN+invisible-axes for any standalone legend panel exported as vector PDF; other supp legends may have the same bug (check supp_spatial_cbar-style standalone pieces if they use legend()).
+
 ### 2026-10-16 — Fig 2G: per-session quartile ratios replace the bootstrap CI; state-quartile supp figure enters the paper
 **Changed/Found:** `paper-writing/paper_stats_table.m` — `2G_*_ratio` / `2G_*_ctrlratio` are now the geometric mean of per-session Q4/Q1 ratios (from `sdRawNs`/`sdPNs`, the drawn curves) with the min–max range; the hierarchical-bootstrap CI is dropped. New rows `2G_*_q4` and `2G_*_beyondctrl` read `sq_stats.csv` (imp_state_quartile_supp). Values: motion 0.58 (0.50–0.81), rel δ 1.03 (0.83–1.16), abs δ 2.35 (1.70–2.71); control 0.60 / 1.08 / 2.70; beyond control 0.92 / 0.95 / 0.95, p = 0.22 / 0.18 / 0.57. `paper_stats_tex.m` — Fig 2G table shows "Ratio (range)" for response and control, and the footnote carries the beyond-control test. Found: the old pooled-trial motion ratio (0.64) did not match the panel's equal-weight session mean (0.58); the δ ratios agreed (2.31 vs 2.35, 1.03 vs 1.03).
 **Why:** User: with 4 sessions the CI does not make sense (35 distinct session draws, under-covers); report per-session spreads instead, and cite the existing supplementary state-quartile figure. That figure also tests response against control, so the Results line "we did not compare … statistically" is replaced with the test (weak evidence at n = 4, still worded as an interpretation).
