@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-15 — Stats-to-paper audit of the full manuscript (read-only)
+**Changed/Found:** `paper-writing/STATS_AUDIT_2026-10-15.md` — checked every statistical number in the built manuscript files against STATS_TABLE.csv and saved outputs. Figs 2/4 and the supplementary are clean (~65 matches). Fig 3H/3I text and Methods are stale against the CL/OL scheme. Wrong in the current text: RMSE pre p 0.85 (should be 0.095), variance post p 0.76 (should be 0.64), variance 0-1 s p 4.3e-4 is the trial-level signed-rank. Also: Fig 2B trial counts (caption 19-84 vs Methods >=44), Discussion leans on the relative-delta p=0.044 that Results disclaims, 4G Methods leads with the nested model, the df-fallback is called conservative, and an unfulfilled "every mouse" promise. Unsourced numbers listed (47 ms loop delay, 2B slopes, leak %, Discussion MPC R2).
+**Why:** User asked for a stats-to-paper consistency check including captions.
+**Next:** main session rewrites Fig 3 Results/caption/Methods from section A and fixes B; user decides the full 0-3 s window test (section C).
+
 ### 2026-10-15 — Manuscript Figure 3 composite updated with the new 3H/3I
 **Changed/Found:** `Closedloop_edit/images/Figure3.pdf` replaced by the user's Illustrator re-export (`paper/figures_final/Figure3.pdf`, 23:24) showing the CL/OL log-axis 3H/3I; latexmk builds clean (0 errors). Committed on draft (dbf92a9), not pushed.
 **Why:** User asked to update the figure PDF in the paper.
