@@ -16,6 +16,15 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 6 I–M resized to fit one row (17.6 cm)
+**Changed/Found:**
+- **Sizes:** in `controller-analysis/ctrl_mpc_sine_panels.m`, panel I is now 5.2×3.0 cm and J–M are 2.8×3.0 cm each (was 8.43 / 4.13 × 3.3). The row is 15.6 cm with 0.3 cm gaps (preview: `paper/images/supp_mpc/_row_preview_mpcs.png`).
+- **Labels:** the condition names are now one row whose spacing is measured in cm from text extents. J and M carry them under their titles, and I's legend reads CL+p / MPC / perfect / target. K and L tick labels are rotated 45°.
+- **Fixes:** I's dashed target is redrawn on top, because at this size the traces hid it. The K/L left margin went to 0.95 cm, because the L y-label was clipped.
+- **Export:** re-exported with PAPER_FINAL.
+**Why:** User: I–M must fit in one row.
+**Next:** User assembles them in Illustrator.
+
 ### 2026-10-16 — Fig 6I example switched to CL+p trial 161 (large MPC gain)
 **Changed/Found:** `controller-analysis/ctrl_mpc_sine_panels.m` has a new 2nd argument `kEx`, default 161; `[]` gives the median trial, which is 87. Candidates were the top 5 CL+p trials by RMSE drop: 104 (4.74→2.70), 141 (2.79→1.63), 184, 27 and 161 (1.58→0.83, perfect 0.53). I chose 161 by eye: MPC tracks the sine across the whole window while CL+p overshoots each rise. 104 and 141 gain mostly in the onset transient. Re-exported with PAPER_FINAL. The caption on Closedloop draft (b96f099) now says "a CL+p trial on which the MPC improved tracking markedly".
 **Why:** User: show a trial where MPC does really well, instead of the median one.
