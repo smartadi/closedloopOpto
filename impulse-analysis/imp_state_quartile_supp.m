@@ -136,16 +136,16 @@ items = [ cellfun(@(lb,c) {lb, c, '-', 'none', J.lw_mean}, SESS_LAB, num2cell(C_
           {{'Session mean', C_stim, '-', 'o', J.lw_mean}}, ...
           {{'Mean (stim/control, variance)', [0 0 0], '-', 'o', J.lw_mean}}, ...
           {{'No-stimulus control', C_ctl, '--', 'none', J.lw_mean}} ];
-x = 0.1;  yc = 0.25;  tok = 0.5;
+x = 0.1;  yc = 0.25;  tok = 0.25;   % short swatch (user 2026-10-16)
 for it = 1:numel(items)
     [lb, c, ls, mk, lw] = items{it}{:};
     plot(ax, x + [0 tok], [yc yc], 'LineStyle', ls, 'Color', c, 'LineWidth', lw);
     if ~strcmp(mk,'none')
         plot(ax, x + tok/2, yc, mk, 'Color', c, 'MarkerFaceColor', c, 'MarkerSize', J.marker);
     end
-    t = text(ax, x + tok + 0.1, yc, lb, 'FontSize', J.fs_annot, 'FontName', J.font, ...
+    t = text(ax, x + tok + 0.07, yc, lb, 'FontSize', J.fs_annot, 'FontName', J.font, ...
              'VerticalAlignment','middle', 'Interpreter','none');
-    x = t.Extent(1) + t.Extent(3) + 0.35;
+    x = t.Extent(1) + t.Extent(3) + 0.25;
 end
 jnExport(f, fullfile(outDir, 'sq_legend.pdf'));  close(f);
 

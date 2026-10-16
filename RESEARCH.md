@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 (state quartiles) legend shortened
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — legend swatch 0.5 → 0.25 cm, swatch–text gap 0.10 → 0.07 cm, gap between items 0.35 → 0.25 cm. Re-exported with PAPER_FINAL, so `sq_legend.pdf` is now 13.4 × 0.3 cm (it was full-width). The stats table is unchanged.
+**Why:** User: "make the legend length smaller and the color bar too". The state-quartile figure has no colorbar, so I read "color bar" as the coloured line swatches.
+**Next:** User re-places sq_legend in Illustrator. At 0.25 cm the dashed no-stim control swatch shows only about one dash; lengthen that one item if it reads as solid.
+
 ### 2026-10-16 — Strip mouse IDs from cohort table and stats Table 3
 **Changed/Found:** `Closedloop_edit/methods_rewrite.tex` — cohort table rows are now Mouse 1–5 (no AL IDs); caption drops the AL↔Mouse map and lists the extra sessions as "two sessions of Mouse 1" and so on. `paper-writing/paper_stats_tex.m` — Table 3's "Recording" column (AL ID + date) is now "Date"; stat_tables.tex regenerated. I checked the rendered Figs 1–6 and S1–S3 by eye: no AL IDs in the figures (Fig 2/4G already use Mouse labels; S3 uses S01–S11).
 **Why:** User: mouse naming "plagues a lot of captions including supplementary figures"; the paper convention is Mouse N only.
