@@ -36,7 +36,10 @@ if ~exist(RS_OUT,'dir'), mkdir(RS_OUT); end
 assert(exist('T','var')==1 && isfield(T,'DPaz'), '[RS] run imp_state_trialvar first');
 
 %% ---- per-trial traces, same loop order as imp_state_trialvar ---------------------------------
-iA  = iOn : (iOn + floor(STV_L2_WIN*fs - 1e-9));   % 0 .. +0.486 s, same span as cols 2-3
+% Activity starts RS_PRE s before onset (user 2026-10-16: "activity slightly prior to stim too, to
+% show the effect of stim on activity"); the deviation column stays 0 .. +0.486 s.
+if ~exist('RS_PRE','var') || isempty(RS_PRE), RS_PRE = 0.2; end
+iA  = (iOn - round(RS_PRE*fs)) : (iOn + floor(STV_L2_WIN*fs - 1e-9));   % -0.2 .. +0.486 s
 tA  = (iA - iOn) / fs;
 iL  = iOn : iOn + floor(STV_L2_WIN*fs - 1e-9);                      % 18 samples, 0 .. 0.486 s
 iC  = (iPow(1) - numel(iL)) : (iPow(1) - 1);                         % -1.514 .. -1.029 s
@@ -141,17 +144,13 @@ if RS_ROWS && isempty(RS_SESS)
     global PAPER_FINAL %#ok<GVMIS,TLEV>
     nDir = fullfile(rDir, '_native');  if ~exist(nDir,'dir'), mkdir(nDir); end
     tagF = {'mot','dpr','dpa'};
-    colS = {'Activity', 'Deviation RMS', 'No-stim RMS'};   % one line at 5 pt fits a 1.25 cm column
-    % COLOUR (user 2026-10-16: "everything appears gray"; the state effect is in the SPREAD, which a
-    % signed per-trial map cannot show -- neighbouring trials' +/- deviations average to mid-grey).
-    %   Activity       signed, grey, +/-RS_ACLIM (black = dip): high-state rows read streakier.
-    %   Deviation/ctrl running RMS over RS_RMSWIN state-sorted trials, white (0) -> black (RS_RMAX):
-    %                  the per-quartile spread of Fig S2 col A, as a gradient up the sorted trials.
-    if ~exist('RS_ACLIM','var')  || isempty(RS_ACLIM),  RS_ACLIM  = 2;   end
-    if ~exist('RS_RMSWIN','var') || isempty(RS_RMSWIN), RS_RMSWIN = 51;  end
-    if ~exist('RS_RMAX','var')   || isempty(RS_RMAX),   RS_RMAX   = 1.6; end
-    cmA = gray(256);  cmR = flipud(gray(256));
-    W = 4.6;  H = SQ_H;  pw = 1.25;  gp = 0.12;  x0 = 0.45;   % 4 x 2.9 tiles + 4.6 strip fits 17.6 cm         % cm
+    colS = {'Activity', 'Deviation from mean'};
+    % TWO columns, both signed, one grey scale (user 2026-10-16: "keep only activity and deviation
+    % from av, not rms" -- no-stim control dropped from the strip; Fig S2 col B carries stim/control).
+    % Running-RMS display was tried the same day and rejected (RESEARCH 2026-10-16).
+    if ~exist('RS_ACLIM','var') || isempty(RS_ACLIM), RS_ACLIM = 2; end
+    cmA = gray(256);
+    W = 4.6;  H = SQ_H;  gp = 0.12;  x0 = 0.45;  pw = (W - x0 - gp - 0.1)/2;   % cm
     pyBin = 'python';
     swp = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'utils', 'pdf_swap_images.py');
     for k = 1:3
@@ -160,13 +159,10 @@ if RS_ROWS && isempty(RS_SESS)
         [stS, o] = sort(st(idx));  idx = idx(o);  nT = numel(idx);
         qEdge = arrayfun(@(p) find(stS >= quantile(stS,p), 1), [0.25 0.5 0.75]);
         qMid  = [1, qEdge, nT+1];  qMid = (qMid(1:end-1) + qMid(2:end))/2;
-        panels = {X(idx,:), D(idx,:), C(idx,:)};  tx = {tA, tL, tL};
-        f = jnFig(W, H);  pngs = cell(1,3);
-        for j = 1:3
-            M = panels{j};
-            if j == 1, cmj = cmA;  lim = [-1 1]*RS_ACLIM;
-            else,      M = sqrt(movmean(M.^2, RS_RMSWIN, 1, 'omitnan'));  cmj = cmR;  lim = [0 RS_RMAX];
-            end
+        panels = {X(idx,:), D(idx,:)};  tx = {tA, tL};
+        f = jnFig(W, H);  pngs = cell(1,2);
+        for j = 1:2
+            M = panels{j};  cmj = cmA;  lim = [-1 1]*RS_ACLIM;
             ax = axes(f, 'Units','centimeters', 'Position', [x0+(j-1)*(pw+gp), 0.27*H, pw, 0.55*H]);
             imagesc(ax, tx{j}, 1:nT, M);  colormap(ax, cmj);  clim(ax, lim);  hold(ax,'on');
             % quartile boundaries: white core on a black casing, visible on any grey
@@ -175,13 +171,19 @@ if RS_ROWS && isempty(RS_SESS)
                 plot(ax, xq, [q q], '-', 'Color', [0 0 0], 'LineWidth', 1.0);
                 plot(ax, xq, [q q], '-', 'Color', [1 1 1], 'LineWidth', 0.4);
             end
+            if tx{j}(1) < 0     % stimulus onset marker on the activity column
+                plot(ax, [0 0] - 0.5*mean(diff(tx{j})), [0.5 nT+0.5], '--', 'Color', [1 1 1], 'LineWidth', 0.5);
+            end
             set(ax, 'YDir','normal', 'Layer','top', 'YTick', qMid, 'YTickLabel', {'Q1','Q2','Q3','Q4'}, ...
-                    'XTick', [0 0.4], 'XTickLabelRotation', 0);   % 2 ticks: 3 rotate at 1.25 cm
+                    'XTick', [0 0.2 0.4], 'XTickLabelRotation', 0);
             if j > 1, set(ax, 'YTickLabel', []); end
-            % user 2026-10-16: x label ONCE (bottom row, middle column); column titles one line, 5 pt.
-            % Titles are text(), not title(): jnAxes/jnAxesAll force title() back to 7 pt bold.
-            if k == 3 && j == 2, xlabel(ax, 'Time (s)'); end
-            jnAxes(ax);  set(ax, 'TickLength', [0.03 0.03]);
+            % user 2026-10-16: x label ONCE (bottom row, centred under both columns); column titles
+            % one line, 5 pt. Titles are text(), not title(): jnAxes/jnAxesAll force title() to 7 pt.
+            jnAxes(ax);  set(ax, 'TickLength', [0.02 0.02]);
+            if k == 3 && j == 1
+                xl = xlabel(ax, 'Time (s)');  xl.Units = 'centimeters';
+                xl.Position(1) = pw + gp/2;
+            end
             if k == 1
                 text(ax, mean(tx{j}), nT + 0.04*nT, colS{j}, 'HorizontalAlignment','center', ...
                      'VerticalAlignment','bottom', 'FontName', J.font, 'FontSize', 5, ...
@@ -211,8 +213,7 @@ if RS_ROWS && isempty(RS_SESS)
     % User 2026-10-16: smaller, no long label -- just the end values. Units are dF/F divided by
     % the session's typical error, so ends read -3 / +3 with a short "norm. dF/F" (caption defines it);
     % a bare "3 dF/F" would read as 3 % dF/F, which these values are not.
-    keys = {'sq_raster_cbar.pdf',     cmA, [-1 1]*RS_ACLIM, {sprintf('-%g',RS_ACLIM), sprintf('+%g',RS_ACLIM)}, 'Activity (norm. ΔF/F)'; ...
-            'sq_raster_cbar_rms.pdf', cmR, [0 RS_RMAX],     {'0', sprintf('%g',RS_RMAX)},                      'RMS (norm. ΔF/F)'};
+    keys = {'sq_raster_cbar.pdf', cmA, [-1 1]*RS_ACLIM, {sprintf('-%g',RS_ACLIM), sprintf('+%g',RS_ACLIM)}, 'norm. ΔF/F'};
     for kk = 1:size(keys,1)
         f = jnFig(1.9, 0.55);
         axK = axes(f, 'Units','centimeters', 'Position', [0.25 0.35 1.4 0.001], 'Visible','off');

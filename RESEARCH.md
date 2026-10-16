@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 rasters: two signed columns, activity from −0.2 s
+**Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` — the strip is now two columns: Activity and "Deviation from mean". Both are signed on one grey scale (±2 norm. ΔF/F, black = negative); columns are 1.97 cm wide. The no-stim control is dropped from the strip. The running-RMS display (entry below) is reverted and its key `sq_raster_cbar_rms` is removed from MANIFEST and deleted from disk. Activity now starts at −0.2 s (`RS_PRE`), with a white dashed onset marker, so the stim-evoked dip shows against pre-stim baseline. Deviation stays at 0–0.486 s. "Time (s)" appears once, centred under the bottom (abs δ) strip.
+**Why:** User: "keep only two things, activity and deviation from av, not rms, we will figure out other route for effect prominence"; then "activity slightly prior to stim too to show effect of stim on activity". Col B (stim/control) already carries the control comparison.
+**Next:** The state effect is still not visually prominent in signed maps; another route is TBD with the user. The caption must describe the two columns and the −0.2 s pre-stim.
+
 ### 2026-10-16 — Fig S2 rasters: running-RMS deviation so the state effect is visible
 **Changed/Found:** `impulse-analysis/imp_state_raster_supp.m` — the Deviation and No-stim columns now show the running RMS over 51 state-sorted trials (`RS_RMSWIN`) on a white (0) → black (`RS_RMAX` = 1.6) grey scale. Titles: "Deviation RMS", "No-stim RMS". Activity stays signed grey, tightened ±3 → ±2 (`RS_ACLIM`). There are now two colour keys: `sq_raster_cbar.pdf` (activity ±2) and the new `sq_raster_cbar_rms.pdf` (0–1.6), which is added to MANIFEST. Quartile boundaries are drawn white on a black casing so they show on any grey.
 Pooled deviation RMS by quartile (Q1→Q4): motion 1.05 / 1.09 / 1.09 / 0.63; rel δ 0.99 / 0.96 / 1.03 / 1.02; abs δ 0.57 / 0.80 / 1.17 / 1.35. Abs δ now shows a clear light→dark gradient up the trials and motion a light Q4; the no-stim RMS also rises with abs δ (as in col B, stim/control ≈ 1).
