@@ -360,3 +360,11 @@ supp_mpc/mpcd_E3_variance.pdf
 supp_mpc/mpcd_E2_rmse_compare.pdf
 supp_mpc/mpcd_B_prediction.pdf
 supp_mpc/mpcd_F_lambda.pdf
+# Fig 6 I-M (2026-10-16): the same MPC replayed on a 1 Hz SINE reference, AL_0048 2026-07-14/1
+# right hemisphere (Fig 5's session). Producer: controller-analysis/ctrl_mpc_sine_panels.m (data from
+# mpc_direct_sine.py, MPCD_RD=0.1). Simulation -> descriptive only.
+supp_mpc/mpcs_I_example.pdf
+supp_mpc/mpcs_J_trial_average.pdf
+supp_mpc/mpcs_K_rmse_compare.pdf
+supp_mpc/mpcs_L_phase_lag.pdf
+supp_mpc/mpcs_M_variance.pdf

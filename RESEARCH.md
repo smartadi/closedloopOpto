@@ -16,6 +16,27 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 6 sine block in paper_stats_table
+**Changed/Found:** `paper-writing/paper_stats_table.m`: new "Figure 6 sine" block (ids `6s_*`) reading `mpc_direct_sine_AL_0048_0714_e1.mat`. For every summary row it adds median RMSE, lag and variance. For each baseline (CL, CL+p) it adds the MPC and perfect RMSE ratios, with the n-lower count in the claim, and the variance ratios. STATS_TABLE.csv now has 140 rows.
+**Why:** Manuscript numbers must come from the saved .mat via the table, not be typed by hand.
+**Next:** none.
+
+### 2026-10-16 — Fig 6 I–M panels (sine MPC) locked into MANIFEST [supp_mpc]
+**Changed/Found:** new `controller-analysis/ctrl_mpc_sine_panels.m` → `mpcs_I_example` (CL trial 113, the median of MPC−CL), `mpcs_J_trial_average` (OL / CL / CL+p / MPC / perfect ± SD), `mpcs_K_rmse_compare` (paired, two baselines), `mpcs_L_phase_lag`, `mpcs_M_variance`. Window −1..5 s. The laser is in mW via `laser_v2mw` (07-14 calibration; nonlinear, so no V/3 rule). M uses a 5-frame running mean for display only; its window means are unsmoothed. All five are added to MANIFEST [supp_mpc] and mirrored with PAPER_FINAL.
+**Why:** User asked for the Fig 6 extension: trial average with OL / CL+p / MPC, phase lag and trial-by-trial variance, in Fig 6 style.
+**Next:** User assembles them in Illustrator after H. The caption names them I–M (five panels, not four).
+
+### 2026-10-16 — Sine MPC replay: MPC 0.84× CL RMSE (46/46), lag 46°→1°; one-sided laser limits even perfect MPC
+**Changed/Found:** new `controller-analysis/mpc_direct_sine.py` (MPCD_RD=0.1). It simulates MPC and perfect MPC on all 200 sine trials; the world reproduces all 200 exactly. Baselines are the recorded trials; values are medians over the 4 s window.
+- RMSE: CL 2.26 → MPC 1.93 (0.845×, lower 46/46) → perfect 1.67 (0.725×). CL+p 3.00 → MPC 2.70 (0.888×, 56/57) → perfect 2.33 (0.758×).
+- Phase lag of the trial average: OL 70.7°, OL+p 15.8°, CL 46.1°, CL+p 1.7°, MPC 0.8°, perfect 0.2°.
+- Gain: CL 0.70, MPC 0.62, perfect 0.59.
+- Across-trial variance (0–4 s): OL 11.8, CL 5.8, CL+p 8.9, MPC (CL+CL+p) 5.2, perfect 4.5. MPC/CL 0.73 on the same trials; MPC/CL+p 0.68.
+- Controller-model R² on the sine windows: 0.69 at 86 ms, 0.29 at 200 ms.
+- KEY: the error left even with perfect prediction sits in the upper half-cycle (r > −2). There the target rises back to 0, the inhibitory laser is at 0 about 80% of the time, and y stays about 1.4–1.7 % below the target (perfect MSE upper 7.5 vs lower 3.4). The actuator can only suppress, so it cannot drive the upswing. That is why the gain is below 1 for every controller and why the sine gain is smaller than the static one (perfect 0.22× there).
+**Why:** User request: extend the Fig 6 replay to a sinusoidal reference, with the natural preview from the future r.
+**Next:** The manuscript paragraph must state the one-sided-actuator ceiling and the four caveats. Fig 5H lags differ by about 1 frame convention (see the exporter entry).
+
 ### 2026-10-16 — mpc_solve takes a reference trajectory; static Fig 6 numbers re-confirmed
 **Changed/Found:** `controller-analysis/mpc_direct.py` — `mpc_solve(..., ref=REF)` now accepts a scalar or the future reference r(t+1..t+Hp). The default is the static −5, so no static call site changed. Re-ran the static case (`MPCD_RD=0.1 MPCD_ORD=0.1 MPCD_SNAP=79,76`, tag `_lam01_check`): PI 1.457, MPC 0.823 (0.652×, 108/108), perfect 0.224× PI. Identical to the canonical `_lam01`. That run then hit KeyError 'MPC rd=1' at the snapshot step, because the canonical invocation also sets `MPCD_REF="MPC rd=0.1"`. No files were written.
 **Why:** The sine replay (Fig 6 I–M) needs a time-varying target with natural preview. Generalised behind a default argument so the static numbers cannot move.

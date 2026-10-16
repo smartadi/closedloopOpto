@@ -101,3 +101,41 @@ id,figure,claim,effect,unit,ci_lo,ci_hi,test,stat_name,stat,df,p,sided,n,n_unit,
 6_rmse_3,6,"median per-trial RMSE 1-3 s, ORACLE MPC rd=1",0.2677213,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,108,trials,mpc_direct
 6_ratio,6,"MPC/PI RMSE ratio, median; MPC lower on 108/108 trials",0.6522224,ratio,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,108,trials,mpc_direct
 6_var,6,"across-trial variance 1-3 s, MPC / PI",0.6089406,ratio,NaN,NaN,"mean over window of across-trial variance (simulation, descriptive)",,,NaN,NaN,,108,trials,mpc_direct
+6s_rmse_1,6 sine,"median per-trial RMSE 0-4 s, rec OL",3.588099,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,51,trials,mpc_direct_sine
+6s_lag_1,6 sine,"phase lag of trial average (1 Hz fit), rec OL",70.6959,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,51,trials,mpc_direct_sine
+6s_var_1,6 sine,"across-trial variance 0-4 s, rec OL",11.82334,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,51,trials,mpc_direct_sine
+6s_rmse_2,6 sine,"median per-trial RMSE 0-4 s, rec OL+p",3.58076,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_lag_2,6 sine,"phase lag of trial average (1 Hz fit), rec OL+p",15.84206,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_var_2,6 sine,"across-trial variance 0-4 s, rec OL+p",13.39493,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_rmse_3,6 sine,"median per-trial RMSE 0-4 s, rec CL",2.255573,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_lag_3,6 sine,"phase lag of trial average (1 Hz fit), rec CL",46.08721,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_var_3,6 sine,"across-trial variance 0-4 s, rec CL",5.812551,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_rmse_4,6 sine,"median per-trial RMSE 0-4 s, rec CL+p",2.995367,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_lag_4,6 sine,"phase lag of trial average (1 Hz fit), rec CL+p",1.683801,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_var_4,6 sine,"across-trial variance 0-4 s, rec CL+p",8.853619,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_rmse_5,6 sine,"median per-trial RMSE 0-4 s, MPC on CL",1.934353,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_lag_5,6 sine,"phase lag of trial average (1 Hz fit), MPC on CL",2.610672,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_var_5,6 sine,"across-trial variance 0-4 s, MPC on CL",4.249278,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_rmse_6,6 sine,"median per-trial RMSE 0-4 s, MPC on CL+p",2.69987,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_lag_6,6 sine,"phase lag of trial average (1 Hz fit), MPC on CL+p",-0.5770653,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_var_6,6 sine,"across-trial variance 0-4 s, MPC on CL+p",6.010091,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_rmse_7,6 sine,"median per-trial RMSE 0-4 s, MPC on CL+CL+p",2.349986,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,103,trials,mpc_direct_sine
+6s_lag_7,6 sine,"phase lag of trial average (1 Hz fit), MPC on CL+CL+p",0.8333058,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,103,trials,mpc_direct_sine
+6s_var_7,6 sine,"across-trial variance 0-4 s, MPC on CL+CL+p",5.221015,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,103,trials,mpc_direct_sine
+6s_rmse_8,6 sine,"median per-trial RMSE 0-4 s, perfect on CL",1.67343,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_lag_8,6 sine,"phase lag of trial average (1 Hz fit), perfect on CL",2.646449,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_var_8,6 sine,"across-trial variance 0-4 s, perfect on CL",3.740354,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_rmse_9,6 sine,"median per-trial RMSE 0-4 s, perfect on CL+p",2.331964,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_lag_9,6 sine,"phase lag of trial average (1 Hz fit), perfect on CL+p",-1.645272,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_var_9,6 sine,"across-trial variance 0-4 s, perfect on CL+p",5.045902,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_rmse_10,6 sine,"median per-trial RMSE 0-4 s, perfect on CL+CL+p",1.96945,%dF/F,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,103,trials,mpc_direct_sine
+6s_lag_10,6 sine,"phase lag of trial average (1 Hz fit), perfect on CL+CL+p",0.2131772,deg,NaN,NaN,"fundamental fit to trial average (descriptive)",,,NaN,NaN,,103,trials,mpc_direct_sine
+6s_var_10,6 sine,"across-trial variance 0-4 s, perfect on CL+CL+p",4.460757,(%dF/F)^2,NaN,NaN,"mean over window of across-trial variance (descriptive)",,,NaN,NaN,,103,trials,mpc_direct_sine
+6s_ratio_MPC_CL,6 sine,"MPC/CL RMSE ratio, median; lower on 46/46 trials",0.8448988,ratio,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_varratio_MPC_CL,6 sine,"across-trial variance 0-4 s, MPC / CL (same trials)",0.731052,ratio,NaN,NaN,"mean over window of across-trial variance (simulation, descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_ratio_perfect_CL,6 sine,"perfect/CL RMSE ratio, median; lower on 46/46 trials",0.7249407,ratio,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_varratio_perfect_CL,6 sine,"across-trial variance 0-4 s, perfect / CL (same trials)",0.6434961,ratio,NaN,NaN,"mean over window of across-trial variance (simulation, descriptive)",,,NaN,NaN,,46,trials,mpc_direct_sine
+6s_ratio_MPC_CL+p,6 sine,"MPC/CL+p RMSE ratio, median; lower on 56/57 trials",0.8875675,ratio,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_varratio_MPC_CL+p,6 sine,"across-trial variance 0-4 s, MPC / CL+p (same trials)",0.6788288,ratio,NaN,NaN,"mean over window of across-trial variance (simulation, descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_ratio_perfect_CL+p,6 sine,"perfect/CL+p RMSE ratio, median; lower on 57/57 trials",0.7579732,ratio,NaN,NaN,"median (simulation, descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine
+6s_varratio_perfect_CL+p,6 sine,"across-trial variance 0-4 s, perfect / CL+p (same trials)",0.5699254,ratio,NaN,NaN,"mean over window of across-trial variance (simulation, descriptive)",,,NaN,NaN,,57,trials,mpc_direct_sine

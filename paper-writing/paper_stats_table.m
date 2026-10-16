@@ -189,6 +189,36 @@ v = squeeze(mean(var(S.Y(w,:,:),0,2),1));
 add('6_var','6','across-trial variance 1-3 s, MPC / PI',v(2)/v(1),'ratio',[NaN NaN], ...
     'mean over window of across-trial variance (simulation, descriptive)','','',NaN,NaN,'',nT,'trials','mpc_direct');
 
+% ---------------- Figure 6 sine (MPC replay on the 1 Hz sine reference, panels I-M, 2026-10-16) --------------
+% SIMULATION on one session (AL_0048 2026-07-14/1, right hemisphere, Fig 5's session): descriptive only.
+% Source: controller-analysis/mpc_direct_sine.py (MPCD_RD=0.1). RMSE over the full 4 s window vs the target;
+% phase lag / gain from a 1 Hz fundamental fit to the trial average (Fig 5H); variance = across-trial variance
+% averaged over the window. MPC / perfect are replayed on every CL and CL+p trial and paired with that recording.
+S = load(fullfile(root,'controller-analysis','data','mpc_direct_sine_AL_0048_0714_e1.mat'));
+sr = cellstr(S.summary_rows); sm = S.summary; cnd = double(S.cond(:)); rRec = S.rmse_rec(:);
+for j = 1:numel(sr)
+    add(sprintf('6s_rmse_%d',j),'6 sine',sprintf('median per-trial RMSE 0-4 s, %s',sr{j}),sm(j,1),'%dF/F',[NaN NaN], ...
+        'median (simulation, descriptive)','','',NaN,NaN,'',sm(j,5),'trials','mpc_direct_sine');
+    add(sprintf('6s_lag_%d',j),'6 sine',sprintf('phase lag of trial average (1 Hz fit), %s',sr{j}),sm(j,2),'deg',[NaN NaN], ...
+        'fundamental fit to trial average (descriptive)','','',NaN,NaN,'',sm(j,5),'trials','mpc_direct_sine');
+    add(sprintf('6s_var_%d',j),'6 sine',sprintf('across-trial variance 0-4 s, %s',sr{j}),sm(j,4),'(%dF/F)^2',[NaN NaN], ...
+        'mean over window of across-trial variance (descriptive)','','',NaN,NaN,'',sm(j,5),'trials','mpc_direct_sine');
+end
+sn = cellstr(S.sim_names); bl = {3,'CL'; 0,'CL+p'};
+for b = 1:2
+    msk = cnd == bl{b,1}; vr = sm(strcmp(sr, ['rec ' bl{b,2}]), 4);
+    for j = 1:numel(sn)
+        q = S.rmse_sim(msk,j) ./ rRec(msk);
+        add(sprintf('6s_ratio_%s_%s',sn{j},bl{b,2}),'6 sine',sprintf('%s/%s RMSE ratio, median; lower on %d/%d trials', ...
+            sn{j},bl{b,2},nnz(q<1),nnz(msk)),median(q),'ratio',[NaN NaN],'median (simulation, descriptive)','','',NaN,NaN,'', ...
+            nnz(msk),'trials','mpc_direct_sine');
+        vs = sm(strcmp(sr, sprintf('%s on %s', sn{j}, bl{b,2})), 4);
+        add(sprintf('6s_varratio_%s_%s',sn{j},bl{b,2}),'6 sine',sprintf('across-trial variance 0-4 s, %s / %s (same trials)', ...
+            sn{j},bl{b,2}),vs/vr,'ratio',[NaN NaN],'mean over window of across-trial variance (simulation, descriptive)', ...
+            '','',NaN,NaN,'',nnz(msk),'trials','mpc_direct_sine');
+    end
+end
+
 T = cell2table(rows,'VariableNames',{'id','figure','claim','effect','unit','ci_lo','ci_hi','test', ...
     'stat_name','stat','df','p','sided','n','n_unit','source'});
 out = fullfile(root,'paper-writing','STATS_TABLE.csv');
