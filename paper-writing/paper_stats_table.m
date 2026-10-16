@@ -5,7 +5,7 @@ function T = paper_stats_table()
 % a run). It only LOADS the saved outputs of the producers; it recomputes nothing, so a stale
 % number here means a producer was not re-run. Producers, in the order to run them:
 %   fig3_olcl_stats             -> data/fig3_olcl_lmm.mat        (Fig 3 LMMs + signed-rank)
-%   variance_mse.m              -> data/fig3h_ratio_signrank.mat  (Fig 3H window ratios)
+%   variance_mse.m (Fr + G2r)   -> data/fig3_ratio_stats.mat     (Fig 3H/3I session-level CL/OL ratios)
 %   f4_row2_quartiles.m         -> data/f4_row2_lme.mat, data/f4_motion_slopes.mat (Fig 4D)
 %   f4_cl_reject_lmm            -> controller-analysis/data/f4_cl_reject_lmm.mat (Fig 4G)
 %   imp_state_trialvar.m        -> data/fig2g_state_stats.mat (save STV_R=R after the run)
@@ -60,21 +60,32 @@ lab3 = struct('rmse_full','RMSE 0-3 s','rmse_early','RMSE 0-1 s','rmse_late','RM
 for m = fieldnames(lab3)'
     g = G.(m{1}); isv = startsWith(m{1},'var');
     add(['3_' m{1} '_lmm'],'3',['CL-OL gap, ' lab3.(m{1})],g.lmm_gap,tern(isv,'log units','%dF/F'),g.lmm_ci, ...
-        'LMM y~cond+(1+cond|sess)+(1|mouse)','t',g.lmm_t,g.lmm_df,g.lmm_p,'2',g.nSess,'sessions','fig3_olcl_stats');
-    add(['3_' m{1} '_sr'],'3',sprintf('per-session signed-rank, %s (%d/%d sessions CL<OL)',lab3.(m{1}),g.nAgree,g.nSess), ...
+        'CORROBORATING trial-level LMM y~cond+(1+cond|sess)+(1|mouse)','t',g.lmm_t,g.lmm_df,g.lmm_p,'2',g.nSess,'sessions','fig3_olcl_stats');
+    add(['3_' m{1} '_sr'],'3',sprintf('CORROBORATING per-session signed-rank, %s (%d/%d sessions CL<OL)',lab3.(m{1}),g.nAgree,g.nSess), ...
         g.medRatio,'median OL/CL',[NaN NaN],'Wilcoxon signed-rank','V',g.sr_V,NaN,g.sr_p,'2',g.nSess,'sessions','fig3_olcl_stats');
 end
-S = load(fullfile(dd,'fig3h_rmse_ratio_signrank.mat')); F = S.F3Hr;
-for w = {'pre','early','late','post'}
-    f = F.(w{1});
-    add(['3H_' w{1}],'3H',sprintf('OL/CL RMSE ratio, window %s (%d/%d sessions >1)',w{1},f.nAbove1,f.n),f.medRatio,'median ratio',[NaN NaN], ...
-        'Wilcoxon signed-rank on log ratio','V',f.V,NaN,f.p,'2',f.n,'sessions','variance_mse');
-end
-S = load(fullfile(dd,'fig3h_ratio_signrank.mat')); F = S.F3H;
-for w = {'pre','early','late','post'}
-    f = F.(w{1});
-    add(['3I_' w{1}],'3I',['OL/CL variance ratio, window ' w{1}],f.medRatio,'median ratio',[NaN NaN], ...
-        'Wilcoxon signed-rank','V',f.V,NaN,f.p,'2',f.n,'sessions','variance_mse');
+% Fig 3H (RMSE) / 3I (variance): ONE scheme (2026-10-15). Unit = session; ratio = CL/OL (<1 = CL
+% better); effect = geometric mean [95% CI]; PRIMARY = LMM log(r)~1+(1|mouse), Satterthwaite;
+% also one-sample t on log r; Wilcoxon on log r corroborating. Source: variance_mse.m Fr/G2r.
+S = load(fullfile(dd,'fig3_ratio_stats.mat')); R3 = S.R3;
+panel3 = struct('rmse',{{'3H','RMSE'}},'var',{{'3I','variance'}});
+wl = struct('pre','pre (-3-0 s)','early','0-1 s','late','1-3 s','full','0-3 s','post','post');
+for mt = {'rmse','var'}
+    pn = panel3.(mt{1});
+    for w = {'pre','early','late','full','post'}
+        r = R3.(mt{1}).(w{1});  id = [pn{1} '_' mt{1} '_' w{1}];
+        lbl = sprintf('CL/OL %s ratio, %s (%d/%d sessions <1; %.1f%% lower)',pn{2},wl.(w{1}),r.nBelow1,r.n,r.pctLower);
+        add([id '_lmm'],pn{1},['PRIMARY ' lbl],r.geo,'geometric-mean ratio',r.geoCI, ...
+            'LMM log(r)~1+(1|mouse), Satterthwaite','t',r.lmm_t,r.lmm_df,r.lmm_p,'2',r.n,'sessions','variance_mse');
+        if isnan(r.lmm_p)          % Satterthwaite df failed (0/NaN): project fallback df = n-1
+            add([id '_lmmfb'],pn{1},['LMM, df fallback n-1 (Satterthwaite df=0) ' lbl],r.lmm_ratio,'LMM ratio',r.lmm_ratioCIc, ...
+                'LMM log(r)~1+(1|mouse), df=n-1 (lmm_cluster_df)','t',r.lmm_t,r.lmm_dfc,r.lmm_pc,'2',r.n,'sessions','variance_mse');
+        end
+        add([id '_t'],pn{1},lbl,r.geo,'geometric-mean ratio',r.geoCI, ...
+            'one-sample t on log ratio','t',r.t_t,r.t_df,r.t_p,'2',r.n,'sessions','variance_mse');
+        add([id '_w'],pn{1},['CORROBORATING ' lbl],r.median,'median ratio',[NaN NaN], ...
+            'Wilcoxon signed-rank on log ratio','V',r.w_V,NaN,r.w_p,'2',r.n,'sessions','variance_mse');
+    end
 end
 
 % ---------------- Figure 4D : state quartiles ---------------------------------------------------

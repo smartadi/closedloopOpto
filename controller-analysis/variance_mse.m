@@ -15,18 +15,21 @@ else
     warning('variance_mse: cannot locate paper/ directory -- paths may be incorrect.');
 end
 
-% Fig-3 OL-vs-CL statistics: session-aware LMM (PRIMARY, Nick-approved / Fig-4-matching)
-% computed once by controller-analysis/fig3_olcl_stats.m and cached to data/fig3_olcl_lmm.mat.
-% The stim-window stars on panels I (variance ratio) and J (RMSE ratio) are drawn from the
-% LMM p; run fig3_olcl_stats first if the cache is missing. Signed-rank stays the companion.
-G3 = [];
-for dd = {'data', fullfile('..','data')}
-    mf = fullfile(dd{1},'fig3_olcl_lmm.mat');
-    if exist(mf,'file'), tmp = load(mf,'G3'); G3 = tmp.G3; break; end
-end
-if isempty(G3)
-    warning('variance_mse: data/fig3_olcl_lmm.mat not found -- run fig3_olcl_stats.m; falling back to signed-rank stars.');
-end
+% Fig-3 ratio statistics (panels 3H RMSE, 3I variance) -- ONE scheme (2026-10-15):
+% unit = session; per session and window the CL/OL ratio (< 1 = closed loop better);
+% effect = geometric mean ratio [95% CI] and "% lower"; PRIMARY test = LMM on the log
+% ratios, log(r) ~ 1 + (1|mouse) (Satterthwaite); also a one-sample t-test and a Wilcoxon on
+% the log ratios. All of it via utils/ratio_session_stats.m, saved to data/fig3_ratio_stats.mat
+% (struct R3: R3.var.<win> from section Fr, R3.rmse.<win> from section G2r).
+% The trial-level LMM (fig3_olcl_stats.m -> data/fig3_olcl_lmm.mat) is now CORROBORATING only.
+f3_dir = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'data');
+if ~exist(f3_dir, 'dir'), f3_dir = 'data'; end
+f3_file = fullfile(f3_dir, 'fig3_ratio_stats.mat');
+f3_win  = {'pre','early','late','full','post'};          % stats windows (full = 0-3 s)
+f3_plot = [1 2 3 5];                                       % plotted: Pre / 0-1 s / 1-3 s / Post
+f3_xlab = {'Pre','0-1 s','1-3 s','Post'};
+f3_mice = cellfun(@(f) mouse.(f).mn, fields, 'UniformOutput', false);
+stars_fr = @(p) repmat('*', 1, (p < 0.001)*3 + (p >= 0.001 && p < 0.01)*2 + (p >= 0.01 && p < 0.05)*1);
 
 %% F: Cross-session variance  (2.33" wide -- matches 1/3 page column)
 fig_F = paperFig(3.4, 3.4);   % jn* resize: unify row height
@@ -59,86 +62,48 @@ title(ax_var, 'Average across sessions', ...
 paperExport(fig_F, fullfile(paper_root, 'images', 'figure3', 'all_variance_sessions.pdf'));
 
 
-%% Fr: Cross-session OL/CL variance ratio -- pre / 0-1 s / 1-3 s / post windows
-% Stim split into early (0-1 s) and late (1-3 s), matching the RMSE-ratio panel (G2r), so the
-% inhibitory transient is separated from the settled hold (user, 2026-08-24).
+%% Fr: Cross-session CL/OL variance ratio by window (paper panel 3I)
+% Per session: across-trial variance (CL) / (OL), each averaged over the window.
+% Windows: pre (-3 to 0 s), 0-1 s, 1-3 s, post (3 to 6 s), plus full stim 0-3 s (stats only).
+% Stats on the log ratios (see header); was a paired signrank on RAW variances before 2026-10-15,
+% which did not match the Methods ("log ratio").
 valid_rows_f = any(Mvarnc > 0, 2) & any(Mvarwc > 0, 2);
 Mvarnc_f = Mvarnc(valid_rows_f, :);
 Mvarwc_f = Mvarwc(valid_rows_f, :);
-nSess_f  = size(Mvarnc_f, 1);
+mice_f   = f3_mice(valid_rows_f);
 
-idx_pre_f   = tp >= -3 & tp <  0;
-idx_early_f = tp >=  0 & tp <= 1;      % 0-1 s stim
-idx_late_f  = tp >   1 & tp <= dur;    % 1-3 s stim
-idx_post_f  = tp >  dur & tp <= dur+3;
+idx_f.pre   = tp >= -3 & tp <  0;
+idx_f.early = tp >=  0 & tp <= 1;      % 0-1 s stim
+idx_f.late  = tp >   1 & tp <= dur;    % 1-3 s stim
+idx_f.full  = tp >=  0 & tp <= dur;    % 0-3 s stim
+idx_f.post  = tp >  dur & tp <= dur+3;
 
-r_pre_f   = mean(Mvarnc_f(:, idx_pre_f),   2) ./ mean(Mvarwc_f(:, idx_pre_f),   2);
-r_early_f = mean(Mvarnc_f(:, idx_early_f), 2) ./ mean(Mvarwc_f(:, idx_early_f), 2);
-r_late_f  = mean(Mvarnc_f(:, idx_late_f),  2) ./ mean(Mvarwc_f(:, idx_late_f),  2);
-r_post_f  = mean(Mvarnc_f(:, idx_post_f),  2) ./ mean(Mvarwc_f(:, idx_post_f),  2);
-
-% Wilcoxon signed-rank tests: OL variance vs CL variance per window (test ratio != 1).
-varnc_pre_f   = mean(Mvarnc_f(:, idx_pre_f),   2);  varwc_pre_f   = mean(Mvarwc_f(:, idx_pre_f),   2);
-varnc_early_f = mean(Mvarnc_f(:, idx_early_f), 2);  varwc_early_f = mean(Mvarwc_f(:, idx_early_f), 2);
-varnc_late_f  = mean(Mvarnc_f(:, idx_late_f),  2);  varwc_late_f  = mean(Mvarwc_f(:, idx_late_f),  2);
-varnc_post_f  = mean(Mvarnc_f(:, idx_post_f),  2);  varwc_post_f  = mean(Mvarwc_f(:, idx_post_f),  2);
-
-p_fr_pre   = signrank(varnc_pre_f,   varwc_pre_f);
-p_fr_early = signrank(varnc_early_f, varwc_early_f);
-p_fr_late  = signrank(varnc_late_f,  varwc_late_f);
-p_fr_post  = signrank(varnc_post_f,  varwc_post_f);
-% Save the full test (V, n, median ratio) for paper_stats_table.m (2026-10-07) -- these
-% caption numbers were previously typed by hand from the console.
-F3H = struct();
-fr_win = {'pre',varnc_pre_f,varwc_pre_f; 'early',varnc_early_f,varwc_early_f; ...
-          'late',varnc_late_f,varwc_late_f; 'post',varnc_post_f,varwc_post_f};
-for iw = 1:size(fr_win,1)
-    [pw,~,sw] = signrank(fr_win{iw,2}, fr_win{iw,3});
-    F3H.(fr_win{iw,1}) = struct('n',numel(fr_win{iw,2}), 'medRatio',median(fr_win{iw,2}./fr_win{iw,3}), ...
-                               'V',sw.signedrank, 'p',pw);
+clear ST_fr
+for iw = 1:numel(f3_win)
+    ix = idx_f.(f3_win{iw});
+    r  = mean(Mvarwc_f(:, ix), 2) ./ mean(Mvarnc_f(:, ix), 2);    % CL / OL
+    ST_fr(iw) = ratio_session_stats(r, mice_f);                    %#ok<SAGROW>
+    R3var.(f3_win{iw}) = ST_fr(iw);
 end
-try, save(fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','fig3h_ratio_signrank.mat'),'F3H'); catch, end
+R3 = struct();
+if exist(f3_file, 'file'), tmp = load(f3_file, 'R3'); R3 = tmp.R3; end
+R3.var  = R3var;
+R3.meta = struct('date', datestr(now,'yyyy-mm-dd'), 'ratio', 'CL/OL', ...
+    'primary', 'LMM log(r) ~ 1 + (1|mouse), REML, Satterthwaite', ...
+    'windows', 'pre -3..0, early 0..1, late 1..3, full 0..3, post (var 3..6; rmse 3..4)');
+try, save(f3_file, 'R3'); catch ME, warning('variance_mse: %s', ME.message); end
 
-stars_fr = @(p) repmat('*', 1, (p < 0.001)*3 + (p >= 0.001 && p < 0.01)*2 + (p >= 0.01 && p < 0.05)*1);
-
-% Compressed 5x4 -> 4.5x3.6 so panels I and J sit side by side where the retired
-% per-session RMSE-violin panel (all_MSE_sessions) used to be (user 2026-09-23).
 fig_Fr = paperFig(3.6, 2.72);  % 4.5 x 3.4 scaled down 20% (user 2026-10-10)
-ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.20 0.15 0.77 0.70]);
-hold(ax_fr, 'on');
-
-for s = 1:nSess_f
-    plot(ax_fr, [1 2 3 4], [r_pre_f(s) r_early_f(s) r_late_f(s) r_post_f(s)], ...
-        '-o', 'Color',[0.6 0.6 0.6], 'MarkerSize',2, ...
-        'MarkerFaceColor',[0.6 0.6 0.6], 'LineWidth',0.6, 'HandleVisibility','off');
-end
-plot(ax_fr, [1 2 3 4], [mean(r_pre_f) mean(r_early_f) mean(r_late_f) mean(r_post_f)], ...
-    'k-o', 'LineWidth',1.5, 'MarkerSize',3.5, 'MarkerFaceColor','k', 'DisplayName','Mean');
-yline(ax_fr, 1, 'k--', 'LineWidth',0.75, 'HandleVisibility','off');
-hold(ax_fr, 'off');
-
-xlim(ax_fr, [0.5 4.5]);
-ax_fr.XTick = [1 2 3 4]; ax_fr.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
-ylabel(ax_fr, 'OL/CL variance ratio', 'FontWeight','bold');
-% No 'Mean' legend at the 80% size (2026-10-10): it collided with the Stim label; bold black = mean is in the caption.
-xtickangle(ax_fr, 0);
-
-% ONE significance mark, carried on the panel-title CLAIM (user 2026-09-23): two identical
-% per-window *** read as ambiguous. The session-aware LMM is the primary test (both stim
-% windows p < 1e-6; pre/post n.s.); its formula + p-values live in the manuscript text, and
-% the grey "Stim" band (mark_stim_span) shows which windows the claim covers.
-yl_fr = ylim(ax_fr);
-ylim(ax_fr, [yl_fr(1), yl_fr(2) + 0.06 * (yl_fr(2) - yl_fr(1))]);
-pStim_fr = max(p_fr_early, p_fr_late);                 % signed-rank fallback
-if ~isempty(G3)
-    pStim_fr = max(G3.var_early.lmm_p, G3.var_late.lmm_p);
-    fprintf('[Fig3-I] variance: stim LMM p<=%.2g (0-1s %.2g, 1-3s %.2g)\n', ...
-        pStim_fr, G3.var_early.lmm_p, G3.var_late.lmm_p);
-end
+ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.25 0.15 0.72 0.70]);
+plot_ratio_windows(ax_fr, ST_fr(f3_plot), f3_xlab);
+ylabel(ax_fr, 'CL/OL variance ratio', 'FontWeight','bold');
+% ONE significance mark on the panel-title CLAIM (user 2026-09-23), now from the session-level
+% LMM on log ratios (the larger p of the two stim windows).
+pStim_fr = max(R3var.early.lmm_p, R3var.late.lmm_p);
+fprintf('[Fig3-I] variance CL/OL: stim LMM p<=%.2g (0-1s %.2g, 1-3s %.2g)\n', ...
+    pStim_fr, R3var.early.lmm_p, R3var.late.lmm_p);
 title(ax_fr, sprintf('CL lowers variance %s', stars_fr(pStim_fr)), ...
     'FontSize',6, 'FontWeight','bold');
-
-% Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
 mark_stim_span(ax_fr);
 
 paperExport(fig_Fr, fullfile(paper_root, 'images', 'figure3', 'variance_ratio_by_window.pdf'));
@@ -478,9 +443,10 @@ end
 paperExport(fig_G2b, fullfile(paper_root, 'MSE_vs_trial_number.png'));
 
 
-%% G2r: OL/CL ratio by window -- 4 windows: pre / 0-1 s / 1-3 s / post
-% Y-axis is dimensionless OL/CL ratio: >1 means CL better.
-% Windows: pre (-3 to 0 s), early stim (0-1 s), late stim (1-3 s), post (3 to 6 s).
+%% G2r: CL/OL RMSE ratio by window (paper panel 3H)
+% Per session: mean trial RMSE (CL) / mean trial RMSE (OL); < 1 means CL better.
+% Windows: pre (-3 to 0 s), early stim (0-1 s), late stim (1-3 s), full stim (0-3 s, stats
+% only), post (3 to ~4 s). Stats on the log ratios (see header).
 % ncDfk layout: col 1 = t=-1s, col 36 = onset (t=0), col 71 = t=+1s,
 %               col 141 = t=+3s (end of stim, dur=3s), col 176 = t=+4s (end of ncDfk).
 % Pre-stim uses pncDfk_l cols 1:105 (3s*35Hz pre-onset).
@@ -491,102 +457,77 @@ c1_g2r  = 71;   % t = +1 s
 c2_g2r  = 141;  % t = +3 s (end of stim)
 Fs_g2r  = 35;
 
-r_pre_g2r   = zeros(1, nValid_g2);
-r_early_g2r = zeros(1, nValid_g2);  % 0-1 s
-r_late_g2r  = zeros(1, nValid_g2);  % 1-3 s
-r_post_g2r  = zeros(1, nValid_g2);
+rr_g2r   = nan(nValid_g2, numel(f3_win));   % CL/OL, columns in f3_win order
+mice_g2r = cell(nValid_g2, 1);
+rmsw = @(M, cols) sqrt(mean((M(:, cols) - ref_g2r).^2, 2));   % per-trial windowed RMSE
 
 ki_r = 0;
 for k = 1:length(fields)
     if isfield(mouse.(fields{k}),'skip') && mouse.(fields{k}).skip; continue; end
     ki_r = ki_r + 1;
     dk = mouse.(fields{k}).data;
+    mice_g2r{ki_r} = mouse.(fields{k}).mn;
 
     % Pre-stim: 3 s pre-onset from pncDfk_l (cols 1:3*Fs_g2r)
     pre_cols = 1 : 3*Fs_g2r;
     if isfield(dk,'pncDfk_l') && size(dk.pncDfk_l,2) >= max(pre_cols)
-        enc_pre = sqrt(mean((dk.pncDfk_l(:, pre_cols) - ref_g2r).^2, 2));
-        ewc_pre = sqrt(mean((dk.pwcDfk_l(:, pre_cols) - ref_g2r).^2, 2));
+        enc_pre = rmsw(dk.pncDfk_l, pre_cols);  ewc_pre = rmsw(dk.pwcDfk_l, pre_cols);
     else
         % fallback: first 35 cols of ncDfk (1 s pre-onset)
-        enc_pre = sqrt(mean((dk.ncDfk(:, 1:c0_g2r-1) - ref_g2r).^2, 2));
-        ewc_pre = sqrt(mean((dk.wcDfk(:, 1:c0_g2r-1) - ref_g2r).^2, 2));
+        enc_pre = rmsw(dk.ncDfk, 1:c0_g2r-1);   ewc_pre = rmsw(dk.wcDfk, 1:c0_g2r-1);
     end
-
-    % Early stim: 0-1 s (cols c0_g2r to c1_g2r in ncDfk)
-    enc_e = sqrt(mean((dk.ncDfk(:, c0_g2r:c1_g2r) - ref_g2r).^2, 2));
-    ewc_e = sqrt(mean((dk.wcDfk(:, c0_g2r:c1_g2r) - ref_g2r).^2, 2));
-
-    % Late stim: 1-3 s (cols c1_g2r+1 to c2_g2r in ncDfk)
-    enc_w = sqrt(mean((dk.ncDfk(:, c1_g2r+1:c2_g2r) - ref_g2r).^2, 2));
-    ewc_w = sqrt(mean((dk.wcDfk(:, c1_g2r+1:c2_g2r) - ref_g2r).^2, 2));
-
+    enc_e = rmsw(dk.ncDfk, c0_g2r:c1_g2r);      ewc_e = rmsw(dk.wcDfk, c0_g2r:c1_g2r);      % 0-1 s
+    enc_w = rmsw(dk.ncDfk, c1_g2r+1:c2_g2r);    ewc_w = rmsw(dk.wcDfk, c1_g2r+1:c2_g2r);    % 1-3 s
+    enc_f = rmsw(dk.ncDfk, c0_g2r:c2_g2r);      ewc_f = rmsw(dk.wcDfk, c0_g2r:c2_g2r);      % 0-3 s
     % Post-stim: cols c2_g2r+1 to end of ncDfk (~1 s)
     nc_ncols = size(dk.ncDfk, 2);
     wc_ncols = size(dk.wcDfk, 2);
     if nc_ncols > c2_g2r && wc_ncols > c2_g2r
-        enc_post = sqrt(mean((dk.ncDfk(:, c2_g2r+1:nc_ncols) - ref_g2r).^2, 2));
-        ewc_post = sqrt(mean((dk.wcDfk(:, c2_g2r+1:wc_ncols) - ref_g2r).^2, 2));
+        enc_post = rmsw(dk.ncDfk, c2_g2r+1:nc_ncols);  ewc_post = rmsw(dk.wcDfk, c2_g2r+1:wc_ncols);
     else
         enc_post = enc_w;  ewc_post = ewc_w;  % fallback: repeat late window
     end
 
-    r_pre_g2r(ki_r)   = mean(enc_pre)  / mean(ewc_pre);
-    r_early_g2r(ki_r) = mean(enc_e)    / mean(ewc_e);
-    r_late_g2r(ki_r)  = mean(enc_w)    / mean(ewc_w);
-    r_post_g2r(ki_r)  = mean(enc_post) / mean(ewc_post);
+    rr_g2r(ki_r, :) = [mean(ewc_pre)/mean(enc_pre),  mean(ewc_e)/mean(enc_e), ...
+                       mean(ewc_w)/mean(enc_w),      mean(ewc_f)/mean(enc_f), ...
+                       mean(ewc_post)/mean(enc_post)];          % CL / OL, f3_win order
 end
-% Per-window signed-rank on log OL/CL RMSE ratio (panel 3H; 2026-10-12 reviewer: the "above one
-% during stimulation but not before or after" claim needs its own test). Saved for paper_stats_table.
-F3Hr = struct();
-g2r_w = {'pre',r_pre_g2r; 'early',r_early_g2r; 'late',r_late_g2r; 'post',r_post_g2r};
-for iw = 1:size(g2r_w,1)
-    rr = g2r_w{iw,2}(:);  [pw,~,sw] = signrank(log(rr));
-    F3Hr.(g2r_w{iw,1}) = struct('n',numel(rr),'medRatio',median(rr),'nAbove1',sum(rr>1), ...
-                                'V',sw.signedrank,'p',pw);
-end
-try, save(fullfile(fileparts(fileparts(mfilename('fullpath'))),'data','fig3h_rmse_ratio_signrank.mat'),'F3Hr'); catch, end
 
-% Compressed to match panel I (4.5x3.6); I and J now sit side by side (user 2026-09-23).
+clear ST_g2r
+for iw = 1:numel(f3_win)
+    ST_g2r(iw) = ratio_session_stats(rr_g2r(:, iw), mice_g2r);  %#ok<SAGROW>
+    R3rmse.(f3_win{iw}) = ST_g2r(iw);
+end
+R3 = struct();
+if exist(f3_file, 'file'), tmp = load(f3_file, 'R3'); R3 = tmp.R3; end
+R3.rmse = R3rmse;
+try, save(f3_file, 'R3'); catch ME, warning('variance_mse: %s', ME.message); end
+
+% Console table (both metrics if section Fr ran in this workspace).
+fprintf('\n==== Fig 3H/3I session-level CL/OL ratios (n=%d sessions, %d mice) ====\n', ...
+    ST_g2r(1).n, ST_g2r(1).nMouse);
+fprintf('%-5s %-6s %20s %7s %22s %16s %9s %5s\n', 'metr','win','geo [95%CI]','%lower', ...
+    'LMM t(df) p','t(14) p','Wilc p','<1');
+for mt = intersect({'rmse','var'}, fieldnames(R3), 'stable')
+    for iw = 1:numel(f3_win)
+        s = R3.(mt{1}).(f3_win{iw});
+        fprintf('%-5s %-6s %6.3f [%5.3f %5.3f] %6.1f%% %6.2f(%4.1f) p=%7.2g %6.2f p=%7.2g %9.2g %2d/%d\n', ...
+            mt{1}, f3_win{iw}, s.geo, s.geoCI, s.pctLower, s.lmm_t, s.lmm_df, s.lmm_p, ...
+            s.t_t, s.t_p, s.w_p, s.nBelow1, s.n);
+    end
+end
+
+% Compressed to match panel I; H and I sit side by side (user 2026-09-23).
 fig_G2r = paperFig(3.6, 2.72);  % 4.5 x 3.4 scaled down 20% (user 2026-10-10)
-ax_g2r = axes(fig_G2r,'Units','normalized','Position',[0.20 0.15 0.77 0.70]);
-hold(ax_g2r,'on');
-
-for ki = 1:nValid_g2
-    plot(ax_g2r, [1 2 3 4], ...
-        [r_pre_g2r(ki) r_early_g2r(ki) r_late_g2r(ki) r_post_g2r(ki)], ...
-        '-o', 'Color',[0.6 0.6 0.6], 'MarkerSize',2, ...
-        'MarkerFaceColor',[0.6 0.6 0.6], 'LineWidth',0.6, 'HandleVisibility','off');
-end
-% Mean line
-plot(ax_g2r, [1 2 3 4], ...
-    [mean(r_pre_g2r) mean(r_early_g2r) mean(r_late_g2r) mean(r_post_g2r)], 'k-o', ...
-    'LineWidth',1.5, 'MarkerSize',3.5, 'MarkerFaceColor','k', 'DisplayName','Mean');
-yline(ax_g2r, 1, 'k--', 'LineWidth',0.75, 'HandleVisibility','off');
-hold(ax_g2r,'off');
-
-xlim(ax_g2r, [0.5 4.5]);
-ax_g2r.XTick = [1 2 3 4];
-ax_g2r.XTickLabel = {'Pre','0-1 s','1-3 s','Post'};
-ylabel(ax_g2r, 'OL/CL RMSE ratio', 'FontWeight','bold');
-xtickangle(ax_g2r, 0);   % no legend at 80% size (see panel H note)
-
+ax_g2r = axes(fig_G2r,'Units','normalized','Position',[0.25 0.15 0.72 0.70]);
+plot_ratio_windows(ax_g2r, ST_g2r(f3_plot), f3_xlab);
+ylabel(ax_g2r, 'CL/OL RMSE ratio', 'FontWeight','bold');
 % ONE significance mark on the panel-title CLAIM (user 2026-09-23; see panel I note).
-% Session-aware LMM is the primary test (both stim windows p < 1e-8; pre/post n.s.).
-yl_g2r = ylim(ax_g2r);
-ylim(ax_g2r, [yl_g2r(1), yl_g2r(2) + 0.06*(yl_g2r(2)-yl_g2r(1))]);
-pStim_g2r = NaN;
-if ~isempty(G3)
-    pStim_g2r = max(G3.rmse_early.lmm_p, G3.rmse_late.lmm_p);
-    fprintf('[Fig3-J] RMSE: stim LMM p<=%.2g (0-1s %.2g, 1-3s %.2g)\n', ...
-        pStim_g2r, G3.rmse_early.lmm_p, G3.rmse_late.lmm_p);
-end
-if ~isnan(pStim_g2r)
-    title(ax_g2r, sprintf('CL lowers RMSE %s', stars_fr(pStim_g2r)), ...
-        'FontSize',6, 'FontWeight','bold');
-end
-
-% Mark the two middle windows (0-1 s, 1-3 s) as the STIM period (user, 2026-08-24).
+pStim_g2r = max(R3rmse.early.lmm_p, R3rmse.late.lmm_p);
+fprintf('[Fig3-H] RMSE CL/OL: stim LMM p<=%.2g (0-1s %.2g, 1-3s %.2g)\n', ...
+    pStim_g2r, R3rmse.early.lmm_p, R3rmse.late.lmm_p);
+title(ax_g2r, sprintf('CL lowers RMSE %s', stars_fr(pStim_g2r)), ...
+    'FontSize',6, 'FontWeight','bold');
 mark_stim_span(ax_g2r);
 
 paperExport(fig_G2r, fullfile(paper_root, 'images', 'figure3', 'MSE_ratio_by_window.pdf'));
