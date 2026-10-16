@@ -1,6 +1,6 @@
 # Decision pending: Fig 2 impulse TF window (0–0.5 s vs −0.5 to +1.0 s)
 
-*Written 2026-10-15. Status: **OPEN**, waiting on Aditya. Nothing in Fig 2 has changed.*
+*Written 2026-10-15. Status: **OPEN**, waiting on Aditya. Nothing in Fig 2 has changed. Current recommendation (after the OL step check, below): keep 0–0.5 s.*
 
 ## The question
 Should the Fig 2 TF fits (2C/2D/2F, model swap, tau forest) move from the current
@@ -92,6 +92,38 @@ old M3), excluded; rebound = slowest remaining mode. Figures: `alt_window/modes_
    Consistent across sessions within each set, not invariant to the window.
 5. **Rebound τ is still not identified** (CI upper ends at the 1 s window edge; 42/50% of draws
    beyond the window in M5a/M5b).
+
+## Added 2026-10-15: open-loop sustained-stim check (`imp_tf_ol_stepcheck.m`) — the deciding test
+Open-loop controller trials apply a near-constant 0.3–1.3 V laser command for 3 s with no feedback.
+Figure: `paper/images/figure3/alt_step_check/ol_step_vs_impulse.png`. 15 sessions, 4 mice:
+
+| | measured OL | impulse-model prediction (Mouse 1, 9 sessions) |
+|---|---|---|
+| Peak suppression time | median 1.20 s (0.57–2.80) | ~0.2 s |
+| Relaxation by 1 s | median **7%** (2–22%) | **79–87%** current fits, **96–110%** alt fits |
+| Relaxation by 3 s | median **21%** (5–37%; AL_0048 72%) | 76–79% current, 133–137% alt |
+| Overshoot after laser offset | median **+27%** of peak (+7 to +90%) | +79–83% current, +135–141% alt |
+
+**Verdict: the suppression is sustained, and the rebound is an offset (release) effect, not a linear mode.**
+Both models get the first ~0.3 s of the step right (the dip), then predict the suppression collapsing;
+the data hold it, with slow relaxation and a rebound only when the laser turns off. This matches the
+closed loop holding −5% for 3 s. So the planned Results wording is right, but its support is the OL
+step data, not the impulse LTI model (which predicts the opposite).
+
+**Revised recommendation: keep 0–0.5 s.** The extra window's main gain was a rebound mode, and that mode
+describes sustained input wrongly (the alt fits are actually the furthest from the data, 96–110% vs 7%).
+The plant model should carry the dip dynamics, which both fits capture and which match the step onset;
+describe the rebound empirically (impulse rebound 18–45% of the dip; OL offset overshoot median 27%).
+
+**Suggested Results sentences:**
+- "The response is dominated by the dip: 65–88% (median 78%) of the impulse response energy falls
+  within 250 ms of onset, carried by a damped oscillatory mode with τ ≈ 0.11 s (median 0.113 s)."
+  (Energy share measured on h(t) with the pre-onset reference; the onset-frame reference gives 39–79%.)
+- "The post-inhibitory rebound was small (18–45% of the dip amplitude, median 29%) and did not act as a
+  linear mode: under 3 s of open-loop stimulation the suppression was sustained, relaxing by a median of
+  7% at 1 s and 21% at 3 s (15 sessions, 4 mice), with a rebound (median 27% of peak) only at laser
+  offset. This slow relaxation acts as a gradual drift that the integral term can absorb."
+  ("can absorb" rather than "removes": closed-loop drift compensation was not measured here.)
 
 ## If switching, still to do
 1. Add a `preData_s` / `refMode` path to `imp_tf_cv` (+ `imp_tf_cv_session`) and rerun CV.
