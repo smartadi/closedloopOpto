@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Collector run live: 8 tabled S4 rejection-trial panels pruned
+**Changed/Found:** `paper/figures_final/collect_final_panels.m` run live. It pruned the 8 `s4_reject_trials_*` .pdf/.png files ([supp_reject], tabled 2026-10-10). Follow-up dry run: 126 present, 0 missing, 0 to prune; the pull folder now matches MANIFEST exactly.
+**Why:** User approved the prune after the dry run listed them.
+**Next:** The panels can be regenerated with `controller-analysis/f4_supp_reject_trials.m` if S4 is un-tabled (un-comment the MANIFEST lines first).
+
 ### 2026-10-16 — Closedloop main c0386d6 pushed: Methods restructure + Figure 6 (I–L) + Overleaf merge
 **Changed/Found:** Placed `figures_final/FigureMPC.pdf` (user's assembly) as `Closedloop_edit/images/Figure6.pdf`. The assembly has FOUR sine panels, I–L (I example, J variance across trials, K phase lag, L per-trial RMSE), not the five (I–M, with RMSE-over-time as J) that the sine session's caption and paragraph described. The caption and Results references were rewritten to match. "the best of the rig's sinusoidal modes" for CL+p became "the rig mode that combined both corrections", because Fig 5 has plain CL with the lower median RMSE. Verified the restructure (943347c): build clean, both ΔF/F definitions with the reason, state windows, continuous band power, motion-energy definition, 14 ms exposure, +2/−1 mm targets, 1 V integral clamp, blinding sentence all present; the per-mouse τ numbers now sit in the Results Fig 2F paragraph. origin/main carried one Overleaf edit (2f5a681, results.tex: an unfinished rewrite of the first sentence of "Controller performance is brain-state dependent"). It was merged into draft unchanged, then main was ff'd to c0386d6 and pushed (draft too).
 **Why:** User: "do the full paper edit, updated methods and push to main".
