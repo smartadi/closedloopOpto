@@ -199,18 +199,16 @@ supplementary/state_quartile/sq_dpa_ratio.pdf
 supplementary/state_quartile/sq_dpa_dist.pdf
 supplementary/state_quartile/sq_dpa_var.pdf
 supplementary/state_quartile/sq_legend.pdf
-# Pooled-trial raster strip, RIGHT of the quartile tiles (user 2026-10-16: "Fig S2 should contain
-# this too ... with a demarcation saying pooled trials"). Tiles shrunk 3.6x2.8 -> 2.7x2.4 cm to fit.
-# One strip per state row (activity | deviation | no-stim control), same axes band as the tiles.
-# Source: impulse-analysis/imp_state_raster_supp.m (RS_ROWS, after load_experiments + imp_state_trialvar).
-# HEATMAPS: the producer swaps exportgraphics' 125x106 JPEG for the native lossless PNG
-# (utils/pdf_swap_images.py), so every one of the 1516 trials is kept in the PDF.
-supplementary/state_quartile/sq_mot_raster.pdf
-supplementary/state_quartile/sq_dpr_raster.pdf
-supplementary/state_quartile/sq_dpa_raster.pdf
-supplementary/state_quartile/sq_raster_cbar.pdf
-supplementary/state_quartile/sq_pooled_header.pdf
-supplementary/state_quartile/sq_divider.pdf
+# Per-mouse raster strips (user 2026-10-16), REPLACING the pooled strip (sq_*_raster, sq_raster_cbar,
+# sq_pooled_header, sq_divider -- retired: pooling mixed stimulation amplitudes). Full width, one strip
+# per state; 4 mice x {Activity -0.2..0.49 s, |Deviation from amplitude mean| 0..0.49 s}, raw % dF/F,
+# ONE amplitude per mouse by rule = each session's second-highest. Native PNGs swapped into the PDF.
+# Source: impulse-analysis/imp_state_raster_peramp.m (RSA_S2, after load_experiments + imp_state_trialvar).
+supplementary/state_quartile/sq_mot_rmice.pdf
+supplementary/state_quartile/sq_dpr_rmice.pdf
+supplementary/state_quartile/sq_dpa_rmice.pdf
+supplementary/state_quartile/sq_rmice_cbar_act.pdf
+supplementary/state_quartile/sq_rmice_cbar_dev.pdf
 
 [supp_tuning]
 # S3 = controller gain tuning. Source: controller-tuning/tune_supp_panels.m.

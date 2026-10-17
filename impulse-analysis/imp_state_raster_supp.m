@@ -136,7 +136,7 @@ fprintf('[RS] %s (%d trials, clim +/-%g, smooth %d) -> %s\n', labS, nnz(keep), R
 % (1516 trials -> a 125 x 106 JPEG, tested 2026-10-16). So each heatmap is ALSO written as a
 % native PNG (one pixel per trial x sample, colour-mapped, lossless) and utils/pdf_swap_images.py
 % swaps it into the PDF in place -- vector axes/text, exact placement, every trial kept.
-if ~exist('RS_ROWS','var') || isempty(RS_ROWS), RS_ROWS = true; end
+if ~exist('RS_ROWS','var') || isempty(RS_ROWS), RS_ROWS = false; end   % RETIRED 2026-10-16: pooled strip replaced by per-mouse strips (imp_state_raster_peramp.m)
 if RS_ROWS && isempty(RS_SESS)
     J   = jnStyle();
     if ~exist('SQ_H','var') || isempty(SQ_H), SQ_H = 2.4; end
