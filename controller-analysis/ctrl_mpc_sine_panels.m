@@ -1,4 +1,4 @@
-function ctrl_mpc_sine_panels(sess, kEx)
+function ctrl_mpc_sine_panels(sess, kEx, sfx)
 %CTRL_MPC_SINE_PANELS  Fig 6 I-M: the direct-prediction MPC replayed on a SINE reference (mpc_direct_sine.py),
 %   AL_0048 2026-07-14/1 right hemisphere (Fig 5's representative session), 1 Hz sine 0..-4 %dF/F, 4 s window.
 %   Same look as ctrl_mpc_direct_panels (Fig 6 A-H): Fig-3 stim box, corner scale bars, colour-named conditions,
@@ -14,16 +14,18 @@ if nargin < 1 || isempty(sess), sess = 'AL_0048_0714_e1'; end
 % Example trial (1-based, all-sine index). 161 = picked by eye (user 2026-10-16: "show a trial where MPC does really
 % well") from the top 5 CL+p trials by RMSE drop (104, 141, 184, 27, 161): MPC tracks the sine over the whole window
 % while CL+p overshoots each rise (RMSE 1.58 -> 0.83). 104/141 gain mostly in the onset transient. [] = median trial.
-if nargin < 2, kEx = 161; end
+if nargin < 2 || isempty(kEx), kEx = 161; end
+% sfx (2026-10-16): variant data suffix, e.g. '_noCL' -> mpc_direct_sine_<sess><sfx>.mat, writes to supp_mpc<sfx>/
+if nargin < 3, sfx = ''; end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data'); addpath(genpath(fullfile(here,'..','utils')));
-figDir = fullfile(here,'..','paper','images','supp_mpc');
+figDir = fullfile(here,'..','paper','images',['supp_mpc' sfx]); if ~exist(figDir,'dir'), mkdir(figDir); end
 PS = paperStyle(); S = jnStyle();
 C.m = [0.45 0.20 0.60]; C.o = [0.78 0.66 0.90]; C.g = [0.62 0.62 0.62]; C.k = [0 0 0];
 C.edge = [0.45 0.45 0.45]; C.ref = [0.25 0.25 0.25];
 C.ol = [1 0 0]; C.clp = [0 0.50 0];                  % Fig 5 MODE_COLS: OL red, CL+p green
 % ONE ROW at the 17.6 cm double-column width (user 2026-10-16): I 5.2 + 4 x 2.8 + 4 gaps x 0.3 = 17.6 cm
 W1 = 2.8; W2 = 5.2; H = 3.0;
-D = load(fullfile(dataDir, sprintf('mpc_direct_sine_%s.mat', sess)));
+D = load(fullfile(dataDir, sprintf('mpc_direct_sine_%s%s.mat', sess, sfx)));
 cond = double(D.cond(:)); Fs = double(D.Fs); N = double(D.N); ext = double(D.ext); dur = (N-1)/Fs;
 tx = (-ext:N+ext-1).'/Fs; keep = tx >= -1 - 1e-9 & tx <= dur + 1 + 1e-9; tx = tx(keep);   % -1 .. 5 s
 sn = cellstr(D.sim_names); iM = find(strcmp(sn,'MPC')); iO = find(strcmp(sn,'perfect'));

@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — MPC panel producers take a variant suffix (for the no-CL preview set)
+**Changed/Found:** `ctrl_mpc_direct_panels.m` (new arg `sfx`) and `ctrl_mpc_sine_panels.m` (new 3rd arg `sfx`) — they read `mpc_direct_<sess>_lam01<sfx>.mat` / `_lowrd<sfx>` / `<sfx>` and `mpc_direct_sine_<sess><sfx>.mat`, and write to `paper/images/supp_mpc<sfx>/`. The default `''` behaves exactly as before.
+**Why:** the user wants every MPC panel rebuilt with the no-CL controller model (`MPCD_NOCL=1`) to compare before deciding whether to swap, without overwriting the canonical data or the final panels.
+**Next:** run with sfx = '_noCL' (PAPER_FINAL off) once the `_noCL` replays finish.
+
 ### 2026-10-16 — Fig 4 relative 2–4 Hz effects framed as measured during stimulation
 **Changed/Found:** `Closedloop_edit/results.tex` L205 (new sentence: the state window spans stimulation, so relative-power effects describe power during stimulation, which the loop shapes, not the starting state); `discussion.tex` L18 ("measured over a window that includes stimulation") and L42 ("during stimulation"). Abstract and Intro L46 already make no relative-2–4 Hz claim, so they are unchanged. Build clean, 40 pp. Draft commit, not pushed.
 **Why:** User 2026-10-16. The laser-off check (RESEARCH 2026-10-10 'Circularity') showed the OL-flat / CL-rises split is specific to the in-stimulation window. The user chose to reword rather than add laser-off rows to Table 1.

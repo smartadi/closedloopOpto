@@ -1,4 +1,4 @@
-function ctrl_mpc_direct_panels(sess)
+function ctrl_mpc_direct_panels(sess, sfx)
 %CTRL_MPC_DIRECT_PANELS  Supplementary panels, direct-prediction MPC (lambda = 0.1), JNeurosci / Figure-3 style:
 %   trial-time panels use the Fig-3 look (grey stim window with edge lines, thin zero line, dashed target,
 %   short corner scale bars instead of axes, colour-named conditions, no numbers in labels).
@@ -13,14 +13,17 @@ function ctrl_mpc_direct_panels(sess)
 %   Inputs: data/mpc_direct_<sess>_lam01.mat (MPCD_RD=0.1 MPCD_ORD=0.1 MPCD_TAG=_lam01), _lowrd.mat, .mat,
 %   data/mpc_varx_embed_<sess>.mat.   OUT paper/images/supp_mpc/mpcd_*.png (drafts; not in MANIFEST)
 if nargin < 1, sess = 'AL_0033_0226_e2'; end
+% sfx (2026-10-16): data-file suffix for a variant run, e.g. '_noCL' (controller model trained without any CL data,
+% MPCD_NOCL=1) -> reads mpc_direct_<sess>_lam01<sfx>.mat etc. and writes to paper/images/supp_mpc<sfx>/
+if nargin < 2, sfx = ''; end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data'); addpath(genpath(fullfile(here,'..','utils')));
-figDir = fullfile(here,'..','paper','images','supp_mpc');
+figDir = fullfile(here,'..','paper','images',['supp_mpc' sfx]); if ~exist(figDir,'dir'), mkdir(figDir); end
 PS = paperStyle(); S = jnStyle();
 C.pi = PS.col_cl; C.m = [0.45 0.20 0.60]; C.o = [0.78 0.66 0.90]; C.g = [0.62 0.62 0.62]; C.k = [0 0 0];
 C.edge = [0.45 0.45 0.45]; C.ref = [0.25 0.25 0.25];
 C.p = [0.85 0.25 0.55];   % MPC prediction / plan (schematic): solid magenta, not dashed (user 2026-10-12)
 W1 = 4.13; W2 = 8.43; H = 3.3;
-D = load(fullfile(dataDir, sprintf('mpc_direct_%s_lam01.mat', sess)));
+D = load(fullfile(dataDir, sprintf('mpc_direct_%s_lam01%s.mat', sess, sfx)));
 nm = cellstr(D.names); iPI = find(strcmp(nm,'PI')); iM = find(startsWith(nm,'MPC')); iO = find(startsWith(nm,'ORACLE'));
 ord3 = [iPI iM iO]; col3 = [C.pi; C.m; C.o]; nam3 = {'PI','MPC','perfect MPC'};
 Fs = double(D.Fs); N = size(D.Y,1); tt = (0:N-1).'/Fs; ref = double(D.ref); pre = double(D.pre);
@@ -192,8 +195,8 @@ ylabel(ax, 'trial RMSE (%)');
 jnAxes(ax); ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_E2_rmse_compare.png')); close(fig);
 
 %% F -- input smoothness lambda (demo; lambda = 0.1 used) -- file only, not in the layout
-Lw = load(fullfile(dataDir, sprintf('mpc_direct_%s_lowrd.mat', sess)));
-Hi = load(fullfile(dataDir, sprintf('mpc_direct_%s.mat', sess)));
+Lw = load(fullfile(dataDir, sprintf('mpc_direct_%s_lowrd%s.mat', sess, sfx)));
+Hi = load(fullfile(dataDir, sprintf('mpc_direct_%s%s.mat', sess, sfx)));
 [lam, rat] = deal([]);
 for SRC = {Lw, Hi}
     s = SRC{1}; nn = cellstr(s.names); p = s.rec(:);
