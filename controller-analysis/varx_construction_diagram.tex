@@ -1,6 +1,8 @@
-% VARX construction diagram for the supplementary VARX figure (PROTOTYPE 2026-10-16), panel B.
-% Same visual language as mpc_direct_diagram.tex (Fig 6A): sans font, MPC purple, grey ink.
+% VARX construction diagram for the supplementary VARX figure, panel B.
+% Same visual language as mpc_direct_diagram.tex (Fig 6A): sans font, grey ink; VARX = pink (purple = MPC only).
 % Built by ctrl_mpc_varx_supp_panels.m -> paper/images/supp_varx/varx_B_construction.pdf
+% 2026-10-16 (user): no L/Q symbols for the reader ("35 frames (1 s)"); channel names on the left with the stacked
+% z and u vectors further left; no iterate loop, just "forecast up to 1 s ahead"; training text = spont + OL only.
 \documentclass[border=1pt]{standalone}
 \usepackage[scaled]{helvet}
 \renewcommand\familydefault{\sfdefault}
@@ -30,28 +32,29 @@
 \node[sm] at (1.6, 0.52) {$\vdots$};
 \draw[las, line width=0.6pt] (0,-0.35) -- (1.2,-0.35) -- (1.2,-0.12) -- (1.6,-0.12) -- (1.6,-0.22) -- (2.2,-0.22)
       -- (2.2,-0.05) -- (2.7,-0.05) -- (2.7,-0.18) -- (\tnow+0.1,-0.18);
-\node[sm, anchor=east, text=site] at (-0.05,1.55) {controlled site $y$};
-\node[sm, anchor=east] at (-0.05,0.75) {100 cortical sites $x_1..x_{100}$};
-\node[sm, anchor=east, text=las] at (-0.05,-0.22) {laser command $u$};
+% channel names
+\node[sm, anchor=east, text=site] at (-0.08,1.55) {output site};
+\node[sm, anchor=east]            at (-0.08,0.75) {cortical sites};
+\node[sm, anchor=east, text=las]  at (-0.08,-0.22) {laser command};
+% stacked vectors, further left
+\node[anchor=east, inner sep=1pt] (zv) at (-1.95,0.90)
+   {$z_t = \left[\begin{array}{c} \color{site}y_t \\ x_{1,t} \\ \vdots \\ x_{100,t} \end{array}\right]$};
+\node[anchor=west, inner sep=1pt, text=las] at (zv.west |- 0,-0.22) {$u_t$};
 % history windows
-\fill[mpc, opacity=0.15] (\tnow-2.5,0.05) rectangle (\tnow,1.78);
+\fill[mpc, opacity=0.15] (\tnow-2.5,0.05) rectangle (\tnow,1.78);
 \fill[las, opacity=0.10] (\tnow-2.5,-0.45) rectangle (\tnow+0.1,0.02);
 \draw[decorate, decoration={brace, amplitude=2.5pt}, line width=0.5pt, mpc] (\tnow-2.5,1.86) -- (\tnow,1.86)
-      node[midway, above=2pt, sm, text=mpc] {$L$ = 35 frames (1 s)};
+      node[midway, above=2pt, sm, text=mpc] {35 frames (1 s)};
 \draw[decorate, decoration={brace, mirror, amplitude=2.5pt}, line width=0.5pt, las] (\tnow-2.5,-0.52) -- (\tnow+0.1,-0.52)
-      node[midway, below=2pt, sm, text=las] {$Q$ = 35 frames (1 s), up to $u_{t+1}$};
+      node[midway, below=2pt, sm, text=las] {35 frames (1 s)};
 \draw[black!40, dashed, line width=0.4pt] (\tnow,-0.45) -- (\tnow,1.86);
 \node[sm] at (\tnow+0.12,2.0) {$t$};
 % ---- the model ----
 \node[mdl, text width=4.4cm] (W) at (\tnow+3.1,0.75) {\textbf{one linear map, ridge fit}\\[2pt]
-   $z_{t+1} = W^{\top}\big[\,z_t..z_{t-L+1},\;u_{t+1}..u_{t-Q+2},\;1\,\big]$\\[2pt]
-   {\fontsize{6}{7.2}\selectfont $z=[\,y,\,x_1..x_{100}\,]$: 101 channels}};
+   $z_{t+1} = W^{\top}\big[\,z_t..z_{t-34},\;u_{t+1}..u_{t-33},\;1\,\big]$};
 \draw[ar] (\tnow+0.15,0.75) -- (W.west);
-\node[sm, align=center, text=mpc] (out) at (\tnow+3.1,-0.35) {predicts all 101 channels one frame ahead};
+\node[sm, align=center, text=mpc] (out) at (\tnow+3.1,-0.25) {$h$-step forecast $\hat z_{t+1},\dots,\hat z_{t+h}$\\(up to 1 s ahead)};
 \draw[ar, draw=mpc] (W.south) -- (out.north);
-\node[sm, align=center] at (\tnow+3.1,-0.75) {trained on every frame of the session\\(spontaneous, open- and closed-loop)};
-% iterate loop: out of the right side, back in at the top
-\draw[ar, draw=mpc] (W.east) -- ++(0.3,0) |- ($(W.north)+(0,0.3)$) -- (W.north);
-\node[sm, text=mpc, align=left, anchor=west] at ($(W.east)+(0.38,0.2)$) {iterate: feed the\\prediction back in\\for $\hat z_{t+2},..,\hat z_{t+h}$};
+\node[sm, align=center] at (\tnow+3.1,-0.85) {trained on spontaneous and open-loop data,\\tested on held-out trials (5-fold)};
 \end{tikzpicture}
 \end{document}

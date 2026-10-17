@@ -80,7 +80,9 @@ def main(sess="AL_0048_0714_e1"):
         return VX(mdl.W, CFG["L"], CFG["Q"], sz, su)
 
     world = fit(rows_excl(np.array([], int)))
-    ctrl = {f: fit(rows_excl(np.flatnonzero(fold == f))) for f in np.unique(fold)}
+    # MPCD_NOCL=1 (2026-10-16 test): controller model never sees ANY closed-loop trial (CL, CL+p) -- spontaneous + OL only
+    NOCL = os.environ.get("MPCD_NOCL", "0") == "1"
+    ctrl = {f: fit(rows_excl(np.flatnonzero((fold == f) | closed) if NOCL else np.flatnonzero(fold == f))) for f in np.unique(fold)}
     print(f"[MPCS] {sess}: {nT} sine trials ({', '.join(f'{NAMES[c]} {np.sum(cond == c)}' for c in range(4))}) | "
           f"u_max {umax:.2f} | uss {uss:.2f} | world DC gain {world.G[:, 0].sum():.2f} %/unit", flush=True)
 

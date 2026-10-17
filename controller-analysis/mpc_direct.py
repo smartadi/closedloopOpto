@@ -116,7 +116,9 @@ def main(sess="AL_0033_0226_e2", world_cfg=None, sig_g=0.0, tag=""):
 
     world = fit(rows_excl(np.array([], int)), wcfg)
     gk = np.exp(np.sqrt(np.log(1 + sig_g ** 2)) * np.random.default_rng(7).standard_normal(nT) - 0.5 * np.log(1 + sig_g ** 2))
-    ctrl = {f: fit(rows_excl(np.flatnonzero(fold == f))) for f in np.unique(fold)}
+    # MPCD_NOCL=1 (2026-10-16 test): controller model never sees ANY closed-loop trial -- spontaneous + OL only
+    NOCL = os.environ.get("MPCD_NOCL", "0") == "1"
+    ctrl = {f: fit(rows_excl(np.arange(nT) if NOCL else np.flatnonzero(fold == f))) for f in np.unique(fold)}
     print(f"[MPCD] {nT} CL trials | u_max {umax:.2f} | uss {uss:.2f} | world laser->y DC gain {world.G[:, 0].sum():.2f} %/unit "
           f"(peak {world.G[:, 0].min():.2f} at lead {np.argmin(world.G[:, 0]) + 1})", flush=True)
 

@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — MPC test: controller VARX trained without ANY closed-loop data changes nothing material
+**Changed/Found:** `mpc_direct.py`, `mpc_direct_sine.py` — new `MPCD_NOCL=1` flag. With it on, the controller model trains on spontaneous + OL data only; static excludes every CL trial, sine excludes every CL and CL+p trial and still holds out the test fold. The world model is unchanged (it must reproduce the recordings). Test runs (tag `_noCLtest`, λ = 100): static MPC/CL 0.682 (canonical 0.662), 107/108; sine MPC/CL+p 0.879 (canonical 0.887), 56/57; perfect unchanged (0.767). Controller R² on CL windows: 0.421 @ 86 ms (was 0.425).
+**Why:** the user asked whether training on CL data lets a reviewer argue we are cheating. The canonical runs only hold out the test fold's CL trials; the other CL trials are in training.
+**Next:** recommended making no-CL the canonical training (alongside the ridge decision), then rerunning static / robust / sine / Fig 6 panels / stats / manuscript numbers. Note the VARX supp panels already train on spont + training-fold OL only (`mpc_varx_supp.py`).
+
+### 2026-10-16 — VARX supp schematic v2: no L/Q, stacked z/u vectors, h-step forecast, correct training text
+**Changed/Found:** `varx_construction_diagram.tex` — braces now read "35 frames (1 s)" with no L/Q symbols; channel labels are "output site / cortical sites / laser command", with the stacked z_t = [y; x1..x100] and u_t further left; the equation is written with explicit lags (t−34, t−33); the iterate feedback loop is replaced by "h-step forecast ẑ_{t+1..t+h} (up to 1 s ahead)". The subtext now says "trained on spontaneous and open-loop data, tested on held-out trials (5-fold)". The old "every frame incl. closed-loop" text was WRONG for the supp panels, whose `mpc_varx_supp.py` excludes CL. Final panel B re-exported.
+**Why:** user feedback — the reader never needs L/Q, and the loop was confusing.
+**Next:** none.
+
 ### 2026-10-16 — Fig 2G Results: state co-variation, no claim about the stimulus effect
 **Changed/Found:** `Closedloop_edit/results.tex` L98–99 (draft) — replaced "a fixed stimulus effect rides on ongoing activity ..., rather than that state changes how cortex responds" with: responses and ongoing activity change together with state (both less variable with movement, both more variable with absolute δ power); we do not separate a change in the stimulus effect from a change in ongoing activity. Next sentence now "This is consistent with brain state acting as a disturbance ...". Build clean, 40 pp, 0 undefined.
 **Why:** User 2026-10-16: not claiming motion changes the stimulus response, nor that it doesn't — only that under motion the responses look different and so does the underlying activity.
