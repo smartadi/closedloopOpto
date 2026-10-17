@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — VARX ridge test: grid-best λ = 10³ barely moves the MPC result
+**Changed/Found:** `mpc_direct.py` / `mpc_direct_sine.py` run with `MPCD_LAM=1000` (tag `_lam1e3test`, canonical files untouched). Validation grid (`mpc_varx_lq_sweep`, R² at 200 ms): chosen L=Q=35, λ=10² = 0.626; best = 0.634, tied at L=Q=20 and L=Q=35 with λ=10³ (full range 0.588–0.634). At λ=10³: static MPC/CL 0.673 (was 0.662), 107/108; sine MPC/CL+p 0.897 (was 0.887), 56/57; perfect/CL+p 0.760 (was 0.767).
+**Why:** the user pointed out that the supp sweep panel shows a best cell we didn't use.
+**Next:** if λ=10³ is adopted, change the CFG default, rerun the canonical static (`_lam01`), robust, sine, varx_supp and Fig 6 panels, then update the stats table and the manuscript numbers.
+
+### 2026-10-16 — VARX supp: tiled forecasts in panel C, AR removed from panel D
+**Changed/Found:** `ctrl_mpc_varx_supp_panels.m` — C now plots every other origin (~0.97 s apart), so the 1 s forecasts tile instead of stacking, with two alternating purples. D drops the AR curve; it keeps VARX, site + laser and naive.
+**Why:** the user said overlapping forecasts made the individual forecasts look bad, and AR is an unfair comparison because it never sees the stimulus.
+**Next:** the scale-bar labels in C/F still crowd; build the panel-lettered layout once the ridge choice is settled.
+
 ### 2026-10-16 — Fig S2: per-mouse raster strips replace the pooled strip
 **Changed/Found:** `impulse-analysis/imp_state_raster_peramp.m` (new `RSA_S2` block) — three full-width (17.6 cm) strips `sq_<mot|dpr|dpa>_rmice.pdf`, one per state. Each strip shows 4 mice × {Activity −0.2 to 0.49 s, signed ±5 % ΔF/F, onset marker; |Deviation from amplitude mean| 0–0.49 s, 0–5 % ΔF/F}, with 2 cm heatmaps, trials sorted by state, quartile lines, and native PNGs swapped in (lossless). There is one amplitude per mouse by rule (second-highest): Mouse 5a 2.4 V (n = 59), Mouse 5b 2.6 V (n = 50), Mouse 1 4.3 V (n = 82), Mouse 3 1.0 V (n = 100). Colour keys are `sq_rmice_cbar_act/dev`. MANIFEST: pooled strip entries (sq_*_raster, sq_raster_cbar, sq_pooled_header, sq_divider) replaced by the 5 new files; retired PDFs/PNGs deleted from the pull folder. `imp_state_raster_supp.m` now has `RS_ROWS` off by default. PAPER.md registry updated. By eye: abs δ Q4 rows are darker (larger |dev|) in Mice 5a, 5b and 3; motion Q1 rows are darker in Mice 5a and 3; rel δ is flat.
 **Why:** User: "Put one amplitude per mouse into Fig S2, chosen by rule (each mouse's second-highest amplitude), as activity + |dev| strips". The pooled strip mixed amplitudes. Eight heatmaps per state can't fit the 4.6 cm right column, so this is a full-width section.

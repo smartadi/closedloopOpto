@@ -6,7 +6,7 @@ function ctrl_mpc_varx_supp_panels(sess)
 %   Panels (draft letters):
 %     A inputs: brain map, 100 spots coloured by their weight in the one-step y equation, controlled site
 %     B construction diagram (TikZ, varx_construction_diagram.tex)
-%     C rolling 1 s forecasts on a held-out OL trial          D R^2 vs lead: VARX | site + laser only | AR | naive
+%     C tiled 1 s forecasts on a held-out OL trial            D R^2 vs lead: VARX | site + laser only | naive
 %     E validation R^2 (200 ms) over history L = Q x ridge lambda      F learned laser response vs measured OL average
 %   (H residual whiteness DROPPED, user 2026-10-16: kept as a Methods sentence.)
 %   OUT paper/images/supp_varx/varx_*.png (+ PDF with PAPER_FINAL) and _draft_layout_supp_varx.png
@@ -59,9 +59,13 @@ for a = {ax1, yl; ax2, [-0.1 3]}.'
     patch(a{1}, [0 dur dur 0], a{2}([1 1 2 2]), [0.9 0.9 0.9], 'FaceAlpha', 0.4, 'EdgeColor','none');
 end
 plot(ax1, t, y, '-', 'Color', C.k, 'LineWidth', S.lw_ind + 0.2);
-for i = 1:numel(og)
-    plot(ax1, og(i) + hz, fc(i,:), '-', 'Color', C.m, 'LineWidth', S.lw_mean);
-    plot(ax1, og(i), y(find(t >= og(i) - 1e-9, 1)), 'o', 'MarkerSize', 2, 'MarkerFaceColor', C.m, 'MarkerEdgeColor','none');
+% every other origin (~0.97 s apart): the 1 s forecasts tile end to end instead of stacking (user 2026-10-16:
+% overlapping forecasts hid how each one tracks); alternate two purples so each forecast reads on its own
+sel = 1:2:numel(og); cF = [C.m; 0.72 0.52 0.85];
+for j = 1:numel(sel)
+    i = sel(j); c = cF(mod(j-1,2)+1, :);
+    plot(ax1, og(i) + hz, fc(i,:), '-', 'Color', c, 'LineWidth', S.lw_mean);
+    plot(ax1, og(i), y(find(t >= og(i) - 1e-9, 1)), 'o', 'MarkerSize', 2.5, 'MarkerFaceColor', c, 'MarkerEdgeColor','none');
 end
 stairs(ax2, t, u, '-', 'Color', [0.55 0.55 0.55], 'LineWidth', PS.lw_inp);
 xlim(ax1, [-1.5 4.5]); xlim(ax2, [-1.5 4.5]); ylim(ax1, yl); ylim(ax2, [-0.1 3]);
@@ -76,14 +80,14 @@ lm = double(D.lead_ms(:));
 fig = jnFig(W1, H); ax = axes(fig, 'Units','centimeters', 'Position', [0.85 0.7 W1-0.95 2.05]); hold(ax,'on');
 for x = [200 1000], plot(ax, [x x], [-0.25 1], ':', 'Color', C.g, 'LineWidth', S.lw_axis); end
 plot(ax, [25 1100], [0 0], '-', 'Color', C.g, 'LineWidth', S.lw_axis);
+% AR (site's own past, no laser) DROPPED (user 2026-10-16): unfair -- it never sees the stimulus
 plot(ax, lm, D.R2_naive, '-', 'Color', C.g, 'LineWidth', S.lw_mean);
-plot(ax, lm, D.R2_ar, '-', 'Color', C.k, 'LineWidth', S.lw_ind + 0.3);
 plot(ax, lm, D.R2_site, '-', 'Color', C.s, 'LineWidth', S.lw_mean);
 plot(ax, lm, D.R2_varx, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
 set(ax, 'XScale','log', 'XTick', [30 200 1000], 'XTickLabel', {'30','200','1000'}, 'YTick', [0 0.5 1]);
 xlim(ax, [25 1100]); ylim(ax, [-0.25 1]); xlabel(ax, 'lead (ms)'); ylabel(ax, 'R^2'); jnAxes(ax);
-nm = {'VARX', 'site + laser', 'AR', 'naive'}; cl = [C.m; C.s; C.k; C.g];
-for j = 1:4, text(ax, 0.98, 0.98 - 0.1*(j-1), nm{j}, 'Units','normalized', 'Color', cl(j,:), 'FontSize', S.fs_annot, ...
+nm = {'VARX', 'site + laser', 'naive'}; cl = [C.m; C.s; C.g];
+for j = 1:3, text(ax, 0.98, 0.98 - 0.1*(j-1), nm{j}, 'Units','normalized', 'Color', cl(j,:), 'FontSize', S.fs_annot, ...
         'FontWeight','bold', 'HorizontalAlignment','right', 'VerticalAlignment','top'); end
 exp_(fig, 'varx_D_r2_lead'); close(fig);
 
