@@ -20,6 +20,7 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 **Changed/Found:** `ctrl_mpc_varx_supp_panels.m` — panel E (paper letter D) y label changed, so L/Q no longer reaches the reader. The PAPER_FINAL re-export did NOT reach the final folder: `panels/supp_varx/varx_E_sweep.pdf` (and C, D) are locked by Illustrator; only A updated. The working copy in `paper/images/supp_varx/` is updated.
 **Why:** user request.
 **Next:** once Illustrator is closed, re-run `global PAPER_FINAL; PAPER_FINAL = true; ctrl_mpc_varx_supp_panels`, then swap panel D in `varx.pdf` and recopy it to Closedloop_edit `images/supplementary/S_varx.pdf`.
+**Update (same day):** the lock was Acrobat (it had `varx.pdf` open), not Illustrator. After the user quit it, the re-export wrote A, C, D and E to `panels/supp_varx/`, and the grid shows "history (frames)". `collect_final_panels` also removed the leftover F pdf; it had been locked during the earlier cleanup. Remaining: the user swaps D into `varx.pdf`, then recopy to `S_varx.pdf`.
 
 ### 2026-10-16 — VARX supp in the paper as Fig. S5; laser-response panel F retired
 **Changed/Found:**
