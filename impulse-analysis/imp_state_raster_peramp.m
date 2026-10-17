@@ -47,7 +47,9 @@ assert(isequal(sS, T.sess) && max(abs(eR - T.devRaw)) < 1e-9, '[RSA] rows do not
 %% ---- one figure per session -------------------------------------------------------------------
 L    = imp_mouse_label({allExperiments.mn});
 tags = {'MOTz','DPrz','DPaz'};  names = {'Motion','Rel \delta','Abs \delta'};
-cmA  = gray(256);  cmD = flipud(gray(256));
+% Activity: blue (negative, the dip) - white - red (positive) (user 2026-10-16: "non grayscale
+% colour bar for activity, like blue to red"); |deviation| stays white -> black.
+cmA  = local_bwr(256);  cmD = flipud(gray(256));
 for s = unique(sS).'
     amps = unique(aS(sS == s)).';  amps = amps(max(1, end-RSA_NAMP+1):end);  nA = numel(amps);
     f  = figure('Color','w', 'Units','centimeters', 'Position', [1 1 3.2*nA + 2, 13]);
@@ -62,8 +64,8 @@ for s = unique(sS).'
             for j = 1:2
                 ax = nexttile(tl, (k-1)*2*nA + (ia-1)*2 + j);
                 imagesc(ax, tx{j}, 1:nT, V{j});  colormap(ax, cms{j});  clim(ax, lims{j});  hold(ax,'on');
-                for q = qE, plot(ax, tx{j}([1 end]), [q q], '-', 'Color', [0.9 0.2 0.2], 'LineWidth', 0.8); end
-                if j == 1, xline(ax, -0.5/fs, '--', 'Color', [0.9 0.2 0.2], 'LineWidth', 0.6); end
+                for q = qE, plot(ax, tx{j}([1 end]), [q q], '-', 'Color', [0 0 0], 'LineWidth', 0.8); end
+                if j == 1, xline(ax, -0.5/fs, '--', 'Color', [0 0 0], 'LineWidth', 0.6); end
                 set(ax, 'YDir','normal', 'FontSize', 6, 'TickDir','out', 'XTick', [0 0.4], 'YTick', []);
                 if k < 3, set(ax, 'XTickLabel', []); end
                 if k == 1
@@ -74,7 +76,7 @@ for s = unique(sS).'
             end
         end
     end
-    title(tl, sprintf('%s: top %d amplitudes, trials sorted by pre-stim state (raw %% \\DeltaF/F; red = quartile edges / onset)', ...
+    title(tl, sprintf('%s: top %d amplitudes, trials sorted by pre-stim state (raw %% \\DeltaF/F; black = quartile edges / onset)', ...
           L{s}, nA), 'FontSize', 8);
     cb = colorbar(nexttile(tl, 4*nA + 1), 'Location','southoutside');  cb.FontSize = 6;  cb.Label.String = 'activity (% \DeltaF/F)';
     cb = colorbar(nexttile(tl, 6*nA), 'Location','southoutside');  cb.FontSize = 6;  cb.Label.String = '|deviation| (% \DeltaF/F)';
@@ -89,6 +91,10 @@ end
 % amplitudes. Full width (17.6 cm), one strip per state: 4 mice x {Activity, |Deviation|}.
 % Native PNGs swapped into the PDF (utils/pdf_swap_images.py) so every trial is kept losslessly.
 if ~exist('RSA_S2','var') || isempty(RSA_S2), RSA_S2 = true; end
+% RSA_S2_AMP: 'second' (FINAL rule, in MANIFEST) | 'top' (highest amplitude; comparison copy,
+% written with a _top suffix and NOT mirrored to figures_final)
+if ~exist('RSA_S2_AMP','var') || isempty(RSA_S2_AMP), RSA_S2_AMP = 'second'; end
+sfx = '';  if strcmp(RSA_S2_AMP, 'top'), sfx = '_top'; end
 if RSA_S2
     J    = jnStyle();
     global PAPER_FINAL %#ok<GVMIS,TLEV>
@@ -104,7 +110,7 @@ if RSA_S2
     for k = 1:3
         f = jnFig(W, H);  pngs = {};
         for is = 1:numel(sOrd)
-            s = sOrd(is);  amps = unique(aS(sS == s));  a2 = amps(end-1);
+            s = sOrd(is);  amps = unique(aS(sS == s));  if strcmp(RSA_S2_AMP,'top'), a2 = amps(end); else, a2 = amps(end-1); end
             m = find(sS == s & aS == a2 & isfinite(T.(tags{k})));
             [stS, o] = sort(T.(tags{k})(m));  m = m(o);  nT = numel(m);
             qE = arrayfun(@(p) find(stS >= quantile(stS,p), 1), [0.25 0.5 0.75]) - 0.5;
@@ -119,7 +125,7 @@ if RSA_S2
                     plot(ax, xq, [q q], '-', 'Color', [0 0 0], 'LineWidth', 1.0);
                     plot(ax, xq, [q q], '-', 'Color', [1 1 1], 'LineWidth', 0.4);
                 end
-                if j == 1, plot(ax, [0 0] - 0.5*dt, [0.5 nT+0.5], '--', 'Color', [1 1 1], 'LineWidth', 0.5); end
+                if j == 1, plot(ax, [0 0] - 0.5*dt, [0.5 nT+0.5], '--', 'Color', [0 0 0], 'LineWidth', 0.5); end
                 set(ax, 'YDir','normal', 'Layer','top', 'YTick', qM, 'YTickLabel', {'Q1','Q2','Q3','Q4'}, ...
                         'XTick', [0 0.2 0.4], 'XTickLabelRotation', 0, 'XLim', xq);
                 if ~(is == 1 && j == 1), set(ax, 'YTickLabel', []); end
@@ -142,13 +148,13 @@ if RSA_S2
                 % native heatmap: row 1 = lowest state at the BOTTOM -> top PNG row = last trial
                 ci = round((min(max(V{j}, lims{j}(1)), lims{j}(2)) - lims{j}(1)) / diff(lims{j}) * 255) + 1;
                 ci(~isfinite(V{j})) = 128;
-                pngs{end+1} = fullfile(nDir, sprintf('sq_%s_rmice_%d_%d.png', tagF{k}, is, j)); %#ok<AGROW>
+                pngs{end+1} = fullfile(nDir, sprintf('sq_%s_rmice%s_%d_%d.png', tagF{k}, sfx, is, j)); %#ok<AGROW>
                 imwrite(ind2rgb(flipud(ci), cms{j}), pngs{end});
             end
         end
-        pdfOut = fullfile(rDir, sprintf('sq_%s_rmice.pdf', tagF{k}));
+        pdfOut = fullfile(rDir, sprintf('sq_%s_rmice%s.pdf', tagF{k}, sfx));
         jnExport(f, pdfOut);  close(f);
-        fin = fullfile(root, 'paper','figures_final','panels','supp_state_quartile', sprintf('sq_%s_rmice.pdf', tagF{k}));
+        fin = fullfile(root, 'paper','figures_final','panels','supp_state_quartile', sprintf('sq_%s_rmice%s.pdf', tagF{k}, sfx));
         targets = {pdfOut};
         if ~isempty(PAPER_FINAL) && PAPER_FINAL && exist(fin,'file'), targets{end+1} = fin; end %#ok<AGROW>
         for t = 1:numel(targets)
@@ -169,4 +175,11 @@ if RSA_S2
         set(cb, 'FontSize', 5, 'FontName', J.font);  cb.Label.FontSize = 5;
         jnExport(f, fullfile(rDir, keys{kk,1}));  close(f);
     end
+end
+
+function cm = local_bwr(n)
+% Diverging blue (negative) - white - red (positive), ColorBrewer RdBu end points.
+a = [0.13 0.40 0.67];  w = [1 1 1];  b = [0.70 0.09 0.17];
+h = floor(n/2);
+cm = [interp1([0 1], [a; w], linspace(0,1,h)); interp1([0 1], [w; b], linspace(0,1,n-h))];
 end

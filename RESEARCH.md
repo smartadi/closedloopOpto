@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 strips: blue-white-red activity map; highest-amplitude comparison copy; finalized
+**Changed/Found:** `impulse-analysis/imp_state_raster_peramp.m` — the activity map is now blue (negative/dip) – white – red (positive) (`local_bwr`, RdBu end points); |dev| stays white → black. Onset and quartile markers are now black so they don't read as data on the red/blue map; this also applies to the exploratory grid. New `RSA_S2_AMP` = 'second' (FINAL, mirrored) | 'top' (writes `sq_*_rmice_top.pdf` to images only, not in MANIFEST). Highest-amplitude copy: Mouse 5a 2.7 V (n = 56), Mouse 5b 2.7 V (n = 54), Mouse 1 4.9 V (n = 84), Mouse 3 1.6 V (n = 100). Its dip is deeper and the abs δ |dev| gradient is still visible (5a, 5b, 3). FINAL = second-highest, re-exported to figures_final with both keys.
+**Why:** User: "non grayscale color bar for activity, like blue to red, also gimme the same for the highest amp per mouse then finalize". Caveat: red/blue are the locked OL/CL condition colours in Figs 3 and 5. Here they are a diverging scale in a supplementary figure, and the caption must say so.
+**Next:** User assembles Fig S2 and writes the caption (rule, raw units, |dev|, colour scales). To use the highest amplitude instead, run with `RSA_S2_AMP='top'` and swap the MANIFEST names.
+
 ### 2026-10-16 — VARX supp locked for assembly: [supp_varx] added to MANIFEST, final PDFs exported
 **Changed/Found:** `paper/figures_final/MANIFEST.txt` — new `[supp_varx]` section (varx_A–F). `ctrl_mpc_varx_supp_panels.m` — with PAPER_FINAL on it now copies the TikZ panel B straight into `panels/supp_varx/`, since B is not a MATLAB figure and so never passes through the mirror. Ran it with PAPER_FINAL on: all 6 PDFs are in `panels/supp_varx/`, and `collect_final_panels('dry')` reports 131 present, 0 missing, 0 to prune.
 **Why:** the user approved the prototype ("looks good give me panels for assembly").
