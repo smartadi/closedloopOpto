@@ -16,6 +16,31 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Reference audit: all 47 cited entries checked against Crossref/arXiv
+**Changed/Found:** `Closedloop_edit/refs.bib` (main 907251a). Each cited entry was checked against Crossref (by DOI where present, by title otherwise) and arXiv: title, authors, journal, year, volume and pages. No wrong title or author list was found. Fixes:
+- Gupta & Murphy: year 2025 → 2026 (version of record 2026-09-24, eLife 14) plus article RP105070.
+- eLife/Science article numbers added: Shimaoka e43533, Siegle e03061, Zatka-Haas e63163, Ye eadx1369.
+- Cell Press page suffixes: Allen 891–907.e6, Makino 880–890.e8.
+- Åström & Hägglund title → "PID Controllers: Theory, Design, and Tuning", second edition.
+- van Overschee title dashes → commas.
+- Ritt & Ching "page" → "pages".
+- Every Unicode en dash in a pages field → `--` (25 entries).
+
+Verified but left as is: Nozari 2024 and Zaaimi 2023 (issue years; online 2023/2022); Bolus 2021 (journal version; the bioRxiv was 2020); Matveev 2024 (still a bioRxiv preprint per Crossref); Lu 2025 arXiv 2510.18037 (authors match); van Overschee 2012 Springer (a valid reprint of the 1996 Kluwer edition). Build: 39 pp, 0 bibtex warnings.
+**Why:** User 2026-10-16: nothing in the references may be wrong (title, authors, journal, year).
+**Next:** Recheck Matveev 2024 for a journal version before submission. Uncited entries in refs.bib were not audited.
+
+### 2026-10-16 — Review fixes in the manuscript; Discussion reminder placed
+**Changed/Found:** `Closedloop_edit` (main fb4e309):
+- `results.tex`: L179 garbled sentence fixed; "independent of overall power" → "normalized for overall power"; Fig 2A caption 0.23–0.87 → 0.23–0.90 mW (matches the panel legend); 2G caption "open circles" → "open diamonds".
+- `stat_tables.tex`: Table 2 caption drops "converted at 1 mW per 3 V".
+- `methods_rewrite.tex`: the nominal-model paragraph now ends at "are the trial-averaged dynamics."
+- `discussion.tex`: visible `\aditya{REMINDER ...}` after the old Fig 2G sentence.
+
+Left as is (user): the [repository URL] placeholder, the mixed m-number / letter session naming, and the 40 Hz-sine sessions line.
+**Why:** User's answers to the full-paper review, 2026-10-16. Do not raise the laser power-ceiling / V→mW arithmetic again (a level shifter; see memory).
+**Next:** User rewrites the Discussion and deletes the reminder. The 2G panel title still says "State dependence of stimulation response" (Illustrator).
+
 ### 2026-10-16 — Fig 6H: AR dropped, site + laser added (same set as Fig S5E)
 **Changed/Found:**
 - **Panel.** `ctrl_mpc_direct_panels.m` panel B (paper 6H) now draws VARX / site + laser (black) / naive, all from `mpc_varx_supp_<sess>.mat`; the embed-file AR + persistence are gone. Re-exported with PAPER_FINAL → `panels/supp_mpc/mpcd_B_prediction.pdf`.
