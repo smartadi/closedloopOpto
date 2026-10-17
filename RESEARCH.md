@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — VARX supp grid panel: y label "history L = Q (frames)" → "history (frames)"
+**Changed/Found:** `ctrl_mpc_varx_supp_panels.m` — panel E (paper letter D) y label changed, so L/Q no longer reaches the reader. The PAPER_FINAL re-export did NOT reach the final folder: `panels/supp_varx/varx_E_sweep.pdf` (and C, D) are locked by Illustrator; only A updated. The working copy in `paper/images/supp_varx/` is updated.
+**Why:** user request.
+**Next:** once Illustrator is closed, re-run `global PAPER_FINAL; PAPER_FINAL = true; ctrl_mpc_varx_supp_panels`, then swap panel D in `varx.pdf` and recopy it to Closedloop_edit `images/supplementary/S_varx.pdf`.
+
 ### 2026-10-16 — VARX supp in the paper as Fig. S5; laser-response panel F retired
 **Changed/Found:**
 - **Assembled figure in.** The user assembled `paper/figures_final/varx.pdf` (A construction, B weight map, C forecasts, D validation grid, E R² vs lead) and dropped panel F. Copied it to Closedloop_edit `images/supplementary/S_varx.pdf`. It renders as Fig. S5 (`fig:supp_varx`).

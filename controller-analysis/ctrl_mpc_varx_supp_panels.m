@@ -107,7 +107,7 @@ cl = [floor(min(M(:))*50)/50 ceil(max(M(:))*50)/50]; caxis(ax, cl); axis(ax, 'ij
 plot(ax, find(ls == 100), find(Ls == 35), 's', 'MarkerSize', 5, 'MarkerEdgeColor', C.k, 'LineWidth', 0.6);
 set(ax, 'XTick', 1:numel(ls), 'XTickLabel', arrayfun(@(v) sprintf('10^{%d}', round(log10(v))), ls, 'uni', 0), ...
     'YTick', 1:numel(Ls), 'YTickLabel', Ls);
-xlabel(ax, 'ridge \lambda'); ylabel(ax, 'history L = Q (frames)'); jnAxes(ax);
+xlabel(ax, 'ridge \lambda'); ylabel(ax, 'history (frames)'); jnAxes(ax);
 cb = colorbar(ax, 'Units','centimeters', 'Position', [W1-0.45 0.95 0.12 1.6], 'Ticks', cl); cb.FontSize = S.fs_tick; cb.Box = 'off';
 title(ax, 'validation R^2, 200 ms', 'FontSize', S.fs_annot, 'FontWeight', 'bold');
 exp_(fig, 'varx_E_sweep'); close(fig);
