@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — VARX supp in the paper as Fig. S5; laser-response panel F retired
+**Changed/Found:**
+- **Assembled figure in.** The user assembled `paper/figures_final/varx.pdf` (A construction, B weight map, C forecasts, D validation grid, E R² vs lead) and dropped panel F. Copied it to Closedloop_edit `images/supplementary/S_varx.pdf`. It renders as Fig. S5 (`fig:supp_varx`).
+- **Caption.** States: training on spontaneous + OL only (no CL); 92 held-out OL trials over 5 folds; grid flat (all λ ≤ 10³ within 0.025 of best 0.634; used 0.626); R² at 200 ms 0.41 / 0.37 / 0.10 (VARX / site + laser / naive).
+- **Methods pointer.** `methods_rewrite.tex` VARX paragraph now points to the figure; the validation range is corrected from "1–10⁴" to the swept grid, 10–10⁴ and 5–35 frames.
+- **Manifest.** `varx_F_laser_response` removed; `collect_final_panels` pruned its pdf and png (127 present, 0 missing).
+- Draft commit `2b828d1`; the PDF builds at 39 pp.
+
+**Why:** the user said the laser-response panel isn't needed and asked to inset the figure with a caption and point to it from Methods.
+**Next:** grid panel D still labels its y axis "history L = Q (frames)" — the only place L/Q reaches the reader; relabel to "history (frames)" if wanted. The producer still draws F (harmless; not in the manifest).
+
 ### 2026-10-16 — No-CL training made CANONICAL for every MPC panel, the stats table and the manuscript; ridge stays 100
 **Changed/Found:**
 - `ctrl_mpc_direct_panels.m` / `ctrl_mpc_sine_panels.m`: default `sfx = '_noCL'`, output back in `supp_mpc/`.

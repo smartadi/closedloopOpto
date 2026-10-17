@@ -377,4 +377,6 @@ supp_varx/varx_B_construction.pdf
 supp_varx/varx_C_forecasts.pdf
 supp_varx/varx_D_r2_lead.pdf
 supp_varx/varx_E_sweep.pdf
-supp_varx/varx_F_laser_response.pdf
+# varx_F_laser_response RETIRED 2026-10-16 (user dropped it at assembly). Assembled figure: figures_final/varx.pdf
+# -> Closedloop_edit images/supplementary/S_varx.pdf = Fig. S5 (fig:supp_varx). Paper letters: A construction,
+# B weight map, C forecasts, D validation grid, E R2 vs lead.
