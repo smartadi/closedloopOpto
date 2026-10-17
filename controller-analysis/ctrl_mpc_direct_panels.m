@@ -98,20 +98,22 @@ paperAxes(ax1, 'XLength', 0.5, 'YLength', 2, 'XLabel', '0.5 s', 'YLabel', '2% \D
 paperAxes(ax2, 'XLength', 0, 'YLength', 1.5, 'YLabel', '0.5 mW');
 ctrl_mpc_export(fig, fullfile(figDir, 'mpcd_0_schematic.png')); close(fig);
 
-%% B -- prediction R^2 vs lead (held-out OL trials): VARX / AR / naive
-V = load(fullfile(dataDir, sprintf('mpc_varx_embed_%s.mat', sess)));                  % AR + naive baselines
-Vs = load(fullfile(dataDir, sprintf('mpc_varx_supp_%s.mat', sess)));                  % VARX = the MPC's model,
-assert(max(abs(Vs.lead_ms(:) - V.lead_ms(:))) < 1e-9); V.R2 = Vs.R2_varx;             % L = Q = 35 (2026-10-16)
+%% B -- prediction R^2 vs lead (held-out OL trials): VARX / site + laser / naive (same set as Fig S5E)
+% AR DROPPED (user 2026-10-16): a univariate AR of y never sees the laser, so on stimulated test trials it is an
+% unfair baseline. "site + laser" = the same VARX given only the controlled site and the laser, so the VARX - site
+% gap is what the 100 cortical sites add. All three curves from mpc_varx_supp.py (identical protocol).
+V = load(fullfile(dataDir, sprintf('mpc_varx_supp_%s.mat', sess)));
+V.lead_ms = double(V.lead_ms(:)); V.R2 = double(V.R2_varx(:));                        % L = Q = 35 (2026-10-16)
 fig = jnFig(W1, H); ax = axes(fig); hold(ax,'on');
 for x = [200 1000], plot(ax, [x x], [-0.25 1], ':', 'Color', C.g, 'LineWidth', S.lw_axis); end
 plot(ax, [25 1100], [0 0], '-', 'Color', C.g, 'LineWidth', S.lw_axis);
-plot(ax, V.lead_ms, V.R2_persist, '-', 'Color', C.g, 'LineWidth', S.lw_mean);
-plot(ax, V.lead_ms, V.R2_ar, '-', 'Color', C.k, 'LineWidth', S.lw_ind+0.3);
+plot(ax, V.lead_ms, V.R2_naive, '-', 'Color', C.g, 'LineWidth', S.lw_mean);
+plot(ax, V.lead_ms, V.R2_site, '-', 'Color', C.k, 'LineWidth', S.lw_ind+0.3);
 plot(ax, V.lead_ms, V.R2, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
 plot(ax, V.lead_ms, V.R2, 'o', 'MarkerSize', 2.5, 'MarkerFaceColor', C.m, 'MarkerEdgeColor', 'none');
 i7 = find(round(V.lead_ms) == 200);
 text(ax, 210, V.R2(i7)+0.08, 'VARX', 'Color', C.m, 'FontSize', S.fs_annot);
-text(ax, 32, -0.06, 'AR', 'Color', C.k, 'FontSize', S.fs_annot);
+text(ax, 32, -0.06, 'site + laser', 'Color', C.k, 'FontSize', S.fs_annot);
 text(ax, 32, -0.19, 'naive', 'Color', C.g, 'FontSize', S.fs_annot);
 set(ax, 'XScale','log', 'XTick', [30 200 1000], 'XTickLabel', {'30','200','1000'}, 'YTick', [0 0.5 1]);
 xlim(ax, [25 1100]); ylim(ax, [-0.25 1]); xlabel(ax, 'prediction lead (ms)'); ylabel(ax, 'R^2');

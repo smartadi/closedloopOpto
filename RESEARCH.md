@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 6H: AR dropped, site + laser added (same set as Fig S5E)
+**Changed/Found:**
+- **Panel.** `ctrl_mpc_direct_panels.m` panel B (paper 6H) now draws VARX / site + laser (black) / naive, all from `mpc_varx_supp_<sess>.mat`; the embed-file AR + persistence are gone. Re-exported with PAPER_FINAL → `panels/supp_mpc/mpcd_B_prediction.pdf`.
+- **Draft text.**
+  - Results: the VARX beats naive and "the same model given only the controlled site and the laser", plus a pointer to Fig S5.
+  - Caption H: lists site + laser.
+  - Discussion: R² 0.41 vs 0.37 (no cortex) vs 0.10 (naive). The Lu et al. citation is kept as context: univariate models cannot use the stimulation command.
+- Clean build; draft committed.
+
+**Why:** the user confirmed AR is a univariate model of y alone with no input; on stimulated test trials it cannot see the laser, so it's an unfair baseline. VARX − site+laser isolates what the cortical sites add.
+**Next:** the user swaps the new H panel into `FigureMPC.pdf`; then recopy it to `images/Figure6.pdf`, rebuild, and fast-forward + push main.
+
 ### 2026-10-16 — Fig 6 re-copied from the user's repaired FigureMPC.pdf; caption/refs follow its lettering
 **Changed/Found:**
 - **Figure.** Closedloop_edit `images/Figure6.pdf` ← `paper/figures_final/FigureMPC.pdf` (the user's 19:19 text repair). The paper's previous copy dated from 14:37, so the main push at ef60279 carried an outdated Fig 6.
