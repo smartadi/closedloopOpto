@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 6 re-copied from the user's repaired FigureMPC.pdf; caption/refs follow its lettering
+**Changed/Found:**
+- **Figure.** Closedloop_edit `images/Figure6.pdf` ← `paper/figures_final/FigureMPC.pdf` (the user's 19:19 text repair). The paper's previous copy dated from 14:37, so the main push at ef60279 carried an outdated Fig 6.
+- **Assembly letters differ from the old caption:** G = smoothness λ, H = prediction R² (swapped), and the sine row is now I example, J per-trial RMSE, K RMSE over time, L variance, M phase lag.
+- **Caption rewritten** for A–M.
+- **Results references:** prediction G→H, smoothness H→G, sine RMSE I,L→I–K, lag K→M, variance J→L.
+- **Discussion:** the reference G→H, and R² 0.42→0.41 (matches the Fig S5 / Fig 6H value 0.408).
+- Clean build (39 pp); draft committed; main fast-forwarded and pushed (ef60279..1a252bb).
+
+**Why:** the user repaired text issues in the assembled figure and asked to move it into the paper and push main.
+**Next:** Overleaf pull. The Discussion's AR value (0.02 at 200 ms) was not re-checked against the current embed data.
+
 ### 2026-10-16 — Sine MPC Results: "two thirds" of the error in rising half-cycles → "about half"
 **Changed/Found:** Closedloop_edit `results.tex` (sine MPC paragraph) — "Most of the remaining error (about two thirds of the squared error) fell in…" → "About half of the remaining squared error fell in…". Recomputed on the canonical `_noCL` data (CL+p trials, dR>0 split): MPC 0.49, perfect 0.49; the laser is off 83% of the rising half. Draft commit after a clean build.
 **Why:** the user asked; the ⅔ figure did not reproduce under either the old or the new data.
