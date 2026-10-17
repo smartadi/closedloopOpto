@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 re-assembled (A–C quartiles, D–F rasters); caption keyed to panels
+**Changed/Found:** The user's new assembly `paper/figures_final/FIgure2_supp.pdf` is copied to `Closedloop_edit/images/supplementary/S_state_quartile.pdf`. Layout: rows A–C = motion / rel δ / abs δ quartile tiles; D–F = per-mouse raster strips (mW headers); legend on top, two colour keys at the bottom. `supplementary.tex` caption is rewritten around A–C and D–F (state rows A/D, B/E, C/F; |Dev.| as labelled in the figure). `results.tex`: "Figure S2, second column" → "S2A–C, second column". Build clean.
+**Why:** User: "reexported with new captions so add them to caption".
+**Next:** Closedloop draft pushed; ff main + push on the user's go.
+
 ### 2026-10-16 — Fig S2 caption rewritten; raster headers in mW
 **Changed/Found:** `Closedloop_edit/supplementary.tex` — Fig S2 caption: column D (error variance) removed. It now describes the right-hand rasters: one amplitude per session by rule (second-highest: Mouse 5a 0.80 mW, 59 trials; 5b 0.87 mW, 50; Mouse 1 1.43 mW, 82; Mouse 3 0.33 mW, 100), trials sorted by state lowest at the bottom, quartile lines; Activity −0.2 to 0.49 s, blue–red ±5 %; |Deviation| from the amplitude mean, 0–0.49 s, white→black 0–5 %; raw ΔF/F. `methods_rewrite.tex` — the Fig S2 sentence no longer mentions variance/bootstrap and now mentions the per-session rasters. `impulse-analysis/imp_state_raster_peramp.m` — strip headers changed from V to mW (÷3, the Table 3 conversion) and re-exported. Build clean (0 undefined).
 **Why:** User: "Rewrite the Fig S2 caption ... drop column D, describe the per-mouse rasters". mW keeps the figure consistent with Table 3 and the caption.
