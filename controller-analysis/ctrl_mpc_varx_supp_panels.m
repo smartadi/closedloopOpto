@@ -14,7 +14,7 @@ if nargin < 1, sess = 'AL_0033_0226_e2'; end
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data'); addpath(genpath(fullfile(here,'..','utils')));
 figDir = fullfile(here,'..','paper','images','supp_varx'); if ~exist(figDir,'dir'), mkdir(figDir); end
 PS = paperStyle(); S = jnStyle();
-C.m = [0.45 0.20 0.60]; C.g = [0.62 0.62 0.62]; C.k = [0 0 0]; C.edge = [0.45 0.45 0.45]; C.site = PS.col_cl;
+C.v = [0.85 0.20 0.55]; C.g = [0.62 0.62 0.62]; C.k = [0 0 0]; C.edge = [0.45 0.45 0.45]; C.site = PS.col_cl;
 C.ol = [1 0 0]; C.s = [0.20 0.55 0.75];
 W1 = 2.8; H = 3.0;
 D = load(fullfile(dataDir, sprintf('mpc_varx_supp_%s.mat', sess)));
@@ -26,7 +26,7 @@ mimg = double(D.mimg); mask = logical(D.mask); rc = double(D.rc); site = double(
 w = double(D.w_chan(:)); ws = w(2:end) / max(w(2:end));                     % spots only, normalised
 fig = jnFig(3.2, H); ax = axes(fig, 'Units','centimeters', 'Position', [0.05 0.35 2.55 2.55]); hold(ax,'on');
 g = mimg / prctile(mimg(mask), 99); g(~mask) = 1; image(ax, repmat(min(g,1), 1, 1, 3) * 0.55 + 0.45);
-cm = interp1([0 1], [0.92 0.90 0.95; C.m], linspace(0,1,64));
+cm = interp1([0 1], [0.96 0.90 0.93; C.v], linspace(0,1,64));
 [~, o] = sort(ws);
 scatter(ax, rc(o,2), rc(o,1), 7, ws(o), 'filled', 'MarkerEdgeColor', 'none'); colormap(ax, cm); caxis(ax, [0 1]);
 plot(ax, site(2), site(1), 'p', 'MarkerSize', 6, 'MarkerFaceColor', C.site, 'MarkerEdgeColor', 'w', 'LineWidth', 0.3);
@@ -60,10 +60,11 @@ for a = {ax1, yl; ax2, [-0.1 3]}.'
 end
 plot(ax1, t, y, '-', 'Color', C.k, 'LineWidth', S.lw_ind + 0.2);
 % every other origin (~0.97 s apart): the 1 s forecasts tile end to end instead of stacking (user 2026-10-16:
-% overlapping forecasts hid how each one tracks); alternate two purples so each forecast reads on its own
-sel = 1:2:numel(og); cF = [C.m; 0.72 0.52 0.85];
+% overlapping forecasts hid how each one tracks). VARX = pink, graded light -> dark in time (user 2026-10-16;
+% purple is reserved for the MPC)
+sel = 1:2:numel(og); cF = interp1([0 1], [0.97 0.70 0.84; 0.62 0.05 0.36], linspace(0, 1, numel(sel)));
 for j = 1:numel(sel)
-    i = sel(j); c = cF(mod(j-1,2)+1, :);
+    i = sel(j); c = cF(j, :);
     plot(ax1, og(i) + hz, fc(i,:), '-', 'Color', c, 'LineWidth', S.lw_mean);
     plot(ax1, og(i), y(find(t >= og(i) - 1e-9, 1)), 'o', 'MarkerSize', 2.5, 'MarkerFaceColor', c, 'MarkerEdgeColor','none');
 end
@@ -72,7 +73,7 @@ xlim(ax1, [-1.5 4.5]); xlim(ax2, [-1.5 4.5]); ylim(ax1, yl); ylim(ax2, [-0.1 3])
 paperAxes(ax1, 'XLength', 1, 'YLength', 2, 'XLabel', '1 s', 'YLabel', '2% \DeltaF/F');
 paperAxes(ax2, 'XLength', 0, 'YLength', 1.5, 'YLabel', '0.5 mW');
 text(ax1, 0.02, 1.02, 'recorded', 'Units','normalized', 'Color', C.k, 'FontSize', S.fs_annot, 'FontWeight','bold', 'VerticalAlignment','bottom');
-text(ax1, 0.35, 1.02, '1 s VARX forecasts', 'Units','normalized', 'Color', C.m, 'FontSize', S.fs_annot, 'FontWeight','bold', 'VerticalAlignment','bottom');
+text(ax1, 0.35, 1.02, '1 s VARX forecasts', 'Units','normalized', 'Color', C.v, 'FontSize', S.fs_annot, 'FontWeight','bold', 'VerticalAlignment','bottom');
 exp_(fig, 'varx_C_forecasts'); close(fig);
 
 % ---- D: R^2 vs lead ------------------------------------------------------------------------------------------------
@@ -83,10 +84,10 @@ plot(ax, [25 1100], [0 0], '-', 'Color', C.g, 'LineWidth', S.lw_axis);
 % AR (site's own past, no laser) DROPPED (user 2026-10-16): unfair -- it never sees the stimulus
 plot(ax, lm, D.R2_naive, '-', 'Color', C.g, 'LineWidth', S.lw_mean);
 plot(ax, lm, D.R2_site, '-', 'Color', C.s, 'LineWidth', S.lw_mean);
-plot(ax, lm, D.R2_varx, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
+plot(ax, lm, D.R2_varx, '-', 'Color', C.v, 'LineWidth', S.lw_mean);
 set(ax, 'XScale','log', 'XTick', [30 200 1000], 'XTickLabel', {'30','200','1000'}, 'YTick', [0 0.5 1]);
 xlim(ax, [25 1100]); ylim(ax, [-0.25 1]); xlabel(ax, 'lead (ms)'); ylabel(ax, 'R^2'); jnAxes(ax);
-nm = {'VARX', 'site + laser', 'naive'}; cl = [C.m; C.s; C.g];
+nm = {'VARX', 'site + laser', 'naive'}; cl = [C.v; C.s; C.g];
 for j = 1:3, text(ax, 0.98, 0.98 - 0.1*(j-1), nm{j}, 'Units','normalized', 'Color', cl(j,:), 'FontSize', S.fs_annot, ...
         'FontWeight','bold', 'HorizontalAlignment','right', 'VerticalAlignment','top'); end
 exp_(fig, 'varx_D_r2_lead'); close(fig);
@@ -96,7 +97,7 @@ Sw = load(fullfile(dataDir, sprintf('mpc_varx_lq_sweep_%s.mat', sess))); Rs = do
 Ls = unique(Rs(:,1)); ls = unique(Rs(:,2)); M = nan(numel(Ls), numel(ls));
 for i = 1:size(Rs,1), M(Ls == Rs(i,1), ls == Rs(i,2)) = Rs(i,4); end
 fig = jnFig(W1, H); ax = axes(fig, 'Units','centimeters', 'Position', [0.8 0.95 W1-1.3 1.6]); hold(ax,'on');
-imagesc(ax, 1:numel(ls), 1:numel(Ls), M); colormap(ax, interp1([0 1], [1 1 1; C.m], linspace(0,1,64)));
+imagesc(ax, 1:numel(ls), 1:numel(Ls), M); colormap(ax, interp1([0 1], [1 1 1; C.v], linspace(0,1,64)));
 cl = [floor(min(M(:))*50)/50 ceil(max(M(:))*50)/50]; caxis(ax, cl); axis(ax, 'ij', 'tight');
 plot(ax, find(ls == 100), find(Ls == 35), 's', 'MarkerSize', 5, 'MarkerEdgeColor', C.k, 'LineWidth', 0.6);
 set(ax, 'XTick', 1:numel(ls), 'XTickLabel', arrayfun(@(v) sprintf('10^{%d}', round(log10(v))), ls, 'uni', 0), ...
@@ -116,13 +117,13 @@ patch(ax1, [0 3 3 0], yl([1 1 2 2]), [0.9 0.9 0.9], 'FaceAlpha', 0.4, 'EdgeColor
 patch(ax2, [0 3 3 0], [-0.1 -0.1 3 3], [0.9 0.9 0.9], 'FaceAlpha', 0.4, 'EdgeColor','none');
 fill(ax1, [tr; flipud(tr)], [mm+se; flipud(mm-se)], C.ol, 'FaceAlpha', 0.25, 'EdgeColor','none');
 plot(ax1, tr, mm, '-', 'Color', C.ol, 'LineWidth', S.lw_mean);
-plot(ax1, tr, md, '-', 'Color', C.m, 'LineWidth', S.lw_mean);
+plot(ax1, tr, md, '-', 'Color', C.v, 'LineWidth', S.lw_mean);
 stairs(ax2, tr, double(D.resp_u(:)), '-', 'Color', [0.55 0.55 0.55], 'LineWidth', PS.lw_inp);
 xlim(ax1, tr([1 end])); xlim(ax2, tr([1 end])); ylim(ax1, yl); ylim(ax2, [-0.1 3]);
 paperAxes(ax1, 'XLength', 1, 'YLength', 2, 'XLabel', '1 s', 'YLabel', '2%');
 paperAxes(ax2, 'XLength', 0, 'YLength', 1.5, 'YLabel', '0.5 mW');
 text(ax1, 0.0, 1.02, 'OL mean', 'Units','normalized', 'Color', C.ol, 'FontSize', S.fs_annot, 'FontWeight','bold', 'VerticalAlignment','bottom');
-text(ax1, 0.62, 1.02, 'VARX', 'Units','normalized', 'Color', C.m, 'FontSize', S.fs_annot, 'FontWeight','bold', 'VerticalAlignment','bottom');
+text(ax1, 0.62, 1.02, 'VARX', 'Units','normalized', 'Color', C.v, 'FontSize', S.fs_annot, 'FontWeight','bold', 'VerticalAlignment','bottom');
 exp_(fig, 'varx_F_laser_response'); close(fig);
 fprintf('[VARX-P] laser response: R^2(model vs measured OL mean) %.3f\n', 1 - sum((mm-md).^2)/sum((mm-mean(mm)).^2));
 

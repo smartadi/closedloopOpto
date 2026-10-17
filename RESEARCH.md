@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — VARX supp: VARX recoloured pink, forecasts graded light → dark
+**Changed/Found:** `ctrl_mpc_varx_supp_panels.m` — VARX colour `C.m` purple → `C.v` pink [0.85 0.20 0.55] in every panel (weight map, forecasts, R² curve, sweep colormap, laser-response fit). Panel C forecasts go from light to dark pink in time order. `varx_construction_diagram.tex` uses the same pink.
+**Why:** the user wants purple reserved for the MPC, so the model and the controller are not confused across Fig 6 and the supp.
+**Next:** Fig 6G (`ctrl_mpc_direct_panels.m` panel B) still draws the VARX R² curve in purple — recolour it to pink if the convention should hold in the main figure too.
+
 ### 2026-10-16 — VARX ridge test: grid-best λ = 10³ barely moves the MPC result
 **Changed/Found:** `mpc_direct.py` / `mpc_direct_sine.py` run with `MPCD_LAM=1000` (tag `_lam1e3test`, canonical files untouched). Validation grid (`mpc_varx_lq_sweep`, R² at 200 ms): chosen L=Q=35, λ=10² = 0.626; best = 0.634, tied at L=Q=20 and L=Q=35 with λ=10³ (full range 0.588–0.634). At λ=10³: static MPC/CL 0.673 (was 0.662), 107/108; sine MPC/CL+p 0.897 (was 0.887), 56/57; perfect/CL+p 0.760 (was 0.767).
 **Why:** the user pointed out that the supp sweep panel shows a best cell we didn't use.
