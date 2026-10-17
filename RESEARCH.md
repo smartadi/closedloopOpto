@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — No-CL preview: full Fig 6 MPC panel set rebuilt with a controller that never saw CL data
+**Changed/Found:** ran `mpc_direct.py` (`_lam01_noCL`, `_lowrd_noCL`, `_noCL`, robust `_lam01_noCL`) and `mpc_direct_sine.py` (`_noCL`), all with `MPCD_NOCL=1`, then `ctrl_mpc_direct_panels(sess,'_noCL')` and `ctrl_mpc_sine_panels(sess,[],'_noCL')` → `paper/images/supp_mpc_noCL/` (PAPER_FINAL off; finals untouched). No-CL vs canonical:
+- **Static:** MPC/CL 0.682 vs 0.662, 107/108; perfect/CL 0.223. Per-trial MPC RMSE correlates 0.999 with canonical; median per-trial ratio is 1.024 (2.4% worse).
+- **Robust A/B/C/D:** 0.682 / 0.693 / 0.715 / 0.700 (canonical 0.662 / 0.680 / 0.684 / 0.693).
+- **rd sweep:** 0 → 0.677, 0.01 → 0.675, 0.03 → 0.680, 0.1 → 0.682, 1 → 0.730.
+- **Sine:** MPC/CL+p 0.879 (56/57) vs 0.887; perfect 0.767 (unchanged); MPC lag −2.5° (was −1.1°); MPC variance 6.26 vs CL+p 8.85.
+- **Example trials:** the median example trial is now 86 (re-picked by median); the deviation example (79) and sine example (161) are unchanged.
+
+**Why:** the user wants every panel in the no-CL version before deciding whether to swap, to rule out a reviewer's "trained on CL" objection.
+**Next:** if the user swaps, make `MPCD_NOCL=1` the default, rerun the canonical tags, regenerate the panels with PAPER_FINAL on, and update the stats table and manuscript numbers (0.84 → ~0.68×-based ratios, etc.).
+
 ### 2026-10-16 — Fig S2: variance column dropped; per-mouse raster fits the right column
 **Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — the error-variance column (D) is dropped (`SQ_VAR`, default false); the tile canvas is 2.4 × 2.3 cm (was 2.7 × 2.4); the legend item reads "Mean (ratio)". The exported tile is still 3.07 cm wide whatever SQ_W is, because the fixed-size 2-line note text sets the overhang. `impulse-analysis/imp_state_raster_peramp.m` — the S2 strip moves to the right column: 8.2 cm wide, the same height (SQ_H) and heatmap band (0.27H / 0.55H) as a tile so rows line up, about 0.86 cm per heatmap. Headers are positioned in cm ("Mouse 5a, 2.4 V" / Activity / |Dev.|), and the activity x-tick label shows only "0" because "0.4" collided with the |dev| "0" ("0.40"). State names come from the tiles. Second-highest amplitude per mouse. MANIFEST: sq_*_var removed and their files deleted from the pull folder. Mock assembly: 3 × 3.07 + 8.22 cm ≈ 17.4 cm plus gaps fits 17.6 cm. PAPER.md registry updated.
 **Why:** User: "drop the error variance column from all states, then make the figures slightly smaller to have this raster fit on the right column, lets pick the second highest amp".
