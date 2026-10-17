@@ -45,6 +45,11 @@ copyfile(fullfile(here, 'varx_construction_diagram.tex'), tmp);
 [st, out] = system(sprintf('cd /d "%s" && pdflatex -interaction=nonstopmode varx_construction_diagram.tex', tmp));
 if st ~= 0, error('pdflatex failed:\n%s', out(max(1,end-800):end)); end
 copyfile(fullfile(tmp, 'varx_construction_diagram.pdf'), fullfile(figDir, 'varx_B_construction.pdf'));
+global PAPER_FINAL                                                   %#ok<GVMIS,TLEV>
+if ~isempty(PAPER_FINAL) && PAPER_FINAL                              % TikZ, not a MATLAB figure -> copy, no mirror
+    fin = fullfile(here, '..', 'paper', 'figures_final', 'panels', 'supp_varx'); if ~exist(fin,'dir'), mkdir(fin); end
+    copyfile(fullfile(tmp, 'varx_construction_diagram.pdf'), fullfile(fin, 'varx_B_construction.pdf'));
+end
 system(sprintf('pdftoppm -png -r 300 -singlefile "%s" "%s"', fullfile(tmp, 'varx_construction_diagram.pdf'), ...
     fullfile(figDir, 'varx_B_construction')));
 

@@ -366,3 +366,18 @@ supp_mpc/mpcs_J_rmse_time.pdf
 supp_mpc/mpcs_K_rmse_compare.pdf
 supp_mpc/mpcs_L_phase_lag.pdf
 supp_mpc/mpcs_M_variance.pdf
+
+[supp_varx]
+# S-VARX = the model inside the Fig 6 MPC: how it is built and how well it predicts (user 2026-10-16:
+# "looks good give me panels for assembly"). AL_0033 2025-02-26 e2, L = Q = 35 (1 s history for cortex
+# and laser), ridge 100. VARX = pink (purple reserved for the MPC). Producer:
+# controller-analysis/ctrl_mpc_varx_supp_panels.m (data from mpc_varx_supp.py, mpc_varx_lq_sweep.py);
+# B is the TikZ diagram varx_construction_diagram.tex, copied in by the producer.
+#   A inputs + weight map | B construction | C tiled 1 s forecasts | D R2 vs lead
+#   E validation grid (L = Q x ridge) | F held-out laser response
+supp_varx/varx_A_inputs.pdf
+supp_varx/varx_B_construction.pdf
+supp_varx/varx_C_forecasts.pdf
+supp_varx/varx_D_r2_lead.pdf
+supp_varx/varx_E_sweep.pdf
+supp_varx/varx_F_laser_response.pdf

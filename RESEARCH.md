@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — VARX supp locked for assembly: [supp_varx] added to MANIFEST, final PDFs exported
+**Changed/Found:** `paper/figures_final/MANIFEST.txt` — new `[supp_varx]` section (varx_A–F). `ctrl_mpc_varx_supp_panels.m` — with PAPER_FINAL on it now copies the TikZ panel B straight into `panels/supp_varx/`, since B is not a MATLAB figure and so never passes through the mirror. Ran it with PAPER_FINAL on: all 6 PDFs are in `panels/supp_varx/`, and `collect_final_panels('dry')` reports 131 present, 0 missing, 0 to prune.
+**Why:** the user approved the prototype ("looks good give me panels for assembly").
+**Next:** the scale-bar labels in C/F crowd each other (fix in Illustrator); the panels use ridge 100 — if ridge switches to 10³ (still open), re-run with PAPER_FINAL on. Caption, Methods pointer and PAPER.md registry entry are still to do.
+
 ### 2026-10-16 — VARX supp: VARX recoloured pink, forecasts graded light → dark
 **Changed/Found:** `ctrl_mpc_varx_supp_panels.m` — VARX colour `C.m` purple → `C.v` pink [0.85 0.20 0.55] in every panel (weight map, forecasts, R² curve, sweep colormap, laser-response fit). Panel C forecasts go from light to dark pink in time order. `varx_construction_diagram.tex` uses the same pink.
 **Why:** the user wants purple reserved for the MPC, so the model and the controller are not confused across Fig 6 and the supp.
