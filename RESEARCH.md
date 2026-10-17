@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Per-amp rasters: top 3 amplitudes per mouse, |deviation| on a sequential scale
+**Changed/Found:** `impulse-analysis/imp_state_raster_peramp.m` — now shows only each session's top 3 amplitudes (`RSA_NAMP`; Mouse 3 has only 3: 0.4 / 1.0 / 1.6 V). Deviation is |x − μ_amp| on a white (0) → black (5 % ΔF/F, `RSA_DLIM`) scale; activity stays signed ±5. There are two colour bars, under the first and last bottom tiles. With |dev| the abs δ effect is visible by eye: Q1 rows are light and Q4 rows dark in Mouse 5a at 2.4/2.7 V, Mouse 5b at 1.9/2.6 V, Mouse 1 at 3.7/4.3 V and Mouse 3 at 1.6 V. Motion Q4 rows are lighter in Mouse 1 at 3.7 V and Mouse 3 at 1.0 V. Rel δ shows no clear gradient, consistent with the pooled result.
+**Why:** User: "three candidate amps for each mouse ... keep the dev as absolute dev ... it will make more sense for effect". Signed deviation cancels to grey; |dev| shows the spread.
+**Next:** User picks the Fig S2 representative(s). The pooled Fig S2 strip still shows signed deviation, so switch it to |dev| if this view is adopted.
+
 ### 2026-10-16 — Per-amplitude state-sorted rasters (exploratory)
 **Changed/Found:** new `impulse-analysis/imp_state_raster_peramp.m` — one PNG per session in `paper/images/supplementary/state_raster_peramp/`. Rows are the 3 states and columns are amplitudes; each cell is Activity (−0.2 to 0.49 s) next to deviation from that amplitude's mean, in raw % ΔF/F at ±5, trials sorted by state, quartile edges marked. Looked at Mouse 1, Mouse 3 and Mouse 5b (Mouse 5a was written but not viewed). Results: (1) the stimulus dip is a clean dark band at the session's top amplitudes (Mouse 1 ≥ 2.7 V, Mouse 3 1.0/1.6 V), invisible at the lowest. (2) Single-trial fluctuations of ±5 % swamp low amplitudes. (3) The state effect is visible by eye only in places: abs δ Q1 rows are calmer than Q4 in Mouse 5b at 2.6/2.7 V. Elsewhere it is not obvious, which fits a pooled effect that is small within any one session × amplitude (11–25 trials per quartile).
 **Why:** User wanted per-amplitude rasters (no amplitude mixing) and a rule-chosen representative for Fig S2.
