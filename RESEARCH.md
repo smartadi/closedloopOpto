@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig S2 caption rewritten; raster headers in mW
+**Changed/Found:** `Closedloop_edit/supplementary.tex` — Fig S2 caption: column D (error variance) removed. It now describes the right-hand rasters: one amplitude per session by rule (second-highest: Mouse 5a 0.80 mW, 59 trials; 5b 0.87 mW, 50; Mouse 1 1.43 mW, 82; Mouse 3 0.33 mW, 100), trials sorted by state lowest at the bottom, quartile lines; Activity −0.2 to 0.49 s, blue–red ±5 %; |Deviation| from the amplitude mean, 0–0.49 s, white→black 0–5 %; raw ΔF/F. `methods_rewrite.tex` — the Fig S2 sentence no longer mentions variance/bootstrap and now mentions the per-session rasters. `impulse-analysis/imp_state_raster_peramp.m` — strip headers changed from V to mW (÷3, the Table 3 conversion) and re-exported. Build clean (0 undefined).
+**Why:** User: "Rewrite the Fig S2 caption ... drop column D, describe the per-mouse rasters". mW keeps the figure consistent with Table 3 and the caption.
+**Next:** Closedloop draft pushed; ff main + push on the user's go. User re-places the rmice strips (headers changed) when assembling.
+
 ### 2026-10-16 — No-CL preview: full Fig 6 MPC panel set rebuilt with a controller that never saw CL data
 **Changed/Found:** ran `mpc_direct.py` (`_lam01_noCL`, `_lowrd_noCL`, `_noCL`, robust `_lam01_noCL`) and `mpc_direct_sine.py` (`_noCL`), all with `MPCD_NOCL=1`, then `ctrl_mpc_direct_panels(sess,'_noCL')` and `ctrl_mpc_sine_panels(sess,[],'_noCL')` → `paper/images/supp_mpc_noCL/` (PAPER_FINAL off; finals untouched). No-CL vs canonical:
 - **Static:** MPC/CL 0.682 vs 0.662, 107/108; perfect/CL 0.223. Per-trial MPC RMSE correlates 0.999 with canonical; median per-trial ratio is 1.024 (2.4% worse).
