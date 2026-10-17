@@ -26,7 +26,7 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 - Clean build; draft committed.
 
 **Why:** the user confirmed AR is a univariate model of y alone with no input; on stimulated test trials it cannot see the laser, so it's an unfair baseline. VARX − site+laser isolates what the cortical sites add.
-**Next:** the user swaps the new H panel into `FigureMPC.pdf`; then recopy it to `images/Figure6.pdf`, rebuild, and fast-forward + push main.
+**Next:** the user swaps the new H panel into `FigureMPC.pdf`; then recopy it to `images/Figure6.pdf`, rebuild, and fast-forward + push main. DONE: the user swapped H (FigureMPC.pdf 19:33). It was copied to `images/Figure6.pdf`; clean build (39 pp, 0 errors, 0 undefined); main fast-forwarded and pushed (1a252bb..80cf840, incl. the text commit 23423b6). Overleaf pull is the last step.
 
 ### 2026-10-16 — Fig 6 re-copied from the user's repaired FigureMPC.pdf; caption/refs follow its lettering
 **Changed/Found:**
