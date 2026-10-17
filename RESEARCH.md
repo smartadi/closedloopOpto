@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — No-CL training made CANONICAL for every MPC panel, the stats table and the manuscript; ridge stays 100
+**Changed/Found:**
+- `ctrl_mpc_direct_panels.m` / `ctrl_mpc_sine_panels.m`: default `sfx = '_noCL'`, output back in `supp_mpc/`.
+- `paper_stats_table.m`: reads `_lam01_noCL` / sine `_noCL`.
+- `mpc_direct.py` / `mpc_direct_sine.py`: docstrings name the canonical run (`MPCD_NOCL=1`, tag `_noCL`). The env default is left at 0, so untagged files keep meaning with-CL. The old canonical files stay in place as the with-CL reference; an overwrite was blocked and isn't needed.
+- Re-exported with PAPER_FINAL: all 8 data mpcd_* + 5 mpcs_* finals. Regenerated STATS_TABLE.csv: 6_ratio 0.682 (107/108), 6_var 0.630, sine MPC/CL+p 0.879 (56/57), varratio 0.707, perfect 0.767, lag −2.5°.
+- `Closedloop_edit` draft:
+  - `methods_rewrite.tex`: "the MPC's own model never saw closed-loop data … spontaneous and open-loop frames only" (static + sine). Also fixed the stale "ten lags, 286 ms" → "35 lags, 1 s, of every channel and of the laser command".
+  - `results.tex`: 0.84 → 0.88 %ΔF/F, 39% → 37%, 2.61 → 2.67, MPC lag −1° → −2°, variance 0.67 → 0.71.
+- Ridge: user settled it — keep 100.
+
+**Found:** the results claim "about two thirds of the squared error in the half-cycles where the reference rose" does NOT reproduce with a dR>0 split: MPC 0.49, perfect 0.49, identical in old and new data, with the laser off 83% of the rising half. The earlier ⅔ / 79% must have used another definition.
+**Why:** the user: "export all panels ill reassemble then add to methods that we used no CL trial training"; "dont change ridge keep as is".
+**Next:** pin down the ⅔ claim (find the original definition, or rewrite it as ~half); push Closedloop_edit draft → main only on the user's go.
+
 ### 2026-10-16 — MPC: no-CL controller model made canonical (code defaults switched)
 **Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m`, `ctrl_mpc_sine_panels.m` — default `sfx` is now `'_noCL'` (was `''`), and panels write to `paper/images/supp_mpc/` whatever the suffix (was `supp_mpc<sfx>/`). `mpc_direct.py`, `mpc_direct_sine.py` — docstrings mark `MPCD_NOCL=1` (controller VARX trained on spontaneous + OL data only, never CL / CL+p) as CANONICAL, with `_noCL` output tags. `paper-writing/paper_stats_table.m` — Fig 6 rows now load `mpc_direct_AL_0033_0226_e2_lam01_noCL.mat`, and the sine rows load `mpc_direct_sine_AL_0048_0714_e1_noCL.mat`. These edits were made in another session; logged and committed here at the user's request.
 **Why:** User decision 2026-10-16 to adopt the no-CL controller model, so the MPC replay can't have learned from the closed-loop trials it is compared against (preview: static MPC/CL 0.682 vs 0.662, sine 0.879 vs 0.887; see the "No-CL preview" entry).
