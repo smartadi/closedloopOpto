@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 4 relative 2–4 Hz effects framed as measured during stimulation
+**Changed/Found:** `Closedloop_edit/results.tex` L205 (new sentence: the state window spans stimulation, so relative-power effects describe power during stimulation, which the loop shapes, not the starting state); `discussion.tex` L18 ("measured over a window that includes stimulation") and L42 ("during stimulation"). Abstract and Intro L46 already make no relative-2–4 Hz claim, so they are unchanged. Build clean, 40 pp. Draft commit, not pushed.
+**Why:** User 2026-10-16. The laser-off check (RESEARCH 2026-10-10 'Circularity') showed the OL-flat / CL-rises split is specific to the in-stimulation window. The user chose to reword rather than add laser-off rows to Table 1.
+**Next:** none for the text. TASKS "DECIDE random state slope" was stale: the uncorrelated random slope was adopted on 2026-10-11 and the manuscript already quotes it (rel 0.76 / 0.044 / 0.027). The laser-off numbers in the 10-10 entry are on the old locked model.
+
 ### 2026-10-16 — MPC test: controller VARX trained without ANY closed-loop data changes nothing material
 **Changed/Found:** `mpc_direct.py`, `mpc_direct_sine.py` — new `MPCD_NOCL=1` flag. With it on, the controller model trains on spontaneous + OL data only; static excludes every CL trial, sine excludes every CL and CL+p trial and still holds out the test fold. The world model is unchanged (it must reproduce the recordings). Test runs (tag `_noCLtest`, λ = 100): static MPC/CL 0.682 (canonical 0.662), 107/108; sine MPC/CL+p 0.879 (canonical 0.887), 56/57; perfect unchanged (0.767). Controller R² on CL windows: 0.421 @ 86 ms (was 0.425).
 **Why:** the user asked whether training on CL data lets a reviewer argue we are cheating. The canonical runs only hold out the test fold's CL trials; the other CL trials are in training.
