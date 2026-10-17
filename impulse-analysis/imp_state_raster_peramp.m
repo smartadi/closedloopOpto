@@ -104,9 +104,13 @@ if RSA_S2
     swp  = fullfile(root, 'utils', 'pdf_swap_images.py');
     tagF = {'mot','dpr','dpa'};  rowN = {'Motion','Rel. \delta','Abs. \delta'};
     sOrd = unique(sS).';                                  % load order = Mouse 5a, 5b, 1, 3
-    W = J.W_double;  H = 3.0;  hH = 2.0;  y0 = 0.5;  x0 = 0.6;  gG = 0.35;  gW = 0.08;   % hH = heatmap height (cm)
-    pw = (W - x0 - 0.1 - 3*gG - 4*gW) / 8;               % cm per heatmap
-    cms = {cmA, cmD};  lims = {[-1 1]*RSA_CLIM, [0 RSA_DLIM]};  colT = {'Activity', '|Deviation|'};
+    % RIGHT COLUMN of Fig S2 (user 2026-10-16: variance column dropped, tiles 2.5 x 2.3 cm, so the
+    % strip fits beside 3 tile columns). One strip per state row, SAME height and heatmap band as a
+    % tile (bottom 0.27*H, height 0.55*H), so the heatmaps line up with the tiles row by row.
+    if ~exist('SQ_H','var') || isempty(SQ_H), SQ_H = 2.3; end
+    W = 8.2;  H = SQ_H;  hH = 0.55*H;  y0 = 0.27*H;  x0 = 0.45;  gG = 0.2;  gW = 0.05;   % cm
+    pw = (W - x0 - 0.05 - 3*gG - 4*gW) / 8;              % ~0.86 cm per heatmap; 3 tiles (3.07 cm exported, note text sets it) + 8.2 = 17.4 cm
+    cms = {cmA, cmD};  lims = {[-1 1]*RSA_CLIM, [0 RSA_DLIM]};  colT = {'Activity', '|Dev.|'};
     for k = 1:3
         f = jnFig(W, H);  pngs = {};
         for is = 1:numel(sOrd)
@@ -127,23 +131,23 @@ if RSA_S2
                 end
                 if j == 1, plot(ax, [0 0] - 0.5*dt, [0.5 nT+0.5], '--', 'Color', [0 0 0], 'LineWidth', 0.5); end
                 set(ax, 'YDir','normal', 'Layer','top', 'YTick', qM, 'YTickLabel', {'Q1','Q2','Q3','Q4'}, ...
-                        'XTick', [0 0.2 0.4], 'XTickLabelRotation', 0, 'XLim', xq);
+                        'XTick', [0 0.4], 'XTickLabelRotation', 0, 'XLim', xq);
                 if ~(is == 1 && j == 1), set(ax, 'YTickLabel', []); end
+                if j == 1, set(ax, 'XTickLabel', {'0',''}); end   % act 0.4 label collided with |dev| 0 ("0.40")
                 if k < 3, set(ax, 'XTickLabel', []); end
                 jnAxes(ax);  set(ax, 'TickLength', [0.02 0.02]);
-                if is == 1 && j == 1, ylabel(ax, rowN{k}); end
-                if k == 1                                    % column + mouse headers, top strip only
-                    text(ax, mean(xq), nT*1.03, colT{j}, 'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
-                         'FontName', J.font, 'FontSize', 5, 'Interpreter','none', 'Clipping','off');
+                if k == 1                                    % column + mouse headers, top strip only (cm above the band)
+                    text(ax, pw/2, hH + 0.03, colT{j}, 'Units','centimeters', 'HorizontalAlignment','center', ...
+                         'VerticalAlignment','bottom', 'FontName', J.font, 'FontSize', 5, 'Interpreter','none', 'Clipping','off');
                     if j == 1
-                        text(ax, xq(2) + (gW/2)/pw*diff(xq), nT*1.16, sprintf('%s, %.1f V (n = %d)', L{s}, a2, nT), ...
+                        text(ax, pw + gW/2, hH + 0.24, sprintf('%s, %.1f V', L{s}, a2), 'Units','centimeters', ...
                              'HorizontalAlignment','center', 'VerticalAlignment','bottom', 'FontName', J.font, ...
-                             'FontSize', 6, 'FontWeight','bold', 'Interpreter','none', 'Clipping','off');
+                             'FontSize', 5, 'FontWeight','bold', 'Interpreter','none', 'Clipping','off');
                     end
                 end
                 if k == 3 && is == 1 && j == 1               % one time label, centred under the strip
                     xl = xlabel(ax, 'Time from stimulus onset (s)');  xl.Units = 'centimeters';
-                    xl.Position(1) = (x0 + (W - x0 - 0.1)/2) - xp;
+                    xl.Position(1) = (x0 + (W - x0 - 0.05)/2) - xp;
                 end
                 % native heatmap: row 1 = lowest state at the BOTTOM -> top PNG row = last trial
                 ci = round((min(max(V{j}, lims{j}(1)), lims{j}(2)) - lims{j}(1)) / diff(lims{j}) * 255) + 1;

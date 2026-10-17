@@ -189,15 +189,12 @@ supplementary/supp_spatial_map_09.png
 supplementary/state_quartile/sq_mot_rms.pdf
 supplementary/state_quartile/sq_mot_ratio.pdf
 supplementary/state_quartile/sq_mot_dist.pdf
-supplementary/state_quartile/sq_mot_var.pdf
 supplementary/state_quartile/sq_dpr_rms.pdf
 supplementary/state_quartile/sq_dpr_ratio.pdf
 supplementary/state_quartile/sq_dpr_dist.pdf
-supplementary/state_quartile/sq_dpr_var.pdf
 supplementary/state_quartile/sq_dpa_rms.pdf
 supplementary/state_quartile/sq_dpa_ratio.pdf
 supplementary/state_quartile/sq_dpa_dist.pdf
-supplementary/state_quartile/sq_dpa_var.pdf
 supplementary/state_quartile/sq_legend.pdf
 # Per-mouse raster strips (user 2026-10-16), REPLACING the pooled strip (sq_*_raster, sq_raster_cbar,
 # sq_pooled_header, sq_divider -- retired: pooling mixed stimulation amplitudes). Full width, one strip

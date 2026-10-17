@@ -32,8 +32,9 @@ outDir = fullfile(root,'paper','images','supplementary','state_quartile');
 if ~exist(outDir,'dir'), mkdir(outDir); end
 
 if ~exist('SQ_STATES','var') || isempty(SQ_STATES), SQ_STATES = {'MOT','DPr','DPa'}; end
-if ~exist('SQ_W','var')      || isempty(SQ_W),      SQ_W = 2.7;  end   % panel width  (cm); 2.7 x 2.4 (content ~3.05 cm with the y-label overhang) makes room for the pooled-trial raster strip at right (user 2026-10-16; was 3.6 x 2.8)
-if ~exist('SQ_H','var')      || isempty(SQ_H),      SQ_H = 2.4;  end   % panel height (cm)
+if ~exist('SQ_W','var')      || isempty(SQ_W),      SQ_W = 2.4;  end   % panel width (cm). 2026-10-16: 2.4 x 2.3 (was 2.7 x 2.4) with the variance column dropped, so the per-mouse raster strip (imp_state_raster_peramp.m) fits the right column
+if ~exist('SQ_H','var')      || isempty(SQ_H),      SQ_H = 2.3;  end   % panel height (cm)
+if ~exist('SQ_VAR','var')    || isempty(SQ_VAR),    SQ_VAR = false; end   % error-variance column (dropped 2026-10-16)
 SESS_LAB = {'Mouse 5a','Mouse 5b','Mouse 1','Mouse 3'};
 STATE_LAB = struct('MOT','Motion','PVv','Pre-trial variance','DPa','Absolute δ power', ...
                    'DPr','Relative δ power');   % unicode + Interpreter none: tex bold spaces words apart
@@ -111,7 +112,8 @@ for iS = 1:numel(SQ_STATES)
     local_ax(ax, nB, qlab, lab, 'Trial error');  xlim(ax, [0.45 nB+0.55]);
     jnAxes(ax);  jnExport(f, fullfile(outDir, sprintf('sq_%s_dist.pdf', tg)));  close(f);
 
-    % ---- (4) variance of trial error -----------------------------------------------------------
+    % ---- (4) variance of trial error -- DROPPED from Fig S2 (user 2026-10-16), SQ_VAR=true to redraw --
+    if SQ_VAR
     f = jnFig(SQ_W, SQ_H);  ax = axes(f);  hold(ax,'on');
     for i = 1:nS
         xo = (1:nB) + (i-(nS+1)/2)*0.1;
@@ -123,6 +125,7 @@ for iS = 1:numel(SQ_STATES)
     ylim(ax, [0 max(ylim(ax))]);
     local_note(ax, J, local_rr(vv));
     jnAxes(ax);  jnExport(f, fullfile(outDir, sprintf('sq_%s_var.pdf', tg)));  close(f);
+    end
 end
 
 % ---- shared legend panel (place once in Illustrator) ------------------------------------------
@@ -138,7 +141,7 @@ axis(ax, [0 LEG_W 0 0.4]);  axis(ax, 'off');
 legLab = {'M5a','M5b','M1','M3'};
 items = [ cellfun(@(lb,c) {lb, c, '-', 'none', J.lw_mean}, legLab, num2cell(C_sess,2).', 'UniformOutput', false), ...
           {{'Mean (RMS)', C_stim, '-', 'o', J.lw_mean}}, ...
-          {{'Mean (ratio, var.)', [0 0 0], '-', 'o', J.lw_mean}}, ...
+          {{'Mean (ratio)', [0 0 0], '-', 'o', J.lw_mean}}, ...
           {{'No-stim control', C_ctl, '--', 'none', J.lw_mean}} ];
 x = 0.05;  yc = 0.2;  tok = 0.25;
 for it = 1:numel(items)
