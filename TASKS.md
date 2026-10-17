@@ -9,6 +9,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-10-16 — **MPC (Fig 6, static + sine I–M) and VARX (Fig S5) DONE and LOCKED** (user). L = Q = 35, ridge 100, controller model trained without CL data; panels in figures_final, Fig S5 + Methods pointer + numbers in Closedloop draft (9d57903). RESEARCH 2026-10-16; locked block in CLAUDE.md.
 - [x] 2026-10-16 — **Fig 4 relative 2-4 Hz framed as in-stimulation** (Closedloop draft): Results L205 + Discussion L18/L42; no laser-off control added (user). Random-slope item was stale: adopted 2026-10-11, already in text. RESEARCH 2026-10-16.
 - [x] 2026-10-16 — **Fig 2G Results reworded as co-variation** (Closedloop draft): responses and ongoing activity change together with state; no claim either way about the stimulus effect itself. Discussion L16 still says "rather than as a change in the response itself" (user is writing the Discussion). RESEARCH 2026-10-16.
 - [x] 2026-10-16 — **Power scale bars: no change needed** — user checked the V→mW conversion by hand (2A/2B/3A/3C/S-MPC). RESEARCH 2026-10-16.
@@ -18,7 +19,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [x] 2026-10-10 — **Overleaf edits merged; Fig 2F (dip/rebound), 2G (session-level) and Fig 3 captions applied**; captions realigned to new assemblies (2A<->B, 3H<->I swapped). RESEARCH 2026-10-10.
 - [x] 2026-10-07 — **JNeurosci statistics pass done:** Methods subsection renamed + Design + multiple-comparison paragraphs; every Results claim is estimate + CI + t(df) + exact p + n, quoted from `paper-writing/STATS_TABLE.csv` (new `paper_stats_table.m`); 0 inexact p left.
 - [x] 2026-10-07 — **Fig 4D multiple comparisons decided:** uncorrected, 8 tests stated, Bonferroni 0.0063 named; rel-delta softened (now p=0.050 after the df fix).
-- [x] 2026-10-07 — **LMM df bug fixed** (`utils/lmm_cluster_df.m`); Fig 3, 4D, 4G, 2G re-run; `f4_cl_reject_lmm.m` post-mode-switch rerun done (AL_0051 now reaches, n=12).
 
 ---
 
@@ -56,7 +56,8 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Three remaining content `\todo` gaps in `results.tex`: §pre-stim brain state (L64–68), §low-freq spectral attribution (L112), §contra→ipsi prediction (L130) — see "Analysis still needed" below.
 - [ ] Add Chrimson spatial-spread citation — `methods_edit.tex` L292 `\todo` (Nuo Li / Svoboda). NOT in refs.bib yet; needs exact paper from AL before adding a bib entry (do not fabricate).
 
-### Supplement (MPC, Fig. S5 in paper since 2026-10-09)
+### MPC (Fig 6) + VARX (Fig S5) — LOCKED 2026-10-16; only optional / open items below
+- [ ] Sine Results sentence "about two thirds of the squared error … rising half-cycles" does not reproduce (≈0.49 with a dR>0 split, laser off 83%): find the original definition or reword to "about half". RESEARCH 2026-10-16.
 - [ ] Optional robustness: repeat `ctrl_mpc_realtrial` on a second session (m9/m11, AL_0039) so the claim isn't n=1.
 - [ ] Ziyu's model (`2026-09-11.4`), if it becomes available: score its error relative to AR (`ctrl_mpc_forecast_sigma`) and mark it on panel B's x-axis. No longer gating.
 - [ ] Tell Nick (`2026-09-11.5`): MPC → supplementary. Real forecasters sit at PI parity; the headroom needs ~2× better forecasts plus online gain adaptation.

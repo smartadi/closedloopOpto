@@ -225,6 +225,17 @@ drift to be "unified"; do not reconcile them.
 - Motion exclusion: **none in the paper** (user 2026-10-16). `motThresh = 1.5` (z-scored motion) survives only as a script default; no paper analysis excludes or splits trials on it.
 - Step response sessions: `custom_idx = [4 9 11]` (m4=AL_0033 2025-02-26, m9/m11=AL_0039)
 
+### MPC (Fig 6) + VARX (Fig S5) — LOCKED (user, 2026-10-16: "MPC and varx is done and locked")
+- VARX: z = [controlled site, 100 cortical spots], **L = Q = 35 (1 s) for cortex and laser**, **ridge λ = 100**
+  (grid 5–35 frames × 10–10⁴ is flat; best 0.634 vs used 0.626 — user kept 100). Do not retune.
+- **The controller's model never sees closed-loop data** (`MPCD_NOCL=1`, files tagged `_noCL`): static = spont + OL;
+  sine = spont + OL/OL+p minus the test fold. The world model uses all data (it must reproduce the recordings).
+  Panels (`ctrl_mpc_direct_panels`, `ctrl_mpc_sine_panels`) and `paper_stats_table.m` read the `_noCL` files; the
+  untagged files are the old with-CL reference only.
+- MPC: Hp = 35, rd = 0.1, box 0..u_max; static RMSE 1–3 s, sine 4 s window; sine compares CL+p vs MPC vs perfect only.
+- Colours: **MPC purple, VARX pink** (forecasts light→dark in time). Fig S5 = `figures_final/varx.pdf`
+  (A construction, B weight map, C forecasts, D validation grid, E R² vs lead); laser-response panel retired.
+
 ### Figure style
 - Size: **6 cm W × 4 cm H** default; see PAPER.md for per-panel sizes
 - Font: **6 pt bold** throughout

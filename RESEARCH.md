@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — MPC (Fig 6) and VARX (Fig S5) declared DONE and LOCKED
+**Changed/Found:** `CLAUDE.md` — new locked-decisions block "MPC (Fig 6) + VARX (Fig S5)":
+- L = Q = 35, ridge 100;
+- the controller model never sees CL data (`_noCL` files canonical);
+- Hp 35, rd 0.1;
+- MPC purple / VARX pink;
+- Fig S5 lettering.
+
+`TASKS.md` — added to Recently done (oldest item, 2026-10-07 LMM df fix, pruned to keep the cap at 10); the MPC section is retitled as locked, and the open "two thirds" sentence check is added there.
+**Why:** the user said "MPC and varx is done and locked log it and commit".
+**Next:** the only open MPC item is the "two thirds of the squared error" sentence in the sine Results (≈ half on recomputation). Push Closedloop draft → main only on the user's go.
+
 ### 2026-10-16 — VARX supp grid panel: y label "history L = Q (frames)" → "history (frames)"
 **Changed/Found:** `ctrl_mpc_varx_supp_panels.m` — panel E (paper letter D) y label changed, so L/Q no longer reaches the reader. The PAPER_FINAL re-export did NOT reach the final folder: `panels/supp_varx/varx_E_sweep.pdf` (and C, D) are locked by Illustrator; only A updated. The working copy in `paper/images/supp_varx/` is updated.
 **Why:** user request.
