@@ -19,7 +19,7 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 ### 2026-10-16 — Sine MPC Results: "two thirds" of the error in rising half-cycles → "about half"
 **Changed/Found:** Closedloop_edit `results.tex` (sine MPC paragraph) — "Most of the remaining error (about two thirds of the squared error) fell in…" → "About half of the remaining squared error fell in…". Recomputed on the canonical `_noCL` data (CL+p trials, dR>0 split): MPC 0.49, perfect 0.49; the laser is off 83% of the rising half. Draft commit after a clean build.
 **Why:** the user asked; the ⅔ figure did not reproduce under either the old or the new data.
-**Next:** none.
+**Next:** none. Update: on the user's go, Closedloop_edit main was fast-forwarded to draft and pushed (5546e7c..ef60279: no-CL MPC wording/numbers, Fig S5, Methods pointer, this sentence). Overleaf pull is the last step.
 
 ### 2026-10-16 — MPC (Fig 6) and VARX (Fig S5) declared DONE and LOCKED
 **Changed/Found:** `CLAUDE.md` — new locked-decisions block "MPC (Fig 6) + VARX (Fig S5)":
