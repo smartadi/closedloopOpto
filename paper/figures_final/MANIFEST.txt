@@ -184,7 +184,7 @@ supplementary/supp_spatial_map_09.png
 [supp_state_quartile]
 # Supplementary Fig "Single-trial variability by state quartile" (LaTeX label fig:state_quartile),
 # locked 2026-10-16 (user: cite it from Fig 2G and blend it into the Results). Rows = motion,
-# rel delta, abs delta; columns A-D = rms, ratio (stim/control), dist, var. 2.7 x 2.4 cm tiles (was 3.6 x 2.8).
+# rel delta, abs delta; columns A-C = rms, ratio (stim/control), dist (var DROPPED 2026-10-16). 2.4 x 2.3 cm tile canvas, 3.07 cm exported (was 2.7 x 2.4; 3.6 x 2.8).
 # Source: impulse-analysis/imp_state_quartile_supp.m (reads data/fig2g_state_stats.mat).
 supplementary/state_quartile/sq_mot_rms.pdf
 supplementary/state_quartile/sq_mot_ratio.pdf
