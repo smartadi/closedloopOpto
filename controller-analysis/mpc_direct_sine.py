@@ -7,6 +7,8 @@ SESSION AL_0048 2026-07-14/1 (Fig 5's representative session), right hemisphere 
         Inputs from ctrl_mpc_sine_export.m (y = rig online dF/F states.csv on the frame clock, r = -reference_raw).
 MODEL   VARX on z = [y, 100 brain spots], L = Q = 35 (1 s), ridge 100; 5-fold held-out controller models (folds
         interleaved over all 200 sine trials; a test fold's trial windows are cut out of training).
+        CANONICAL since 2026-10-16 (user): MPCD_NOCL=1 MPCD_TAG=_noCL -> no CL / CL+p trial is ever in training
+        (spontaneous + OL / OL+p only); the panels and the stats table read the _noCL file.
 WORLD   VARX on all valid frames + each trial's recorded one-step innovations: under the recorded laser it reproduces
         every recorded trial exactly (asserted for all 200).
 SIMULATED on EVERY sine trial (its innovations): MPC (fold model, rd = MPCD_RD) and the perfect-prediction MPC (world

@@ -16,9 +16,9 @@ if nargin < 1 || isempty(sess), sess = 'AL_0048_0714_e1'; end
 % while CL+p overshoots each rise (RMSE 1.58 -> 0.83). 104/141 gain mostly in the onset transient. [] = median trial.
 if nargin < 2 || isempty(kEx), kEx = 161; end
 % sfx (2026-10-16): variant data suffix, e.g. '_noCL' -> mpc_direct_sine_<sess><sfx>.mat, writes to supp_mpc<sfx>/
-if nargin < 3, sfx = ''; end
+if nargin < 3, sfx = '_noCL'; end   % CANONICAL since 2026-10-16: controller model never saw CL / CL+p data; '' = old
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data'); addpath(genpath(fullfile(here,'..','utils')));
-figDir = fullfile(here,'..','paper','images',['supp_mpc' sfx]); if ~exist(figDir,'dir'), mkdir(figDir); end
+figDir = fullfile(here,'..','paper','images','supp_mpc');
 PS = paperStyle(); S = jnStyle();
 C.m = [0.45 0.20 0.60]; C.o = [0.78 0.66 0.90]; C.g = [0.62 0.62 0.62]; C.k = [0 0 0];
 C.edge = [0.45 0.45 0.45]; C.ref = [0.25 0.25 0.25];

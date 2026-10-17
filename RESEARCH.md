@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — MPC: no-CL controller model made canonical (code defaults switched)
+**Changed/Found:** `controller-analysis/ctrl_mpc_direct_panels.m`, `ctrl_mpc_sine_panels.m` — default `sfx` is now `'_noCL'` (was `''`), and panels write to `paper/images/supp_mpc/` whatever the suffix (was `supp_mpc<sfx>/`). `mpc_direct.py`, `mpc_direct_sine.py` — docstrings mark `MPCD_NOCL=1` (controller VARX trained on spontaneous + OL data only, never CL / CL+p) as CANONICAL, with `_noCL` output tags. `paper-writing/paper_stats_table.m` — Fig 6 rows now load `mpc_direct_AL_0033_0226_e2_lam01_noCL.mat`, and the sine rows load `mpc_direct_sine_AL_0048_0714_e1_noCL.mat`. These edits were made in another session; logged and committed here at the user's request.
+**Why:** User decision 2026-10-16 to adopt the no-CL controller model, so the MPC replay can't have learned from the closed-loop trials it is compared against (preview: static MPC/CL 0.682 vs 0.662, sine 0.879 vs 0.887; see the "No-CL preview" entry).
+**Next:** Not verified here: re-run `paper_stats_table` → `paper_stats_tex` so STATS_TABLE.csv / stat_tables.tex pick up the _noCL numbers; regenerate the Fig 6 panels with PAPER_FINAL on; update the manuscript MPC numbers to match.
+
 ### 2026-10-16 — Fig S2 re-assembled (A–C quartiles, D–F rasters); caption keyed to panels
 **Changed/Found:** The user's new assembly `paper/figures_final/FIgure2_supp.pdf` is copied to `Closedloop_edit/images/supplementary/S_state_quartile.pdf`. Layout: rows A–C = motion / rel δ / abs δ quartile tiles; D–F = per-mouse raster strips (mW headers); legend on top, two colour keys at the bottom. `supplementary.tex` caption is rewritten around A–C and D–F (state rows A/D, B/E, C/F; |Dev.| as labelled in the figure). `results.tex`: "Figure S2, second column" → "S2A–C, second column". Build clean.
 **Why:** User: "reexported with new captions so add them to caption".

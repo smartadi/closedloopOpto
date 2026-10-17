@@ -4,6 +4,8 @@ wanted to use the d ... get away from disturbance, just directly predict and pla
 MODEL   delay-embedded VARX on z = [controlled spot y (rig online dF/F), 100 brain spots], L = 35 lags, Q = 35 laser
         lags, ridge lambda = 100 (mpc_pred200_sweep.Model). Trained on EVERY valid frame -- spontaneous stretches
         between trials, OL trials and CL trials -- except the test fold's CL-trial windows (5 CL folds, as before).
+        CANONICAL since 2026-10-16 (user): MPCD_NOCL=1 -> the controller model never sees ANY CL trial (spontaneous +
+        OL only); outputs carry the suffix _noCL (e.g. MPCD_TAG=_lam01_noCL) and the panels / stats table read those.
 MPC     at frame t (y(t) observed) choose U = u(t+1..t+Hp). The VARX is affine in the future laser, so
         y_hat(t+1..t+Hp) = f(t) + G U  with f = free response (future laser 0) and G = the model's laser->y impulse
         response (time-invariant). Cost sum (y_hat - ref)^2 + r (U - uss)^2 + rd ||Delta U||^2, 0 <= U <= u_max

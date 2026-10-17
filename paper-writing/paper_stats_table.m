@@ -175,7 +175,8 @@ end
 % SIMULATION on one session (AL_0033 2025-02-26, 108 CL trials): descriptive only, no tests.
 % Source: controller-analysis/mpc_direct.py run with MPCD_RD=0.1 MPCD_ORD=0.1 MPCD_TAG=_lam01
 % (timing lag 0, user decision 2026-10-12). Columns of rmse/Y: PI (recorded) | MPC | perfect-prediction MPC.
-S = load(fullfile(root,'controller-analysis','data','mpc_direct_AL_0033_0226_e2_lam01.mat'));
+% _noCL (2026-10-16, canonical): the controller's VARX is trained on spontaneous + OL data only (MPCD_NOCL=1)
+S = load(fullfile(root,'controller-analysis','data','mpc_direct_AL_0033_0226_e2_lam01_noCL.mat'));
 nm = cellstr(S.names);  rr = S.rmse;  nT = size(rr,1);
 for j = 1:numel(nm)
     add(sprintf('6_rmse_%d',j),'6',sprintf('median per-trial RMSE 1-3 s, %s',nm{j}),median(rr(:,j)),'%dF/F',[NaN NaN], ...
@@ -194,7 +195,7 @@ add('6_var','6','across-trial variance 1-3 s, MPC / PI',v(2)/v(1),'ratio',[NaN N
 % Source: controller-analysis/mpc_direct_sine.py (MPCD_RD=0.1). RMSE over the full 4 s window vs the target;
 % phase lag / gain from a 1 Hz fundamental fit to the trial average (Fig 5H); variance = across-trial variance
 % averaged over the window. MPC / perfect are replayed on every CL and CL+p trial and paired with that recording.
-S = load(fullfile(root,'controller-analysis','data','mpc_direct_sine_AL_0048_0714_e1.mat'));
+S = load(fullfile(root,'controller-analysis','data','mpc_direct_sine_AL_0048_0714_e1_noCL.mat'));   % _noCL canonical
 sr = cellstr(S.summary_rows); sm = S.summary; cnd = double(S.cond(:)); rRec = S.rmse_rec(:);
 for j = 1:numel(sr)
     add(sprintf('6s_rmse_%d',j),'6 sine',sprintf('median per-trial RMSE 0-4 s, %s',sr{j}),sm(j,1),'%dF/F',[NaN NaN], ...

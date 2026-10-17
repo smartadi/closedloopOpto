@@ -15,9 +15,9 @@ function ctrl_mpc_direct_panels(sess, sfx)
 if nargin < 1, sess = 'AL_0033_0226_e2'; end
 % sfx (2026-10-16): data-file suffix for a variant run, e.g. '_noCL' (controller model trained without any CL data,
 % MPCD_NOCL=1) -> reads mpc_direct_<sess>_lam01<sfx>.mat etc. and writes to paper/images/supp_mpc<sfx>/
-if nargin < 2, sfx = ''; end
+if nargin < 2, sfx = '_noCL'; end   % CANONICAL since 2026-10-16 (user): the controller model never saw CL data; '' = old with-CL run
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data'); addpath(genpath(fullfile(here,'..','utils')));
-figDir = fullfile(here,'..','paper','images',['supp_mpc' sfx]); if ~exist(figDir,'dir'), mkdir(figDir); end
+figDir = fullfile(here,'..','paper','images','supp_mpc');
 PS = paperStyle(); S = jnStyle();
 C.pi = PS.col_cl; C.m = [0.45 0.20 0.60]; C.o = [0.78 0.66 0.90]; C.g = [0.62 0.62 0.62]; C.k = [0 0 0];
 C.edge = [0.45 0.45 0.45]; C.ref = [0.25 0.25 0.25];
