@@ -25,7 +25,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## 🔴 Blocking submission
 
 ### arXiv blockers (plan: `paper-writing/arxiv_jneurosci_plan_2026-10-10.md`; RESEARCH 2026-10-10)
-- [ ] (user) Author/affiliation block (`main.tex` L71-78 renders "Department of ,") -- editing on Overleaf.
+- [ ] (user) Author block: syntax fixed 2026-10-16 (single UW affiliation, no indices, renders cleanly); add departments + confirm order with Nick before journal submission.
 - [ ] (user decision) **Fig 2G trial set + AL_0048 reference** (RESEARCH 2026-10-12): drop the 251 amp-0 trials? re-reference AL_0048 to onset? The motion-vs-control conclusion flips with the reference. Then fix heading L71, intro L44, results L148, 2G panel title.
 - [ ] **NEXT, after the 2026-10-12 TF rerun + M3 dip check finish (user 2026-10-12): recompute Mouse 3 (AL_0048 2026-07-15/1) hemo correction LOCALLY, then rerun its Fig 2 chain.** Why: so that all four sessions are on one pipeline version (the lab's fixed hemoCorrect). ⚠ Updated 2026-10-12 evening (RESEARCH "CORRECTION: Mouse 3's slow dip…"): M3's May-2021 corr has NO net filter delay on its own onset frames (+0.75 ms vs zero-phase raw blue). The recompute is therefore NOT expected to move its 0.14 s dip to ~0.11 s; the earlier raw-blue 0.102 s was an onset-frame artefact. The lab's code and record are at `\\sahale\data\Code\dataChangeLog\2026-10_hemoCorrect_recompute\` (EXPLAINER.md, hemo_corr_sessions.csv). How:
   - copy the raw widefield frames for that session from the server to local disk (the server is read-only: read and copy only);
