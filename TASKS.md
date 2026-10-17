@@ -9,6 +9,8 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-10-16 — **Fig 2G Results reworded as co-variation** (Closedloop draft): responses and ongoing activity change together with state; no claim either way about the stimulus effect itself. Discussion L16 still says "rather than as a change in the response itself" (user is writing the Discussion). RESEARCH 2026-10-16.
+- [x] 2026-10-16 — **Power scale bars: no change needed** — user checked the V→mW conversion by hand (2A/2B/3A/3C/S-MPC). RESEARCH 2026-10-16.
 - [x] 2026-10-12 — **Fig 2C–F on the seeded Mouse 3 fit + leak-free CV, manuscript made consistent** (Closedloop draft 8db98b1, not pushed). Held-out 0.85 pooled. Mouse 3's slowest pole is vestigial (< 0.2%), dip 0.14 s; the dip τ is order-sensitive. RESEARCH 2026-10-12.
 - [x] 2026-10-10 — **AL_0041 e2 rebinned + Fig 2 rerun** (gap-based levels in `detectStimEvents_idx`; Mouse 1b R² 0.51 -> 0.76) and manuscript numbers updated; Fig 2 laser values accepted as-is (user); 4G stays gated, the all-13-session result is not reported (user); 4D = session mean ± SEM (user).
 - [x] 2026-10-10 — Fig 4D session-level points (+pooled/median fallbacks); OL offsets + 4G paired stats saved (`f4_rr_denominator_check`); Global-state circularity check done (does not fix it).
@@ -17,8 +19,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [x] 2026-10-07 — **Fig 4D multiple comparisons decided:** uncorrected, 8 tests stated, Bonferroni 0.0063 named; rel-delta softened (now p=0.050 after the df fix).
 - [x] 2026-10-07 — **LMM df bug fixed** (`utils/lmm_cluster_df.m`); Fig 3, 4D, 4G, 2G re-run; `f4_cl_reject_lmm.m` post-mode-switch rerun done (AL_0051 now reaches, n=12).
 - [x] 2026-10-05 — **MPC finished as a supplement:** forecast σ measured with our own CV forecasters (in place of Ziyu's model); MPC rebuilt on the 108 real single-trial disturbances (old tube-MPC was 17× under-scaled); 3-panel supp figure. Resolves `2026-09-11.3/.4` and the placement decision. See RESEARCH 2026-10-05.
-- [x] 2026-10-02 — **Methods synced to the code behind every figure** (`methods_rewrite.tex`): state windows Fig 2 [−1,0) / Fig 4 [−2,+3) + continuous band power, Fig-4 exemplars + unique-R² decomposition, Fig-2G variability pipeline, Fig-2 TF/CV/swap/τ bootstrap (+ new Table tab:tf_fig2), preview controller + Fig-5 metrics, two ΔF/F normalizations, 40 s baseline. Fig-5 Results made descriptive (no tests). See RESEARCH 2026-10-02.
-- [x] 2026-10-02 — Methods paragraph for the Fig-4 Row-2 session-aware LMM: covered by Statistics (cond × state model, predictability/controllability, hierarchical bootstrap) + "Brain-state measures" (motion = mean z over −2..+3 s).
 
 ---
 
@@ -36,7 +36,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
   - Check free disk space before copying.
 - [ ] (later, user advises) **Run the hemo correction locally for ALL sessions for consistency**, with the same frames → local SVD + hemo → delete-frames procedure and one code version for every session. Then rerun every figure that reads corr/.
 - [ ] (user, Illustrator) **Figure4.pdf panels C, D and G** -> re-place `f4_row2_quartiles.pdf` (4D now session points, 2026-10-10) and `figures_final/panels/figure4/f4_decomp_unique_sep.pdf` + `f4_cl_reject_RR.pdf` (text quotes 0.41/0.03, 0.15/0.19; panel shows 0.39/0.10).
-- [ ] **Mislabeled power scale bars** -> fix code, re-export, re-place: 2A legend (`trace_overlay.m:53` uses /3; use plateau V x 1.8/4.9), 2B bar ('0.25 mW' spans 1 V = 0.37 mW, `dose_response.m:136,149`), 3A/3C '1 mW' bars are 0.15-0.24 mW (`analysisPlots_combined.m:72,81-82,97,200,208,216`), S-MPC '1 mW' on command volts (`ctrl_mpc_direct_panels.m:91,129`).
 - [ ] **DECIDE 2-4 Hz framing (circularity; RESEARCH 2026-10-10 'Circularity').** Contra/Global state does NOT fix it (keeps the overlap, carries laser leak). Laser-off window [-2,0) on the readout: abs 1-4 Hz holds (OL/CL p 4e-7/5e-8), rel 2-4 Hz predicts OL and CL equally (att p=0.47) -> 'OL flat, CL rises' is in-stimulation only. Options: add laser-off rows to Table 1 + reword Abstract/Intro L46/Results L152/Discussion L18,L42 as concurrent effects; Methods 'sub-band least attenuated' justification.
 - [ ] **DECIDE random state slope for Table 1** (1+cond+xw|sess): rel 2-4 reg 8.6e-4 -> 0.05, initdev reg 3.5e-5 -> 0.055, motion att 0.015 -> 0.0046, abs all still pass. `data/f4_circularity_checks.mat`.
 - [ ] Methods tuning: re-read end gains for AL_0034 10-25 e1 and AL_0033 12-19 from Kdata.npy and the iteration count; remove the `%% CHECK`.

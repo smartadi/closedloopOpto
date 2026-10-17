@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-16 — Fig 2G Results: state co-variation, no claim about the stimulus effect
+**Changed/Found:** `Closedloop_edit/results.tex` L98–99 (draft) — replaced "a fixed stimulus effect rides on ongoing activity ..., rather than that state changes how cortex responds" with: responses and ongoing activity change together with state (both less variable with movement, both more variable with absolute δ power); we do not separate a change in the stimulus effect from a change in ongoing activity. Next sentence now "This is consistent with brain state acting as a disturbance ...". Build clean, 40 pp, 0 undefined.
+**Why:** User 2026-10-16: not claiming motion changes the stimulus response, nor that it doesn't — only that under motion the responses look different and so does the underlying activity.
+**Next:** Discussion L16 carries the old claim ("rather than as a change in the response itself") — user is rewriting the Discussion. The response-vs-control ratio test (TASKS) is no longer needed for this wording.
+
+### 2026-10-16 — Power scale bars: decided not to change
+**Changed/Found:** none — the TASKS item "Mislabeled power scale bars" (2A, 2B, 3A/3C, S-MPC) is closed without code changes.
+**Why:** User checked the V→mW conversion manually and it is correct; the 2026-10-10 review flag was wrong.
+**Next:** none
+
 ### 2026-10-16 — Fig S2 strips: blue-white-red activity map; highest-amplitude comparison copy; finalized
 **Changed/Found:** `impulse-analysis/imp_state_raster_peramp.m` — the activity map is now blue (negative/dip) – white – red (positive) (`local_bwr`, RdBu end points); |dev| stays white → black. Onset and quartile markers are now black so they don't read as data on the red/blue map; this also applies to the exploratory grid. New `RSA_S2_AMP` = 'second' (FINAL, mirrored) | 'top' (writes `sq_*_rmice_top.pdf` to images only, not in MANIFEST). Highest-amplitude copy: Mouse 5a 2.7 V (n = 56), Mouse 5b 2.7 V (n = 54), Mouse 1 4.9 V (n = 84), Mouse 3 1.6 V (n = 100). Its dip is deeper and the abs δ |dev| gradient is still visible (5a, 5b, 3). FINAL = second-highest, re-exported to figures_final with both keys.
 **Why:** User: "non grayscale color bar for activity, like blue to red, also gimme the same for the highest amp per mouse then finalize". Caveat: red/blue are the locked OL/CL condition colours in Figs 3 and 5. Here they are a diverging scale in a supplementary figure, and the caption must say so.
