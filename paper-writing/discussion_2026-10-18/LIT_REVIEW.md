@@ -1,0 +1,1005 @@
+# Discussion literature review (2026-10-18)
+
+Built by a multi-agent search: one researcher per theme, then an independent checker that confirmed each work exists (Crossref by DOI or title), corrected its metadata and read its abstract to judge whether the intended use is supported. "Support" = the checker's verdict on the claim we want to make: yes / partly (reword as noted) / gap (found by the referee gap-fill pass; existence confirmed by that agent, claim not independently re-checked yet).
+
+## 1. Design guarantee from a monotone input-output map
+
+- **`desoer1985tracking`** ★★★ · support: **partly** · metadata corrected
+  - Desoer & Lin (1985). Tracking and disturbance rejection of MIMO nonlinear systems with PI controller. *IEEE Transactions on Automatic Control* 30:861--867. doi:10.1109/TAC.1985.1104078
+  - Finding: For an exponentially stable MIMO nonlinear plant with a strictly increasing dc steady-state I/O map, a PI compensator (low gain) gives a stable unity-feedback loop that asymptotically tracks constant references and rejects constant disturbances.
+  - Use: Anchor citation for the monotonicity argument, phrased as a PI/integral (not P-only) guarantee on the nominal, trial-averaged plant with the sign convention made explicit.
+  - Checker's caveat: The abstract (OpenAlex) says, roughly, that an exponentially stable nonlinear plant with a strictly increasing dc steady-state I/O map can be put in a stable unity-feedback loop with a simple PI compensator that tracks and rejects asymptotically constant signals. Three caveats for the Discussion. (1) The guarantee is for PI/integral action, NOT a pure proportional controller. The user's theme says monotonicity guarantees that a 'proportional controller will work'. That is not what this theorem says, because P-only feedback leaves a steady-state offset (see francis1976internal). Word it as 'proportional-integral' or 'low-gain integral'. (2) Our map is strictly DECREASING (more light, less dF/F), so the theorem applies after a sign flip of the input or the error. Say 'strictly monotone' and note that the controller sign is chosen to match. (3) Exponential stability and the monotone map are properties of the trial-averaged nominal model, not proven for the nonstationary real plant. Present this as the design rationale, not as proof that the in-vivo loop is stable. The 'sufficiently small gains' condition is in the theorem body, not the abstract. Suggested wording: 'For exponentially stable plants whose steady-state input-output map is strictly monotone, low-gain PI feedback is guaranteed to track constant references (Desoer and Lin, 1985); our trial-averaged dose-response satisfies this structural condition.'
+- **`logemann2000absolute`** ★★★ · support: **yes**
+  - Logemann & Curtain (2000). Absolute stability results for well-posed infinite-dimensional systems with applications to low-gain integral control. *ESAIM: Control, Optimisation and Calculus of Variations* 5:395--424. doi:10.1051/cocv:2000115
+  - Finding: Low-gain integral control of an exponentially stable well-posed linear system (including delays) with positive dc gain, preceded by a nondecreasing globally Lipschitz actuator nonlinearity (e.g., saturation, deadzone), converges to any feasible reference (r/G(0) in the range of phi) for gains below K/lambda. K can be estimated from frequency-response data.
+  - Use: Precise statement for the Methods remark. The feasibility condition formalises 'the reference must lie within the attainable suppression range'.
+- **`logemann1999integral`** ★★★ · support: **yes**
+  - Logemann et al. (1999). Integral control of linear systems with actuator nonlinearities: lower bounds for the maximal regulating gain. *IEEE Transactions on Automatic Control* 44:1315--1319. doi:10.1109/9.769399
+  - Finding: Integral control of an exponentially stable SISO plant with a nondecreasing globally Lipschitz actuator nonlinearity tracks feasible constant references if G(0)>0 and the gain is small enough. The paper gives explicit lower bounds on the maximal gain from open-loop step/frequency data, including for second-order plants with input/output delay.
+  - Use: Route from the interpretable 2-pole-plus-delay model to a certifiable admissible-gain bound.
+- **`li2019spatiotemporal`** ★★★ · support: **partly**
+  - Li et al. (2019). Spatiotemporal constraints on optogenetic inactivation in cortical circuits. *eLife* 8:e48622. doi:10.7554/eLife.48622
+  - Finding: Benchmarked cortical photoinhibition methods. Exciting GABAergic neurons gave strong, light-dependent suppression of pyramidal activity that spread beyond the spot, with paradoxical interneuron suppression over some intensity range and dose-dependent rebound excitation after offset.
+  - Use: External evidence that interneuron-mediated suppression is graded with light dose. Rebound after offset is consistent with our slow component. Do not map their mW values onto ours.
+  - Checker's caveat: The abstract supports: GABAergic excitation gives effective inactivation; inactivation spreads beyond the light; a paradoxical effect occurs over some intensity range; and offset is followed by light dose-dependent rebound. The specific numbers (>80% at ~0.5-1.5 mW) and the 'graded then saturating' curve come from the figures, not the abstract, so verify them in the paper before quoting. Two use claims overreach. (1) 'Our max power (~1-1.6 mW) falls in their steep-to-saturating regime': their data are blue light / ChR2 (and GtACR1) in transgenic lines, with a different spot size and readout, while ours is 638 nm ChrimsonR in DLX-targeted interneurons with a widefield readout, so powers are not transferable. Drop this sentence. (2) 'Explains our slow rebound component': say 'is consistent with' the dose-dependent post-inhibitory rebound they report.
+- **`fliegner2003lowgain`** ★★ · support: **partly**
+  - Fliegner et al. (2003). Low-gain integral control of continuous-time linear systems subject to input and output nonlinearities. *Automatica* 39:455--462. doi:10.1016/S0005-1098(02)00238-8
+  - Finding: Extends low-gain integral tracking to stable SISO linear plants with both a nondecreasing globally Lipschitz input nonlinearity and a nondecreasing, affinely sector-bounded output nonlinearity, given positive steady-state gain, small (fixed or adaptive) gain and a feasible reference.
+  - Use: Covers the static sensor-nonlinearity version (indicator saturation). Pair it with Logemann & Curtain in the Methods remark.
+  - Checker's caveat: Existence and metadata confirmed (Crossref). No abstract was retrievable from Crossref, Semantic Scholar or OpenAlex, so the content is inferred from the title and the companion discrete-time paper (fliegner2001discrete), whose abstract states the same conditions. The use claim needs care. GCaMP fluorescence is a plausibly monotone static output nonlinearity. Our dF/F, however, is normalised by a TRAILING 40-s rolling mean, which is a time-varying, dynamic operation, not a static nondecreasing nonlinearity. Reword: 'a monotone static sensor nonlinearity (e.g., indicator saturation) does not break the guarantee (Fliegner et al., 2003)'. Do not claim the rolling-baseline dF/F is covered.
+- **`fliegner2001discrete`** ★★ · support: **yes**
+  - Fliegner et al. (2001). Discrete-time low-gain control of linear systems with input/output nonlinearities. *International Journal of Robust and Nonlinear Control* 11:1127--1143. doi:10.1002/rnc.588
+  - Finding: Discrete-time (and sampled-data) low-gain integral control of power-stable SISO linear plants with monotone input/output nonlinearities (including saturation and deadzone) tracks feasible constant references when the steady-state gain is positive and the gain is ultimately small.
+  - Use: Shows the guarantee does not depend on a continuous-time idealisation, since the loop runs at 35 Hz. It also covers the sampled-data case.
+- **`davison1976tuning`** ★★ · support: **partly**
+  - Davison (1976). Multivariable tuning regulators: The feedforward and robust control of a general servomechanism problem. *IEEE Transactions on Automatic Control* 21:35--47. doi:10.1109/TAC.1976.1101126
+  - Finding: For a stable LTI plant of unknown order, a robust servomechanism (feedforward plus integral) controller can be synthesised from experimentally measured steady-state plant data and tuned online, without a full parametric model.
+  - Use: Classical precedent for designing from a measured dose-response (steady-state gain) and hand-tuned low gains.
+  - Checker's caveat: The abstract describes 'compensator identification': for an LTI, open-loop stable plant of unknown order, a robust feedforward-feedback controller is synthesised from experiments on the plant, with necessary and sufficient conditions and an algorithm. The 'single scalar gain tuned up from zero' detail (the tuning-regulator epsilon) is in the body, not the abstract. The theory is LTI only, so it supports the design philosophy (steady-state gain from experiments plus low-gain integral action tuned online), not robustness to nonlinearity. Reword: 'this design pattern, a steady-state gain identified experimentally plus low-gain integral action tuned online, is the classical tuning-regulator approach for stable plants of unknown order (Davison, 1976)'.
+- **`morari1985robust`** ★★ · support: **partly**
+  - Morari (1985). Robust stability of systems with integral control. *IEEE Transactions on Automatic Control* 30:574--577. doi:10.1109/TAC.1985.1104012
+  - Finding: Gives necessary and sufficient conditions on a stable LTI plant's dc gain matrix for an integral controller to exist that stabilises the loop, characterises the family of plants that a common integral controller stabilises, and links this to failure tolerance.
+  - Use: Supports robustness of low-gain integral design to model variation, with the caveat that the gain bound is plant-specific.
+  - Checker's caveat: The abstract supports necessary and sufficient dc-gain conditions for the existence of a stabilising integral controller, plus the family of plants stabilised by the same controller. The intended use overreaches. 'Only the sign of G(0)' guarantees that SOME sufficiently small gain stabilises each plant, but the admissible gain bound differs across plants. So session-to-session model variation threatens stability unless the gain used is below every session's bound. Reword: 'in the SISO case integral controllability requires only the correct sign of the dc gain (Morari, 1985), so sessions with differing dynamics remain stabilisable by sufficiently low gains; the admissible bound is session-specific'. Also note the gains here were tuned per session, which is consistent with this.
+- **`simpsonporco2022projected`** ★★ · support: **yes**
+  - Simpson-Porco (2022). Low-gain stability of projected integral control for input-constrained discrete-time nonlinear systems. *IEEE Control Systems Letters* 6:788--793. doi:10.1109/LCSYS.2021.3086682
+  - Finding: For exponentially stable discrete-time nonlinear plants with hard convex input constraints and constant disturbances, projected integral control is exponentially stable for all sufficiently small gains if the composition of the equilibrium input-output map and the gain is strongly monotone.
+  - Use: Modern (2022) statement matching discrete time, a bounded input range and a nonlinear plant. Its strong-monotonicity condition is the current form of the monotonicity argument.
+- **`francis1976internal`** ★★ · support: **yes** · in refs.bib
+  - Francis & Wonham (1976). The internal model principle of control theory. *Automatica* 12:457--465. doi:10.1016/0005-1098(76)90006-6
+  - Finding: Robust regulation requires the controller to embed a model of the exogenous signal generator; for constant references and disturbances, that model is an integrator.
+  - Use: Explains why integral action, not proportional action alone, removes the steady offset, and why only constant or slow disturbances are rejected (links to Fig 4).
+- **`khalil2002nonlinear`** ★★ · support: **yes**
+  - Khalil (2002). Nonlinear Systems. *Prentice Hall, Upper Saddle River, NJ (3rd edition)*
+  - Finding: Standard graduate text covering absolute stability (sector nonlinearities, circle and Popov criteria) and regulation via integral control.
+  - Use: Textbook citation for treating the monotone saturating actuator as a sector nonlinearity (absolute-stability framing).
+- **`astrom2008feedback`** ★★ · support: **yes**
+  - {\AA}str{\"o}m & Murray (2008). Feedback Systems: An Introduction for Scientists and Engineers. *Princeton University Press*. doi:10.1515/9781400828739
+  - Finding: Introductory text on analysing feedback loops with low-order LTI models: stability, Bode/Nyquist, margins, sensitivity, delay limits on bandwidth, robustness to model error.
+  - Use: Supports the claim that an interpretable LTI model enables loop analysis, and that delay limits achievable bandwidth.
+- **`sanzeni2020inhibition`** ★★ · support: **yes**
+  - Sanzeni et al. (2020). Inhibition stabilization is a widespread property of cortical networks. *eLife* 9:e54875. doi:10.7554/eLife.54875
+  - Finding: ISN signatures, including paradoxical suppression of inhibitory firing under inhibitory-cell photostimulation, occur in mouse visual, somatosensory and motor cortex without sensory drive and under light anaesthesia. Average paradoxical effects appear with transgenic but not viral PV opsin expression.
+  - Use: Pre-empts the paradoxical-effect objection: the paradox concerns interneuron rates while excitatory output is still suppressed, and it is weak or absent on average with viral expression.
+- **`tsodyks1997paradoxical`** ★★ · support: **partly**
+  - Tsodyks et al. (1997). Paradoxical effects of external modulation of inhibitory interneurons. *Journal of Neuroscience* 17:4382--4388. doi:10.1523/JNEUROSCI.17-11-04382.1997
+  - Finding: Modelling plus CA1 recordings: in networks whose recurrent excitation is unstable without feedback inhibition, external modulation of interneurons can change interneuron firing in the paradoxical direction.
+  - Use: Original source for the paradoxical effect; cite with Sanzeni 2020 when addressing the objection.
+  - Checker's caveat: It is not purely theoretical: the abstract includes in vivo CA1 interneuron recordings that broadly confirm the model. The abstract states the mirror case: increasing external INHIBITORY input to interneurons can INCREASE their firing when recurrent excitation is unstable without feedback inhibition. The stated version (exciting interneurons lowers their rate while excitatory firing falls) is the symmetric corollary, but the abstract does not state the excitatory-rate claim explicitly. Reword: 'modelling and hippocampal recordings showing that, when recurrent excitation is inhibition-stabilised, interneuron rates can respond paradoxically to external input to interneurons (Tsodyks et al., 1997)'.
+- **`simpsonporco2021analysis`** ★ · support: **partly**
+  - Simpson-Porco (2021). Analysis and synthesis of low-gain integral controllers for nonlinear systems. *IEEE Transactions on Automatic Control* 66:4148--4159. doi:10.1109/TAC.2020.3035569
+  - Finding: For exponentially stable MIMO nonlinear plants, low-gain integral control is exponentially stable if the equilibrium input-output map composed with the integral gain is infinitesimally contracting. The condition can be checked and the gains synthesised via SDP.
+  - Use: Optional single modern citation summarising the low-gain integral lineage.
+  - Checker's caveat: The abstract supports relaxed low-gain stability conditions for exponentially stable MIMO nonlinear plants when the equilibrium I/O map composed with the gain is infinitesimally contracting, plus SDP-based checks and synthesis. That it 'unifies Davison/Morari and Desoer-Lin' is a reasonable reading of the paper's framing, but the abstract does not say so. Phrase it as 'generalises earlier low-gain integral results' rather than 'unifies'.
+- **`skogestad2005multivariable`** ★ · support: **yes**
+  - Skogestad & Postlethwaite (2005). Multivariable Feedback Control: Analysis and Design. *John Wiley & Sons, Chichester (2nd edition)*
+  - Finding: Standard text on robust stability and performance with model uncertainty, and on fundamental limitations from time delay and input constraints, analysed on nominal linear models with uncertainty descriptions.
+  - Use: Pair with Astrom & Murray: a nominal LTI model plus an uncertainty bound is the standard robustness object; delay and saturation set performance limits.
+- **`mahrach2020mechanisms`** ★ · support: **yes**
+  - Mahrach et al. (2020). Mechanisms underlying the response of mouse cortical networks to optogenetic manipulation. *eLife* 9:e49967. doi:10.7554/eLife.49967
+  - Finding: PV photostimulation gives paradoxical PV responses in ALM layer 5 and barrel cortex but not ALM layer 2/3. Explaining this needs four-population models, and the paradox alone is not evidence of inhibition stabilisation.
+  - Use: Caveat: responses to interneuron stimulation depend on circuit composition, so monotonicity is an empirical property verified in Fig 2, not one guaranteed a priori.
+- **`atallah2012parvalbumin`** ★ · support: **partly**
+  - Atallah et al. (2012). Parvalbumin-expressing interneurons linearly transform cortical responses to visual stimuli. *Neuron* 73:159--170. doi:10.1016/j.neuron.2011.12.013
+  - Finding: Bidirectional optogenetic manipulation of PV cells in mouse V1 changes L2/3 pyramidal visual responses by a thresholded linear (additive and multiplicative) transformation, with modest effects on tuning.
+  - Use: One sentence of supporting evidence that interneuron drive acts on excitatory output in a graded, roughly linear, thresholded way.
+  - Checker's caveat: The abstract says that bidirectional PV manipulation in V1 changes L2/3 pyramidal visual responses by a linear (additive plus multiplicative) transformation with a threshold. That transformation acts on sensory-evoked responses at fixed PV manipulation levels. It is not a dose-response of excitatory output versus light power. Reword: 'PV activity modulates pyramidal responses through a thresholded linear transformation (Atallah et al., 2012), consistent with a graded, monotone effect of interneuron drive'. Avoid the stronger 'deadzone nonlinearity in the theorem class' unless it is flagged as an interpretation.
+- **`klapoetke2014independent`** ★ · support: **yes**
+  - Klapoetke et al. (2014). Independent optical excitation of distinct neural populations. *Nature Methods* 11:338--346. doi:10.1038/nmeth.2836
+  - Finding: Introduced the channelrhodopsins Chrimson (red-shifted ~45 nm, with the ChrimsonR variant described in the paper) and Chronos (fast kinetics), enabling two-colour independent activation.
+  - Use: Actuator citation (ChrimsonR, 638 nm) if actuator properties are discussed.
+
+_Rejected in this theme:_ No references were rejected. All 19 exist: 17 were confirmed through Crossref and their abstracts were read via Crossref, OpenAlex or Semantic Scholar where available. The two textbooks (Khalil 2002, Skogestad & Postlethwaite 2005) were confirmed through Open Library ISBN records. For Logemann & Curtain 2000 (Theorem 4.1, Remark 4.2) the full text was checked on Numdam. Fliegner 2003 (Automatica) and Francis & Wonham 1976 had no retrievable abstract; their metadata is confirmed and their content was judged from the title and companion papers.
+
+The main problem is in the theme itself. The user's draft says monotonicity guarantees that 'a proportional controller will work'. Every theorem here (Desoer-Lin, Logemann et al., Fliegner et al., Simpson-Porco, Morari, Davison) guarantees LOW-GAIN INTEGRAL or PI control, not proportional-only. Francis & Wonham explains why integral action is needed for zero steady-state error.
+
+Other recurring caveats:
+- The dose-response map is DECREASING, so the theorems apply after a sign flip of the input or error.
+- The guarantees hold for the nominal trial-averaged plant, not as proof that the nonstationary in-vivo loop is stable.
+- Admissible gain bounds are session-specific, so Morari's 'sign only' result does not by itself give robustness across sessions.
+- The rolling-baseline dF/F is a dynamic normalisation, not a static output nonlinearity (Fliegner).
+- The projected-integral result (Simpson-Porco 2022) needs the integrator itself to be clipped.
+- Li et al. 2019 light powers cannot be mapped onto our ChrimsonR/638-nm setup.
+
+**Risks a referee would raise (researcher):**
+- Calling it a 'guarantee' without qualification. The theorems are asymptotic (t -> infinity), assume a time-invariant plant (the brain plant is state-dependent and non-stationary) and need the gain below a bound we never computed. A control referee will ask whether Ki < K/lambda. Mitigate by calling the result a nominal guarantee, or by computing the Logemann-Ryan-Townley bound from each session's 2-pole + 47 ms delay model.
+- 'Only one solution exists for every equilibrium' is wrong as stated if it means the command voltage (non-unique on the saturated plateau) or if it suggests proportional control alone reaches the reference (P alone leaves an offset). Rephrase: a unique steady-state effective input per reference; integral action finds it without knowing it.
+- Sign convention: the plant's dc gain is negative (light lowers dF/F). The theorems are stated for G(0) > 0, so the Methods remark must say the error sign makes the loop gain positive.
+- Paradoxical or inhibition-stabilised effects (Tsodyks 1997; Sanzeni 2020; Li 2019; Mahrach 2020): a referee may argue that driving interneurons can give non-monotone effects. Answer: the paradox concerns interneuron rates while the excitatory output still falls; our viral pan-interneuron expression and CaMKII readout were empirically monotone (Fig 2). Do not claim monotonicity follows from theory, and acknowledge VIP-disinhibition as a possible exception.
+- Monotonicity was shown for trial averages (Assumption 1: E[f(x)] ~ f(E[x])), not for single trials. The theorem needs the actual plant to be monotone and stable. The argument survives only if state changes the magnitude, not the sign, of the gain; say so explicitly.
+- Feasibility of -5% must be shown, not asserted: confirm from Fig 2 that suppression at the top tested amplitude exceeds 5% dF/F in every controller session (controller sessions are not the same as the Fig 2 impulse sessions).
+- The implemented controller differs from the theorem's: the P term is clamped, the I term is clamped (q = 1 V) and is a 3 s boxcar reset each trial, plus feedforward. These are standard anti-windup and practical modifications, but the remark should present the theorem as justifying the structure, not the exact implementation.
+- Methods currently says margins were not certified because a linear nominal model 'would describe a controller other than the one that ran'. A Discussion that leans on interpretable LTI models enabling stability analysis must stay consistent with that; frame it as 'enables', and give the low-gain theorem as the analysis that does tolerate the saturating actuator.
+- Dose-dependent rebound excitation after light offset (Li 2019) behaves like a slow positive lobe of the plant; a large rebound relative to the dip could, in principle, make the effective dc gain small or change its sign at long horizons. Check that the fitted G(0) keeps the expected sign in every session.
+- The guarantee concerns the measured, hemodynamically uncorrected blue-channel signal, not neural activity itself. Fine for the control claim, but do not extend the guarantee to 'regulating neural activity' without that qualifier.
+
+## 2a. Modelling approaches and the unobserved-input problem
+
+- **`Nozari2024`** ★★★ · support: **yes** · in refs.bib
+  - Nozari et al. (2024). Macroscopic resting-state brain dynamics are best described by linear models. *Nature Biomedical Engineering* 8:68--84. doi:10.1038/s41551-023-01117-y
+  - Finding: On resting-state fMRI (700 HCP participants) and iEEG (122 RAM participants), linear autoregressive models fit best on predictive power, computational complexity and unexplained residual dynamics. The authors attribute this to spatial and temporal averaging, observation noise and limited data, which mask microscopic nonlinearity.
+  - Use: Linear models describe aggregated macroscale activity at least as well as nonlinear ones, plausibly because averaging masks microscopic nonlinearity [Nozari2024]. Trial averaging is an analogous averaging step, which is consistent with our finding that the trial mean is near-LTI while single trials are not.
+- **`lu2025benchmarking`** ★★★ · support: **yes** · in refs.bib
+  - Lu et al. (2025). Benchmarking Probabilistic Time Series Forecasting Models on Neural Activity. *arXiv:2510.18037 (NeurIPS 2025 Workshop: Data on the Brain & Mind)*. doi:10.48550/arXiv.2510.18037
+  - Finding: Benchmarks 12 univariate probabilistic forecasters (8 deep, including 2 foundation models; 4 classical) and 2 baselines on spontaneous mouse widefield activity at 35 Hz. Several deep models consistently beat classical approaches. The best model (PatchTST) is informative up to about 1.5 s and no better than the training mean and standard deviation beyond that.
+  - Use: Even the best forecasters of spontaneous widefield activity of this kind stay informative only about 1.5 s ahead, and they are univariate and trained without any stimulation input [lu2025benchmarking]. Put this next to Fig 6H to argue that forecasting is horizon-limited, while a feedback controller needs only short-horizon, input-conditioned prediction.
+- **`pandarinath2018lfads`** ★★★ · support: **partly**
+  - Pandarinath et al. (2018). Inferring single-trial neural population dynamics using sequential auto-encoders. *Nature Methods* 15:805--815. doi:10.1038/s41592-018-0109-9
+  - Finding: LFADS, a sequential autoencoder with an RNN generator, infers single-trial latent dynamics from spiking data. It also infers time-varying perturbations (inputs) to those dynamics that correlate with behavioral choices.
+  - Use: A leading single-trial model has to infer unobserved inputs to explain single-trial dynamics. Those inputs are estimated with access to the whole trial, so a causal controller cannot use them. Frame this as a limit on forecasting and control, not as a flaw in LFADS.
+  - Checker's caveat: The abstract supports single-trial latent dynamics from spiking data and 'infers perturbations to those dynamics that correlate with behavioral choices' in macaque and human motor cortex datasets. That the inputs are inferred from the whole trial is an architectural fact (bidirectional encoders in Methods), not stated in the abstract, and the 'cannot forecast without them' argument is our inference. Word it as: 'inputs are inferred with access to the full trial, so they are not available to a causal controller'.
+- **`vahidi2024intrinsic`** ★★★ · support: **yes**
+  - Vahidi et al. (2024). Modeling and dissociation of intrinsic and input-driven neural population dynamics underlying behavior. *Proceedings of the National Academy of Sciences* 121:e2212887121. doi:10.1073/pnas.2212887121
+  - Finding: Dynamics identified for a recorded population can mistake temporally structured inputs (sensory, or from other regions) for intrinsic dynamics. A linear state-space method that models measured inputs and behavior together separates intrinsic behavior-relevant dynamics from input-driven ones, in simulation and in motor-task recordings.
+  - Use: Dynamics identified without accounting for inputs conflate the system with its drive [vahidi2024intrinsic]. The remedy needs measured inputs, but in our preparation most extra-regional drive is unmeasured apart from the contralateral cortex captured by the Global predictor.
+- **`galgali2023residual`** ★★★ · support: **yes**
+  - Galgali et al. (2023). Residual dynamics resolves recurrent contributions to neural computation. *Nature Neuroscience* 26:326--338. doi:10.1038/s41593-022-01230-2
+  - Finding: Analysing residuals (single-trial deviations from the condition-mean trajectory) in macaque PFC shows recurrent dynamics that are time-dependent but consistently stable. Prominent rotations in the condition-mean trajectories appear to be driven by upstream inputs.
+  - Use: Conceptual precedent for separating the trial-averaged response (designed on) from single-trial residuals (characterised against state). The condition mean mixes input-driven and recurrent contributions, and residual structure carries separate information.
+- **`acharya2022brain`** ★★★ · support: **partly**
+  - Acharya et al. (2022). Brain modeling for control: A review. *Frontiers in Control Engineering* 3:1046764. doi:10.3389/fcteg.2022.1046764
+  - Finding: Reviews computational models of five neurostimulation modalities (DBS, TMS, DCS, tES, optogenetics), splitting them into theory-driven biophysical and data-driven models. It argues that control design needs models of how the stimulus interacts with network dynamics, to assess controllability and to design closed-loop stimulation.
+  - Use: Main citation for the view that a control model must be built around the actuator input and be analysable, and that data-driven input-output models are the practical basis for closed-loop neurostimulation design.
+  - Checker's caveat: The abstract supports a review of models for DBS, TMS, DCS, tES and optogenetics, split into theory-driven biophysical and data-driven models, and the need to understand how the stimulus interacts with network dynamics to assess controllability and design closed-loop stimulation. The added claim that 'most dynamical models of spontaneous activity have no input channel' is NOT in the abstract. Make it our own statement, or drop the citation from that clause.
+- **`lueckmann2025zapbench`** ★★ · support: **partly** · metadata corrected
+  - Lueckmann et al. (2025). ZAPBench: A Benchmark for Whole-Brain Activity Prediction in Zebrafish. *International Conference on Learning Representations (ICLR); arXiv:2503.02618*. doi:10.48550/arXiv.2503.02618
+  - Finding: Whole-brain forecasting benchmark: more than 70,000 neurons in larval zebrafish, about 0.9 s per volume, 32-step horizon of about 30 s. Models mostly beat naive baselines, but a stimulus-conditioned baseline is competitive at long horizons with short context. The authors expect a non-zero, unknown error floor from intrinsic randomness, unobserved processes (for example neuromodulation) and uncontrolled stimuli.
+  - Use: Even with cellular-resolution whole-brain coverage, forecasters are expected to hit a non-zero error floor set by intrinsic stochasticity and by processes and inputs the model does not observe [lueckmann2025zapbench]. Present it as a contrast too, because the models do beat naive baselines.
+  - Checker's caveat: Supported by the full text: models mostly beat the naive baselines; the stimulus baseline 'can be competitive', and in the per-condition short-context results fewer than half of the models beat it at 32 steps. The authors name intrinsic biophysical randomness, unobserved processes (neuromodulation, changing excitability) and uncontrolled non-visual stimuli as sources of stochasticity, and they expect an unknown, non-zero error floor. Rewording needed: the floor is NOT attributed to unobserved inputs alone. Write 'stochasticity, including unobserved processes and uncontrolled inputs, is expected to set a non-zero error floor'. The competitive stimulus baseline applies to the short-context setting.
+- **`schimel2022ilqrvae`** ★★ · support: **yes** · metadata corrected
+  - Schimel et al. (2022). iLQR-VAE: control-based learning of input-driven dynamics with applications to neural data. *International Conference on Learning Representations (ICLR 2022); bioRxiv 2021.10.07.463540*. doi:10.1101/2021.10.07.463540
+  - Finding: Because recordings sample only part of a wider network, local latent dynamics and unobserved external inputs must be learned together. iLQR-VAE does this by using an iterative LQR solver as the recognition model of an input-driven sequential VAE. It is demonstrated on synthetic systems and on monkey reaching data.
+  - Use: Cite with LFADS: the modelling community treats unobserved inputs from other regions as a central obstacle, and here input inference is itself posed as an optimal-control problem.
+- **`das2020systematic`** ★★ · support: **yes**
+  - Das & Fiete (2020). Systematic errors in connectivity inferred from activity in strongly recurrent networks. *Nature Neuroscience* 23:1286--1296. doi:10.1038/s41593-020-0699-2
+  - Finding: Even with unlimited data from every neuron, connectivity inferred from activity in strongly recurrent networks is biased toward correlated but unconnected pairs whenever the inference model does not match the true dynamics. Driving circuits far from equilibrium with a simple suppressive input may reduce the bias.
+  - Use: Fitting richer models to passively observed activity does not by itself recover the system, because model mismatch and correlated drive bias the inferred interactions. Perturbation, for example suppressive drive like our inhibitory actuator, may help.
+- **`brunton2016dmd`** ★★ · support: **yes**
+  - Brunton et al. (2016). Extracting spatial-temporal coherent patterns in large-scale neural recordings using dynamic mode decomposition. *Journal of Neuroscience Methods* 258:1--15. doi:10.1016/j.jneumeth.2015.10.010
+  - Finding: Adapts dynamic mode decomposition (coupled spatial-temporal modes from a best-fit linear operator) to human ECoG. It is used to identify motor-task patterns and to separate distinct sleep-spindle networks.
+  - Use: Representative of the interpretable linear-operator family (DMD, Koopman approximations) in the sentence listing model families.
+- **`linderman2017rslds`** ★★ · support: **yes**
+  - Linderman et al. (2017). Bayesian Learning and Inference in Recurrent Switching Linear Dynamical Systems. *Proceedings of the 20th International Conference on Artificial Intelligence and Statistics (AISTATS), PMLR 54*:914--922
+  - Finding: Recurrent switching linear dynamical systems split nonlinear time series into discrete states, each with its own linear dynamics. Switching depends on the continuous latent state or the observations, and Pólya-gamma augmentation makes Bayesian inference tractable.
+  - Use: Natural future model class: locally linear input-output maps whose parameters switch with brain state, which keeps per-state analysability. Our state-resolved stimulus responses are the data needed to fit such models.
+- **`perich2026curbd`** ★★ · support: **yes** · metadata corrected
+  - Perich et al. (2026). Inferring brain-wide interactions using data-constrained recurrent neural network models. *Neuron*. doi:10.1016/j.neuron.2026.07.016
+  - Finding: CURBD fits data-constrained RNNs to multi-region recordings and decomposes each region's activity into directional currents from other regions. It is validated on simulated ground-truth networks and applied to larval zebrafish, mouse, macaque and human data.
+  - Use: Inter-area drive is a dominant, modellable component of regional activity, which supports treating the readout site as driven by unknown inputs. Our contra-predicted Global term is a linear, causal analogue. CURBD is post hoc, requires the source regions to be recorded, and is not a forecaster.
+- **`macdowell2020motifs`** ★★ · support: **yes**
+  - MacDowell & Buschman (2020). Low-Dimensional Spatiotemporal Dynamics Underlie Cortex-wide Neural Activity. *Current Biology* 30:2665--2680.e8. doi:10.1016/j.cub.2020.04.090
+  - Finding: In mesoscale calcium imaging of awake mouse dorsal cortex, about 14 spatiotemporal motifs explain about 75% of variance. The motifs generalize across animals and environments, and their expression differs across behavioral states.
+  - Use: Mesoscale support that dorsal-cortex dynamics are low-dimensional and that which dynamics are expressed depends on behavioral state. Cite it where state dependence is described as a property of the natural system.
+- **`breakspear2017dynamic`** ★★ · support: **partly**
+  - Breakspear (2017). Dynamic models of large-scale brain activity. *Nature Neuroscience* 20:340--352. doi:10.1038/nn.4497
+  - Finding: Reviews nonlinear dynamical (neural-mass and field, whole-brain network) models of large-scale brain activity, their assumptions and the supporting evidence. It argues that collective nonlinear dynamics, including multistability and metastability, are central to cortical function and to disorders.
+  - Use: Single citation for the biophysical and neural-mass family. These models target collective statistics, use noise to stand in for unmodelled drive, and are not built around an actuator-to-readout map for control design.
+  - Checker's caveat: The abstract supports a review of nonlinear dynamical models of large-scale activity and the view that collective nonlinear dynamics are central. It does NOT say these models are unsuitable for prediction. It says the framework 'facilitates prediction, testing and possible refutation'. Reword: 'neural-mass and whole-brain models aim to reproduce collective, statistical features of large-scale activity through nonlinear dynamics driven by noise, rather than to forecast single trials from a measured actuator input'. Do not call them 'non-predictive' or 'grossly over-approximating'.
+- **`tang2018colloquium`** ★★ · support: **partly**
+  - Tang & Bassett (2018). Colloquium: Control of dynamics in brain networks. *Reviews of Modern Physics* 90:031003. doi:10.1103/RevModPhys.90.031003
+  - Finding: Reviews control- and dynamical-systems tools for brain networks (controllability, control strategies) and their uses in development, cognition, anesthesia, seizure suppression and DBS. It ends with a forward look at nonlinear approaches.
+  - Use: System-theoretic quantities such as controllability, reachability and control energy are most tractable under linear(ized) dynamics. Cite here and again in the reachability / Fig 4 theme. Caveat: most of that work is in silico on structural connectomes.
+  - Checker's caveat: The abstract describes control tools drawn from 'a wide array of mathematical approaches', applications (anesthesia, seizure suppression, DBS) and a forward look at nonlinear approaches. It does not state that the framework rests largely on linear dynamics on structural connectomes. That is true of the network-controllability work the review covers, but it is not the review's headline. Reword: 'network control theory, much of it built on linear(ized) models, makes notions such as controllability and control energy computable [tang2018colloquium]'.
+- **`schiff2011neural`** ★★ · support: **partly**
+  - Schiff (2011). Neural Control Engineering: The Emerging Intersection between Control Theory and Neuroscience. *MIT Press*. doi:10.7551/mitpress/8436.001.0001
+  - Finding: Monograph on applying model-based control and estimation (Kalman filtering, data assimilation with reduced neural models) to neural systems.
+  - Use: Classic engineering citation for using tractable reduced models with online estimation for neural control. Pair it with Acharya 2022.
+  - Checker's caveat: No abstract was available. The book is known for model-based estimation and control of neural systems (Kalman filtering, data assimilation with reduced models). The specific stance that 'a control model need not be faithful, only adequate' is an interpretation, not a quotable finding. Reword: 'model-based neural control has used reduced models fit online together with state estimation [schiff2011neural]'.
+- **`Yang2021`** ★★ · support: **partly** · in refs.bib
+  - Yang et al. (2021). Modelling and prediction of the dynamic responses of large-scale brain networks during direct electrical stimulation. *Nature Biomedical Engineering* 5:324--345. doi:10.1038/s41551-020-00666-w
+  - Finding: Dynamic input-output models predict the multiregional network responses of macaque brain networks to time-varying patterns of direct electrical microstimulation. Prediction accuracy across regions is explained by at-rest functional connectivity.
+  - Use: Precedent that interpretable input-output models of stimulation responses predict network-scale responses, which is the same modelling choice we make for optogenetic inhibition at mesoscale.
+  - Checker's caveat: The abstract supports 'dynamic input-output models that predict multiregional dynamics of brain networks in response to temporally varying patterns of ongoing microstimulation' in two macaques, with damping and oscillatory responses. The abstract does not say 'linear state-space' or 'held-out', nor name the output feature (the paper models multiregional LFP-derived activity). Check Methods before writing 'linear state-space' and 'held-out'. Safe wording: 'input-output dynamical models identified with designed stimulation patterns predicted multiregional network responses to ongoing stimulation [Yang2021]'.
+- **`duan2025poco`** ★ · support: **yes**
+  - Duan et al. (2025). POCO: Scalable Neural Forecasting through Population Conditioning. *Advances in Neural Information Processing Systems 38 (NeurIPS 2025)*:26815--26853. doi:10.52202/085713-0798
+  - Finding: A multi-session forecaster that pairs a univariate forecaster with a population encoder. It reaches state-of-the-art cellular-resolution forecasts of spontaneous activity across five calcium-imaging datasets (zebrafish, mice, C. elegans) and adapts to new recordings with minimal fine-tuning.
+  - Use: The expressive end of the forecasting spectrum, cited with ZAPBench and Lu 2025. These models are trained on unperturbed activity to optimise forecast accuracy, not to describe an actuator-to-readout map with analysable stability, so they address a different question from closed-loop design.
+- **`marrouch2020koopman`** ★ · support: **yes**
+  - Marrouch et al. (2020). Data-driven Koopman operator approach for computational neuroscience. *Annals of Mathematics and Artificial Intelligence* 88:1155--1173. doi:10.1007/s10472-019-09666-2
+  - Finding: Kernel-based, data-driven Koopman operator approximations decompose ECoG into coherent spatiotemporal components (for example beta at about 13 Hz and high gamma at about 50 Hz) without band-pass filtering.
+  - Use: Optional Koopman example: even nonlinear approaches seek a linear operator, in a lifted space, for interpretability.
+- **`deco2008dynamic`** ★ · support: **yes**
+  - Deco et al. (2008). The Dynamic Brain: From Spiking Neurons to Neural Masses and Cortical Fields. *PLoS Computational Biology* 4:e1000092. doi:10.1371/journal.pcbi.1000092
+  - Finding: A review that unifies modelling of cortical dynamics from single neurons to neural masses and cortical fields. It covers mean-field formulations as forward models that can be inverted from data (EEG, MEG, fMRI).
+  - Use: Optional companion to Breakspear 2017 for whole-cortex mean-field modelling. Use one or the other.
+- **`wilson1972excitatory`** ★ · support: **yes**
+  - Wilson & Cowan (1972). Excitatory and Inhibitory Interactions in Localized Populations of Model Neurons. *Biophysical Journal* 12:1--24. doi:10.1016/S0006-3495(72)86068-5
+  - Finding: Derives coupled nonlinear mean-field equations for excitatory and inhibitory populations. These show hysteresis, multiple stable states and limit cycles whose frequency depends monotonically on stimulus intensity.
+  - Use: Seminal neural-mass citation, used once in the list of model families.
+- **`sani2021psid`** ★ · support: **yes**
+  - Sani et al. (2021). Modeling behaviorally relevant neural dynamics enabled by preferential subspace identification. *Nature Neuroscience* 24:140--149. doi:10.1038/s41593-020-00733-0
+  - Finding: PSID is a linear state-space identification method that prioritizes behavior-relevant dynamics. These dynamics are lower-dimensional than total dynamics suggest and can be missed by standard methods.
+  - Use: Optional: one need model only the dynamics relevant to the objective, which for a controller is the input-to-readout map.
+- **`bolus2021state`** ★ · support: **partly** · in refs.bib
+  - Bolus et al. (2021). State-space optimal feedback control of optogenetically driven neural activity. *Journal of Neural Engineering* 18:036006. doi:10.1088/1741-2552/abb89c
+  - Finding: LQ state-space feedback control of single-neuron firing rates driven by ChR2 in thalamus of awake mice, using identified linear dynamical models and a parameter-adaptive Kalman filter for robustness to model mismatch. Multi-output control was simulated.
+  - Use: Contrast: they identify an explicit state-space model and adapt the estimator online to handle mismatch. We design on the trial-averaged LTI model and let feedback absorb unmodelled drive.
+  - Checker's caveat: The abstract supports ChR2 stimulation in somatosensory thalamus of awake mice, linear state-space models of the light-to-spiking relationship, LQ optimal state-feedback gains, and a parameter-adaptive Kalman filter that 'provided robustness to model-mismatch'. It does not say 'disturbance estimation'. Reword to 'an adaptive Kalman filter to absorb model mismatch'. The contrast should be that they estimate mismatch online in an explicit state-space framework, while we design on a trial-averaged LTI model and rely on feedback alone. It is also excitatory (ChR2) control of single-neuron firing rates, not inhibitory mesoscale control.
+
+_Rejected in this theme:_ No reference was rejected; all 23 exist and their metadata was confirmed through Crossref, PubMed, arXiv, PMLR or OpenReview/ICLR listings.
+
+Corrections:
+- ZAPBench: venue confirmed as ICLR 2025 Spotlight, with an OpenReview URL and no DOI.
+- iLQR-VAE: the venue is ICLR 2022 (oral, OpenReview wRODLDHaAiW). The bioRxiv DOI is now in a note.
+- CURBD (Perich 2026): the paper is online ahead of print (Aug 2026) with no volume or pages yet. Zebrafish data was added to the description.
+
+Claims to reword (marked 'partly'):
+- Breakspear 2017: it does not say these models are non-predictive. Avoid 'grossly over-approximating'.
+- ZAPBench: the error floor comes from intrinsic noise as well as unobserved inputs.
+- Acharya 2022: 'most models have no input channel' is our claim, not theirs.
+- Tang & Bassett 2018: the 'largely linear / structural connectome' framing is not in the abstract.
+- Schiff 2011: 'a control model need not be faithful' is an interpretation.
+- Yang 2021: check Methods before saying 'linear state-space' and 'held-out'.
+- Bolus 2021: they use an adaptive Kalman filter for model mismatch. The paper does not say 'disturbance estimation'.
+- LFADS: the 'whole trial' acausality comes from the architecture, not the abstract.
+
+**Risks a referee would raise (researcher):**
+- Nozari et al. 2024 directly contradicts a blanket claim that published models 'grossly over-approximate': at macroscale, linear AR models were BEST. Aim the pointed critique at nonlinear single-trial models (LFADS, RNN/CURBD, neural mass) and at stimulus-blind forecasters, and cite Nozari as support for the LTI choice.
+- 'Will fail in forecasting' is untested for most of the targets. LFADS, CURBD, rSLDS and neural-mass models are not forecasting models. The forecasting benchmarks (Lu 2025, ZAPBench, POCO) show deep models BEATING baselines. Defensible version: forecasts are informative only over short horizons (~1.5 s widefield), they need inputs that are unobserved at control time, and they lack an actuator channel.
+- Our own Fig 4 Global/Local result shows a large share of the 'unknown input' IS predictable from contralateral cortex (R2 0.76). A referee will point out that the inputs are partly observable. Phrase it as 'largely unobserved by a single-site controller' and present the contra predictor as evidence that the inputs are other brain regions, not as evidence that they are unknowable.
+- Fig 6H shows that adding 100 cortical sites raises 200 ms prediction only from 0.37 to 0.41, and the naive baseline is 0.10. A referee could read the low ceiling as a weakness of our VARX rather than of predictability in general. Say that it bounds what a linear model of the observed cortex achieves, not what is achievable.
+- Galgali et al. 2023 show that single-trial (residual) dynamics CAN be identified from enough data with time-varying linear models. Do not claim that single-trial dynamics are unidentifiable, only that the trial mean does not determine them.
+- The uncorrected (no hemodynamic correction) blue channel was fed back. Model-family critiques of calcium/widefield data may be met with 'your LTI fit partly captures hemodynamics'. Keep that in the limitations paragraph.
+- The Perich (CURBD) Neuron 2026 record has no volume or pages in Crossref yet, so verify before final submission. The Schiff book is 2011 per Crossref but often cited as 2012. ZAPBench's ICLR 2025 venue comes from the Semantic Scholar venue field. The arXiv record does not state it, so confirm before final submission.
+- Lu et al. 2025 shares authors with this paper (Deole, Shea-Brown, Steinmetz, Li). Using it as the main evidence that forecasting is horizon-limited is fine, but pair it with an independent source (ZAPBench) so the argument does not rest on self-citation.
+
+## 2b. State dependence of the natural system and of stimulus responses
+
+- **`Arieli1996`** ★★★ · support: **yes** · in refs.bib
+  - Arieli et al. (1996). Dynamics of ongoing activity: explanation of the large variability in evoked cortical responses. *Science* 273:1868--1871. doi:10.1126/science.273.5283.1868
+  - Finding: Optical imaging plus LFP and single-unit recording in cat visual cortex: a single-trial evoked response is predicted by linear summation of the deterministic (averaged) response and the ongoing activity just before it.
+  - Use: Anchor for the additive picture in Fig 2G (response variability matched to ongoing variability in a stimulus-free window, ratio 0.92-1.06). Cite first in the paragraph that frames state dependence as a property of the unstimulated system.
+- **`Mateo2011`** ★★★ · support: **partly** · in refs.bib
+  - Mateo et al. (2011). In vivo optogenetic stimulation of neocortical excitatory neurons drives brain-state-dependent inhibition. *Current Biology* 21:1593--1602. doi:10.1016/j.cub.2011.08.028
+  - Finding: ChR2 stimulation of L2/3 barrel-cortex excitatory neurons evoked reliable spiking in the targeted cells, but postsynaptic responses depended near-linearly on spontaneous pre-stimulus Vm, and inhibitory (especially non-fast-spiking) neurons were recruited preferentially from depolarized network states.
+  - Use: Honest counterpoint: the network response to a fixed optogenetic input is itself state dependent, so we report co-variation and do not claim a state-invariant stimulus effect.
+  - Checker's caveat: The abstract does NOT say 'awake' or 'quiet vs active'. Its state variable is the spontaneous pre-stimulus membrane potential / network state. ChR2 drove L2/3 excitatory neurons, not interneurons, and the spike count in the ChR2-expressing neurons varied little from trial to trial. Postsynaptic responses varied 'strongly with near-linear dependence upon' pre-stimulus Vm, and inhibitory neurons fired preferentially from depolarized network states. The preparation (awake vs anaesthetized) could not be confirmed from the abstract, so do not state it. Suggested wording: 'even when an optogenetic stimulus drives its directly targeted neurons reliably, the downstream network response varies with the pre-stimulus network state, largely through state-dependent recruitment of inhibitory neurons (Mateo2011)'. Note that the near-linear dependence on pre-stimulus Vm partly supports an additive/affine picture as well as being a counterpoint.
+- **`Shimaoka2019`** ★★★ · support: **yes** · in refs.bib
+  - Shimaoka et al. (2019). The impact of bilateral ongoing activity on evoked responses in mouse cortex. *eLife* 8:e43533. doi:10.7554/eLife.43533
+  - Finding: Widefield voltage and calcium imaging in mice: largely bilateral ongoing fluctuations add to unilateral visual responses and explain much of their trial-to-trial variance, without affecting detection behavior.
+  - Use: Closest precedent in species and scale. Cite in Theme 2b (ongoing activity rides on responses) and at the Fig 4 contra-predicted disturbance G.
+- **`McCormick2020`** ★★★ · support: **yes**
+  - McCormick et al. (2020). Neuromodulation of brain state and behavior. *Annual Review of Neuroscience* 43:391--415. doi:10.1146/annurev-neuro-100219-105424
+  - Finding: Review: rapid waking-state variations, generated by ascending neuromodulatory plus corticocortical and subcortical-cortical pathways, account for much of the variability in neural and behavioral responses.
+  - Use: State is set by inputs we do not observe, which makes the local input-output system non-stationary. Cite with Harris2011.
+- **`Poulet2019`** ★★★ · support: **yes**
+  - Poulet & Crochet (2019). The cortical states of wakefulness. *Frontiers in Systems Neuroscience* 12:64. doi:10.3389/fnsys.2018.00064
+  - Finding: Review of awake rodent cortical states: large, low-frequency fluctuations in quiet wakefulness give way to small, fast activity during movement, under thalamic and cholinergic control, reshaping sensory processing.
+  - Use: Backs reading motion (desynchronized, lower variability) and absolute low-frequency power (quiet-wake synchronization, higher variability) as the same physiology.
+- **`Valley2020`** ★★★ · support: **partly**
+  - Valley et al. (2020). Separation of hemodynamic signals from GCaMP fluorescence measured with wide-field imaging. *Journal of Neurophysiology* 123:356--366. doi:10.1152/jn.00304.2019
+  - Finding: Hemodynamics strongly contaminate wide-field GCaMP fluorescence. A pixel-wise regression model built on backscatter measurements separates them better than Beer-Lambert correction, especially near blood vessels.
+  - Use: Strongest support for the hemodynamic caveat on the uncorrected-channel state measure. Pair it with what the offline violet-corrected check (paper/_hemo_compare) shows.
+  - Checker's caveat: Abstract: hemoglobin absorption can substantially affect wide-field fluorescence. The authors build a pixel-wise regression 'Spatial Model' from multiwavelength backscatter, which beats Beer-Lambert correction, especially near vessels and the midline, in three mouse lines. Two parts of the stated finding could not be confirmed: (a) that they used GFP (calcium-insensitive) mice, since the abstract only says 'three transgenic lines', and (b) that 'standard isosbestic correction' only partly removes artifacts, since the comparison in the abstract is with backscatter/Beer-Lambert methods. Suggested wording: 'hemodynamic absorption is a strong and spatially heterogeneous source of contamination in wide-field GCaMP imaging, and the correction method matters (Valley2020)'.
+- **`Galgali2023`** ★★★ · support: **partly**
+  - Galgali et al. (2023). Residual dynamics resolves recurrent contributions to neural computation. *Nature Neuroscience* 26:326--338. doi:10.1038/s41593-022-01230-2
+  - Finding: Modelling the dynamics of single-trial residuals around the condition mean in macaque PFC revealed time-dependent but stable recurrent dynamics and attributed rotational structure to upstream inputs.
+  - Use: Supports the nominal trial-averaged map plus single-trial residual split. State-conditioned residual dynamics is a model class our data could feed, which also tempers the 'models fail' critique.
+  - Checker's caveat: Abstract: inferring recurrent dynamics from partial recordings is hard. Analysing the dynamics of residuals (trial-by-trial variability around the condition-mean trajectory) separates recurrent from input-driven contributions. In PFC the residual dynamics were time dependent but stable, and rotations during saccades were attributed to upstream inputs. The abstract does not literally say that trial averages 'cannot' separate recurrent from input-driven dynamics. Suggested wording: 'condition-averaged trajectories mix recurrent and input-driven contributions; the dynamics of single-trial residuals can separate them (Galgali2023)'.
+- **`Vahidi2024`** ★★★ · support: **partly**
+  - Vahidi et al. (2024). Modeling and dissociation of intrinsic and input-driven neural population dynamics underlying behavior. *Proceedings of the National Academy of Sciences* 121:e2212887121. doi:10.1073/pnas.2212887121
+  - Finding: Neural dynamical models that ignore measured inputs can mistake input dynamics for intrinsic dynamics. A linear state-space method that accounts for inputs recovers intrinsic dynamics that are invariant across tasks.
+  - Use: Support for the 'unknown inputs' argument. The contralateral G is one measured proxy for such inputs.
+  - Checker's caveat: Abstract: models that ignore measured inputs can misinterpret temporally structured inputs (sensory or from other regions) as intrinsic dynamics. The authors develop a linear dynamical modelling method that dissociates intrinsic from input-driven dynamics. It does not explicitly show that such models 'forecast poorly when inputs change'. That is our inference. Suggested wording: 'a model of a local circuit fit without its inputs can attribute input-driven structure to intrinsic dynamics (Vahidi2024), so it will mispredict when those unobserved inputs change'.
+- **`Azouz1999`** ★★ · support: **partly**
+  - Azouz & Gray (1999). Cellular mechanisms contributing to response variability of cortical neurons in vivo. *The Journal of Neuroscience* 19:2209--2223. doi:10.1523/JNEUROSCI.19-06-02209.1999
+  - Finding: Intracellular recordings in cat striate cortex: the evoked Vm response scaled linearly with the preceding spontaneous Vm, so most variability came from coherent pre-stimulus network fluctuations, with smaller contributions from variable spike threshold.
+  - Use: Cellular-level complement to Arieli1996 and Shimaoka2019. Use one clause.
+  - Checker's caveat: Abstract: evoked Vm response magnitude correlated linearly with the preceding spontaneous Vm, and variability is 'attributable largely to coherent fluctuations in cortical activity preceding the onset of a stimulus'. The abstract also names variation in spike threshold (about 10 mV) and in stimulus-evoked gamma fluctuations as contributors. So do not write 'rather than unreliable spike generation'. Suggested wording: 'response variability in single neurons arises largely from coherent network fluctuations present before stimulus onset (Azouz1999)'.
+- **`Haider2013`** ★★ · support: **partly**
+  - Haider et al. (2013). Inhibition dominates sensory responses in the awake cortex. *Nature* 493:97--100. doi:10.1038/nature11665
+  - Finding: Whole-cell recordings in mouse V1: under anaesthesia, inhibition tracked excitation. In wakefulness, visually evoked inhibition was much stronger than excitation and spatially broad, and responses were briefer and more spatially selective.
+  - Use: Mechanistic hypothesis for a state-dependent input-to-output gain. Keep the wording hedged.
+  - Checker's caveat: The finding is supported, but the 'state' here is anaesthesia vs wakefulness, not fluctuations within wakefulness, and the stimulus was visual, not optogenetic. Using it as the mechanism by which actuator effectiveness varies across awake states is an extrapolation. Suggested wording: 'the excitation-inhibition balance of evoked responses depends strongly on global state, with inhibition dominating in wakefulness (Haider2013); an actuator that acts through inhibitory circuitry may therefore have state-dependent gain'. Present this as a hypothesis, not as an established mechanism.
+- **`Churchland2010`** ★★ · support: **yes**
+  - Churchland et al. (2010). Stimulus onset quenches neural variability: a widespread cortical phenomenon. *Nature Neuroscience* 13:369--378. doi:10.1038/nn.2501
+  - Finding: Across 14 datasets from 7 cortical areas in monkeys and cats, stimulus onset reduced trial-to-trial variability (spiking, Vm, correlated variability), even without a change in mean rate, in awake and anaesthetized animals.
+  - Use: Contrast: in Fig 2, optogenetic inhibition left variability close to its ongoing level (ratio about 1). A weak, local, one-sided perturbation does not quench ongoing dynamics, which is why feedback is needed.
+- **`Lin2015`** ★★ · support: **yes**
+  - Lin et al. (2015). The nature of shared cortical variability. *Neuron* 87:644--656. doi:10.1016/j.neuron.2015.06.035
+  - Finding: Shared variability in visual cortex populations is captured by two population factors: a multiplicative gain that uniformly scales sensory drive and an additive offset that affects neurons to different degrees. Their relative weight varies over time.
+  - Use: Vocabulary for how state enters a response: additive (a disturbance the loop can subtract) vs multiplicative (plant-gain uncertainty the loop must tolerate).
+- **`Pachitariu2015`** ★★ · support: **partly**
+  - Pachitariu et al. (2015). State-dependent population coding in primary auditory cortex. *The Journal of Neuroscience* 35:2058--2073. doi:10.1523/JNEUROSCI.3318-14.2015
+  - Finding: In anaesthetized gerbil A1, synchronized states gave weak, unreliable, stereotyped responses to tones and speech, while desynchronized states gave precise, reliable, highly decodable responses.
+  - Use: Analogue for higher variability in the synchronized (slow-wave-rich) state and support for treating state as an explicit variable. Drop the claim that state-conditioned models predict single trials better.
+  - Checker's caveat: Supported: in synchronized A1, responses were weakly modulated, unreliable and less decodable, while desynchronized A1 gave precise, reliable, decodable responses. The authors conclude that cortical state should be an explicit variable in sensory studies. NOT supported: 'models that included the pre-stimulus state predicted single-trial responses better'. Neither the abstract nor the full text makes that claim; the analyses are reliability, pattern-similarity and SVM decoding. Suggested wording: 'in auditory cortex, responses in synchronized states were less reliable and less informative than in desynchronized states, leading the authors to argue that cortical state should be treated as an explicit variable (Pachitariu2015)'. Mention anaesthesia if drawing the analogy to our awake absolute-delta result.
+- **`Harris2011`** ★★ · support: **yes** · in refs.bib
+  - Harris & Thiele (2011). Cortical state and attention. *Nature Reviews Neuroscience* 12:509--523. doi:10.1038/nrn3084
+  - Finding: Review: cortical state modulates low-frequency fluctuations and spiking correlations, controlling how cortical circuits process information. The authors argue that attention acts like a local state change.
+  - Use: Standard framing citation for the synchronized/desynchronized axis.
+- **`Ma2016PTB`** ★★ · support: **partly**
+  - Ma et al. (2016). Wide-field optical mapping of neural activity and brain haemodynamics: considerations and novel approaches. *Philosophical Transactions of the Royal Society B: Biological Sciences* 371:20150360. doi:10.1098/rstb.2015.0360
+  - Finding: Methods overview of wide-field optical mapping of neural activity and haemodynamics, including hemodynamic contamination of fluorescence and spectroscopic correction.
+  - Use: Limitations sentence: the absolute low-frequency power state measure comes from an uncorrected channel that may carry hemodynamic contamination.
+  - Checker's caveat: The abstract is a general overview of WFOM principles, implementation, spectroscopy and interpretation. It does not state that contamination is 'concentrated in slow hemodynamic time scales'. The paper does cover hemoglobin cross-talk in GCaMP fluorescence and correction using reflectance channels. Suggested wording: 'hemoglobin absorption contaminates wide-field GCaMP fluorescence and can be corrected with simultaneous reflectance measurements (Ma2016PTB)'. Do not attribute a frequency-band statement to it unless you check the figure.
+- **`Zrenner2018`** ★★ · support: **yes**
+  - Zrenner et al. (2018). Real-time EEG-defined excitability states determine efficacy of TMS-induced plasticity in human motor cortex. *Brain Stimulation* 11:374--389. doi:10.1016/j.brs.2017.11.016
+  - Finding: EEG-triggered TMS showed that the mu-rhythm negative peak is a high-excitability state (larger MEPs). Identical rTMS at that phase induced LTP-like plasticity, while stimulation at the positive peak did not.
+  - Use: Cross-modality evidence that the effect of a fixed stimulus depends on state. Strategic contrast: trigger on a favorable state vs reject state as a disturbance, with state-scheduled gains as a middle path.
+- **`Siegle2014`** ★★ · support: **partly**
+  - Siegle & Wilson (2014). Enhancement of encoding and retrieval functions through theta phase-specific manipulation of hippocampus. *eLife* 3:e03061. doi:10.7554/eLife.03061
+  - Finding: Closed-loop optogenetic inhibition of dorsal CA1 at specific theta phases enhanced spatial-task performance. Peak-triggered inhibition helped during encoding and trough-triggered inhibition helped during retrieval.
+  - Use: Rodent optogenetic precedent for state- or phase-dependent closed-loop stimulation. Cite with Zrenner2018 and avoid the 'silencing interneurons' wording.
+  - Checker's caveat: The abstract says closed-loop 'inhibition of dorsal CA1' triggered at specific theta phases, not 'silencing of hippocampal interneurons'. As far as I recall, the method was optogenetic activation of PV interneurons to inhibit CA1, but the full-text methods could not be retrieved, so check before claiming 'same actuator type as ours'. The abstract also shows that the behavioral effect depended on both theta phase and task segment (encoding vs retrieval). Suggested wording: 'closed-loop optogenetic inhibition of CA1 locked to theta phase improved behavior in a phase- and task-epoch-specific way (Siegle2014)'.
+- **`Yang2021`** ★★ · support: **yes**
+  - Yang et al. (2021). Modelling and prediction of the dynamic responses of large-scale brain networks during direct electrical stimulation. *Nature Biomedical Engineering* 5:324--345. doi:10.1038/s41551-020-00666-w
+  - Finding: Input-output dynamic models predicted multiregional macaque brain-network responses to time-varying electrical microstimulation, with damped and oscillatory dynamics. Accuracy across regions tracked resting functional connectivity.
+  - Use: Precedent for low-order input-output models as the useful object for control. It sharpens the critique to unknown inputs, not 'all models fail'.
+- **`Linderman2017`** ★★ · support: **yes**
+  - Linderman et al. (2017). Bayesian learning and inference in recurrent switching linear dynamical systems. *Proceedings of the 20th International Conference on Artificial Intelligence and Statistics (AISTATS), PMLR 54* 54:914--922
+  - Finding: Recurrent switching linear dynamical systems: discrete regimes, each with linear dynamics, with switching that depends on the continuous state. Approximate Bayesian inference is made tractable with Polya-gamma augmentation.
+  - Use: A named future model class that keeps per-regime LTI interpretability (so stability and margins can be checked regime by regime) while capturing state dependence. Use it in the closing sentence of Theme 2b.
+- **`ArandiaRomero2016`** ★ · support: **yes**
+  - Arandia-Romero et al. (2016). Multiplicative and additive modulation of neuronal tuning with population activity affects encoded information. *Neuron* 89:1305--1316. doi:10.1016/j.neuron.2016.01.044
+  - Finding: In primate visual cortex, fluctuations in population activity modulate tuning multiplicatively and additively along a continuum across neurons, with opposite effects on the information each neuron encodes.
+  - Use: With Lin2015: state reshapes responses by both offset and gain, which is why state-conditioned characterization (Fig 2G, Fig 4) is the data future models need.
+- **`Fontanini2008`** ★ · support: **yes**
+  - Fontanini & Katz (2008). Behavioral states, network states, and sensory response variability. *Journal of Neurophysiology* 100:1160--1168. doi:10.1152/jn.90592.2008
+  - Finding: Review: single-neuron sensory responses change with network state (anaesthesia, sleep, attention, experience), and trial-to-trial variability is a non-random function of network fluctuations.
+  - Use: Optional conceptual cite: variability is structured by state, not noise.
+- **`Little2013`** ★ · support: **yes**
+  - Little et al. (2013). Adaptive deep brain stimulation in advanced Parkinson disease. *Annals of Neurology* 74:449--457. doi:10.1002/ana.23951
+  - Finding: Subthalamic DBS gated by a beta-power threshold improved motor scores more than continuous DBS while delivering less stimulation.
+  - Use: Optional contrast: state-gated on-off closed loop vs our continuous-valued regulation.
+
+_Rejected in this theme:_ No reference was rejected. All 22 exist, confirmed by Crossref DOI lookup, or on the PMLR proceedings page for Linderman2017. Claim corrections:
+- Pachitariu2015: the recordings were in anaesthetized gerbils. The 'state-conditioned models predict single trials better' claim is absent from the paper; drop it.
+- Mateo2011: the abstract does not support 'awake, quiet vs active'. The state variable is pre-stimulus Vm/network state, and ChR2 drove excitatory cells.
+- Siegle2014: the abstract describes inhibition of CA1, not 'silencing interneurons'.
+- Valley2020: the abstract supports neither the 'GFP mice' detail nor the 'isosbestic only partly removes' claim; its comparison is with Beer-Lambert backscatter correction.
+- Ma2016PTB: the abstract does not support 'contamination concentrated in slow time scales'.
+- Haider2013: the state contrast is anaesthesia vs wake, so its use for awake actuator gain is a hypothesis.
+- Galgali2023 and Vahidi2024: the 'cannot' and 'forecasts poorly' wording overstates the abstracts.
+Minor wording fixes for Azouz1999 (spike threshold also contributes) and Lin2015 (the gain is uniform; only the offset varies across neurons). Poulet2019: year 2019, volume 12, article 64.
+
+**Risks a referee would raise (researcher):**
+- The author's statement that state dependence is 'not dependent on stim' is contradicted in principle by Mateo2011, where optogenetic responses in barrel cortex were themselves brain-state dependent, and by Haider2013 (state-dependent inhibition). Our own Results explicitly refuse to separate the two. The Discussion must say that our data are consistent with state acting mainly through ongoing activity and cannot exclude a state-dependent stimulus effect.
+- 'Highly nonlinear' is not shown by our data. Fig 2 shows near-linear trial averages (R2 0.73-0.97). The nonlinearity is either in the actuator (one-sided and saturating) or inferred from the literature. Attribute it carefully, e.g. 'the underlying circuit is nonlinear and state dependent (refs); the trial-averaged map is approximately linear'.
+- Possible tension between figures: Fig 2G finds lower single-trial variability at high motion, while Fig 4 finds that open-loop error rises with motion. The windows ([-1,0) vs [-2,+3) s) and metrics (deviation from trial average over 0-0.5 s vs RMSE to reference over 0-3 s) differ, and Fig 4 open-loop error includes the standing offset and the movement-related drive during stimulation. A referee will ask about this. Address it in one sentence (e.g. movement lowers pre-stimulus variability but adds movement-locked drive during the trial, which the loop rejects), or check the data before asserting it.
+- A pointed claim that existing mesoscale models 'grossly over-approximate' and 'will fail' invites attack. Galgali2023, Vahidi2024 and Yang2021 explicitly handle residuals and inputs and report good prediction when inputs are measured. Our own VARX reaches R2 0.41 at 200 ms. Narrow the claim to forecasting single trials of a region whose inputs are unobserved, and cite our Fig 6 ceiling as evidence.
+- Hemodynamic contamination of the uncorrected blue channel could inflate absolute 1-4 Hz power (Valley2020, Ma2016PTB). Because absolute power is the main 1-3 s error contributor in Fig 4, a referee may ask whether the effect partly reflects blood dynamics. Report the violet-corrected check if one exists (paper/_hemo_compare/).
+- Churchland2010 (stimulus onset quenches variability) may be raised against our finding that the response is about as variable as ongoing activity. Frame this as an expected difference for a weak local optogenetic perturbation measured at mesoscale, not as a contradiction.
+- Statistical power: the Fig 2 state analysis rests on 4 sessions from 3 mice (per-session slopes with 3 df). Do not let the Discussion state the state-dependence claims more strongly than the Results do.
+
+## 3. Closed-loop control as cancellation of intra-brain interactions; downstream effects
+
+- **`li2016robust`** ★★★ · support: **partly**
+  - Li et al. (2016). Robust neuronal dynamics in premotor cortex during motor planning. *Nature* 532:459--464. doi:10.1038/nature17643
+  - Finding: After large unilateral optogenetic silencing of mouse ALM, preparatory activity was restored quickly and selectively. Selectivity did not recover after bilateral silencing, so perturbations to one hemisphere are corrected by information from the other. After callosal bisection, each hemisphere could maintain preparatory activity on its own. The authors describe redundancy across coupled modules as a hallmark of robust control systems.
+  - Use: Precedent for interhemispheric coupling acting as endogenous corrective feedback. Frame our loop as an external feedback that holds the readout at the target against contralaterally predicted drive. Specify premotor cortex and post-perturbation recovery.
+  - Checker's caveat: The abstract says preparatory activity in ALM was restored quickly and selectively after large unilateral silencing, that this failed after bilateral silencing, and that perturbations to one hemisphere are corrected by information from the other. What was measured is recovery after the light went off, during motor planning in premotor cortex. It does not show bilateral coupling opposing a perturbation while the perturbation is on. Reword along the lines of: 'In premotor cortex, activity disrupted by unilateral silencing is restored by input from the other hemisphere (Li et al., 2016), so interhemispheric coupling acts as an endogenous corrective feedback.' Do not imply the effect has been shown in somatosensory cortex or during ongoing stimulation.
+- **`otchy2015acute`** ★★★ · support: **partly**
+  - Otchy et al. (2015). Acute off-target effects of neural circuit manipulations. *Nature* 528:358--363. doi:10.1038/nature16442
+  - Finding: Transient inactivation of rat motor cortex or songbird NIf disrupted learned behaviors that recover after permanent lesions. NIf silencing acutely impaired downstream HVC, and these off-target effects resolved within days of a lesion, consistent with homeostatic compensation.
+  - Use: States the interpretive problem with open-loop perturbations: downstream and compensatory effects. Cite with Wolff and Olveczky 2018. Claim only that clamping specifies the node's own activity on each trial, not that it removes downstream effects.
+  - Checker's caveat: The problem statement is supported: transient inactivation of rat motor cortex or songbird NIf degraded learned behaviors that recover after permanent lesions, NIf silencing acutely disrupted downstream HVC, and the off-target effects resolved within days of lesioning, consistent with homeostatic regulation. The proposed remedy is not supported by this paper. Clamping specifies the activity of the manipulated node, but downstream off-target effects still occur, because the clamped node still drives its targets. Reword: 'clamping removes ambiguity about what the manipulated node did on each trial, but downstream effects must still be measured, not assumed away.'
+- **`li2019spatiotemporal`** ★★★ · support: **yes** · metadata corrected
+  - Li et al. (2019). Spatiotemporal constraints on optogenetic inactivation in cortical circuits. *eLife* 8:e48622. doi:10.7554/eLife.48622
+  - Finding: A benchmark of optogenetic silencing of small neocortical regions. Excitation of GABAergic neurons beat light-gated pumps, and GtACR1 was the most potent. Silencing spread substantially beyond the light. Within some intensity ranges the paradoxical ISN effect appeared. Rebound excitation followed light offset and grew with dose.
+  - Use: In Methods, the citation for spatial spread of silencing. In the Discussion, spread, paradoxical effects and rebound explain why an open-loop light dose does not map cleanly to a neural effect. Feedback fixes the outcome at the readout but not spread or rebound elsewhere.
+- **`Shimaoka2019`** ★★★ · support: **yes** · in refs.bib
+  - Shimaoka et al. (2019). The impact of bilateral ongoing activity on evoked responses in mouse cortex. *eLife* 8:e43533. doi:10.7554/eLife.43533
+  - Finding: Bilateral ongoing fluctuations across mouse cortex added to unilateral visual responses and explained much of the trial-to-trial variability. They were weaker in monocular V1 and in task-engaged MOs, and did not affect detection behavior.
+  - Use: Most direct precedent for the contralateral predictor. The additive bilateral fluctuations justify treating G as an output disturbance that the loop rejects.
+- **`chen2021modularity`** ★★ · support: **partly**
+  - Chen et al. (2021). Modularity and robustness of frontal cortical networks. *Cell* 184:3717--3730.e24. doi:10.1016/j.cell.2021.05.026
+  - Finding: Simultaneous recordings across both mouse frontal hemispheres showed coordinated persistent activity. A modular organization made activity robust: each hemisphere kept its persistent activity while the other was perturbed, and a dynamic gate shared coherent information while blocking corrupt information. The organization varied from mouse to mouse.
+  - Use: Pair with Li 2016. Interhemispheric coupling is strong but gated and varies between animals, which fits the between-session variation in our contralateral predictability. Do not cite it for state dependence.
+  - Checker's caveat: Supported: activity is coordinated across hemispheres, each hemisphere keeps persistent activity while the other is perturbed, a dynamic gating mechanism shares coherent information and gates out corrupt information, and network organization varies between individual mice. Not in the abstract: any statement that the gating depends on brain state. Write 'gated and variable across animals', not 'state-dependent'. The comparison with our between-session variation in contralateral R2 is an analogy, not a result of this paper.
+- **`palmer2012cellular`** ★★ · support: **partly** · metadata corrected
+  - Palmer et al. (2012). The cellular basis of GABA(B)-mediated interhemispheric inhibition. *Science* 335:989--993. doi:10.1126/science.1217276
+  - Finding: In rat somatosensory cortex, ipsilateral (callosally mediated) input inhibits contralateral-stimulus-evoked L5 pyramidal firing for hundreds of milliseconds. The route is layer 1 interneurons acting through GABA-B receptors on active apical dendrites.
+  - Use: A cellular route for inhibitory callosal influence on somatosensory output. Cite only as a plausible mechanism, not as evidence that G is callosal, and drop 'excitatory'.
+  - Checker's caveat: The paper is in rat somatosensory cortex. Firing of L5 pyramidal neurons driven by contralateral sensory stimulation was inhibited for hundreds of milliseconds when ipsilateral stimulation was paired with it. The inhibition acted on apical dendrites through layer 1 interneurons and GABA-B receptors, and only when the pyramidal cells were firing. The paper shows interhemispheric inhibition only, not 'both excitatory and inhibitory' callosal influence. Reword: 'callosal input can inhibit somatosensory L5 output through dendritic GABA-B inhibition (Palmer et al., 2012), one route by which contralateral activity could shape our readout.'
+- **`bauer2018effective`** ★★ · support: **partly**
+  - Bauer et al. (2018). Effective connectivity measured using optogenetically evoked hemodynamic signals exhibits topography distinct from resting state functional connectivity in the mouse. *Cerebral Cortex* 28:370--386. doi:10.1093/cercor/bhx298
+  - Finding: Optogenetic effective-connectivity mapping (Thy1-ChR2, awake mice, optical intrinsic signal imaging) was more spatially specific than resting-state FC, showed less interhemispheric connectivity where RS-FC is strong, was asymmetric, and matched axonal projections better than RS-FC did.
+  - Use: A caveat for calling G 'callosal'. Call it 'contralaterally predicted' or 'bilaterally shared' activity. Also a precedent for wide-field readout of where a focal optogenetic perturbation goes.
+  - Checker's caveat: Supported: optogenetic effective connectivity (Thy1-ChR2, awake mice, read out with optical intrinsic hemoglobin signals, not calcium) was more spatially specific than resting-state FC, showed weaker interhemispheric connectivity where RS-FC is strong, was asymmetric, and resembled axonal projection maps more than RS-FC did. The abstract does not say that bilateral resting correlation comes from common thalamic, neuromodulatory or movement drive. That is our inference. Reword: 'optogenetically measured effective connectivity is weaker interhemispherically than resting-state correlations suggest (Bauer et al., 2018), so bilateral co-fluctuation need not reflect direct callosal transmission.' Mention that the readout was hemodynamic.
+- **`jazayeri2017navigating`** ★★ · support: **partly**
+  - Jazayeri & Afraz (2017). Navigating the neural space in search of the neural code. *Neuron* 93:1003--1014. doi:10.1016/j.neuron.2017.02.019
+  - Finding: A perspective on when measurements and perturbations support causal inference. Perturbations work best at the scale where the system operates. A geometric framework covers perturbations that do or do not respect intrinsic activity patterns, and the paper discusses the difficulty of perturbing a dynamical system.
+  - Use: Supports two points: the loop acts at a mesoscale population level, and specifying a physiological target level is preferable to pushing the node to an arbitrary state. Present the closed-loop link as our argument.
+  - Checker's caveat: Supported: the perspective argues that causal dependencies may be best inferred with perturbations that interface with the system at the appropriate scale. It gives a geometric framework for perturbations that do or do not respect intrinsic activity patterns, and it discusses the challenges of perturbing in the presence of dynamics. It does not discuss closed-loop control or keeping the state at a reference. That framing is ours. Reword: 'perturbations are most interpretable when they keep activity within its natural range (Jazayeri and Afraz, 2017); a reference-tracking loop is one way to specify where in that range the node sits.'
+- **`guo2014flow`** ★★ · support: **partly**
+  - Guo et al. (2014). Flow of cortical activity underlying a tactile decision in mice. *Neuron* 81:179--194. doi:10.1016/j.neuron.2013.10.020
+  - Finding: A survey of cortex using optogenetic inhibition, combined with recordings, during a whisker-based decision task. Barrel cortex drove the sensation epoch and ALM drove the short-term-memory and planning epoch, consistent with serial flow from sensory to motor areas.
+  - Use: Context for future work. Somatosensory-to-frontal flow is a downstream pathway that a somatosensory clamp could probe as a function of a controlled upstream level.
+  - Checker's caveat: The finding is supported: an optogenetic inhibition survey of neocortex (2 mm spatial, 100 ms temporal resolution) found barrel cortex critical for sensation, and unilateral ALM inhibition during the delay biased choice to the ipsilateral side, suggesting serial flow from sensory to motor areas. The paper does not say that inactivation leaves each node at an unknown, variable level. That contrast is ours. Present it as our argument, not as something this paper showed.
+- **`sharp1993dynamic`** ★★ · support: **partly**
+  - Sharp et al. (1993). Dynamic clamp: computer-generated conductances in real neurons. *Journal of Neurophysiology* 69:992--995. doi:10.1152/jn.1993.69.3.992
+  - Finding: Introduced the dynamic clamp. Real-time computer feedback injects simulated voltage- and ligand-gated conductances into real neurons, including artificial reciprocal inhibitory synapses between uncoupled neurons.
+  - Use: One-sentence analogy: real-time feedback can impose specified interactions on a living system. Do not attribute cancellation of endogenous conductances to this paper.
+  - Checker's caveat: The 1993 paper introduces the dynamic clamp: a computer uses the measured membrane potential to inject simulated voltage- and ligand-dependent conductances into real neurons. It demonstrates an artificial GABA response, a voltage-dependent proctolin conductance, and artificial reciprocal inhibitory synapses between neurons that are not naturally coupled. It does not demonstrate cancelling or removing an endogenous conductance (later work did that). Reword: 'real-time feedback can add, and in later work subtract, specified interactions in living neurons (Sharp et al., 1993)'. Alternatively, say only 'introduce' and cite a later review for cancellation.
+- **`oconnor2013neural`** ★★ · support: **yes**
+  - O'Connor et al. (2013). Neural coding during active somatosensation revealed using illusory touch. *Nature Neuroscience* 16:958--965. doi:10.1038/nn.3419
+  - Finding: Photostimulating L4 of a single barrel in closed loop with whisking produced illusory touch, but only during directed whisking and only in the relevant barrel. Reducing activity biased behavior, consistent with a spike-count code for object detection.
+  - Use: A precedent in somatosensory cortex for closed-loop, behavior-contingent optogenetics as a causal test of perception. Use it in the future-directions sentence.
+- **`peixoto2021decoding`** ★★ · support: **partly**
+  - Peixoto et al. (2021). Decoding and perturbing decision states in real time. *Nature* 591:604--609. doi:10.1038/s41586-020-03181-9
+  - Finding: In macaques, a decision variable decoded in real time from motor cortex controlled stimulus duration. Its within-trial fluctuations predicted choice better than the condition average. Weak sensory pulses delivered on single trials supported time-varying absorbing decision bounds.
+  - Use: Precedent that trial-to-trial deviations from the trial average are meaningful and can be acted on in real time. That supports treating the deviations the controller cancels as signal worth studying.
+  - Checker's caveat: Supported: a decision variable decoded in real time from macaque motor/premotor cortex was used for neural feedback control of stimulus duration. Within-trial DV fluctuations predicted choices substantially better than the condition-averaged DV or the stimulus, and DV sign changes looked like changes of mind. The 'perturbations' were weak visual stimulus pulses, not neural stimulation. They gave evidence for time-varying absorbing bounds. Reword: 'single-trial deviations from the condition average carry behavioral meaning and can be targeted in real time (Peixoto et al., 2021).' Do not imply they cancelled fluctuations or stimulated the brain.
+- **`astrom2008feedback`** ★★ · support: **yes** · metadata corrected
+  - {\AA}str{\"o}m & Murray (2008). Feedback Systems: An Introduction for Scientists and Engineers. *Princeton University Press*. doi:10.1515/9781400828739
+  - Finding: Textbook treatment of feedback. An output disturbance is scaled by S = 1/(1+L) and attenuated only below the loop bandwidth. Bode's integral limits attenuation across frequency, and integral action rejects constant disturbances.
+  - Use: Formal basis for the claim that the PI loop removes the standing offset but only partly attenuates fast fluctuations.
+- **`Peters2021`** ★★ · support: **yes** · in refs.bib
+  - Peters et al. (2021). Striatal activity topographically reflects cortical activity. *Nature* 591:420--425. doi:10.1038/s41586-020-03166-8
+  - Finding: Each dorsal striatal region mirrored activity in the cortical region topographically associated with it, regardless of task engagement. Inactivating visual cortex abolished striatal visual responses.
+  - Use: Supports the downstream future direction. Clamping a cortical node would provide a controlled input for testing the cortex-to-striatum mapping causally.
+- **`Wolff2018`** ★★ · support: **yes** · in refs.bib
+  - Wolff & {\"O}lveczky (2018). The promise and perils of causal circuit manipulations. *Current Opinion in Neurobiology* 49:84--94. doi:10.1016/j.conb.2018.01.004
+  - Finding: Reviews the assumptions behind causal circuit manipulations in behaving animals and the strengths and limits of different approaches, especially when function is distributed over large networks.
+  - Use: Pair with Otchy 2015 when stating the interpretive problem that clamping partly addresses.
+- **`newman2015optogenetic`** ★★ · support: **partly** · in refs.bib
+  - Newman et al. (2015). Optogenetic feedback control of neural activity. *eLife* 4:e07192. doi:10.7554/eLife.07192
+  - Finding: The optoclamp locks firing at set targets with real-time bidirectional optical feedback. It decoupled firing from pharmacological changes in network excitability in vitro and from vibrissal sensory drive in vivo.
+  - Use: Closest precedent for a clamp as cancellation of changing network drive. Our extension is to endogenous contralateral fluctuations, at mesoscale, in awake animals.
+  - Checker's caveat: Supported: the optoclamp continuously adjusts bidirectional optical stimulation to lock spiking at set targets over seconds to days. It decoupled firing from multi-hour glutamatergic or GABAergic blockade in vitro and from vibrissal sensory drive in vivo. The finding wrongly places the pharmacological result in vivo: pharmacology was in vitro, and the in vivo case was sensory drive. Reword: 'the optoclamp held firing at target despite pharmacological changes in excitability in vitro and sensory drive in vivo (Newman et al., 2015); we extend this to cancelling endogenous contralateral fluctuations of a mesoscale signal in awake mice.' Confirm the PI controller detail from the Methods before stating it.
+- **`francis1976internal`** ★★ · support: **yes** · in refs.bib
+  - Francis & Wonham (1976). The internal model principle of control theory. *Automatica* 12:457--465. doi:10.1016/0005-1098(76)90006-6
+  - Finding: Robust asymptotic tracking or disturbance rejection requires the controller to contain a model of the generator of the reference or disturbance. Integral action is the internal model for constant signals.
+  - Use: Explains why integral action removes the standing offset but not broadband fluctuations, and motivates MPC with a predictive disturbance model (VARX) as the next step.
+- **`rocchi2022increased`** ★ · support: **partly**
+  - Rocchi et al. (2022). Increased fMRI connectivity upon chemogenetic inhibition of the mouse prefrontal cortex. *Nature Communications* 13:1056. doi:10.1038/s41467-022-28591-3
+  - Finding: Chronic or chemogenetic inhibition of mouse PFC increased fMRI connectivity with its thalamocortical targets. Inhibition boosted 0.1-4 Hz power by suppressing firing that was not locked to slow rhythms, which increased slow and delta coherence.
+  - Use: Optional caution that local inhibition can reshape slow, low-frequency network fluctuations. Do not imply our data show this.
+  - Checker's caveat: Supported: chronic inhibition of mouse PFC (Kir2.1 overexpression) and acute chemogenetic inhibition both increased fMRI connectivity with thalamocortical targets. Chemogenetic inhibition increased 0.1-4 Hz power by suppressing firing that was not phase-locked to slow rhythms, which raised slow and delta coherence. The manipulation runs over minutes to chronic timescales and the readout is fMRI or LFP, not seconds-scale optogenetics. Any link to our Fig 4 result on 1-4 Hz power is speculative. Keep it to a single cautionary clause: 'local inhibition can enhance slow network fluctuations (Rocchi et al., 2022)'.
+- **`sato2019interhemispherically`** ★ · support: **yes**
+  - Sato et al. (2019). Interhemispherically dynamic representation of an eye movement-related activity in mouse frontal cortex. *eLife* 8:e50855. doi:10.7554/eLife.50855
+  - Finding: Repeated unilateral optogenetic suppression of mouse MOs lost its behavioral effect over days. Recovery came with more contralateral MOs neurons encoding the movement, and suppressing both sides brought the deficit back.
+  - Use: Optional. Extends interhemispheric compensation from seconds to days. In a clamp, such compensation would appear as a drift in the command needed to hold the target.
+- **`resta2022largescale`** ★ · support: **yes**
+  - Resta et al. (2022). Large-scale all-optical dissection of motor cortex connectivity shows a segregated organization of mouse forelimb representations. *Cell Reports* 41:111627. doi:10.1016/j.celrep.2022.111627
+  - Finding: All-optical transcranial optogenetic stimulation with wide-field imaging in awake mice mapped cortex-wide activation and connectivity for evoked forelimb movements. It found segregated CFA and RFA and a separate lateral forelimb area.
+  - Use: A precedent for reading out the cortex-wide consequences of a focal optogenetic input in awake mice. Supports using the field of view around the kernel as a downstream readout.
+- **`hodgkin1952measurement`** ★ · support: **partly** · metadata corrected
+  - Hodgkin et al. (1952). Measurement of current-voltage relations in the membrane of the giant axon of Loligo. *The Journal of Physiology* 116:424--448. doi:10.1113/jphysiol.1952.sp004716
+  - Finding: A feedback amplifier held the membrane potential of the squid giant axon at commanded values, and the current needed to do so was measured. This yielded the membrane's current-voltage relations.
+  - Use: The classical clamping example. The command needed to hold a variable is itself the measurement, which supports reading the laser command as a readout of the counteracted drive (future analysis).
+  - Checker's caveat: Crossref confirms the paper exists. No abstract is indexed, and the stated use goes beyond what can be checked here. The paper is the canonical voltage-clamp measurement of current-voltage relations in squid axon with a feedback amplifier, and the clamp idea itself is usually credited to Cole and Marmont (1949). It is accurate to say that holding the membrane potential at commanded values made ionic currents measurable, because the clamp removes the potential-dependent feedback. Saying it 'removes the system's internal feedback' is our gloss. Reword: 'as in the voltage clamp, where the current needed to hold membrane potential at a command value reveals the underlying conductances (Hodgkin, Huxley and Katz, 1952), the laser command needed to hold the readout is itself a measurement of the drive the loop opposed.'
+
+_Rejected in this theme:_ None rejected. Crossref confirmed all 21 references, and the DOIs, volumes, issues and pages match. The metadata changes are formatting only: the Palmer title uses GABA$_\mathrm{B}$; Loligo is italicized in Hodgkin 1952; eLife, Nature Communications and Cell Reports entries use article numbers; and the Astrom and Murray book has its full subtitle. Claims that need rewording ('partly'):
+- li2016robust: shows recovery after silencing, in premotor cortex.
+- chen2021modularity: shows variation across animals, not state dependence.
+- palmer2012cellular: shows inhibitory callosal influence only, in rat.
+- bauer2018effective: the 'common drive' reading is our inference.
+- otchy2015acute: clamping does not remove downstream effects.
+- jazayeri2017navigating: the closed-loop framing is ours.
+- rocchi2022increased: the link to our data is speculative.
+- guo2014flow: the 'unknown level' contrast is ours.
+- sharp1993dynamic: the paper adds conductances; it does not cancel them.
+- hodgkin1952measurement: no abstract, and the clamp idea predates it (Cole/Marmont).
+- peixoto2021decoding: perturbations were visual pulses, not neural stimulation.
+- newman2015optogenetic: the pharmacology was in vitro; the in vivo test was against sensory drive.
+Lim 2012, mentioned in the resta2022 use, is not in this list and still needs checking.
+
+**Risks a referee would raise (researcher):**
+- 'Cancellation of intra-brain interactions' overclaims what Fig 4 shows. By the paper's own decomposition most of the open-loop excess removed is a standing offset (35% to 7%), and fluctuation energy fell only from 0.66 to 0.54 of the disturbance. A referee will say the loop mainly fixes calibration offset. State the split honestly: the integral term removes the offset, and feedback partly attenuates the slow shared fluctuations.
+- Calling G 'interhemispheric' or 'callosal' invites attack. A contralateral predictor captures any common drive (thalamus, neuromodulation, movement, hemodynamics). Bauer 2018 shows optogenetic effective interhemispheric connectivity is weaker than resting-state correlation where those correlations are strong. Use 'contralaterally predicted' or 'bilaterally shared' wording and cite Shimaoka 2019 and Mohajerani 2010 for bilateral symmetry, not for mechanism.
+- G partly contains the laser response (open-loop contra dip 6-42% of the readout, median 23%, subtracted with a leak correction). Referees may say the loop is partly 'cancelling' its own spread to the other hemisphere. Mention that the leak correction exists, and that the paired OL vs CL comparison does not depend on the disturbance scale.
+- The controller fed back on the uncorrected blue channel. Part of the contra-predicted 'disturbance' could be bilaterally symmetric hemodynamic fluctuation rather than neural drive, which weakens 'intra-brain neural interactions' wording.
+- A voltage or dynamic clamp analogy invites the 'no space clamp' rebuttal: only a 10x10-pixel kernel is held, while spread of the interneuron-driven silencing (Li 2019) and surrounding and contralateral tissue are not controlled. Make the analogy explicit about this limit instead of letting a referee raise it.
+- Downstream effects are not measured. Any sentence implying the clamp 'causes downstream effects' or 'isolates causal contributions' must be future-tense. Otchy 2015 and Li 2019 show downstream and spread effects remain even when the local variable is controlled.
+- Li 2019 benchmarked ChR2-based excitation of GABAergic neurons (VGAT, PV lines), light-gated pumps and GtACR1. It did not test ChrimsonR under a DLX enhancer at 638 nm. Cite it for the general principle of spread and rebound with interneuron-driven silencing, not as a quantitative spread estimate for our opsin.
+- The 11-session RR result comes from 3 mice, one contributing a single session. Cancellation claims are session-level and should not be generalized to animals.
+
+## 4. Reachability, predictability and fundamental limits (Fig 4)
+
+- **`brammer1972controllability`** ★★★ · support: **partly**
+  - Brammer (1972). Controllability in linear autonomous systems with positive controllers. *SIAM Journal on Control* 10:339--353. doi:10.1137/0310026
+  - Finding: Exists (SIAM J. Control 10(2):339-353, 1972). The abstract confirms the paper gives necessary and sufficient conditions for null-controllability, and for global null-controllability with uniformly bounded controls, of dx/dt = Ax + Bu when u lies in a set Omega that need not contain the origin in its interior. It extends Saperstone and Yorke's case m = 1, Omega = [0,1]. The stated condition (Kalman rank plus no real eigenvector v of A^T with v'Bu <= 0 for every admissible u) is Brammer's theorem. The corollary that a single non-negative input cannot control a plant with only real modes follows from it.
+  - Use: Formal basis for the one-sided-actuator argument: a scalar non-negative input applied to a plant with real poles is not controllable in Brammer's sense. Keep set-point reachability as our own steady-state argument and do not attribute it to Brammer.
+  - Checker's caveat: Partly supported. Brammer's result concerns null-controllability of a continuous-time state-space system: steering the state to the origin, with u in a cone or a bounded set. It does not cover set-point tracking of an output. The statement 'a constant reference is reachable iff y_ref lies in G(0)*[0,u_max]' is our own steady-state argument, and it ignores the additive disturbance (the steady state is G(0)u + d), so do not attribute it to Brammer. Our loop is also sampled at 35 Hz, while Brammer's analysis is continuous-time. Suggested wording: 'With a single sign-constrained input, a linear plant with real modes is not controllable in the classical sense (Brammer 1972); for tracking, this means only targets on the suppressive side of the unstimulated trajectory are reachable.'
+- **`bode1945network`** ★★★ · support: **yes**
+  - Bode (1945). Network Analysis and Feedback Amplifier Design. *D. Van Nostrand, New York (Bell Telephone Laboratories series)*
+  - Finding: The book exists (Open Library: Hendrik W. Bode, first published 1945, later printings 1947 and 1953; D. Van Nostrand, Bell Telephone Laboratories series). It is the original source of the integral constraint on the log of the return difference: for a stable loop with sufficient roll-off, log|S| integrates to zero over frequency.
+  - Use: Primary citation for the sensitivity integral (the 'waterbed'). Cite it with Freudenberg & Looze and Sung & Hara.
+- **`freudenberg1985right`** ★★★ · support: **partly**
+  - Freudenberg & Looze (1985). Right half plane poles and zeros and design tradeoffs in feedback systems. *IEEE Transactions on Automatic Control* 30:555--565. doi:10.1109/tac.1985.1104004
+  - Finding: Exists (IEEE TAC 30(6):555-565, 1985). Crossref and Semantic Scholar have no abstract. It is the standard source for the Bode sensitivity integral with open-loop unstable poles (the integral then equals pi times the sum of the unstable poles) and for the Poisson-integral constraints that right-half-plane zeros impose.
+  - Use: Rigorous modern form of the sensitivity-integral tradeoff. Cite it for the integral constraints, and cite Skogestad and Astrom for the delay-imposed bandwidth limit.
+  - Checker's caveat: The paper treats RHP poles and RHP zeros. A time delay is not an RHP zero, so 'including delay-like phase lag' overstates it. Our plant is open-loop stable, so the unstable-pole term is zero and the core constraint is Bode's original. The argument that no retuning can make |S| small both at slow drift and at 1-4 Hz is mainly a delay/bandwidth argument (crossover below ~1/tau_eff) combined with the integral, not a result of this paper alone. Reword: 'Sensitivity reduction at some frequencies must be paid for by amplification at others (Bode 1945; Freudenberg & Looze 1985), and the loop delay caps the band over which reduction is possible (Skogestad & Postlethwaite 2005; Astrom 2000).'
+- **`skogestad2005multivariable`** ★★★ · support: **yes**
+  - Skogestad & Postlethwaite (2005). Multivariable Feedback Control: Analysis and Design. *Wiley, Chichester (2nd ed.)*
+  - Finding: The book exists (2nd ed., Wiley, 2005; 1st ed. 1996). Chapter 5, on limitations on performance in SISO systems, gives the time-delay bound omega_c < 1/theta and the input-constraint condition for disturbance rejection (|G| > |G_d| at frequencies where |G_d| > 1).
+  - Use: Citation for the crossover criterion omega_c * tau_eff <~ 1. With tau_eff = 37-61 ms this gives 1/tau of 27-16 rad/s, about 4.3-2.6 Hz, which is consistent with the stated 2.6-4 Hz. Also supports the point that a bounded, one-sided input cannot reject disturbances in one direction.
+- **`astrom1970introduction`** ★★★ · support: **yes**
+  - {\AA}str{\"o}m (1970). Introduction to Stochastic Control Theory. *Academic Press, New York (Mathematics in Science and Engineering, vol. 70)* 70. doi:10.1016/s0076-5392(09)x6015-7
+  - Finding: The book exists (Crossref: Mathematics in Science and Engineering, Elsevier/Academic Press, 1970; Open Library confirms the author and year). It is the classic derivation of minimum-variance control: for a linear plant with a d-step delay and an ARMA disturbance, the minimum achievable output variance equals the variance of the d-step-ahead prediction error of the disturbance.
+  - Use: Theoretical link between how predictable the disturbance is and how well the loop can regulate. It bridges the state-linked error in Fig 4 to MPC in Fig 6.
+- **`harris1989assessment`** ★★★ · support: **yes**
+  - Harris (1989). Assessment of control loop performance. *The Canadian Journal of Chemical Engineering* 67:856--861. doi:10.1002/cjce.5450670519
+  - Finding: Exists (Can. J. Chem. Eng. 67(5):856-861, Oct 1989). Per the abstract, for linear processes with additive disturbances the best achievable mean-square control is minimum-variance control, and its value can be estimated by fitting a univariate time series to data collected under routine control, with no identifiability constraints.
+  - Use: Data-driven yardstick: split the closed-loop residual error into a part no causal controller could remove and a remainder. Optional analysis: compute the Harris index on the CL trials with d = 1-2 samples (about 29-57 ms at 35 Hz).
+- **`desborough1993feedforward`** ★★★ · support: **partly**
+  - Desborough & Harris (1993). Performance assessment measures for univariate feedforward/feedback control. *The Canadian Journal of Chemical Engineering* 71:605--616. doi:10.1002/cjce.5450710413
+  - Finding: Exists (Can. J. Chem. Eng. 71(4):605-616, Aug 1993). Per the abstract, it derives an analysis of variance for univariate feedforward/feedback loops. The ANOVA attributes variance to disturbances and to controllers, defines an overall performance index, and estimates both from ordinary closed-loop data by least squares.
+  - Use: Framing analogy: the contralateral hemisphere acts like a measured disturbance variable. Its predictable (Global) part is in principle removable by feedforward, and the Local part is not.
+  - Checker's caveat: The variance decomposition is supported. The framework assumes the measured disturbance is exogenous, meaning the manipulated input does not affect it. Contralateral cortex is bidirectionally coupled to the stimulated site and may respond to the laser, so it is not a clean feedforward variable. The paper also cannot 'justify' our empirical results (VARX R^2 0.37 to 0.41; MPC better than PI); those are our results. Reword: 'In control-performance terms (Desborough & Harris 1993), activity in the contralateral hemisphere plays the role of a measured disturbance: its predictable component is, in principle, removable by feedforward or predictive control, consistent with the gain from adding cortical sites to the model and with MPC outperforming PI.' Add the exogeneity caveat.
+- **`kalman1960general`** ★★ · support: **partly**
+  - Kalman (1960). On the general theory of control systems. *IFAC Proceedings Volumes (Proc. 1st IFAC World Congress, Moscow)* 1:491--502. doi:10.1016/s1474-6670(17)70094-8
+  - Finding: Exists (Crossref: IFAC Proceedings Volumes 1(1):491-502, 1960, sole author R. E. Kalman). It is the standard citation for introducing controllability and observability as structural properties of linear systems and for their duality. Crossref has no abstract. The explicit rank test on [B AB ... A^(n-1)B] is more often credited to Kalman, Ho & Narendra (1963) than to this paper.
+  - Use: Use it as a one-sentence anchor: classical controllability asks whether any state can be reached with unconstrained inputs. Do not credit the rank test to this paper alone.
+  - Checker's caveat: The metadata is correct. The duality and the definition of controllability are supported. For the rank criterion, either drop the attribution or add Kalman, Ho & Narendra 1963 (Contrib. Differential Equations 1:189-213). Suggested wording: 'Classical controllability (Kalman 1960) asks whether any state can be reached with unconstrained inputs.'
+- **`kreindler1964concepts`** ★★ · support: **yes**
+  - Kreindler & Sarachik (1964). On the concepts of controllability and observability of linear systems. *IEEE Transactions on Automatic Control* 9:129--136. doi:10.1109/tac.1964.1105665
+  - Finding: Exists (Crossref: IEEE TAC 9(2):129-136, April 1964). It is the standard source for output controllability (as distinct from state controllability) and its rank condition on [CB CAB ... CA^(n-1)B D]. Crossref has no abstract, but this attribution is textbook-standard.
+  - Use: Use it to say that regulating one cortical readout needs only output controllability of a scalar output, which is much weaker than the full-state controllability analysed in network-control studies of the brain.
+- **`ching2013control`** ★★ · support: **partly**
+  - Ching & Ritt (2013). Control strategies for underactuated neural ensembles driven by optogenetic stimulation. *Frontiers in Neural Circuits* 7:54. doi:10.3389/fncir.2013.00054
+  - Finding: Exists (Front. Neural Circuits 7:54, 2013). Per the abstract, the paper controls spike patterns in ensembles of uncoupled integrate-and-fire neurons that share one common conductance input. It finds a simple controllability rule for neuron pairs and shows that full control of every neuron is impossible with a single input. Heterogeneity in neuron parameters allows partial control of a subensemble. The abstract notes that most neural-stimulation technologies are underactuated.
+  - Use: Neuroscience precedent that optogenetic actuation is underactuated (one input, many states), so controlling one output, not the full state, is the tractable goal.
+  - Checker's caveat: Underactuation, single-input limits and pair controllability are supported. The model is a set of uncoupled spiking neurons driven by a common excitatory conductance. It is not a mesoscale population, and the abstract does not frame sign-constraint as the limiting factor. 'Pulse-based strategies' is not confirmed by the abstract. Rephrase: 'Optogenetic actuation is generically underactuated: a single shared input cannot independently control every element of a neural ensemble (Ching & Ritt 2013).' Cite it for underactuation, not for one-sidedness; Brammer covers that.
+- **`gu2015controllability`** ★★ · support: **yes**
+  - Gu et al. (2015). Controllability of structural brain networks. *Nature Communications* 6:8414. doi:10.1038/ncomms9414
+  - Finding: Exists, and all 11 authors match Crossref (Nat. Commun. 6:8414, 2015). Per the abstract, it applies network control theory to diffusion-imaging white-matter networks and assigns roles to regions. Densely connected regions (default mode) facilitate moves to easily reachable states. Weakly connected regions (cognitive control) facilitate moves to hard-to-reach states. Boundary regions (attention) support integration.
+  - Use: Example of model-based, open-loop, full-state brain controllability. Contrast it with our empirical, closed-loop, single-output reachability, and cite it alongside Tu 2018.
+- **`pasqualetti2014controllability`** ★★ · support: **partly** · metadata corrected
+  - Pasqualetti et al. (2014). Controllability metrics, limitations, and algorithms for complex networks. *IEEE Transactions on Control of Network Systems* 1:40--52. doi:10.1109/tcns.2014.2310254
+  - Finding: Exists (IEEE TCNS 1(1):40-52, 2014). The abstract confirms a control-energy metric for steering a network to a target state. For Schur-stable symmetric networks with a constant number of control nodes, the energy grows exponentially with network size. If control nodes are a fixed fraction of the network, some networks can be controlled with constant energy.
+  - Use: Supports the point that rank-sense controllability is a weak practical guarantee: steering a full network state from a few nodes can need exponentially large energy. It bridges yes/no reachability to graded, energy-limited reachability.
+  - Checker's caveat: The theorem is for stable symmetric linear network models and full-state targets. Saying 'a single actuated site cannot practically steer mesoscale cortical state' extrapolates beyond it, and the link to our laser power ceiling is an analogy only. Reword: 'Even when a network is formally controllable, the energy needed to steer its full state from a few input nodes can grow exponentially with network size (Pasqualetti et al. 2014); regulating a single local output is the tractable problem.'
+- **`tu2018warnings`** ★★ · support: **yes**
+  - Tu et al. (2018). Warnings and caveats in brain controllability. *NeuroImage* 176:83--91. doi:10.1016/j.neuroimage.2018.04.010
+  - Finding: Exists (NeuroImage 176:83-91, 2018). The abstract (Europe PMC) confirms its findings. Brain networks are not statistically controllable from a single region. Random null models reproduce Gu et al.'s relation between controllability metrics and weighted degree. Resting-state networks cannot be assigned specific control roles. A rebuttal (Pasqualetti, Gu & Bassett 2019, NeuroImage 197:586-588) and a reply (Suweis et al. 2019, 'Brain controllability: Not a slam dunk yet', NeuroImage 200:552-555) both exist, as stated.
+  - Use: Use it with Gu 2015 to note that model-based brain controllability is contested and depends on the model, which motivates establishing controllability empirically, in closed loop, at the output level. Cite the rebuttal and reply as well, so the debate is presented fairly.
+- **`sung1988properties`** ★★ · support: **partly** · metadata corrected
+  - Sung & Hara (1988). Properties of sensitivity and complementary sensitivity functions in single-input single-output digital control systems. *International Journal of Control* 48:2429--2439. doi:10.1080/00207178808906338
+  - Finding: Exists (Int. J. Control 48(6):2429-2439, Dec 1988). Crossref and Semantic Scholar have no abstract. It is the standard reference for the discrete-time Bode integral: the integral of log|S(e^{j theta})| over [0, pi] equals the sum of log|p_i| over the unstable open-loop poles, and is zero for a stable open loop.
+  - Use: Our controller runs at 35 Hz, so the discrete integral applies. Low-frequency rejection has to be paid for by amplification below the 17.5 Hz Nyquist frequency, not spread over infinite bandwidth.
+  - Checker's caveat: The integral result is standard and supported. The rhetorical claim that this makes the waterbed 'harder than continuous-time intuition suggests' is interpretation. In continuous time, the practical bandwidth limit produces much the same effect. Reword neutrally: 'For a sampled loop the sensitivity integral is taken over a finite frequency range up to Nyquist (Sung & Hara 1988), so attenuation in one band must be balanced by amplification elsewhere below 17.5 Hz.'
+- **`stein2003respect`** ★★ · support: **partly**
+  - Stein (2003). Respect the unstable. *IEEE Control Systems Magazine* 23:12--25. doi:10.1109/mcs.2003.1213600
+  - Finding: Exists (IEEE Control Systems Magazine 23(4):12-25, Aug 2003). Crossref has no author field; Semantic Scholar gives G. Stein. It is the written version of the 1989 Bode Lecture. It presents the Bode integral as a conservation law of feedback and stresses that open-loop unstable plants combined with actuator limits make the constraint binding.
+  - Use: Accessible exposition of the sensitivity integral as a conservation law, for neuroscience readers. Use it as a companion to Freudenberg & Looze.
+  - Checker's caveat: The paper is centred on open-loop unstable plants: the unstable-pole term and the danger of saturation when the plant is unstable. Our plant is stable, so do not use it to argue that our laser ceiling causes an analogous problem. Also avoid presenting the phrase 'you cannot get something for nothing' as a verbatim quote, because it could not be verified. Cite it only as an accessible statement of the conservation-law interpretation.
+- **`astrom2000limitations`** ★★ · support: **yes**
+  - {\AA}str{\"o}m (2000). Limitations on control system performance. *European Journal of Control* 6:2--20. doi:10.1016/s0947-3580(00)70906-x
+  - Finding: Exists (Eur. J. Control 6(1):2-20, Jan 2000). Crossref has no abstract; Semantic Scholar dates an earlier version to 1997. It is a tutorial on what limits achievable performance: process dynamics (time delays, RHP zeros and poles), actuator saturation, measurement noise and model uncertainty, with simple bounds on achievable crossover.
+  - Use: Companion to Skogestad for the delay-to-bandwidth argument. Its framing of latency, saturation and noisy measurement as separate limits fits our limitations paragraph.
+- **`desborough1992performance`** ★★ · support: **yes**
+  - Desborough & Harris (1992). Performance assessment measures for univariate feedback control. *The Canadian Journal of Chemical Engineering* 70:1186--1197. doi:10.1002/cjce.5450700620
+  - Finding: Exists (Can. J. Chem. Eng. 70(6):1186-1197, Dec 1992). Per the abstract, it introduces a normalized performance index eta(b) that measures how close a loop is to minimum-variance control. It gives time-domain and spectral interpretations and a fast on-line estimator, and describes the estimator's statistical properties.
+  - Use: Cite it with Harris 1989 as the standard reference for the normalized performance index.
+- **`seron1997fundamental`** ★ · support: **yes**
+  - Seron et al. (1997). Fundamental Limitations in Filtering and Control. *Springer (Communications and Control Engineering), London*. doi:10.1007/978-1-4471-0965-5
+  - Finding: The book exists (Crossref: Springer London, Communications and Control Engineering series, 1997; Seron, Braslavsky, Goodwin). It is a monograph that unifies Bode and Poisson integral limits for continuous-time, discrete-time and sampled-data systems, together with their filtering duals.
+  - Use: Optional single umbrella citation for the limits remark.
+- **`chandra2011glycolytic`** ★ · support: **yes**
+  - Chandra et al. (2011). Glycolytic oscillations and limits on robust efficiency. *Science* 333:187--192. doi:10.1126/science.1200705
+  - Finding: Exists (Science 333(6039):187-192, 8 Jul 2011). The one-line Crossref abstract says glycolytic oscillations in yeast are a by-product of a trade-off between robustness and efficiency. The paper derives this from a Bode-type sensitivity-integral hard limit.
+  - Use: Precedent that waterbed limits are measurable and explanatory in biological feedback systems. Supports framing the 1-4 Hz attenuation failure as a fundamental tradeoff rather than a tuning failure.
+
+_Rejected in this theme:_ All 19 references exist and none was rejected. Two have metadata corrections. Pasqualetti et al. 2014: the title has no comma before 'and'. Sung & Hara 1988: the first author is Hak-Kyung, not Hak-Keung. For Stein 2003, the author name comes from Semantic Scholar because Crossref lists none.
+
+Eight of the 19 claims are only partly supported and need rewording:
+- kalman1960general: the rank test is better credited to Kalman, Ho & Narendra 1963.
+- brammer1972controllability: the paper covers null-controllability only. The set-point reachability argument is ours, not Brammer's.
+- ching2013control: it supports underactuation, not sign-constraint, and its model is uncoupled spiking neurons.
+- pasqualetti2014controllability: its result is for stable symmetric network models, so the mesoscale and power-ceiling links are extrapolation.
+- freudenberg1985right: it covers RHP poles and zeros, not delays. The bandwidth limit should be credited to Skogestad and Astrom.
+- sung1988properties: the claim that sampling makes the waterbed 'harder' is our interpretation.
+- stein2003respect: it is about unstable plants, so it should not be used for the analogy to our laser ceiling. The quoted phrase could not be verified.
+- desborough1993feedforward: it assumes the measured disturbance is exogenous, which contralateral cortex is not. It cannot justify our VARX or MPC results.
+
+Abstracts were unavailable for Kalman, Kreindler, Freudenberg, Sung, Stein and Astrom 2000; those judgements rest on the standard attributions of these works. Fig 4 needs one caveat: the minimum-variance and Harris bounds assume a linear plant and unconstrained input, so with our one-sided laser present them as benchmarks, not hard floors.
+
+**Risks a referee would raise (researcher):**
+- Naming: Fig 4 'predictability' (OL slope vs state; positive = LESS predictable) clashes with the temporal meaning used in minimum-variance and MPC theory, and 'regularizability' is not a standard control term. A control-literate referee will flag both. Add one disambiguating sentence, or rename.
+- Calling attenuation 'the empirical counterpart of the sensitivity function' overclaims. S(jw) is a frequency-resolved LTI transfer function, while our ratio is a broadband RMSE ratio across interleaved (non-paired) trials that also contains the feedforward step response and the 0-1 s initial-deviation transient. Use 'broadband, disturbance-weighted analogue', or back it with a frequency-resolved CL/OL error-PSD ratio.
+- Circularity in the 1-4 Hz result: absolute 1-4 Hz power is measured on the controlled signal over -2..+3 s, i.e. partly during control. If the loop's sensitivity is above 1 near crossover, closed-loop control itself raises 1-4 Hz power, so 'high power -> worse attenuation' could partly be the loop causing the power rather than the state limiting the loop. A referee may ask for a check with the state measured pre-stim only, or on an uncontrolled site (contralateral). Note that the locked decision keeps the peri window for Fig 4 because pre-only kills the motion result; that was tested for motion, so whether the band-power result survives a pre-only window should be stated or checked.
+- Invoking the Bode integral or the minimum-variance bound as if they strictly applied: both require LTI loops and (for MV) stationary disturbances and unconstrained inputs, while ours has saturation, a one-sided actuator and non-stationary, state-dependent disturbance. Present them as explaining the direction and location of the limit, not as quantitative predictions.
+- The delay criterion omega_c*tau <~ 1 is a rule of thumb, so 'bound' language invites pushback. Say 'of order' and cite Skogestad and Astrom 2000.
+- Stating that the system 'is not controllable' (Brammer) without checking that the fitted poles are real, and without separating full-state controllability from set-point output reachability, would be both wrong and needlessly alarming. Use the reachable-set formulation.
+- Network-controllability critique: using Tu 2018 to dismiss Gu 2015 without acknowledging the rebuttal (Pasqualetti, Gu & Bassett 2019) can read as partisan. Also, our data neither test nor refute connectome controllability, because the scales and questions differ.
+- Hemodynamic contamination: the controller fed back on the uncorrected blue channel, and hemodynamic fluctuations overlap 1-4 Hz. A fundamental-limit story for 1-4 Hz must keep the caveat that part of that band may be vascular, which the loop cannot distinguish from neural activity.
+
+## 5. Prediction, preview and MPC
+
+- **`mayne2000constrained`** ★★★ · support: **yes**
+  - Mayne et al. (2000). Constrained model predictive control: Stability and optimality. *Automatica* 36:789--814. doi:10.1016/S0005-1098(99)00214-9
+  - Finding: Crossref confirms all metadata. Survey of constrained MPC for linear and nonlinear systems that distils the essential stability ingredients: a terminal cost and a terminal constraint set, with the value function acting as a Lyapunov function, plus recursive feasibility.
+  - Use: Cite where MPC is defined (constraints enter the optimisation directly; receding-horizon replanning is feedback). Also cite in the caveat that the replay MPC had no terminal cost or constraint and so carries no formal closed-loop stability guarantee, unlike the PI loop.
+- **`hocker2019myopic`** ★★★ · support: **partly**
+  - Hocker & Park (2019). Myopic control of neural dynamics. *PLOS Computational Biology* 15:e1006854. doi:10.1371/journal.pcbi.1006854
+  - Finding: Nonlinear state-feedback 'myopic' controller with a one-step model-reference cost that respects neural variability and acts on the current state. Shown in simulation on a decision-making model and on a beta-oscillation motor model.
+  - Use: Neural precedent for state-based, continually recomputed stimulation control. Contrast its one-step horizon and simulation-only testing with our multi-step MPC replayed on recorded cortex.
+  - Checker's caveat: Supported: control of neural dynamics should respect moment-to-moment variability and act on the current state. Their controller is myopic: it sets a target only one step ahead and explicitly avoids precomputing long-horizon solutions. It is simulation only. Calling it agreement with a 35-step receding-horizon MPC is a stretch. Reword to: both approaches recompute stimulation from the current measured state every step rather than following a precomputed plan; ours looks further ahead and is tested on recorded cortex rather than model systems.
+- **`bolus2021state`** ★★★ · support: **yes** · in refs.bib
+  - Bolus et al. (2021). State-space optimal feedback control of optogenetically driven neural activity. *Journal of Neural Engineering* 18:036006. doi:10.1088/1741-2552/abb89c
+  - Finding: First experimental state-space, model-based optogenetic feedback control. LDS light-to-spiking models, LQR gains and a parameter-adaptive Kalman filter control single-neuron thalamic firing in awake mice. Simulated multi-output control handles a heterogeneous population better.
+  - Use: In-vivo precedent for model-based optimal control at the single-neuron scale. Our MPC extends predictive model-based control to mesoscale cortex, but only in replay.
+- **`lu2025benchmarking`** ★★★ · support: **partly** · in refs.bib
+  - Lu et al. (2025). Benchmarking Probabilistic Time Series Forecasting Models on Neural Activity. *arXiv:2510.18037 (NeurIPS 2025 Workshop: Data on the Brain & Mind)*
+  - Finding: On spontaneous widefield mouse-cortex activity, several probabilistic deep forecasting models outperform classical statistical models, with informative forecasts up to 1.5 s ahead.
+  - Use: In-house anchor: the same widefield signal is partly forecastable from its own past (up to about 1.5 s), but these models take no stimulation command as input, which a controller requires. Pair it with POCO and ZAPBench.
+  - Checker's caveat: The abstract says 8 probabilistic deep-learning models (including 2 foundation models) were compared with 4 classical and 2 baseline methods on spontaneous widefield mouse-cortex activity. Several deep models beat classical ones, with the best giving informative forecasts up to 1.5 s, and the paper points toward control applications. The abstract does not say the models are 'univariate or unconditioned'. Say instead that the models were trained and evaluated on spontaneous activity without a stimulation input, so they cannot predict the actuator's effect.
+- **`rawlings2017mpc`** ★★ · support: **yes**
+  - Rawlings et al. (2017). Model Predictive Control: Theory, Computation, and Design. *Nob Hill Publishing, Madison, WI (2nd edition)*
+  - Finding: Standard graduate MPC textbook covering stability, robustness, offset-free tracking and state estimation (MHE/Kalman), plus computation.
+  - Use: General MPC reference, specifically for offset-free MPC and for MPC combined with a state estimator. Use where we say a live MPC needs a disturbance model to keep the integral action the PI controller already gives.
+- **`tomizuka1975optimal`** ★★ · support: **partly**
+  - Tomizuka (1975). Optimal continuous finite preview problem. *IEEE Transactions on Automatic Control* 20:362--365. doi:10.1109/TAC.1975.1100962
+  - Finding: Continuous-time optimal tracking when the command is known a finite time ahead. Shows how to use the local future information, and that an effective preview length exists.
+  - Use: Classical basis for the Fig 5 preview block: the 5-sample lookahead is a crude finite preview, and MPC with the reference in its cost is the optimal version. The explanation of why preview removed phase lag but not offset should come from our own analysis, not from this citation.
+  - Checker's caveat: The abstract supports that optimal finite-preview tracking uses the future command over the preview window, and that an 'effective preview length' exists beyond which extra preview helps little. It does not say this length equals the closed-loop settling time, and it does not address offset or broadband error. Reword to: 'optimal finite-preview control combines feedback with feedforward of the previewed reference, and the benefit of preview saturates beyond an effective preview length'. Do not attribute the settling-time or offset statements to this paper.
+- **`tomizuka1975discrete`** ★★ · support: **partly**
+  - Tomizuka & Whitney (1975). Optimal Discrete Finite Preview Problems (Why and How Is Future Information Important?). *Journal of Dynamic Systems, Measurement, and Control* 97:319--325. doi:10.1115/1.3426946
+  - Finding: Discrete-time optimal finite-preview control with measurement delay and noise. Preview strongly improves performance relative to the non-preview optimum, and a critical preview length exists.
+  - Use: Better fit than the continuous paper for the sampled 35 Hz loop. Cite for the point that preview helps sharply up to a critical length and then saturates.
+  - Checker's caveat: The abstract supports a discrete-time stochastic formulation (with measurement delay, observation and driving noise), that preview greatly improves performance over no preview, and that there is a 'critical preview length' for the improvement. It does not say the useful preview equals the plant's response delay. Reword to: 'preview improves tracking sharply up to a critical preview length, beyond which gains are small'. Present the link to our 5-sample (143 ms) delay-matched lookahead as our own reasoning.
+- **`smith1957closer`** ★★ · support: **yes**
+  - Smith (1957). Closer control of loops with dead time. *Chemical Engineering Progress* 53:217--219
+  - Finding: The original Smith predictor: an internal delay-free plant model in the feedback path removes the dead time from the closed-loop characteristic equation, for a stable plant with an accurate model, allowing higher gain.
+  - Use: Cite where we say prediction is the standard remedy for loop latency, and that a model predicting the response a few frames ahead can buy back bandwidth that the delay costs the PI loop. Keep the caveat: it needs a stable plant and an accurate delay model. The bandwidth numbers (2.6-4 Hz) are ours, not the paper's.
+- **`pannocchia2003disturbance`** ★★ · support: **yes**
+  - Pannocchia & Rawlings (2003). Disturbance models for offset-free model-predictive control. *AIChE Journal* 49:426--437. doi:10.1002/aic.690490213
+  - Finding: MPC achieves offset-free tracking by adding integrating disturbances to the model to lump plant-model mismatch. The number of integrating disturbances must equal the number of measured variables; m disturbances for m manipulated variables is not enough in general. Holds for stable, integrating and unstable plants.
+  - Use: Key reference for the 'what MPC adds beyond PI' paragraph. A naive MPC with model mismatch reintroduces steady offset unless it has an integrating disturbance model. So a live MPC should keep integral action, either as an augmented disturbance state or as an outer loop around the PI regulator.
+- **`coulson2019deepc`** ★★ · support: **yes** · metadata corrected
+  - Coulson et al. (2019). Data-Enabled Predictive Control: In the Shallows of the DeePC. *2019 18th European Control Conference (ECC)*:307--312. doi:10.23919/ECC.2019.8795639
+  - Finding: DeePC: recorded input-output data replace a parametric model in predictive control. Equivalent to MPC for deterministic LTI systems, with regularisation proposed for nonlinear stochastic systems. Shown in simulation.
+  - Use: Cite as a route to MPC without hand-identifying a model, built from each session's own recordings, which fits the per-session recalibration Fig 2 showed was needed. Hedge on whether our trial inputs are sufficiently (persistently) exciting.
+- **`korda2018koopman`** ★★ · support: **yes**
+  - Korda & Mezić (2018). Linear predictors for nonlinear dynamical systems: Koopman operator meets model predictive control. *Automatica* 93:149--160. doi:10.1016/j.automatica.2018.03.046
+  - Finding: Lifts nonlinear controlled dynamics into observables where evolution is approximately linear (EDMD fitted by least squares). Linear MPC on the lifted predictor has computational complexity comparable to MPC for a linear system of the original size.
+  - Use: Natural next model class after the VARX. It keeps the MPC problem convex while potentially capturing state dependence and nonlinearity that a linear VARX misses.
+- **`hewing2020learning`** ★★ · support: **yes**
+  - Hewing et al. (2020). Learning-Based Model Predictive Control: Toward Safe Learning in Control. *Annual Review of Control, Robotics, and Autonomous Systems* 3:269--296. doi:10.1146/annurev-control-090419-075625
+  - Finding: Review of learning-based MPC in three categories: learning the prediction model from data (most work), learning the MPC cost and constraints, and using MPC to give learned controllers constraint satisfaction. Emphasises safety.
+  - Use: Single review to cite for MPC with learned models, and for the open problem of improving the model online (e.g. state-dependent laser gain) without unsafe stimulation. Use in the future-directions sentence.
+- **`chang2020seizure`** ★★ · support: **yes**
+  - Chang et al. (2020). Model Predictive Control for Seizure Suppression Based on Nonlinear Auto-Regressive Moving-Average Volterra Model. *IEEE Transactions on Neural Systems and Rehabilitation Engineering* 28:2173--2183. doi:10.1109/TNSRE.2020.3014927
+  - Finding: A neural mass model is treated as a black box. A Volterra input-output model is identified from stimulation and response, and MPC designs stimulation waveforms that remove epileptiform activity in simulation, with robustness to disturbances.
+  - Use: Example that neural MPC has mainly been shown in computational models, using the same identify-then-plan pattern as ours. Our replay uses recorded cortical activity.
+- **`steffen2024mpcdbs`** ★★ · support: **yes**
+  - Steffen et al. (2024). Model Predictive Control for Closed-Loop Deep Brain Stimulation. *2024 IEEE 63rd Conference on Decision and Control (CDC)*:4034--4039. doi:10.1109/CDC56724.2024.10885888
+  - Finding: Beta-amplitude model identified after a linearising transform, combined with a population-average stimulation-response model and a Kalman filter, used in MPC. In simulation, compared with bang-bang and PI controllers (the most advanced tested in vivo), it gives less stimulation for similar tracking error.
+  - Use: Closest recent parallel to our PI-vs-MPC comparison: same motivation and also simulation or offline only. Place our replay result next to it and note that neither has live MPC validation.
+- **`Yang2021`** ★★ · support: **partly** · in refs.bib
+  - Yang et al. (2021). Modelling and prediction of the dynamic responses of large-scale brain networks during direct electrical stimulation. *Nature Biomedical Engineering* 5:324--345. doi:10.1038/s41551-020-00666-w
+  - Finding: Dynamic input-output (linear state-space) models predict multiregional LFP network responses to time-varying microstimulation in awake macaques. Response strength and prediction accuracy vary with resting functional connectivity.
+  - Use: Supports that a predictor usable for control must be input-conditioned, and that linear input-output stimulation models are predictive. This backs the VARX-with-laser choice.
+  - Checker's caveat: The abstract supports dynamic input-output models that predict multiregional network responses to time-varying microstimulation in two macaques, with damped and oscillatory response dynamics, and variability in prediction accuracy explained by resting functional connectivity. The abstract does not state a comparison against 'models without input dynamics' or prediction of 'new stimulation patterns'. Reword to 'input-output dynamical models predicted multiregional responses to time-varying stimulation'.
+- **`vahidi2024modeling`** ★★ · support: **yes**
+  - Vahidi et al. (2024). Modeling and dissociation of intrinsic and input-driven neural population dynamics underlying behavior. *Proceedings of the National Academy of Sciences* 121:e2212887121. doi:10.1073/pnas.2212887121
+  - Finding: Analytical linear dynamical modelling that jointly accounts for neural activity, behaviour and measured inputs. It dissociates intrinsic dynamics from input-driven dynamics and shows that ignoring inputs can lead to misinterpretation.
+  - Use: Supports separating intrinsic and inter-areal disturbance from actuator-driven response in a future MPC predictor.
+- **`duan2025poco`** ★★ · support: **yes** · metadata corrected
+  - Duan et al. (2025). POCO: Scalable Neural Forecasting through Population Conditioning. *Advances in Neural Information Processing Systems (NeurIPS 2025); arXiv:2506.14957*
+  - Finding: A univariate forecaster combined with a population encoder, trained across five calcium-imaging datasets (zebrafish, mouse, C. elegans). State-of-the-art cellular-resolution forecasting of spontaneous activity, with fast adaptation to new recordings. Framed as groundwork for closed-loop neurotechnology.
+  - Use: Current forecasting state of the art, trained on spontaneous activity with no stimulation input. It forecasts the disturbance but not the actuator effect, which is why a control model also needs the laser command.
+- **`camacho2007mpc`** ★ · support: **yes** · metadata corrected
+  - Camacho & Bordons (2007). Model Predictive Control. *Springer (Advanced Textbooks in Control and Signal Processing)*. doi:10.1007/978-0-85729-398-5
+  - Finding: Applied MPC textbook covering input-output predictive controllers (GPC, CARIMA models), constraint handling and reference preview over the prediction horizon.
+  - Use: Optional. Cite for the point that an input-output (ARX/GPC-type) predictive controller puts the known future reference into the cost over the horizon. Drop it if space is tight, since Rawlings 2017 covers the same ground.
+- **`mesbah2016stochastic`** ★ · support: **yes** · metadata corrected
+  - Mesbah (2016). Stochastic Model Predictive Control: An Overview and Perspectives for Future Research. *IEEE Control Systems Magazine* 36:30--44. doi:10.1109/MCS.2016.2602087
+  - Finding: Overview of stochastic MPC: the stochastic optimal control problem formulation, SMPC approaches for linear and nonlinear systems, and open theoretical challenges.
+  - Use: Cite for the point that state-dependent variability need not be modelled deterministically. It can enter MPC probabilistically, so the controller hedges in high-variance states. Bridges themes 2 and 5.
+- **`wang2010fast`** ★ · support: **partly**
+  - Wang & Boyd (2010). Fast Model Predictive Control Using Online Optimization. *IEEE Transactions on Control Systems Technology* 18:267--278. doi:10.1109/TCST.2009.2017934
+  - Finding: Structure-exploiting online optimisation (with warm start and early termination) computes MPC actions about 100 times faster than generic solvers, e.g. about 5 ms for a 12-state, 3-input, 30-step problem.
+  - Use: Answers the compute-latency objection: a box-constrained QP over 35 future laser commands is small. Pair it with the caveat that any solve time adds to loop latency, and that we did not measure it.
+  - Checker's caveat: The abstract's concrete benchmark is 12 states, 3 controls, horizon 30 (a QP with 450 variables) solved in about 5 ms, allowing 200 Hz, about 100 times faster than a generic solver. 'Tens of states and inputs in milliseconds or less' overstates it. Reword to 'custom structure-exploiting solvers solve moderate-size MPC QPs in a few milliseconds'. Note that 5 ms is a non-trivial fraction of our 28.6 ms frame and adds to the existing <=47 ms latency, and that rig solve time was not measured.
+- **`bemporad2002explicit`** ★ · support: **yes**
+  - Bemporad et al. (2002). The explicit linear quadratic regulator for constrained systems. *Automatica* 38:3--20. doi:10.1016/S0005-1098(01)00174-1
+  - Finding: The constrained finite- and infinite-horizon LQ control law is an explicit piecewise-affine (continuous) function of the state that can be computed offline, so online control becomes lookup and evaluation.
+  - Use: Optional alternative to Wang & Boyd for the latency argument. Note that our high-dimensional VARX state makes explicit MPC impractical without model reduction (Wang & Boyd also state explicit MPC suits about 5 or fewer states), so online QP is the realistic route.
+- **`liang2023koopman`** ★ · support: **yes**
+  - Liang et al. (2023). Online Learning Koopman Operator for Closed-Loop Electrical Neurostimulation in Epilepsy. *IEEE Journal of Biomedical and Health Informatics* 27:492--503. doi:10.1109/JBHI.2022.3210303
+  - Finding: A deep (autoencoder) Koopman model, updated online, predicts EEG better than VAR, kernel and RNN baselines on synthetic and real data. Koopman-MPC suppresses seizures more efficiently than RNN-MPC in the Jansen-Rit and Epileptor models.
+  - Use: Neural instance of Korda & Mezic: learned linear-in-latent predictors keep MPC convex and allow online adaptation. Shows that VAR-class models are the baseline such methods improve on.
+- **`pandarinath2018lfads`** ★ · support: **partly**
+  - Pandarinath et al. (2018). Inferring single-trial neural population dynamics using sequential auto-encoders. *Nature Methods* 15:805--815. doi:10.1038/s41592-018-0109-9
+  - Finding: LFADS: a deep sequential autoencoder that infers single-trial latent dynamics and perturbations from spiking, predicts behaviour, and stitches sessions together.
+  - Use: Leading single-trial latent-dynamics model. Cite for the inferred-inputs idea (unknown inputs, theme 2), and note factually that its standard form is not a causal predictor.
+  - Checker's caveat: Supported: LFADS infers single-trial latent dynamics and perturbations (inferred inputs) that correlate with behavioural choices, going beyond trial averaging. 'Concedes that much single-trial variability comes from unmeasured inputs' over-reads the abstract. Reword to: 'LFADS explicitly models inferred inputs (perturbations) to the latent dynamics, acknowledging that single-trial activity is shaped by unobserved drives'. The acausal (bidirectional) encoder comes from the method, not the abstract; state it factually.
+- **`lueckmann2025zapbench`** ★ · support: **partly** · metadata corrected
+  - Lueckmann et al. (2025). ZAPBench: A Benchmark for Whole-Brain Activity Prediction in Zebrafish. *International Conference on Learning Representations (ICLR 2025); arXiv:2503.02618*
+  - Finding: Benchmark for forecasting the activity of more than 70,000 neurons in a larval zebrafish (light-sheet). Time-series and volumetric-video models beat naive baselines but leave substantial room for improvement.
+  - Use: Supports the limits-of-forecasting point that bounds what any MPC predictor can achieve. Keep the comparison to our R2 and MPC numbers as interpretation.
+  - Checker's caveat: The abstract says initial models beat naive baselines 'but also show room for further improvement'. It gives no evidence for a direct link to our VARX R2 of 0.41 or to our MPC-vs-oracle gap. Reword to: 'even with cellular-resolution observation of an entire vertebrate brain, current forecasting models improve only partly over naive baselines'. Present the parallel to our numbers as our interpretation.
+
+_Rejected in this theme:_ No references rejected; all 24 confirmed to exist via Crossref, OpenAlex, arXiv, ICLR proceedings or the publisher page. Metadata fixes: Dörfler spelling (coulson2019deepc); sole author Ali Mesbah supplied (Crossref lists none); POCO is now NeurIPS 38 pp. 26815--26853, doi 10.52202/085713-0798; ZAPBench confirmed at ICLR 2025; Bolus 2021 DOI now verified; Camacho 2nd-edition series and address added; Smith 1957 53(5):217--219 confirmed via OpenAlex. Rawlings 2017 ISBN taken from the claim, not checked independently. Claim-level downgrades to 'partly': Tomizuka papers (no evidence the preview limit is tied to settling time or delay), Wang & Boyd (benchmark is 12 states/3 inputs in ~5 ms, not 'tens'), Hocker & Park (myopic one-step controller, not long-horizon replanning), Yang 2021 (abstract does not show a comparison with input-free models), LFADS (over-reads 'inferred inputs'), ZAPBench (no direct support for linking to our R2/MPC numbers), Lu 2025 ('univariate' not supported).
+
+**Risks a referee would raise (researcher):**
+- The Fig 6 replay plant is a VARX of the same class as the MPC's model, with a linear, additive, state-independent laser effect. A referee will say the 107/108 win rate is close to guaranteed by construction (superposition in a linear plant). The plant VARX is also fitted to the whole session, while the MPC model excludes CL frames. Present the replay strictly as an upper bound (as Results does) and avoid 'MPC outperforms PI'.
+- Cortical sites improve the 200 ms prediction only from R2 0.37 to 0.41. Claiming that the MPC gain comes from anticipating inter-areal (e.g. contralateral) disturbance is not supported by Fig 6 alone. The gain may come mostly from modelling the site's own dynamics and the laser. Tie the cancellation of intra-brain interactions to the Fig 4 contra-G analysis (RR 0.58), not to the MPC.
+- The perfect-prediction value (0.27) is an oracle inside the linear replay, not a physical floor. Do not call it 'the achievable limit'.
+- The replay MPC has no terminal cost or terminal set and no formal stability guarantee (Mayne 2000 conditions are not met). Do not imply MPC brings stability guarantees; theme 1's monotonicity and integral-control argument covers the PI loop only.
+- Naive MPC can reintroduce steady-state offset under model mismatch (Pannocchia & Rawlings 2003). Offset is the largest error term in Figs 4-5, so claiming MPC would simply replace PI is attackable. Propose MPC with a disturbance model, or MPC as an outer loop around PI.
+- The pointed tone against forecasting models is risky. POCO, ZAPBench and LFADS were not built or claimed as control models, and our own forecaster reaches only R2 0.41 at 200 ms; Lu et al. 2025 is our own group's benchmark. Criticise the gap (no input conditioning, no tests under perturbation) rather than declaring the models 'grossly over-approximating' or failing.
+- 'State-dependent laser response' as a limit of MPC must not suggest that Fig 2 showed the stimulus effect changes with state. The paper explicitly reports only co-variation of trial deviations with state. Use 'state-dependent variability'.
+- Claims of novelty ('first MPC for cortical control') are unsafe. MPC and optimal control for neural stimulation exist in simulation (Chang 2020, Steffen 2024, Liang 2023, Hocker & Park 2019), and live model-based optimal control exists at single-neuron scale (Bolus 2021). Restrict any novelty claim to MPC evaluated on recorded mesoscale data, hedged with 'to our knowledge'.
+- The controller and the replay used the uncorrected blue channel. Part of the 'predictable disturbance' the VARX exploits could be hemodynamic, so a referee may argue the MPC is predicting blood-volume artefacts rather than neural activity. Acknowledge this in the limitations paragraph.
+- Compute-latency claims are untested on the rig: say 'should be feasible (Wang & Boyd 2010)', not 'is feasible'. Note that any solve time adds to the existing <=47 ms latency.
+- Smith 1957 has no DOI and its page range is cited inconsistently (217-219 is the consensus). Check it against the AIChE record before submission. The Bolus 2021 DOI given here (10.1088/1741-2552/abb89c) was not verified this session; the existing bib entry has none.
+
+## Gap fill (literature the two referee critics said was missing)
+
+- **`grosenick2015closed`** · support: gap · in refs.bib
+  - Grosenick et al. (2015). Closed-loop and activity-guided optogenetic control. *Neuron* 86:106--139. doi:10.1016/j.neuron.2015.03.034
+  - Finding: Review that sets out the taxonomy of closed-loop and activity-guided optogenetics, from event-triggered stimulation to continuous feedback control of neural activity.
+  - Use: Opening sentence of Theme 3: where continuous setpoint tracking sits relative to event-triggered closed loop. Cite it again; dropping it is an obvious omission.
+- **`bolus2018design`** · support: gap · in refs.bib
+  - Bolus et al. (2018). Design strategies for dynamic closed-loop optogenetic neurocontrol in vivo. *Journal of Neural Engineering* 15:026011. doi:10.1088/1741-2552/aaa506
+  - Finding: Shows continuous feedback optogenetic control of firing rate in rodent somatosensory thalamus. Compares PI control with model-based designs that use a fitted model of the opsin-to-rate dynamics.
+  - Use: Most direct precedent for PI feedback designed on a fitted low-order model (Theme 1) and for continuous tracking in vivo (Theme 3). Contrast it with our setting: one recording site and spiking there, versus a mesoscale optical readout with one-sided inhibitory actuation here.
+- **`Zhang2018`** · support: gap · in refs.bib
+  - Zhang et al. (2018). Closed-loop all-optical interrogation of neural circuits in vivo. *Nature Methods* 15:1037--1040. doi:10.1038/s41592-018-0183-z
+  - Finding: Feeds two-photon imaging of activity back into holographic photostimulation in vivo, closing the loop at cellular resolution.
+  - Use: Name it as the cellular-scale counterpart to our mesoscale loop (Theme 3).
+- **`carrilloreid2019controlling`** · support: gap
+  - Carrillo-Reid et al. (2019). Controlling visually guided behavior by holographic recalling of cortical ensembles. *Cell* 178:447--457.e5. doi:10.1016/j.cell.2019.05.045
+  - Finding: Holographic activation of a few ensemble neurons in mouse V1 recalls the ensemble and biases visually guided behaviour. This shows that targeted cortical perturbation can have downstream behavioural effects.
+  - Use: Theme 3's closing hope that controlled cortical activity has downstream effects. It is precedent that perturbations at the cellular scale reach behaviour. It is not evidence that our loop does.
+- **`wallach2011neuronal`** · support: gap
+  - Wallach et al. (2011). Neuronal response clamp. *Frontiers in Neuroengineering* 4:3. doi:10.3389/fneng.2011.00003
+  - Finding: Uses PI-type feedback on stimulation in cultured networks to hold a neuronal response probability at a target. The stimulation needed to hold the clamp then becomes a readout of the hidden excitability of the network.
+  - Use: The in vitro precedent for the clamp analogy in Theme 3. It also points to a concrete future analysis: our laser command under closed loop estimates the disturbance the loop cancelled, the same way the clamp current reports hidden excitability.
+- **`krookmagnuson2013ondemand`** · support: gap
+  - Krook-Magnuson et al. (2013). On-demand optogenetic control of spontaneous seizures in temporal lobe epilepsy. *Nature Communications* 4:1376. doi:10.1038/ncomms2376
+  - Finding: Online seizure detection triggers optogenetic stimulation in a mouse model of temporal lobe epilepsy and stops spontaneous seizures.
+  - Use: Positioning (Theme 3): canonical in vivo closed-loop optogenetics, and event-triggered rather than continuous setpoint tracking.
+- **`paz2013closed`** · support: gap
+  - Paz et al. (2013). Closed-loop optogenetic control of thalamus as a tool for interrupting seizures after cortical injury. *Nature Neuroscience* 16:64--70. doi:10.1038/nn.3269
+  - Finding: Detecting seizures after cortical injury and then optogenetically inhibiting thalamocortical neurons in closed loop interrupts the seizures.
+  - Use: Cite together with Krook-Magnuson 2013 as on-demand optogenetic precedents. Crossref gives 2012 as the online date; the print volume is 2013.
+- **`berenyi2012closed`** · support: gap
+  - Ber{\'e}nyi et al. (2012). Closed-loop control of epilepsy by transcranial electrical stimulation. *Science* 337:735--737. doi:10.1126/science.1223154
+  - Finding: Transcranial electrical stimulation triggered by detected spike-and-wave episodes shortens absence-like seizures in rats.
+  - Use: Non-optical in vivo closed-loop precedent. One clause next to the optogenetic seizure papers.
+- **`rosin2011closed`** · support: gap
+  - Rosin et al. (2011). Closed-loop deep brain stimulation is superior in ameliorating parkinsonism. *Neuron* 72:370--384. doi:10.1016/j.neuron.2011.08.023
+  - Finding: In parkinsonian primates, pallidal stimulation triggered by recorded neural activity reduces pathological oscillations and akinesia more than standard continuous DBS.
+  - Use: Theme 5 / clinical relevance: stimulation conditioned on the measured brain state outperforms open-loop stimulation, which is the clinical form of our CL versus OL comparison.
+- **`little2013adaptive`** · support: gap
+  - Little et al. (2013). Adaptive deep brain stimulation in advanced Parkinson disease. *Annals of Neurology* 74:449--457. doi:10.1002/ana.23951
+  - Finding: In patients, DBS gated by subthalamic beta power improves motor scores relative to continuous stimulation while delivering less stimulation.
+  - Use: Human precedent for state-gated closed-loop stimulation (Theme 5). Pair it with Rosin 2011.
+- **`McGinley2015waking`** · support: gap
+  - McGinley et al. (2015). Waking state: rapid variations modulate neural and behavioral responses. *Neuron* 87:1143--1161. doi:10.1016/j.neuron.2015.09.012
+  - Finding: Review of how arousal and locomotion in awake rodents shift cortical membrane potential, synchrony (low-frequency power) and sensory responses on sub-second to second timescales.
+  - Use: Theme 2: the standard framing for state as a fast, natural, non-stimulus variable. Our motion and delta axes are proxies of it. The refs.bib key McGinley2015 is a different paper (Neuron 87:179); use a new key for this one.
+- **`Vinck2015`** · support: gap · in refs.bib
+  - Vinck et al. (2015). Arousal and locomotion make distinct contributions to cortical activity patterns and visual encoding. *Neuron* 86:740--754. doi:10.1016/j.neuron.2015.03.028
+  - Finding: Separates arousal (pupil) from locomotion in mouse V1. Arousal suppresses low-frequency fluctuations, and locomotion additionally changes firing and encoding.
+  - Use: Supports treating motion and low-frequency power as distinct state axes in Fig 2 and Fig 4.
+- **`musall2019single`** · support: gap · in refs.bib
+  - Musall et al. (2019). Single-trial neural dynamics are dominated by richly varied movements. *Nature Neuroscience* 22:1677--1686. doi:10.1038/s41593-019-0502-4
+  - Finding: In widefield imaging of behaving mice, uninstructed movements explain most single-trial cortical variance across dorsal cortex.
+  - Use: Theme 2 and 4: movement is a large unmeasured input to our readout. This motivates treating motion as a disturbance that the loop rejects (Fig 4 motion: OL slope up, CL flat). Pair it with Stringer2019 and Salkoff2020, which are already in refs.
+- **`pachitariu2015state`** · support: gap
+  - Pachitariu et al. (2015). State-dependent population coding in primary auditory cortex. *Journal of Neuroscience* 35:2058--2073. doi:10.1523/JNEUROSCI.3318-14.2015
+  - Finding: Population responses in A1 are more reliable and better encode stimuli in desynchronized states than in synchronized states (large low-frequency fluctuations).
+  - Use: Theme 2: precedent that response reliability depends on synchronization state. This matches our observation that trial-to-trial deviations grow with absolute 2-4 Hz power. Note the DOI is 3318-14, not the 2539-14 given in the task.
+- **`ozeki2009inhibitory`** · support: gap
+  - Ozeki et al. (2009). Inhibitory stabilization of the cortical network underlies visual surround suppression. *Neuron* 62:578--592. doi:10.1016/j.neuron.2009.03.028
+  - Finding: In vivo intracellular recordings in cat V1 show that surround suppression reduces both excitation and inhibition, the signature of an inhibition-stabilized network.
+  - Use: If the ISN/paradoxical-effect argument stays, cite this as the cortical in vivo evidence alongside Tsodyks 1997. Use it to argue that driving interneurons still reduces net local excitatory activity, so the actuator sign is robust.
+- **`litwinkumar2016inhibitory`** · support: gap
+  - Litwin-Kumar et al. (2016). Inhibitory stabilization and visual coding in cortical circuits with multiple interneuron subtypes. *Journal of Neurophysiology* 115:1399--1409. doi:10.1152/jn.00732.2015
+  - Finding: Network models with PV, SOM and VIP interneurons show that the response to perturbing one subtype depends on the circuit, and can be paradoxical.
+  - Use: Caveat for a DLX-driven actuator that reaches several interneuron classes: the sign of the net effect is a property of the circuit, which we measured empirically (Fig 2 monotone suppression) rather than assumed.
+- **`ma2016resting`** · support: gap
+  - Ma et al. (2016). Resting-state hemodynamics are spatiotemporally coupled to synchronized and symmetric neural activity in excitatory neurons. *Proceedings of the National Academy of Sciences* 113:E8463--E8471. doi:10.1073/pnas.1525369113
+  - Finding: Widefield imaging of neural calcium and hemodynamics in awake mice shows that resting-state hemodynamics follow bilaterally symmetric, synchronized excitatory activity.
+  - Use: Limitations of the Global/Local split: part of what the contralateral predictor captures on an uncorrected signal could be shared hemodynamics. Ma 2016 says that this shared component is itself tied to bilateral neural activity. Page range is from memory (Crossref gave no pages); check it before final BibTeX.
+- **`mateo2017entrainment`** · support: gap
+  - Mateo et al. (2017). Entrainment of arteriole vasomotor fluctuations by neural activity is a basis of blood-oxygenation-level-dependent ``resting-state'' connectivity. *Neuron* 96:936--948.e3. doi:10.1016/j.neuron.2017.10.012
+  - Finding: Arteriole vasomotion is concentrated near 0.1 Hz and is entrained by ultra-slow envelopes of gamma-band neural activity. Mirrored arterioles in the two hemispheres co-fluctuate.
+  - Use: Bounds the hemodynamic caveat in frequency: vasomotion sits roughly an order of magnitude below our 1-4 Hz band. Its bilateral co-fluctuation is also a reason the slow part of G may be partly vascular.
+- **`valley2020separation`** · support: gap
+  - Valley et al. (2020). Separation of hemodynamic signals from GCaMP fluorescence measured with wide-field imaging. *Journal of Neurophysiology* 123:356--366. doi:10.1152/jn.00304.2019
+  - Finding: Quantifies hemodynamic contamination of widefield GCaMP fluorescence in mice and evaluates correction methods.
+  - Use: Limitations: the controller fed back on uncorrected blue-channel fluorescence. Cite it as the standard quantification of that contamination and as the remedy a future observer could implement.
+- **`owen2019thermal`** · support: gap
+  - Owen et al. (2019). Thermal constraints on in vivo optogenetic manipulations. *Nature Neuroscience* 22:1061--1065. doi:10.1038/s41593-019-0422-3
+  - Finding: Common illumination protocols warm tissue by about 0.2-2 C. That warming suppresses spiking in several regions without any opsin, via a temperature-sensitive potassium conductance.
+  - Use: Limitations: heating is a second, opsin-independent suppressive pathway in the actuator, and it would be absorbed into the identified plant. State the powers and duty cycle used and whether an opsin-free light control exists.
+- **`klapoetke2014independent`** · support: gap
+  - Klapoetke et al. (2014). Independent optical excitation of distinct neural populations. *Nature Methods* 11:338--346. doi:10.1038/nmeth.2836
+  - Finding: Introduces Chrimson and the faster ChrimsonR, red-shifted channelrhodopsins, and characterizes their kinetics.
+  - Use: ChrimsonR off-kinetics are part of the actuator transfer function and add phase lag on top of loop latency (Theme 4 bandwidth argument and Fig 5 phase lag). It also provides the primary citation for the opsin.
+- **`sani2021modeling`** · support: gap
+  - Sani et al. (2021). Modeling behaviorally relevant neural dynamics enabled by preferential subspace identification. *Nature Neuroscience* 24:140--149. doi:10.1038/s41593-020-00733-0
+  - Finding: PSID identifies linear state-space models of neural population activity that prioritize the dynamics relevant to a measured behaviour.
+  - Use: Theme 2: input- and behaviour-aware state-space identification exists; Yang2021 (in refs) already covers models of stimulation input. Cite these so the paper does not say models lack input channels. The argument becomes: unmeasured inputs, not missing machinery, limit forecasting.
+- **`miall1993cerebellum`** · support: gap
+  - Miall et al. (1993). Is the cerebellum a Smith predictor?. *Journal of Motor Behavior* 25:203--216. doi:10.1080/00222895.1993.9942050
+  - Finding: Proposes that the cerebellum compensates feedback delays in motor control by internally predicting the plant output, as in a Smith predictor.
+  - Use: Theme 5: a one-clause nod that makes delay compensation and prediction familiar to neuroscientists before the MPC/preview argument.
+- **`hjalmarsson2005experiment`** · support: gap
+  - Hjalmarsson (2005). From experiment design to closed-loop control. *Automatica* 41:393--438. doi:10.1016/j.automatica.2004.11.021
+  - Finding: Survey of identification for control. A model only needs to be accurate where it matters for the closed loop, so experiment design and model quality should follow the control objective.
+  - Use: Theme 1/2 central methodological stance: a trial-averaged model that is wrong on every single trial is still adequate if it is accurate in the band where loop gain matters. Feedback absorbs the rest. This turns the design choice into a principled one.
+- **`vandenhof1995identification`** · support: gap
+  - Van den Hof & Schrama (1995). Identification and control -- closed-loop issues. *Automatica* 31:1751--1770. doi:10.1016/0005-1098(95)00094-X
+  - Finding: Reviews closed-loop identification and control-relevant model accuracy, including how to estimate plant and sensitivity from data collected under feedback.
+  - Use: Pair it with Hjalmarsson 2005 in Theme 1. In Theme 4 it is the route to estimating the sensitivity function empirically from the interleaved OL/CL trials, as future work.
+- **`desoer1969slowly`** · support: gap
+  - Desoer (1969). Slowly varying system $\dot{x} = A(t)x$. *IEEE Transactions on Automatic Control* 14:780--781. doi:10.1109/TAC.1969.1099336
+  - Finding: Shows that a linear time-varying system whose frozen-time matrices are uniformly stable stays exponentially stable if its parameters vary slowly enough.
+  - Use: Theme 2: the precise condition under which frozen-time LTI design is legitimate for a plant whose parameters drift with brain state. The drift must be slow relative to the closed-loop dynamics.
+- **`rugh2000research`** · support: gap
+  - Rugh & Shamma (2000). Research on gain scheduling. *Automatica* 36:1401--1425. doi:10.1016/S0005-1098(00)00058-3
+  - Finding: Survey of gain scheduling and LPV control: design a family of linear controllers indexed by a measured scheduling variable, with stability guarantees under bounded variation rates.
+  - Use: Theme 2/5: the proper home for state-resolved models that stay analysable regime by regime. Measured motion or delta power could schedule gains. Cite with Shamma & Athans 1992 for the slow-variation hazard.
+- **`shamma1992gain`** · support: gap
+  - Shamma & Athans (1992). Gain scheduling: potential hazards and possible remedies. *IEEE Control Systems Magazine* 12:101--107. doi:10.1109/37.165527
+  - Finding: Shows that a gain-scheduled loop that is stable at every frozen operating point can still go unstable if the scheduling variable changes quickly.
+  - Use: The honest hedge for Theme 2: frozen-time robustness holds only if state changes slowly relative to the loop. Motion onsets can be abrupt, which is a candidate reason for residual error at transitions.
+- **`kothare1994unified`** · support: gap
+  - Kothare et al. (1994). A unified framework for the study of anti-windup designs. *Automatica* 30:1869--1883. doi:10.1016/0005-1098(94)90048-5
+  - Finding: Unifies anti-windup schemes for linear controllers with saturating actuators into one framework for analysing their effect on closed-loop behaviour.
+  - Use: Methods/Discussion: cite where the P- and I-term clamps are called anti-windup with a saturating, one-sided laser. Astrom & Hagglund (astrom1995pid, in refs) covers the practical PID version.
+- **`garone2017reference`** · support: gap
+  - Garone et al. (2017). Reference and command governors for systems with constraints: a survey on theory and applications. *Automatica* 75:306--328. doi:10.1016/j.automatica.2016.08.013
+  - Finding: Survey of reference governors: add-on schemes that modify the reference to a pre-stabilized loop so that input and state constraints are never violated.
+  - Use: Theme 4/5: formal language for 'the reference may be unreachable with a one-sided actuator' (sessions at the ceiling, rising half-cycles of the sine). It also gives a cheap alternative to full MPC on the existing rig.
+- **`chen2016disturbance`** · support: gap
+  - Chen et al. (2016). Disturbance-observer-based control and related methods---an overview. *IEEE Transactions on Industrial Electronics* 63:1083--1095. doi:10.1109/TIE.2015.2478397
+  - Finding: Reviews disturbance observers and related estimate-and-cancel schemes that augment feedback by estimating lumped disturbances online.
+  - Use: Theme 3/5: the contralateral predictor used online is a measured-disturbance feedforward/disturbance observer. It helps only if the disturbance estimate arrives early enough relative to the actuator path.
+- **`bristow2006survey`** · support: gap
+  - Bristow et al. (2006). A survey of iterative learning control. *IEEE Control Systems Magazine* 26:96--114. doi:10.1109/MCS.2006.1636313
+  - Finding: Survey of iterative learning control, which uses the error from previous repetitions of the same task to update the feedforward input on the next repetition.
+  - Use: Theme 5: with 100+ identical 3 s trials, ILC directly targets the repeatable standing offset (the largest residual term in Fig 4/5). Name it as a next step, or say why it was not used.
+- **`stellato2020osqp`** · support: gap
+  - Stellato et al. (2020). OSQP: an operator splitting solver for quadratic programs. *Mathematical Programming Computation* 12:637--672. doi:10.1007/s12532-020-00179-2
+  - Finding: Presents an embedded-capable QP solver with benchmarks, including MPC problems solved in milliseconds or less.
+  - Use: Theme 5: concrete backing that solving a box-constrained MPC QP online fits within one 28.6 ms frame at 35 Hz for a problem of our size. Replace the extrapolated feasibility claim with it.
+- **`sussmann1994general`** · support: gap
+  - Sussmann et al. (1994). A general result on the stabilization of linear systems using bounded controls. *IEEE Transactions on Automatic Control* 39:2411--2425. doi:10.1109/9.362853
+  - Finding: Shows that a linear system that is stabilizable and has no eigenvalues with positive real part can be globally stabilized with bounded (saturated) controls.
+  - Use: Use with care, if at all. It is a positive result for symmetric bounded inputs, while our actuator is one-sided. For an exponentially stable plant, stability is trivial (zero input). What is not trivial is reachability of the reference, which is better framed with Garone 2017.
+- **`rohrs1985robustness`** · support: gap
+  - Rohrs et al. (1985). Robustness of continuous-time adaptive control algorithms in the presence of unmodeled dynamics. *IEEE Transactions on Automatic Control* 30:881--889. doi:10.1109/TAC.1985.1104070
+  - Finding: Shows that standard adaptive controllers can go unstable in the presence of unmodelled high-frequency dynamics and small disturbances.
+  - Use: Theme 5: one sentence on why gains were recalibrated per session with a fixed controller rather than adapted online. Unmodelled fast dynamics and latency jitter are exactly the conditions in which naive adaptation fails.
+
+## Referee critiques of the first outline
+
+### Critic 1: neuroscience
+Major revision of the outline before drafting. The scientific core is sound: per-session nominal LTI design, feedback that cuts error and variance in 15/15 sessions, state co-variation of residuals, rejection of the contralaterally predicted component, and a limit set by the actuator and by delay. The outline's own caveat fields already catch most hazards. The problem is that the topic sentences still state the stronger version:
+- "worked BECAUSE of a structural guarantee"
+- "cancels activity shared with the rest of the brain"
+- "failures of reachability"
+- "no retuning can attenuate 1-4 Hz"
+- "bounded by unobserved inputs, not model capacity"
+- "none is built around the input a controller applies"
+
+A J Neurosci referee will read the topic sentences, not the caveats. Rewrite every topic sentence to the level the data support. The 1-4 Hz Bode argument also conflicts internally with the stated 2.6-4 Hz crossover; resolve that first, ideally with an empirical CL/OL error PSD ratio.
+
+Cut the network-controllability material (Kreindler, Pasqualetti, Gu, Tu, Brammer) and the glycolysis analogy. Compress the model-critique paragraph to three sentences aimed at the gap, not at the models. Move the formal guarantee into the Methods remark with one intuitive sentence in the Discussion.
+
+Rebalance toward the neuroscience literature a referee in this field will expect:
+- closed-loop optogenetics (Grosenick 2015, Krook-Magnuson 2013, Paz 2013, Bolus 2018, Zhang 2018)
+- movement-driven widefield activity (Musall 2019, Salkoff 2020, Stringer 2019)
+- awake state (Vinck 2015, McGinley 2015, Reimer 2014)
+- bilateral hemodynamic coupling (Ma et al. 2016 PNAS)
+- optogenetic-inhibition confounds (Owen 2019, Wiegert 2017)
+
+Extend Limitations to cover:
+- opsin-negative or light-only controls
+- the readout sitting adjacent to the spot, so spread of inhibition is a confound
+- GCaMP sensor nonlinearity
+- hemodynamic contamination of G and of delta power; state this in Theme 3 itself, not only in Limitations
+
+Finally, add bib entries for the roughly 80 missing keys and collapse the duplicate keys before compiling.
+
+**Overclaims**
+- Opening question: 'a system that never behaves like the average on a single trial' is rhetoric. Single-trial responses scatter around the mean; they do not 'never' match it. Ask instead how a nominal model of the mean can be enough when single trials vary widely.
+- Theme 1 topic sentence: 'The controller worked in every session BECAUSE its design relied on a structural property...' is a causal claim the data do not test. No gain was compared with K*/lambda, no P-only or no-integrator ablation was run, and the theorem is asymptotic while trials last 3 s. Write 'The design rationale was...' and treat 15/15 stability as consistent with it, not as proof.
+- Theme 1 P(4), 'the data show the integrator at work': the larger 1-3 s benefit and the collapse of the standing offset are also what an imperfect feedforward gain plus any feedback would give. Without a P-only or FF-only condition, the attribution to integral action is an inference. Hedge it ('consistent with integral action').
+- Theme 1 P2: 'changes in gain or slow dynamics across sessions and states cost speed, not convergence.' Morari/Logemann cover a fixed time-invariant plant per gain. State changes inside a session make the plant time-varying, which the outline itself admits a paragraph later. Remove 'and states'. Also, monotonicity was measured in 4 impulse sessions, not in the 15 controller sessions, so 'the sign is robust' is an extrapolation.
+- Theme 1: the steady-state map is never measured. Fig 2B averages over 0-200 ms of brief impulses, and the dc gain comes from a 2-pole fit that includes a rebound term of opposite sign. The structural argument depends on G(0) keeping its sign in every session. Until that is checked, the 'guarantee' rests on an unverified assumption.
+- Theme 2 P2: 'none is built around the input a controller applies' is false as stated. Input-output stimulation models exist and are cited elsewhere in the same outline: Yang et al. 2018/2021, Bolus et al. 2021, Vahidi et al. 2024 (measured inputs), and PSID-type models with inputs. Narrow it to 'the expressive single-trial models we review (LFADS, CURBD, rSLDS, neural-mass) were not built to predict responses to an applied input'.
+- Theme 2 P2, 'they explain more than they can predict': no cited paper shows this, and it reads as a pointed critique the authors cannot back with their own comparison. Drop it, or limit it to the architectural fact that acausal smoothers use future data.
+- Theme 2 P5: 'what any model of a single readout can know in advance is bounded by the unobserved inputs from other regions, not by model capacity.' Only linear VARX models were tested (Fig 6H). Model capacity was never varied, and the 0.04 R2 gain from 100 cortical sites could equally reflect a poor representation. Unsupported; delete or restrict it to 'for the linear models we tested'.
+- Theme 2 P3 ('the subsystem ... is nonlinear, depends on brain state and is driven by inputs from other regions; on single trials it is non-stationary, and its parameters drift'): none of this is measured. The data show approximately linear trial averages and state co-variation of residuals consistent with an ADDITIVE disturbance on a fixed plant. Present it as a modelling stance, not a finding.
+- Theme 2 P4 builds a 600-word theme on 4 sessions/3 mice with 3-df per-session slopes. The state-labelled-trials-for-better-models argument outweighs its evidence. Saying both 'the remedy is feedback, not a better open-loop dose' and 'state dependence belongs to the unstimulated cortex' over-reads co-variation as mechanism.
+- Theme 3 heading, 'Feedback cancels activity the readout shares with the rest of the brain': only contralateral dorsal cortex was used as the predictor, so 'the rest of the brain' is unsupported. 'Cancels' also conflicts with the outline's own numbers: shared fluctuation energy only falls 0.66 -> 0.54. Use 'reduces' / 'rejects much of the contralaterally predicted component, mostly its standing offset'.
+- Theme 3 P1, 'an interaction that would otherwise set the level of the controlled site': a ridge predictor shows shared variance, not that contralateral activity sets ipsilateral level. Common drive, movement, hemodynamics and laser leak into G (6-42% of readout) all contribute. Remove the causal framing.
+- Theme 3 P2: 'the brain itself uses interhemispheric coupling as corrective feedback ... our loop adds an external feedback on top' implies the ALM recovery mechanism (Li 2016) operates in S1 during ongoing activity. That is an unsupported analogy across area, task and timescale.
+- Theme 3 P3 (clamp): 'the laser command needed to hold the readout is itself a trial-by-trial measurement of the drive the loop opposed'. The command is PI-filtered, saturating, one-sided and passes through an unknown, state-varying opsin/circuit gain, so at best it is a nonlinear, lagged correlate. With no space clamp, inhibition spreading beyond the spot (Li 2019) and rebound, 'turns an optogenetic perturbation into a controlled variable' holds only at the 10x10-pixel readout. Soften both.
+- Theme 4 P2, reachability: 'the tracking failures we observed are failures of reachability' is not yet demonstrated. The outline itself says to check that the 2 excluded sessions' commands sat at u_max, and that 7/13 sessions hitting the ceiling does not show the ceiling caused error. Write 'we attribute ... ' only after checking.
+- Theme 4 P3, Bode integral: 'large fluctuations at 1-4 Hz sit where no retuning of a linear feedback loop can attenuate them'. This contradicts the stated crossover of order 2.6-4 Hz: 1-2.6 Hz lies BELOW crossover, where a PI loop should attenuate. Also, open-loop error rises with absolute power almost as much as closed-loop error does (+0.30 vs +0.36). That is the expected scale effect (larger-variance epochs give larger RMSE in both conditions) and does not need a fundamental limit. Show an empirical CL/OL error PSD ratio before invoking waterbed effects; otherwise present it as a hypothesis.
+- Theme 4 P3: attenuation worsening with absolute delta power may be a ratio artifact. Absolute power is measured on the controlled signal from -2 to +3 s, so closed-loop trials have loop-shaped band power. The outline flags this in the caveat but still states the conclusion ('a fundamental limit, not a tuning failure') in the text.
+- Theme 4 P4, 'the next gain has to come from prediction, not from higher gain': lower latency, a bidirectional actuator, multi-site actuation and hemodynamically corrected sensing are equally valid routes, and the Limitations paragraph itself names latency as 'the most direct route'. Internal contradiction; soften.
+- Theme 4 P3, citing Chandra et al. (glycolytic oscillations) to call the 1-4 Hz effect 'the same kind' of limit as in biological feedback is an over-reach for a J Neurosci audience.
+- Theme 5 P2, 'predictability, not the optimiser, set the size of the gain' rests on an oracle inside a linear VARX replay of the controller's own model class. It does not show that predictability limits a live loop.
+- Methods remark / attenuation: calling attenuation the 'empirical counterpart of the sensitivity function' (current Methods L901-902) and the Theme 4 'analogue of |S|' framing both treat an interleaved, non-LTI, pooled-transient RMSE ratio as a frequency-domain quantity. Keep the analogy to one clause.
+- Hemodynamics are treated only in Limitations, yet several central interpretations (absolute 1-4 Hz power, bilateral shared G, standing offset) are on the uncorrected blue channel. The bilateral hemodynamic signal is itself highly symmetric (Ma et al. 2016 PNAS). The 'cancellation of shared drive' claim must carry this caveat in Theme 3 itself, not only at the end.
+
+**Weak citations**
+- kreindler1964concepts: output controllability of an unconstrained LTI system is trivially satisfied for one scalar readout with nonzero gain. It does not support the constrained set-point reachability argument actually made; cut it.
+- pasqualetti2014controllability: concerns full-state control energy in large networks, which is irrelevant to holding one scalar output with one actuator. Citing it invites a digression a J Neurosci referee will see as padding.
+- gu2015controllability: connectome controllability from diffusion imaging; unrelated to this experiment. Remove together with tu2018warnings.
+- tu2018warnings: same as gu2015controllability; included only to stage a debate the paper does not engage.
+- brammer1972controllability: the outline concedes its corollary does not apply because the dip mode is a complex pair, and the reachability statement is the authors' own. Citing it for the sign-constraint point is misleading.
+- chandra2011glycolytic: yeast glycolytic oscillations do not support a claim about cortical feedback bandwidth.
+- morari1985robust: concerns MIMO integral controllability through dc-gain matrices. For SISO it reduces to a sign condition and does not support 'a low enough gain tracks any plant ... across sessions and states' (no common gain, no time variation).
+- davison1976tuning: requires a measured steady-state gain. The paper has only impulse responses and an inferred dc gain, so the 'classical tuning-regulator pattern' is not what was done.
+- desoer1985tracking: needs a strictly monotone steady-state I/O map of an exponentially stable plant. Fig 2B measures 200 ms impulse means, not a steady-state map, so it supports the remark only conditionally.
+- atallah2012parvalbumin: V1 visual-response transformation by PV manipulation. It does not establish monotone dose-suppression for DLX-driven ChrimsonR stimulation in S1.
+- tsodyks1997paradoxical: CA1 model and data on interneuron paradoxical responses. It is not evidence about the sign of the pyramidal/widefield response in this preparation.
+- Nozari2024: resting fMRI/iEEG, with no trial averaging or stimulation. Use it only as an analogy for averaging masking nonlinearity, not as support for 'trial averaging moves nonlinearity into the residual'.
+- wilson1972excitatory: derives E-I mean-field equations. It does not support the claim that noise stands in for unmodelled drive, nor any forecasting failure.
+- breakspear2017dynamic: a review arguing FOR nonlinear collective dynamics. Citing it within a critique of models that 'explain more than they predict' misrepresents it.
+- pandarinath2018lfads: supports inference of single-trial inputs. It does not support 'explain more than they can predict'; that claim is the authors' own.
+- Churchland2010: spiking and Vm variance quenching. Contrasting it with widefield dF/F variance under weak inhibition compares different measures.
+- Mateo2011: excitatory ChR2 in L2/3 barrel cortex. It supports state-dependent network responses to a fixed optogenetic input, but the actuator differs from inhibitory-interneuron drive, so say so.
+- li2016robust: ALM, recovery after unilateral silencing during motor planning. It does not support interhemispheric coupling acting as ongoing corrective feedback on S1 activity during stimulation.
+- chen2021modularity: shows gating and mouse-to-mouse variation of interhemispheric coupling, not corrective feedback.
+- hodgkin1952measurement: supports the clamp analogy, but not that the laser command measures the opposed drive (the command is nonlinear and PI-filtered).
+- jazayeri2017navigating: a perspective on perturbation scale and natural activity manifolds. 'Keep activity within its natural range' as a closed-loop design principle is the authors' reading; attribute it so.
+- desborough1993feedforward: requires an exogenous measured disturbance. Contralateral cortex is coupled to the stimulated site and responds to the laser, so the feedforward-ANOVA logic does not apply directly.
+- Ma2016PTB: methods review. It does not establish band-specific (1-4 Hz) hemodynamic contamination; pair it with Valley2020 and Ma et al. 2016 PNAS.
+- Ye2026: rotating-wave coordination. Citing it for 'bilateral ongoing fluctuations add to evoked responses' stretches it; Shimaoka2019 and Mohajerani2010 carry that point.
+- astrom1970introduction / harris1989assessment: the minimum-variance bound uses the 1-2 sample loop delay, but the outline pairs it with a 200 ms VARX prediction lead. The citation is right but the numbers it is set beside do not test it.
+
+### Critic 2: control theory
+MAJOR REVISION OF THE OUTLINE BEFORE DRAFTING. This is a well-organised and unusually self-critical outline - the softened_claims and caveat fields already catch most of what a routine referee would catch, and the Methods remark is a genuine improvement on the current Discussion. But it is not yet draftable, for four reasons. (1) TWO STRUCTURAL CONTROL ARGUMENTS DO NOT HOLD AS WRITTEN. Theme 1's guarantee is asymptotic while the controller operates entirely inside a 3 s reset transient; and Theme 1 P2 applies an LTI-family robustness result (Morari) to a plant that switches within a session, which is not covered and can be unstable. Fix by adding a slowly-varying/frozen-time or absolute-stability (Khalil, circle/Popov) argument and by stating plainly that the theorem justifies the structure, not the 3 s performance. (2) THEME 4's BODE PARAGRAPH HAS AN UNTESTED, MORE PARSIMONIOUS RIVAL: with 7/13 sessions at the laser ceiling, actuator saturation may explain the 1-4 Hz attenuation result entirely, and saturation is nonlinear so no sensitivity-integral argument applies. Run the saturation-fraction-vs-band-power check and the empirical CL/OL error PSD ratio before writing it. In the same theme, motion and absolute delta power are known to be anticorrelated; if the attenuation slopes are univariate, two of your three headline Fig 4 results may be one result reported twice with opposite sign - report partial slopes first. (3) THEME 2's POINTED CRITIQUE IS NOT SAFE YET: 'none of these models takes the stimulation command as an input' is false (Yang 2018/2021, Vahidi 2024, Bolus 2021, and your own Theme 5 citations); the acausal-inference critique is applied to causal forecasters it does not fit; and the key evidential load is carried by a self-citation whose univariate, stimulus-free scope cannot support a general predictability bound. (4) SCOPE AND LOGISTICS: 2510 words with ~95 citations is a review, ~80 of those keys are absent from refs.bib, five are unverified, and several are decorative (the connectome-controllability trio, Kreindler, Brammer, Freudenberg, Stein, Bode). The missing literature a control referee will expect clusters in four places: identification-for-control (Ljung, Gevers, Hjalmarsson) as the formal backing for your own central argument; anti-windup and bounded-input stabilisation (Astrom & Rundqwist, Kothare, Teel/Sontag-Sussmann) for the controller you actually built; reference governors and maximal admissible sets (Gilbert & Tan, Garone) as the correct formalism for the one-sided-actuator limit you currently miscite Brammer for; and closed-loop all-optical / on-demand stimulation in vivo (Zhang et al. 2018, Grosenick 2015, Krook-Magnuson 2013, Paz 2013, Berenyi 2012) for positioning, which the outline drops without replacement. PRIORITY ORDER: run the four blocking analyses (command saturation vs band power; motion/delta partial slopes; empirical |S| from the CL/OL error PSD ratio; quasi-static command-vs-suppression map from the controller sessions), then fix Theme 1 P2 and Theme 2 P2, then cut to ~1700 words by merging Themes 1 and 2 and deleting the Harris paragraph.
+
+**Overclaims**
+- THE CENTRAL GAP IN THEME 1: every theorem cited (Desoer & Lin; Logemann & Curtain; Logemann, Ryan & Townley; Fliegner) is an ASYMPTOTIC (t -> infinity) result, but the controller runs 3 s trials with the integrator reset between trials. The loop never leaves the transient, so asymptotic set-point convergence is not the operating regime and is never tested. The theorem motivates the STRUCTURE (integral action, sign condition, feasibility) and says nothing about the quantity you report (3 s RMSE), which is governed by gain and bandwidth. Say this in Theme 1 P1, not just in one clause of the Methods remark.
+- THEME 1 P1 BLENDS FOUR THEOREMS INTO ONE SENTENCE ('This holds through a saturating actuator, with loop delay and in sampled time'). No single cited result covers a nonlinear state-dependent plant + input saturation + delay + sampling at once. Logemann/Fliegner assume a LINEAR plant preceded by a static monotone input nonlinearity (Hammerstein structure); Desoer & Lin assume a nonlinear plant with strictly increasing dc map but no saturation, delay or sampling. Your plant is neither. Say which theorem supplies which hypothesis and state that no theorem covers the union.
+- THEME 1 P2 IS THE SHARPEST TECHNICAL HOLE. 'A low enough gain tracks any plant that is stable and keeps the sign of its dc gain, so changes in gain or slow dynamics across sessions AND STATES cost speed, not convergence' is applied to within-session, state-driven variation. Morari 1985 covers a family of LTI plants, each stabilised by some low gain; it says nothing about a plant that SWITCHES among that family during operation, and switching among individually stabilised loops can be unstable. This is elementary and a control referee will raise it first, because the paper's own thesis is that the plant varies with state. Needed: (a) a slowly-varying / frozen-time argument (state changes slower than the integrator; Desoer 1969, Khalil Ch. 9), or (b) an absolute-stability/IQC argument covering the whole uncertainty set (Khalil, circle/Popov - in your verified list, uncited), or (c) an explicit admission that the robustness argument is heuristic for a time-varying plant. The buried clause about time-variation is not enough.
+- THE STEADY-STATE MAP WAS NEVER MEASURED. Theme 1 rests on a 'strictly monotone steady-state input-output map', but Fig 2B measures brief impulses (mean over 0-200 ms) at a few powers in 4 sessions (3 df per session), and G(0) is extrapolated from a 2-pole fit whose slow rebound is session-variable. Sustained illumination engages opsin desensitisation, adaptation, rebound and homeostasis, so the static map under sustained drive could be non-monotone or saturate well below the modelled dc gain. Cheap fix before submission: regress trial-mean command against trial-mean suppression across the 15 controller sessions for an EMPIRICAL quasi-static map, and confirm each fitted G(0) keeps its sign.
+- 'THE DATA SHOW THE INTEGRATOR AT WORK: feedback helped more from 1 to 3 s than in the first second' is not evidence for integral action specifically. Any feedback, including pure proportional, improves more once the ~0.11 s dip and the feedforward step have passed, and the 0-1 s window is dominated by the initial deviation (unique R2 0.53). The clean test is the standing-offset result (35% -> 7%), which you already have. Drop or demote the window contrast.
+- THEME 4, REACHABILITY: the argument you make is STEADY-STATE ADMISSIBILITY of a set-point under a one-sided input bound. That is not reachability and is not what Kreindler or Brammer prove. Kreindler's output-controllability rank test is satisfied trivially by a SISO 2-pole plant with an UNCONSTRAINED input and says nothing about the constraint that is your actual limitation; Brammer's corollary, as your own caveat concedes, does not apply because the dip mode is a complex pair. Both citations are decorative. The correct objects are the maximal output admissible set (Gilbert & Tan 1991) and reference governors (Gilbert & Kolmanovsky 1999; Garone et al. 2017), which also give a concrete next step beyond 'add an excitatory opsin'.
+- THEME 4 P2, THE BODE ARGUMENT, IS THE REMAINING MAJOR OVERCLAIM. (1) 'Slow, large fluctuations add disturbance where loop delay leaves the loop with none' contradicts your own numbers: with crossover of order 2.6-4 Hz the loop HAS gain at 1-2 Hz and loses it only near 4 Hz. Write '|S| approaches and exceeds 1'. (2) Bode's integral constrains the INTEGRAL of log|S|; it does not predict |S|>1 in the band you name, and for an open-loop-STABLE plant with no RHP zeros the waterbed is mild - which is exactly why Freudenberg & Looze and Stein (unstable plants / RHP zeros) do not support the claim. (3) A more parsimonious rival is never considered: large 1-4 Hz excursions drive the command into the one-sided ceiling, and 7/13 sessions already hit it. Saturation, not the sensitivity waterbed, may be the whole effect - and being nonlinear, no Bode argument applies. Test it (fraction of samples at u_max vs absolute 1-4 Hz power, per trial) and compute the empirical CL/OL error PSD ratio before writing this paragraph.
+- POSSIBLE COLLINEARITY THAT COULD COLLAPSE TWO OF THE THREE FIG-4 RESULTS INTO ONE. Motion and absolute 1-4 Hz power are strongly anticorrelated in awake cortex (Poulet & Crochet 2019; McCormick et al. 2020 - both cited by you for exactly that fact). If the attenuation slopes are univariate, 'motion improves attenuation (-9%/SD)' and 'absolute delta worsens it (+8%/SD)' may be one effect reported twice with opposite sign, not two independent state axes supporting two control stories. Report partial slopes from a joint model plus the motion/delta correlation or VIF before building the narrative. This is the first thing a quantitative referee will check.
+- THEME 2 P2 CONTAINS A FLATLY FALSE SENTENCE: 'None of these models takes the stimulation command as an input.' Yang et al. 2018/2021 are input-output models of stimulation responses; Vahidi et al. 2024 explicitly models measured inputs; Bolus et al. 2021 identified a light-to-firing model; the DBS/epilepsy MPC work you cite in Theme 5 (Chang, Steffen, Liang) is built on stimulation-input models. You cite several of these yourself in the same outline. Restrict to 'no widely used model of MESOSCALE widefield cortical dynamics takes an optogenetic command as an input', and only after checking.
+- THEME 2 P2 ALSO MISFIRES AS A CRITIQUE by lumping acausal latent-variable inference (LFADS, iLQR-VAE, CURBD) with strictly causal forecasters (rSLDS, VAR, DMD/Koopman, PoCo, ZAPBench entrants). 'They explain more than they can predict' is true of the first group and false of the second, several of which are one-step predictors a controller could use. Split into (a) acausal inference models are not a controller's model by construction, and (b) causal forecasters are, but are trained stimulus-blind with short informative horizons.
+- USING Lu et al. 2025 (~1.5 s informative horizon) AS A GENERAL PREDICTABILITY CEILING is unsupported: that benchmark is UNIVARIATE, probabilistic and stimulus-free, so it bounds neither multivariate nor input-driven prediction. It is also a self-citation carrying the main evidential load of your critique of the field, which a referee will notice. Pair with ZAPBench and state the univariate/stimulus-free restriction in the same sentence.
+- NOZARI et al. 2024 PARTLY ARGUES AGAINST YOU. You use it for 'averaging masks nonlinearity', but its headline finding is that LINEAR models are the best macroscale description. Theme 2's assertion that the subsystem is 'nonlinear, state dependent, non-stationary, with drifting parameters' is then made with no data of yours behind it - your only demonstrated nonlinearity is the one-sided saturating actuator. The softened_claims entry says to attribute the nonlinearity to the literature and the actuator; the paragraph body does not do it.
+- THEME 3: G is fit stimulation-blind on spontaneous frames and evaluated during trials, but the laser perturbs the contralateral signal (6-42% of the readout dip). Under CLOSED loop the command is a function of the disturbance, so the laser-leak component of G becomes correlated with the disturbance in a way it is not under open loop. 'The paired OL vs CL comparison does not depend on that scale' is an assertion about a bias whose problem is direction, not scale. Either show the result survives after regressing the command out of the contralateral traces, or restrict to the pre-stimulus window, or carry it as a limitation rather than dismissing it.
+- THEME 3: RR compares residual energy about the REFERENCE with G energy about the SPONTANEOUS MEAN; different centrings can make RR<1 mechanically. Also, contralateral cortex is not exogenous - it is bidirectionally coupled to the stimulated site and responds to the laser - so Global/Local is a linear projection, not a causal decomposition. Say this once in the paragraph's own voice, not only in a caveat.
+- THEME 4 P3 (Harris / minimum-variance): four process-control citations are spent on a benchmark that is never computed, and as stated (using the 1-2 sample loop delay) it would predict a floor far below anything achieved - i.e. that the loop is nowhere near minimum-variance, a claim you are not prepared to make. Either compute the Harris index from closed-loop residuals (genuinely cheap) or cut to two sentences keeping only the feedforward-lowers-the-bound point.
+- THEME 5: confirm the 1.46 baseline is the PI loop SIMULATED IN THE SAME REPLAY, not the recorded in vivo RMSE. If the baseline is real data and 0.88 is simulated, the headline comparison is apples to oranges and uninterpretable. Nothing in the outline resolves this and it is the first question a referee asks of a replay result.
+- WANG & BOYD 2010 does not support feasibility for YOUR problem: their ~5 ms figure is a 12-state, 3-input, 30-step QP, while your VARX carries the controlled site plus 100 cortical sites with 1 s history. Cite a solver with reported embedded timings at your scale (OSQP, Stellato et al. 2020; qpOASES, Ferreau et al. 2014) or explicit MPC (Bemporad et al. 2002, already verified), and say solve time was not measured on the rig.
+- MINOR BUT CHECKABLE: the Methods remark's K* = sup{k>0 : 1 + k Re[G(sigma)/sigma] >= 0 for all Re sigma > 0} should be checked verbatim against Logemann & Curtain Thm 4.1 - the condition is normally a Popov-type/positive-real condition reduced to the boundary sigma = i*omega by the maximum principle, which should be spelled out. Also prove rather than assert K* > 0 under (i)-(ii), and note K* = infinity when G(s)/s is positive real.
+
+**Weak citations**
+- kreindler1964concepts
+- brammer1972controllability
+- freudenberg1985right
+- stein2003respect
+- bode1945network
+- pasqualetti2014controllability
+- gu2015controllability
+- tu2018warnings
+- desoer1985tracking
+- davison1976tuning
+- morari1985robust
+- wilson1972excitatory
+- atallah2012parvalbumin
+- tsodyks1997paradoxical
+- lu2025benchmarking
+- Nozari2024
+- wang2010fast
+- chandra2011glycolytic
+- desborough1993feedforward
+- desborough1992performance
+- harris1989assessment
+- astrom1970introduction
+- tomizuka1975optimal
+- tomizuka1975discrete
+- smith1957closer
+- hodgkin1952measurement
+- sharp1993dynamic
+- ching2013control
+- macdowell2020motifs
+- Ma2016PTB
+- Yang2018
+- Goris2014
+- Mohajerani2010
+- Ye2026
+- ZatkaHaas2021
+- perich2026curbd
