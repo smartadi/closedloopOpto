@@ -159,7 +159,7 @@ LME = struct();
 % _preview/, so the stitched panel's PNG read as hours stale while its PDF was current.
 outview=fullfile(fileparts(which('f4_row2_quartiles')),'_preview');
 if ~exist(outview,'dir'); mkdir(outview); end
-PQ=struct('qmO',{},'qmC',{},'qsO',{},'qsC',{},'qmOp',{},'qmCp',{},'qsOp',{},'qsCp',{},'medO',{},'medC',{},'iqO',{},'iqC',{},'predP',{},'predUp',{},'ctrlP',{},'ctrlUp',{});   % per-state quantities for the stitched figure
+PQ=struct('qmO',{},'qmC',{},'qsO',{},'qsC',{},'qmOp',{},'qmCp',{},'qsOp',{},'qsCp',{},'medO',{},'medC',{},'iqO',{},'iqC',{},'predP',{},'predUp',{},'ctrlP',{},'ctrlUp',{},'attP',{},'attUp',{});   % per-state quantities for the stitched figure
 for ip=1:numel(preds); nm=preds{ip};
     zx=Pl.(nm).zx; zy=Pl.(nm).zy; g=Pl.(nm).g;
     if isempty(zx); fprintf('%-9s (no data)\n',nm); continue; end
@@ -223,18 +223,22 @@ for ip=1:numel(preds); nm=preds{ip};
     % the gap trend cannot tell "OL worsens while CL holds" from "CL worsens". The variables
     % keep their old ctrl* names so the draw/stash code below is unchanged.
     ctrlP=Rf.regP; ctrlUp = Rf.reg<0;                              % regularizability arrow up iff CL error FALLS
+    % Third property ATTENUATION (user 2026-10-18): slope of log(CL/OL) on state. Arrow up iff
+    % the CL/OL ratio FALLS, i.e. the loop removes a larger share of the error. Carries the
+    % motion result (CL holds flat while OL rises), which regularizability alone reads as n.s.
+    attP=Rf.attP; attUp = Rf.att<0;
     fprintf('           predictability %s (OL slope %+.3f p=%.2g) | regularizability %s (CL slope %+.3f p=%.2g) | attenuation %+.3f p=%.2g | gap trend %+.3f p=%.2g\n', ...
         tern(predUp,'UP','DOWN'),bOL,predP, tern(ctrlUp,'UP','DOWN'),Rf.reg,ctrlP, Rf.att,Rf.attP, Rf.dec,Rf.decP);
 
     % stash per-state quantities so the stitched paper figure reuses them (no recompute)
     PQ(ip)=struct('qmO',qmO,'qmC',qmC,'qsO',qsO,'qsC',qsC,'qmOp',qmOp,'qmCp',qmCp,'qsOp',qsOp,'qsCp',qsCp, ...
                   'medO',medO,'medC',medC,'iqO',iqO,'iqC',iqC, ...
-                  'predP',predP,'predUp',predUp,'ctrlP',ctrlP,'ctrlUp',ctrlUp); %#ok<AGROW>
+                  'predP',predP,'predUp',predUp,'ctrlP',ctrlP,'ctrlUp',ctrlUp,'attP',attP,'attUp',attUp); %#ok<AGROW>
 
     % ---- separate standalone panel: keep its own y-axis; legend ONLY on init-dev; colored title ----
     figP=jnFig(jnPanelWidth('double',4),3.3); ax=axes(figP);   % jn* v2 sizing
     draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, titR2{ip}, titCol(ip,:), true, ip==1, ...
-        predP,predUp,ctrlP,ctrlUp,'points');
+        predP,predUp,ctrlP,ctrlUp,'points',attP,attUp);
     % ---- F4Q_GRANT: grant copies of 2B/2C at the EXACT printed width (opt-in, 2026-09-30) ----
     % Set F4Q_GRANT = {targetCm, outDir} to ALSO write fig:pid C,D for the R01. The locked
     % paper PDFs in outdir are written either way -- this branch never touches them. These
@@ -274,7 +278,7 @@ for ip=1:numel(preds); nm=preds{ip};
     % FALLBACK standalone (pooled-trial view, the pre-2026-10-10 display) -> *_pooled.pdf
     figPp=jnFig(jnPanelWidth('double',4),3.3); axp=axes(figPp);
     draw_panel(axp, qmOp,qmCp,qsOp,qsCp, colOL,colCL, PS, titR2{ip}, titCol(ip,:), true, ip==1, ...
-        predP,predUp,ctrlP,ctrlUp);
+        predP,predUp,ctrlP,ctrlUp,'bars',attP,attUp);
     try
         paperExport(figPp, fullfile(outdir,strrep(fnout{ip},'.pdf','_pooled.pdf')));
     catch ME, warning('[F4R2] export skip pooled %s (%s)',fnout{ip},ME.message); end
@@ -299,7 +303,7 @@ for iv=1:size(VIEWS,1)
         end
         draw_panel(ax, m{:}, colOL,colCL, PS, ...
             titR2{ip}, titCol(ip,:), ip==1, ip==1, ...   % showY only leftmost; legend only leftmost
-            PQ(ip).predP,PQ(ip).predUp,PQ(ip).ctrlP,PQ(ip).ctrlUp,sty);
+            PQ(ip).predP,PQ(ip).predUp,PQ(ip).ctrlP,PQ(ip).ctrlUp,sty,PQ(ip).attP,PQ(ip).attUp);
     end
     title(tlR,'Effect of state on controller performance','FontSize',PS.fs,'FontWeight','bold');
     xlabel(tlR,'sorted state quartile bins','FontSize',PS.fs,'FontWeight','bold');   % common x-label
@@ -338,10 +342,11 @@ bpRoot=fileparts(fileparts(mfilename('fullpath')));   % absolute: run() changes 
 try, save(fullfile(bpRoot,'data','f4_motion_slopes.mat'),'MOTSLOPE'); catch, end
 try, save(fullfile(bpRoot,'data','f4_row2_lme.mat'),'LME'); fprintf('[F4R2-LME] -> data/f4_row2_lme.mat\n'); catch ME; warning('[F4R2-LME] save skipped (%s)',ME.message); end
 
-function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, showLegend, predP,predUp,ctrlP,ctrlUp,sty)
+function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, showLegend, predP,predUp,ctrlP,ctrlUp,sty,attP,attUp)
 % sty: 'bars' (pooled fallback, the original look) | 'points' (session views, user 2026-10-10:
 % point-and-line, OL/CL offset in x). qs* is a 1x4 symmetric error or a 2x4 [below; above].
     if nargin<17 || isempty(sty), sty='bars'; end
+    if nargin<19, attP=[]; attUp=false; end   % attenuation line optional (grant copies omit it)
 % One OL/CL-by-quartile panel. Colored title; optional y-axis + legend.
 % Two-concept annotation (top-right): Predictability + Regularizability, each an up/down arrow
 % with significance stars (n.s. if p>=0.05). Predictability = OL slope, Regularizability = CL slope.
@@ -372,12 +377,16 @@ function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, 
     title(ax,ttl,'FontSize',PS.fs,'FontWeight','bold','Color',titleCol);   % colored to match state exemplars
     % ---- two-concept annotation (top-center, black): predictability + controllability, arrow + stars ----
     % First/leftmost panel spells the names out; the rest abbreviate to P / C.
-    if showLegend, pN='Predictability'; cN='Regularizability'; else, pN='P'; cN='R'; end
-    yA=yl(2)-0.02*range(yl); dyA=0.085*range(yl);
+    if showLegend, pN='Predictability'; cN='Regularizability'; aN='Attenuation'; else, pN='P'; cN='R'; aN='A'; end
+    yA=yl(2)-0.02*range(yl); dyA=0.105*range(yl);   % 0.085 -> 0.105 (2026-10-18): 3 lines with A collided
     text(ax,2.5,yA,     [pN ' ' arrowstars(predP,predUp)],'Interpreter','tex','HorizontalAlignment','center', ...
         'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
     text(ax,2.5,yA-dyA, [cN ' ' arrowstars(ctrlP,ctrlUp)],'Interpreter','tex','HorizontalAlignment','center', ...
         'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
+    if ~isempty(attP)
+        text(ax,2.5,yA-2*dyA, [aN ' ' arrowstars(attP,attUp)],'Interpreter','tex','HorizontalAlignment','center', ...
+            'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
+    end
     if showY
         ylabel(ax,'RMSE to ref (z)','FontSize',PS.fs,'FontWeight','bold');
     else
