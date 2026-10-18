@@ -16,6 +16,45 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-18 — Introduction rewrite and JN compliance audit started, then paused at the user's request
+**Changed/Found:** Two workflows were started and then stopped before producing output.
+- The JN compliance audit (six auditors plus verifiers) was stopped because the user wants it after their own Discussion pass.
+- The Introduction rewrite (brief: scratchpad `intro_brief.md`, 650 words including citations, set up Discussion claims C1–C4) was stopped when the user said "wait".
+Both can resume from cache in this session.
+**Why:** The user's priority is internal review and arXiv readiness: their Discussion pass first, then an Intro attempt, then reviewer passes, and JN formatting last.
+**Next:** Resume the Intro rewrite on the user's go. Run the compliance audit after the user's Discussion pass.
+
+### 2026-10-18 — Found: JN word caps confirmed; Introduction over its cap, Abstract lacks sex, figures pair red with green
+**Changed/Found:** The official JN Information for Authors (pasted by the user) confirms these caps: Discussion 1,500 words including citations; Introduction 650 including citations; Abstract 250 including citations; Significance Statement 120.
+- `introduction.tex` measures ~713 words with citations, over the cap.
+- The Abstract is 222 words but does not state the sex of the subjects. JN requires it in the Abstract, though only at revision.
+- The Significance Statement is 112 words.
+- JN asks authors to convert red/green to magenta/green for colour-blind readers. The locked condition colours pair OL red with CL+p green.
+**Why:** The user asked for the Discussion to meet the JN rules, which meant checking the current guidelines.
+**Next:** Intro rewrite to ≤650 words (paused). Decide on the colour scheme and the sex statement when JN formatting starts.
+
+### 2026-10-18 — JN Discussion at 1,496 words (incl. citations): `discussion_jn1500.tex`
+**Changed/Found:** `paper-writing/discussion_2026-10-18/discussion_jn1500.tex` plus `DISCUSSION_JN1500_NOTES.md` (change log and 11 author items). It was rewritten to the user's rulebook by a workflow:
+1. two planners and a merge;
+2. three drafts;
+3. two judges and a synthesis;
+4. four checkers (facts, citations, causal language, structure);
+5. a revision and a final section-6 check, which passed.
+
+Structure: a cortical-function opening, then four claims (C1 linear-on-average and the control argument; C2 contralateral cancellation; C3 reachable vs unreachable variability; C4 observable but not forecastable, preview, MPC), then one limitations paragraph, implications and a closing sentence.
+
+My post-workflow fixes:
+- removed a dangling "small gain" referent;
+- corrected the Sanzeni connective;
+- removed a hedge stack;
+- added a preview sentence to mirror the Abstract;
+- removed an unverified Valley clause;
+- fixed a missing space.
+
+A scratch build compiles with no undefined references or citations (41 pp). Word count by scratchpad `dwc.py`: prose plus rendered author-year citations.
+**Why:** The user's J Neurosci rulebook and the 1,500-word cap including citations. Draft 2 was ~3,100 words.
+**Next:** The user's pass on the Discussion and the 11 author items in the NOTES file. Then write into Closedloop_edit (draft branch) with the Methods remark and new_refs.bib, and align Results L230 and Methods L901–902.
+
 ### 2026-10-18 — Discussion draft: ~2,900 words, not cut to the 2,500 target
 **Changed/Found:** `paper-writing/discussion_2026-10-18/discussion_draft.tex`. After the verification fixes the draft came to 3,500 words, and it was trimmed to 2,895 (texcount). Dropped for length: Jazayeri & Afraz, Das & Fiete, Harris 1989, Garone 2017 (reference governors), the "jazayeri natural range" clause and the repeated Li 2019 rebound citation. An optional cut list of about 400 words is in OUTLINE.md.
 **Why:** Cutting further would remove the caveats the verifiers required (theorem scope, "consistent with" for reachability, the crossover hedge) or remove the user's themes. Better to let the user choose the cuts.
