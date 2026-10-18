@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-18 — Seed FC pilot: CL decouples the site from cortex, OL does not (m4)
+**Changed/Found:** `controller-analysis/ctrl_seed_fc.m` (new) — seed = 5x5 px box at the laser site; noise-correlation map (trial-mean removed) over paired windows, baseline [−2,0) s vs stim [+1,+3) s, computed in SVD space (200 SV, hemo-corrected V). m4 (AL_0033 0226 e2, 92 OL / 108 CL trials), mean r over mask >0.5 mm from the site: **OL 0.746 → 0.759 (Δ +0.013, trial-bootstrap 95% CI [−0.045, 0.087])**; **CL 0.783 → 0.630 (Δ −0.152, CI [−0.188, −0.101])**. The CL drop grows with distance and is largest over the far/contra cortex; it is ~0 at the site itself. Regressing laser lags 0..34 (ridge λ=100) out of the CL stim window does NOT restore r (0.605). Seed sd ratio stim/base: OL 0.78, CL 0.57. Figure `paper/images/supp_seedfc/seedfc_AL_0033_0226_e2.png`.
+**Why:** hub #32 (user idea): show the stim site is cut off from the rest of cortex during stim. OL (no feedback) is the mechanism control: a drop in OL would mean the circuit's input gain changed (e.g. shunting); a drop only in CL means the feedback removes the shared fluctuations. Result says the latter: decoupling comes from the controller, not from light on the tissue.
+**Next:** run on the other sessions (needs `ctrl_mpc_arx_in_` + `ctrl_mpc_wb_in_` exports; only m4 and AL_0048 0714 have them); add a global-signal-regressed variant (r≈0.75 everywhere, so the global mode dominates); check that the laser-partial failure isn't just a nonlinear/gain-varying actuator; then decide the panel layout.
+
 ### 2026-10-18 — Introduction rewrite and JN compliance audit started, then paused at the user's request
 **Changed/Found:** Two workflows were started and then stopped before producing output.
 - The JN compliance audit (six auditors plus verifiers) was stopped because the user wants it after their own Discussion pass.

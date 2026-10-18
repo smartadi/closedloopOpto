@@ -8,6 +8,16 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
+## IN PROGRESS: Closed-loop control functionally decouples the stim site from cortex (seed FC, hub #32)
+**Question:** During stimulation, is the controlled site less coupled to the rest of cortex, and is that from the light itself (OL) or from the feedback (CL)?
+**Analysis:** `controller-analysis/ctrl_seed_fc.m` — seed-based noise correlation (evoked part removed), baseline [−2,0) s vs stim [+1,+3) s, OL and CL.
+**Result (m4 only):** OL unchanged (mean r 0.75 → 0.76, Δ CI spans 0); CL drops 0.78 → 0.63 (Δ −0.15, CI [−0.19, −0.10]), mostly over distant/contra cortex. Linear laser regression does not undo it.
+**Paper claim (draft):** Closed-loop control, not stimulation per se, isolates the target from cortex-wide fluctuations. Open-loop light at the same site leaves its coupling intact.
+**Figure:** pilot `paper/images/supp_seedfc/seedfc_AL_0033_0226_e2.png` (candidate supp panel).
+**Status:** single session; needs cross-session replication + global-signal control. See RESEARCH 2026-10-18.
+
+---
+
 ## Finding: Brain state shapes OL error; feedback decouples motion but not relative 2–4 Hz power (Fig 4)
 **Question:** Which brain-state factors account for tracking error, and does closed-loop control remove their effect?
 **Analysis:** `controller-analysis/f4_row2_quartiles.m` + `utils/f4_row2_pool.m` / `f4_row2_fit.m` (LMM `RMSE ~ cond*state + (1+cond|sess) + (1|mouse)`, REML + Satterthwaite); `f4_error_decomp.m` (unique R², 'sep' mode); `f4_state_exemplars.m`. States over ONE window [−2, +3) s (`utils/f4_state_window.m` 'peri'), band power grid-independent (`utils/f4_bandpow.m` 'continuous'), motion = mean z (`f4_motion_stat.m`). Final 2026-10-02.
