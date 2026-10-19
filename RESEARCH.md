@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-19 — Decision: seed-FC panel stays raw (no laser removal, no GSR)
+**Changed/Found:** no code change. The supp panel (`ctrl_seed_fc_panel.m`, raw noise correlations) is the version going forward; the laser-removed and GSR variants in `ctrl_seed_fc_story.m` are not shown.
+**Why:** user: the comparison is during stim, so the laser's effect is part of what's being measured, and GSR "makes no sense" here. Caveat kept on record: the raw CL drop (−0.157, 12/12) is fully accounted for by the controller's own laser signal (laser-removed −0.018, ns). So the text should say the site's activity decouples from cortex under CL, not that its inputs are cut off.
+**Next:** run the 60-spot panel for all 12 sessions (cross-session version); keep the laser-removed number available for a reviewer reply / Methods sentence.
+
 ### 2026-10-19 — Seed-FC decoupling is cancellation, not disconnection (12 sessions)
 **Changed/Found:** new `controller-analysis/ctrl_seed_fc_story.m` (self-contained loader; 60 spots) + `ctrl_seed_fc_story_summary.m`. Three controls on the CL site–cortex r drop: (1) laser → V FIR kernel (lags 0..34, all 200 SV) fit on OL trials only (cross-fitted 5-fold for OL), predicted laser-driven part 6 Hz low-passed and subtracted; gain sweep 0–1.4; shuffled-laser control. (3) Coherence vs frequency, 3 s Hann windows, base [−3,0) vs stim [0,3). (4) Global-signal regression. Across 12 AL_0033/AL_0039 sessions (mean over spots >0.5 mm): **raw ΔR CL −0.157 ± 0.026, 12/12 < 0, p = 0.0005; OL +0.008, p = 0.42.** **After laser removal CL −0.018 ± 0.014, p = 0.20** (drop shrinks in 12/12, p = 0.0005); flat for gain 0.6–1.4; shuffled laser is worse than the true laser in 12/12. GSR + laser: CL +0.006, OL +0.003 (both ns). Coherence: the raw CL drop is concentrated < 1 Hz (≈ −0.2 at 0.33 Hz) and is restored by laser removal; OL coherence rises slightly < 2 Hz (+0.047, p = 0.002). Figure `paper/images/supp_seedfc/seedfc_story_summary.png`.
 **Why:** user's question (hub #32): does the laser drive itself bias r? In CL the laser varies by trial, so the trial-mean subtraction can't remove it. The kernel is learned where the laser is independent of the brain (OL), so the removal isn't circular.
