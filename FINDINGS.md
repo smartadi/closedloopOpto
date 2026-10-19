@@ -13,7 +13,7 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Analysis:** `controller-analysis/ctrl_seed_fc.m` — seed-based noise correlation (evoked part removed), baseline [−2,0) s vs stim [+1,+3) s, OL and CL.
 **Result (m4 only):** OL unchanged (mean r 0.75 → 0.76, Δ CI spans 0); CL drops 0.78 → 0.63 (Δ −0.15, CI [−0.19, −0.10]), mostly over distant/contra cortex. Linear laser regression does not undo it.
 **Paper claim (draft):** Closed-loop control, not stimulation per se, isolates the target from cortex-wide fluctuations. Open-loop light at the same site leaves its coupling intact.
-**Figure:** pilot `paper/images/supp_seedfc/seedfc_AL_0033_0226_e2.png` (candidate supp panel).
+**Figure:** supp panel draft `paper/images/supp_seedfc/seedfc_spots_AL_0033_0226_e2.pdf` (60 spots; OL 1/60, CL 60/60 spots with Δr CI excluding 0); full-map pilot `seedfc_AL_0033_0226_e2.png`.
 **Status:** single session; needs cross-session replication + global-signal control. See RESEARCH 2026-10-18.
 
 ---

@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-18 — Seed FC supp panel: 60-spot view (OL 1/60, CL 60/60 spots drop)
+**Changed/Found:** `controller-analysis/ctrl_seed_fc.m` — added `opt.nSpot` (default 60): r with the site at 60 evenly spaced 5x5 px spots (square grid on the mask, 52.8 px spacing), plus a per-spot paired trial-bootstrap 95% CI on Δr (200 boots). New `controller-analysis/ctrl_seed_fc_panel.m` — JN-style 8.5 × 6.8 cm panel, rows OL/CL × columns baseline r / stim r / Δr, black ring = CI excludes 0, site = star, 2 mm bar. m4: OL spot-mean r 0.75 → 0.77, **1/60** spots significant; CL 0.79 → 0.64, **60/60** spots significant (all negative). Output `paper/images/supp_seedfc/seedfc_spots_AL_0033_0226_e2.pdf` (+png).
+**Why:** user asked for a 60-spot dot view instead of the full pixel map, as a supp panel cited from the variance paragraph.
+**Next:** not in `MANIFEST.txt` / PAPER.md yet (still single-session) — add once the user locks it; replicate across sessions; global-signal-regressed variant.
+
 ### 2026-10-18 — Fig 6M phase lag check: CL+p and MPC both have zero lag; the panel exaggerates noise
 **Changed/Found:** check on `mpc_direct_sine_AL_0048_0714_e1_noCL.mat` (57 CL+p trials). The method (`mpc_direct_sine.py` `fund`/`lag_gain`: 1 Hz sine fit to the trial average over 0–4 s, lag = wrap(φr − φy)) is correct.
 

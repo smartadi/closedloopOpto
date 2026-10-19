@@ -13,12 +13,14 @@ function R = ctrl_seed_fc(sess, opt)
 %   whether the coupling is still there once the controller's own cancellation is regressed out.
 %   OL vs CL is the mechanism test: OL has no feedback, so a drop in OL = a change in the circuit,
 %   a drop only in CL = the controller cancelling the shared input.
+%   Spot view (opt.nSpot, default 60): the same r at ~60 evenly spaced 5x5 px spots on the brain mask, with a
+%   per-spot paired trial-bootstrap CI on delta r -> the supp panel (ctrl_seed_fc_panel.m).
 % IN   sess  (default 'AL_0033_0226_e2' = m4; needs data/ctrl_mpc_arx_in_<sess>.mat + ctrl_mpc_wb_in_<sess>_n100.mat)
 % OUT  R struct (maps, seed sd, distance curves); data/ctrl_seed_fc_<sess>.mat; paper/images/supp_seedfc/*.png
 if nargin < 1 || isempty(sess), sess = 'AL_0033_0226_e2'; end
 if nargin < 2, opt = struct(); end
 df = struct('nSV', 200, 'base', [-2 0], 'stim', [1 3], 'Q', 35, 'lam', 100, 'partial', true, ...
-            'excl_mm', 0.5, 'px_mm', NaN, 'nboot', 200, 'plot', true);
+            'excl_mm', 0.5, 'px_mm', NaN, 'nboot', 200, 'plot', true, 'nSpot', 60);
 fn = fieldnames(df); for i = 1:numel(fn), if ~isfield(opt, fn{i}), opt.(fn{i}) = df.(fn{i}); end, end
 
 here = fileparts(mfilename('fullpath')); dataDir = fullfile(here, 'data'); addpath(genpath(fullfile(here, '..', 'utils')));
@@ -40,6 +42,21 @@ s = Wb.site_rc; h = 2;
 [b1, b2] = ndgrid(s(1)-h:s(1)+h, s(2)-h:s(2)+h); us = mean(Uf(sub2ind([nY nX], b1(:), b2(:)), :), 1);   % 1 x nS
 mask = Wb.mask;
 
+% ~nSpot evenly spaced spots on the brain mask (square grid, 5x5 px box each) -- the panel view
+[rr, cc] = find(mask); best = inf;
+for sp = 3:0.25:80
+    [G1, G2] = ndgrid(round(min(rr):sp:max(rr)), round(min(cc):sp:max(cc)));
+    in = mask(sub2ind(size(mask), G1(:), G2(:)));
+    if abs(nnz(in) - opt.nSpot) < best, best = abs(nnz(in) - opt.nSpot); rc = [G1(in) G2(in)]; spc = sp; end
+end
+Us = zeros(size(rc, 1), nS);
+for i = 1:size(rc, 1)
+    [b1, b2] = ndgrid(max(1, rc(i,1)-h):min(nY, rc(i,1)+h), max(1, rc(i,2)-h):min(nX, rc(i,2)+h));
+    Us(i, :) = mean(Uf(sub2ind([nY nX], b1(:), b2(:)), :), 1);
+end
+R.spot_rc = rc; R.spot_spacing_px = spc;
+fprintf('[SEEDFC] %d spots, spacing %.1f px\n', size(rc, 1), spc);
+
 wb = round(opt.base(1)*Fs):round(opt.base(2)*Fs)-1;  ws = round(opt.stim(1)*Fs):round(opt.stim(2)*Fs)-1;
 cond = {'OL', A.onOL(:); 'CL', A.onCL(:)};
 for c = 1:2
@@ -51,13 +68,14 @@ for c = 1:2
         Vt = Vt - mean(Vt, 3);                                                  % remove the evoked (trial-mean) part
         X  = reshape(Vt, nS, []);
         R.(cond{c,1}).(w{1}) = seedmap(Uf, us, X, mask);
+        R.(cond{c,1}).(w{1}).spot_r = seedr(Us, us, X);
         if opt.partial && strcmp(w{1}, 'stim')
             Lg = lagmat(u, ix, opt.Q); Lg = Lg - mean(Lg, 1);
             B  = (Lg.' * Lg + opt.lam * eye(opt.Q)) \ (Lg.' * X.');             % Q x nS
             R.(cond{c,1}).stim_p = seedmap(Uf, us, X - (Lg * B).', mask);
+            R.(cond{c,1}).stim_p.spot_r = seedr(Us, us, X - (Lg * B).');
         end
-        % trial bootstrap of the masked-mean r (excluding the site neighbourhood)
-        R.(cond{c,1}).([w{1} '_ix']) = ix;
+        R.(cond{c,1}).([w{1} '_ix']) = ix;                                      % kept for the trial bootstrap
     end
     R.(cond{c,1}).nTr = numel(on);
     fprintf('[SEEDFC] %s: %d trials | seed sd base %.3f stim %.3f (ratio %.2f)\n', cond{c,1}, numel(on), ...
@@ -84,13 +102,17 @@ end
 rng(1);
 for c = {'OL', 'CL'}
     ixb = R.(c{1}).base_ix; ixs = R.(c{1}).stim_ix; nT = size(ixb, 1); d = nan(opt.nboot, 1);
+    ds = nan(opt.nboot, size(Us, 1));
     for b = 1:opt.nboot
         k = randi(nT, nT, 1);
-        mb = bootmean(V, ixb(k, :), Uf, us, mask, far, nS);
-        ms = bootmean(V, ixs(k, :), Uf, us, mask, far, nS);
-        d(b) = ms - mb;
+        [mb, sb] = bootmean(V, ixb(k, :), Uf, us, mask, far, nS, Us);
+        [ms, ss] = bootmean(V, ixs(k, :), Uf, us, mask, far, nS, Us);
+        d(b) = ms - mb; ds(b, :) = ss - sb;
     end
     R.(c{1}).dboot = d; R.(c{1}).dci = prctile(d, [2.5 97.5]);
+    R.(c{1}).spot_dci = prctile(ds, [2.5 97.5]).';                              % nSpot x 2
+    R.(c{1}).spot_sig = all(R.(c{1}).spot_dci < 0, 2) | all(R.(c{1}).spot_dci > 0, 2);
+    fprintf('[SEEDFC] %s: %d/%d spots with delta-r CI excluding 0\n', c{1}, nnz(R.(c{1}).spot_sig), size(Us, 1));
     fprintf('[SEEDFC] %s delta mean r (stim-base) = %.3f, 95%% CI [%.3f %.3f]\n', c{1}, ...
         R.(c{1}).stim.mean_far - R.(c{1}).base.mean_far, R.(c{1}).dci);
 end
@@ -111,9 +133,15 @@ r  = reshape(r, size(mask)); r(~mask) = NaN;
 M  = struct('r', r, 'sd_seed', std(sv, 1));
 end
 
-function m = bootmean(V, ix, Uf, us, mask, far, nS)
-Vt = reshape(V(:, ix.'), nS, size(ix, 2), []); Vt = Vt - mean(Vt, 3);
-M = seedmap(Uf, us, reshape(Vt, nS, []), mask); m = mean(M.r(far), 'omitnan');
+function r = seedr(Us, us, X)
+% r of each spot (rows of Us, spatial weights) with the seed, same math as seedmap
+n = size(X, 2); sv = us * X;
+r = (Us * (X * sv.') / n) ./ sqrt(sum((Us * ((X * X.') / n)) .* Us, 2) * var(sv, 1));
+end
+
+function [m, rs] = bootmean(V, ix, Uf, us, mask, far, nS, Us)
+Vt = reshape(V(:, ix.'), nS, size(ix, 2), []); Vt = Vt - mean(Vt, 3); X = reshape(Vt, nS, []);
+M = seedmap(Uf, us, X, mask); m = mean(M.r(far), 'omitnan'); rs = seedr(Us, us, X);
 end
 
 function Lg = lagmat(u, ix, Q)
