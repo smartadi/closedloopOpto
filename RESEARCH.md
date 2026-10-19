@@ -16,6 +16,19 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-18 — Fig 6M phase lag check: CL+p and MPC both have zero lag; the panel exaggerates noise
+**Changed/Found:** check on `mpc_direct_sine_AL_0048_0714_e1_noCL.mat` (57 CL+p trials). The method (`mpc_direct_sine.py` `fund`/`lag_gain`: 1 Hz sine fit to the trial average over 0–4 s, lag = wrap(φr − φy)) is correct.
+
+| | Fit lag | 95% bootstrap CI (2000 trial resamples) | Fit from 0.5 s | Cross-corr lag (×20 spline) |
+|---|---|---|---|---|
+| CL+p | +1.7° (4.7 ms) | [−5.9, 8.6] | −4.5° | 0 ms |
+| MPC | −2.5° (−6.9 ms) | [−11.1, 5.2] | −5.7° | 0 ms |
+| perfect | −2.1° | [−10.7, 5.4] | −6.0° | 0 ms |
+
+One frame = 28.6 ms = 10.3°. Every lag is ≤ ¼ frame, every CI includes 0, and the sign is not robust to the window. The panel's −2.5..3° axis (rescaled 2026-10-16 to "emphasize CL+p vs MPC") makes this noise look like a difference.
+**Why:** the user saw MPC tracking better yet "lagging" vs CL+p and asked to check the method.
+**Next:** the user will fix the panel and text before shipping (TASKS 🔴/MPC block): ±12° axis, CIs, ±1-frame band; Results "both zero within a frame" vs 71° OL.
+
 ### 2026-10-18 — Discussion cites the attenuation ratio for motion and 1–4 Hz power (Closedloop main 0a19de3)
 **Changed/Found:** `discussion.tex` (and `paper-writing/discussion_2026-10-18/discussion_jn1500.tex`) — motion sentence now "Error that accompanied movement was attenuated: the closed-to-open-loop error ratio fell 9% per SD of motion, because open-loop error rose (predictability) while closed-loop error stayed flat (regularizability; Fig 4D)"; the 1–4 Hz sentence merged with the sensitivity-function sentence and now says "so the error ratio … grew 8% per SD"; opening drops a redundant "did". 1,497 → 1,498 words incl. citations. Chosen from three drafts (minimal add / unify the measure / lead with the ratio) by two judges + an adversarial verifier; the minimal draft lost because its trims cut "against a set value" and it tacked the ratio on as an afterthought. Numbers checked against Results L196–204 and Table 5 (−9 [−14, −4], +8 [4, 12]); no p values added; all refs/cites resolve; build clean.
 **Why:** User asked for the attenuation sentence the pre-push check suggested, so the Discussion argues from the same measure Results now leads with.

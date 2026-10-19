@@ -57,6 +57,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [ ] Add Chrimson spatial-spread citation — `methods_edit.tex` L292 `\todo` (Nuo Li / Svoboda). NOT in refs.bib yet; needs exact paper from AL before adding a bib entry (do not fabricate).
 
 ### MPC (Fig 6) + VARX (Fig S5) — LOCKED 2026-10-16; only optional / open items below
+- [ ] (user, BEFORE SHIPPING) **Fig 6M phase lag misleads — fix the panel and the text.** CL+p +1.7° and MPC −2.5° are both zero: sub-frame (1 frame = 10.3° at 1 Hz), bootstrap 95% CIs include 0 (CL+p [−5.9, 8.6], MPC [−11.1, 5.2]), the cross-correlation lag is 0 ms for all, and the sign flips if the first 0.5 s is dropped. The −2.5..3° axis turns noise into an apparent CL+p vs MPC difference. Plan: `ctrl_mpc_sine_panels.m` panel L (paper M) → axis ≈ ±12°, OL 71° bar broken, CI error bars, ±1-frame band; Results "2° under CL+p, −2° under MPC" → both held zero lag within a frame (CIs include 0) vs 71° OL; caption adds the CIs + band. (Or drop the panel.) Then swap M into FigureMPC.pdf → Figure6.pdf → push main. RESEARCH 2026-10-18.
 - [ ] Optional robustness: repeat `ctrl_mpc_realtrial` on a second session (m9/m11, AL_0039) so the claim isn't n=1.
 - [ ] Ziyu's model (`2026-09-11.4`), if it becomes available: score its error relative to AR (`ctrl_mpc_forecast_sigma`) and mark it on panel B's x-axis. No longer gating.
 - [ ] Tell Nick (`2026-09-11.5`): MPC → supplementary. Real forecasters sit at PI parity; the headroom needs ~2× better forecasts plus online gain adaptation.
