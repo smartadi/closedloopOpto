@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-19 — Seed FC 12-session raw supp panel (seedfc_group.pdf)
+**Changed/Found:** new `controller-analysis/ctrl_seed_fc_group.m`. Raw pixel r-maps per session (as ctrl_seed_fc), mapped to a brain-normalised frame (no CCF registration exists: display orientation via cp_orient, AP = fraction of brain rows, ML = (col − midline)/lateral extent, stimulated hemisphere +). A 61-node common grid (0.80 mm spacing) sits inside the ≥75%-of-sessions consensus mask, eroded by 5 raster cells. Sessions are averaged in Fisher z, with signed-rank across sessions per node and BH-FDR. Panel 11.6 × 6.8 cm: OL/CL × baseline/stim/Δr maps, plus a per-session Δr column (OL red, CL blue; mouse = marker). **CL r 0.739 → 0.585, session Δr −0.154 ± 0.027, 12/12 < 0, p = 0.0005; 59/61 nodes FDR < 0.05. OL +0.011, p = 0.30, 6/61 nodes. CL vs OL paired p = 0.0005.** Per-session results cached in `data/ctrl_seed_fc_group_<sess>.mat`.
+**Why:** user asked for the raw 60-spot panel across all 12 sessions. Found and fixed: without erosion, nodes on the brain edge read r ≈ 0.95–0.97 in every session (skull-edge pixels, not cortex).
+**Next:** user to decide whether to lock it (add to MANIFEST.txt + PAPER.md). Then write the variance-paragraph sentence; network-wide OL vs CL analysis after.
+
 ### 2026-10-19 — Decision: seed-FC panel stays raw (no laser removal, no GSR)
 **Changed/Found:** no code change. The supp panel (`ctrl_seed_fc_panel.m`, raw noise correlations) is the version going forward; the laser-removed and GSR variants in `ctrl_seed_fc_story.m` are not shown.
 **Why:** user: the comparison is during stim, so the laser's effect is part of what's being measured, and GSR "makes no sense" here. Caveat kept on record: the raw CL drop (−0.157, 12/12) is fully accounted for by the controller's own laser signal (laser-removed −0.018, ns). So the text should say the site's activity decouples from cortex under CL, not that its inputs are cut off.
