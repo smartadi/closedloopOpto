@@ -8,13 +8,13 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
-## IN PROGRESS: Closed-loop control functionally decouples the stim site from cortex (seed FC, hub #32)
-**Question:** During stimulation, is the controlled site less coupled to the rest of cortex, and is that from the light itself (OL) or from the feedback (CL)?
-**Analysis:** `controller-analysis/ctrl_seed_fc.m` — seed-based noise correlation (evoked part removed), baseline [−2,0) s vs stim [+1,+3) s, OL and CL.
-**Result (m4 only):** OL unchanged (mean r 0.75 → 0.76, Δ CI spans 0); CL drops 0.78 → 0.63 (Δ −0.15, CI [−0.19, −0.10]), mostly over distant/contra cortex. Linear laser regression does not undo it.
-**Paper claim (draft):** Closed-loop control, not stimulation per se, isolates the target from cortex-wide fluctuations. Open-loop light at the same site leaves its coupling intact.
-**Figure:** supp panel draft `paper/images/supp_seedfc/seedfc_spots_AL_0033_0226_e2.pdf` (60 spots; OL 1/60, CL 60/60 spots with Δr CI excluding 0); full-map pilot `seedfc_AL_0033_0226_e2.png`.
-**Status:** single session; needs cross-session replication + global-signal control. See RESEARCH 2026-10-18.
+## IN PROGRESS: Closed-loop control cancels, not disconnects, the site's brain-wide input (seed FC, hub #32)
+**Question:** During stimulation, is the controlled site cut off from the rest of cortex? Is any change due to the light itself (OL) or to the feedback (CL)?
+**Analysis:** `controller-analysis/ctrl_seed_fc.m` (maps), `ctrl_seed_fc_story.m` + `_summary.m` (60 spots, 12 sessions): noise correlation and coherence of the site with cortex, base vs stim, raw / laser-removed (kernel learned on OL only) / + global-signal regression.
+**Result (12 sessions, 2 mice):** Raw: CL Δr −0.157 ± 0.026 (12/12, p = 0.0005); OL unchanged. Removing the controller's own laser-driven signal restores coupling (CL Δr −0.018, ns; recovery in 12/12; gain-robust; shuffled laser fails). With GSR, no change in either. The CL coherence drop is < 1 Hz, i.e. within the loop's bandwidth.
+**Paper claim (draft):** The controller does not disconnect the target from cortex. The site keeps receiving the same brain-wide slow input, and closed-loop stimulation cancels that input locally, so the site's own output decouples from cortex only below ~1 Hz. Open-loop light leaves coupling intact.
+**Figure:** panel draft `paper/images/supp_seedfc/seedfc_spots_AL_0033_0226_e2.pdf` (raw, m4); cross-session controls `seedfc_story_summary.png`.
+**Status:** analysis done on 12 sessions; panel needs reframing (add laser-removed row) before locking. See RESEARCH 2026-10-18/19.
 
 ---
 
