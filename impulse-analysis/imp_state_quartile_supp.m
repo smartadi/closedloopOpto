@@ -15,9 +15,8 @@
 % Writes paper/images/supplementary/state_quartile/sq_<state>_<panel>.pdf (+ .png), via jnExport.
 %
 % Sessions (STV_R.sess = allExperiments index, load_experiments.m order):
-%   1 AL_0041 2025-12-02 e1 = Mouse 5a, 2 AL_0041 e2 = Mouse 5b, 3 AL_0033 2025-01-29 = Mouse 1,
-%   4 AL_0048 = Mouse 3. These are the PAPER's names (stats Table 3, Fig 2B/D/E); the first
-%   export (2026-10-15) used 1a/1b/2/3 and was fixed 2026-10-16.
+%   1 AL_0041 2025-12-02 e1 = Mouse 5a, 2 AL_0041 e2 = Mouse 5b, 3 AL_0033 2025-01-29 = Mouse 1b,
+%   4 AL_0048 = Mouse 3c (utils/paper_session_label.m, global letters since 2026-10-19).
 % States: the three Fig-2G states (motion, relative delta, absolute delta). Pre-trial variance is
 % the retracted power confound and is not drawn (SQ_STATES to override, e.g. {'MOT','PVv','DPa','DPr'}).
 %
@@ -35,7 +34,10 @@ if ~exist('SQ_STATES','var') || isempty(SQ_STATES), SQ_STATES = {'MOT','DPr','DP
 if ~exist('SQ_W','var')      || isempty(SQ_W),      SQ_W = 2.4;  end   % panel width (cm). 2026-10-16: 2.4 x 2.3 (was 2.7 x 2.4) with the variance column dropped, so the per-mouse raster strip (imp_state_raster_peramp.m) fits the right column
 if ~exist('SQ_H','var')      || isempty(SQ_H),      SQ_H = 2.3;  end   % panel height (cm)
 if ~exist('SQ_VAR','var')    || isempty(SQ_VAR),    SQ_VAR = false; end   % error-variance column (dropped 2026-10-16)
-SESS_LAB = {'Mouse 5a','Mouse 5b','Mouse 1','Mouse 3'};
+% Paper-wide labels from the one registry (utils/paper_session_label.m, user 2026-10-19), in
+% STV_R.sess order. The mat file carries no session structs, so the sessions are named here.
+SESS_ID  = {'AL_0041 2025-12-02 e1','AL_0041 2025-12-02 e2','AL_0033 2025-01-29 e1','AL_0048 2026-07-15 e1'};
+SESS_LAB = imp_mouse_label(SESS_ID);          % 'Mouse 5a','Mouse 5b','Mouse 1b','Mouse 3c'
 STATE_LAB = struct('MOT','Motion','PVv','Pre-trial variance','DPa','Absolute δ power', ...
                    'DPr','Relative δ power');   % unicode + Interpreter none: tex bold spaces words apart
 C_stim = J.col_ol;  C_ctl = [0.55 0.55 0.55];
@@ -138,7 +140,7 @@ LEG_W = 7.5;  fsL = 5;
 f = jnFig(LEG_W, 0.4);
 ax = axes(f, 'Units','normalized', 'Position',[0 0 1 1]);  hold(ax,'on');
 axis(ax, [0 LEG_W 0 0.4]);  axis(ax, 'off');
-legLab = {'M5a','M5b','M1','M3'};
+legLab = imp_mouse_label(SESS_ID, 'short').';   % M5a M5b M1b M3c
 items = [ cellfun(@(lb,c) {lb, c, '-', 'none', J.lw_mean}, legLab, num2cell(C_sess,2).', 'UniformOutput', false), ...
           {{'Mean (RMS)', C_stim, '-', 'o', J.lw_mean}}, ...
           {{'Mean (ratio)', [0 0 0], '-', 'o', J.lw_mean}}, ...

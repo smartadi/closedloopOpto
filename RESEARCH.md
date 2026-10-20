@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Fig 2 / Fig S2-quartile / Fig 4G panels rebuilt with global session labels
+**Changed/Found:** Ran with `PAPER_FINAL = true` (serial MCP calls, cold `load_experiments` → 4 sessions): `dose_response` → `figure2/imp_response.pdf` (2.89 × 3.10 cm, direct labels Mouse 5a/5b/1b/3c); `imp_tf_cv` → `tf_cv_2D_sidebar.pdf` + `tf_cv_single_AL_0033.pdf` (CV numbers unchanged: pooled held-out R² 0.846); `imp_tf_figs` (FIG_PANELS swap+tau, cached fits) → `tf_model_swap.pdf`, `tf_tau_forest.pdf` (ticks M5a/M5b/M1b/M3c); `imp_state_trialvar` + `imp_state_var_combined(STV.R)` → `imp_state_var_combined.pdf` (no session labels; Q4/Q1 0.58/1.03/2.32 as before); `imp_state_raster_peramp` → `sq_{mot,dpr,dpa}_rmice.pdf` + cbars; `imp_state_quartile_supp` → all `sq_*` + `sq_legend.pdf`; `f4_cl_reject_panel` → `figure4/f4_cl_reject_RR.pdf` (11 sessions, ticks 2a 1h 1f 2d 1d 2b 1e 1j 1l 3e 1k; LMM RR 0.58 [0.46,0.72] p=1.3e-4 unchanged). Labels verified by pdftotext on the final PDFs + MATLAB renders for rotated ticks. `paper_stats_tex` re-run to scratch: byte-identical (bar line endings) to `Closedloop_edit/stat_tables.tex`, which already carries Mouse 1b/3c (Closedloop_edit 43fabaf) → not overwritten. ⚠ `tf_cv_2D_sidebar.pdf` now exports 4.76 × 3.39 cm vs the 3.99 × 3.35 MANIFEST note.
+**Why:** the 2026-10-19 global session-label rule (`utils/paper_session_label.m`, 8956579) changed printed labels; code was switched but the locked panels still carried per-panel labels.
+**Next:** Illustrator: update links in `FIgure2.ai` (7 linked panels) and `FIgure2_supp.ai` (16 links; it still links the retired `sq_divider.pdf`); `FIgure4.ai` links only `f4_row2_quartiles.pdf`, so 4G is EMBEDDED and must be re-placed from `panels/figure4/f4_cl_reject_RR.pdf`. Check 2D sidebar width in the layout. No hand-typed session labels found in the .ai files (only panel letters are native text).
+
+### 2026-10-20 — imp_state_quartile_supp.m: legend labels from the registry (was hard-coded M1/M3)
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m` — `legLab = {'M5a','M5b','M1','M3'}` and the unused `SESS_LAB` were hard-coded with the pre-2026-10-19 names, so `sq_legend.pdf` (Fig S2 state-quartile) still printed M1/M3. Both now come from `imp_mouse_label(SESS_ID)` over the four impulse sessions → M5a M5b M1b M3c. The 10-19 switch missed it because it never called the label helper. Repo sweep for other hard-coded `'Mouse N'`/`'MN'` literals in analysis code: none left.
+**Why:** one label registry project-wide (user 2026-10-19).
+**Next:** none
+
 ### 2026-10-20 — Seed FC panel locked as a supp panel (figure TBD)
 **Changed/Found:** `paper/figures_final/MANIFEST.txt`: new `[supp_seedfc]` section listing `supp_seedfc/seedfc_group.pdf`. `PAPER.md`: added a row to "Supplementary figures in use" (figure TBD). Rebuilt with `PAPER_FINAL = true`: `paper/figures_final/panels/supp_seedfc/seedfc_group.pdf` (jn-style, 17.11 × 4.73 cm cropped). `collect_final_panels('dry')`: 128 present, 0 missing, 0 to prune.
 **Why:** user: "this is a legitimate supplementary panel… put it in paper figures, I'll decide which figure it goes into; give me a paper-style PDF".
