@@ -84,6 +84,7 @@ for c = 1:2
         nnz(G.(cn{c}).sig), nN, opt.q);
 end
 fprintf('[GROUP] CL vs OL session dr: paired signrank p = %.4f\n', signrank(G.CL.sess_dr, G.OL.sess_dr));
+G.Mn = {P.Mn}; G.L_px = [P.L_px]; G.lat_px = [P.lat_px];
 G.node = node; G.cons = cons; G.Mfrac = Mfrac; G.Lap = Lap; G.Lml = Lml; G.ap = ap; G.ml = ml;
 G.site_n = reshape([P.site_n], 2, []).'; G.sessions = sessions; G.mouse = cellfun(@(s) str2double(s(6:7)), sessions);
 G.opt = opt; G.pxmm = pxmm; G.spacing_mm = dsp / pxmm;
@@ -149,52 +150,52 @@ if ~isempty(k), sig(ok) = p(ok) <= ps(k); end
 end
 
 function panel(G, here)
-S = jnStyle(); cmR = parula(256); cmD = divcm(256);
-xmm = @(mlv) mlv * G.Lml / G.pxmm; ymm = @(apv) apv * G.Lap / G.pxmm;     % normalised -> mm
-X = xmm(G.ml); Y = ymm(G.ap);
-nx = xmm((G.node(:,2) - 1)/50 - 1); ny = ymm((G.node(:,1) - 1)/100);
-sx = xmm(G.site_n(:,2)); sy = ymm(G.site_n(:,1));
-fig = jnFig(11.6, 6.8);
-W = 2.3; Hh = W * range(Y) / range(X); x0 = [0.7 3.1 5.6]; y0 = [3.85 1.45];
-cn = {'OL', 'CL'}; ttl = {'Baseline', 'Stim', '\Deltar (stim - base)'};
+% Per-session delta r maps, each in its own brain (user 2026-10-20: no pooled map, no shared site markers).
+% Rows 1-2 OL, rows 3-4 CL; nodes = the common grid restricted to that session's mask; star = its site.
+% Right: per-session delta r, OL vs CL (locked colours OL red, CL blue; marker = mouse).
+S = jnStyle(); cmD = divcm(256); cl = [-0.3 0.3]; nS = numel(G.sessions);
+mlN = (G.node(:,2) - 1)/50 - 1; apN = (G.node(:,1) - 1)/100;
+xl = max(G.lat_px) / G.pxmm * [-1 1]; yl = [0 max(G.L_px) / G.pxmm];
+fig = jnFig(17.6, 9.8);
+nc = 6; W = 1.95; Hh = W * diff(yl) / diff(xl); dx = 2.2; x00 = 0.75;
+yB = {[7.75 5.75], [3.65 1.65]};                         % OL block rows, CL block rows (bottom of axes, cm)
+cn = {'OL', 'CL'};
 for c = 1:2
-    for k = 1:3
-        ax = axes(fig, 'Units', 'centimeters', 'Position', [x0(k) y0(c) W Hh]); hold(ax, 'on');
-        contourf(ax, X, Y, double(G.cons), [0.5 0.5], 'FaceColor', [0.9 0.9 0.9], 'LineColor', [0.4 0.4 0.4], ...
+    for i = 1:nS
+        rw = ceil(i / nc); cl_i = i - (rw - 1) * nc;
+        ax = axes(fig, 'Units', 'centimeters', 'Position', [x00 + (cl_i - 1) * dx, yB{c}(rw), W, Hh]); hold(ax, 'on');
+        X = G.ml * G.lat_px(i) / G.pxmm; Y = G.ap * G.L_px(i) / G.pxmm;
+        contourf(ax, X, Y, double(G.Mn{i}), [0.5 0.5], 'FaceColor', [0.92 0.92 0.92], 'LineColor', [0.45 0.45 0.45], ...
             'LineWidth', S.lw_axis);
-        if k == 1, v = tanh(mean(G.(cn{c}).base, 1, 'omitnan')); cm = cmR; cl = [0.3 1];
-        elseif k == 2, v = tanh(mean(G.(cn{c}).stim, 1, 'omitnan')); cm = cmR; cl = [0.3 1];
-        else, v = mean(G.(cn{c}).dr, 1, 'omitnan'); cm = cmD; cl = [-0.3 0.3]; end
-        ci = round(1 + (min(max(v(:), cl(1)), cl(2)) - cl(1)) / diff(cl) * 255);
-        scatter(ax, nx, ny, 8, cm(ci, :), 'filled', 'MarkerEdgeColor', 'none');
-        if k == 3, sg = G.(cn{c}).sig(:); scatter(ax, nx(sg), ny(sg), 8, 'k', 'LineWidth', 0.4); end
-        plot(ax, sx, sy, '.', 'Color', [0.2 0.2 0.2], 'MarkerSize', 3);
-        plot(ax, mean(sx), mean(sy), 'p', 'MarkerSize', 5.5, 'MarkerFaceColor', 'w', 'MarkerEdgeColor', 'k', 'LineWidth', 0.4);
-        set(ax, 'YDir', 'reverse'); axis(ax, 'equal', 'off'); xlim(ax, [min(X) max(X)]); ylim(ax, [min(Y) max(Y)]);
-        colormap(ax, cm); clim(ax, cl);
-        if c == 1, title(ax, ttl{k}, 'FontSize', S.fs_label, 'FontWeight', 'bold'); end
-        if k == 1, text(ax, min(X) - 0.4, mean(Y), cn{c}, 'Rotation', 90, 'HorizontalAlignment', 'center', ...
-                'FontSize', S.fs_label, 'FontWeight', 'bold'); end
-        if k < 3, lab = sprintf('mean r %.2f', mean(v, 'omitnan'));
-        else, lab = sprintf('%d/%d nodes q<%.2f', nnz(G.(cn{c}).sig), numel(v), G.opt.q); end
-        text(ax, mean(X), max(Y) + 0.35, lab, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', S.fs_annot);
-        if c == 2 && k == 1
-            plot(ax, min(X) + [0.2 2.2], max(Y) * [1 1] - 0.1, 'k', 'LineWidth', 1);
-            text(ax, min(X) + 1.2, max(Y) - 0.25, '2 mm', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', ...
+        v = G.(cn{c}).dr(i, :).'; ok = ~isnan(v);
+        ci = round(1 + (min(max(v(ok), cl(1)), cl(2)) - cl(1)) / diff(cl) * 255);
+        scatter(ax, mlN(ok) * G.lat_px(i) / G.pxmm, apN(ok) * G.L_px(i) / G.pxmm, 4, cmD(ci, :), 'filled', 'MarkerEdgeColor', 'none');
+        plot(ax, G.site_n(i,2) * G.lat_px(i) / G.pxmm, G.site_n(i,1) * G.L_px(i) / G.pxmm, 'p', 'MarkerSize', 4.5, ...
+            'MarkerFaceColor', 'w', 'MarkerEdgeColor', 'k', 'LineWidth', 0.4);
+        set(ax, 'YDir', 'reverse'); axis(ax, 'equal', 'off'); xlim(ax, xl); ylim(ax, yl);
+        tg = regexp(G.sessions{i}, 'AL_(\d+)_(\d\d)(\d\d)_e(\d+)', 'tokens', 'once');
+        text(ax, 0, yl(1) - 0.15, sprintf('AL%s %s-%s e%s  %+.2f', tg{1}(3:4), tg{2}, tg{3}, tg{4}, G.(cn{c}).sess_dr(i)), ...
+            'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', S.fs_min);
+        if cl_i == 1 && rw == 1
+            text(ax, xl(1) - 0.6, yl(2) + 0.6, cn{c}, 'Rotation', 90, 'HorizontalAlignment', 'center', ...
+                'FontSize', S.fs_label, 'FontWeight', 'bold');
+        end
+        if c == 2 && i == nS - nc + 1      % 2 mm scale bar, bottom-left map
+            plot(ax, xl(1) + [0 2], yl(2) * [1 1] + 0.55, 'k', 'LineWidth', 1, 'Clipping', 'off');
+            text(ax, xl(1) + 1, yl(2) + 0.6, '2 mm', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', ...
                 'FontSize', S.fs_annot);
         end
-        if c == 2 && k >= 2
+        colormap(ax, cmD); clim(ax, cl);
+        if c == 2 && i == nS
             cb = colorbar(ax, 'southoutside'); cb.Units = 'centimeters';
-            cb.Position = [x0(k) + 0.25, 0.7, W - 0.5, 0.12]; cb.FontSize = S.fs_tick; cb.TickDirection = 'out';
-            cb.LineWidth = S.lw_axis;
-            if k == 2, cb.Ticks = [0.3 0.65 1]; cb.Label.String = 'r with site';
-            else, cb.Ticks = [-0.3 0 0.3]; cb.Label.String = '\Deltar'; end
+            cb.Position = [x00 + 2 * dx, 0.75, 2 * dx, 0.12]; cb.FontSize = S.fs_tick; cb.TickDirection = 'out';
+            cb.LineWidth = S.lw_axis; cb.Ticks = [-0.3 0 0.3]; cb.Label.String = '\Deltar with site (stim - base)';
             cb.Label.FontSize = S.fs_tick;
         end
     end
 end
-% per-session delta r, OL vs CL (locked colours: OL red, CL blue)
-ax = axes(fig, 'Units', 'centimeters', 'Position', [8.75 1.6 2.4 4.3]); hold(ax, 'on');
+% per-session delta r, OL vs CL
+ax = axes(fig, 'Units', 'centimeters', 'Position', [14.65 1.6 2.5 7.2]); hold(ax, 'on');
 cO = [0.85 0.2 0.15]; cC = [0.15 0.35 0.8];
 plot(ax, [1 2], [G.OL.sess_dr(:) G.CL.sess_dr(:)].', '-', 'Color', [0.7 0.7 0.7], 'LineWidth', S.lw_ind);
 mk = {'o', 's'}; ms = [33 39];
@@ -204,13 +205,13 @@ for m = 1:2
     scatter(ax, 2 * ones(nnz(i), 1), G.CL.sess_dr(i), 10, cC, mk{m}, 'filled');
 end
 errorbar(ax, [0.75 2.25], [mean(G.OL.sess_dr) mean(G.CL.sess_dr)], ...
-    [std(G.OL.sess_dr) std(G.CL.sess_dr)] / sqrt(numel(G.sessions)), 'k_', 'LineWidth', S.lw_err, 'CapSize', 0);
+    [std(G.OL.sess_dr) std(G.CL.sess_dr)] / sqrt(nS), 'k_', 'LineWidth', S.lw_err, 'CapSize', 0);
 yline(ax, 0, ':', 'Color', [0.3 0.3 0.3], 'LineWidth', S.lw_ref);
-p = signrank(G.CL.sess_dr, G.OL.sess_dr);
-text(ax, 1.5, 0.085, sprintf('CL vs OL p = %.4f', p), 'HorizontalAlignment', 'center', 'FontSize', S.fs_annot);
+text(ax, 1.5, 0.085, sprintf('CL vs OL p = %.4f', signrank(G.CL.sess_dr, G.OL.sess_dr)), ...
+    'HorizontalAlignment', 'center', 'FontSize', S.fs_annot);
 set(ax, 'XTick', [1 2], 'XTickLabel', {'OL', 'CL'}, 'XLim', [0.5 2.5], 'YLim', [-0.4 0.1], 'FontSize', S.fs_tick);
 ylabel(ax, '\Deltar (stim - base)', 'FontSize', S.fs_label, 'FontWeight', 'bold');
-title(ax, sprintf('%d sessions', numel(G.sessions)), 'FontSize', S.fs_label, 'FontWeight', 'bold');
+title(ax, sprintf('%d sessions', nS), 'FontSize', S.fs_label, 'FontWeight', 'bold');
 jnExport(fig, fullfile(here, '..', 'paper', 'images', 'supp_seedfc', 'seedfc_group.pdf'));
 end
 

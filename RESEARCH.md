@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Seed FC supp panel: per-session Δr maps replace the pooled map
+**Changed/Found:** `controller-analysis/ctrl_seed_fc_group.m` `panel()` rewritten. The panel is now 17.6 × 9.8 cm (double column): 12 per-session Δr maps for OL (rows 1–2) and 12 for CL (rows 3–4). Each map shows its own brain outline, the common nodes inside its own mask, and its own site (star), labelled `ALxx MM-DD eN  ±Δr`. One Δr colorbar; the per-session OL-vs-CL scatter is kept on the right. Stats unchanged (CL Δr −0.154, 12/12, p = 0.0005; OL +0.011, p = 0.30). The pooled-map columns and the overlay of all 12 sites are removed.
+**Why:** user: drawing all sessions' stim sites on one shared brain looked wrong; show per-session maps instead and keep the side scatter.
+**Next:** AL_0033 0212 (transposed view) has its site at ML +0.11, near the midline. Check whether that's real or a midline estimate issue. Then the user decides whether to lock the panel.
+
 ### 2026-10-19 — Paper-wide session labels: one registry, global date-order letters
 **Changed/Found:** `utils/paper_session_label.m` (new) — single registry of every session in the paper → "Mouse <n><letter>", letters in date/exp order over ALL of a mouse's sessions (m1..m15 → 1a,1c,1d,1e,1f,1h,1j,1k,2b,2a,2d,1l,2c,3e,4; impulse AL_0033 = 1b, AL_0048 = 3c; grid 1g, auto-tune 1i; sine 3a/3b/3d). `utils/imp_mouse_label.m` now wraps it (errors if a bare mouse name repeats). Callers switched to pass session structs: `dose_response.m`, `f2b_trial_counts.m`, `f2_slope_ci.m`, `imp_state_examples_supp.m`, `imp_state_raster_peramp.m`, `imp_state_raster_supp.m`, `imp_tf_cv.m`. `f4_cl_reject_panel.m` Fig 4G ticks use the registry. `data/fig2b_trial_counts.csv` relabelled (1→1b, 3→3c). Verified in MATLAB: all 15 m-indices, the impulse set and tag formats map correctly.
 **Why:** user rule 2026-10-19. Old code lettered within each panel, so Fig 2 printed "Mouse 1" for one of Mouse 1's 12 sessions and Fig 4G relettered Mouse 1 after dropping m2 (and gave single-session Mouse 3 a spurious "3a").
