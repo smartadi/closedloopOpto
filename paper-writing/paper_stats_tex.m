@@ -32,27 +32,24 @@ add(['Every statistic quoted in the Results is listed here with its estimate, ' 
 add('');
 
 % ---------------- Table: Fig 2B/2G trial counts --------------------------------------------
+% One row per session (2026-10-20, user: "compress table 2"): amplitudes listed, trials per
+% amplitude as a range. The per-amplitude counts stay in data/fig2b_trial_counts.csv.
 add('\begin{table}[!ht]', '\centering', '\small', ...
-        '\caption{\textbf{Impulse-response trials per session and stimulation amplitude} (Figure~\ref{fig:figure2}B and G). Amplitude, command voltage converted at 1\,mW per 3\,V. Trials, trials with a valid evoked-suppression value; every nonzero amplitude was analyzed.}', ...
+        '\caption{\textbf{Impulse-response trials per session} (Figure~\ref{fig:figure2}B and G). Amplitudes, the nonzero stimulation amplitudes, all of which were analyzed. Trials, trials with a valid evoked-suppression value, per amplitude (range across amplitudes) and in total.}', ...
         '\label{tab:stat_counts}', ...
-        '\begin{tabular}{llrr}', '\toprule', ...
-        'Session & Date & Amplitude (mW) & Trials \\', '\midrule');
+        '\begin{tabular}{lllcr}', '\toprule', ...
+        'Session & Date & Amplitudes (mW) & Trials per amplitude & Total \\', '\midrule');
 [us,~,is] = unique(C.label, 'stable');
 for s = 1:numel(us)
     k = find(is == s);
-    for j = 1:numel(k)
-        r = C(k(j),:);
-        if j == 1
-            c1 = char(r.label);  c2 = char(r.date);
-        else
-            c1 = '';  c2 = '';
-        end
-        add(sprintf('%s & %s & %.2f & %d \\\\', c1, strrep(c2,'_','\_'), r.amp_mW, r.n));
-    end
-    add(sprintf(' & & \\textit{Session total} & \\textit{%d} \\\\', sum(C.n(k))));
-    if s < numel(us), add('\addlinespace'); end
+    r = C(k(1),:);
+    amps = strjoin(arrayfun(@(a) sprintf('%.2f', a), C.amp_mW(k), 'UniformOutput', false), ', ');
+    nlo = min(C.n(k));  nhi = max(C.n(k));
+    if nlo == nhi, ns = sprintf('%d', nlo); else, ns = sprintf('%d--%d', nlo, nhi); end
+    add(sprintf('%s & %s & %s & %s & %d \\\\', char(r.label), strrep(char(r.date),'_','\_'), ...
+        amps, ns, sum(C.n(k))));
 end
-add('\midrule', sprintf('\\multicolumn{3}{l}{All sessions} & %d \\\\', sum(C.n)), ...
+add('\midrule', sprintf('All sessions & & & & %d \\\\', sum(C.n)), ...
         '\bottomrule', '\end{tabular}', '\end{table}', '');
 
 % ---------------- Table: Fig 2G state dependence of impulse-response variability ------------
@@ -90,21 +87,21 @@ add('\bottomrule', '\end{tabular}', ...
         '\end{table}', '');
 
 % ---------------- Table: Fig 3 OL vs CL ------------------------------------------------------
+% One test only (2026-10-20, user: "table 4 refers to 3 different tests why, lets only talk
+% about one relevant one"): the session-level mixed model, which is the one the Results quote.
+% The one-sample t-test, Wilcoxon and per-trial model are still in STATS_TABLE.csv.
 add('\begin{table}[!ht]', '\centering', '\small', ...
-        '\caption{\textbf{Closed- versus open-loop tracking error and trial-to-trial variability} (Figure~\ref{fig:figure3}; 15 sessions, 4 mice, 1670 trials). \textbf{A:} Per-session ratio of the closed- to the open-loop value (mean per-trial RMSE, or across-trial variance averaged over the window); below one, closed loop better. Ratio, geometric mean across sessions with $t$-based 95\% CI; lower, $100\,(1-\mathrm{ratio})$. Mixed model, $\log r \sim 1 + (1\mid\mathrm{mouse})$ with Satterthwaite degrees of freedom (primary test). $t$-test, one-sample on $\log r$ (14 degrees of freedom); Wilcoxon, signed-rank on $\log r$. Below 1, sessions with ratio below one. Post-stimulation window, 1\,s (RMSE) or 3\,s (variance) after offset. \textbf{B:} Corroborating per-trial mixed model, $y \sim \mathrm{condition} + (1+\mathrm{condition}\mid\mathrm{session}) + (1\mid\mathrm{mouse})$; RMSE difference in $\%\,\Delta F/F$, variance difference as percent change of the per-trial variance contribution.}', ...
+        '\caption{\textbf{Closed- versus open-loop tracking error and trial-to-trial variability} (Figure~\ref{fig:figure3}; 15 sessions, 4 mice, 1670 trials). Ratio, per-session ratio of the closed- to the open-loop value (mean per-trial RMSE, or across-trial variance averaged over the window), so that below one means closed loop was better; geometric mean across sessions with 95\% CI from the mixed model $\log r \sim 1 + (1\mid\mathrm{mouse})$, tested with Satterthwaite degrees of freedom (Materials and Methods). Lower, $100\,(1-\mathrm{ratio})$. Below 1, sessions with ratio below one. Post-stimulation window, 1\,s (RMSE) or 3\,s (variance) after offset.}', ...
         '\label{tab:stat_fig3}', ...
-        '\begin{tabular}{lccccccc}', '\toprule', ...
-        '\multicolumn{8}{l}{\textbf{A}\quad Session-level ratio, closed/open loop} \\', ...
-        'Window & Ratio [95\% CI] & Lower & \multicolumn{2}{c}{Mixed model} & $t$-test & Wilcoxon & Below 1 \\', ...
-        '\cmidrule(lr){4-5}', ...
-        ' & & & $t$ (df) & $p$ & $p$ & $p$ & \\', '\midrule');
+        '\begin{tabular}{lccccc}', '\toprule', ...
+        'Window & Ratio [95\% CI] & Lower & $t$ (df) & $p$ & Below 1 \\', '\midrule');
 win = {'pre','Pre-stimulation'; 'early','0--1\,s'; 'late','1--3\,s'; 'full','0--3\,s'; 'post','Post-stimulation'};
 blk = {'3H','rmse','Tracking RMSE'; '3I','var','Across-trial variance'};
 for b = 1:2
-    add(sprintf('\\multicolumn{8}{l}{\\textit{%s}} \\\\', blk{b,3}));
+    add(sprintf('\\multicolumn{6}{l}{\\textit{%s}} \\\\', blk{b,3}));
     for w = 1:size(win,1)
         base = blk{b,1}+"_"+blk{b,2}+"_"+win{w,1};
-        lm = R(base+"_lmm"); tt = R(base+"_t"); wx = R(base+"_w");
+        lm = R(base+"_lmm");
         nb = regexp(lm.claim, '\((\d+/\d+) sessions <1', 'tokens', 'once');
         mark = '';
         if strcmp(win{w,1}, 'full'), mark = '$^{a}$'; end
@@ -113,25 +110,10 @@ for b = 1:2
         else
             lmt = sprintf('%s (%s)', num(lm.stat), dfs(lm.df));  lmp = pvm(lm.p);
         end
-        add(sprintf('\\quad %s%s & %s & $%.0f$\\%% & %s & %s & %s & %s & %s \\\\', win{w,2}, mark, ...
-            estci(lm.effect, lm.ci_lo, lm.ci_hi), 100*(1-lm.effect), ...
-            lmt, lmp, pvm(tt.p), pvm(wx.p), nb{1}));
+        add(sprintf('\\quad %s%s & %s & $%.0f$\\%% & %s & %s & %s \\\\', win{w,2}, mark, ...
+            estci(lm.effect, lm.ci_lo, lm.ci_hi), 100*(1-lm.effect), lmt, lmp, nb{1}));
     end
     if b == 1, add('\addlinespace'); end
-end
-add('\midrule', ...
-        '\multicolumn{8}{l}{\textbf{B}\quad Per-trial mixed model, closed minus open loop (corroborating)} \\', ...
-        'Window & Difference [95\% CI] & & $t$ (df) & $p$ & & & \\', '\midrule');
-pt = {'rmse_full','RMSE, 0--3\,s',0; 'rmse_early','RMSE, 0--1\,s',0; 'rmse_late','RMSE, 1--3\,s',0; ...
-      'var_stim','Variance, 0--3\,s',1; 'var_early','Variance, 0--1\,s',1; 'var_late','Variance, 1--3\,s',1};
-for i = 1:size(pt,1)
-    g = R("3_"+pt{i,1}+"_lmm");
-    if pt{i,3}   % log units -> percent change
-        e = pctci(g.effect, g.ci_lo, g.ci_hi, true);
-    else
-        e = sprintf('%s $\\%%\\,\\Delta F/F$', estci(g.effect, g.ci_lo, g.ci_hi));
-    end
-    add(sprintf('\\quad %s & %s & & %s (%s) & %s & & & \\\\', pt{i,2}, e, num(g.stat), dfs(g.df), pvm(g.p)));
 end
 fl = R("3H_rmse_full_lmm");
 add('\bottomrule', '\end{tabular}', ...
@@ -145,7 +127,7 @@ add('\bottomrule', '\end{tabular}', ...
 % trials from RESEARCH 2026-10-02 (motion video available in 11 sessions).
 N4D = struct('initdev',1670,'motion',1190,'delta',1670,'absdelta',1670);
 add('\begin{table}[!ht]', '\centering', '\small', ...
-        '\caption{\textbf{State dependence of open- and closed-loop tracking error} (Figure~\ref{fig:figure4}D). Mixed model on per-trial RMSE from 1 to 3\,s after onset (Materials and Methods); slopes in $\%\,\Delta F/F$ of RMSE per within-session SD of the state. Gap, open- minus closed-loop RMSE at mean state. Predictability and regularizability, open- and closed-loop slopes. Attenuation, slope of the closed-to-open-loop RMSE ratio on state, as percent change per SD; negative, the loop removes a larger fraction of the open-loop error. Gap trend, condition-by-state interaction (Discussion). Degrees of freedom capped at sessions $-1$. Bold, below the Bonferroni threshold ($0.0063$ for predictability and regularizability, eight tests; $0.0125$ for attenuation, four tests).}', ...
+        '\caption{\textbf{State dependence of open- and closed-loop tracking error} (Figure~\ref{fig:figure4}D). Mixed model on per-trial RMSE from 1 to 3\,s after onset (Materials and Methods); slopes in $\%\,\Delta F/F$ of RMSE per within-session SD of the state. Gap, open- minus closed-loop RMSE at mean state. Predictability and regularizability, open- and closed-loop slopes. Attenuation, slope of the closed-to-open-loop RMSE ratio on state, as percent change per SD; negative, the loop removes a larger fraction of the open-loop error. Gap trend, condition-by-state interaction (not interpreted; Materials and Methods). Degrees of freedom capped at sessions $-1$. Bold, below the Bonferroni threshold ($0.0063$ for predictability and regularizability, eight tests; $0.0125$ for attenuation, four tests).}', ...
         '\label{tab:fig4_state_stats}', ...
         '\begin{tabular}{llcc}', '\toprule', ...
         'State & Quantity & Estimate [95\% CI] & Test \\', '\midrule');
