@@ -380,3 +380,10 @@ supp_varx/varx_E_sweep.pdf
 # varx_F_laser_response RETIRED 2026-10-16 (user dropped it at assembly). Assembled figure: figures_final/varx.pdf
 # -> Closedloop_edit images/supplementary/S_varx.pdf = Fig. S5 (fig:supp_varx). Paper letters: A construction,
 # B weight map, C forecasts, D validation grid, E R2 vs lead.
+[supp_seedfc]
+# Seed FC of the controlled site (hub #32; user 2026-10-20: "legitimate supplementary panel", which figure
+# TBD). RAW noise correlation of the site (5x5 px seed) with a 61-node cortical grid, r_base - r_stim
+# (base [-2,0) s vs stim [+1,+3) s, evoked removed; no laser removal, no GSR by user decision 2026-10-19).
+# Row OL / row CL x sessions m2..m13 (paper numbering; m1 has no site cache) + per-session OL vs CL scatter.
+# 17.6 x 5.0 cm. Producer: controller-analysis/ctrl_seed_fc_group.m (per-session caches data/ctrl_seed_fc_group_*.mat).
+supp_seedfc/seedfc_group.pdf

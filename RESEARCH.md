@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Seed FC panel locked as a supp panel (figure TBD)
+**Changed/Found:** `paper/figures_final/MANIFEST.txt`: new `[supp_seedfc]` section listing `supp_seedfc/seedfc_group.pdf`. `PAPER.md`: added a row to "Supplementary figures in use" (figure TBD). Rebuilt with `PAPER_FINAL = true`: `paper/figures_final/panels/supp_seedfc/seedfc_group.pdf` (jn-style, 17.11 × 4.73 cm cropped). `collect_final_panels('dry')`: 128 present, 0 missing, 0 to prune.
+**Why:** user: "this is a legitimate supplementary panel… put it in paper figures, I'll decide which figure it goes into; give me a paper-style PDF".
+**Next:** user to assign it to a supp figure / LaTeX label and cite it from the variance paragraph. The m2 midline check is still open.
+
 ### 2026-10-20 — Seed FC supp panel: one row OL / one row CL, paper m-numbering, r_base − r_stim
 **Changed/Found:** `controller-analysis/ctrl_seed_fc_group.m` `panel()`: 17.6 × 5.0 cm. Row 1 = OL, row 2 = CL, 12 sessions per row in paper order m2…m13 (`paper_m()` table copied from `load_sessions.m`; m1 = AL_0033 01-20 has no stim-site cache, so it's absent). The plotted quantity is now **r_base − r_stim** (positive = coupling to the site lost), in the maps and the side scatter. Colormap switched to brown–white–teal (BrBG) because red/blue are the locked OL/CL condition colours. The scatter title carries n and the paired p. Numbers unchanged: CL r_base − r_stim +0.154 (12/12 > 0), OL −0.011, CL vs OL p = 0.0005.
 **Why:** user: use the paper's session numbering, put all sessions in one row per condition, and plot baseline − stim instead of baseline and stim separately.
