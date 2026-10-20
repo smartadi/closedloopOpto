@@ -40,10 +40,10 @@ if ~exist('DR_YAXIS','var') || isempty(DR_YAXIS), DR_YAXIS = true; end
 
 % ---- mouse labels, for DR_LABEL='mouse' -----------------------------------------------------
 % NOTE sessions are NOT mice: the impulse set is AL_0041 e1, AL_0041 e2, AL_0033 e1, AL_0048 e1,
-% so a bare "Mouse 1..4" would claim four animals where there are three. Number the UNIQUE mouse
-% names and suffix a/b when one animal contributes more than one session.
+% so a bare "Mouse 1..4" would claim four animals where there are three. Labels are the paper-wide
+% session labels (Mouse 5a, 5b, 1b, 3c; utils/paper_session_label.m, user 2026-10-19).
 mnAll    = arrayfun(@(e) allExperiments(e).mn, 1:nExp, 'UniformOutput', false);
-mouseTxt = imp_mouse_label(mnAll);           % shared cross-figure convention (utils/imp_mouse_label.m)
+mouseTxt = imp_mouse_label(allExperiments);  % shared cross-figure convention (utils/imp_mouse_label.m)
 uMn      = unique(string(mnAll), 'stable');
 fprintf('[DR] %d sessions from %d mice: %s\n', nExp, numel(uMn), strjoin(mouseTxt', ', '));
 

@@ -4,8 +4,7 @@
 % dose_response.m averages. Amplitudes are command volts; mW = V/3 (paper convention).
 % Writes data/fig2b_trial_counts.csv, read by paper-writing/paper_stats_tex.m (Table S1).
 here = fileparts(which('f2b_trial_counts'));
-mouseTxt = imp_mouse_label(arrayfun(@(e) allExperiments(e).mn, 1:numel(allExperiments), ...
-    'UniformOutput', false));
+mouseTxt = imp_mouse_label(allExperiments);   % paper-wide session labels (utils/paper_session_label.m)
 rows = {};
 for e = 1:numel(allExperiments)
     g = allExperiments(e).groupLabels;  v = allExperiments(e).allVals;

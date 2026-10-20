@@ -33,7 +33,7 @@ from `brain_paper/paper/` into `images/`, and flags cited-but-missing + tracked-
 |---|---|
 | `results.tex` | Primary editing target (there is no `results_edit.tex` — renamed) |
 | `discussion.tex` | Discussion |
-| `methods_edit.tex` | Methods — the live one; `main.tex` inputs this |
+| `methods_rewrite.tex` | Methods — the live one; `main.tex` inputs this (`methods_edit.tex` is no longer inputted) |
 | `methods.tex` | **DEAD** — not inputted. Two `\todo` refs in `results.tex` point at labels that live only here (`fig:lowfreq_examples`, `sec:disturbance`), hence 2 undefined refs at build. Harmless until those sections are written. |
 | `main.tex` | Top-level; `\input{introduction}` now active |
 | `introduction.tex` | Introduction |

@@ -22,16 +22,11 @@ for i=1:nS
     lr = T.logRR(T.sess==u{i});  m=mean(lr); s=std(lr);
     gm(i)=exp(m); lo(i)=exp(m-s); hi(i)=exp(m+s); nt(i)=numel(lr);
 end
-% ---- x labels = m<mouse#><session-letter> (user 2026-09-28), replacing the date tag ----
-% mouse# = ascending unique mouse by AL number; letter = session order (by tag/date) within mouse.
-mtok  = regexp(u,'^AL_\d+','match','once');     % mouse token per session, e.g. 'AL_0033'
-umice = unique(mtok);                            % sorted -> AL_0033=m1, AL_0039=m2, AL_0048=m3 ...
-lab = strings(nS,1);
-for mi=1:numel(umice)
-    sIdx = find(strcmp(mtok,umice{mi}));         % this mouse's sessions
-    [~,so]=sort(u(sIdx)); sIdx=sIdx(so);         % chronological (tag) order within mouse
-    for k=1:numel(sIdx), lab(sIdx(k))=sprintf('Mouse%d%c',mi,'a'+k-1); end
-end
+% ---- x labels = paper-wide session labels (user 2026-10-19; utils/paper_session_label.m) ----
+% Mouse number + date-order letter across ALL of that mouse's sessions in the paper, so the
+% labels match every other figure (was: letters within this panel's 11 sessions, which
+% relettered Mouse 1 after m2 was excluded). Space dropped to keep the tick width unchanged.
+lab = string(strrep(paper_session_label(u), ' ', ''));
 [gm,ord]=sort(gm); lo=lo(ord); hi=hi(ord); nt=nt(ord); lab=lab(ord);
 
 fig = jnFig(jnPanelWidth('double',3), S.rowH);  ax=axes(fig); hold(ax,'on');   % 5.53 x 3.3 cm

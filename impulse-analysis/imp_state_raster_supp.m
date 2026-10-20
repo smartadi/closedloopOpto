@@ -69,7 +69,7 @@ for s = unique(sS).'
 end
 keep = true(size(sS));  if ~isempty(RS_SESS), keep = sS == RS_SESS; end
 labS = 'all sessions';
-if ~isempty(RS_SESS), L = imp_mouse_label({allExperiments.mn}); labS = L{RS_SESS}; end
+if ~isempty(RS_SESS), L = imp_mouse_label(allExperiments); labS = L{RS_SESS}; end
 
 %% ---- figure -----------------------------------------------------------------------------------
 PS   = paperStyle();

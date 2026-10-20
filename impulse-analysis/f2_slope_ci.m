@@ -13,7 +13,7 @@ clc;
 assert(exist('allExperiments','var')==1,'run load_experiments first');
 nExp=numel(allExperiments);
 mnAll=arrayfun(@(e) allExperiments(e).mn,1:nExp,'UniformOutput',false);
-try, mouseTxt=imp_mouse_label(mnAll); catch, mouseTxt=mnAll; end
+try, mouseTxt=imp_mouse_label(allExperiments); catch, mouseTxt=mnAll; end
 uMn=unique(string(mnAll),'stable');
 fprintf('\n===== Fig-2B dose-response slopes: %d sessions from %d mice =====\n',nExp,numel(uMn));
 fprintf('%-10s %-8s | %-28s | %-28s | %s\n','session','mouse','MEAN-FIT slope [95%% CI]','RAW-FIT slope [95%% CI]','R2 (mean fit)');

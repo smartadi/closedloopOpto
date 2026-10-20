@@ -95,8 +95,8 @@ figA = paperFig(PS.f2w, PS.f2h);  axA = axes(figA);  hold(axA,'on');
 tmax = 0.5;
 hLine   = gobjects(n,1);         % one solid (measured) handle per session for the legend
 legTxt  = cell(n,1);             % "Mouse 1a  R^2=0.50" -- animal label + held-out R^2 on the legend
-mouseLab  = imp_mouse_label(cellfun(@(c) c.mn, CV(:), 'uni', 0));           % full "Mouse 1a" for legend boxes
-mlabShort = imp_mouse_label(cellfun(@(c) c.mn, CV(:), 'uni', 0), 'short');  % "M1a" for cramped axis ticks/inline
+mouseLab  = imp_mouse_label(CV(:));           % full "Mouse 1a" for legend boxes
+mlabShort = imp_mouse_label(CV(:), 'short');  % "M1a" for cramped axis ticks/inline
 for k = 1:n
     c   = PS.sessColor(k);
     t   = CV{k}.tPost(:);

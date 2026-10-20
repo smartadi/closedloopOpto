@@ -207,8 +207,8 @@ drift to be "unified"; do not reconcile them.
 - Motion statistic = **mean of z-scored motion energy** (`utils/f4_motion_stat.m` 'mean'), not mean(z²).
 
 ### Data & sessions
-- Two mice: **AL_0033** (8 sessions), **AL_0039** (3 sessions), plus **AL_0041** for impulse experiments
-- 13 controller sessions total (m1–m13)
+- Controller (CL vs OL): **15 sessions from 4 mice** (m1–m15 in `load_sessions.m`): AL_0033 ×9, AL_0039 ×4, AL_0048 ×1, AL_0051 ×1. Impulse: AL_0041 ×2, AL_0033 ×1, AL_0048 ×1. Sine: AL_0048 ×3.
+- **Session labels (user 2026-10-19):** paper Mouse 1 = AL_0033, 2 = AL_0039, 3 = AL_0048, 4 = AL_0051, 5 = AL_0041. A session = mouse number + a letter if that mouse has >1 session anywhere in the paper, letters in date order over ALL its sessions (e.g. m4 = Mouse 1e, impulse AL_0033 = 1b, Fig 3 example m10 = 2a). One registry: `utils/paper_session_label.m`; never letter within a panel. m-numbers are internal only, never in the manuscript.
 - Reference level: `d.ref = −5` (percent ΔF/F), project-wide default
 - **AL_0048** — dual-opsin bilateral mouse; excitatory left, inhibitory right; sessions tracked in `bilateral/load_bilateral.m`; reference polarity switchable (`REF_L`, `REF_R`)
 

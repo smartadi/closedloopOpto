@@ -98,7 +98,7 @@ fprintf('[SUPP] %d trials; e and e_ctrl match T exactly; control %.3f..%.3f s\n'
     numel(eR), (iSh(1)-iOn)/fs, (iSh(end)-iOn)/fs);
 
 uS   = unique(sS).';
-labF = imp_mouse_label({allExperiments.mn});
+labF = imp_mouse_label(allExperiments);
 stTag  = {'MOT', 'DPr', 'DPa'};
 stName = {'Motion', 'Rel. \delta power', 'Abs. \delta power'};
 G = zeros(numel(eR), 3);                                    % Fig 2G quartile per trial per state

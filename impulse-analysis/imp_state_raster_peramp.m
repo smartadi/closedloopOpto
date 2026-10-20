@@ -45,7 +45,7 @@ end
 assert(isequal(sS, T.sess) && max(abs(eR - T.devRaw)) < 1e-9, '[RSA] rows do not match T');
 
 %% ---- one figure per session -------------------------------------------------------------------
-L    = imp_mouse_label({allExperiments.mn});
+L    = imp_mouse_label(allExperiments);
 tags = {'MOTz','DPrz','DPaz'};  names = {'Motion','Rel \delta','Abs \delta'};
 % Activity: blue (negative, the dip) - white - red (positive) (user 2026-10-16: "non grayscale
 % colour bar for activity, like blue to red"); |deviation| stays white -> black.
