@@ -16,6 +16,31 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Minor review points: Overleaf snippet set drafted
+**Changed/Found:** `paper-writing/REVIEW_2026-10-20_minor_snippets.md` (new) has find/replace LaTeX for m1, m3–m8, m14, m15, m17–m19, plus a new Abstract and Significance Statement. Those two also carry the agreed M7 ("within a session") and M8 ("simulated", credit to the linear model) wording and come to 249/250 and 119/120 words. It adds one Discussion sentence on Zhang2018, which the user flagged (PMC6513754 = Zhang et al. 2018 Nat Methods, already cited): their on/off "activity clamp" held single-cell GCaMP6s ΔF/F at 30/50/80% with |error| 5.2 ± 4.7% (18 cells, 6 awake mice). No snippet for m2, m13, m16 (skipped by user decision), m20 or m21.
+**Why:** user: "lets do minor ones first"; snippet mode (Overleaf-only since 2026-10-20).
+**Next:** user pastes the snippets on Overleaf. m20 needs the 470/405 nm illumination intensity and Matveev's no-activation evidence from the user. Then the major points, one at a time.
+
+### 2026-10-20 — Review m4: whole-session loop latency (Mouse 4)
+**Changed/Found:** `controller-analysis/ctrl_latency.m` (unchanged; run on AL_0051 2026-07-29/2). Measured from the exposure start of the source blue frame to the laser edge on the Timeline. CL: n = 3539 updates, median 24.0 ms, IQR 24.0–24.5, 99th percentile 40.0, max 43.5 ms; 12.6% arrived after the next blue frame (>28.5 ms). OL: n = 103, max 41.0 ms. Command→frame mapping ρ = 0.9996. Consistent with the paper's "at most 47 ms" (Fig 1F, 200 cycles). The channel that fired is `lightCommand594`, while Methods say 638 nm; asked the user, likely a channel name.
+**Why:** reviewer m4: 200 cycles (~6 s) is too few to bound worst-case latency.
+**Next:** only one 2026-build session can be measured this way; the 2025 sessions use an older log format. Confirm the laser wavelength with the user.
+
+### 2026-10-20 — Review m5: Fig 4C robust to the two small sessions
+**Changed/Found:** `controller-analysis/data/f4_error_decomp.mat` (read only; scratch script). There are 11 sessions, 613 CL trials, 16–108 per session (1h = 16, 1f = 24). Dropping 1f and 1h moves every mean adjusted unique R² by ≤ 0.03. Transient: init-dev 0.53 → 0.52, abs δ 0.11 → 0.13. Steady state: abs δ 0.11 → 0.14, rel δ 0.03 → 0.04, init-dev 0.03 → 0.05. Motion stays ≈ 0. The factor ordering is unchanged.
+**Why:** reviewer m5: adjusted R² at n = 16 with 3 predictors is noisy.
+**Next:** none beyond the Fig 4C caption snippet.
+
+### 2026-10-20 — Review m6: post-stimulation window asymmetry explained; Table 4 caption
+**Changed/Found:** `controller-analysis/variance_mse.m` (read): post-stim RMSE uses 3–4 s because the stored trial segment `ncDfk` ends 1 s after offset (L450–453, L482–486), while variance uses a separate 3 s buffer. `paper-writing/paper_stats_tex.m`: the Table 4 caption now gives that reason ("RMSE, the end of the stored trial segment").
+**Why:** reviewer m6 asked to justify or harmonize; justifying needs no rerun.
+**Next:** if the user wants the windows equal, compute the variance post window over 3–4 s and rerun Table 4.
+
+### 2026-10-20 — Review m20/m21: reference status checked
+**Changed/Found:** Crossref: Gupta2026 = eLife vol. 14 RP105070, VOR 2026-09-24 (the entry is correct; the reviewer's concern is unfounded). Ye2026 = Science 392:eadx1369, 2026-06-18 (correct). bioRxiv API: Matveev2024 (10.1101/2024.11.01.621418) is still v1 only, with no published version.
+**Why:** reviewer m20/m21.
+**Next:** m20 needs the key illumination parameters from the user.
+
 ### 2026-10-20 — Blind review round (PDF only): major revision; Table 4 CI/test mismatch confirmed
 **Changed/Found:** `paper-writing/REVIEW_2026-10-20.md` (new). A fresh reviewer agent got only the compiled PDF of Closedloop 43fabaf, with no CLAUDE.md, project context or earlier reviews. It returned 12 major and 21 minor points and a major-revision recommendation. Spot-checked against source:
 - **M12 is real.** Table 4's "Ratio [95% CI]" is the raw geometric mean with a one-sample-t CI (`paper_stats_table.m` L111 stores `r.geo`/`r.geoCI` in the `_lmm` row). Only t, df and p are from the mixed model. The pre-stimulation rows therefore disagree: variance ratio 1.04 with LMM t = −0.03; RMSE CI [1.00, 1.03] with LMM p = 0.84, against t-test p = 0.07. The LMM's own ratio is in `r.lmm_ratio`.
