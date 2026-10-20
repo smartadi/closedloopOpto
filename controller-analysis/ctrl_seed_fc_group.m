@@ -150,69 +150,84 @@ if ~isempty(k), sig(ok) = p(ok) <= ps(k); end
 end
 
 function panel(G, here)
-% Per-session delta r maps, each in its own brain (user 2026-10-20: no pooled map, no shared site markers).
-% Rows 1-2 OL, rows 3-4 CL; nodes = the common grid restricted to that session's mask; star = its site.
-% Right: per-session delta r, OL vs CL (locked colours OL red, CL blue; marker = mouse).
-S = jnStyle(); cmD = divcm(256); cl = [-0.3 0.3]; nS = numel(G.sessions);
+% Per-session coupling loss maps (r_base - r_stim), one row OL, one row CL, sessions in paper order
+% m2..m13 (load_sessions.m; m1 has no stim-site cache). Each map = that session's own brain outline,
+% common nodes inside its own mask, its own site (star). Right: per-session r_base - r_stim, OL vs CL.
+% Colormap is brown-white-teal on purpose: red/blue are the locked OL/CL condition colours.
+% (user 2026-10-20: paper numbering, all sessions in a row, plot baseline - stim)
+S = jnStyle(); cmD = brbg(256); cl = [-0.3 0.3]; nS = numel(G.sessions);
+mnum = cellfun(@paper_m, G.sessions); [mnum, ord] = sort(mnum);
 mlN = (G.node(:,2) - 1)/50 - 1; apN = (G.node(:,1) - 1)/100;
 xl = max(G.lat_px) / G.pxmm * [-1 1]; yl = [0 max(G.L_px) / G.pxmm];
-fig = jnFig(17.6, 9.8);
-nc = 6; W = 1.95; Hh = W * diff(yl) / diff(xl); dx = 2.2; x00 = 0.75;
-yB = {[7.75 5.75], [3.65 1.65]};                         % OL block rows, CL block rows (bottom of axes, cm)
+fig = jnFig(17.6, 5.0);
+W = 1.12; Hh = W * diff(yl) / diff(xl); dx = 1.15; x00 = 0.55; yB = [2.75 1.35];
 cn = {'OL', 'CL'};
 for c = 1:2
-    for i = 1:nS
-        rw = ceil(i / nc); cl_i = i - (rw - 1) * nc;
-        ax = axes(fig, 'Units', 'centimeters', 'Position', [x00 + (cl_i - 1) * dx, yB{c}(rw), W, Hh]); hold(ax, 'on');
+    for j = 1:nS
+        i = ord(j);
+        ax = axes(fig, 'Units', 'centimeters', 'Position', [x00 + (j - 1) * dx, yB(c), W, Hh]); hold(ax, 'on');
         X = G.ml * G.lat_px(i) / G.pxmm; Y = G.ap * G.L_px(i) / G.pxmm;
         contourf(ax, X, Y, double(G.Mn{i}), [0.5 0.5], 'FaceColor', [0.92 0.92 0.92], 'LineColor', [0.45 0.45 0.45], ...
-            'LineWidth', S.lw_axis);
-        v = G.(cn{c}).dr(i, :).'; ok = ~isnan(v);
+            'LineWidth', 0.3);
+        v = -G.(cn{c}).dr(i, :).'; ok = ~isnan(v);                 % baseline - stim
         ci = round(1 + (min(max(v(ok), cl(1)), cl(2)) - cl(1)) / diff(cl) * 255);
-        scatter(ax, mlN(ok) * G.lat_px(i) / G.pxmm, apN(ok) * G.L_px(i) / G.pxmm, 4, cmD(ci, :), 'filled', 'MarkerEdgeColor', 'none');
-        plot(ax, G.site_n(i,2) * G.lat_px(i) / G.pxmm, G.site_n(i,1) * G.L_px(i) / G.pxmm, 'p', 'MarkerSize', 4.5, ...
-            'MarkerFaceColor', 'w', 'MarkerEdgeColor', 'k', 'LineWidth', 0.4);
+        scatter(ax, mlN(ok) * G.lat_px(i) / G.pxmm, apN(ok) * G.L_px(i) / G.pxmm, 3, cmD(ci, :), 'filled', 'MarkerEdgeColor', 'none');
+        plot(ax, G.site_n(i,2) * G.lat_px(i) / G.pxmm, G.site_n(i,1) * G.L_px(i) / G.pxmm, 'p', 'MarkerSize', 3, ...
+            'MarkerFaceColor', 'w', 'MarkerEdgeColor', 'k', 'LineWidth', 0.3);
         set(ax, 'YDir', 'reverse'); axis(ax, 'equal', 'off'); xlim(ax, xl); ylim(ax, yl);
-        tg = regexp(G.sessions{i}, 'AL_(\d+)_(\d\d)(\d\d)_e(\d+)', 'tokens', 'once');
-        text(ax, 0, yl(1) - 0.15, sprintf('AL%s %s-%s e%s  %+.2f', tg{1}(3:4), tg{2}, tg{3}, tg{4}, G.(cn{c}).sess_dr(i)), ...
-            'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', S.fs_min);
-        if cl_i == 1 && rw == 1
-            text(ax, xl(1) - 0.6, yl(2) + 0.6, cn{c}, 'Rotation', 90, 'HorizontalAlignment', 'center', ...
+        if c == 1
+            text(ax, 0, yl(1) - 0.2, sprintf('m%d', mnum(j)), 'HorizontalAlignment', 'center', ...
+                'VerticalAlignment', 'bottom', 'FontSize', S.fs_annot, 'FontWeight', 'bold');
+        end
+        if j == 1
+            text(ax, xl(1) - 0.5, mean(yl), cn{c}, 'Rotation', 90, 'HorizontalAlignment', 'center', ...
                 'FontSize', S.fs_label, 'FontWeight', 'bold');
         end
-        if c == 2 && i == nS - nc + 1      % 2 mm scale bar, bottom-left map
-            plot(ax, xl(1) + [0 2], yl(2) * [1 1] + 0.55, 'k', 'LineWidth', 1, 'Clipping', 'off');
+        if c == 2 && j == 1      % 2 mm scale bar
+            plot(ax, xl(1) + [0 2], yl(2) * [1 1] + 0.5, 'k', 'LineWidth', 1, 'Clipping', 'off');
             text(ax, xl(1) + 1, yl(2) + 0.6, '2 mm', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', ...
-                'FontSize', S.fs_annot);
+                'FontSize', S.fs_min);
         end
         colormap(ax, cmD); clim(ax, cl);
-        if c == 2 && i == nS
+        if c == 2 && j == nS
             cb = colorbar(ax, 'southoutside'); cb.Units = 'centimeters';
-            cb.Position = [x00 + 2 * dx, 0.75, 2 * dx, 0.12]; cb.FontSize = S.fs_tick; cb.TickDirection = 'out';
-            cb.LineWidth = S.lw_axis; cb.Ticks = [-0.3 0 0.3]; cb.Label.String = '\Deltar with site (stim - base)';
-            cb.Label.FontSize = S.fs_tick;
+            cb.Position = [x00 + 4 * dx, 0.75, 4 * dx, 0.1]; cb.FontSize = S.fs_tick; cb.TickDirection = 'out';
+            cb.LineWidth = S.lw_axis; cb.Ticks = [-0.3 0 0.3];
+            cb.Label.String = 'r_{base} - r_{stim} (coupling to site lost)'; cb.Label.FontSize = S.fs_tick;
         end
     end
 end
-% per-session delta r, OL vs CL
-ax = axes(fig, 'Units', 'centimeters', 'Position', [14.65 1.6 2.5 7.2]); hold(ax, 'on');
-cO = [0.85 0.2 0.15]; cC = [0.15 0.35 0.8];
-plot(ax, [1 2], [G.OL.sess_dr(:) G.CL.sess_dr(:)].', '-', 'Color', [0.7 0.7 0.7], 'LineWidth', S.lw_ind);
+% per-session baseline - stim, OL vs CL (locked colours OL red, CL blue; marker = mouse)
+ax = axes(fig, 'Units', 'centimeters', 'Position', [15.45 1.35 1.85 3.0]); hold(ax, 'on');
+cO = [0.85 0.2 0.15]; cC = [0.15 0.35 0.8]; yo = -G.OL.sess_dr(:); yc = -G.CL.sess_dr(:);
+plot(ax, [1 2], [yo yc].', '-', 'Color', [0.7 0.7 0.7], 'LineWidth', S.lw_ind);
 mk = {'o', 's'}; ms = [33 39];
 for m = 1:2
-    i = G.mouse == ms(m);
-    scatter(ax, ones(nnz(i), 1), G.OL.sess_dr(i), 10, cO, mk{m}, 'filled');
-    scatter(ax, 2 * ones(nnz(i), 1), G.CL.sess_dr(i), 10, cC, mk{m}, 'filled');
+    i = G.mouse(:) == ms(m);
+    scatter(ax, ones(nnz(i), 1), yo(i), 6, cO, mk{m}, 'filled');
+    scatter(ax, 2 * ones(nnz(i), 1), yc(i), 6, cC, mk{m}, 'filled');
 end
-errorbar(ax, [0.75 2.25], [mean(G.OL.sess_dr) mean(G.CL.sess_dr)], ...
-    [std(G.OL.sess_dr) std(G.CL.sess_dr)] / sqrt(nS), 'k_', 'LineWidth', S.lw_err, 'CapSize', 0);
+errorbar(ax, [0.7 2.3], [mean(yo) mean(yc)], [std(yo) std(yc)] / sqrt(nS), 'k_', 'LineWidth', S.lw_err, 'CapSize', 0);
 yline(ax, 0, ':', 'Color', [0.3 0.3 0.3], 'LineWidth', S.lw_ref);
-text(ax, 1.5, 0.085, sprintf('CL vs OL p = %.4f', signrank(G.CL.sess_dr, G.OL.sess_dr)), ...
-    'HorizontalAlignment', 'center', 'FontSize', S.fs_annot);
-set(ax, 'XTick', [1 2], 'XTickLabel', {'OL', 'CL'}, 'XLim', [0.5 2.5], 'YLim', [-0.4 0.1], 'FontSize', S.fs_tick);
-ylabel(ax, '\Deltar (stim - base)', 'FontSize', S.fs_label, 'FontWeight', 'bold');
-title(ax, sprintf('%d sessions', nS), 'FontSize', S.fs_label, 'FontWeight', 'bold');
+set(ax, 'XTick', [1 2], 'XTickLabel', {'OL', 'CL'}, 'XLim', [0.5 2.5], 'YLim', [-0.1 0.4], 'YTick', [-0.1 0 0.2 0.4], ...
+    'FontSize', S.fs_tick);
+ylabel(ax, 'r_{base} - r_{stim}', 'FontSize', S.fs_label, 'FontWeight', 'bold');
+title(ax, sprintf('n = %d, p = %.4f', nS, signrank(yc, yo)), 'FontSize', S.fs_annot, 'FontWeight', 'normal');
 jnExport(fig, fullfile(here, '..', 'paper', 'images', 'supp_seedfc', 'seedfc_group.pdf'));
+end
+
+function m = paper_m(sess)
+% paper session numbering (controller-analysis/load_sessions.m, mouse.m1..m13)
+K = {'AL_0033_0120_e3',1; 'AL_0033_0212_e2',2; 'AL_0033_0224_e2',3; 'AL_0033_0226_e2',4; 'AL_0033_0304_e1',5; ...
+     'AL_0033_0305_e2',6; 'AL_0033_0320_e4',7; 'AL_0033_0415_e2',8; 'AL_0039_0420_e1',9; 'AL_0039_0419_e1',10; ...
+     'AL_0039_0430_e3',11; 'AL_0033_0419_e1',12; 'AL_0039_0420_e2',13};
+m = K{strcmp(K(:,1), sess), 2};
+end
+
+function cm = brbg(n)
+% brown - white - teal diverging (ColorBrewer BrBG endpoints)
+x = linspace(-1, 1, n).'; b = [0.55 0.32 0.04]; t = [0.00 0.40 0.37]; w = [1 1 1];
+cm = (x < 0) .* (w + (-x) .* (b - w)) + (x >= 0) .* (w + x .* (t - w));
 end
 
 function cm = divcm(n)
