@@ -33,8 +33,7 @@ from `brain_paper/paper/` into `images/`, and flags cited-but-missing + tracked-
 |---|---|
 | `results.tex` | Primary editing target (there is no `results_edit.tex` — renamed) |
 | `discussion.tex` | Discussion |
-| `methods_rewrite.tex` | Methods — the live one; `main.tex` inputs this (`methods_edit.tex` is no longer inputted) |
-| `methods.tex` | **DEAD** — not inputted. Two `\todo` refs in `results.tex` point at labels that live only here (`fig:lowfreq_examples`, `sec:disturbance`), hence 2 undefined refs at build. Harmless until those sections are written. |
+| `methods.tex` | Methods — the ONLY Methods file (2026-10-20: `methods_rewrite.tex` renamed to it; the dead `methods.tex`/`methods_edit.tex` deleted, they live in git history). One sentence per line. Older audit docs (NUMBERS.md, PROVENANCE.md) cite `methods_rewrite.tex` line numbers from before the rename. |
 | `main.tex` | Top-level; `\input{introduction}` now active |
 | `introduction.tex` | Introduction |
 

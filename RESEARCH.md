@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Manuscript: Table 4 best-fixed rows, OLbest supp figure, one Methods file + pass
+**Changed/Found:** Closedloop_edit `main` was fast-forwarded to the user's Overleaf push 40a9323. Five local commits followed, NOT pushed (waiting on the user):
+- d911ce8: `stat_tables.tex` regenerated. The diff against the Overleaf version was only the 3 best-fixed rows and footnote b.
+- 4acfe97: `fig:best_fixed` (`images/supplementary/OLbest.pdf`) added after Table S1. The text already cited it in 5 places.
+- 4b26815: `methods_rewrite.tex` renamed to `methods.tex`; the dead `methods.tex` and `methods_edit.tex` deleted.
+- 7367d15: Methods reflowed to one sentence per line. Script-verified as whitespace-only (949 → 652 lines).
+- 75bbd67: Methods pass. 25 semicolon-joined clauses split into sentences, the dangling "(see Discussion)" dropped (the user deleted the Discussion's hemodynamics sentence), "it asserts" → "it assumes" (M7 stance), "Figure~" → "Fig.~", Table 1 caption reflowed.
+
+`latexmk` gives 40 pages and 0 undefined references. Snippet check: all major snippets are in. Not pasted, on purpose: m8 (tested range / 3.5-fold spread), m19 (sex), "Over the tested powers" in the Abstract. The user rewrote m18 their own way.
+**Why:** the user asked for the table update, the figure, one Methods file and a pass, with returns only at sentence ends. They also said: "dont add edits without asking i deleted some sentences" (saved to memory).
+**Next:** user approves the push of `main`. Report the "wide bran activity" typo in their Discussion limitation sentence and ask before fixing. `paper-writing/CLAUDE.md` file map updated.
+
 ### 2026-10-20 — Best-fixed-input supp figure assembled (OLbest.pdf) and checked
 **Changed/Found:** the user assembled `paper/figures_final/OLbest.pdf` (+ `.ai`) from the four `supp_best_fixed` panels. It is 17.6 × 3.83 cm, vector only (0 embedded images), with fonts embedded. Panel letters are 10 pt, like Figure2/S3/S5, and the text is 6–7 pt. B and C share a y-range, and the content matches the SF-1 caption. The PAPER.md registry row now points at it.
 **Why:** check before the figure goes into the manuscript.
