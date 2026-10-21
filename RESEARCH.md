@@ -16,6 +16,26 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Review M2/M11: rough K_r is off by about 30%, and sessions are roughly consistent within a mouse
+**Changed/Found:** scratch check, no script changed. It uses c* from `ctrl_best_fixed_ol.mat` and K_r from Table S1. c* has median 1.29 (IQR 1.06–1.40, range 0.78–1.67); 9/15 sessions are within a factor of 4/3. The gain that would have been best, K_r* = K_r·c*, is 0.077–0.105 in Mouse 2 (CV 0.14, 4 sessions over 11 days) and 0.10–0.28 in Mouse 1 (CV 0.29, 9 sessions over 3 months). K_r and c* are not correlated (Spearman −0.28, p = 0.31).
+**Why:** M2 says K_r was fit on another signal; M11 says it was retuned every session. The user's stance is that a rough gain from earlier sessions is enough because feedback compensates.
+**Next:** user must say how K_r was set for Mice 2 and 4 and for 1a (before impulse 1b). The Methods/Discussion snippets are given in chat.
+
+### 2026-10-20 — Review M11: dropping session 1e (three Kp values) leaves Fig 3H/3I unchanged
+**Changed/Found:** scratch rerun of `ratio_session_stats` on `data/fig3_ratio_stats.mat` R3 without m4 (1e), n = 14. RMSE CL/OL: 0–1 s 0.84 [0.79, 0.89], 1–3 s 0.68 [0.61, 0.75], 14/14 below one. Variance: 0.64 [0.52, 0.79] (13/14) and 0.53 [0.45, 0.63] (14/14). All stimulation-window LMM p ≤ 0.003. CL/best fixed input without 1e: 0.91 (p = 0.029) and 0.80 (p = 0.21).
+**Why:** 1e interleaved three Kp values, so the reviewer asks whether it drives the pooled result.
+**Next:** one sentence in the Table S1 caption (snippet in chat).
+
+### 2026-10-20 — Supplementary figure: closed loop vs best fixed input (review M1)
+**Changed/Found:** `controller-analysis/ctrl_best_fixed_ol.m` gains a `[BFO-SUPP]` section with four 4.0 × 3.4 cm paper panels (`paper/images/supplementary/supp_bfo_*.pdf`):
+- A: laser command in the median-c* session (1d): OL as run 1.69 V, best fixed 2.18 V, CL mean ± SD (2.06 V over 1–3 s). The command amplitude is a 40 ms moving peak, because the early sessions are 40 Hz-modulated.
+- B, C: per-session RMSE at 0–1 s and 1–3 s.
+- D: CL/OL command vs c*, with ρ = 0.66.
+
+The trial averages are now saved as `TR`. The panels are registered in `MANIFEST.txt` [supp_best_fixed] and the PAPER.md registry, then mirrored with PAPER_FINAL. Two run-time fixes: labels carry a "Mouse " prefix, and `T.capped` is double, so it is indexed via `logical`. A '\rho' inside sprintf was read as a carriage return, so the title is now concatenated.
+**Why:** the user asked for the M1 review figure as a supplementary figure. A first showed trial-averaged ΔF/F, and the user rejected it ("dont show trial averaged but input trace plots it just confuses the reader"). The Fig 3 example (2a) is not used because its OL was already near the reference (c* = 1.05).
+**Next:** assemble the four panels in Illustrator as `images/supplementary/S_best_fixed.pdf`, then paste the figure environment on Overleaf.
+
 ### 2026-10-20 — Stats tables: M1 best-fixed-input rows added to STATS_TABLE + Table 4
 **Changed/Found:** `paper-writing/paper_stats_table.m` now reads `controller-analysis/data/ctrl_best_fixed_ol.mat` and adds 6 rows (`3H_best_{early,late,full}_{lmm,t}`). A diff of STATS_TABLE.csv confirms all 140 earlier rows are unchanged. `paper-writing/paper_stats_tex.m` adds a "Tracking RMSE, closed loop / best fixed input" block to Table 4, with footnote b (definition; df fall to 2.6 and 1.0). It compiles cleanly in a scratch copy of 43fabaf (no overfull boxes or undefined references).
 **Why:** the stats-table section promises every statistic quoted in Results, and the M1 text will quote these ratios.

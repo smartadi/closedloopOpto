@@ -387,3 +387,16 @@ supp_varx/varx_E_sweep.pdf
 # Row OL / row CL x sessions m2..m13 (paper numbering; m1 has no site cache) + per-session OL vs CL scatter.
 # 17.6 x 5.0 cm. Producer: controller-analysis/ctrl_seed_fc_group.m (per-session caches data/ctrl_seed_fc_group_*.mat).
 supp_seedfc/seedfc_group.pdf
+
+[supp_best_fixed]
+# Review M1 (user 2026-10-20: "make the figure you gave into supplementary panel figure").
+# Closed loop vs the best fixed open-loop input. Four 4.0 x 3.4 cm panels, one row at full page width.
+#   A laser command in the median-c* session (1d): OL as run / best fixed (c* x OL) / CL mean +- SD
+#     (user 2026-10-20: inputs, not trial-averaged dF/F, which confuses the reader)
+#   B, C per-session mean trial RMSE 0-1 s and 1-3 s (shared y-range): OL as run / best fixed / CL
+#   D mean CL command (1-3 s) vs best fixed input, both x the OL command (open = capped at 2.45 V)
+# Producer: controller-analysis/ctrl_best_fixed_ol.m [BFO-SUPP]; stats in Table 4 (3H_best_* rows).
+supplementary/supp_bfo_example.pdf
+supplementary/supp_bfo_rmse_early.pdf
+supplementary/supp_bfo_rmse_late.pdf
+supplementary/supp_bfo_command.pdf

@@ -30,6 +30,7 @@ T = table('Size', [nS 13], 'VariableTypes', [{'string','string'}, repmat({'doubl
                       'offOL','offBest','rmseOL_late','rmseBest_late','rmseCL_late','uCLrel'});
 R = struct();
 for w = 1:size(win,1), R.(win{w,1}) = nan(nS, 3); end     % cols: OL, best, CL mean trial RMSE
+TR = struct('ol', [], 'best', [], 'cl', []);              % trial averages, for the supp example panel
 
 for k = 1:nS
     [lab, info] = paper_session_label(sprintf('m%d', k));
@@ -46,6 +47,7 @@ for k = 1:nS
     if uOL > 0 && cStar * uOL > UMAX, cStar = UMAX / uOL; capped = true; end
     cStar = max(cStar, 0);
     Yb = b + cStar * h + N;
+    TR.ol(k,:) = g;  TR.best(k,:) = b + cStar * h;  TR.cl(k,:) = mean(Yc, 1);
 
     for w = 1:size(win,1)
         cols = win{w,2};
@@ -93,7 +95,7 @@ fprintf(['[BFO] mean CL command / OL command (1-3 s): median %.2f (range %.2f-%.
     median(abs(log(T.uCLrel ./ T.cStar))));
 disp(T);
 
-save(fullfile(root, 'controller-analysis', 'data', 'ctrl_best_fixed_ol.mat'), 'T', 'R', 'ST', 'win', 'REF', 'UMAX');
+save(fullfile(root, 'controller-analysis', 'data', 'ctrl_best_fixed_ol.mat'), 'T', 'R', 'ST', 'TR', 'win', 'REF', 'UMAX');
 
 %% [BFO-FIG] per-session steady-state RMSE: OL as run, best fixed input, CL (PNG, review only)
 PS = paperStyle(); setPaperDefaults();
@@ -117,3 +119,80 @@ outDir = fullfile(root, 'paper', 'images', 'review');
 if ~exist(outDir, 'dir'), mkdir(outDir); end
 exportgraphics(fig, fullfile(outDir, 'ctrl_best_fixed_ol.png'), 'Resolution', 300);
 fprintf('[BFO] figure -> %s\n', fullfile(outDir, 'ctrl_best_fixed_ol.png'));
+
+%% [BFO-SUPP] supplementary figure (user 2026-10-20: "make the figure into supplementary panel figure")
+% Four panels, paper style, PDF via paperExport (mirrored into figures_final/panels/supp_best_fixed
+% when PAPER_FINAL is on and the basename is in MANIFEST.txt):
+%   A supp_bfo_example      the session with the median c* (1d): OL as run, best fixed input (model), CL.
+%                           Not the Fig 3 example 2a: its OL was already near the reference (c* = 1.05).
+%   B supp_bfo_rmse_early   per-session mean trial RMSE 0-1 s: OL as run / best fixed / CL
+%   C supp_bfo_rmse_late    same, 1-3 s (B and C share one y-range)
+%   D supp_bfo_command      mean CL command (1-3 s) vs best fixed input, both relative to the OL command
+cB = [0.5 0.5 0.5];  sd = fullfile(root, 'paper', 'images', 'supplementary');
+styl = @(ax) set(ax, 'FontSize', PS.fs, 'FontWeight', PS.fw, 'TickDir', 'out', 'Box', 'off', ...
+    'LineWidth', 0.5, 'Color', 'none');
+
+% A: example session, laser command (user 2026-10-20: inputs, not trial-averaged dF/F, which
+% confuses the reader). Command amplitude = 40 ms moving peak, so the 40 Hz-modulated early
+% sessions show their drive level; it is the raw command for the unmodulated 2026 build.
+[~, kx] = min(abs(T.cStar - median(T.cStar)));
+[~, info] = paper_session_label(sprintf('m%d', kx));  td = char(info.td);
+S = load(fullfile(root, 'data', sprintf('%sctrl%s%s%d.mat', char(info.mn), td(6:7), td(9:10), info.en)), 'data');
+dsU = 20;  fsU = 2000;                                      % ncInp/wcInp at 2 kHz; plot every 10 ms
+eOL = movmax(S.data.ncInp, 80, 2);  eCL = movmax(S.data.wcInp, 80, 2);
+eOL = eOL(:, 1:dsU:end);  eCL = eCL(:, 1:dsU:end);
+tu = (0:size(eOL, 2) - 1) * dsU / fsU;
+uO = median(eOL, 1);  mC = mean(eCL, 1);  sC = std(eCL, 0, 1);
+fA = paperFig(4.0, 3.4);
+ax = axes(fA, 'Position', [0.20 0.24 0.76 0.52]); hold(ax, 'on');
+fill(ax, [tu fliplr(tu)], [mC - sC, fliplr(mC + sC)], PS.col_cl, 'FaceAlpha', PS.fa, 'EdgeColor', 'none');
+hA = [plot(ax, tu, uO,               '-', 'Color', PS.col_ol, 'LineWidth', PS.lw_mean), ...
+      plot(ax, tu, T.cStar(kx) * uO, '-', 'Color', cB,        'LineWidth', PS.lw_mean), ...
+      plot(ax, tu, mC,               '-', 'Color', PS.col_cl, 'LineWidth', PS.lw_mean)];
+set(ax, 'XLim', [0 3], 'XTick', 0:3, 'YLim', [0 3]);
+styl(ax);
+xlabel(ax, 'Time from onset (s)', 'FontWeight', PS.fw);
+ylabel(ax, 'Command (V)', 'FontWeight', PS.fw);
+lg = legend(ax, hA, {'OL as run', 'Best fixed', 'CL'}, 'Location', 'northoutside', ...
+    'Orientation', 'horizontal', 'Color', 'none');
+paperLegend(lg);
+title(ax, T.label(kx), 'FontSize', PS.fs, 'FontWeight', PS.fw);
+paperExport(fA, fullfile(sd, 'supp_bfo_example.pdf'));
+fprintf('[BFO-SUPP] A: %s command OL %.2f V, best fixed %.2f V, CL mean over 1-3 s %.2f V\n', ...
+    T.label(kx), median(uO), T.cStar(kx) * median(uO), mean(mC(tu >= 1)));
+
+% B, C: per-session RMSE, three inputs
+yTop = 1.05 * max([R.early(:); R.late(:)]);
+wl = {'early', '0-1 s'; 'late', '1-3 s'};
+for w = 1:2
+    X = R.(wl{w,1});  s = ST.(wl{w,1}).cl_best;
+    fW = paperFig(4.0, 3.4);
+    ax = axes(fW, 'Position', [0.20 0.15 0.76 0.66]); hold(ax, 'on');
+    plot(ax, repmat([1 2 3], nS, 1)', X', '-', 'Color', [0.75 0.75 0.75], 'LineWidth', PS.lw_trial);
+    scatter(ax, ones(nS,1),   X(:,1), 6, PS.col_ol, 'filled');
+    scatter(ax, 2*ones(nS,1), X(:,2), 6, cB,        'filled');
+    scatter(ax, 3*ones(nS,1), X(:,3), 6, PS.col_cl, 'filled');
+    set(ax, 'XTick', 1:3, 'XTickLabel', {'OL', 'Best', 'CL'}, 'XLim', [0.6 3.4], 'YLim', [0 yTop]);
+    styl(ax);
+    ylabel(ax, 'Trial RMSE (% \DeltaF/F)', 'FontWeight', PS.fw);
+    title(ax, {wl{w,2}, sprintf('CL/best %.2f [%.2f, %.2f]', s.geo, s.geoCI(1), s.geoCI(2))}, ...
+        'FontSize', PS.fs, 'FontWeight', PS.fw);
+    paperExport(fW, fullfile(sd, sprintf('supp_bfo_rmse_%s.pdf', wl{w,1})));
+end
+
+% D: did feedback find the best fixed input? Open markers = c* capped at the command limit.
+fD = paperFig(4.0, 3.4);
+ax = axes(fD, 'Position', [0.22 0.22 0.70 0.60]); hold(ax, 'on');
+lim = [0.5 2];
+plot(ax, lim, lim, ':', 'Color', [0.3 0.3 0.3], 'LineWidth', PS.lw_ref);
+cp = logical(T.capped);
+scatter(ax, T.cStar(~cp), T.uCLrel(~cp), 8, PS.col_cl, 'filled');
+scatter(ax, T.cStar(cp),  T.uCLrel(cp),  8, PS.col_cl, 'LineWidth', 0.5);
+set(ax, 'XLim', lim, 'YLim', lim, 'XTick', [0.5 1 1.5 2], 'YTick', [0.5 1 1.5 2]);
+axis(ax, 'square'); styl(ax);
+xlabel(ax, 'Best fixed / OL input', 'FontWeight', PS.fw);
+ylabel(ax, 'CL / OL command', 'FontWeight', PS.fw);
+title(ax, ['\rho = ' sprintf('%.2f, p = %.3f', rho, prho)], 'FontSize', PS.fs, 'FontWeight', PS.fw);
+paperExport(fD, fullfile(sd, 'supp_bfo_command.pdf'));
+fprintf('[BFO-SUPP] D axis range check: c* %.2f-%.2f, CL command %.2f-%.2f (axes %.1f-%.1f)\n', ...
+    min(T.cStar), max(T.cStar), min(T.uCLrel), max(T.uCLrel), lim);
