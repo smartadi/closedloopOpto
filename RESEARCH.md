@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Review M1: closed loop vs the best fixed open-loop input
+**Changed/Found:** `controller-analysis/ctrl_best_fixed_ol.m` (new). Under the paper's linear model with an additive trial-to-trial disturbance, an OL trial is b + h(t) + n_i(t), and a rescaled fixed command gives b + c·h + n_i. c* minimises the 0–3 s squared error to −5% on the same OL trials (an in-sample oracle, which favours OL) and is capped at the 2.45 V limit (binding in 1a and 1c). All 15 sessions; stats via `utils/ratio_session_stats`, the Fig 3H scheme.
+- The CL/OL check reproduces Table 4 exactly (0.85, 0.68, 0.77).
+- c* median 1.29 (0.78–1.67). The median stim-window offset falls from 1.47 (OL as run) to 0.29 %ΔF/F.
+- Best/OL: 0.92 [0.88, 0.97] for 0–1 s, 0.85 [0.76, 0.94] for 1–3 s, 0.89 [0.83, 0.95] for 0–3 s.
+- **CL/best: 0.92 [0.85, 0.99] for 0–1 s, 0.80 [0.73, 0.89] for 1–3 s, 0.87 [0.80, 0.93] for 0–3 s, 13/15 sessions below 1 in each window.** LMM p = 0.036 (t(14) = −2.33), 0.22 (t(2.6) = −1.62; the mouse variance is non-zero, so df collapses) and 0.17 (df 1). One-sample t p = 0.036, 2.4e-4 and 0.001.
+- About half the CL advantage over OL as run is calibration, half is feedback beyond the best fixed input.
+- The mean CL command (1–3 s) relative to the OL command has median 1.16 (0.75–1.90), against c* median 1.29. Spearman ρ = 0.66, p = 0.0086; median |log(uCL/c*)| = 0.08. So feedback moved the average command toward the best fixed input in each session (1f: OL overshot, CL 0.75 vs c* 0.78).
+- Under this model across-trial variance is independent of c, so the Fig 3I reduction (35–46%) is not a calibration effect (M10 tests the level-dependence caveat separately).
+**Why:** blind review M1. The OL arm is a deliberately rough calibration (user), and the reviewer asked how much of the CL advantage survives against the best constant input.
+**Next:** draft the M1 text (Methods K_r sentence, new Methods paragraph, Results, Discussion). Caveats: linear scaling to c* up to 1.67× is extrapolated beyond the power that ran, and the in-sample c* favours OL. 3e's `ncInp` is in different units (uOL 0.003), but its cap is not binding. The user plans real best-fixed-input experiments before submission.
+
 ### 2026-10-20 — Minor review points: Overleaf snippet set drafted
 **Changed/Found:** `paper-writing/REVIEW_2026-10-20_minor_snippets.md` (new) has find/replace LaTeX for m1, m3–m8, m14, m15, m17–m19, plus a new Abstract and Significance Statement. Those two also carry the agreed M7 ("within a session") and M8 ("simulated", credit to the linear model) wording and come to 249/250 and 119/120 words. It adds one Discussion sentence on Zhang2018, which the user flagged (PMC6513754 = Zhang et al. 2018 Nat Methods, already cited): their on/off "activity clamp" held single-cell GCaMP6s ΔF/F at 30/50/80% with |error| 5.2 ± 4.7% (18 cells, 6 awake mice). No snippet for m2, m13, m16 (skipped by user decision), m20 or m21.
 **Why:** user: "lets do minor ones first"; snippet mode (Overleaf-only since 2026-10-20).
