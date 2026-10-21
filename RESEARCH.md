@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Best-fixed-input supp figure assembled (OLbest.pdf) and checked
+**Changed/Found:** the user assembled `paper/figures_final/OLbest.pdf` (+ `.ai`) from the four `supp_best_fixed` panels. It is 17.6 × 3.83 cm, vector only (0 embedded images), with fonts embedded. Panel letters are 10 pt, like Figure2/S3/S5, and the text is 6–7 pt. B and C share a y-range, and the content matches the SF-1 caption. The PAPER.md registry row now points at it.
+**Why:** check before the figure goes into the manuscript.
+**Next:** after the user pushes their Overleaf edits, add the figure to Closedloop_edit `supplementary.tex`. Copy it as `images/supplementary/OLbest.pdf`, use label `fig:best_fixed`, and add the references from the M1-3 / M2 snippets.
+
 ### 2026-10-20 — Review M2/M11: rough K_r is off by about 30%, and sessions are roughly consistent within a mouse
 **Changed/Found:** scratch check, no script changed. It uses c* from `ctrl_best_fixed_ol.mat` and K_r from Table S1. c* has median 1.29 (IQR 1.06–1.40, range 0.78–1.67); 9/15 sessions are within a factor of 4/3. The gain that would have been best, K_r* = K_r·c*, is 0.077–0.105 in Mouse 2 (CV 0.14, 4 sessions over 11 days) and 0.10–0.28 in Mouse 1 (CV 0.29, 9 sessions over 3 months). K_r and c* are not correlated (Spearman −0.28, p = 0.31).
 **Why:** M2 says K_r was fit on another signal; M11 says it was retuned every session. The user's stance is that a rough gain from earlier sessions is enough because feedback compensates.
