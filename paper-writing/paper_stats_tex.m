@@ -115,11 +115,28 @@ for b = 1:2
     end
     if b == 1, add('\addlinespace'); end
 end
-fl = R("3H_rmse_full_lmm");
+% Review M1 (2026-10-20): CL against the best fixed OL input (ctrl_best_fixed_ol.m), same columns.
+add('\addlinespace', '\multicolumn{6}{l}{\textit{Tracking RMSE, closed loop / best fixed input}$^{b}$} \\');
+wb = {'early','0--1\,s'; 'late','1--3\,s'; 'full','0--3\,s'};
+for w = 1:size(wb,1)
+    lm = R("3H_best_"+wb{w,1}+"_lmm");
+    nb = regexp(lm.claim, '\((\d+/\d+) sessions <1', 'tokens', 'once');
+    if isnan(lm.p) || lm.df < 0.5
+        lmt = '---';  lmp = '---';
+    else
+        lmt = sprintf('%s (%s)', num(lm.stat), dfs(lm.df));  lmp = pvm(lm.p);
+    end
+    add(sprintf('\\quad %s & %s & $%.0f$\\%% & %s & %s & %s \\\\', wb{w,2}, ...
+        estci(lm.effect, lm.ci_lo, lm.ci_hi), 100*(1-lm.effect), lmt, lmp, nb{1}));
+end
+fl = R("3H_rmse_full_lmm");  bl = R("3H_best_late_lmm");  bf = R("3H_best_full_lmm");
 add('\bottomrule', '\end{tabular}', ...
         sprintf(['\\par\\smallskip\\parbox{\\linewidth}{\\footnotesize $^{a}$For the full window the mouse variance is estimated above zero, ' ...
                  'and the Satterthwaite degrees of freedom collapse toward the number of mice (RMSE, %.1f; variance, 0, no test), ' ...
-                 'so the session-level mixed model is not used for inference there; see Materials and Methods.}'], fl.df), ...
+                 'so the session-level mixed model is not used for inference there; see Materials and Methods. ' ...
+                 '$^{b}$Open-loop RMSE recomputed for the fixed input that minimizes it, under the linear model and on the same trials, ' ...
+                 'which favors open loop (Materials and Methods); the degrees of freedom fall to %.1f (1--3\\,s) and %.1f (0--3\\,s) ' ...
+                 'for the same reason.}'], fl.df, bl.df, bf.df), ...
         '\end{table}', '');
 
 % ---------------- Table: Fig 4D state dependence ---------------------------------------------

@@ -120,6 +120,18 @@ for mt = {'rmse','var'}
             'Wilcoxon signed-rank on log ratio','V',r.w_V,NaN,r.w_p,'2',r.n,'sessions','variance_mse');
     end
 end
+% Review M1 (2026-10-20): CL vs the best fixed OL input, same scheme as 3H
+% (controller-analysis/ctrl_best_fixed_ol.m -> controller-analysis/data/ctrl_best_fixed_ol.mat).
+B = load(fullfile(root,'controller-analysis','data','ctrl_best_fixed_ol.mat'));
+for w = {'early','late','full'}
+    r = B.ST.(w{1}).cl_best;  id = ['3H_best_' w{1}];
+    lbl = sprintf('CL/best-fixed-OL RMSE ratio, %s (%d/%d sessions <1; %.1f%% lower)', ...
+                  wl.(w{1}), r.nBelow1, r.n, r.pctLower);
+    add([id '_lmm'],'3H',['PRIMARY ' lbl],r.geo,'geometric-mean ratio',r.geoCI, ...
+        'LMM log(r)~1+(1|mouse), Satterthwaite','t',r.lmm_t,r.lmm_df,r.lmm_p,'2',r.n,'sessions','ctrl_best_fixed_ol');
+    add([id '_t'],'3H',lbl,r.geo,'geometric-mean ratio',r.geoCI, ...
+        'one-sample t on log ratio','t',r.t_t,r.t_df,r.t_p,'2',r.n,'sessions','ctrl_best_fixed_ol');
+end
 
 % ---------------- Figure 4D : state quartiles ---------------------------------------------------
 S = load(fullfile(dd,'f4_row2_lme.mat')); L = S.LME;

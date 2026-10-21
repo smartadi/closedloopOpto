@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Stats tables: M1 best-fixed-input rows added to STATS_TABLE + Table 4
+**Changed/Found:** `paper-writing/paper_stats_table.m` now reads `controller-analysis/data/ctrl_best_fixed_ol.mat` and adds 6 rows (`3H_best_{early,late,full}_{lmm,t}`). A diff of STATS_TABLE.csv confirms all 140 earlier rows are unchanged. `paper-writing/paper_stats_tex.m` adds a "Tracking RMSE, closed loop / best fixed input" block to Table 4, with footnote b (definition; df fall to 2.6 and 1.0). It compiles cleanly in a scratch copy of 43fabaf (no overfull boxes or undefined references).
+**Why:** the stats-table section promises every statistic quoted in Results, and the M1 text will quote these ratios.
+**Next:** user pastes the regenerated Table 4 on Overleaf (Overleaf-only, so `stat_tables.tex` is not regenerated in Closedloop_edit).
+
 ### 2026-10-20 — Review M1: closed loop vs the best fixed open-loop input
 **Changed/Found:** `controller-analysis/ctrl_best_fixed_ol.m` (new). Under the paper's linear model with an additive trial-to-trial disturbance, an OL trial is b + h(t) + n_i(t), and a rescaled fixed command gives b + c·h + n_i. c* minimises the 0–3 s squared error to −5% on the same OL trials (an in-sample oracle, which favours OL) and is capped at the 2.45 V limit (binding in 1a and 1c). All 15 sessions; stats via `utils/ratio_session_stats`, the Fig 3H scheme.
 - The CL/OL check reproduces Table 4 exactly (0.85, 0.68, 0.77).
