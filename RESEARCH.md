@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-20 — Discussion: clearer ZAPBench error-floor sentence (Closedloop 2faf7f7, pushed)
+**Changed/Found:** `discussion.tex` line 30. "Authors of a zebrafish whole-brain benchmark expect an irreducible error floor" now says what the floor is and why: activity has random sources and depends on unobserved processes such as neuromodulation, so even a perfect forecasting model leaves some error. Checked against Lueckmann et al. 2025 (ZAPBench, ICLR, pp. 9–10), which says the floor's size is unknown. The new sentence makes no claim about its size. Builds with 0 undefined references. The earlier 5 commits (d911ce8..75bbd67) are also pushed.
+**Why:** the user found the old line unclear and approved the rewrite ("do it push to main").
+**Next:** user pulls into Overleaf.
+
 ### 2026-10-20 — Manuscript: Table 4 best-fixed rows, OLbest supp figure, one Methods file + pass
 **Changed/Found:** Closedloop_edit `main` was fast-forwarded to the user's Overleaf push 40a9323. Five local commits followed, NOT pushed (waiting on the user):
 - d911ce8: `stat_tables.tex` regenerated. The diff against the Overleaf version was only the 3 best-fixed rows and footnote b.
