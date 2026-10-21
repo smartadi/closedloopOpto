@@ -16,6 +16,38 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-21 — Introduction rewritten and installed (Closedloop 3f75ae2, pushed)
+**Changed/Found:** `Closedloop_edit/introduction.tex` was replaced with the rewrite, which is 1229 words excluding citations and cites 46 keys.
+- **Structure:** six paragraphs:
+  - why modulate, and the limits of open loop;
+  - modelling the state versus feedback;
+  - the mesoscale (10 mm field, 35 Hz, 24 ms latency);
+  - what closed loop has achieved;
+  - the gap as three questions (linearity, variability, state);
+  - what we did.
+- **`refs.bib`:** added Ambrosone2025, Zhang2025 and deAlteriis2026. The build was clean: 41 pp, no undefined citations.
+- **Working copy and notes:** `paper-writing/introduction_draft_2026-10-21.md`.
+- **Novelty re-run found two things:**
+  - Ambrosone 2025 (Brain Stimul) already shows wide-field suppression deepening with laser power. The old intro's "monotonic … has not been tested" was therefore dropped; our result is now reported "as in open-loop silencing".
+  - A KCL FENS 2026 abstract (de Alteriis … Khan) reports preliminary closed-loop wide-field control. The intro therefore makes no "first" claim; its single "to our knowledge" points to that abstract.
+- **Tone pass against the Discussion:**
+  - "designed from it" became "on that basis built … tuned to the experiment", because the gains were empirical (Discussion L9, L72).
+  - Nozari's "better than nonlinear" became "about as well as".
+  - The integral-action sentence was hedged and cut to Logemann only.
+  - Only offset-like state is called a disturbance, as in Discussion L17.
+  - "anesthetized"; "four mice"; "brain state".
+
+**Why:** Aditya asked for the rewrite (funnel structure, discovery lead, originals only), then "takes whats good from main and add to this intro", then "main this the intro in main repo and push", after a tone check against the Discussion.
+
+**Next:**
+- Aditya pulls into Overleaf.
+- Get the KCL abstract text, or drop deAlteriis2026.
+- Confirm the Logemann & Curtain conditions in the paper.
+- Trim toward the ~750-word limit.
+- Two Discussion issues, left unedited:
+  - L70 has a typo ("wide bran activity") and a run-on sentence;
+  - it never cites Gupta2026, Ambrosone2025 or the KCL abstract, although the intro now does.
+
 ### 2026-10-20 — Discussion: clearer ZAPBench error-floor sentence (Closedloop 2faf7f7, pushed)
 **Changed/Found:** `discussion.tex` line 30. "Authors of a zebrafish whole-brain benchmark expect an irreducible error floor" now says what the floor is and why: activity has random sources and depends on unobserved processes such as neuromodulation, so even a perfect forecasting model leaves some error. Checked against Lueckmann et al. 2025 (ZAPBench, ICLR, pp. 9–10), which says the floor's size is unknown. The new sentence makes no claim about its size. Builds with 0 undefined references. The earlier 5 commits (d911ce8..75bbd67) are also pushed.
 **Why:** the user found the old line unclear and approved the rewrite ("do it push to main").
