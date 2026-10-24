@@ -1,0 +1,63 @@
+\section*{Introduction}
+
+The same stimulus delivered to cortex rarely evokes the same response twice. Evoked activity adds to, and is scaled by,
+ongoing fluctuations present at the moment of stimulation~\citep{Arieli1996, Petersen2003, Goris2014}. In awake mice
+these fluctuations track movement and arousal~\citep{Niell2010, McGinley2015, Vinck2015, musall2019single,
+stringer2019spontaneous, Salkoff2020}, alternate with slow, synchronized rhythms during quiet
+wakefulness~\citep{Crochet2006, Poulet2008, Reimer2014}, and are shared across the two
+hemispheres~\citep{Mohajerani2010, Shimaoka2019, Ye2026}. Responses to optogenetic and magnetic stimulation also change
+with brain state~\citep{Mateo2011, Massimini2005, bryan2025temporal}, so a fixed stimulation protocol delivers a
+different effective perturbation on every trial, which limits both the precision of causal manipulations and their
+interpretation~\citep{Harris2011, Wolff2018}.
+
+At the mesoscale, these fluctuations are directly observable. Wide-field calcium imaging resolves population activity
+across the dorsal cortex of behaving mice~\citep{allen2017global, makino2017transformation, musall2019single,
+Peters2021}, and has been combined with spatially targeted optogenetic stimulation to map and silence cortical
+areas~\citep{Lim2012, ZatkaHaas2021}, now in awake mice over months~\citep{Matveev2024}. These experiments have been
+open loop: the stimulus is fixed in advance, and the variability it meets is averaged away afterwards.
+
+One way to tame this variability is to model it. Switching linear dynamical systems treat brain state as a parameter
+that changes the dynamics~\citep{linderman2017rslds}, other approaches isolate the dynamics relevant to a
+behavior~\citep{sani2021modeling}, and cortical state can now be decoded in real time~\citep{weiss2024realtime}. Yet
+cortical activity also follows uninstructed movements and drive from other areas that a model of one region does not
+observe~\citep{musall2019single, stringer2019spontaneous, zagha2013motor}, and univariate forecasts of spontaneous
+wide-field activity stay informative for only about 1.5\,s~\citep{lu2025benchmarking}. A stimulation protocol that
+anticipated each trial's state would need a model that identifies and forecasts it precisely.
+
+Feedback needs much less. A controller that adjusts its input from a real-time measurement compensates for disturbances
+it does not model~\citep{astrom1995pid}, so state-dependent variability becomes a disturbance to reject rather than a
+confound to average~\citep{grosenick2015closed, RittChing2015}. Integral action, an internal model of a constant
+signal, drives a constant offset toward zero~\citep{francis1976internal}, and at low gain it does so for an
+exponentially stable linear plant despite actuator saturation and input delay, given only the sign of the plant's
+steady-state gain~\citep{logemann2000absolute}. Closed-loop optogenetic control has held the firing rates of neurons at a
+target in culture and in rodent thalamus~\citep{newman2015optogenetic, bolus2018design, bolus2021state}, clamped the
+calcium signals of single neurons~\citep{Zhang2018}, and timed light to ongoing oscillations in rodents and
+primates~\citep{Siegle2014, nicholson2018analogue, kanta2019closed, Zaaimi2022}. Input--output models of multiregional
+responses to electrical stimulation have been proposed for model-based control, so far tested in closed loop only in
+simulation~\citep{Yang2018, Yang2021}. At the mesoscale, real-time wide-field signals have closed the loop only through
+behavior, as neurofeedback that animals learn to modulate~\citep{clancy2014volitional, Neely2018, Gupta2026}.
+
+Two questions decide whether closed-loop control of mesoscale cortical activity is feasible and what it can reveal.
+First, is the response to stimulation simple enough to design a controller around? Population dynamics are often well
+captured by low-dimensional, linear descriptions~\citep{Churchland2012, vyas2020computation}, and linear models predict
+resting-state human brain activity at the macroscale as well as nonlinear ones~\citep{Nozari2024}, but whether
+optogenetic drive of a mesoscale signal is monotonic and approximately linear on average has not been tested. Second,
+what does the error left by feedback reveal? A controller designed on the average response is not designed for
+single-trial deviations, so relating the error it leaves to measured state can indicate which fluctuations lie beyond
+its reach.
+
+Here we establish closed-loop optogenetic control of mesoscale cortical activity in awake, head-fixed mice. We read out
+regional $\Delta F/F$ in real time with wide-field calcium imaging and used it to set the power of inhibitory
+optogenetic stimulation through a proportional--integral controller with feedforward compensation. Trial-averaged
+suppression grew monotonically with stimulation power and was predicted by a low-order linear model, whereas single
+trials varied with brain state about as much as ongoing activity did without stimulation. Across 15 sessions in four
+mice, closed-loop control tracked a target activity level more accurately than open-loop stimulation in every session,
+and with lower trial-to-trial variability on average. Against a disturbance predicted from the contralateral
+hemisphere, feedback lowered residual error in 11 sessions, mostly by removing the offset left by open-loop
+calibration. The error it left was larger on trials with more 1--4\,Hz power around stimulation, but not on trials with
+more movement. In one mouse, adding a preview of the reference cancelled the phase lag in tracking a sinusoidal target,
+and in a simulated replay of one session a model-predictive controller lowered the error left by feedback. These results
+outline a procedure that does not depend on the readout or the stimulus: characterize the input--output relationship,
+check that the average response is monotonic and approximately linear, and tune a proportional--integral controller to
+the experiment. The error such a controller leaves then indicates which components of ongoing variability lie beyond a
+fixed linear design, a starting point for context-dependent models and controllers.

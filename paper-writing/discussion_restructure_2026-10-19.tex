@@ -1,0 +1,84 @@
+\section*{Discussion}
+A cortical region's response to local optogenetic inhibition was approximately linear and time-invariant on average, but single trials varied with brain state and ongoing activity.
+A proportional--integral controller that assumed this linear, time-invariant model tracked the reference and reduced trial-to-trial variability on average by correcting deviations from it.
+Its single-trial performance depended on brain state, consistent with disturbances that vary with state.
+Replayed on one session's trials, a model-predictive controller that forecast the disturbance lowered the error further.
+
+The impulse experiments set our design choices.
+The trial-averaged response grew monotonically with laser power, and a low-order linear model fitted each session's average (Figure~\ref{fig:figure2}B--D), so the controller assumed linearity.
+The fitted models transferred only inconsistently between sessions (Figure~\ref{fig:figure2}E), so we recalibrated the feedforward gain in every session.
+
+Single trials also varied with state (Figure~\ref{fig:figure2}G), but what counts as brain state differs between studies.
+It can be the activity at stimulus onset, which shaped optogenetic responses in macaque sensorimotor cortex~\citep{bryan2025temporal} and enters our analysis as the initial deviation.
+It can also be a variable that changes the dynamics themselves, such as movement and arousal~\citep{Niell2010,Vinck2015,McGinley2015waking} or the synchrony of ongoing activity~\citep{Poulet2008,Harris2011}, which our slow-wave power measures track.
+These variables shape the dynamics but are hard to predict, so we measured them post hoc, though identifying them in real time could inform the controller, as we plan next.
+Sorted by movement or slow-wave power, single trials departed from their average about as much as stimulus-free activity did from its own, with similar state dependence (Figure~\ref{fig:state_quartile}), consistent with a fixed response riding on ongoing activity~\citep{Arieli1996,Shimaoka2019}.
+State that adds an offset is a disturbance that feedback subtracts, whereas state that changes gain is a model error that feedback must tolerate.
+Models that treat state as a parameter of the dynamics switch between linear systems~\citep{linderman2017rslds} or model dynamics within a regime, such as the subspace relevant to a behavior~\citep{sani2021modeling}.
+Input--output models fitted per state would separate offset from gain, but would require precise identification of each state switch and, for control, ideally its forecast.
+A real-time decoder of discrete cortical states, such as a hidden semi-Markov model of LFP spectra in mouse somatosensory cortex~\citep{weiss2024realtime}, labels the state without modelling the response to stimulation, so it could select among interpretable per-state models, although its estimates lag offline ones by about 120--240\,ms.
+All such models must contend with inputs they cannot observe, as cortical activity tracks uninstructed movements~\citep{musall2019single,stringer2019spontaneous} and drive from other areas~\citep{zagha2013motor,harris2013topdown} as well as its own dynamics.
+
+We therefore simplified, treating the trial-averaged system as stationary (Assumption~\ref{assm:trial_avg}).
+A single linear model is then enough for control if, within a session, the laser's average effect on the readout is well defined and monotonic.
+The distribution of states is unknown, and over-sampling one state shifts the average toward that state's mean response but not beyond the range of the per-state means.
+That range, unmeasured here, loosely bounds the design model's error.
+Averages therefore need enough trials, and in three sessions the cross-trial variance of spontaneous activity changed by only 1--2\% with the number of trials averaged (Figure~\ref{fig:spatial_spread}C).
+A nonlinear model is the usual alternative, but linear ones often predict brain activity, including responses to stimulation, about as well~\citep{Nozari2024,sani2024dissociative,Yang2021}, and the richer the model of the dynamics, the more must be known to control with it.
+Both kinds forecast ongoing activity only briefly, and stimulus-blind, univariate forecasts of spontaneous mouse wide-field activity stay informative for about 1.5\,s, with deep models modestly ahead of a linear autoregressive one~\citep{lu2025benchmarking}.
+Authors of a zebrafish whole-brain benchmark expect an irreducible error floor~\citep{lueckmann2025zapbench}.
+Feedback partly opposes such unforecastable inputs through the error they cause.
+A model for feedback design need only capture how the laser moves the readout~\citep{gevers2005identification}, and a low-order linear model makes stability, gain limits and bandwidth computable~\citep{astrom2008feedback}.
+
+Proportional--integral control needs only the sign of the laser's effect, which was consistently suppressive (Figure~\ref{fig:figure2}B; Figure~\ref{fig:figure3}B).
+The simplest optimal regulator of a system must model it~\citep{conant1970every}, and ours modelled only its average.
+The feedforward gain approximately inverted the average response, and the integrator, an internal model of a constant signal rather than of cortex, drives a constant offset toward zero within its clamp~\citep{francis1976internal}.
+Monotonicity gives each attainable reference one steady-state light drive, which low-gain integral control of an exponentially stable linear plant reaches despite a saturating actuator and input delay~\citep{logemann2000absolute}.
+Session-to-session variability therefore limits the gains, not whether some correctly signed gain stabilizes the loop~\citep{morari1985robust}.
+With this minimal model, feedback lowered error in every session and, on average, trial-to-trial variability (Figure~\ref{fig:figure3}H,I).
+Against the contralaterally predicted disturbance~\citep{Shimaoka2019,Ye2026}, feedback lowered residual energy in all 11 retained sessions (two excluded for large closed-loop offsets), mostly by shrinking the standing offset left by open-loop calibration, while fluctuations fell less (Figure~\ref{fig:figure4}G; Table~\ref{tab:stat_fig4g}).
+
+Earlier closed-loop optogenetic controllers held neuronal firing rates in culture and in rodent thalamus~\citep{newman2015optogenetic,bolus2018design,bolus2021state}, clamped single-neuron calcium signals~\citep{Zhang2018} or phase-locked light to oscillations~\citep{nicholson2018analogue,kanta2019closed,Zaaimi2022}.
+In anesthetized rat thalamus, proportional--integral feedback held firing rates although its fitted model predicted open-loop responses poorly, lowered Fano factors below open loop in five cells, and could not lower rates above target with an excitatory opsin~\citep{bolus2018design}, the mirror image of our one-sided limit.
+Changing brain state was anticipated as a disturbance~\citep{bolus2021state} or a change in the plant~\citep{grosenick2015closed}, whereas here we related residual closed-loop error to measured state.
+
+Poorly regulated trials may reflect activity outside the controller's model, so per-trial error probes brain state: slow 1--4\,Hz power explained part of the 1--3\,s error, and movement none (Figure~\ref{fig:figure4}B,C).
+Open-loop error rose with movement while closed-loop error stayed flat.
+Slow, large-amplitude 1--4\,Hz fluctuations were reduced, but closed-loop error still rose with their power as much as open-loop error (Figure~\ref{fig:figure4}D; Table~\ref{tab:fig4_state_stats}).
+An effective delay of 37--61\,ms (loop delay at most 47\,ms and about half that on average, Figure~\ref{fig:figure1}F, plus the 14\,ms half-sample hold) caps the feedback bandwidth at about 2.6--4\,Hz by the crossover criterion $\omega_c\tau \lesssim 1$\,rad~\citep{skogestad2005multivariable}.
+Cortical lag (Figure~\ref{fig:figure5}H) probably lowers the unmeasured crossover further.
+Large slow excursions may also saturate the command, which can suppress activity but not raise it.
+A closed- to open-loop error spectrum and time at the ceiling would separate delay from saturation.
+The band-power window spans stimulation, which the loop shapes, and motion and slow power are anticorrelated~\citep{McGinley2015waking}, so state effects are associations.
+Where state changes the plant itself, the alternative to a single time-invariant model is a context-dependent model whose controller switches, or schedules its gains, with state~\citep{rugh2000research,grosenick2015closed}.
+Adaptive deep brain stimulation switches on when a measured biomarker crosses a threshold~\citep{little2013adaptive}, rather than adjusting stimulation continuously, and optogenetic feedback in mouse thalamus paired a first-order model with an adaptive estimator that compensated for mismatch online~\citep{bolus2021state}.
+
+Model-predictive control is a modest step beyond proportional--integral control, adding prediction to a linear model that now includes the rest of cortex and treating the one-sided laser as a constraint~\citep{mayne2000constrained}.
+Preview, which predicts only the reference, already cancelled the cortical phase lag that feedback left (Figure~\ref{fig:figure5}H).
+The contralateral hemisphere predicted much of the site's spontaneous activity (Figure~\ref{fig:figure4}F).
+Yet in one session, 100 cortical sites added little to a 200\,ms forecast of the site beyond its own past and the laser (Figure~\ref{fig:mpc_direct}H; Figure~\ref{fig:supp_varx}E), so drive from the rest of cortex was observable but largely unforecastable at short leads.
+A linear model without subcortical signals may understate what is forecastable.
+In a replay of one session, the controller lowered the error that feedback left by about 40\%, and by about 80\% given the future residuals (Figure~\ref{fig:mpc_direct}C--F).
+What remained was mostly activity its model could not predict.
+The replayed cortex shares the controller's model class and responds to the laser identically in every state, so these values bound, rather than measure, live performance, as for model-based designs for electrical stimulation tested in simulation~\citep{Yang2018,Yang2021}.
+A live controller should keep integral action~\citep{pannocchia2003disturbance}.
+
+The data comprise four impulse sessions in three mice, 15 separate controller sessions in four mice (11 in the disturbance analysis) and three sinusoidal sessions in one mouse.
+In every impulse session the average response grew monotonically with power and was predicted by a linear model (Figure~\ref{fig:figure2}B--D), so with a comparable preparation it should be predictable enough for control.
+All sessions inhibited one somatosensory site in awake, head-fixed mice, leaving excitation, other areas and task performance untested, though the preparation reaches all dorsal cortex~\citep{Matveev2024}.
+The loop fed back on fluorescence without hemodynamic correction, which cannot run within one control interval, so closed-loop measures describe the regulated signal rather than purely neural activity~\citep{valley2020separation}.
+Inhibition spreads toward the adjacent readout (Figure~\ref{fig:spatial_spread}A,B;~\citealp{li2019spatiotemporal}), so the loop holds a readout kernel, not a whole area, and partly regulates that spread.
+Interleaved trials limit, but cannot remove, drift in brain state between conditions.
+Gains were tuned empirically, and the low-gain guarantee assumes a fixed plant, so stability rests on the observation that no session showed sustained oscillation.
+There was no sham, opsin-free light-only, random-timing or proportional-only condition.
+Opsin-independent light effects would therefore enter the identified plant, and proportional action also shrinks an offset, so the role of integral action in removing it is inferred, not isolated.
+
+We present a procedure for precise feedback control that makes cortical activity follow a chosen reference without an explicit model of its dynamics.
+Characterize the input--output relationship with brief stimuli at several intensities and check that the average response is monotonic.
+If a low-order linear model fits that average and the trial average is stable in the number of trials (Assumption~\ref{assm:trial_avg}), proportional--integral control with feedforward compensation, tuned to the experiment, can be used.
+Nothing in this procedure is specific to wide-field imaging or optogenetics, as it requires only a graded stimulus that moves the readout monotonically and stable trial averages.
+It should therefore carry over to two-photon imaging, electrophysiology, electrocorticography or functional MRI, and to electrical stimulation, within each readout's bandwidth.
+Model-predictive control may add precision where the disturbance is partly predictable.
+A site that tracks a chosen reference also lets its influence on dorsal cortex, striatum~\citep{Peters2021} or behavior~\citep{ZatkaHaas2021} be tested at defined activity levels.
+As in the voltage clamp and the optoclamp~\citep{newman2015optogenetic}, the laser command needed to track the reference should then report the drive that the loop opposes, a prediction we did not test.
+The linear design is also an investigative tool, as the error it leaves shows which brain states its model misses and so guides context-dependent models and switching controllers.
