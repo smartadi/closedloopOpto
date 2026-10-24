@@ -33,26 +33,11 @@ One entry per change. Do not skip — the log is the primary record between git 
 
 ## Vault worklog (cross-project hub)
 
-Separate from `RESEARCH.md`. The **Research Hub** is a single Obsidian file spanning all of Aditya's projects (both postdoc labs, the sleep-mask startup, personal):
+The cross-project hub moved from the OneDrive `Research Hub.md` to the private GitHub repo **`smartadi/research-hub`** (local clone: `C:\Users\aditya\Documents\projects\research-hub`). Its `CLAUDE.md` holds the full session loop; the short version for this project:
 
-**Path:** `C:\Users\aditya\OneDrive\Notes\Research Hub.md`
-
-**At the END of any session that did real work** (edited a script, ran an analysis, produced a figure, or found something), append **one** distilled entry to the `## 📓 Worklog` section:
-
-```
-### YYYY-MM-DD · Brain Paper — <one-line title>
-**Done:** <what got done this session, plain language>
-**Found:** <key result / bug / decision, or "—">
-**Next:** <what's next, or "—">
-```
-
-Rules:
-1. **Newest on top**, directly under the `## 📓 Worklog` header (below its format comment).
-2. **One entry per session, not per change.** This is the human daily distillation — `RESEARCH.md` remains the granular per-change machine log. Don't paste RESEARCH entries here; summarize the session.
-3. **Human, low-jargon.** Write it so a non-specialist collaborator (or future-you skimming a week later) gets it. Spell out what mattered, skip the script internals.
-4. **Prefix the title with `Brain Paper`** so the hub stays sortable by project.
-5. **Append only to `## 📓 Worklog`.** Never edit the `## 🎯 Command board` (that's the user's brief to you) — but *do* read the `### Brain Paper` command section at session start for pending asks. You may update the project's row in `## 📊 Dashboard` (Current focus / Next action / Updated date) when it has clearly changed.
-6. Use today's real date (`currentDate`). Never guess or reuse a prior date.
+- **Session start:** `git pull` in the hub clone, read its `STATUS.md`, and run `gh issue list -R smartadi/research-hub --label brain-paper` for pending asks.
+- **Session end (only if real work happened):** append **one** plain-language entry to the hub's `WORKLOG.md`, directly under the marker, newest on top: `### YYYY-MM-DD · Brain Paper — <one-line title>` then **Done / Found / Next** (real current date). Update `projects/brain-paper.md` (`focus` / `next` / `updated`, each ≤250 chars, replace don't append) if they changed; commit and push.
+- `RESEARCH.md` here stays the granular per-change log; don't paste it into the worklog. Don't edit the hub's `STATUS.md` (generated) or `PLANNER.md` (Aditya's).
 
 ---
 
