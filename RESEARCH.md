@@ -16,6 +16,24 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-25 — Replay plays the CL average one sample (28.6 ms) late (AL_0048 2026-10-23/1)
+**Changed/Found:** `controller-analysis/ol_opt_replay_controlapp.m`: the replay trials' command is exactly `custom_mw_trial_avg` (max diff 1.8e-14 mW), but delayed by 1 sample relative to the CL custom trials it was averaged from. `avg_mw(1)` is the `kk_onset` sample, when the light is still off: custom trials are recorded from `u_log[inp]`, one sample before light (DATA_FILES gotcha 9). Replay plays that 0 as its first on-sample. CL light starts at `kk_onset+1`, replay light at `kk_onset+2`.
+**Why:** The overlay of replay on its CL source looked shifted. A lag scan (−2…+3 samples) gives zero error only at +1.
+**Next:** This is a rig-side bug (controlApp, Main custom recording), not an analysis issue. At 28.6 ms it is small next to a 3 s step, so the result stands. Fix in the rig repo: drop the first recorded sample or start replay at index 1. Mention it in Methods if replay goes in the paper.
+
+### 2026-10-25 — OL-best replay analysis for control-app session AL_0048 2026-10-23/1
+**Changed/Found:** New `controller-analysis/ol_opt_replay_controlapp.m`, the control-app counterpart of `ol_opt_replay_batch.m` + `ol_opt_replay_avginput.m`. Those scripts, and the AL_0041 results and figures, are untouched. It writes `paper/images/ol_opt_replay/AL_0048_2026-10-23_1_{tracking,avginput}.png`.
+- **Format:** recorded by `Main_experiment.py --mode closed_loop --demo`, controlApp @ 959995b (`git_dirty: yes`). `--demo` is on by default and only adds read-only presentation panels to the live figure (`demo_panels.py` reads `statedf` / `refr` / `last_logged_k`), so the data are unaffected. `input_params_header.csv` has one name per line; columns are read by name.
+- **Onset = `kk_onset`**, not `kk`. With `kk_onset`, pre-onset ΔF/F is ~0 and the command 0 mW. With `kk` (the AL_0041 rule) the "pre" window is inside the stimulus: ΔF/F −1.7 to −3.2 %, command 5–18 mW. `kk − kk_onset` = 103–105 samples, because `kk` is logged at trial end. Timeline check: all 164 trials match a `lightCommand638` rising edge, 19.7 ms (median, p95 50 ms) after the blue frame at `kk_onset`, with epoch duration 2.997 s and Timeline V within 4% of `laser_out.laser_v`. The 34 extra Timeline epochs all fall inside CL trials, where the command touched 0 mW.
+- **trial_type decoding** (`Main_experiment.py` `TRIAL_TYPES` and `control()`): 0 = Exp Start, trials 1–15. These are gain/Kref tuning, logged as mode 1 even though trials 1–6 have Kp = Ki = 0, and are excluded. 4 = custom, trials 16–65: 50 CL trials at Kp 5 / Ki 0.75 / Kref 1, whose command mean is `custom_mw_trial_avg`, identical to 1e-14 mW. 1 = Analyze, trials 66–164: mode drawn at random from {0, 0.5, 1}, giving OL 30 / CL 36 / replay 33 at the same gains. The comparison uses the Analyze block only.
+- **Units:** mW; OL = Kref·R = 5 mW, i.e. 0.30 old uval at 16.81 mW/uval; CL mean 17.6 mW, replay 18.0 mW. The red calibration failed QC.
+- **Result** (states.csv, RMSE over 0–3 s to ref −5 %):
+  - **RMSE:** OL 3.68 ± 1.14, CL 2.77 ± 0.88, replay 2.78 ± 0.72. Ranksum: CL vs replay p = 0.85, OL vs CL p = 8e-4, OL vs replay p = 9e-4.
+  - **Across-trial variance, 0–3 s:** OL 4.42, CL 3.79, replay 2.90 (%ΔF/F)².
+  - **Steady state:** neither CL nor replay reaches the ref; both plateau near −3.3 %.
+**Why:** The user asked for the AL_0048 OL-best replay session to be added as a new session for the supplement. The new rig format breaks the AL_0041 conventions (`loadData` parsing, `kk` meaning, uval), so it needs its own loader.
+**Next:** The user decides how it enters the supplement (OLbest figure). Note that OL here is Kref·R = 5 mW, an under-dosed fixed input rather than the best fixed input. Check whether the PI integrator saturates or resets, given the plateau at −3.3 % instead of −5 %. No pixel maps were made (SVD has no `corr` folder).
+
 ### 2026-10-21 — Introduction rewritten and installed (Closedloop 3f75ae2, pushed)
 **Changed/Found:** `Closedloop_edit/introduction.tex` was replaced with the rewrite, which is 1229 words excluding citations and cites 46 keys.
 - **Structure:** six paragraphs:

@@ -110,6 +110,20 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
+## Finding: Replaying the average CL command open-loop matches CL tracking (AL_0048 2026-10-23/1)
+**Question:** In a new mouse and on the new control app, does the averaged CL command, replayed open-loop ("OL-optimized"), track as well as live feedback?
+**Analysis:** `controller-analysis/ol_opt_replay_controlapp.m`. The comparison uses the Analyze block only (trial_type 1: OL / CL / replay drawn at random per trial, Kp 5, Ki 0.75, Kref 1, ref −5 %, dur 3 s, red laser in mW). Onset = `kk_onset`, verified against Timeline `lightCommand638`. Replay = mean of 50 custom-block CL trials (trial_type 4). The signal is states.csv, the online ΔF/F.
+**Result:**
+- **RMSE (0–3 s):** OL 3.68 ± 1.14 (n = 30), CL 2.77 ± 0.88 (n = 36), replay 2.78 ± 0.72 (n = 33). CL ≈ replay (p = 0.85); both beat OL (p < 1e-3).
+- **Across-trial variance:** replay 2.90 < CL 3.79 < OL 4.42 (%ΔF/F)².
+- **Steady state:** CL and replay both plateau near −3.3 %, not at the −5 % ref.
+- **Replay timing:** replay plays the CL average 1 sample (28.6 ms) late, a rig recording artefact.
+**Paper claim (draft, single session, n = 1 mouse):** Most of the CL benefit in this session is in the mean command, not in trial-by-trial feedback. Replaying the average CL input open-loop gives the same error. Caveat: the OL comparison is Kref·R = 5 mW, far below the CL mean of ~18 mW, so it is not a best-fixed-input control.
+**Figure:** `paper/images/ol_opt_replay/AL_0048_2026-10-23_1_tracking.png`, `_avginput.png` (PNG, not yet a paper panel).
+**Status:** Analysis done 2026-10-25; supplement placement pending the user. See RESEARCH 2026-10-25.
+
+---
+
 ## Finding: OL stimulation reduces trial-to-trial variance
 **Question:** Does stimulation onset affect trial-to-trial variance, and how does OL compare to CL?
 **Analysis:** `controller-analysis/variance_mse.m` (§variance slope) — slope-based analysis, n=13 OL sessions
