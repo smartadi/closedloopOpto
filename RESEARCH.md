@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-26 — Results MPC wording fixes (Closedloop e1b13e4, pushed)
+**Changed/Found:** `Closedloop_edit/results.tex`, MPC subsection. Changes:
+- The Overleaf opening (lines 282–283) was rewritten. The cost now matches Methods: tracking error plus a penalty on command changes. It had said "conserving energy", and that the model predicts "from current activity"; neither was accurate.
+- Fixed "horizon( Figure".
+- The constraint sentence is now in controls language: input constraints, prediction error from plant–model mismatch and unforecastable disturbance.
+- Aditya's own Methods perfect-prediction line was kept as he wrote it.
+
+Built clean.
+**Why:** Aditya asked for my earlier MPC corrections to replace his Overleaf push (b091bca), and for main to be pushed.
+**Next:** Aditya pulls into Overleaf. The new Intro first line and the P1.5 cortex/mesoscale line are still to be pasted by him.
+
 ### 2026-10-26 — Stats audit: Fig 3 mouse-LMM df collapse, CI/p mismatch, ~35 redundant rows
 **Changed/Found:** `paper-writing/STATS_AUDIT.md` (new) — claim-by-claim audit of all 146 STATS_TABLE rows against results.tex / stat_tables.tex / methods.tex. Found: (1) Fig 3 primary `log r~1+(1|mouse)` Satterthwaite df flips between 14 and 0–2.7 with 4 mice (9/4/1/1 sessions), giving p=0.089 for 0–3 s RMSE (15/15 sessions <1; t-test p=9.2e-8) and p=0.22 for CL/best-fixed 1–3 s (t p=2.4e-4); (2) Fig 3 table CIs are df-14 intervals beside df-1/2.6 p-values; (3) Fig 3 uses mouse-LMM as primary but Fig 4G uses session-only LMM, so the rule flips between figures; (4) results.tex:147 Spearman rho=0.66 p=0.009 (ctrl_best_fixed_ol.m) has no STATS_TABLE row; (5) ~35 redundant/orphan rows (3_* corroborating, 0–3 s tests, gap ×4, gap trend vs attenuation, 4_motslope_* Wilcoxon vs 4D LMM slopes, 2G_*_q4).
 **Why:** User asked for an audit before reconsolidating tests: which claims need a test, and is each test the right one (hub #62).
