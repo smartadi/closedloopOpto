@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Intro: ML dynamics models + two limits for control (Closedloop 9354e56)
+**Changed/Found:** `introduction.tex`, `refs.bib`: two sentences added after the lu2025 forecasting sentence, covering LFADS, NDT, CEBRA, the Wang 2025 foundation model, POYO and POSSM. Their limits are framed as real-time impracticality and no forecasting of the response to stimulation. Five bib entries were added. The reference check (Crossref/arXiv) changed the claims. NDT's abstract claims 3.9 ms real-time inference, so NDT is NOT cited for real-time impracticality. Wang 2025 *does* predict responses to (visual) stimuli, so it is excepted from the "no forecasting" claim. "In the manner of language models" was dropped because no source says it.
+**Why:** The user asked for state-of-the-art ML models (including Lajoie's group) with their limits, and for the references to be checked before installing.
+**Next:** "LFADS infers from whole trials" is from model knowledge; the Crossref record has no abstract. The NDT citation is arXiv-only. The Intro is still about 1,300 words against the ~750 limit.
+
 ### 2026-10-26 — Results MPC wording fixes (Closedloop e1b13e4, pushed)
 **Changed/Found:** `Closedloop_edit/results.tex`, MPC subsection. Changes:
 - The Overleaf opening (lines 282–283) was rewritten. The cost now matches Methods: tracking error plus a penalty on command changes. It had said "conserving energy", and that the model predicts "from current activity"; neither was accurate.
