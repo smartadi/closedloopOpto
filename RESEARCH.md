@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-26 — Stats audit: Fig 3 mouse-LMM df collapse, CI/p mismatch, ~35 redundant rows
+**Changed/Found:** `paper-writing/STATS_AUDIT.md` (new) — claim-by-claim audit of all 146 STATS_TABLE rows against results.tex / stat_tables.tex / methods.tex. Found: (1) Fig 3 primary `log r~1+(1|mouse)` Satterthwaite df flips between 14 and 0–2.7 with 4 mice (9/4/1/1 sessions), giving p=0.089 for 0–3 s RMSE (15/15 sessions <1; t-test p=9.2e-8) and p=0.22 for CL/best-fixed 1–3 s (t p=2.4e-4); (2) Fig 3 table CIs are df-14 intervals beside df-1/2.6 p-values; (3) Fig 3 uses mouse-LMM as primary but Fig 4G uses session-only LMM, so the rule flips between figures; (4) results.tex:147 Spearman rho=0.66 p=0.009 (ctrl_best_fixed_ol.m) has no STATS_TABLE row; (5) ~35 redundant/orphan rows (3_* corroborating, 0–3 s tests, gap ×4, gap trend vs attenuation, 4_motslope_* Wilcoxon vs 4D LMM slopes, 2G_*_q4).
+**Why:** User asked for an audit before reconsolidating tests: which claims need a test, and is each test the right one (hub #62).
+**Next:** User decides the paper-wide rule (recommended: session-level one-sample t on log ratios + Wilcoxon robustness + mouse sensitivity check), one-sided vs two-sided 4G, CI-only for pre/post null windows; then rewire producers + paper_stats_table/tex.
+
 ### 2026-10-25 — Replay plays the CL average one sample (28.6 ms) late (AL_0048 2026-10-23/1)
 **Changed/Found:** `controller-analysis/ol_opt_replay_controlapp.m`: the replay trials' command is exactly `custom_mw_trial_avg` (max diff 1.8e-14 mW), but delayed by 1 sample relative to the CL custom trials it was averaged from. `avg_mw(1)` is the `kk_onset` sample, when the light is still off: custom trials are recorded from `u_log[inp]`, one sample before light (DATA_FILES gotcha 9). Replay plays that 0 as its first on-sample. CL light starts at `kk_onset+1`, replay light at `kk_onset+2`.
 **Why:** The overlay of replay on its CL source looked shifted. A lag scan (−2…+3 samples) gives zero error only at +1.
