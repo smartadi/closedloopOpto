@@ -221,3 +221,12 @@ These supersede the matching points above.
    z units, 11 sessions): OL slope t p = 0.0073 (mixed model 0.013); CL slope t p = 0.46 (0.27); OL − CL t p = 0.0014
    (gap trend 0.0051). The other states need `load_sessions.m` (clean-room Phase 3). Correcting across the 12 slopes (Holm)
    is still needed: the unit and the number of questions are separate issues.
+10. **User decision 2026-10-27: Fig 4D uses session-level t-tests** (per-session P, R, A slopes; t-test across sessions; Wilcoxon backup).
+    The "pick random sessions" check on saved motion slopes (11 sessions, `data/f4_motion_slopes.mat`):
+    | motion | mean | sessions agreeing | t p | sign-flip p | bootstrap 95% | random 5-session halves, same sign |
+    |---|---|---|---|---|---|---|
+    | OL slope (P) | +0.237 | 10/11 | 0.0073 | 0.0020 | [+0.12, +0.38] | 100% |
+    | CL slope (R) | −0.036 | 6/11 | 0.46 | 0.45 | [−0.12, +0.05] | 74.5% |
+    | gap change (OL − CL) | +0.274 | 11/11 | 0.0014 | 0.0010 | [+0.17, +0.40] | 100% |
+    Correction across the 12 slopes: user treats each as a separate question (no division). Open: per-question stars in the panel,
+    with a Holm column in Table 4 as reviewer insurance; the text then interprets every starred slope and drops "did not survive correction".

@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Fig 4D goes session-level; motion gap increase holds in every random half of sessions
+**Changed/Found:** `data/f4_motion_slopes.mat` — resampled the 11 per-session motion slopes. Gap change (OL − CL): 11/11 sessions, t p = 0.0014, exact sign-flip p = 0.0010, bootstrap 95% [+0.17, +0.40], same sign in 100% of random 5-session halves. OL slope: 10/11, p = 0.0073, 100% of halves. CL slope: 6/11, p = 0.46, only 74.5% of halves. Decision recorded in STATS_AUDIT §7.10: Fig 4D uses per-session slopes with a t-test across sessions.
+**Why:** User framed the test as "does the claim hold if we pick random sessions?" and chose the session-level t-test. User also argued P, R and A per state are separate questions, so dividing by 12 makes no sense.
+**Next:** User confirms per-question stars plus a Holm column in Table 4. The clean-room rebuild computes session-level P, R and A for all four states.
+
 ### 2026-10-27 — Fig 4D motion slopes at session level agree with the mixed model, slightly stronger
 **Changed/Found:** `data/f4_motion_slopes.mat` (MOTSLOPE, 11 sessions, z units) — one-sample t across sessions: OL slope p = 0.0073 (Wilcoxon 0.0020; mixed model 0.013), CL slope p = 0.46 (mixed model 0.27), OL − CL p = 0.0014 (mixed-model gap trend 0.0051). Recorded as STATS_AUDIT §7.9.
 **Why:** User asked whether Fig 4D can use session-level tests like Fig 3 instead of the trial-level mixed model.
