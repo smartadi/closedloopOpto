@@ -196,7 +196,16 @@ These supersede the matching points above.
    when attenuation was added.~~ **User decision 2026-10-27: rejected.** Attenuation is a distinct quantity; P, R and A each show
    something different in the Fig 4D quartiles. No Methods mention of when it was added. Gap trend keeps its current place
    (Table 4, "not interpreted") unless the user drops it.
-4. **Fig 4D stars on Bonferroni-corrected p** (unchanged).
+4. **Fig 4D stars on corrected p** (unchanged in intent). Panel labels now come from raw p (`arrowstars`, `f4_row2_quartiles.m:407`).
+   Holm-adjusted p within the two caption families (P+R: 8 tests; A: 4 tests) → standard thresholds:
+   | state | P | R | A |
+   |---|---|---|---|
+   | initial deviation | ↓\* → n.s. (0.11) | ↓\* → n.s. (0.22) | n.s. |
+   | motion | ↓\* → n.s. (0.08) | n.s. | ↑\*\* → ↑\* (0.014) |
+   | relative 2–4 Hz | n.s. | ↓\* → n.s. (0.27) | ↓\* → n.s. (0.055) |
+   | absolute 1–4 Hz | ↓\*\*\* → ↓\*\* (0.0046) | ↓\*\*\* → ↓\*\* (0.0013) | ↓\*\* (0.0057) |
+   Bonferroni gives the same labels. If a reviewer pools all 12 slopes into one family, Holm still keeps the same four
+   (motion A adjusted 0.043), but Bonferroni ×12 would lose motion A (0.058). So use Holm.
 5. **Fig 4G: put the all-13-session result in the text** (11/13 below one, p = 0.021) next to the 11-session one, because the
    offset exclusion can look post hoc.
 6. **Best fixed: don't frame Mouse 4 as a weak prep.** Its CL/OL steady-state ratio is 0.72, which is typical. Its CL/best ratio of

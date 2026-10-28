@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Fig 4D corrected stars worked out: Holm keeps motion attenuation even across 12 tests
+**Changed/Found:** `paper-writing/STATS_AUDIT.md` §7.4 — Holm-adjusted p from STATS_TABLE 4D rows. Stars disappear for initdev P/R, motion P, rel-δ R/A. Star levels drop for motion A (** → *) and abs-δ P/R (*** → **). Abs-δ A stays **. Bonferroni gives identical labels within the caption families. Pooled into one family of 12, Holm keeps the same four survivors (motion A 0.043), whereas Bonferroni would drop motion A (0.058).
+**Why:** User asked for a detailed explanation of the Fig 4D star change. Raw-p stars contradict the Results text, which already says those slopes don't survive correction.
+**Next:** User confirms Holm-adjusted stars; then `arrowstars` takes adjusted p, and the caption and Table 4 bold rule name Holm.
+
 ### 2026-10-27 — Decided not to flag in Methods when attenuation was added
 **Changed/Found:** `paper-writing/STATS_AUDIT.md` §7.3 — the suggestion to say in Methods that attenuation was introduced on 2026-10-18 is struck. The other §7 revisions are accepted in principle; final approval is pending.
 **Why:** User: attenuation is a real, distinct quantity, and predictability, regularizability and attenuation each show something different in the Fig 4D quartiles, so its timing doesn't need a mention.
