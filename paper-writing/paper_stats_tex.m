@@ -27,8 +27,9 @@ add(sprintf('%% from STATS_TABLE.csv on %s. Do not edit by hand: re-run the gene
 add('% =============================================================================');
 add('\section*{Statistical tables}');
 add('\label{sec:stat_tables}');
-add(['Every statistic quoted in the Results is listed here with its estimate, ' ...
-         '95\% confidence interval, test statistic, $p$-value and $n$. Tests are described ' ...
+add(['Every test quoted in the Results for Figs.~\ref{fig:figure2}--\ref{fig:figure4} is listed here with its estimate, ' ...
+         '95\% confidence interval, test statistic, $p$-value and $n$; Figs.~\ref{fig:figure5} and~\ref{fig:mpc_direct} ' ...
+         'are reported descriptively. Tests are described ' ...
          'in Materials and Methods (\nameref{sec:stats}). $p$-values are two-sided and ' ...
          'uncorrected unless stated.']);
 add('');
@@ -56,7 +57,7 @@ add('\midrule', sprintf('All sessions & & & & %d \\\\', sum(C.n)), ...
 
 % ---------------- Table: Fig 2G state dependence of impulse-response variability ------------
 add('\begin{table}[!ht]', '\centering', '\small', ...
-        '\caption{\textbf{Single-trial impulse-response variability and pre-stimulus state} (Figure~\ref{fig:figure2}G and Figure~\ref{fig:state_quartile}; 4 sessions, 3 mice, 1516 trials). Figure~\ref{fig:figure2} is reported descriptively; the slope tests below are supporting and are not used for inference in the text. Ratio, variability in the top versus bottom within-session quartile of the state, computed in each session; geometric mean across sessions, with the range of the four per-session ratios in parentheses (with four sessions we give the range rather than a confidence interval). Slope, per-session slope of variability on state, one-sample $t$-test across sessions (3 degrees of freedom); agreeing, sessions with the same sign. Stimulus-free, the same measures in the stimulus-free window. $\rho$, Spearman correlation over pooled trials (descriptive; no test). Bonferroni threshold for three states, $p < 0.017$.}', ...
+        '\caption{\textbf{Single-trial impulse-response variability and pre-stimulus state} (Figure~\ref{fig:figure2}G and Figure~\ref{fig:state_quartile}; 4 sessions, 3 mice, 1516 trials). Figure~\ref{fig:figure2} is reported descriptively; the slope tests below are supporting and are not used for inference in the text. Ratio, variability in the top versus bottom within-session quartile of the state, computed in each session; geometric mean across sessions, with the range of the four per-session ratios in parentheses (with four sessions we give the range rather than a confidence interval). Slope, per-session slope of variability on state, one-sample $t$-test across sessions (3 degrees of freedom); agreeing, sessions with the same sign. Stimulus-free, the same measures in the stimulus-free window. $\rho$, Spearman correlation over pooled trials (descriptive; no test).}', ...
         '\label{tab:stat_fig2g}', ...
         '\begin{tabular}{lccccccc}', '\toprule', ...
         ' & \multicolumn{4}{c}{Stimulus response} & & \multicolumn{2}{c}{Stimulus-free} \\', ...
@@ -126,31 +127,32 @@ add('\bottomrule', '\end{tabular}', ...
 % one-sample t across sessions. p = uncorrected (the figure stars, each P/R/A its own question);
 % Holm p within P+R (8 tests) and within A (4 tests). Gap and gap trend are descriptive.
 % Trial counts per state (not in STATS_TABLE): 1670 trials; 1190 for motion (face video in 11 sessions).
+% 2026-10-28: same columns as the Fig 3 table (Wilcoxon, sessions (mice), LOMO), which Methods
+% promises for every session test; the state is a block header, as the window block is there.
 N4D = struct('initdev',1670,'motion',1190,'delta',1670,'absdelta',1670);
 add('\begin{table}[!ht]', '\centering', '\small', ...
-        '\caption{\textbf{State dependence of open- and closed-loop tracking error} (Figure~\ref{fig:figure4}D). In each session, ordinary least-squares slopes of per-trial RMSE from 1 to 3\,s after onset on the state, standardized within session; slopes in $\%\,\Delta F/F$ of RMSE per within-session SD of the state, tested across sessions with a two-sided one-sample $t$-test (Materials and Methods). Gap, open- minus closed-loop mean RMSE (descriptive; the Figure~\ref{fig:figure3} result). Predictability and regularizability, open- and closed-loop slopes. Attenuation, closed- minus open-loop slope of $\log$ RMSE, given as the percent change per SD of the closed-to-open-loop RMSE ratio; negative, the loop removes a larger fraction of the open-loop error. Gap trend, open- minus closed-loop slope (not interpreted; Materials and Methods). $p$, uncorrected, as marked in Figure~\ref{fig:figure4}D; Holm $p$, Holm-adjusted within predictability and regularizability (eight tests) and within attenuation (four tests). Sessions, sessions whose estimate has the sign of the mean.}', ...
+        '\caption{\textbf{State dependence of open- and closed-loop tracking error} (Figure~\ref{fig:figure4}D). In each session, ordinary least-squares slopes of per-trial RMSE from 1 to 3\,s after onset on the state, standardized within session; slopes in $\%\,\Delta F/F$ of RMSE per within-session SD of the state, tested across sessions with a two-sided one-sample $t$-test (14 degrees of freedom; 10 for motion; Materials and Methods). Gap, open- minus closed-loop mean RMSE (descriptive; the Figure~\ref{fig:figure3} result). Predictability and regularizability, open- and closed-loop slopes. Attenuation, closed- minus open-loop slope of $\log$ RMSE, given as the percent change per SD of the closed-to-open-loop RMSE ratio; negative, the loop removes a larger fraction of the open-loop error. Gap trend, open- minus closed-loop slope (not interpreted; Materials and Methods). $p$, uncorrected, as marked in Figure~\ref{fig:figure4}D; Holm $p$, Holm-adjusted within predictability and regularizability (eight tests) and within attenuation (four tests); Wilcoxon, exact signed-rank test on the same session values. Sessions, sessions whose estimate has the sign of the mean (in parentheses, mice whose mean has that sign). LOMO, the largest $p$ of the $t$-test when each mouse is left out in turn.}', ...
         '\label{tab:fig4_state_stats}', ...
-        '\setlength{\tabcolsep}{4pt}', ...   % six columns overran the text width by 15 pt at the default 6 pt
-        '\begin{tabular}{llcccc}', '\toprule', ...
-        'State & Quantity & Estimate [95\% CI] & Test & Holm $p$ & Sessions \\', '\midrule');
+        '\setlength{\tabcolsep}{4pt}', ...
+        '\begin{tabular}{lccccccc}', '\toprule', ...
+        'Quantity & Estimate [95\% CI] & $t$ & $p$ & Holm $p$ & Wilcoxon $p$ & Sessions & LOMO $p$ \\', '\midrule');
 st4 = {'initdev','Initial deviation'; 'motion','Motion'; 'delta','Relative 2--4\,Hz'; 'absdelta','Absolute 1--4\,Hz'};
 qs  = {'gap','Gap'; 'pred','Predictability'; 'reg','Regularizability'; 'att','Attenuation (\% per SD)'; 'gaptrend','Gap trend'};
 for i = 1:size(st4,1)
+    g1 = R("4D_"+st4{i,1}+"_pred");
+    add(sprintf('\\multicolumn{8}{l}{\\textit{%s} (%d sessions, %d trials)} \\\\', st4{i,2}, g1.n, N4D.(st4{i,1})));
     for q = 1:size(qs,1)
         g = R("4D_"+st4{i,1}+"_"+qs{q,1});
-        if q == 1
-            c1 = st4{i,2};
-        elseif q == 2
-            c1 = sprintf('\\footnotesize %d sessions, %d trials', g.n, N4D.(st4{i,1}));
-        else
-            c1 = '';
-        end
         if strcmp(qs{q,1}, 'att'), e = pctci(g.effect, g.ci_lo, g.ci_hi);
         else,                      e = estci(g.effect, g.ci_lo, g.ci_hi, true); end
-        if strcmp(qs{q,1}, 'gap'), tst = '---';
-        else, tst = sprintf('$t(%s) = %s$, $p = %s$', dfs(g.df), num(g.stat,'%.2f',false), pv(g.p)); end
+        if strcmp(qs{q,1}, 'gap')
+            ts = '---';  ps = '---';  ws = '---';  ls = '---';
+        else
+            ts = num(g.stat);  ps = pvm(g.p);  ws = pvm(g.wilcoxon_p);  ls = pvm(g.lomo_worst_p);
+        end
         hp = '---';  if isfinite(g.holm_p), hp = pvm(g.holm_p); end
-        add(sprintf('%s & %s & %s & %s & %s & %s \\\\', c1, qs{q,2}, e, tst, hp, g.sessions_agree));
+        add(sprintf('\\quad %s & %s & %s & %s & %s & %s & %s (%s) & %s \\\\', qs{q,2}, e, ts, ps, hp, ws, ...
+            g.sessions_agree, g.mice_agree, ls));
     end
     if i < size(st4,1), add('\addlinespace'); end
 end
@@ -234,12 +236,14 @@ function s = pv(p)
     end
 end
 function s = pctci(b, lo, hi, pct)
-% log-scale estimate -> percent change; one decimal when the estimate is under 1 %
+% log-scale estimate -> percent change, whole percent like its CI (2026-10-28: was one decimal
+% under 1 %, which mixed precisions in one row); no signed zero
     if nargin < 4, pct = false; end
     v = 100*(exp([b lo hi]) - 1);
-    if abs(v(1)) < 1, f = '%+.1f'; else, f = '%+.0f'; end
     u = '';  if pct, u = '\\%%'; end   % becomes \% after sprintf
-    s = sprintf(['$' f '$' u ' $[%.0f, %.0f]$'], v(1), v(2), v(3));
+    s = sprintf(['$%+.0f$' u ' $[%.0f, %.0f]$'], v(1), v(2), v(3));
+    s = regexprep(s, '^\$[+-]0\$', '\$0\$');
+    s = strrep(s, '[-0,', '[0,');  s = strrep(s, ', -0]', ', 0]');
 end
 function s = pvm(p)
     s = pv(p);  if ~strcmp(s,'---'), s = ['$' s '$']; end

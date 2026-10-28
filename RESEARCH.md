@@ -16,6 +16,80 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-28 — Manuscript pushed to Overleaf: rebuilt Figs 3/4/OLbest + stats-quoting consistency pass
+**Changed/Found:** Closedloop_edit main d2eb61d (images/Figure3.pdf, Figure4.pdf, supplementary/OLbest.pdf copied from `paper/figures_final/`) and e7c4b0f (text), pushed together with 7e96deb..2fabeb6; origin/main = e7c4b0f. An independent read of every quoted statistic against STATS_TABLE.csv found, and I fixed:
+- Abstract (main.tex) and Introduction still said 1–4 Hz power cost feedback ground *relative to open loop*. That is attenuation, now p = 0.094. Both now state the closed-loop slope (R, p = 7.1e-4, Holm 0.0057), as Results does.
+- Abstract: MPC "about 40%" scoped to the constant-reference replay (the sine replay gave 11%).
+- Discussion: "one session's trials" → "recorded trials" (two sessions were replayed); best fixed "29% too low" (old median 1.29) → "1.28 times".
+- Methods:
+  - Fig 4G carved out of "one number per session".
+  - Mouse random effect: "did not base inference on".
+  - The tables, not the text, carry CI + t(df).
+  - V is given only for Fig 4G.
+- Results:
+  - Initial-deviation OL slope (p = 0.056) is no longer described as an effect.
+  - Motion gap-trend clause removed (Methods says the gap trend is not interpreted).
+  - Selective Holm caveat on rel δ removed (L204 already names the two Holm survivors).
+  - Mouse counts added: 3H windows 4/4, best fixed 3/4, motion A 4/4, abs-δ R 4/4.
+  - 3H star legend now says 0–3 s; 4G legend names its test; three typos.
+- Numbers printed inside the figures match the tables:
+  - OLbest: 0.92 [0.86, 0.99], 0.80 [0.73, 0.88], ρ 0.67, p 0.008.
+  - Fig 4D: every star equals the raw p.
+  - Fig 3H/I: the geometric means read off the axes are 0.85/0.68 and 0.66/0.54.
+- latexmk clean, 41 pp, no overfull boxes.
+**Why:** User 2026-10-28: "i updated all figures add to paper edit and push to main, do a review of stats quoting consistency in paper first then push to main".
+**Next:**
+- Overleaf pull.
+- S1.pdf was not reassembled: `figures_final/S1.pdf` is still from 2026-10-05, and its OL-variance-evolution panel changed (not quoted anywhere).
+- Fig 5/6 sine mismatch (entry below).
+- Fig 4G re-run.
+
+### 2026-10-28 — paper_stats_tex: Table 5 gets Wilcoxon / mice / LOMO columns; Bonferroni line removed
+**Changed/Found:** `paper-writing/paper_stats_tex.m`:
+- Fig 4D table re-laid out like the Fig 3 table. Each state is an italic block header with its sessions and trials. Columns: Quantity | Estimate [CI] | t | p | Holm p | Wilcoxon p | Sessions (mice) | LOMO p. The df go in the caption (14; 10 for motion).
+- Fig 2G caption: "Bonferroni threshold for three states, p < 0.017" removed.
+- Lead sentence: "Every statistic quoted in the Results" → "Every test quoted for Figs 2–4", with Figs 5 and 6 named as descriptive.
+- `pctci` now always prints whole percent with no signed zero (initdev A was "−0.4 [−7, 7]").
+- The table now shows:
+  - abs-δ R LOMO worst p 0.065;
+  - motion P LOMO 0.073;
+  - abs-δ A Wilcoxon p 0.035 against t p 0.094.
+**Why:** Methods promises the Wilcoxon and mouse checks for every session test, but Table 5 had only a sessions column. Bonferroni was retired on 2026-10-27.
+**Next:** none.
+
+### 2026-10-28 — Table S1 sensitivity without session 1e, re-run with the session t-test
+**Changed/Found:** Took the per-session ratios in `data/fig3_ratio_stats.mat` (`R3.*.st.values`; row 4 = m4 = 1e, matched to `stats_v2/results/corrected/session_fig3.csv`), dropped 1e and ran `sess_test`. All six windows have 14 sessions and 4/4 mice:
+
+| Ratio | 0–3 s | 0–1 s | 1–3 s |
+|---|---|---|---|
+| RMSE | 0.763 [0.72, 0.81], p 1.4e-7 | 0.850, p 2.0e-5 | 0.672, p 1.1e-6 |
+| Variance | 0.573, p 9.0e-6 | 0.659, p 6.6e-4 | 0.526, p 1.9e-6 |
+
+The supplementary caption had the old mixed-model values on the pre-fix caches (0.84/0.68 and 0.64/0.53, p ≤ 0.003) and left out the primary window. Caption updated.
+**Why:** The consistency review found stale numbers from the retired test.
+**Next:** none.
+
+### 2026-10-28 — Found: Fig 5 and Fig 6 quote different numbers for the same Mouse 3b sine trials (NOT fixed)
+**Changed/Found:** Both texts describe the same session and the same 0–4 s window, but quote different values:
+
+| Quantity | Fig 5 text (`sine_ff_*`) | Fig 6 text/caption and STATS_TABLE `6s_*` (`ctrl_mpc_sine_export`) |
+|---|---|---|
+| OL lag | 60° | 71° |
+| CL lag | 36° | 46° |
+| OL+p lag | 5° | 16° |
+| CL+p lag | −9° | 2° |
+| OL median RMSE | 3.82 | 3.59 |
+| OL+p median RMSE | 3.55 | 3.58 |
+| CL median RMSE | 2.80 | 2.26 |
+| CL+p median RMSE | 3.30 | 3.00 |
+| OL variance | 17.9 | 11.8 |
+| CL variance | 14.8 | 5.8 |
+
+- The ~10° lag offset is the one-frame pairing difference logged 2026-10-27. `sine_ff_*` pairs row kk with frame kk; the MPC export uses the rig's o ↔ o−1 pairing.
+- The RMSE and variance gaps are too large for one frame. Check the trial set, the window edges, the variance definition, and whether both really use the same session (Fig 6 caption: "the session of Fig. 5B–H").
+**Why:** Found in the consistency review: a reader comparing Figs 5 and 6 sees two values for one quantity.
+**Next:** Reconcile the two sine pipelines. The MPC side is locked, so Fig 5 adopts the rig pairing if that is the cause. Re-export the Fig 5 panels and text if Fig 5 moves.
+
 ### 2026-10-27 — Manuscript: Methods, Results and tables moved to the session rule (Closedloop_edit main, not pushed)
 **Changed/Found:** Closedloop_edit commits 7e96deb (Tables 4–5 regenerated), deec011 (Methods), 2fabeb6 (Results + supplementary).
 - Methods:
