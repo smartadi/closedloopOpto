@@ -200,9 +200,9 @@ These supersede the matching points above.
    Holm-adjusted p within the two caption families (P+R: 8 tests; A: 4 tests) → standard thresholds:
    | state | P | R | A |
    |---|---|---|---|
-   | initial deviation | ↓\* → n.s. (0.11) | ↓\* → n.s. (0.22) | n.s. |
-   | motion | ↓\* → n.s. (0.08) | n.s. | ↑\*\* → ↑\* (0.014) |
-   | relative 2–4 Hz | n.s. | ↓\* → n.s. (0.27) | ↓\* → n.s. (0.055) |
+   | initial deviation | ↓\* → n.s. (0.080) | ↓\* → n.s. (0.11) | n.s. |
+   | motion | ↓\* → n.s. (0.080) | n.s. | ↑\*\* → ↑\* (0.014) |
+   | relative 2–4 Hz | n.s. | ↓\* → n.s. (0.13) | ↓\* → n.s. (0.055) |
    | absolute 1–4 Hz | ↓\*\*\* → ↓\*\* (0.0046) | ↓\*\*\* → ↓\*\* (0.0013) | ↓\*\* (0.0057) |
    Bonferroni gives the same labels. If a reviewer pools all 12 slopes into one family, Holm still keeps the same four
    (motion A adjusted 0.043), but Bonferroni ×12 would lose motion A (0.058). So use Holm.
