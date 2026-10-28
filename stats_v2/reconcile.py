@@ -2,7 +2,10 @@
 
 Run after run_all.py. This script is NOT blind: it reads the old derived fields (data.nc/wc, data.er_*)
 and the old per-session ratios, and writes data/stats_v2/RECONCILE.md.
+--corrected: compare the MATLAB caches AFTER ctrl_apply_onset_fix.m with run_all.py --corrected
+(tier 1 only, plus the per-trial OL/CL command maximum), written to data/stats_v2/corrected/RECONCILE.md.
 """
+import sys
 import os
 import h5py
 import numpy as np
@@ -33,7 +36,9 @@ def old_trials(sess):
 
 
 def main():
-    new = pd.read_csv(os.path.join(OUT, "trials.csv"))
+    corrected = "--corrected" in sys.argv
+    out = os.path.join(OUT, "corrected") if corrected else OUT
+    new = pd.read_csv(os.path.join(out, "trials.csv"))
     old = pd.concat([old_trials(s) for s in CACHES], ignore_index=True)
     m = new.merge(old, on=["session", "trial_index", "condition"], how="outer", indicator=True)
     lines = ["# Reconciliation: clean-room rebuild vs old pipeline caches", ""]
@@ -48,6 +53,21 @@ def main():
         lines.append(f"| {s} | {int((ms._merge != 'right_only').sum())} | {int((ms._merge != 'left_only').sum())} | "
                      f"{int((ms._merge == 'left_only').sum())} | {int((ms._merge == 'right_only').sum())} | "
                      f"{d.max():.2e} | {int((d > 1e-6).sum())} |")
+
+    if corrected:
+        lines += ["", "## Laser command in the MATLAB cache (median per-trial max, V): MATLAB nc/wc vs rebuild", "",
+                  "| session | OL matlab | OL rebuild | CL matlab | CL rebuild |", "|---|---|---|---|---|"]
+        for s in CACHES:
+            with h5py.File(os.path.join(ROOT, "data", CACHES[s]), "r") as h:
+                nc = np.median(np.asarray(h["data"]["ncInp"]).max(axis=0))
+                wc = np.median(np.asarray(h["data"]["wcInp"]).max(axis=0))
+            ns = new[new.session == s]
+            lines.append(f"| {s} | {nc:.3f} | {ns[ns.condition == 'OL'].max_cmd.median():.3f} | "
+                         f"{wc:.3f} | {ns[ns.condition == 'CL'].max_cmd.median():.3f} |")
+        with open(os.path.join(out, "RECONCILE.md"), "w", encoding="utf-8") as f:
+            f.write(chr(10).join(lines) + chr(10))
+        print(chr(10).join(lines))
+        return
 
     # Tier 2: per-session Fig 3 ratios vs the old ratio file (MATLAB v5 .mat, read via scipy).
     from scipy.io import loadmat

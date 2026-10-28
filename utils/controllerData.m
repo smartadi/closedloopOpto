@@ -9,7 +9,9 @@ nc    = find(d.input_params(:,3) == 0 & trials == 1);
 wc    = find(d.input_params(:,3) == 1 & trials == 1);
 dur   = d.params.dur;
 tBlue = d.timeBlue(:)';
-ti    = d.inpTime(:)';
+% Laser command: the channel that actually fired (AL_0048 used 638 nm; RESEARCH 2026-10-27).
+[uCmd, ti] = ctrl_laser_cmd(d);
+ti    = ti(:)';
 
 
 
@@ -116,7 +118,7 @@ for j = 1:length(nc)
     % i2 = ncIdxIn(j);
     ncDfk(j,:)    = dFk(i-35 : i+35*(dur+1));
     pncDfk(j,:)   = dFk(i-350 : i+35*(dur+3));
-    ncInp(j,:)    = d.inpVals(i2 : i2+dur*2000)';
+    ncInp(j,:)    = uCmd(i2 : i2+dur*2000)';
     ncmotion(j,:) = mv(i-70 : i+35*dur);
     seg = dFk(i : i+35*dur);
     % RMSE (sample-normalised) so values are in %dF/F and comparable across
@@ -143,7 +145,7 @@ for j = 1:length(wc)
     % i2 = wcIdxIn(j);
     wcDfk(j,:)    = dFk(i-35 : i+35*(dur+1));
     pwcDfk(j,:)   = dFk(i-350 : i+35*(dur+3));
-    wcInp(j,:)    = d.inpVals(i2 : i2+dur*2000)';
+    wcInp(j,:)    = uCmd(i2 : i2+dur*2000)';
     wcmotion(j,:) = mv(i-70 : i+35*dur);
     seg = dFk(i : i+35*dur);
     % RMSE (sample-normalised) -- see er_ncDfk note above.

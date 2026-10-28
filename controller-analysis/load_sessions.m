@@ -178,6 +178,19 @@ for k = 1:length(fields)
                 mouse.(fields{k}).d.has_motion = any(mouse.(fields{k}).d.motion ~= 0);
             end
             mouse.(fields{k}).has_motion = mouse.(fields{k}).d.has_motion;
+            % 2026-10-27 fixes (corrected onsets m1-m8, AL_0048 dF/F alignment): a cache built
+            % before them is fixed, recomputed and re-saved here (ctrl_apply_onset_fix.m does all
+            % caches at once, for the scripts that lazy-load caches themselves).
+            [dF, dataF, ofx] = ctrl_onset_fix(mouse.(fields{k}).d, mouse.(fields{k}).data, fields{k});
+            if ofx.changed
+                dataF = controllerData(dataF, dF, mouse.(fields{k}).trials);
+                dF    = ctrl_cache_stamp(dF, dataF, 'onset fix 2026-10-27');
+                d = dF;  data = dataF;
+                save(pathCtrl, 'd', 'data', '-v7.3');
+                mouse.(fields{k}).d = dF;  mouse.(fields{k}).data = dataF;
+                fprintf('Applied onset fix + re-saved cache: %s\n', fields{k});
+            end
+            clear dF dataF
             fprintf('Loaded cache: %s\n', fields{k});
         else
             mouse.(fields{k}).d = initialize_data(mn_k, en_k, td_k);
@@ -210,6 +223,8 @@ for k = 1:length(fields)
 
             mouse.(fields{k}).d.ref = -5;
             mouse.(fields{k}).has_motion = mouse.(fields{k}).d.has_motion;
+            [mouse.(fields{k}).d, mouse.(fields{k}).data] = ctrl_onset_fix( ...
+                mouse.(fields{k}).d, mouse.(fields{k}).data, fields{k});   % 2026-10-27 fixes
             mouse.(fields{k}).data = controllerData(mouse.(fields{k}).data, mouse.(fields{k}).d, mouse.(fields{k}).trials);
 
             d    = mouse.(fields{k}).d;
