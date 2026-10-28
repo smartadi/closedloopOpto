@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Decided not to flag in Methods when attenuation was added
+**Changed/Found:** `paper-writing/STATS_AUDIT.md` §7.3 — the suggestion to say in Methods that attenuation was introduced on 2026-10-18 is struck. The other §7 revisions are accepted in principle; final approval is pending.
+**Why:** User: attenuation is a real, distinct quantity, and predictability, regularizability and attenuation each show something different in the Fig 4D quartiles, so its timing doesn't need a mention.
+**Next:** Confirm whether gap trend stays in Table 4 as "not interpreted"; then final approval of §7 and the clean-room spec.
+
 ### 2026-10-27 — Stats recommendations revised after a strict-reviewer pass
 **Changed/Found:** `paper-writing/STATS_AUDIT.md` §7 — session unit kept (justified by within-session random interleaving, methods.tex:130/596) with the mouse level in the same sentence. 0–3 s becomes the primary window (was "drop its test"). Gap trend kept as the linear-scale check on attenuation (was "drop"), because attenuation was added 2026-10-18 after motion R was n.s. The 4G all-13 result goes in the text. Prep quality allowed only as a pre-specified OL- or actuator-based covariate, never as an exclusion.
 **Why:** User asked to rethink each recommendation as a strict reviewer, and argued that a weak mouse reflects prep quality, not the controller.

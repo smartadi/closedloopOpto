@@ -192,8 +192,10 @@ These supersede the matching points above.
 3. **Keep gap trend next to attenuation.** This replaces "drop gap trend". Attenuation was added on 2026-10-18 after motion
    regularizability came out n.s. (RESEARCH 2026-10-18, `f4_row2_quartiles.m:226`), which a reviewer would read as a post hoc
    choice. The linear-scale gap trend is the check: motion agrees on both scales (p = 0.0048 / 0.0051). Absolute δ differs
-   (0.0014 / 0.31), and that difference is the text's own point (equal absolute rises → rising ratio). Consider saying in Methods
-   when attenuation was added.
+   (0.0014 / 0.31), and that difference is the text's own point (equal absolute rises → rising ratio). ~~Consider saying in Methods
+   when attenuation was added.~~ **User decision 2026-10-27: rejected.** Attenuation is a distinct quantity; P, R and A each show
+   something different in the Fig 4D quartiles. No Methods mention of when it was added. Gap trend keeps its current place
+   (Table 4, "not interpreted") unless the user drops it.
 4. **Fig 4D stars on Bonferroni-corrected p** (unchanged).
 5. **Fig 4G: put the all-13-session result in the text** (11/13 below one, p = 0.021) next to the 11-session one, because the
    offset exclusion can look post hoc.
