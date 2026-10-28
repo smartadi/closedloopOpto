@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — BUG: AL_0048 (m14) laser command read from the idle 594 nm channel
+**Changed/Found:** `utils/controllerData.m:119,146` builds `ncInp`/`wcInp` from `d.inpVals`, which for the 2026-07 builds equals `inpVals594`. In AL_0048 2026-07-29/2 the 594 channel is idle (max 0.016 V); stimulation went through `inpVals638` (max 4.18 V, on 19% of samples). So `ncInp`/`wcInp` for m14 are near zero (per-trial max median −0.01). AL_0051 (m15) used 594 and is correct (OL 1.30, CL 3.07). Affected for m14: `ctrl_best_fixed_ol.m` (uOL 0.003, cStar, best-fixed RMSE, uCLrel), the command-ratio Spearman (results.tex:147), and any pooled command panel. Not affected: Fig 3 RMSE/variance (from dFk and trial labels) and Fig 6 sine (`ctrl_mpc_sine_export.m:44` reads 638 explicitly).
+**Why:** Pre-check before the clean-room rebuild: AL_0048's OL command read 0.003 against 0.33–2.49 in every other session.
+**Next:** Clean-room picks the active laser channel per session from the raw command (spec rule). Then re-run `ctrl_best_fixed_ol.m` with m14 fixed and re-check the best-fixed rows and the Spearman.
+
 ### 2026-10-27 — Fig 4D goes session-level; motion gap increase holds in every random half of sessions
 **Changed/Found:** `data/f4_motion_slopes.mat` — resampled the 11 per-session motion slopes. Gap change (OL − CL): 11/11 sessions, t p = 0.0014, exact sign-flip p = 0.0010, bootstrap 95% [+0.17, +0.40], same sign in 100% of random 5-session halves. OL slope: 10/11, p = 0.0073, 100% of halves. CL slope: 6/11, p = 0.46, only 74.5% of halves. Decision recorded in STATS_AUDIT §7.10: Fig 4D uses per-session slopes with a t-test across sessions.
 **Why:** User framed the test as "does the claim hold if we pick random sessions?" and chose the session-level t-test. User also argued P, R and A per state are separate questions, so dividing by 12 makes no sense.
