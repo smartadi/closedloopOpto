@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Clean-room stats rebuild: spec v1 and Python environment
+**Changed/Found:** `stats_v2/SPEC.md` (new) and `stats_v2/requirements.txt` (numpy 2.5.4, scipy 1.18.1, pandas 3.1.0, h5py 3.16.0, venv at `stats_v2/.venv`). Fig 3 and Fig 4D are rebuilt in Python from each cache's `d.*` and `data.dFk` only, read via h5py. All 15 caches are local and v7.3. Rules: active laser channel picked per session, validation block = last N trials, input_params row 3 = condition, session-level tests via one `tests.py`. Out of scope for v1: ΔF/F itself, Fig 4G, Fig 2G, best fixed input.
+**Why:** User approved the clean-room rebuild with Python tests. An earlier attempt to run `load_sessions.m` through the MATLAB MCP hung for 30 min (MATLAB idle, no network I/O) and was aborted, so this path avoids MATLAB entirely.
+**Next:** A blind builder agent implements the spec; then reconcile tier by tier against the old caches and STATS_TABLE.
+
 ### 2026-10-27 — BUG: AL_0048 (m14) laser command read from the idle 594 nm channel
 **Changed/Found:** `utils/controllerData.m:119,146` builds `ncInp`/`wcInp` from `d.inpVals`, which for the 2026-07 builds equals `inpVals594`. In AL_0048 2026-07-29/2 the 594 channel is idle (max 0.016 V); stimulation went through `inpVals638` (max 4.18 V, on 19% of samples). So `ncInp`/`wcInp` for m14 are near zero (per-trial max median −0.01). AL_0051 (m15) used 594 and is correct (OL 1.30, CL 3.07). Affected for m14: `ctrl_best_fixed_ol.m` (uOL 0.003, cStar, best-fixed RMSE, uCLrel), the command-ratio Spearman (results.tex:147), and any pooled command panel. Not affected: Fig 3 RMSE/variance (from dFk and trial labels) and Fig 6 sine (`ctrl_mpc_sine_export.m:44` reads 638 explicitly).
 **Why:** Pre-check before the clean-room rebuild: AL_0048's OL command read 0.003 against 0.33–2.49 in every other session.
