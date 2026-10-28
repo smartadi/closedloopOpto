@@ -16,6 +16,88 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-28 — Fig 5 panels re-exported and the manuscript's Fig 5 numbers updated (committed locally, NOT pushed)
+**Changed/Found:** Headless `matlab -batch` ran `load_bilateral` → `sine_ff_plots_combined` (s2) → `sine_ff_across_sessions` with `PAPER_FINAL` on. All 10 `figures_final/panels/figure5/` panels were rewritten through the mirror. The old panels and working copies are backed up in `data/_pre_sine_rig_20261028/`. Trial counts are unchanged: s2 51/46/46/57; pooled 136/110/100/132.
+
+Closedloop_edit `results.tex`, Fig 5 text and caption:
+
+| Quantity | Old | New |
+|---|---|---|
+| Variance, OL → CL | 17.9 → 14.8 | 11.8 → 5.8 |
+| Median RMSE (OL / OL+p / CL / CL+p) | 3.82 / 3.55 / 2.80 / 3.30 | 3.59 / 3.58 / 2.26 / 3.00 |
+| Lag (OL / CL / OL+p / CL+p) | 60° / 36° / 5° / −9° | 71° / 46° / 16° / 2° |
+| 5G SDs | 1.85 / 2.75 / 2.19 / 1.57 | 1.22 / 1.64 / 0.99 / 1.01 |
+| Pooled RMSE (mean ± SD) | 4.58 ± 1.77 / 4.47 ± 2.22 / 3.83 ± 1.94 / 3.95 ± 1.58 | 4.08 ± 1.40 / 3.77 ± 1.38 / 3.00 ± 1.12 / 3.08 ± 1.11 |
+
+Two claims changed:
+- "the median per-trial shift was 5.0 samples" became "the OL shift (55°) was close to the five-sample lookahead (51°); the per-trial lag fell by 5.7 samples on average (6 in the median)".
+- "CL+p had the narrowest spread of the four modes (SD 1.57 / 1.58)" was false on the new signal: CL is 0.99, CL+p 1.01. It became "as tightly spread as closed loop (1.01 vs 0.99; pooled 1.11 vs 1.12)".
+
+Left alone:
+- "preview canceled the lag" (Results J, abstract, Discussion). The per-session residuals are 4–16° (OL+p) and −12–15° (CL+p), the same size as the old −10° that was already called canceled.
+- Methods L74/L119 already said Figs 3–5 use the signal the controller computed online, so the code now matches Methods and Methods needs no edit.
+
+latexmk clean, 41 pp. Committed on Closedloop_edit main, not pushed: `images/Figure5.pdf` is still the old Illustrator assembly, so pushing now would put the new numbers next to the old panels on Overleaf. PAPER.md Fig 5 block and FINDINGS updated to the new numbers.
+**Why:** User 2026-10-28: "reconcile the Fig 5 and Fig 6 sine numbers here now".
+**Next:**
+- User reassembles Figure5.pdf from the re-exported panels and copies it to `Closedloop_edit/images/`.
+- Then push Closedloop_edit main.
+
+### 2026-10-28 — 5B single-trial panels: y range now holds the example trials
+**Changed/Found:** `bilateral/sine_ff_plots_combined.m` 5B y-limit was a fixed [−12 8]. On the rig signal the OL example trial (EX_TRIAL 6) runs above +8 after the stimulus and was clipped. It is now `[min(−12, floor(min)) max(8, ceil(max))]` over the four example traces, shared across the four mode axes. 5C keeps its fixed [−8 6]: the rolling signal's ±SD band is narrower and fits.
+**Why:** Seen in the preview after the signal switch (entry below).
+**Next:** none.
+
+### 2026-10-28 — Found: the rig's logged signal comes from the stimulated right site in all three sine sessions; the low session-wide correlation is the rig's start-up transient
+**Changed/Found:** Read-only (scratch `rig_pixel_map.m`, `rig_noise_check.m`, `rig_trace_plot.m`; server SVD + `states.csv` read only).
+- Session-wide corr(states row k+1, offline 40 s trailing dF/F at `right.pixel`, frame k): s1 0.40, s2 0.99, s3 0.67.
+- The cause is outside the trials:
+  - the rig trace has a large start-up transient in its first ~1.5 min (s1 to > 40 %);
+  - s3's excluded stationary block at the end (after ~64 min) diverges.
+- On the scored sine-trial windows: r = 0.982 / 0.985 / 0.977 at lag 0, against 0.94–0.96 at ±1. Per-trial r is 0.99 and the OL trial averages agree (r ≥ 0.99, p2p 4.4 vs 4.5, 5.7 vs 5.8, 5.1 vs 4.5).
+- The rig trace sits ~0.8–1.1 % below the offline one in every session, a baseline difference.
+- s3's `d.params.pixel` = [153 367] (left hemisphere; the galvo sign-flip logged 2026-07-29). The correlation map (states vs every pixel, high-passed SVD) peaks in the RIGHT hemisphere near the stimulated site in s1 and s3, not at [153 367]. So the s3 controller fed back on the right site, and `params.pixel` is only mislabelled; no wrong-site control.
+- Smoothing below 4 Hz does not raise the session-wide r, so this is not pixel noise.
+**Why:** The first version of `sine_rig_dff`'s alignment check ran on the whole session and gave 0.40 / 0.67 for s1 / s3, which could have meant the rig controlled a different pixel.
+**Next:** none. `sine_rig_dff.m` now runs its check on the trial windows and asserts r > 0.95.
+
+### 2026-10-28 — Fig 5 now scores the rig's online dF/F on the rig's pairing; Fig 5 and Fig 6 now agree on Mouse 3b
+**Changed/Found:**
+- New `bilateral/sine_rig_dff.m` returns `states.csv` (the rig's online 40 s trailing dF/F at the controlled pixel) on the row clock of `onset_idx` / `ref_raw`:
+  - row k = frame k−1, which is the rig's own pairing, as in `ctrl_mpc_sine_export`;
+  - it reads the CSV from the server once and caches it in `data/sine_states_<mn>_<mmdd><en>.mat`;
+  - it checks the alignment on the scored trial windows.
+- `sine_ff_plots_combined.m` and `sine_ff_across_sessions.m` now score it:
+  - against −`ref_raw`, the target the rig tracked (`error = states + reference`); the old `sine.ref0` offset (−0.032) was never part of it;
+  - skipping trials that reach into the 1400-row warm-up (none do);
+  - in 5B/5D the laser is read at `timeBlue(i0−1)`.
+- Before, they scored `sess.right.dFoF`: `getpixel_dFoF` mode 1, F/meanImage, the impulse definition, against CLAUDE.md's rule that Figs 3–5 use the controller's trailing dF/F. Row kk was paired with frame kk.
+- The plots script now prints the quoted numbers (median RMSE, SD, lag, window-mean variance).
+
+Decomposition on s2, same trials and same 0–4 s window in both pipelines:
+
+| | OL lag | CL lag | OL var | CL var | CL+p median RMSE |
+|---|---|---|---|---|---|
+| F/mI, kk (old Fig 5) | 60.5 | 36.2 | 17.93 | 14.76 | 3.300 |
+| F/mI, o−1 | 70.2 | 45.9 | 17.97 | 14.79 | 3.265 |
+| offline trailing, o−1 | 69.8 | 45.3 | 11.73 | 6.25 | 2.925 |
+| rig states, o−1 (new Fig 5) | 70.7 | 46.1 | 11.82 | 5.81 | 2.985 (3.00 without ref0 = Fig 6's 2.995) |
+
+So the pairing explains the ~10° lag gap, and the dF/F definition explains the RMSE and variance gaps. The new s2 output equals STATS_TABLE `6s_*` exactly: 3.59 / 3.58 / 2.26 / 3.00; 71 / 16 / 46 / 2°; variances 11.82 / 13.39 / 5.81 / 8.85.
+
+Across sessions (5I–K), CL < OL still holds in every session:
+
+| Session | RMSE (OL / OL+p / CL / CL+p) | Variance | Lag (°) |
+|---|---|---|---|
+| s1 | 5.18 / 4.31 / 3.99 / 3.46 | 24.6 / 19.3 / 13.4 / 11.4 | 66 / 9 / 55 / 15 |
+| s2 | 3.84 / 3.69 / 2.61 / 2.98 | 11.8 / 13.4 / 5.8 / 8.9 | 71 / 16 / 46 / 2 |
+| s3 | 3.88 / 3.63 / 2.93 / 3.05 | 12.7 / 11.9 / 7.6 / 9.8 | 70 / 4 / 49 / −12 |
+
+**Why:** This was the Fig 5 vs Fig 6 mismatch found in today's consistency review. Fig 6 (MPC, locked) already scored the rig signal, so Fig 5 moves to it. This also brings Fig 5 in line with the locked ΔF/F rule and with what Methods already says.
+**Next:**
+- Re-export the panels and update the text (entry above).
+- Not touched, all still on the old F/meanImage signal and none in the paper: `sine_ff_modes.m`, `sine_ff_error_decomp.m`, `sine_ff_paper_panels.m` (retired Fig-4 naming) and the presentation `export_ff_bundle.m`.
+
 ### 2026-10-28 — Manuscript pushed to Overleaf: rebuilt Figs 3/4/OLbest + stats-quoting consistency pass
 **Changed/Found:** Closedloop_edit main d2eb61d (images/Figure3.pdf, Figure4.pdf, supplementary/OLbest.pdf copied from `paper/figures_final/`) and e7c4b0f (text), pushed together with 7e96deb..2fabeb6; origin/main = e7c4b0f. An independent read of every quoted statistic against STATS_TABLE.csv found, and I fixed:
 - Abstract (main.tex) and Introduction still said 1–4 Hz power cost feedback ground *relative to open loop*. That is attenuation, now p = 0.094. Both now state the closed-loop slope (R, p = 7.1e-4, Holm 0.0057), as Results does.

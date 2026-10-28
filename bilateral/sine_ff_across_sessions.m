@@ -10,8 +10,8 @@
 % cannot reach p<0.25 at n=3). These panels show DIRECTION + CONSISTENCY:
 % each session is a point, paired across modes by a faint line; the bold bar
 % is the across-session mean. Report within-session stats separately (5G).
-% Metric definitions match sine_ff_plots_combined.m (raw dF/F vs sine ref,
-% stim window 0..dur).
+% Metric definitions match sine_ff_plots_combined.m (the rig's online dF/F,
+% sine_rig_dff.m, vs the tracked target -ref_raw; stim window 0..dur).
 
 SESS_TAGS = {'s1','s2','s3'};
 SIDE      = 'right';
@@ -67,8 +67,10 @@ for si = 1:nS
     Xf = [ones(numel(Tref),1), sin(2*pi*hz*Tref).', cos(2*pi*hz*Tref).'];
     fPh = @(y) atan2([0 0 1]*(Xf\y(:)), [0 1 0]*(Xf\y(:)));
     sideMask = strcmp({s.trial_meta.side}, SIDE); fc = [s.trial_meta.ff_cond];
-    dF = s.(SIDE).dFoF(:).'; rr = s.ref_raw(:).'; ref0 = s.sine.ref0;
-    nGuard = max(nPre, nPreStim);
+    % rig's online 40 s trailing dF/F on the ref_raw row clock (the rig's own pairing), against
+    % -ref_raw, the target the rig tracked; same as sine_ff_plots_combined and Fig 6 (2026-10-28)
+    dF = sine_rig_dff(s); rr = s.ref_raw(:).';
+    nGuard = max(nPre, nPreStim) + 1400;           % + the rig's 1400-row baseline warm-up
 
     % ---- pass 1: per-session pre-stim variance threshold (all sine modes) ----
     allTr = [s.trial_meta((fc>=0) & sideMask).trial_idx];
@@ -90,7 +92,7 @@ for si = 1:nS
         for j = 1:numel(tr)
             i0 = s.onset_idx(tr(j));
             if isnan(i0) || i0-nGuard<1 || i0+nR>numel(dF) || i0+nR>numel(rr); continue; end
-            T = dF(i0:i0+nR); R = ref0 - rr(i0:i0+nR);
+            T = dF(i0:i0+nR); R = -rr(i0:i0+nR);
             Tc = [Tc; T]; Rc = [Rc; R];                                   %#ok<AGROW>
             cleanM(end+1) = var(dF(i0-nPreStim:i0-1)) <= thr;             %#ok<AGROW>
             % per-trial phase lag via constrained cross-correlation (response vs

@@ -9,6 +9,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-10-28 — **Fig 5 vs Fig 6 reconciled:** Fig 5 now scores the rig's online dF/F (`sine_rig_dff.m`) on the rig's pairing; Mouse 3b numbers equal Fig 6's (71°, CL+p 3.00, variances 11.8/5.8). Panels re-exported, text updated (Closedloop_edit committed, not pushed). RESEARCH 2026-10-28.
 - [x] 2026-10-28 — **Manuscript pushed to Overleaf (Closedloop_edit e7c4b0f):** Figs 3/4/OLbest rebuilt; stats-quoting review fixed the abstract/intro 1–4 Hz claim, Table 5 mouse check, Table S1 no-1e numbers, Methods carve-outs. RESEARCH 2026-10-28.
 - [x] 2026-10-27 — **Stats reconsolidation (#62): session rule end to end.** Onsets fixed (m1–m8) + AL_0048 fixes; Fig 3, 4D, best-fixed re-run and FINAL panels exported; STATS_TABLE + Tables 4–5 rewired; Methods/Results rewritten (Closedloop_edit 7e96deb..2fabeb6, NOT pushed). RESEARCH 2026-10-27.
 - [x] 2026-10-16 — **MPC (Fig 6, static + sine I–M) and VARX (Fig S5) DONE and LOCKED** (user). L = Q = 35, ridge 100, controller model trained without CL data; panels in figures_final, Fig S5 + Methods pointer + numbers in Closedloop draft (9d57903). RESEARCH 2026-10-16; locked block in CLAUDE.md.
@@ -18,13 +19,12 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [x] 2026-10-12 — **Fig 2C–F on the seeded Mouse 3 fit + leak-free CV, manuscript made consistent** (Closedloop draft 8db98b1, not pushed). Held-out 0.85 pooled. Mouse 3's slowest pole is vestigial (< 0.2%), dip 0.14 s; the dip τ is order-sensitive. RESEARCH 2026-10-12.
 - [x] 2026-10-10 — **AL_0041 e2 rebinned + Fig 2 rerun** (gap-based levels in `detectStimEvents_idx`; Mouse 1b R² 0.51 -> 0.76) and manuscript numbers updated; Fig 2 laser values accepted as-is (user); 4G stays gated, the all-13-session result is not reported (user); 4D = session mean ± SEM (user).
 - [x] 2026-10-10 — Fig 4D session-level points (+pooled/median fallbacks); OL offsets + 4G paired stats saved (`f4_rr_denominator_check`); Global-state circularity check done (does not fix it).
-- [x] 2026-10-10 — **Overleaf edits merged; Fig 2F (dip/rebound), 2G (session-level) and Fig 3 captions applied**; captions realigned to new assemblies (2A<->B, 3H<->I swapped). RESEARCH 2026-10-10.
 
 ---
 
 ## 🔴 Blocking submission
 
-- [ ] **Fig 5 vs Fig 6 sine numbers disagree for Mouse 3b** (OL lag 60° vs 71°, CL+p RMSE 3.30 vs 3.00, variances): reconcile `sine_ff_*` with `ctrl_mpc_sine_export` (pairing o↔o−1, trial set, window, variance definition); fix Fig 5 if it moves. RESEARCH 2026-10-28.
+- [ ] **Reassemble Figure5.pdf** in Illustrator from the re-exported `figures_final/panels/figure5/` (2026-10-28: all 10 panels moved to the rig signal), copy to `Closedloop_edit/images/`, then push Closedloop_edit main (text already committed locally). RESEARCH 2026-10-28.
 - [ ] **Reassemble S1.pdf** in Illustrator: its OL-variance-evolution panel was re-exported 2026-10-27 (figures_final/S1.pdf is from 2026-10-05).
 - [ ] **Fig 4G re-run on the fixed onsets.** Blocked 2026-10-27: the widefield SVD folders on the lab server are empty or missing for AL_0033 2025-02-12 and 2025-02-26, and AL_0039 2025-04-20. Then: `f4_cl_reject_lmm` → `f4_cl_reject_panel` (PAPER_FINAL), `paper_stats_table` / `paper_stats_tex`, and the Fig 4G Methods paragraph, Results text, caption and Table 6 (two-sided session t + all-13 sensitivity).
 

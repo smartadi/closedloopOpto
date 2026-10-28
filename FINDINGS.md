@@ -51,7 +51,7 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 ## Finding: Feedback removes variability, preview removes lag, in sinusoidal tracking (Fig 5)
 **Question:** Do feedback and preview correct different failures when tracking a 1 Hz sinusoidal reference?
 **Analysis:** `bilateral/sine_ff_plots_combined.m`, `sine_ff_across_sessions.m`, `sine_ff_error_decomp.m`; AL_0048, 3 sessions, 4 randomly interleaved modes (OL, OL+p, CL, CL+p); preview = pure 5-sample lookahead (K_vel = K_acc = 0, K_preview = 1).
-**Result:** CL < OL RMSE in 3/3 sessions (rep. session median 3.82 → 2.80; pooled 4.58 ± 1.77 → 3.83 ± 1.94); preview cancels the lag in 3/3 (OL 60° → 5°, CL 36° → −9°); preview cuts the drive-frequency error (3.5-fold OL, 1.5-fold CL), feedback the broadband error.
+**Result:** (rig's online dF/F since 2026-10-28, matching Fig 6) CL < OL RMSE in 3/3 sessions (rep. session median 3.59 → 2.26; pooled 4.08 ± 1.40 → 3.00 ± 1.12); across-trial variance OL 11.8 → CL 5.8 in the rep. session, lower under CL in 3/3; preview brings the lag near zero in 3/3 (rep. session OL 71° → 16°, CL 46° → 2°). The drive-frequency vs broadband split (preview cuts the 1 Hz error 3.5-fold OL, 1.5-fold CL) is from `sine_ff_error_decomp.m` on the OLD F/meanImage signal, not re-run and not in the paper.
 **Paper claim:** Descriptive only — n = 3 sessions in one mouse is too few for significance tests (user 2026-10-02).
 **Figure:** Fig 5B–K.
 **Status:** IN PAPER, descriptive (stats removed 2026-10-02; 5G brackets off via SINE_SHOW_STATS).

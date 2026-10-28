@@ -52,7 +52,12 @@ PS = paperStyle();
 setPaperDefaults();
 
 sess = sessions.(SESSION_TAG);
-d = sess.d; dFoF = sess.(SIDE).dFoF; sn = sess.sine;
+% Scored signal = the rig's online 40 s trailing dF/F (states.csv), on the row clock of
+% onset_idx / ref_raw, i.e. the rig's own pairing (2026-10-28). It was the F/meanImage
+% trace in sess.right.dFoF with row kk on frame kk, which put Fig 5 ~10 deg and up to
+% 0.5 %dF/F (RMSE) away from Fig 6 on the same trials. sine_rig_dff.m has the details.
+d = sess.d; dFoF = sine_rig_dff(sess); sn = sess.sine;
+W_BASE = 1400;   % rig baseline warm-up (rows); trials reaching into it are skipped
 sfx = sprintf('%s_%s_%d', sess.mn, sess.td, sess.en);
 fs = 35; dur = sn.dur;
 
@@ -101,12 +106,15 @@ for m = 1:nMode
     trials = [sess.trial_meta(([sess.trial_meta.ff_cond]==MODE_CODES(m)) & sideMask).trial_idx];
     for j = 1:numel(trials)
         i0 = sess.onset_idx(trials(j));
-        if isnan(i0) || i0-nPre < 1 || i0+nPost > numel(dFoF); continue; end
+        if isnan(i0) || i0-nPre <= W_BASE || i0+nPost > numel(dFoF); continue; end
         if i0+round(dur*fs) > numel(sess.ref_raw); continue; end
         traces{m} = [traces{m}; dFoF(i0-nPre : i0+nPost)];
-        Rj = sn.ref0 - sess.ref_raw(i0 : i0+round(dur*fs)).';   % right/inhibitory: negative
+        % target = -reference_raw, what the rig tracked (error = states + reference);
+        % the old sn.ref0 offset (-0.03) was never part of it
+        Rj = -sess.ref_raw(i0 : i0+round(dur*fs)).';   % right/inhibitory: negative
         refs{m}   = [refs{m}; Rj(:)'];
-        inps{m}   = [inps{m}; interp1(tt, v, d.timeBlue(i0)+T, 'linear', 0)];
+        % row i0 is frame i0-1, so the laser is read on that frame's clock
+        inps{m}   = [inps{m}; interp1(tt, v, d.timeBlue(i0-1)+T, 'linear', 0)];
         seg = dFoF(i0 : i0+round(dur*fs));
         % RMSE, not MSE — sample-normalised root-mean-square error, matching the
         % Fig 3 project-wide decision (2026-07-16). sqrt is monotone, so every
@@ -130,6 +138,10 @@ cL  = lm + (0:3)*(cW + cg);
 fig_A = paperFig(PW, 3.4);
 bm = 0.12; tm = 0.12; axH = 1 - bm - tm;
 axA = gobjects(1,nMode);
+% shared y range that holds all four example trials (was a fixed [-12 8], which clipped
+% the OL example once the scored signal became the rig's trailing dF/F, 2026-10-28)
+exTr = cell2mat(arrayfun(@(m) traces{m}(min(EX_TRIAL, nTr(m)), :), (1:nMode).', 'uni', 0));
+ylA  = [min(-12, floor(min(exTr(:)))) max(8, ceil(max(exTr(:))))];
 for m = 1:nMode
     axA(m) = axes(fig_A, 'Position', [cL(m), bm, cW, axH]); hold(axA(m),'on');
     plot(axA(m), T, zeros(size(T)), 'k', 'LineWidth', PS.lw_zero, 'HandleVisibility','off');
@@ -140,7 +152,7 @@ for m = 1:nMode
         'LineWidth', PS.lw_mean, 'HandleVisibility','off');
     plot(axA(m), Tref, refPlot, '--k', 'LineWidth', PS.lw_ref, 'HandleVisibility','off');
     xline(axA(m), 0, 'HandleVisibility','off'); xline(axA(m), dur, 'HandleVisibility','off');
-    ylim(axA(m), [-12 8]); xlim(axA(m), [-PRE dur+POST]);
+    ylim(axA(m), ylA); xlim(axA(m), [-PRE dur+POST]);
     addStimPatch(axA(m), x1, x2);
     uistack(findobj(axA(m),'Type','line'), 'top'); hold(axA(m),'off');
     if m == 1
@@ -440,3 +452,8 @@ prev(fig_F, 'F');
 fprintf('\n[%s] %s exp %d — n per mode: %s\n', SESSION_TAG, sess.td, sess.en, mat2str(nTr));
 fprintf('gain: %s\nlag (deg): %s | preview lookahead = %.0f deg\n', ...
     mat2str(gains,3), mat2str(round(lags)), prevLook);
+% the numbers the Results and caption quote (same definitions as mpc_direct_sine.py)
+for m = 1:nMode
+    fprintf('  %-5s median RMSE %.2f | SD %.2f | lag %5.1f deg | across-trial var, 0-%g s mean %.2f\n', ...
+        MODE_SHORT{m}, median(rmseV{m}), std(rmseV{m}), lags(m), dur, mean(var(traces{m}(:, iRef), 0, 1)));
+end
