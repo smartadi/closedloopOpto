@@ -216,3 +216,8 @@ These supersede the matching points above.
    at the 0 / u_max bounds, or OL gain per volt), tested across all sessions with every mouse kept in. Never use it as an exclusion rule.
 8. **Must verify before interpreting AL_0048:** its OL command (`ctrl_best_fixed_ol.m:45`, median per-trial max of `ncInp`) is
    0.003, against 0.33–2.49 in every other session. Either a units difference or almost no OL stimulation.
+9. **Fig 4D at session level (user question, 2026-10-27).** Fit P, R and A within each session, then test the session slopes
+   (t-test + Wilcoxon), the same rule as Fig 3. Preview from the saved per-session motion slopes (`data/f4_motion_slopes.mat`,
+   z units, 11 sessions): OL slope t p = 0.0073 (mixed model 0.013); CL slope t p = 0.46 (0.27); OL − CL t p = 0.0014
+   (gap trend 0.0051). The other states need `load_sessions.m` (clean-room Phase 3). Correcting across the 12 slopes (Holm)
+   is still needed: the unit and the number of questions are separate issues.

@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Fig 4D motion slopes at session level agree with the mixed model, slightly stronger
+**Changed/Found:** `data/f4_motion_slopes.mat` (MOTSLOPE, 11 sessions, z units) — one-sample t across sessions: OL slope p = 0.0073 (Wilcoxon 0.0020; mixed model 0.013), CL slope p = 0.46 (mixed model 0.27), OL − CL p = 0.0014 (mixed-model gap trend 0.0051). Recorded as STATS_AUDIT §7.9.
+**Why:** User asked whether Fig 4D can use session-level tests like Fig 3 instead of the trial-level mixed model.
+**Next:** If approved, the clean-room rebuild computes per-session P, R and A for all 4 states. Holm across the 12 slopes stays.
+
 ### 2026-10-27 — Fig 4D corrected stars worked out: Holm keeps motion attenuation even across 12 tests
 **Changed/Found:** `paper-writing/STATS_AUDIT.md` §7.4 — Holm-adjusted p from STATS_TABLE 4D rows. Stars disappear for initdev P/R, motion P, rel-δ R/A. Star levels drop for motion A (** → *) and abs-δ P/R (*** → **). Abs-δ A stays **. Bonferroni gives identical labels within the caption families. Pooled into one family of 12, Holm keeps the same four survivors (motion A 0.043), whereas Bonferroni would drop motion A (0.058).
 **Why:** User asked for a detailed explanation of the Fig 4D star change. Raw-p stars contradict the Results text, which already says those slopes don't survive correction.
