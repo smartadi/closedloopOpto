@@ -5,8 +5,10 @@ some sessions. Only OPEN-LOOP trials mark the onset reliably with the command: a
 can start late when the initial error is ~0. So, per session:
 
   1. Measure the command-rise offset (frames after the stimStarts frame) in every OL trial.
-  2. Nominal latency L = median OL offset over the build's sessions whose offsets are stable
-     (onset frame -> laser output; ~2 frames in the old builds).
+  2. Reference offset L = median OL offset over the build's sessions whose offsets are stable.
+     L is NOT the loop latency: it is whole frames of trial bookkeeping (the first command is
+     computed from onset frame + 1 in the old builds, + 2 in the new) plus the ~24 ms
+     exposure-to-laser latency (methods.tex:101), i.e. ~1.88 and ~2.86 frames.
   3. A session needs correction if any of its OL trials sits > 1.5 frames from L.
   4. In those sessions the onset becomes (laser rise - L): OL trials from their own rise; CL trials
      from the OL offsets interpolated in time. Where the two neighbouring OL offsets jump by
@@ -126,7 +128,7 @@ def main():
     pd.DataFrame(rows).to_csv(OUT / "onsets_corrected.csv", index=False)
     sm = pd.DataFrame(summ)
     lines = ["# Corrected onsets (OL laser-command rise)", "",
-             f"Nominal latency L (frames, onset frame -> command rise): old builds {L['old']:.2f}, "
+             f"Reference offset L (frames, logged onset frame -> first laser command; NOT loop latency, see docstring): old builds {L['old']:.2f}, "
              f"new builds {L['new']:.2f}.",
              f"A session is corrected if > {OFF_FRAC:.0%} of its OL trials sit > {OFF_TOL} frames from L.",
              "cl_check = CL trials whose own rise was detected: share within 1 frame of the OL-derived estimate.",

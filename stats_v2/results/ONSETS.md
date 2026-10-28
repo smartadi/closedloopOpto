@@ -1,6 +1,6 @@
 # Corrected onsets (OL laser-command rise)
 
-Nominal latency L (frames, onset frame -> command rise): old builds 1.88, new builds 2.86.
+Reference offset L (frames, logged onset frame -> first laser command; NOT loop latency, see docstring): old builds 1.88, new builds 2.86.
 A session is corrected if > 0% of its OL trials sit > 1.5 frames from L.
 cl_check = CL trials whose own rise was detected: share within 1 frame of the OL-derived estimate.
 

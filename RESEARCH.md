@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Correction: the 1.88 / 2.86-frame onset offset is not loop latency
+**Changed/Found:** `stats_v2/onsets.py` (docstring and ONSETS.md label only; the onsets are byte-identical). The previous entry called L the "onset→laser latency". It is the offset from the logged onset frame to the first laser command. Measured loop latency (exposure start → laser edge) is 24.0 ms median (methods.tex:101; RESEARCH 2026-10-20, m15). Subtracting it leaves 29.6 ms = 1.04 frames (old builds) and 57.5 ms = 2.02 frames (new builds): whole frames of trial bookkeeping. The first command is computed from onset frame + 1 (old) or + 2 (new). So t = 0 (the logged onset) sits about 1 frame (28.5 ms) earlier relative to the laser in the new builds than in the old.
+**Why:** User: latency cannot be 2.86 frames. Correct; latency is about 0.84 frames.
+**Next:** User decides whether t = 0 stays the logged onset frame (current) or becomes the laser onset in every session (shift 2 frames old / 3 frames new).
+
 ### 2026-10-27 — Rebuild with corrected onsets + m14 fix: Fig 3 unchanged; Fig 4D init-dev R drops below Holm
 **Changed/Found:** `stats_v2/run_all.py --corrected` → `stats_v2/results/corrected/`. Fig 3 is unchanged in substance: full RMSE 0.768 [0.727, 0.811], p = 5.8e-8, 15/15, 4/4 mice (p = 0.011); full variance 0.585, p = 6.3e-6; pre RMSE 1.013 [0.997, 1.030]. Fig 4D (p, Holm): init-dev P 0.056, R 0.014 (Holm 0.071; was 0.0060 / 0.042 with the old onsets), A 0.91. Motion P 0.011, R 0.16, A 0.0023 (Holm 0.0092, 11/11, 4/4 mice). Rel δ P 0.98, R 0.035, A 0.029 (Holm 0.087). Abs δ P 0.0098, R 7.0e-4 (Holm 0.0057, 15/15), A 0.094 (Wilcoxon 0.035, 12/15). Survive Holm: motion A and abs-δ R only.
 **Why:** User chose the laser-command rise (OL only) as the onset, with stimStarts corrected in the sessions that need it.
