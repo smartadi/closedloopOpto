@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Session-level stats rule: Fig 3 robust to every mouse check; best-fixed 1–3 s is not
+**Changed/Found:** `paper-writing/STATS_AUDIT.md` §6 — recomputed the Fig 3, best-fixed and Fig 4G tests from saved per-session values under the session rule (t on log ratio + Wilcoxon) with leave-one-mouse-out and mouse-averaged checks. Fig 3: every stimulation window passes all checks (LOMO worst p ≤ 0.014; 4/4 mice below 1). Fig 3I stars go ** → ***. Fig 4G: two-sided p = 2.6e-4, 3/3 mice < 1, still p = 0.021 with the 2 excluded sessions. Best fixed 1–3 s: session p = 2.4e-4 but dropping AL_0033 gives p = 0.053, and AL_0051's single session has ratio 1.10 (3/4 mice). Best fixed 0–1 s is weak (LOMO up to 0.16). Separately, the Fig 4D panel stars use uncorrected p, so five starred slopes are ones the text says don't survive Bonferroni.
+**Why:** User asked how moving the unit from mouse to session changes results and figures before committing to the rule.
+**Next:** User decides the best-fixed wording and whether Fig 4D stars use corrected p; then run the independent clean-room re-derivation (spec → fresh implementation → reconcile against STATS_TABLE).
+
 ### 2026-10-27 — Intro: ML dynamics models + two limits for control (Closedloop 9354e56)
 **Changed/Found:** `introduction.tex`, `refs.bib`: two sentences added after the lu2025 forecasting sentence, covering LFADS, NDT, CEBRA, the Wang 2025 foundation model, POYO and POSSM. Their limits are framed as real-time impracticality and no forecasting of the response to stimulation. Five bib entries were added. The reference check (Crossref/arXiv) changed the claims. NDT's abstract claims 3.9 ms real-time inference, so NDT is NOT cited for real-time impracticality. Wang 2025 *does* predict responses to (visual) stimuli, so it is excepted from the "no forecasting" claim. "In the manner of language models" was dropped because no source says it.
 **Why:** The user asked for state-of-the-art ML models (including Lajoie's group) with their limits, and for the references to be checked before installing.

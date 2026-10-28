@@ -135,3 +135,45 @@ descriptive; the "k/N trials lower" counts are the right summary.
 2. One-sided tests in Fig 4G: keep with a stated reason, or go two-sided.
 3. Pre/post null windows: CI only (recommended) or keep the p-values.
 4. Gap trend and the motion Wilcoxon rows: drop, or move to the supplement.
+
+---
+
+## 6. Session rule + mouse sensitivity, computed 2026-10-27
+
+From the saved per-session values (`data/fig3_ratio_stats.mat`, `controller-analysis/data/ctrl_best_fixed_ol.mat`,
+`controller-analysis/data/f4_cl_reject_lmm.mat`); no producer re-run. t = one-sample t on log ratio, two-sided;
+LOMO = leave-one-mouse-out t (drop AL_0033 / 0039 / 0048 / 0051); mouse-avg = mean log ratio per mouse, n = 4.
+
+| Fig 3 row | geo | k/15 | t p | Wilcoxon p | LOMO worst p | mouse-avg (k/4, p df 3) |
+|---|---|---|---|---|---|---|
+| RMSE pre | 1.015 | 6 | 0.070 | 0.095 | — | 0.997 (2/4, 0.81) |
+| RMSE 0–1 s | 0.848 | 15 | 2.0e-5 | 6.1e-5 | 2.2e-3 | 0.841 (4/4, 0.017) |
+| RMSE 1–3 s | 0.683 | 15 | 1.1e-6 | 6.1e-5 | 3.6e-3 | 0.732 (4/4, 0.039) |
+| RMSE 0–3 s | 0.767 | 15 | 9.2e-8 | 6.1e-5 | 1.4e-3 | 0.793 (4/4, 0.013) |
+| RMSE post | 1.000 | 9 | 1.00 | 0.76 | — | 0.986 (3/4, 0.51) |
+| var pre | 1.038 | 7 | 0.56 | 0.85 | — | 0.925 (3/4, 0.40) |
+| var 0–1 s | 0.652 | 14 | 4.5e-4 | 8.5e-4 | 1.4e-2 | 0.658 (4/4, 0.046) |
+| var 1–3 s | 0.542 | 15 | 1.8e-6 | 6.1e-5 | 1.4e-3 | 0.551 (4/4, 0.006) |
+| var 0–3 s | 0.581 | 14 | 7.4e-6 | 1.2e-4 | 6.5e-4 | 0.593 (4/4, 0.005) |
+| var post | 1.045 | 8 | 0.48 | 0.64 | — | 1.062 (2/4, 0.58) |
+
+| CL / best fixed | geo | k/15 | t p | Wilcoxon p | LOMO worst p | mouse-avg |
+|---|---|---|---|---|---|---|
+| 0–1 s | 0.917 | 13 | 0.036 | 0.013 | 0.16 (drop 0039) | 0.894 (4/4, 0.11) |
+| 1–3 s | 0.805 | 13 | 2.4e-4 | 4.3e-4 | 0.053 (drop 0033) | 0.876 (3/4, 0.28) |
+| 0–3 s | 0.867 | 13 | 1.0e-3 | 2.6e-3 | 0.026 | 0.893 (3/4, 0.12) |
+
+Per-mouse 1–3 s best-fixed ratios: AL_0033 8/9 < 1, AL_0039 4/4 < 1, AL_0048 0.947 (1 session), AL_0051 **1.103** (1 session).
+Mouse SD 0.17 vs residual SD 0.13: here the mixed model's df collapse reflects real between-mouse spread, not only a fitting artifact.
+
+| Fig 4G | value |
+|---|---|
+| per-session mean log RR, t two-sided | geo 0.575 [0.460, 0.719], 10/11 < 1, p = 2.6e-4; Wilcoxon p = 2.0e-3 |
+| LOMO | drop AL_0033 (4 sessions left) p = 0.048; drop AL_0039 p = 1.9e-3; drop AL_0048 p = 4.8e-4 |
+| mouse-avg RR | 0.62 / 0.46 / 0.72 (3/3 mice < 1) |
+| all 13 sessions (incl. 2 offset-excluded) | session medians 11/13 < 1, Wilcoxon p = 0.021 (excluded: 1.23, 1.94) |
+
+Figure-level consequences:
+- Fig 3I title stars: `max(early, late)` p goes 0.0039 → 4.5e-4, so `**` → `***`. Fig 3H stays `***`. Fig 4G stays `***`.
+- Fig 4D stars use **uncorrected** p < 0.05 (`f4_row2_quartiles.m` `arrowstars`), while the text and Table 4 use Bonferroni.
+  Five starred results don't survive correction: initial-deviation P and R, motion P, relative-δ R and A. Pre-existing, unrelated to the session switch.
