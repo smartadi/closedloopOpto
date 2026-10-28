@@ -16,6 +16,71 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Manuscript: Methods, Results and tables moved to the session rule (Closedloop_edit main, not pushed)
+**Changed/Found:** Closedloop_edit commits 7e96deb (Tables 4–5 regenerated), deec011 (Methods), 2fabeb6 (Results + supplementary).
+- Methods:
+  - "Software and inference" now states the session t-test, the exact Wilcoxon, the mouse check (mice agreeing, leave-one-mouse-out) and why mouse is not a random effect, plus one sentence on the independent Python reproduction.
+  - Fig 3: 0–3 s is primary; pre/post are reported as ratio + CI only.
+  - Best fixed: Spearman sentence added; median 1.29 → 1.28.
+  - Fig 4D: per-session OLS slopes replace the mixed-model block. The simulation false-positive sentence and the motion-Wilcoxon corroboration sentence are removed.
+  - Multiple comparisons: raw p per question, with a Holm column as a check (Bonferroni thresholds removed).
+  - The REML/Satterthwaite sentences moved into the Fig 4G paragraph, the only mixed model left.
+  - New "Trial onsets" paragraph: Mouse 1 drift of up to 7 frames, corrected from the open-loop laser rise minus the 1.9-frame lag; Mouse 3e 11-frame realignment.
+- Results:
+  - Fig 3, variance and best-fixed numbers; the 2.6-df sentence is removed.
+  - Fig 4D rewritten: abs-δ attenuation is no longer claimed (p = 0.094), and every starred slope is interpreted (initdev R, rel-δ R and A).
+  - Fig 4D caption and Fig 3H star caption updated.
+- Fig 4G text, caption and table are unchanged.
+- latexmk is clean (41 pp, no overfull boxes); the 4D table needed tabcolsep 4 pt.
+**Why:** User approved 2026-10-27: "Use raw per-question stars on Fig 4D with a Holm column in Table 4, re-export the final panels, and start the paper text and table changes."
+**Next:** User reviews `git diff origin/main..main` in Closedloop_edit and says when to push. Fig 4G: re-run where the server SVDs are reachable, then update its Methods paragraph, Results L231, caption and Table 6.
+
+### 2026-10-27 — paper_stats_table / paper_stats_tex rewired to the session rule
+**Changed/Found:**
+- `paper-writing/paper_stats_table.m`:
+  - Six new columns (role, wilcoxon_p, sessions_agree, mice_agree, lomo_worst_p, holm_p) and an `addS` helper for `sess_test` rows.
+  - Fig 3 rows come from `R3.*.st` (role main/secondary/control); Fig 4D rows come from `data/f4_row2_sess.mat`.
+  - Retired (STATS_AUDIT §2–3 TRIM): the LMM, `_lmmfb` and `_w` rows; the trial-level CORROBORATING rows (`3_*_lmm` / `3_*_sr`); the Fig 4D LMM rows; the motion Wilcoxon rows.
+  - New rows: `3H_best_cstar` (median + IQR) and `3H_best_cmd_rho` (Spearman).
+  - STATS_TABLE.csv: 146 → 109 rows.
+- `paper_stats_tex.m`:
+  - New Fig 3 table: t, p, Wilcoxon, sessions (mice) below one, LOMO; pre/post without a test.
+  - New Fig 4D table: Test, Holm p and Sessions columns; no bold.
+  - The new text columns are read as strings; no signed zero.
+- Before regenerating, I checked the old generator's output against Overleaf's `stat_tables.tex`: only the date line differed, so no hand edits were lost.
+**Why:** The tables must match the approved test rule, and the audit's TRIM verdicts remove duplicate tests of one claim.
+**Next:** Fig 4G rows once `f4_cl_reject_lmm` is re-run. The script already saves the session `ST` / `STall`.
+
+### 2026-10-27 — FINAL export: Fig 3 ratio/cross-session panels, Fig 4D, best-fixed supp, S1 panels
+**Changed/Found:** Headless `matlab -batch` run with `PAPER_FINAL = true` and `F4_STAR = 'raw'`. `PAPER_FINAL` was off during `load_sessions`, so panels A–E for m10 were not touched. 11 panels written to `paper/figures_final/panels/`:
+- figure3: `MSE_ratio_by_window`, `variance_ratio_by_window`, `all_variance_sessions`, `all_average_sessions`;
+- figure4: `f4_row2_quartiles`;
+- supp_best_fixed: all 4 panels;
+- supp_spatial: `supp_s1_batch_variance` (picture unchanged) and `supp_s1_ol_variance_evolution` (slopes now −0.10 / −0.52 / +0.30; not quoted anywhere).
+
+The old final panels are backed up in `data/_pre_rerun_20261027/figures_final_panels/`, except `supp_s1_ol_variance_evolution`, which was not backed up; its old version survives inside `Closedloop_edit/images/supplementary/S1.pdf`. `collect_final_panels('dry')`: 132 present, 0 missing, 0 to prune. `f4_cl_reject_RR` was NOT re-exported (4G blocked).
+**Why:** User approved the before/after comparison and asked for the final re-export.
+**Next:** Re-link in Illustrator and rebuild Figure3.pdf / Figure4.pdf / OLbest.pdf / S1.pdf for the manuscript.
+
+### 2026-10-27 — plot_ratio_windows: keep the tick just under the data
+**Changed/Found:** `utils/plot_ratio_windows.m`. The y floor was min/1.15. After the onset fix, the lowest 0–1 s variance ratio (≈0.29) put the floor at 0.255, so the 0.25 tick disappeared from 3I. Now, if the nearest candidate tick below the data is within a factor of 1.3, the floor extends to just under it.
+**Why:** Cosmetic regression seen in the before/after comparison.
+**Next:** none.
+
+### 2026-10-27 — Check: AL_0048 sine sessions (Figs 5/6) do NOT have the m14 dF/F offset or laser-channel bug
+**Changed/Found:** Read-only check on the `load_bilateral.m` caches (`data/AL_0048_bil_07016 / 07141 / 07211.mat`, h5py; scratch scripts only, no code changed). Fig 5/6 score the OFFLINE pixel dF/F (`sess.right.dFoF`, from `getpixel_dFoF` on the SVD), not a logged dFk.
+
+| session | n(timeBlue) | n(right.dFoF) | active laser (p99.9 V) | laser→dF/F lag, start / end-aligned | kk row ↔ frame (states vs offline dF/F; ref_raw vs laser, OL) | verdict |
+|---|---|---|---|---|---|---|
+| s1 2026-07-01/6 | 47244 | 47244 | 638 (3.94; 594 = 0.03) | +7 / +7 fr (r = −0.14) | states row = frame+1 (r 0.60); laser(f) ↔ ref row f−1 (r 0.995; ±11 fr r < 0) | OK |
+| s2 2026-07-14/1 | 113302 | 113302 | 638 (3.30) | +6 / +6 fr (r = −0.14) | row = frame+1 (r 0.67); f−1 (r 0.995) | OK |
+| s3 2026-07-21/1 | 150013 | 150013 | 638 (4.52) | +8 / +8 fr (r = −0.09) | row = frame+1 (r 0.68); f−1 (r 0.995) | OK |
+
+Lengths match, so start- and end-aligned are the same; the laser→dF/F lag (+6..+8 fr ≈ 0.17–0.23 s ≈ 60–80° at 1 Hz, the expected OL phase lag) is causal, unlike m14's −6 fr lead. The kk clock (traj_on onsets, ref_raw, states) is within 1 frame of timeBlue in all three; an 11-frame shift is strongly anti-correlated. The 638 nm channel is the one that fired; the Fig 5 scripts never read a laser channel, and `ctrl_mpc_sine_export` already reads `inpVals638`.
+Side note (not a bug of the m14 kind): `sine_ff_modes` / `sine_ff_across_sessions` / `sine_ff_plots_combined` index `dFoF(i0)` and `ref_raw(i0)` with the same kk row, while `ctrl_mpc_sine_export` uses row o ↔ frame o−1 (the rig's own pairing, `error = states + reference`). That is a 1-frame (~10° at 1 Hz) difference in absolute phase, the same in every mode, so mode differences and RMSE ordering are unaffected.
+**Why:** Today's stats_v2 rebuild found m14 (AL_0048 2026-07-29/2) had dFk 11 frames short and end-aligned plus the laser read from the idle 594 nm channel (`ctrl_onset_fix.m`, `ctrl_laser_cmd.m`); 0.31 s would be ~113° at 1 Hz, so the sine sessions had to be ruled out.
+**Next:** none for the fix (no `DFK_LEAD` entry needed; no Fig 5/6 number moves). Optional: decide whether Fig 5's absolute phase should adopt the o−1 pairing used by the MPC export (~10° shift, all modes).
+
 ### 2026-10-27 — Producers re-run on the fixed caches with the session rule: what changed (working copies only)
 **Changed/Found:** Headless MATLAB (`matlab -batch`, `PAPER_FINAL` off) ran `variance_mse`, `step_response`, `f4_row2_quartiles` and `ctrl_best_fixed_ol` on the onset-fixed caches. Before/after: `data/_pre_rerun_20261027/CHANGES.md` and `compare/compare_{fig3,fig4,bestfixed}.png` (old outputs backed up alongside, all local). `paper/figures_final` untouched (timestamps checked).
 - **Fig 3:** ratios barely move (RMSE 0–3 s 0.767 → 0.768; variance 0.581 → 0.585; steady 0.683 → 0.679). Stars: 3H stays \*\*\* (t p = 5.8e-8, 15/15, 4/4 mice); 3I goes \*\* → \*\*\* (t p = 6.3e-6, 14/15). `all_average_sessions` and `all_variance_sessions` look cleaner: the onset step is sharper and the end-of-stim upturn is gone. 3I lost its 0.25 tick (cosmetic).

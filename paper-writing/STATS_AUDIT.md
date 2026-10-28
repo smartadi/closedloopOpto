@@ -230,3 +230,5 @@ These supersede the matching points above.
     | gap change (OL − CL) | +0.274 | 11/11 | 0.0014 | 0.0010 | [+0.17, +0.40] | 100% |
     Correction across the 12 slopes: user treats each as a separate question (no division). Open: per-question stars in the panel,
     with a Holm column in Table 4 as reviewer insurance; the text then interprets every starred slope and drops "did not survive correction".
+11. **User decision 2026-10-27: raw per-question stars on Fig 4D, with a Holm column in Table 4** (the manuscript's Table 5, `tab:fig4_state_stats`).
+    Implemented the same day: producers re-run on the onset-fixed caches, final panels exported, STATS_TABLE + tables rewired, and Methods/Results rewritten (`stats_v2/results/MATLAB_RERUN_CHANGES.md`; RESEARCH 2026-10-27). Fig 4G is still pending (server SVDs unreachable).

@@ -23,9 +23,12 @@ hold(ax, 'off');
 set(ax, 'YScale', 'log');
 allr = vertcat(ST.r);  allc = vertcat(ST.geoCI);
 lo = min([allr; allc(:)]);  hi = max([allr; allc(:)]);
-ylim(ax, [lo/1.15, hi*1.35]);                             % headroom for the Stim label
 cand = [0.125 0.25 0.5 1 2 4];
-yt = cand(cand >= lo/1.15 & cand <= hi*1.35);
+yb = lo/1.15;
+cb = cand(cand <= lo);                                    % nearest tick below the data: if it sits just
+if ~isempty(cb) && cb(end) >= lo/1.3, yb = min(yb, cb(end)/1.02); end   % under the floor, extend to show it
+ylim(ax, [yb, hi*1.35]);                                  % headroom for the Stim label
+yt = cand(cand >= yb & cand <= hi*1.35);
 if ~ismember(1, yt), yt = sort([yt 1]); end
 ax.YTick = yt;
 ax.YTickLabel = arrayfun(@(v) strip(sprintf('%g', v)), yt, 'UniformOutput', false);

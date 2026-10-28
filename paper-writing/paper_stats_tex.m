@@ -11,8 +11,10 @@ root = fileparts(fileparts(mfilename('fullpath')));
 if nargin < 1
     outFile = fullfile(fileparts(root), 'Closedloop_edit', 'stat_tables.tex');
 end
-T = readtable(fullfile(root,'paper-writing','STATS_TABLE.csv'), 'TextType','string', ...
+opts = detectImportOptions(fullfile(root,'paper-writing','STATS_TABLE.csv'), 'TextType','string', ...
               'Delimiter', ',');
+opts = setvartype(opts, intersect({'role','sessions_agree','mice_agree'}, opts.VariableNames), 'string');
+T = readtable(fullfile(root,'paper-writing','STATS_TABLE.csv'), opts);
 C = readtable(fullfile(root,'data','fig2b_trial_counts.csv'), 'TextType','string');
 if isdatetime(C.date), C.date = string(C.date, 'yyyy-MM-dd'); end
 R = @(id) T(T.id == id, :);
@@ -87,102 +89,72 @@ add('\bottomrule', '\end{tabular}', ...
         '\end{table}', '');
 
 % ---------------- Table: Fig 3 OL vs CL ------------------------------------------------------
-% One test only (2026-10-20, user: "table 4 refers to 3 different tests why, lets only talk
-% about one relevant one"): the session-level mixed model, which is the one the Results quote.
-% The one-sample t-test, Wilcoxon and per-trial model are still in STATS_TABLE.csv.
+% SESSION RULE (2026-10-27, STATS_AUDIT §7): one test, the two-sided one-sample t on the per-session
+% log ratios (df 14), with the exact Wilcoxon, sessions (mice) below one and the leave-one-mouse-out
+% worst p as columns. 0-3 s is the primary window. Pre/post are controls: ratio + CI, no test.
 add('\begin{table}[!ht]', '\centering', '\small', ...
-        '\caption{\textbf{Closed- versus open-loop tracking error and trial-to-trial variability} (Figure~\ref{fig:figure3}; 15 sessions, 4 mice, 1670 trials). Ratio, per-session ratio of the closed- to the open-loop value (mean per-trial RMSE, or across-trial variance averaged over the window), so that below one means closed loop was better; geometric mean across sessions with its $t$-based 95\% CI. $t$ (df) and $p$, mixed model $\log r \sim 1 + (1\mid\mathrm{mouse})$ with Satterthwaite degrees of freedom (Materials and Methods). Lower, $100\,(1-\mathrm{ratio})$. Below 1, sessions with ratio below one. Post-stimulation window, 1\,s (RMSE, the end of the stored trial segment) or 3\,s (variance) after offset.}', ...
+        '\caption{\textbf{Closed- versus open-loop tracking error and trial-to-trial variability} (Figure~\ref{fig:figure3}; 15 sessions, 4 mice, 1670 trials). Ratio, per-session ratio of the closed- to the open-loop value (mean per-trial RMSE, or across-trial variance averaged over the window), so that below one means closed loop was better; geometric mean across sessions with its $t$-based 95\% CI. Lower, $100\,(1-\mathrm{ratio})$. $t$ and $p$, two-sided one-sample $t$-test of the per-session log ratios (14 degrees of freedom); Wilcoxon, exact signed-rank test on the same values. Below one, sessions with a ratio below one (in parentheses, mice whose mean log ratio is below zero). LOMO, the largest $p$ of the $t$-test when each mouse is left out in turn. The pre- and post-stimulation windows are controls and are reported as the ratio with its CI, without a test. Post-stimulation window, 1\,s (RMSE, the end of the stored trial segment) or 3\,s (variance) after offset.}', ...
         '\label{tab:stat_fig3}', ...
-        '\begin{tabular}{lccccc}', '\toprule', ...
-        'Window & Ratio [95\% CI] & Lower & $t$ (df) & $p$ & Below 1 \\', '\midrule');
-win = {'pre','Pre-stimulation'; 'early','0--1\,s'; 'late','1--3\,s'; 'full','0--3\,s'; 'post','Post-stimulation'};
+        '\begin{tabular}{lccccccc}', '\toprule', ...
+        'Window & Ratio [95\% CI] & Lower & $t$ & $p$ & Wilcoxon $p$ & Below one & LOMO $p$ \\', '\midrule');
+win = {'pre','Pre-stimulation'; 'early','0--1\,s'; 'late','1--3\,s'; 'full','0--3\,s$^{a}$'; 'post','Post-stimulation'};
 blk = {'3H','rmse','Tracking RMSE'; '3I','var','Across-trial variance'};
 for b = 1:2
-    add(sprintf('\\multicolumn{6}{l}{\\textit{%s}} \\\\', blk{b,3}));
+    add(sprintf('\\multicolumn{8}{l}{\\textit{%s}} \\\\', blk{b,3}));
     for w = 1:size(win,1)
-        base = blk{b,1}+"_"+blk{b,2}+"_"+win{w,1};
-        lm = R(base+"_lmm");
-        nb = regexp(lm.claim, '\((\d+/\d+) sessions <1', 'tokens', 'once');
-        mark = '';
-        if strcmp(win{w,1}, 'full'), mark = '$^{a}$'; end
-        if isnan(lm.p) || lm.df < 0.5
-            lmt = '---';  lmp = '---';
-        else
-            lmt = sprintf('%s (%s)', num(lm.stat), dfs(lm.df));  lmp = pvm(lm.p);
-        end
-        add(sprintf('\\quad %s%s & %s & $%.0f$\\%% & %s & %s & %s \\\\', win{w,2}, mark, ...
-            estci(lm.effect, lm.ci_lo, lm.ci_hi), 100*(1-lm.effect), lmt, lmp, nb{1}));
+        add(f3row(['\quad ' win{w,2}], R(blk{b,1}+"_"+blk{b,2}+"_"+win{w,1})));
     end
     if b == 1, add('\addlinespace'); end
 end
 % Review M1 (2026-10-20): CL against the best fixed OL input (ctrl_best_fixed_ol.m), same columns.
-add('\addlinespace', '\multicolumn{6}{l}{\textit{Tracking RMSE, closed loop / best fixed input}$^{b}$} \\');
-wb = {'early','0--1\,s'; 'late','1--3\,s'; 'full','0--3\,s'};
+add('\addlinespace', '\multicolumn{8}{l}{\textit{Tracking RMSE, closed loop / best fixed input}$^{b}$} \\');
+wb = {'early','0--1\,s'; 'late','1--3\,s'; 'full','0--3\,s$^{a}$'};
 for w = 1:size(wb,1)
-    lm = R("3H_best_"+wb{w,1}+"_lmm");
-    nb = regexp(lm.claim, '\((\d+/\d+) sessions <1', 'tokens', 'once');
-    if isnan(lm.p) || lm.df < 0.5
-        lmt = '---';  lmp = '---';
-    else
-        lmt = sprintf('%s (%s)', num(lm.stat), dfs(lm.df));  lmp = pvm(lm.p);
-    end
-    add(sprintf('\\quad %s & %s & $%.0f$\\%% & %s & %s & %s \\\\', wb{w,2}, ...
-        estci(lm.effect, lm.ci_lo, lm.ci_hi), 100*(1-lm.effect), lmt, lmp, nb{1}));
+    add(f3row(['\quad ' wb{w,2}], R("3H_best_"+wb{w,1})));
 end
-fl = R("3H_rmse_full_lmm");  bl = R("3H_best_late_lmm");  bf = R("3H_best_full_lmm");
+cs = R("3H_best_cstar");  rh = R("3H_best_cmd_rho");
 add('\bottomrule', '\end{tabular}', ...
-        sprintf(['\\par\\smallskip\\parbox{\\linewidth}{\\footnotesize $^{a}$For the full window the mouse variance is estimated above zero, ' ...
-                 'and the Satterthwaite degrees of freedom collapse toward the number of mice (RMSE, %.1f; variance, 0, no test), ' ...
-                 'so the session-level mixed model is not used for inference there; see Materials and Methods. ' ...
-                 '$^{b}$Open-loop RMSE recomputed for the fixed input that minimizes it, under the linear model and on the same trials, ' ...
-                 'which favors open loop (Materials and Methods); the degrees of freedom fall to %.1f (1--3\\,s) and %.1f (0--3\\,s) ' ...
-                 'for the same reason.}'], fl.df, bl.df, bf.df), ...
+        sprintf(['\\par\\smallskip\\parbox{\\linewidth}{\\footnotesize $^{a}$Primary window; 0--1 and 1--3\\,s are its transient and steady-state parts. ' ...
+                 '$^{b}$Open-loop RMSE recomputed for the fixed input that minimizes it, under the linear model and on the same trials, which favors open loop (Materials and Methods). ' ...
+                 'The best fixed input was a median of %s times the open-loop input (interquartile range %s--%s), and the mean closed-loop command over 1--3\\,s, relative to the open-loop command, was correlated with it across sessions (Spearman $\\rho = %s$, $p = %s$, %d sessions).}'], ...
+                num(cs.effect,'%.2f',false), num(cs.ci_lo,'%.2f',false), num(cs.ci_hi,'%.2f',false), ...
+                num(rh.effect,'%.2f',false), pv(rh.p), rh.n), ...
         '\end{table}', '');
 
 % ---------------- Table: Fig 4D state dependence ---------------------------------------------
-% Trial counts per state model (not in STATS_TABLE): 1670 from fig3_olcl_lmm G3.n; 1190 motion
-% trials from RESEARCH 2026-10-02 (motion video available in 11 sessions).
+% SESSION RULE (user 2026-10-27): per-session OLS slopes on the within-session standardized state,
+% one-sample t across sessions. p = uncorrected (the figure stars, each P/R/A its own question);
+% Holm p within P+R (8 tests) and within A (4 tests). Gap and gap trend are descriptive.
+% Trial counts per state (not in STATS_TABLE): 1670 trials; 1190 for motion (face video in 11 sessions).
 N4D = struct('initdev',1670,'motion',1190,'delta',1670,'absdelta',1670);
 add('\begin{table}[!ht]', '\centering', '\small', ...
-        '\caption{\textbf{State dependence of open- and closed-loop tracking error} (Figure~\ref{fig:figure4}D). Mixed model on per-trial RMSE from 1 to 3\,s after onset (Materials and Methods); slopes in $\%\,\Delta F/F$ of RMSE per within-session SD of the state. Gap, open- minus closed-loop RMSE at mean state. Predictability and regularizability, open- and closed-loop slopes. Attenuation, slope of the closed-to-open-loop RMSE ratio on state, as percent change per SD; negative, the loop removes a larger fraction of the open-loop error. Gap trend, condition-by-state interaction (not interpreted; Materials and Methods). Degrees of freedom capped at sessions $-1$. Bold, below the Bonferroni threshold ($0.0063$ for predictability and regularizability, eight tests; $0.0125$ for attenuation, four tests).}', ...
+        '\caption{\textbf{State dependence of open- and closed-loop tracking error} (Figure~\ref{fig:figure4}D). In each session, ordinary least-squares slopes of per-trial RMSE from 1 to 3\,s after onset on the state, standardized within session; slopes in $\%\,\Delta F/F$ of RMSE per within-session SD of the state, tested across sessions with a two-sided one-sample $t$-test (Materials and Methods). Gap, open- minus closed-loop mean RMSE (descriptive; the Figure~\ref{fig:figure3} result). Predictability and regularizability, open- and closed-loop slopes. Attenuation, closed- minus open-loop slope of $\log$ RMSE, given as the percent change per SD of the closed-to-open-loop RMSE ratio; negative, the loop removes a larger fraction of the open-loop error. Gap trend, open- minus closed-loop slope (not interpreted; Materials and Methods). $p$, uncorrected, as marked in Figure~\ref{fig:figure4}D; Holm $p$, Holm-adjusted within predictability and regularizability (eight tests) and within attenuation (four tests). Sessions, sessions whose estimate has the sign of the mean.}', ...
         '\label{tab:fig4_state_stats}', ...
-        '\begin{tabular}{llcc}', '\toprule', ...
-        'State & Quantity & Estimate [95\% CI] & Test \\', '\midrule');
+        '\setlength{\tabcolsep}{4pt}', ...   % six columns overran the text width by 15 pt at the default 6 pt
+        '\begin{tabular}{llcccc}', '\toprule', ...
+        'State & Quantity & Estimate [95\% CI] & Test & Holm $p$ & Sessions \\', '\midrule');
 st4 = {'initdev','Initial deviation'; 'motion','Motion'; 'delta','Relative 2--4\,Hz'; 'absdelta','Absolute 1--4\,Hz'};
-qs  = {'gap','Gap',-1,0; 'pred','Predictability',1,0.05/8; 'reg','Regularizability',1,0.05/8; ...
-       'att','Attenuation (\% per SD)',0,0.05/4; 'gaptrend','Gap trend',-1,0};   % col 4: bold threshold (0 = never)
+qs  = {'gap','Gap'; 'pred','Predictability'; 'reg','Regularizability'; 'att','Attenuation (\% per SD)'; 'gaptrend','Gap trend'};
 for i = 1:size(st4,1)
     for q = 1:size(qs,1)
         g = R("4D_"+st4{i,1}+"_"+qs{q,1});
         if q == 1
-            c1 = sprintf('%s', st4{i,2});
+            c1 = st4{i,2};
         elseif q == 2
             c1 = sprintf('\\footnotesize %d sessions, %d trials', g.n, N4D.(st4{i,1}));
         else
             c1 = '';
         end
-        switch qs{q,3}
-            case 0    % log slope -> percent
-                e = pctci(g.effect, g.ci_lo, g.ci_hi);
-                tv = g.stat;
-            case -1   % stored CL-OL; report OL-CL
-                e = estci(-g.effect, -g.ci_hi, -g.ci_lo, true);  tv = -g.stat;
-            otherwise
-                e = estci(g.effect, g.ci_lo, g.ci_hi, true);     tv = g.stat;
-        end
-        p = pv(g.p);
-        if g.p < qs{q,4}, p = ['\mathbf{' p '}']; end
-        add(sprintf('%s & %s & %s & $t(%s) = %s$, $p = %s$ \\\\', c1, qs{q,2}, e, dfs(g.df), num(tv,'%.2f',false), p));
+        if strcmp(qs{q,1}, 'att'), e = pctci(g.effect, g.ci_lo, g.ci_hi);
+        else,                      e = estci(g.effect, g.ci_lo, g.ci_hi, true); end
+        if strcmp(qs{q,1}, 'gap'), tst = '---';
+        else, tst = sprintf('$t(%s) = %s$, $p = %s$', dfs(g.df), num(g.stat,'%.2f',false), pv(g.p)); end
+        hp = '---';  if isfinite(g.holm_p), hp = pvm(g.holm_p); end
+        add(sprintf('%s & %s & %s & %s & %s & %s \\\\', c1, qs{q,2}, e, tst, hp, g.sessions_agree));
     end
     if i < size(st4,1), add('\addlinespace'); end
 end
-mo = R("4_motslope_OL"); mc = R("4_motslope_CL"); md = R("4_motslope_diff");
-agd = regexp(md.claim, '\((\d+/\d+) sessions', 'tokens', 'once');
-add('\midrule', '\multicolumn{4}{l}{\textit{Within-session slopes of RMSE on motion ($z$ units), Wilcoxon signed-rank across 11 sessions}} \\', ...
-        sprintf('Motion & Open loop (median) & %s & $V = %d$, $p = %s$ \\\\', num(mo.effect,'%+.2f'), mo.stat, pv(mo.p)), ...
-        sprintf(' & Closed loop (median) & %s & $V = %d$, $p = %s$ \\\\', num(mc.effect,'%+.2f'), mc.stat, pv(mc.p)), ...
-        sprintf(' & Open minus closed (%s sessions) & %s & $V = %d$, $p = %s$ \\\\', agd{1}, num(md.effect,'%+.2f'), md.stat, pv(md.p)), ...
-        '\bottomrule', '\end{tabular}', '\end{table}', '');
+add('\bottomrule', '\end{tabular}', '\end{table}', '');
 
 % ---------------- Table: Fig 4G disturbance rejection ----------------------------------------
 gs = R("4G_sess"); gn = R("4G_nested"); gm = R("4G_sessmed");
@@ -215,6 +187,20 @@ fprintf('[stats-tex] %d lines -> %s\n', numel(L), outFile);
 end
 
 % ---------------- formatting helpers ---------------------------------------------------------
+function s = f3row(lab, g)
+% one Fig 3 table row (session rule 2026-10-27); control windows carry the ratio and CI only
+    nb = regexp(g.claim, '\((\d+/\d+) sessions <1', 'tokens', 'once');
+    lw = sprintf('$%.0f$\\%%', 100*(1-g.effect) + 0);
+    lw = strrep(lw, '$-0$', '$0$');
+    if g.role == "control"
+        s = sprintf('%s & %s & %s & --- & --- & --- & %s & --- \\\\', lab, ...
+            estci(g.effect, g.ci_lo, g.ci_hi), lw, nb{1});
+    else
+        s = sprintf('%s & %s & %s & %s & %s & %s & %s (%s) & %s \\\\', lab, ...
+            estci(g.effect, g.ci_lo, g.ci_hi), lw, num(g.stat), pvm(g.p), pvm(g.wilcoxon_p), ...
+            nb{1}, g.mice_agree, pvm(g.lomo_worst_p));
+    end
+end
 function s = num(x, f, mathmode)
     if nargin < 2 || isempty(f), f = '%.2f'; end
     if nargin < 3, mathmode = true; end
@@ -226,6 +212,8 @@ function s = estci(e, lo, hi, signed)
     if nargin < 4, signed = false; end
     if signed, f = '%+.2f'; else, f = '%.2f'; end
     s = sprintf(['$' f '$ $[%.2f, %.2f]$'], e, lo, hi);
+    s = regexprep(s, '^\$-0\.00\$', '\$0.00\$');     % no signed zero
+    s = strrep(s, '[-0.00,', '[0.00,');  s = strrep(s, ', -0.00]', ', 0.00]');
 end
 function s = estrng(e, lo, hi)
 % estimate with a min-max range (not a CI), e.g. per-session spread over 4 sessions

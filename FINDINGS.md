@@ -38,6 +38,12 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
   - motion 0.
 - The pooled numbers above were inflated by between-session differences.
 - The claim narrows: the initial deviation owns the transient, and ABSOLUTE low-frequency power is the largest steady-state term. Rel alone does not carry it.
+**Update 2026-10-27 (session rule, onset-fixed caches):** Fig 4D is now tested at the session level: per-session OLS slopes on the within-session z-scored state, with a one-sample t across sessions (`utils/f4_row2_sess.m`). MATLAB and the Python rebuild agree to 4 decimals. The panel stars use raw p; Table 5 has a Holm column.
+  - Initdev: P +0.18, p = 0.056; R +0.14, p = 0.014 (13/15); A n.s.
+  - Motion: P +0.24, p = 0.011; R n.s.; A −13 %/SD, p = 0.0023 (Holm 0.0092, 11/11).
+  - Rel δ: R +0.10, p = 0.035; A +5 %/SD, p = 0.029 (neither survives Holm).
+  - Abs δ: P +0.28, p = 0.0098; R +0.32, p = 7.1e-4 (Holm 0.0057, 15/15); A +7 %/SD, p = 0.094, **no longer significant**.
+  - Claim change: absolute power degrades regularizability (closed loop does not hold the reference as it grows). It is no longer an attenuation result. The onset fix barely moved the mixed model; the change comes from the test. In the paper (Closedloop_edit 2fabeb6, not pushed).
 - See RESEARCH 2026-10-11.
 
 ---

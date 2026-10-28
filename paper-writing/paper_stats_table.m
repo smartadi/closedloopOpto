@@ -4,18 +4,34 @@ function T = paper_stats_table()
 % The manuscript quotes THIS table (NUMBERS.md rule: the paper quotes a file, the file quotes
 % a run). It only LOADS the saved outputs of the producers; it recomputes nothing, so a stale
 % number here means a producer was not re-run. Producers, in the order to run them:
-%   fig3_olcl_stats             -> data/fig3_olcl_lmm.mat        (Fig 3 LMMs + signed-rank)
 %   variance_mse.m (Fr + G2r)   -> data/fig3_ratio_stats.mat     (Fig 3H/3I session-level CL/OL ratios)
-%   f4_row2_quartiles.m         -> data/f4_row2_lme.mat, data/f4_motion_slopes.mat (Fig 4D)
+%   ctrl_best_fixed_ol.m        -> controller-analysis/data/ctrl_best_fixed_ol.mat (best fixed input)
+%   f4_row2_quartiles.m         -> data/f4_row2_sess.mat (Fig 4D session-level P/R/A)
 %   f4_cl_reject_lmm            -> controller-analysis/data/f4_cl_reject_lmm.mat (Fig 4G)
 %   imp_state_trialvar.m        -> data/fig2g_state_stats.mat (save STV_R=R after the run)
-% Convention for every mixed-model row (2026-10-07): REML, Satterthwaite df capped at
-% nSessions-1 (utils/lmm_cluster_df.m), t-based 95% CI, exact p; 'sided' says 1 or 2.
+% SESSION RULE (2026-10-27, STATS_AUDIT §7) for Figs 3 and 4D: one value per session, one-sample t
+% across sessions (two-sided, df = n-1, t CI), via utils/sess_test.m; the extra columns carry the
+% exact Wilcoxon p, sessions/mice agreeing in sign, the leave-one-mouse-out worst p, the Holm p
+% (Fig 4D) and a role (main / secondary / control / descriptive). Fig 4G rows are still the
+% mixed-model convention (REML, Satterthwaite df capped at nSessions-1, utils/lmm_cluster_df.m)
+% until f4_cl_reject_lmm is re-run on the fixed onsets; 'sided' says 1 or 2.
 root = fileparts(fileparts(mfilename('fullpath')));
 dd   = fullfile(root,'data');
-rows = cell(0,16);
-    function add(id,fig,claim,eff,unit,ci,test,sn,sv,df,p,sided,n,nunit,src)
-        rows(end+1,:) = {id,fig,claim,eff,unit,ci(1),ci(2),test,sn,sv,df,p,sided,n,nunit,src};
+rows = cell(0,22);
+    function add(id,fig,claim,eff,unit,ci,test,sn,sv,df,p,sided,n,nunit,src,X)
+        % X (optional, 2026-10-27 session rule): role, w_p, k_n, mice, lomo_p, holm_p
+        if nargin < 16, X = struct(); end
+        x = struct('role','','w_p',NaN,'k_n','','mice','','lomo_p',NaN,'holm_p',NaN);
+        for f = fieldnames(X)', x.(f{1}) = X.(f{1}); end
+        rows(end+1,:) = {id,fig,claim,eff,unit,ci(1),ci(2),test,sn,sv,df,p,sided,n,nunit,src, ...
+                         x.role,x.w_p,x.k_n,x.mice,x.lomo_p,x.holm_p};
+    end
+    function addS(id,fig,claim,S,unit,role,src,holm)
+        % one session-level test row from a utils/sess_test struct (two-sided t, df = n-1)
+        if nargin < 8, holm = NaN; end
+        add(id,fig,claim,S.effect,unit,S.ci,'one-sample t across sessions','t',S.t,S.df,S.p,'2', ...
+            S.n,'sessions',src,struct('role',role,'w_p',S.w_p,'k_n',sprintf('%d/%d',S.k,S.k_n), ...
+            'mice',sprintf('%d/%d',S.mouse_k,S.mouse_n),'lomo_p',S.lomo_worst_p,'holm_p',holm));
     end
 
 % ---------------- Figure 2G : impulse-response deviation vs pre-stimulus state ----------------
@@ -87,37 +103,23 @@ if isfield(R,'ctlRespSD')
 end
 
 % ---------------- Figure 3 : OL vs CL ---------------------------------------------------------
-S = load(fullfile(dd,'fig3_olcl_lmm.mat')); G = S.G3;
-lab3 = struct('rmse_full','RMSE 0-3 s','rmse_early','RMSE 0-1 s','rmse_late','RMSE 1-3 s', ...
-              'var_stim','log variance 0-3 s','var_early','log variance 0-1 s','var_late','log variance 1-3 s');
-for m = fieldnames(lab3)'
-    g = G.(m{1}); isv = startsWith(m{1},'var');
-    add(['3_' m{1} '_lmm'],'3',['CL-OL gap, ' lab3.(m{1})],g.lmm_gap,tern(isv,'log units','%dF/F'),g.lmm_ci, ...
-        'CORROBORATING trial-level LMM y~cond+(1+cond|sess)+(1|mouse)','t',g.lmm_t,g.lmm_df,g.lmm_p,'2',g.nSess,'sessions','fig3_olcl_stats');
-    add(['3_' m{1} '_sr'],'3',sprintf('CORROBORATING per-session signed-rank, %s (%d/%d sessions CL<OL)',lab3.(m{1}),g.nAgree,g.nSess), ...
-        g.medRatio,'median OL/CL',[NaN NaN],'Wilcoxon signed-rank','V',g.sr_V,NaN,g.sr_p,'2',g.nSess,'sessions','fig3_olcl_stats');
-end
-% Fig 3H (RMSE) / 3I (variance): ONE scheme (2026-10-15). Unit = session; ratio = CL/OL (<1 = CL
-% better); effect = geometric mean [95% CI]; PRIMARY = LMM log(r)~1+(1|mouse), Satterthwaite;
-% also one-sample t on log r; Wilcoxon on log r corroborating. Source: variance_mse.m Fr/G2r.
+% SESSION RULE (2026-10-27, STATS_AUDIT §7). Unit = session; ratio = CL/OL (<1 = CL better);
+% effect = geometric mean [95% CI]; the test = one-sample t on log r across sessions (two-sided,
+% df = n-1), with the exact Wilcoxon, sessions/mice below one and the leave-one-mouse-out worst p
+% as columns. Role: 'main' = 0-3 s, 'secondary' = 0-1 / 1-3 s, 'control' = pre/post (ratio + CI
+% only in the paper; their p is kept here but not quoted). The LMM log(r)~1+(1|mouse) rows and the
+% trial-level CORROBORATING rows (fig3_olcl_stats, 3_*_lmm / 3_*_sr) are retired: the mouse
+% variance is not identifiable with 4 mice and those rows repeated the same claims.
 S = load(fullfile(dd,'fig3_ratio_stats.mat')); R3 = S.R3;
 panel3 = struct('rmse',{{'3H','RMSE'}},'var',{{'3I','variance'}});
 wl = struct('pre','pre (-3-0 s)','early','0-1 s','late','1-3 s','full','0-3 s','post','post');
+role3 = struct('pre','control','early','secondary','late','secondary','full','main','post','control');
 for mt = {'rmse','var'}
     pn = panel3.(mt{1});
     for w = {'pre','early','late','full','post'}
         r = R3.(mt{1}).(w{1});  id = [pn{1} '_' mt{1} '_' w{1}];
         lbl = sprintf('CL/OL %s ratio, %s (%d/%d sessions <1; %.1f%% lower)',pn{2},wl.(w{1}),r.nBelow1,r.n,r.pctLower);
-        add([id '_lmm'],pn{1},['PRIMARY ' lbl],r.geo,'geometric-mean ratio',r.geoCI, ...
-            'LMM log(r)~1+(1|mouse), Satterthwaite','t',r.lmm_t,r.lmm_df,r.lmm_p,'2',r.n,'sessions','variance_mse');
-        if isnan(r.lmm_p)          % Satterthwaite df failed (0/NaN): project fallback df = n-1
-            add([id '_lmmfb'],pn{1},['LMM, df fallback n-1 (Satterthwaite df=0) ' lbl],r.lmm_ratio,'LMM ratio',r.lmm_ratioCIc, ...
-                'LMM log(r)~1+(1|mouse), df=n-1 (lmm_cluster_df)','t',r.lmm_t,r.lmm_dfc,r.lmm_pc,'2',r.n,'sessions','variance_mse');
-        end
-        add([id '_t'],pn{1},lbl,r.geo,'geometric-mean ratio',r.geoCI, ...
-            'one-sample t on log ratio','t',r.t_t,r.t_df,r.t_p,'2',r.n,'sessions','variance_mse');
-        add([id '_w'],pn{1},['CORROBORATING ' lbl],r.median,'median ratio',[NaN NaN], ...
-            'Wilcoxon signed-rank on log ratio','V',r.w_V,NaN,r.w_p,'2',r.n,'sessions','variance_mse');
+        addS(id,pn{1},lbl,r.st,'geometric-mean ratio',role3.(w{1}),'variance_mse');
     end
 end
 % Review M1 (2026-10-20): CL vs the best fixed OL input, same scheme as 3H
@@ -127,36 +129,33 @@ for w = {'early','late','full'}
     r = B.ST.(w{1}).cl_best;  id = ['3H_best_' w{1}];
     lbl = sprintf('CL/best-fixed-OL RMSE ratio, %s (%d/%d sessions <1; %.1f%% lower)', ...
                   wl.(w{1}), r.nBelow1, r.n, r.pctLower);
-    add([id '_lmm'],'3H',['PRIMARY ' lbl],r.geo,'geometric-mean ratio',r.geoCI, ...
-        'LMM log(r)~1+(1|mouse), Satterthwaite','t',r.lmm_t,r.lmm_df,r.lmm_p,'2',r.n,'sessions','ctrl_best_fixed_ol');
-    add([id '_t'],'3H',lbl,r.geo,'geometric-mean ratio',r.geoCI, ...
-        'one-sample t on log ratio','t',r.t_t,r.t_df,r.t_p,'2',r.n,'sessions','ctrl_best_fixed_ol');
+    addS(id,'3H',lbl,r.st,'geometric-mean ratio',role3.(w{1}),'ctrl_best_fixed_ol');
 end
+% Did feedback move the command toward the best fixed input? (quoted in Results; added 2026-10-27)
+qc = quantile(B.T.cStar,[0.25 0.75]);
+add('3H_best_cstar','3H','best fixed input / OL input, median (IQR as CI columns)',median(B.T.cStar),'ratio',qc, ...
+    'descriptive','','',NaN,NaN,'',height(B.T),'sessions','ctrl_best_fixed_ol',struct('role','descriptive'));
+add('3H_best_cmd_rho','3H',sprintf('mean CL / OL command (1-3 s), median %.2f, vs best fixed input across sessions', ...
+    median(B.T.uCLrel)),B.SP.rho,'Spearman rho',[NaN NaN],'Spearman rank correlation','rho',B.SP.rho,NaN,B.SP.p,'2', ...
+    B.SP.n,'sessions','ctrl_best_fixed_ol',struct('role','secondary'));
 
-% ---------------- Figure 4D : state quartiles ---------------------------------------------------
-S = load(fullfile(dd,'f4_row2_lme.mat')); L = S.LME;
+% ---------------- Figure 4D : state dependence ---------------------------------------------------
+% SESSION RULE (user 2026-10-27): per session, OLS slopes of steady-state RMSE on the within-session
+% z-scored state (utils/f4_row2_sess.m); one-sample t across sessions. Stars in the panel = raw p
+% (each P, R, A per state is its own question); holm_p = Holm within P+R (8) and A (4), Table 4 column.
+% gap and gap trend (P - R) are descriptive ('not interpreted'). The LMM (f4_row2_lme.mat) and the
+% motion-only Wilcoxon slopes (f4_motion_slopes.mat) are retired from the table.
+S = load(fullfile(dd,'f4_row2_sess.mat')); SS = S.SESS;
 lab4 = struct('initdev','initial deviation','motion','motion','delta','relative 2-4 Hz','absdelta','absolute 1-4 Hz');
+u = '%dF/F RMSE per SD of state';
 for st = fieldnames(lab4)'
-    E = L.(st{1}); r = E.Rf; mdl = 'LMM y~cond*state+(1+cond|sess)+(state-1|sess)+(1|mouse)';
-    u = '%dF/F RMSE per SD of state';
-    add(['4D_' st{1} '_gap'],'4D',['CL-OL gap at mean state, ' lab4.(st{1})],r.gap,'%dF/F RMSE',r.gapCI, ...
-        mdl,'t',r.gapT,r.gapDF,r.gapP,'2',E.nSes,'sessions','f4_row2_quartiles');
-    add(['4D_' st{1} '_pred'],'4D',['predictability (OL slope), ' lab4.(st{1})],r.slope,u,r.slopeCI, ...
-        mdl,'t',r.slopeT,r.slopeDF,r.slopeP,'2',E.nSes,'sessions','f4_row2_quartiles');
-    add(['4D_' st{1} '_reg'],'4D',['regularizability (CL slope), ' lab4.(st{1})],r.reg,u,r.regCI, ...
-        [mdl ', CL reference'],'t',r.regT,r.regDF,r.regP,'2',E.nSes,'sessions','f4_row2_quartiles');
-    add(['4D_' st{1} '_att'],'4D-att',['attenuation (slope of log CL/OL), ' lab4.(st{1})],r.att,'log ratio per SD of state',r.attCI, ...
-        'LMM log(y)~cond*state+(1+cond|sess)+(state-1|sess)+(1|mouse)','t',r.attT,r.attDF,r.attP,'2',E.nSes,'sessions','f4_row2_quartiles');
-    add(['4D_' st{1} '_gaptrend'],'4D-disc',['gap trend (cond x state, Discussion), ' lab4.(st{1})],r.dec,u,r.decCI, ...
-        mdl,'t',r.decT,r.decDF,r.decP,'2',E.nSes,'sessions','f4_row2_quartiles');
+    E = SS.(st{1});
+    addS(['4D_' st{1} '_gap'],'4D',['OL-CL gap in mean RMSE, ' lab4.(st{1})],E.gap,'%dF/F RMSE','descriptive','f4_row2_quartiles');
+    addS(['4D_' st{1} '_pred'],'4D',['predictability (OL slope), ' lab4.(st{1})],E.P,u,'main','f4_row2_quartiles',E.P.holm_p);
+    addS(['4D_' st{1} '_reg'],'4D',['regularizability (CL slope), ' lab4.(st{1})],E.R,u,'main','f4_row2_quartiles',E.R.holm_p);
+    addS(['4D_' st{1} '_att'],'4D-att',['attenuation (slope of log CL/OL), ' lab4.(st{1})],E.A,'log ratio per SD of state','main','f4_row2_quartiles',E.A.holm_p);
+    addS(['4D_' st{1} '_gaptrend'],'4D-disc',['gap trend (OL minus CL slope; not interpreted), ' lab4.(st{1})],E.gap_change,u,'descriptive','f4_row2_quartiles');
 end
-S = load(fullfile(dd,'f4_motion_slopes.mat')); M = S.MOTSLOPE;
-add('4_motslope_OL','4','within-session OL slope, RMSE on motion',M.medOL,'median z/z',[NaN NaN], ...
-    'Wilcoxon signed-rank vs 0','V',M.VOL,NaN,M.pOL,'2',M.n,'sessions','f4_row2_quartiles');
-add('4_motslope_CL','4','within-session CL slope, RMSE on motion',M.medCL,'median z/z',[NaN NaN], ...
-    'Wilcoxon signed-rank vs 0','V',M.VCL,NaN,M.pCL,'2',M.n,'sessions','f4_row2_quartiles');
-add('4_motslope_diff','4',sprintf('OL vs CL slope (%d/%d sessions OL>CL)',sum(M.sO>M.sC),M.n),median(M.sO-M.sC),'median diff',[NaN NaN], ...
-    'Wilcoxon signed-rank','V',M.VD,NaN,M.pD,'2',M.n,'sessions','f4_row2_quartiles');
 
 % ---------------- Figure 4G : disturbance rejection ----------------------------------------------
 S = load(fullfile(root,'controller-analysis','data','f4_cl_reject_lmm.mat'));
@@ -233,7 +232,8 @@ for b = 1:2
 end
 
 T = cell2table(rows,'VariableNames',{'id','figure','claim','effect','unit','ci_lo','ci_hi','test', ...
-    'stat_name','stat','df','p','sided','n','n_unit','source'});
+    'stat_name','stat','df','p','sided','n','n_unit','source', ...
+    'role','wilcoxon_p','sessions_agree','mice_agree','lomo_worst_p','holm_p'});
 out = fullfile(root,'paper-writing','STATS_TABLE.csv');
 writetable(T,out);
 fprintf('[stats] %d rows -> %s\n', height(T), out);

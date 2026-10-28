@@ -9,6 +9,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-10-27 — **Stats reconsolidation (#62): session rule end to end.** Onsets fixed (m1–m8) + AL_0048 fixes; Fig 3, 4D, best-fixed re-run and FINAL panels exported; STATS_TABLE + Tables 4–5 rewired; Methods/Results rewritten (Closedloop_edit 7e96deb..2fabeb6, NOT pushed). RESEARCH 2026-10-27.
 - [x] 2026-10-16 — **MPC (Fig 6, static + sine I–M) and VARX (Fig S5) DONE and LOCKED** (user). L = Q = 35, ridge 100, controller model trained without CL data; panels in figures_final, Fig S5 + Methods pointer + numbers in Closedloop draft (9d57903). RESEARCH 2026-10-16; locked block in CLAUDE.md.
 - [x] 2026-10-16 — **Fig 4 relative 2-4 Hz framed as in-stimulation** (Closedloop draft): Results L205 + Discussion L18/L42; no laser-off control added (user). Random-slope item was stale: adopted 2026-10-11, already in text. RESEARCH 2026-10-16.
 - [x] 2026-10-16 — **Fig 2G Results reworded as co-variation** (Closedloop draft): responses and ongoing activity change together with state; no claim either way about the stimulus effect itself. Discussion L16 still says "rather than as a change in the response itself" (user is writing the Discussion). RESEARCH 2026-10-16.
@@ -18,11 +19,13 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [x] 2026-10-10 — Fig 4D session-level points (+pooled/median fallbacks); OL offsets + 4G paired stats saved (`f4_rr_denominator_check`); Global-state circularity check done (does not fix it).
 - [x] 2026-10-10 — **Overleaf edits merged; Fig 2F (dip/rebound), 2G (session-level) and Fig 3 captions applied**; captions realigned to new assemblies (2A<->B, 3H<->I swapped). RESEARCH 2026-10-10.
 - [x] 2026-10-07 — **JNeurosci statistics pass done:** Methods subsection renamed + Design + multiple-comparison paragraphs; every Results claim is estimate + CI + t(df) + exact p + n, quoted from `paper-writing/STATS_TABLE.csv` (new `paper_stats_table.m`); 0 inexact p left.
-- [x] 2026-10-07 — **Fig 4D multiple comparisons decided:** uncorrected, 8 tests stated, Bonferroni 0.0063 named; rel-delta softened (now p=0.050 after the df fix).
 
 ---
 
 ## 🔴 Blocking submission
+
+- [ ] **Push the session-rule manuscript commits** (Closedloop_edit main 7e96deb, deec011, 2fabeb6): user reviews `git diff origin/main..main`, then push; Illustrator re-link of the Fig 3/4/OLbest/S1 panels.
+- [ ] **Fig 4G re-run on the fixed onsets.** Blocked 2026-10-27: the widefield SVD folders on the lab server are empty or missing for AL_0033 2025-02-12 and 2025-02-26, and AL_0039 2025-04-20. Then: `f4_cl_reject_lmm` → `f4_cl_reject_panel` (PAPER_FINAL), `paper_stats_table` / `paper_stats_tex`, and the Fig 4G Methods paragraph, Results text, caption and Table 6 (two-sided session t + all-13 sensitivity).
 
 ### arXiv blockers (plan: `paper-writing/arxiv_jneurosci_plan_2026-10-10.md`; RESEARCH 2026-10-10)
 - [ ] (user) Author block: syntax fixed 2026-10-16 (single UW affiliation, no indices, renders cleanly); add departments + confirm order with Nick before journal submission.
