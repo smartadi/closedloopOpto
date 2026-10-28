@@ -15,6 +15,10 @@ L = load(fullfile(dataDir,'f4_cl_reject_lmm.mat'));   % T (logRR,sess,mouse), es
 % (2026-10-07). The nested mouse model has ~2.5 df with 4 mice and is reported in the
 % caption as the mouse-level caveat, not drawn. Was: nested model, normal 1.96*SE band.
 T = L.T;  gmLMM = exp(L.sessM.est);  ciLMM = exp(L.sessM.ci);  pStar = L.sessM.p1;
+% 2026-10-27 (user, session rule): band + star = the session t-test on per-session mean log RR,
+% TWO-sided, geometric mean + t CI on nSess-1 df (f4_cl_reject_lmm -> L.ST). The LMM is reference.
+assert(isfield(L,'ST'), 'f4_cl_reject_panel: rerun f4_cl_reject_lmm (no session test in the .mat)');
+gmLMM = L.ST.effect;  ciLMM = L.ST.ci;  pStar = L.ST.p;
 
 u = unique(cellstr(T.sess),'stable');  nS = numel(u);
 gm=nan(nS,1); lo=nan(nS,1); hi=nan(nS,1); nt=nan(nS,1);
@@ -46,7 +50,7 @@ set(ax,'YScale','log','XTick',1:nS,'XTickLabel',cellstr(lab),'XTickLabelRotation
     'YTick',[0.25 0.5 1 2]);
 xlim(ax,[0.3 nS+0.7]); ylim(ax,[0.22 2.9]);
 ylabel(ax,'rejection ratio (RR)','FontSize',PS.fs,'FontWeight',PS.fw);   % self-explanatory words; RR=||A-r||^2/||D||^2 defined in caption
-% title states the claim; a single significance star marks the LMM one-sided RR<1 test.
+% title states the claim; a single significance star marks the two-sided session t-test (2026-10-27).
 star = repmat('*',1,(pStar<0.05)+(pStar<0.01)+(pStar<0.001)); if isempty(star), star='n.s.'; end
 title(ax,sprintf('CL rejects disturbances %s',star));
 

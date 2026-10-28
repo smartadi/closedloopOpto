@@ -21,7 +21,7 @@ function [d, data, info] = ctrl_onset_fix(d, data, sid)
 % The laser-channel fix for the same session lives in controllerData (ctrl_laser_cmd).
 DFK_LEAD = struct('key', {'AL_0048_2026-07-29_2'}, 'lead', {11});
 
-info = struct('changed', false, 'n_shifted', 0, 'dfk_lead', 0);
+info = struct('changed', false, 'n_shifted', 0, 'dfk_lead', 0, 'reoriented', false);
 root = fileparts(fileparts(mfilename('fullpath')));
 T = readtable(fullfile(root, 'stats_v2', 'results', 'onsets_corrected.csv'), 'TextType', 'string');
 T = T(T.session == string(sid) & T.shift ~= 0, :);
@@ -47,11 +47,18 @@ m = strcmp({DFK_LEAD.key}, key);
 if any(m)
     lead = DFK_LEAD(m).lead;
     if numel(data.dFk) == numel(tb) - lead
-        data.dFk = [repmat(data.dFk(1), lead, 1); data.dFk(:)];
+        data.dFk = padlead(data.dFk, lead);
         if isfield(data, 'F') && numel(data.F) == numel(tb) - lead
-            data.F = [repmat(data.F(1), lead, 1); data.F(:)];
+            data.F = padlead(data.F, lead);
         end
         info.dfk_lead = lead;
+    elseif iscolumn(data.dFk) && numel(data.dFk) == numel(tb)
+        % REPAIR: the first version of this fix (2026-10-27) wrote dFk/F as columns, but the
+        % cache stores them as rows and load_sessions.m stacks dFk segments with vertcat, so a
+        % column silently changed the shape of pncDfk_l/vr_ncDfk_l. Values are unchanged.
+        data.dFk = data.dFk(:)';
+        if isfield(data, 'F') && iscolumn(data.F), data.F = data.F(:)'; end
+        info.dfk_lead = lead;  info.reoriented = true;
     end
 end
 
@@ -61,4 +68,9 @@ if info.changed
         'n_shifted', info.n_shifted, 'dfk_lead', info.dfk_lead, ...
         'when', char(datetime('now', 'Format', 'yyyy-MM-dd')));
 end
+end
+
+function v = padlead(v, lead)
+% prepend LEAD copies of the first sample, keeping v's orientation (row stays row)
+if isrow(v), v = [repmat(v(1), 1, lead), v]; else, v = [repmat(v(1), lead, 1); v(:)]; end
 end

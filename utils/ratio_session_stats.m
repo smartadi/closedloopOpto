@@ -54,4 +54,11 @@ S.residSD = sqrt(lme.MSE);
 % ---- corroborating: Wilcoxon signed-rank on log ratios ----
 [pw, ~, sw] = signrank(lr);
 S.w_p = pw;  S.w_V = sw.signedrank;
+
+% ---- SESSION RULE (2026-10-27, STATS_AUDIT §7): the MAIN test is the one-sample t on log r
+% (S.t_p above, = S.st.p), with the exact Wilcoxon as backup and the mouse checks next to it.
+% The LMM fields above are kept as a reference only; they no longer drive any star.
+S.st = sess_test(r, mouse, true);
+S.lomo_worst_p = S.st.lomo_worst_p;  S.lomo_worst_mouse = S.st.lomo_worst_mouse;
+S.mouse_k = S.st.mouse_k;  S.mouse_p = S.st.mouse_p;
 end

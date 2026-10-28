@@ -18,7 +18,11 @@
 % z-scored within session across the combined OL+CL trials (removes session
 % baseline, keeps the OL-vs-CL level difference).
 %
-% TEST (the star): session-aware linear mixed model on z-scored RMSE, cond x state
+% TEST (the star), 2026-10-27 (user): SESSION-LEVEL. Per session, P/R/A slopes of steady-state
+% RMSE on the within-session z-scored state; one-sample t-test across sessions (utils/
+% f4_row2_sess.m + utils/sess_test.m). Everything below this paragraph about the LMM describes
+% the reference model, which is still fitted and printed but no longer sets a star.
+% OLD TEST: session-aware linear mixed model on z-scored RMSE, cond x state
 % interaction with trials nested in sessions nested in mice
 % (zrmse ~ cond*state + (1|mouse) + (1|sess)) -- the panel star is this LMM
 % interaction p (Nick 2026-09-11; replaces the old session-level signed-rank, which
@@ -76,6 +80,30 @@ fnout = {'f4_2A_initdev.pdf','f4_2B_motion.pdf','f4_2C_delta.pdf','f4_2D_absdelt
 if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; end
 [POOLs,~] = f4_row2_pool(mouse,fields,F4_MOT_STAT,F4_STATE_WIN); FIT = struct();
 for pn=preds; FIT.(pn{1}) = f4_row2_fit(POOLs.(pn{1})); end
+% ---- SESSION-LEVEL test (user 2026-10-27): the panel STARS. Per session P/R/A slopes on the
+% within-session z-scored state, t-test across sessions (utils/f4_row2_sess). The LMM above is
+% kept for the console + data/f4_row2_lme.mat as a reference only.
+% F4_STAR: 'raw' (default; each P, R, A per state is its own question, user 2026-10-27) | 'holm'
+% (Holm within the caption families, P+R = 8 tests, A = 4 tests).
+if ~exist('F4_STAR','var') || isempty(F4_STAR), F4_STAR = 'raw'; end
+SESS = struct();
+for pn=preds; SESS.(pn{1}) = f4_row2_sess(POOLs.(pn{1})); end
+pPR = cellfun(@(s) [SESS.(s).P.p; SESS.(s).R.p], preds, 'UniformOutput', false);
+hPR = reshape(holm_adjust(vertcat(pPR{:})), 2, []);
+hA  = holm_adjust(cellfun(@(s) SESS.(s).A.p, preds));
+for ip=1:numel(preds)
+    SESS.(preds{ip}).P.holm_p = hPR(1,ip); SESS.(preds{ip}).R.holm_p = hPR(2,ip);
+    SESS.(preds{ip}).A.holm_p = hA(ip);
+end
+fprintf('\n[F4R2-SESS] session-level slopes (per within-session SD), t-test across sessions; stars = %s\n', F4_STAR);
+fprintf('%-9s %3s | %-30s | %-30s | %-34s\n','state','n','P (OL slope)  t p / Holm  k/n','R (CL slope)  t p / Holm  k/n','A %%/SD [95%% CI]  t p / Holm  k/n');
+for ip=1:numel(preds); s=SESS.(preds{ip});
+    fprintf('%-9s %3d | %+.3f p=%.2g/%.2g %2d/%2d | %+.3f p=%.2g/%.2g %2d/%2d | %+5.1f [%+5.1f %+5.1f] p=%.2g/%.2g %2d/%2d\n', ...
+        preds{ip}, s.n, s.P.effect, s.P.p, s.P.holm_p, s.P.k, s.P.n, s.R.effect, s.R.p, s.R.holm_p, s.R.k, s.R.n, ...
+        s.A_pct, s.A_pctCI, s.A.p, s.A.holm_p, s.A.k, s.A.n);
+end
+bpRoot0=fileparts(fileparts(mfilename('fullpath')));
+try, save(fullfile(bpRoot0,'data','f4_row2_sess.mat'),'SESS','F4_STAR','F4_MOT_STAT','F4_STATE_WIN'); catch ME, warning('[F4R2-SESS] save skipped (%s)',ME.message); end
 
 % ---- per-session z-scored state + z-scored RMSE, per condition -------------------------------
 Pl = struct();
@@ -227,8 +255,15 @@ for ip=1:numel(preds); nm=preds{ip};
     % the CL/OL ratio FALLS, i.e. the loop removes a larger share of the error. Carries the
     % motion result (CL holds flat while OL rises), which regularizability alone reads as n.s.
     attP=Rf.attP; attUp = Rf.att<0;
-    fprintf('           predictability %s (OL slope %+.3f p=%.2g) | regularizability %s (CL slope %+.3f p=%.2g) | attenuation %+.3f p=%.2g | gap trend %+.3f p=%.2g\n', ...
+    fprintf('    [LMM ref] predictability %s (OL slope %+.3f p=%.2g) | regularizability %s (CL slope %+.3f p=%.2g) | attenuation %+.3f p=%.2g | gap trend %+.3f p=%.2g\n', ...
         tern(predUp,'UP','DOWN'),bOL,predP, tern(ctrlUp,'UP','DOWN'),Rf.reg,ctrlP, Rf.att,Rf.attP, Rf.dec,Rf.decP);
+    % 2026-10-27: the STARS come from the session-level test (SESS, above), not the LMM. Same
+    % arrow convention: P up iff the OL slope is negative, R up iff the CL slope is negative,
+    % A up iff the log CL/OL slope is negative.
+    sS=SESS.(nm); pk=tern(strcmp(F4_STAR,'holm'),'holm_p','p');
+    predP=sS.P.(pk); predUp=sS.P.effect<0;
+    ctrlP=sS.R.(pk); ctrlUp=sS.R.effect<0;
+    attP =sS.A.(pk); attUp =sS.A.effect<0;
 
     % stash per-state quantities so the stitched paper figure reuses them (no recompute)
     PQ(ip)=struct('qmO',qmO,'qmC',qmC,'qsO',qsO,'qsC',qsC,'qmOp',qmOp,'qmCp',qmCp,'qsOp',qsOp,'qsCp',qsCp, ...

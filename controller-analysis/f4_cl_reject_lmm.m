@@ -25,7 +25,7 @@ here = fileparts(mfilename('fullpath')); dataDir = fullfile(here,'data');
 bpData = fullfile(fileparts(here),'data');
 CFG.nSV_load=500; CFG.Fs=35; CFG.pre_s=1.0; CFG.resp_s=3.0; REF=-5; BIAS_MAX=1/3;
 
-rr=[]; sess={}; mn={}; keptsess=struct('tag',{},'mnn',{},'nTr',{},'Aset',{},'medRR',{},'biasFrac',{},'keep',{});
+rr=[]; sess={}; mn={}; rrAll=[]; sessAll={}; mnAll={}; keptsess=struct('tag',{},'mnn',{},'nTr',{},'Aset',{},'medRR',{},'biasFrac',{},'keep',{});
 for s = 1:numel(fields)
     fld = fields{s}; M = mouse.(fld); freeAfter=false;
     if ~isfield(M,'d') || isempty(M.d)
@@ -50,6 +50,7 @@ for s = 1:numel(fields)
     ok = isfinite(rr_tr) & rr_tr>0;
     keptsess(end+1)=struct('tag',S.sess_tag,'mnn',S.mn,'nTr',nnz(ok),'Aset',Aset, ...
         'medRR',median(rr_tr(ok)),'biasFrac',biasFrac,'keep',keep); %#ok<AGROW>
+    rrAll = [rrAll; rr_tr(ok)]; sessAll = [sessAll; repmat({S.sess_tag},nnz(ok),1)]; mnAll = [mnAll; repmat({S.mn},nnz(ok),1)]; %#ok<AGROW>
     if ~keep; continue; end                                  % OFFSET GATE
     rr   = [rr; rr_tr(ok)]; %#ok<AGROW>
     sess = [sess; repmat({S.sess_tag},nnz(ok),1)]; %#ok<AGROW>
@@ -97,6 +98,29 @@ sessM = struct('est',CS.Estimate(1),'se',CS.SE(1),'t',CS.tStat(1),'df',CS.DFc(1)
 fprintf('[LMM-sess] logRR ~ 1+(1|sess): GM RR %.2f [%.2f, %.2f], t(%.1f)=%.2f, one-sided p=%.3g\n', ...
     exp(sessM.est), exp(sessM.ci), sessM.df, sessM.t, sessM.p1);
 fprintf('[sess medians] %d/%d < 1, signrank V=%d one-sided p=%.3g\n', sum(sessMed<1), numel(sessMed), srV, srSess1);
-save(fullfile(dataDir,'f4_cl_reject_lmm.mat'),'T','keptsess','est','se','tv','df','dfSat','ci','p1','p2','srSess','srSess1','srV','sessM','lme','lmeS');
+% ---- SESSION RULE (user 2026-10-27, STATS_AUDIT §7): THE test. One number per session = its mean
+% log RR over trials; one-sample t-test across sessions, TWO-sided (utils/sess_test), geometric
+% mean + t CI on df = nSess-1. The two LMMs above stay as references; neither sets the star.
+% ST = after the offset gate (the panel); STall = every session with an RR (the text's sensitivity,
+% so the exclusion cannot look post hoc).
+[ST, sessTab] = sess_logrr(T);
+TA = table(log(rrAll), categorical(sessAll), categorical(mnAll), 'VariableNames',{'logRR','sess','mouse'});
+[STall, sessTabAll] = sess_logrr(TA);
+fprintf('[SESS] gated: GM RR %.2f [%.2f, %.2f], t(%d)=%.2f, two-sided p=%.3g, Wilcoxon p=%.3g, %d/%d < 1, LOMO worst p=%.3g (%s), mice %d/%d\n', ...
+    ST.effect, ST.ci, ST.df, ST.t, ST.p, ST.w_p, ST.k, ST.n, ST.lomo_worst_p, ST.lomo_worst_mouse, ST.mouse_k, ST.mouse_n);
+fprintf('[SESS] all %d: GM RR %.2f [%.2f, %.2f], t(%d)=%.2f, two-sided p=%.3g, Wilcoxon p=%.3g, %d/%d < 1\n', ...
+    STall.n, STall.effect, STall.ci, STall.df, STall.t, STall.p, STall.w_p, STall.k, STall.n);
+save(fullfile(dataDir,'f4_cl_reject_lmm.mat'),'T','keptsess','est','se','tv','df','dfSat','ci','p1','p2','srSess','srSess1','srV','sessM','lme','lmeS', ...
+    'ST','sessTab','STall','sessTabAll','TA');
 fprintf('  saved data/f4_cl_reject_lmm.mat\n');
+end
+
+function [ST, tab] = sess_logrr(T)
+% per-session mean log RR, then the session test (on exp of it, log = true, so the effect is the
+% geometric mean RR)
+[us, ~, gi] = unique(T.sess, 'stable');
+ml = accumarray(gi, T.logRR, [], @mean);
+mo = arrayfun(@(i) char(T.mouse(find(gi == i, 1))), (1:numel(us))', 'UniformOutput', false);
+tab = table(cellstr(us), mo, exp(ml), accumarray(gi, 1), 'VariableNames', {'sess','mouse','gmRR','nTr'});
+ST = sess_test(exp(ml), mo, true);
 end

@@ -17,9 +17,12 @@ end
 
 % Fig-3 ratio statistics (panels 3H RMSE, 3I variance) -- ONE scheme (2026-10-15):
 % unit = session; per session and window the CL/OL ratio (< 1 = closed loop better);
-% effect = geometric mean ratio [95% CI] and "% lower"; PRIMARY test = LMM on the log
-% ratios, log(r) ~ 1 + (1|mouse) (Satterthwaite); also a one-sample t-test and a Wilcoxon on
-% the log ratios. All of it via utils/ratio_session_stats.m, saved to data/fig3_ratio_stats.mat
+% effect = geometric mean ratio [95% CI] and "% lower"; MAIN test (2026-10-27 session rule,
+% STATS_AUDIT §7) = one-sample t-test on the log ratios of the MAIN window, 0-3 s (two-sided,
+% df = n-1), exact Wilcoxon as backup, leave-one-mouse-out + per-mouse means beside it. The
+% 0-1 / 1-3 s windows are secondary; pre/post carry a ratio and CI only. The LMM
+% log(r) ~ 1 + (1|mouse) is still computed as a reference (it does not drive the star).
+% All of it via utils/ratio_session_stats.m, saved to data/fig3_ratio_stats.mat
 % (struct R3: R3.var.<win> from section Fr, R3.rmse.<win> from section G2r).
 % The trial-level LMM (fig3_olcl_stats.m -> data/fig3_olcl_lmm.mat) is now CORROBORATING only.
 f3_dir = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'data');
@@ -89,7 +92,7 @@ R3 = struct();
 if exist(f3_file, 'file'), tmp = load(f3_file, 'R3'); R3 = tmp.R3; end
 R3.var  = R3var;
 R3.meta = struct('date', datestr(now,'yyyy-mm-dd'), 'ratio', 'CL/OL', ...
-    'primary', 'LMM log(r) ~ 1 + (1|mouse), REML, Satterthwaite', ...
+    'primary', 'one-sample t on log(r), main window 0-3 s (2026-10-27); LMM kept as reference', ...
     'windows', 'pre -3..0, early 0..1, late 1..3, full 0..3, post (var 3..6; rmse 3..4)');
 try, save(f3_file, 'R3'); catch ME, warning('variance_mse: %s', ME.message); end
 
@@ -98,10 +101,12 @@ ax_fr = axes(fig_Fr, 'Units','normalized', 'Position',[0.25 0.15 0.72 0.70]);
 plot_ratio_windows(ax_fr, ST_fr(f3_plot), f3_xlab);
 ylabel(ax_fr, 'CL/OL variance ratio', 'FontWeight','bold');
 % ONE significance mark on the panel-title CLAIM (user 2026-09-23), now from the session-level
-% LMM on log ratios (the larger p of the two stim windows).
-pStim_fr = max(R3var.early.lmm_p, R3var.late.lmm_p);
-fprintf('[Fig3-I] variance CL/OL: stim LMM p<=%.2g (0-1s %.2g, 1-3s %.2g)\n', ...
-    pStim_fr, R3var.early.lmm_p, R3var.late.lmm_p);
+% LMM on log ratios (the larger p of the two stim windows). 2026-10-27: now the session t-test
+% on the log ratio of the MAIN window, 0-3 s.
+pStim_fr = R3var.full.t_p;
+fprintf('[Fig3-I] variance CL/OL 0-3 s: t p=%.2g, Wilcoxon p=%.2g, %d/%d sessions, LOMO worst p=%.2g (LMM ref: 0-1s %.2g, 1-3s %.2g)\n', ...
+    pStim_fr, R3var.full.w_p, R3var.full.nBelow1, R3var.full.n, R3var.full.lomo_worst_p, ...
+    R3var.early.lmm_p, R3var.late.lmm_p);
 title(ax_fr, sprintf('CL lowers variance %s', stars_fr(pStim_fr)), ...
     'FontSize',6, 'FontWeight','bold');
 mark_stim_span(ax_fr);
@@ -523,9 +528,10 @@ ax_g2r = axes(fig_G2r,'Units','normalized','Position',[0.25 0.15 0.72 0.70]);
 plot_ratio_windows(ax_g2r, ST_g2r(f3_plot), f3_xlab);
 ylabel(ax_g2r, 'CL/OL RMSE ratio', 'FontWeight','bold');
 % ONE significance mark on the panel-title CLAIM (user 2026-09-23; see panel I note).
-pStim_g2r = max(R3rmse.early.lmm_p, R3rmse.late.lmm_p);
-fprintf('[Fig3-H] RMSE CL/OL: stim LMM p<=%.2g (0-1s %.2g, 1-3s %.2g)\n', ...
-    pStim_g2r, R3rmse.early.lmm_p, R3rmse.late.lmm_p);
+pStim_g2r = R3rmse.full.t_p;     % main window 0-3 s, session t-test (2026-10-27)
+fprintf('[Fig3-H] RMSE CL/OL 0-3 s: t p=%.2g, Wilcoxon p=%.2g, %d/%d sessions, LOMO worst p=%.2g (LMM ref: 0-1s %.2g, 1-3s %.2g)\n', ...
+    pStim_g2r, R3rmse.full.w_p, R3rmse.full.nBelow1, R3rmse.full.n, R3rmse.full.lomo_worst_p, ...
+    R3rmse.early.lmm_p, R3rmse.late.lmm_p);
 title(ax_g2r, sprintf('CL lowers RMSE %s', stars_fr(pStim_g2r)), ...
     'FontSize',6, 'FontWeight','bold');
 mark_stim_span(ax_g2r);

@@ -79,7 +79,8 @@ fprintf('[BFO] mean stim-window offset from reference (%%dF/F): OL median %.2f, 
 fprintf('\n%-7s %-9s %-34s %-34s %-34s\n', 'window', '', 'CL/OL (Table 4 check)', 'CL/best-fixed', 'best-fixed/OL');
 for w = 1:size(win,1)
     s = ST.(win{w,1});
-    p = @(x) sprintf('%.2f [%.2f %.2f] p=%.2g (%d/15<1)', x.geo, x.geoCI(1), x.geoCI(2), x.lmm_p, x.nBelow1);
+    % p = the session t-test on log ratios (2026-10-27 session rule; was the LMM p)
+    p = @(x) sprintf('%.2f [%.2f %.2f] p=%.2g (%d/15<1)', x.geo, x.geoCI(1), x.geoCI(2), x.t_p, x.nBelow1);
     fprintf('%-7s %-9s %-34s %-34s %-34s\n', win{w,1}, '', p(s.cl_ol), p(s.cl_best), p(s.best_ol));
 end
 fprintf('\n[BFO] LMM t(df) CL/best: early %.2f(%.1f) late %.2f(%.1f) full %.2f(%.1f)\n', ...
@@ -95,7 +96,8 @@ fprintf(['[BFO] mean CL command / OL command (1-3 s): median %.2f (range %.2f-%.
     median(abs(log(T.uCLrel ./ T.cStar))));
 disp(T);
 
-save(fullfile(root, 'controller-analysis', 'data', 'ctrl_best_fixed_ol.mat'), 'T', 'R', 'ST', 'TR', 'win', 'REF', 'UMAX');
+SP = struct('rho', rho, 'p', prho, 'n', height(T), 'x', 'cStar', 'y', 'uCLrel (1-3 s)');   % Table 4 row (2026-10-27)
+save(fullfile(root, 'controller-analysis', 'data', 'ctrl_best_fixed_ol.mat'), 'T', 'R', 'ST', 'TR', 'win', 'REF', 'UMAX', 'SP');
 
 %% [BFO-FIG] per-session steady-state RMSE: OL as run, best fixed input, CL (PNG, review only)
 PS = paperStyle(); setPaperDefaults();
