@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Onset check figures: corrections look right; CL rises unbiased against the OL estimate
+**Changed/Found:** `stats_v2/plot_onsets.py` (new; matplotlib added to `stats_v2/requirements.txt`) → `data/stats_v2/onset_check_{1,2,3}.png` (local, git-ignored). Per session: 2 OL and 2 CL single trials (the largest correction or worst rise, plus a random one) and the OL average aligned on the new vs the old onset. In m1/m2 the old-onset average is about 4 frames late, while the corrected dip starts right after the laser rise. In m3–m8 the largest-shift trials show the response starting before the old onset. The corrected sessions m1–m8 are exactly the sessions whose command is a 35 Hz pulse train; m9–m15 use a step command. CL trials with a prompt rise: the residual vs the OL-derived estimate has a median of −0.17..+0.18 frames per session (IQR within ±0.5). m14 CL trial 89 shows the "error already below the reference" case: no command until frame 18. Minor: m14's OL average (dFk +11) drifts down about 1.5 % over the 8 frames before onset; probably noise (n = 45), worth a glance.
+**Why:** User asked to confirm visually that trial onsets are correctly identified in every session.
+**Next:** User confirms the onsets. Then decide the t = 0 convention and port the onsets to MATLAB.
+
 ### 2026-10-27 — Correction: the 1.88 / 2.86-frame onset offset is not loop latency
 **Changed/Found:** `stats_v2/onsets.py` (docstring and ONSETS.md label only; the onsets are byte-identical). The previous entry called L the "onset→laser latency". It is the offset from the logged onset frame to the first laser command. Measured loop latency (exposure start → laser edge) is 24.0 ms median (methods.tex:101; RESEARCH 2026-10-20, m15). Subtracting it leaves 29.6 ms = 1.04 frames (old builds) and 57.5 ms = 2.02 frames (new builds): whole frames of trial bookkeeping. The first command is computed from onset frame + 1 (old) or + 2 (new). So t = 0 (the logged onset) sits about 1 frame (28.5 ms) earlier relative to the laser in the new builds than in the old.
 **Why:** User: latency cannot be 2.86 frames. Correct; latency is about 0.84 frames.
