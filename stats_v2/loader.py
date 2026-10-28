@@ -59,13 +59,15 @@ def session_info(sid):
     return dict(zip(keys, row))
 
 
-def load_session(sid, dfk_offset=0):
+def load_session(sid, dfk_offset=0, onset_frames=None):
     """Load one session.
 
     dfk_offset: frame shift used to place data.dFk on the timeBlue grid.
       0  -> dFk[i] belongs to timeBlue[i] (the spec's reading; default).
-      k  -> dFk[i] belongs to timeBlue[i + k] (only used for the m14 sensitivity check).
+      k  -> dFk[i] belongs to timeBlue[i + k] (m14: k = 11, see RESEARCH 2026-10-27).
     Frames of the timeBlue grid without a dFk value are NaN.
+    onset_frames: optional 0-based onset frame per validation trial (corrected onsets,
+      stats_v2/onsets.py); replaces the stimStarts-derived onsets.
     """
     info = session_info(sid)
     path = DATA / info["file"]
@@ -138,4 +140,7 @@ def load_session(sid, dfk_offset=0):
     s["dt_frame"] = float(np.median(np.diff(tb)))
     # Onset frame = frame whose timeBlue is nearest to stimStarts (0-based index).
     s["onset"] = np.array([int(np.argmin(np.abs(tb - t))) for t in s["stim"]])
+    if onset_frames is not None:
+        assert len(onset_frames) == len(s["onset"]), f"{sid}: onset override has wrong length"
+        s["onset"] = np.asarray(onset_frames, dtype=int)
     return s

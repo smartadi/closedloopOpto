@@ -277,10 +277,22 @@ def md_table(df, nd=4):
 
 
 def main():
+    # --corrected: onsets from stats_v2/onsets.py (OL laser-command rise) and m14 dFk shifted by
+    # M14_SHIFT; outputs go to data/stats_v2/corrected/. The m14 sensitivity then compares against
+    # the unshifted mapping instead.
+    global OUT
+    corrected = "--corrected" in sys.argv
+    onsets, m14_main, m14_alt = {}, 0, M14_SHIFT
+    if corrected:
+        oc = pd.read_csv(OUT / "onsets_corrected.csv")
+        onsets = {k: g["onset_frame"].to_numpy() - 1 for k, g in oc.groupby("session")}
+        m14_main, m14_alt = M14_SHIFT, 0
+        OUT = OUT / "corrected"
     OUT.mkdir(parents=True, exist_ok=True)
     trials, f3s, f4s, preps, chks, scs = [], [], [], [], {}, {}
     for sid in loader.SESSION_IDS:
-        s = loader.load_session(sid)
+        s = loader.load_session(sid, dfk_offset=m14_main if sid == "m14" else 0,
+                                onset_frames=onsets.get(sid))
         tr, f3, f4, prep, chk = analyse_session(s)
         sc = session_checks(s)
         print(f"{sid}: {s['mn']} {s['td']} trials={s['n_trials_all']} val={s['n_val']} "
@@ -306,7 +318,7 @@ def main():
     tests.to_csv(OUT / "tests.csv", index=False)
 
     # ---- sensitivity: m14 dFk aligned to the END of timeBlue (shift 11 frames)
-    s14 = loader.load_session("m14", dfk_offset=M14_SHIFT)
+    s14 = loader.load_session("m14", dfk_offset=m14_alt, onset_frames=onsets.get("m14"))
     tr14, f3_14, f4_14, prep14, chk14 = analyse_session(s14)
     lag14 = M.response_lag(s14["inpTime"], s14["cmd"], s14["timeBlue"], s14["dFk"])
     del s14

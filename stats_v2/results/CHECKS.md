@@ -1,6 +1,6 @@
 # stats_v2 CHECKS
 
-Generated 2026-10-28T03:43:02+00:00 by `stats_v2/run_all.py`.
+Generated 2026-10-28T03:56:40+00:00 by `stats_v2/run_all.py`.
 
 ## 1. Per-session counts, channel, motion
 

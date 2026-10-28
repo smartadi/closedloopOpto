@@ -1,0 +1,101 @@
+{
+  "git_commit": "5748b13493315419277c94a547e9ef165f7a36da",
+  "git_branch": "alpha",
+  "stats_v2_uncommitted": "M stats_v2/loader.py\n M stats_v2/run_all.py\n?? stats_v2/onsets.py",
+  "code_sha256": {
+    "loader.py": "4ae430c180e1d6c938a8a6a031020546e19962f9f40d0d345a1ff2e396e82055",
+    "metrics.py": "8a8023f0f7d2d0915deedd245861d91f341dd069a1fb061ff39a8fc6e29df65c",
+    "onsets.py": "7022feeb9a1138e2e5c4af1f17356e5ce4271795d32b34a9a73baddff5cbc6b2",
+    "reconcile.py": "d7e96ff5506392f7f8a7960d2e9b6d70b9cc2e7461be430b77119bfc93e5c994",
+    "run_all.py": "910db22d2320789e94d7560d66f2eeec14652dae5dffc12dccfb0934e861fd82",
+    "tests.py": "0825a8762f18619b0cc838f50344dbdb60456d687472c1654b3866943f40cf34"
+  },
+  "utc_time": "2026-10-28T03:56:53+00:00",
+  "python": "3.14.2",
+  "packages": {
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "pandas": "3.1.0",
+    "h5py": "3.16.0"
+  },
+  "inputs": {
+    "AL_0033ctrl01203.mat": {
+      "session": "m1",
+      "sha256": "07a1b0e2136dcc7befd0bb5904b8a6081c13dd4e0f13304976f463bcca69e56a"
+    },
+    "AL_0033ctrl02122.mat": {
+      "session": "m2",
+      "sha256": "2f212f16f924f1c9c608df90aa76e410dac450c493196edd6cdd7e343096b9e9"
+    },
+    "AL_0033ctrl02242.mat": {
+      "session": "m3",
+      "sha256": "3d696e465f64041bc412a6c004b25595c2cec60de0107c0c17ca427585efd71f"
+    },
+    "AL_0033ctrl02262.mat": {
+      "session": "m4",
+      "sha256": "f9f23a33e40300b6643bb0f7f592aebc377f652359106a021ac5bd14d145b97e"
+    },
+    "AL_0033ctrl03041.mat": {
+      "session": "m5",
+      "sha256": "dec9270b3c325e7e3e01dee3f81b61a37e569ee94c17cae016c2d6435b5a7c8b"
+    },
+    "AL_0033ctrl03052.mat": {
+      "session": "m6",
+      "sha256": "b6644d3f6ae3baebd609cefd8d05ea9b1d35f4adf9e9a87482199811cb37aca7"
+    },
+    "AL_0033ctrl03204.mat": {
+      "session": "m7",
+      "sha256": "9fea7923ace93cfe074c8ec37c2bdd142922a10ceeaaa4b49c7d5c0f813efe6a"
+    },
+    "AL_0033ctrl04152.mat": {
+      "session": "m8",
+      "sha256": "52038c82ac35923e656401a6f076582a0b1a6c18f4e925aecbc3a1aef46314a3"
+    },
+    "AL_0039ctrl04201.mat": {
+      "session": "m9",
+      "sha256": "7e007cc8a1d7b256a527e4dbc5a21e663be126b1b958d06ec8277c3b51048f2f"
+    },
+    "AL_0039ctrl04191.mat": {
+      "session": "m10",
+      "sha256": "c3d12385c7c2234a58ff483f8ffb0f4c2f97e4867920a5a876101d1f400961db"
+    },
+    "AL_0039ctrl04303.mat": {
+      "session": "m11",
+      "sha256": "7126735a932f56c5b3e64e74a97e4603249c5c3b510af6f4ca6817fe0f4d441c"
+    },
+    "AL_0033ctrl04191.mat": {
+      "session": "m12",
+      "sha256": "b52fd98dad8d600b7598f75073d81efd8b5e0305ae9ff1355fa811592bd82a9b"
+    },
+    "AL_0039ctrl04202.mat": {
+      "session": "m13",
+      "sha256": "d26641baaa50f4fbe2ce625c2b11200fe0ec6f784b28451d8af16a9a01fba316"
+    },
+    "AL_0048ctrl07292.mat": {
+      "session": "m14",
+      "sha256": "95dd3f2fdc9d52f6ed2482266b04e1d593d059e9c67266dd33d75bd5ef1af8dd"
+    },
+    "AL_0051ctrl07292.mat": {
+      "session": "m15",
+      "sha256": "864c1e9b7ce611570a68d947a641931eb60da858b4aaee83b5f4a33189ce84e7"
+    }
+  },
+  "fields_read": [
+    "d.en",
+    "d.inpTime",
+    "d.inpTime594",
+    "d.inpTime638",
+    "d.inpVals",
+    "d.inpVals594",
+    "d.inpVals638",
+    "d.input_params",
+    "d.mn",
+    "d.motion",
+    "d.params.dur",
+    "d.ref",
+    "d.stimStarts",
+    "d.td",
+    "d.timeBlue",
+    "data.dFk"
+  ]
+}

@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Rebuild with corrected onsets + m14 fix: Fig 3 unchanged; Fig 4D init-dev R drops below Holm
+**Changed/Found:** `stats_v2/run_all.py --corrected` → `stats_v2/results/corrected/`. Fig 3 is unchanged in substance: full RMSE 0.768 [0.727, 0.811], p = 5.8e-8, 15/15, 4/4 mice (p = 0.011); full variance 0.585, p = 6.3e-6; pre RMSE 1.013 [0.997, 1.030]. Fig 4D (p, Holm): init-dev P 0.056, R 0.014 (Holm 0.071; was 0.0060 / 0.042 with the old onsets), A 0.91. Motion P 0.011, R 0.16, A 0.0023 (Holm 0.0092, 11/11, 4/4 mice). Rel δ P 0.98, R 0.035, A 0.029 (Holm 0.087). Abs δ P 0.0098, R 7.0e-4 (Holm 0.0057, 15/15), A 0.094 (Wilcoxon 0.035, 12/15). Survive Holm: motion A and abs-δ R only.
+**Why:** User chose the laser-command rise (OL only) as the onset, with stimStarts corrected in the sessions that need it.
+**Next:** Port the corrected onsets and the m14 fixes (dFk shift 11, 638 nm channel) into the MATLAB producers so the figures match; then redo the Fig 4D Results text and Table 4.
+
+### 2026-10-27 — Corrected onsets: OL laser rise, carried to CL trials by time
+**Changed/Found:** `stats_v2/onsets.py` (new), `loader.py` (`onset_frames` override), `run_all.py` (`--corrected`: corrected onsets + m14 dFk shift 11; outputs to `data/stats_v2/corrected/`). Nominal onset→laser latency L = 1.88 frames (old builds) and 2.86 (new), from the sessions whose OL offsets are stable. A session is corrected if any OL trial sits > 1.5 frames from L. That rule selects exactly m1–m8 (AL_0033, Jan–Apr 15 2025); m9–m15 are untouched. Shifts: m1 and m2 +3..+5 frames (median +4); m3–m8 median 0, range −7..+2. In CL trials whose own rise was detected, 89–100 % sit within 1 frame of the OL-derived estimate. No clock re-sync jumps between neighbouring OL trials. Per-trial table: `stats_v2/results/onsets_corrected.csv`.
+**Why:** User: trust the command rise only in open loop (a CL command can start late when the error is ~0); stimStarts were right originally but code changes shifted them, so correct the sessions that need it.
+**Next:** Same port to MATLAB as the entry above.
+
 ### 2026-10-27 — Fig 4D at session level: abs-δ attenuation no longer significant; init-dev R and motion A stronger
 **Changed/Found:** `stats_v2/results/tests.csv` — per-session slopes, t-test across sessions (session-level p vs old mixed-model p). init-dev: P 0.060 (0.014), R **0.0060** (0.028), A 0.51 (0.89). Motion: P 0.011 (0.013), R 0.13 (0.27), A **0.0019**, 11/11 sessions (0.0048). Rel δ: P 0.95 (0.76), R 0.040 (0.044), A 0.039 (0.027). Abs δ: P 0.011 (6.6e-4), R **7.0e-4**, 15/15 (1.6e-4), A **0.082**, Wilcoxon 0.035, 12/15 (0.0014). Holm < 0.05: motion A 0.0077, abs-δ R 0.0056, init-dev R 0.042. Results.tex currently quotes abs-δ attenuation "+8 %/SD, p = 0.0014, survives correction"; at session level it is +7 %/SD, p = 0.082.
 **Why:** User chose session-level tests for Fig 4D. The values are preliminary: they still use stimStarts onsets (see the onset entry) and the literal m14 alignment.
