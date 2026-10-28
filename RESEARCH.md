@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Stats recommendations revised after a strict-reviewer pass
+**Changed/Found:** `paper-writing/STATS_AUDIT.md` §7 — session unit kept (justified by within-session random interleaving, methods.tex:130/596) with the mouse level in the same sentence. 0–3 s becomes the primary window (was "drop its test"). Gap trend kept as the linear-scale check on attenuation (was "drop"), because attenuation was added 2026-10-18 after motion R was n.s. The 4G all-13 result goes in the text. Prep quality allowed only as a pre-specified OL- or actuator-based covariate, never as an exclusion.
+**Why:** User asked to rethink each recommendation as a strict reviewer, and argued that a weak mouse reflects prep quality, not the controller.
+**Next:** User decides on these revisions; then write the clean-room spec.
+
+### 2026-10-27 — Best-fixed outliers are calibration sessions, not weak preps; AL_0048 OL command reads 0.003
+**Changed/Found:** `controller-analysis/data/ctrl_best_fixed_ol.mat` (table T) — Mouse 4 (AL_0051): CL/OL 1–3 s 0.72 (typical), best/OL 0.66, OL offset 2.03 → 0.38 %ΔF/F under the best fixed input, so CL/best = 1.10. Session 1k (AL_0033): same pattern (offset 2.25, CL/best 1.00). AL_0048 (Mouse 3e): uOL = median per-trial max of `ncInp` = 0.003, against 0.33–2.49 in the other 14 sessions; it is also the weakest CL/OL session (0.94).
+**Why:** Checked whether the user's prep-quality explanation fits the session that breaks the best-fixed mouse-level result. It doesn't fit Mouse 4: its feedback benefit over OL is normal, and its OL was badly calibrated.
+**Next:** Verify AL_0048's `ncInp` units, or whether OL barely stimulated, before any interpretation of that session; include it in the clean-room spec as an explicit check.
+
 ### 2026-10-27 — Session-level stats rule: Fig 3 robust to every mouse check; best-fixed 1–3 s is not
 **Changed/Found:** `paper-writing/STATS_AUDIT.md` §6 — recomputed the Fig 3, best-fixed and Fig 4G tests from saved per-session values under the session rule (t on log ratio + Wilcoxon) with leave-one-mouse-out and mouse-averaged checks. Fig 3: every stimulation window passes all checks (LOMO worst p ≤ 0.014; 4/4 mice below 1). Fig 3I stars go ** → ***. Fig 4G: two-sided p = 2.6e-4, 3/3 mice < 1, still p = 0.021 with the 2 excluded sessions. Best fixed 1–3 s: session p = 2.4e-4 but dropping AL_0033 gives p = 0.053, and AL_0051's single session has ratio 1.10 (3/4 mice). Best fixed 0–1 s is weak (LOMO up to 0.16). Separately, the Fig 4D panel stars use uncorrected p, so five starred slopes are ones the text says don't survive Bonferroni.
 **Why:** User asked how moving the unit from mouse to session changes results and figures before committing to the rule.

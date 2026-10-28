@@ -177,3 +177,31 @@ Figure-level consequences:
 - Fig 3I title stars: `max(early, late)` p goes 0.0039 → 4.5e-4, so `**` → `***`. Fig 3H stays `***`. Fig 4G stays `***`.
 - Fig 4D stars use **uncorrected** p < 0.05 (`f4_row2_quartiles.m` `arrowstars`), while the text and Table 4 use Bonferroni.
   Five starred results don't survive correction: initial-deviation P and R, motion P, relative-δ R and A. Pre-existing, unrelated to the session switch.
+
+---
+
+## 7. Revisions after a strict-reviewer pass (2026-10-27)
+
+These supersede the matching points above.
+
+1. **Session as the unit holds up, because of the design.** CL and OL trials were randomly interleaved within each session
+   (methods.tex:130, :596), so each session is its own control and the per-session ratio cancels the prep. Report the mouse level
+   **in the same sentence**, not in a footnote: "15/15 sessions, 4/4 mice".
+2. **Primary window = 0–3 s** (the locked trial-RMSE window), with 0–1 / 1–3 s as the secondary split. This replaces "drop the 0–3 s test":
+   dropping the window that used to fail would look like hiding it.
+3. **Keep gap trend next to attenuation.** This replaces "drop gap trend". Attenuation was added on 2026-10-18 after motion
+   regularizability came out n.s. (RESEARCH 2026-10-18, `f4_row2_quartiles.m:226`), which a reviewer would read as a post hoc
+   choice. The linear-scale gap trend is the check: motion agrees on both scales (p = 0.0048 / 0.0051). Absolute δ differs
+   (0.0014 / 0.31), and that difference is the text's own point (equal absolute rises → rising ratio). Consider saying in Methods
+   when attenuation was added.
+4. **Fig 4D stars on Bonferroni-corrected p** (unchanged).
+5. **Fig 4G: put the all-13-session result in the text** (11/13 below one, p = 0.021) next to the 11-session one, because the
+   offset exclusion can look post hoc.
+6. **Best fixed: don't frame Mouse 4 as a weak prep.** Its CL/OL steady-state ratio is 0.72, which is typical. Its CL/best ratio of
+   1.10 arises because OL sat 2.0 %ΔF/F off the reference and the best fixed input removed that offset (best/OL 0.66). Session 1k
+   shows the same pattern (offset 2.25, CL/best 1.00). Explain it with theory instead: CL can beat a perfectly calibrated fixed input
+   only by rejecting trial-to-trial disturbances.
+7. **Prep quality, if used, must be a pre-specified covariate from OL-only or actuator data** (for example, the fraction of CL samples
+   at the 0 / u_max bounds, or OL gain per volt), tested across all sessions with every mouse kept in. Never use it as an exclusion rule.
+8. **Must verify before interpreting AL_0048:** its OL command (`ctrl_best_fixed_ol.m:45`, median per-trial max of `ncInp`) is
+   0.003, against 0.33–2.49 in every other session. Either a units difference or almost no OL stimulation.
