@@ -16,6 +16,26 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-27 — Fig 4D at session level: abs-δ attenuation no longer significant; init-dev R and motion A stronger
+**Changed/Found:** `stats_v2/results/tests.csv` — per-session slopes, t-test across sessions (session-level p vs old mixed-model p). init-dev: P 0.060 (0.014), R **0.0060** (0.028), A 0.51 (0.89). Motion: P 0.011 (0.013), R 0.13 (0.27), A **0.0019**, 11/11 sessions (0.0048). Rel δ: P 0.95 (0.76), R 0.040 (0.044), A 0.039 (0.027). Abs δ: P 0.011 (6.6e-4), R **7.0e-4**, 15/15 (1.6e-4), A **0.082**, Wilcoxon 0.035, 12/15 (0.0014). Holm < 0.05: motion A 0.0077, abs-δ R 0.0056, init-dev R 0.042. Results.tex currently quotes abs-δ attenuation "+8 %/SD, p = 0.0014, survives correction"; at session level it is +7 %/SD, p = 0.082.
+**Why:** User chose session-level tests for Fig 4D. The values are preliminary: they still use stimStarts onsets (see the onset entry) and the literal m14 alignment.
+**Next:** Decide the onset marker; re-run; then rewrite the Fig 4D Results paragraph around the session-level numbers.
+
+### 2026-10-27 — BUG: m14 (AL_0048) dFk is offset 11 frames from timeBlue
+**Changed/Found:** `data/AL_0048ctrl07292.mat` — `data.dFk` has 54828 frames, `d.timeBlue` 54839. With the literal mapping dFk[i] ↔ timeBlue[i], the OL trial-average dFk starts falling 6 frames BEFORE the laser command rises (command at +2 frames, dFk dip from −6). In m13/m15 the dip starts 2 frames after the command. Shifting m14 by 11 frames gives a +3-frame lag, like every other session. The old pipeline uses the same literal mapping, so its m14 windows are about 0.31 s late. Effect on Fig 3 is small (full RMSE ratio 0.7675 → 0.7670); init-dev R Holm p moves 0.042 → 0.060.
+**Why:** Found by the clean-room alignment check and confirmed independently from the trial averages.
+**Next:** Fix m14's frame mapping at the source (SVD/dFk time base for the 2026-07 builds). Check whether the AL_0048 sine sessions (Fig 5/6 phase lags) have the same length mismatch; a 0.31 s offset is about 113° at 1 Hz.
+
+### 2026-10-27 — Onset marker: stimStarts is off from the actual laser onset in the old builds
+**Changed/Found:** The laser command (2 kHz, same clock) rises after the stimStarts frame by: m1 4.7–6.7 frames (median 5.7, every trial); m2 5.5–6.9; m3–m8 a saw-tooth drift from −5 to +4 frames; m9–m13 about 1.9; m14/m15 about 2.9. In m1 the dFk dip aligned on the command rise starts within 1 frame; aligned on stimStarts it starts at +6/+7. So the command marks the true onset and stimStarts is about 0.16 s early in m1/m2 and jitters ±0.14 s in m3–m8. Old pipeline and rebuild share stimStarts, so this is not a discrepancy between them. Both conditions are affected alike per session; the transient window and initial deviation are affected most.
+**Why:** Spec §6 onset sanity check (876/1670 trials outside ±2 frames), confirmed independently for m1 and m4.
+**Next:** User decides the onset marker (command rise vs stimStarts). Then re-run Fig 3/4D as a sensitivity before choosing the primary.
+
+### 2026-10-27 — Clean-room rebuild reproduces the old trial-level values exactly
+**Changed/Found:** `stats_v2/` (loader/metrics/tests/run_all, built blind from SPEC.md; commit 09edd4a), `stats_v2/reconcile.py`, `stats_v2/results/`. Trial sets are identical in all 15 sessions (1670 trials). Per-trial full-window RMSE matches to ≤ 4.9e-7. Per-session Fig 3 ratios for pre/full/post match to ≤ 4e-7. Early/late differ by ≤ 0.007 (RMSE) and ≤ 0.028 (variance), because the old code puts the 1.000 s sample in "early" (tp ≤ 1, `variance_mse.m:76`) and the rebuild puts it in "late" — a convention, not a bug. Fig 3 session-level tests reproduce §6 of STATS_AUDIT (full RMSE p 9.2e-8, full variance 7.4e-6).
+**Why:** Phase 4 reconciliation, tier by tier.
+**Next:** none for Fig 3 arithmetic. The open items are upstream (onsets, m14 alignment).
+
 ### 2026-10-27 — Clean-room stats rebuild: spec v1 and Python environment
 **Changed/Found:** `stats_v2/SPEC.md` (new) and `stats_v2/requirements.txt` (numpy 2.5.4, scipy 1.18.1, pandas 3.1.0, h5py 3.16.0, venv at `stats_v2/.venv`). Fig 3 and Fig 4D are rebuilt in Python from each cache's `d.*` and `data.dFk` only, read via h5py. All 15 caches are local and v7.3. Rules: active laser channel picked per session, validation block = last N trials, input_params row 3 = condition, session-level tests via one `tests.py`. Out of scope for v1: ΔF/F itself, Fig 4G, Fig 2G, best fixed input.
 **Why:** User approved the clean-room rebuild with Python tests. An earlier attempt to run `load_sessions.m` through the MATLAB MCP hung for 30 min (MATLAB idle, no network I/O) and was aborted, so this path avoids MATLAB entirely.
