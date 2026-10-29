@@ -150,13 +150,14 @@ if ~isempty(k), sig(ok) = p(ok) <= ps(k); end
 end
 
 function panel(G, here)
-% Per-session coupling loss maps (r_base - r_stim), one row OL, one row CL, sessions in paper order
-% m2..m13 (load_sessions.m; m1 has no stim-site cache). Each map = that session's own brain outline,
-% common nodes inside its own mask, its own site (star). Right: per-session r_base - r_stim, OL vs CL.
+% Per-session coupling loss maps (r_base - r_stim), one row OL, one row CL, sessions labelled and
+% ordered by the paper session label (utils/paper_session_label.m: mouse, then date; m1 has no
+% stim-site cache). Each map = that session's own brain outline, common nodes inside its own mask,
+% its own site (star). Right: per-session r_base - r_stim, OL vs CL.
 % Colormap is brown-white-teal on purpose: red/blue are the locked OL/CL condition colours.
-% (user 2026-10-20: paper numbering, all sessions in a row, plot baseline - stim)
+% (user 2026-10-20: all sessions in a row, plot baseline - stim; 2026-10-29: paper labels, not m-numbers)
 S = jnStyle(); cmD = brbg(256); cl = [-0.3 0.3]; nS = numel(G.sessions);
-mnum = cellfun(@paper_m, G.sessions); [mnum, ord] = sort(mnum);
+lab = paper_session_label(G.sessions, 'short'); [lab, ord] = sort(lab);
 mlN = (G.node(:,2) - 1)/50 - 1; apN = (G.node(:,1) - 1)/100;
 xl = max(G.lat_px) / G.pxmm * [-1 1]; yl = [0 max(G.L_px) / G.pxmm];
 fig = jnFig(17.6, 5.0);
@@ -176,7 +177,7 @@ for c = 1:2
             'MarkerFaceColor', 'w', 'MarkerEdgeColor', 'k', 'LineWidth', 0.3);
         set(ax, 'YDir', 'reverse'); axis(ax, 'equal', 'off'); xlim(ax, xl); ylim(ax, yl);
         if c == 1
-            text(ax, 0, yl(1) - 0.2, sprintf('m%d', mnum(j)), 'HorizontalAlignment', 'center', ...
+            text(ax, 0, yl(1) - 0.2, lab{j}, 'HorizontalAlignment', 'center', ...
                 'VerticalAlignment', 'bottom', 'FontSize', S.fs_annot, 'FontWeight', 'bold');
         end
         if j == 1
@@ -214,14 +215,6 @@ set(ax, 'XTick', [1 2], 'XTickLabel', {'OL', 'CL'}, 'XLim', [0.5 2.5], 'YLim', [
 ylabel(ax, 'r_{base} - r_{stim}', 'FontSize', S.fs_label, 'FontWeight', 'bold');
 title(ax, sprintf('n = %d, p = %.4f', nS, signrank(yc, yo)), 'FontSize', S.fs_annot, 'FontWeight', 'normal');
 jnExport(fig, fullfile(here, '..', 'paper', 'images', 'supp_seedfc', 'seedfc_group.pdf'));
-end
-
-function m = paper_m(sess)
-% paper session numbering (controller-analysis/load_sessions.m, mouse.m1..m13)
-K = {'AL_0033_0120_e3',1; 'AL_0033_0212_e2',2; 'AL_0033_0224_e2',3; 'AL_0033_0226_e2',4; 'AL_0033_0304_e1',5; ...
-     'AL_0033_0305_e2',6; 'AL_0033_0320_e4',7; 'AL_0033_0415_e2',8; 'AL_0039_0420_e1',9; 'AL_0039_0419_e1',10; ...
-     'AL_0039_0430_e3',11; 'AL_0033_0419_e1',12; 'AL_0039_0420_e2',13};
-m = K{strcmp(K(:,1), sess), 2};
 end
 
 function cm = brbg(n)
