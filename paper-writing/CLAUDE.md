@@ -15,6 +15,11 @@
 - The NC repo has a fetch-only `jn` remote (push URL disabled, main only). A shared fix may be
   cherry-picked from `jn/main` while the file still matches; after the NC restructure, port by hand.
   Nothing in the JN repo knows the NC repo exists.
+- **NC style tools** (here in `paper-writing/`): `nc_style.py <draft> [--apply]` converts JN conventions to
+  Nature Comms ones (Fig. 1a refs, lowercase panels, Supplementary Fig./Table, equation (n), "Methods").
+  It is idempotent, so re-run it whenever `stat_tables.tex` is regenerated into the NC draft
+  (`paper_stats_tex` always writes JN style) or text is ported from JN. `nc_wordcount.py <draft>` gives
+  the word budget against the Nat Comms limits (main text excludes abstract, Methods, refs, legends).
 - **Every manuscript request names a draft. If it is unclear which, ask.**
 - Both are their own git repos, NOT part of `brain_paper`. Chain for each: local repo → its GitHub
   repo → its Overleaf project pulls via GitHub sync. Both are `auto` in the hub's `REPOS.md`, so
