@@ -24,6 +24,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ## 🔴 Blocking submission
 
+- [ ] **Anna's review (2026-10-29, through Fig 4): 26 items** — prose "slop" sweep, abstract/significance framing, intro sentences, opsin wording, Fig 1–4 panel fixes, Fig 4E kernel map. Every note verbatim with location, fix and status in `paper-writing/REVIEW_ANNA_2026-10-29.md`; work it one item at a time; 7 decisions (D1–D7) wait on Aditya.
 - [ ] **Reassemble Figure5.pdf** in Illustrator from the re-exported `figures_final/panels/figure5/` (2026-10-28: all 10 panels moved to the rig signal), copy to `Closedloop_edit/images/`, then push Closedloop_edit main (text already committed locally). RESEARCH 2026-10-28.
 - [ ] **Reassemble S1.pdf** in Illustrator: its OL-variance-evolution panel was re-exported 2026-10-27 (figures_final/S1.pdf is from 2026-10-05).
 - [ ] **Fig 4G re-run on the fixed onsets.** Blocked 2026-10-27: the widefield SVD folders on the lab server are empty or missing for AL_0033 2025-02-12 and 2025-02-26, and AL_0039 2025-04-20. Then: `f4_cl_reject_lmm` → `f4_cl_reject_panel` (PAPER_FINAL), `paper_stats_table` / `paper_stats_tex`, and the Fig 4G Methods paragraph, Results text, caption and Table 6 (two-sided session t + all-13 sensitivity).
