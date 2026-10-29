@@ -247,7 +247,7 @@ drift to be "unified"; do not reconcile them.
 
 ### Manuscript
 - Target style: Li & Lu et al. — active voice, results-first topic sentences, no equation refs in Results
-- Local editing: `C:\Users\aditya\Documents\projects\Closedloop_edit\`
+- Local editing, two independent drafts (2026-10-29): JN = `C:\Users\aditya\Documents\projects\Closedloop_edit\` (arXiv, then JNeurosci); NC = `C:\Users\aditya\Documents\projects\Closedloop_nc\` (Nature Communications). Each has its own GitHub repo and Overleaf project; every manuscript request names one. See `paper-writing/CLAUDE.md`.
 - Sync to Overleaf after editing
 
 ---

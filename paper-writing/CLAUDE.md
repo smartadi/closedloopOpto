@@ -1,21 +1,33 @@
 # Paper Writing — Session Context
 
 ## Editing environment — local-first, Overleaf is downstream
-- **Repo:** `C:\Users\aditya\Documents\projects\Closedloop_edit\` (own git repo, NOT part of `brain_paper`)
-- **Chain:** local repo → GitHub `smartadi/Closedloop` → Overleaf pulls via GitHub sync
+
+### Two independent drafts (since 2026-10-29)
+| Draft | Local repo | GitHub | Overleaf | Target |
+|---|---|---|---|---|
+| **JN** | `projects\Closedloop_edit\` | `smartadi/Closedloop` | original project (shared with Nick) | arXiv, then JNeurosci |
+| **NC** | `projects\Closedloop_nc\` | `smartadi/Closedloop-NC` (private) | imported from GitHub 2026-10-29 | Nature Communications |
+
+- NC was cloned from JN main 98aebf1 (tag `fork-nc-2026-10-29` in the NC repo). From then on the two
+  drafts are independent: prose, captions, figure assemblies, `main.tex` and `refs.bib` belong to each draft.
+- Shared, single-sourced in `brain_paper`: analysis code, panels (`paper/figures_final/panels/`),
+  `STATS_TABLE.csv`, FINDINGS. A science change must land in both drafts by hand.
+- The NC repo has a fetch-only `jn` remote (push URL disabled, main only). A shared fix may be
+  cherry-picked from `jn/main` while the file still matches; after the NC restructure, port by hand.
+  Nothing in the JN repo knows the NC repo exists.
+- **Every manuscript request names a draft. If it is unclear which, ask.**
+- Both are their own git repos, NOT part of `brain_paper`. Chain for each: local repo → its GitHub
+  repo → its Overleaf project pulls via GitHub sync. Both are `auto` in the hub's `REPOS.md`, so
+  `sync.py` never pushes their `main`.
 - **Editor:** VS Code + LaTeX Workshop. `.vscode/settings.json` is committed-ignored, so it is local only.
 - **Build locally:** MiKTeX is installed; `latexmk -pdf main.tex` compiles (31 pp). Never edit on Overleaf while a draft is open locally — it forces a merge.
-- **Shared with Nick** on Overleaf
 
 ### Branch protocol (the review gate)
-| Branch | Meaning |
-|---|---|
-| `main` | Mirrors what is on Overleaf. Only fast-forward merges from `draft`. |
-| `draft` | Where Claude (and in-progress user edits) commit. Never pushed. |
-
-Claude commits prose changes to `draft` only. Aditya reviews `git diff main..draft`
-in VS Code, then merges to `main` and pushes; Overleaf pull is the last step.
-**Never push `draft`, and never commit to `main` directly.**
+Since 2026-10-27 each draft repo has ONLY `main` (the `draft` branch was deleted locally and on
+GitHub). Commit straight on `main`, one commit per logical change, check with `latexmk`, and ask
+before pushing `main`, because a push reaches Overleaf. `origin/overleaf-*` branches are Overleaf's
+conflict branches, not ours. Default is still Overleaf-first: give snippets in chat and edit the
+repo only when Aditya asks.
 
 ### What must NOT reach Overleaf
 - Build artifacts → already handled by `.gitignore` (note: `.gitignore` itself IS pushed).
@@ -26,7 +38,9 @@ in VS Code, then merges to `main` and pushes; Overleaf pull is the last step.
 
 ### Figures
 `.\sync_figs.ps1` (dry run) / `-Apply` copies **only figures cited by `\includegraphics`**
-from `brain_paper/paper/` into `images/`, and flags cited-but-missing + tracked-but-uncited.
+into `images/`, and flags cited-but-missing + tracked-but-uncited. Each draft has its own local copy:
+JN pulls from `brain_paper/paper/`, NC from `brain_paper/paper/figures_final/nc/` (the NC Illustrator
+assemblies: lowercase panel letters, 88/180 mm widths). Both assemblies link the same panels.
 
 ## File map (Closedloop_edit/)
 | File | Role |
