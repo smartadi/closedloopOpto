@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — Fig 4E kernel map: not an indexing bug, but the ridge weights cannot be read as a map
+**Changed/Found:** `controller-analysis/f4_kernel_map.m` (Anna's review: "looks bugged") — checked the plotted ridge file `ctrl_ols_ol_stimblind_ridge_AL_0033_0415_e2.mat`. The 408 weights match the 408 grid points (33×17 grid, step 13 px), so nothing is misplaced. The weights flip sign from pixel to pixel: sum(b) = 1.55 against sum(|b|) = 19.7, and the correlation between neighbouring weights is about zero (−0.08 horizontal, 0.13 vertical). Ridge spread the fit across strongly correlated neighbouring pixels. The prediction itself is fine (held-out R² 0.748 at λ* = 0.046). Held-out R² is flat across λ: 0.755 at λ → 0, 0.709 at λ = 1, 0.686 at λ = 10.
+**Why:** a backward-model weight map shows how the model cancels shared signal, not where the information sits (Haufe et al. 2014), so the panel can't support the "the homolog carries the most weight" reading that Anna expects and the script header claims. The pixel time series aren't cached (the S1/S2 files hold no X or Gram), so a forward map needs the session's SVD to be reloaded.
+**Next:** decide with Aditya: (1) replace 4E with a forward pattern (each contra pixel's covariance with the prediction) or a spontaneous-frame correlation map, or (2) drop 4E. Nothing changed yet.
+
 ### 2026-10-28 — Fig 5 panels re-exported and the manuscript's Fig 5 numbers updated (committed locally, NOT pushed)
 **Changed/Found:** Headless `matlab -batch` ran `load_bilateral` → `sine_ff_plots_combined` (s2) → `sine_ff_across_sessions` with `PAPER_FINAL` on. All 10 `figures_final/panels/figure5/` panels were rewritten through the mirror. The old panels and working copies are backed up in `data/_pre_sine_rig_20261028/`. Trial counts are unchanged: s2 51/46/46/57; pooled 136/110/100/132.
 
