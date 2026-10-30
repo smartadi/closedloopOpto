@@ -110,6 +110,38 @@ sentences into sentence 1 and replaces "slow-wave-like delta-band" with "1–4 H
 
 ## Figure 1
 
+### Anna's Fig 1 redraw (her Claude chat "Scientific figure formatting", read 2026-10-29)
+
+Shared as https://claude.ai/share/530f9b84-ccfa-4a2e-9707-debbb3cb2178, now opened for aditya.158@gmail.com.
+The chat text is readable, but **its files are not**: the share says "This link doesn't give access to
+this file". Anna has to send the files herself: `Panel e control loop.svg`, `Panel d architecture.svg`,
+and `Figure full 180mm` as .pdf, .svg and .png. Drop them in `brain_paper/paper/from_anna_2026-10-29/`.
+What the chat produced:
+- **Layout:** 180 × 112 mm in two rows. The top row (44 mm) is A 46 mm, then B, C and F at 38–42 mm.
+  The bottom row is D (57 × 62 mm) and E (118 × 62 mm). A, B and F are placeholders; C is a low-res crop.
+  180 mm is the Nature Comms double-column width, so this fits the NC assembly.
+  She left open whether to reletter in reading order (A B C D / E F).
+- **Style:** 6.5 pt Arial text, 8 pt italic serif for variables and gains, 10 pt bold panel letters,
+  0.7 pt lines. Our house style is 6 pt bold (also inside Nature's 5–7 pt range). Pick one size for the
+  whole figure, which is Anna's G3 complaint.
+- **E changes:** "Open-loop gain" became "Feedforward gain" (correct: K_r is the feedforward term);
+  "Controller" became "PI controller"; signals are labelled r, e, u, y; the stray output arrow and the
+  mouse icon are gone ("System (mouse cortex)"); the widefield image is a placeholder
+  (`widefield_image_REPLACE`, 14 × 14 mm).
+- **⚠ E sign flip is WRONG for this paper.** Her chat changed the summing junction to e = r − y,
+  calling the original positive feedback. Our Methods define **e_t = y_t − y_ref**
+  (`methods.tex` eq. `eq:error`), because the light only lowers activity, so the command must rise when
+  activity is above the reference. With a plant of negative gain, y − r and positive gains is negative
+  feedback. When the SVG arrives, restore "+" on y and "−" on r, or show the plant sign explicitly.
+  The original figure was right.
+- **D changes:** labels are aligned; each arrow meets a rising edge of the trigger trace. The trace is
+  schematic, not to scale. To make it to scale, use the blue-frame interval (35 Hz) and the
+  24.0 ms median latency.
+- **Her open question (latency definition):** Methods L100–101 time it from **exposure start** of the
+  source frame to the laser command (24.0 ms median, Mouse 4 whole session). Fig 1F (200 loop cycles,
+  14–47 ms) must say the same on its axis (F1.5). PAPER.md still flags 1F as having no generator in
+  the repo; check `latencyAnalysis.m`.
+
 Producers: A `wfpath.pdf`; B, D and E are Illustrator schematics (`schematic_optoephyswf (1).pdf`
 in figures_final); C `controller-analysis/load_sessions.m` (`svd_frame_*`); F `latencyAnalysis.m`
 (root; prints `paper/latency_histogram.pdf` with `print`, not `paperExport`).
