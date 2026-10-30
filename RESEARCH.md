@@ -16,6 +16,56 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — Bug: NC Results L39 still quoted the old 200-cycle latency ("at most 47 ms and about half that on average")
+**Changed/Found:** Found during the G4 sweep. NC `results.tex` L39 is now two sentences: software computes the error and, from it, the stimulus on every frame; "The stimulus follows the camera exposure by a median of 24 ms and at most 43.5 ms (Fig. 1c,d)". It cited Fig 1c,e; e is the block diagram, so it now cites c,d.
+**Why:** D8 replaced Fig 1c, its caption and Methods with the whole-session measurement (Mouse 4, n = 3539), but missed this Results sentence, so the text and figure disagreed.
+**Next:** Grep JN for "47" when porting D8.
+
+### 2026-10-30 — F2.7a: relative vs absolute 2–4 Hz power text applied to NC (Results, Fig 2g caption, Methods, 5 references)
+**Changed/Found:** Applied `paper-writing/relative_vs_absolute_power.md` §6 to NC.
+- **Results state paragraph:** one ~70-word sentence became five. Two refs say why low-frequency power indexes state (Crochet/Poulet/Vinck) and that wide-field imaging resolves it (Vanni 2017, Jacobs 2020). Absolute = band power, ρ = 0.97 with total power. Relative = share of 0.4–10 Hz, ρ = 0.24. It cites Supplementary Fig. 2a–c, so that supplement is now cited.
+- **δ removed:** from Results L92–101 and caption g. Caption g's "state ." is fixed, and its dashed line is now "stimulus-free control" (was "no stimulus trials").
+- **Methods L479–482:** replaced; it drops "the sub-band least attenuated by the controller", which is outcome-informed and wrong (review M19).
+- **Methods:** new "Bands" paragraph.
+- **refs.bib:** +Jacobs2020, Vanni2017, Donoghue2020eNeuro, Ma2016, Wright2017, copied from the checked list in the md §7.
+
+**Why:** Anna F2.7 ("why del? … what is relative vs absolute supposed to be"), Aditya 2026-10-29 (be clear on the difference and cite why these bands), and the G4 sweep (Results L86 was one of the flagged paragraph-sentences).
+**Next:** Fig 4 panels still say "abs δ" (F4.3). JN not ported. Results is +162 words.
+
+### 2026-10-30 — G4: "slop" sweep of the NC Results through Fig 4 and captions
+**Changed/Found:** NC `results.tex`, applying the tracker's cross-cutting list:
+- **Definitions wedged in as asides, now their own sentences or reworded:**
+  - initial deviation (L136);
+  - best fixed input (L141, now three sentences);
+  - attenuation (L201, now "We therefore also divided closed-loop by open-loop error, which gives the fraction of error left under feedback. The slope of this error ratio with the state measures attenuation");
+  - Global/Local (L222);
+  - RR (L227).
+- **Dip/rebound paragraph (L79–82):** one claim per sentence. It explains poles in plain words ("Each fitted model describes the response as a sum of modes. Each mode decays with its own time constant, set by one of the model's poles"). This answers Anna's "what is a pole" without deciding D5.
+- **Split "…, so …; …" chains:** L91, L94, L95, L98, L153, L154, L190, L202, L207, L208, L209, L212, and the Fig 4d caption.
+- **Grammar:**
+  - L151 "we observe the drop … holds showing its not a session specific effect";
+  - L154 "and the controller treats them as disturbance".
+- **"Significantly reduced" (L150)** became "fell much more": no test sits behind that single-session claim.
+- **Small fixes:**
+  - L77 reworded ("The dynamics were similar enough across sessions that the gains carried over…");
+  - Fig 2f caption: "filled markers", not "solids";
+  - Fig 3d caption: "Panels d and e".
+- **"Plant":** now defined in its own sentence after L42 ("It acts on the cortical response to light, which control theory calls the plant.").
+
+**Why:** Anna G4 / "you gotta fix the claude slop": the tracker's cross-cutting patterns 1–3 and 5. Numbers are unchanged; only sentence structure changed.
+**Next:** Aditya reads the diff (NC local, unpushed). Still open: D5 (Fig 2e/f in place or supplement) and the JN port.
+
+### 2026-10-30 — G4: "slop" sweep of the NC intro
+**Changed/Found:** NC `introduction.tex`:
+- **ML-limits sentence (L14)** is three sentences ("two limits. First, … Second, …").
+- **Bolus:** the "plant" aside is gone ("fitted a model of how light drives thalamic firing and designed controllers from it"). L39 "stable linear plant" became "stable linear system", because plant is now defined in Results.
+- **Rig sentence:** split in two.
+- **Latency aside:** "The latency, the delay from a camera exposure to the light it triggers, has a median of 24 ms" became "The light follows each camera exposure by a median of 24 ms".
+- **"…, and …, so …" chains split:** the opsin sentence, the characterize/built sentence, the linear-model sentence, and the 1–4 Hz/movement sentence (L53, flagged).
+
+**Why:** Anna G4, patterns 1 and 3. The latency and rig sentences were Aditya-approved wording (2026-10-21) moved by D7; only their structure changed.
+**Next:** Aditya to read it. JN not ported.
+
 ### 2026-10-30 — SfN 2026 poster draft (Figs 1–5) in LaTeX
 **Changed/Found:** new `poster/sfn2026/poster.tex` — 60×40 in landscape, 3 columns, assembled vector Figs 1–5 with claim headlines and numbers from JN `results.tex`. Fig 1 is read from `Closedloop_nc/images/Figure1.pdf` by full path because `paper/figures_final/Figure1.pdf` is in fact a stale Fig-2 assembly (Mouse 1 / M1 labels, stars in G). Fig 2 is the 10-20 assembly, so it predates today's A = Mouse 1b / D = held-out-R² swap.
 **Why:** SfN Neuroscience 2026 (DC, Nov 14–18); board is 6×4 ft, so 60×40 leaves a pin margin and prints on a 42 in roll. A virtual PDF is required, and it must name the funding sources. Fig 6 (MPC) is left out by request.
