@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — SfN poster restyled to SfN template 3 + UW theme; state-dependence title
+**Changed/Found:** `poster/sfn2026/poster.tex` (commit e3e8335) — layout now follows SfN example poster 3: header with two QR slots on the left and the poster number plus `talk/mousy.png` on the right; Introduction / Results / Conclusions section bars; result boxes with a square number badge. UW Husky Purple #4B2E83 and Husky Gold #B7A57A, Open Sans. Title is now "Brain state shapes how well feedback controls mesoscale cortical activity". Box 4 is retitled "Controller performance is brain-state dependent", with separate movement and slow-δ bullets. Methods moved into the Conclusions box. To fit the page, Fig 1 is drawn at 0.74 of the column width. mousy.png is 330 dpi, so its trim is in bp of an 180 bp image (the first trim was in px and blew up the header).
+**Why:** User asked for template 3 with a UW theme and a title about the controller's state dependence.
+**Next:** User picks a final title from the options. Fill the [FILL] items. A real poster number is shorter than the placeholder, which currently overlaps the top edge.
+
 ### 2026-10-30 — NC intro restructured: model survey cut (N1), internal model principle stated
 **Changed/Found:** NC `introduction.tex` (NC ff2391e) — P2 (models of variability: switching LDS, LFADS, NDT, CEBRA, foundation models, POYO, POSSM, lu2025) cut; its point (feedback needs no model of what caused a deviation) closes P1. P1 reuses Nick's JN edits (mediate, input pattern chosen in advance, whisking/fidgeting, synchronized vs desynchronized). The third question now asks which fluctuations a linear controller leaves and whether they are predictable, stating the internal model principle (francis1976internal: PI contains a model of a constant, rejects offsets and slow drifts). The summary is split into setup and findings; findings in past tense, conclusions in present; the "procedure" sentences moved out (they stay in the Discussion). "Target level" replaces "reference".
 **Why:** Aditya, 2026-10-30: rewrite NC in Nick's style around the three bold points; approved cutting the model survey (Nick's N1 on JN) and the five-paragraph outline.
