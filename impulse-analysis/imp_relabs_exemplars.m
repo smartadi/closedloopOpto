@@ -58,14 +58,20 @@ fprintf('[REX] %d trials, %d sessions | Spearman(abs, rel): pooled %.2f, per ses
 %% exemplars and groups in the chosen session, by rule
 m = T.sess == REX_SESS;  idx = find(m);
 sA = za(m) - zr(m);  sA(za(m) < 0.5) = -inf;  [~, k] = max(sA);  iA = idx(k);   % high abs, low rel
-sR = zr(m) - za(m);  sR(zr(m) < 0.5) = -inf;  [~, k] = max(sR);  iR = idx(k);   % high rel, low abs
+% High relative = highest relative power among trials with at least average absolute power.
+% The first rule (high relative AND low absolute, mirroring f4_delta_candidates) picked trials too
+% small for any rhythm to show (Aditya 2026-10-29: "these high relatives ones dont have the short
+% bursts i was hoping exist"). Requiring z_abs >= 0 brings out the 2-4 Hz bursts, and the pick then
+% matches the high-absolute exemplar in absolute power, so the two differ in spectral shape only.
+% Candidate gallery (top 6 per session) was checked by eye; every session shows the bursts.
+sR = zr(m);  sR(za(m) < 0) = -inf;  [~, k] = max(sR);  iR = idx(k);            % high rel, abs >= mean
 [~, k] = min(za(m).^2 + zr(m).^2);  iT = idx(k);                                % typical
-gA = m & za > 1 & zr < 0;  gR = m & zr > 1 & za < 0;  gT = m & abs(za) < 0.5 & abs(zr) < 0.5;
+gA = m & za > 1 & zr < 0;  gR = m & zr > 1 & za >= 0;  gT = m & abs(za) < 0.5 & abs(zr) < 0.5;
 for q = [iT iA iR]
     fprintf('[REX] %s exemplar: amp %d trial %d | z_abs %+.1f z_rel %+.1f | abs %.3g rel %.2f\n', ...
             mlab{REX_SESS}, T.amp(q), T.row(q), local_r1(za(q)), local_r1(zr(q)), T.dpa(q), T.dpr(q));
 end
-fprintf('[REX] %s groups: typical n=%d, high-abs/low-rel n=%d, high-rel/low-abs n=%d\n', ...
+fprintf('[REX] %s groups: typical n=%d, high-abs/low-rel n=%d, high-rel/abs>=mean n=%d\n', ...
         mlab{REX_SESS}, nnz(gT), nnz(gA), nnz(gR));
 
 %% (a) relative vs absolute, every trial
@@ -87,15 +93,24 @@ jnAxesAll(figA);
 paperExport(figA, fullfile(outDir, 'relabs_scatter.pdf'));
 
 %% (b) example trials, one y-axis
+% Each trial is overlaid, inside the state window only, with its 2-4 Hz component (2nd-order
+% Butterworth, zero phase, run on the whole -3..3 s trial so the window has no edge effect; DISPLAY
+% ONLY, the measures use the periodogram). Absolute power is the size of that component; relative
+% power is its size against the whole trace. The amplitude-mean line was dropped: this panel is
+% about the state before onset.
 twin = [-1.5 1.0];  iT_ = tAxis >= twin(1) & tAxis <= twin(2);  tv = tAxis(iT_);
+iW = tAxis >= -1 & tAxis < 0;
+[bb, aa] = butter(2, [2 4] / (fs/2));
 ex = [iT iA iR];  cx = {C_typ, C_abs, C_rel};
 nm = {'Typical', 'High absolute', 'High relative'};
-Y = cell(1,3);  Ym = cell(1,3);
+Y = cell(1,3);  Yb = cell(1,3);
 for j = 1:3
     df = allExperiments(REX_SESS).imp.dfImp{T.amp(ex(j))};
-    Y{j} = df(T.row(ex(j)), iT_);  Ym{j} = mean(df(:, iT_), 1, 'omitnan');
+    y  = df(T.row(ex(j)), :);
+    Y{j} = y(iT_);  yb = filtfilt(bb, aa, y);
+    Yb{j} = yb(iW) + mean(y(iW), 'omitnan');   % ride at the trace's level, not at zero
 end
-yl = [min(cellfun(@min, [Y Ym])), max(cellfun(@max, [Y Ym]))];  yl = yl + [-0.08 0.18]*diff(yl);
+yl = [min(cellfun(@min, Y)), max(cellfun(@max, Y))];  yl = yl + [-0.08 0.18]*diff(yl);
 figB = paperFig(7.6, 3.3);
 tl = tiledlayout(figB, 1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
 for j = 1:3
@@ -103,8 +118,8 @@ for j = 1:3
     patch(ax, [-1 0 0 -1], yl([1 1 2 2]), [0.90 0.90 0.90], 'EdgeColor', 'none');
     lz = yl(1) + 0.90*diff(yl);  lh = 0.06*diff(yl);
     plot(ax, [twin(1) 0 0 0.025 0.025 twin(2)], lz + [0 0 lh lh 0 0], 'r', 'LineWidth', 0.6);
-    plot(ax, tv, Ym{j}, '-', 'Color', [0.65 0.65 0.65], 'LineWidth', PS.lw_trial*2);
     plot(ax, tv, Y{j},  '-', 'Color', cx{j}, 'LineWidth', 1.0);
+    plot(ax, tAxis(iW), Yb{j}, '-', 'Color', 0.45*cx{j} + 0.55, 'LineWidth', 0.8);   % 2-4 Hz part
     xlim(ax, twin);  ylim(ax, yl);  xticks(ax, -1:1);
     title(ax, nm{j}, 'FontWeight', PS.fw, 'Color', cx{j});   % z values: panel a circles + caption
     set(ax, 'Box', 'off', 'TickDir', 'out', 'FontSize', PS.fs, 'FontWeight', PS.fw);

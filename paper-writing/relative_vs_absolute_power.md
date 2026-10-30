@@ -33,15 +33,19 @@ Impulse trials (`impulse-analysis/imp_relabs_exemplars.m`, 2026-10-29; 1516 tria
   Relative power does not (**ρ = 0.24**, 0.13–0.29).
 - Mouse 1b trial groups (shares of 0.4–10 Hz power):
 
-  | Group | n | at 1 Hz | in 2–4 Hz | median total (%ΔF/F)² |
-  |---|---|---|---|---|
-  | typical (\|z\| < 0.5 on both) | 72 | 37% | 49% | 1.78 |
-  | high absolute, low relative (z_abs > 1, z_rel < 0) | 20 | 53% | 42% | 28.3 |
-  | high relative, low absolute (z_rel > 1, z_abs < 0) | 29 | 8% | 80% | 0.45 |
+  | Group | n | at 1 Hz | in 2–4 Hz | median total | median absolute 2–4 Hz |
+  |---|---|---|---|---|---|
+  | typical (\|z\| < 0.5 on both) | 72 | 37% | 49% | 1.78 | 0.85 |
+  | high absolute, low relative (z_abs > 1, z_rel < 0) | 20 | 53% | 42% | 28.3 | 12.2 |
+  | high relative, absolute ≥ mean (z_rel > 1, z_abs ≥ 0) | 104 | 11% | 81% | 10.0 | 9.3 |
 
-- **Reading.** A trial is high in absolute 2–4 Hz power because all of its fluctuations are large, and
-  those fluctuations are mostly slower than 2 Hz. A trial is high in relative power when its
-  fluctuations are small but concentrated at 2–4 Hz.
+  (power in (%ΔF/F)² Hz⁻¹ summed over bins.) The first version of the high-relative group required
+  z_abs < 0: n = 29, 8% / 80%, median total 0.45. Those trials were too small for a rhythm to show
+  (Aditya: "these high relatives ones dont have the short bursts i was hoping exist").
+- **Reading.** The two non-typical groups carry similar 2–4 Hz power, but the high-absolute trials
+  also carry ten times more power at 1 Hz. A trial is high in absolute 2–4 Hz power when all of its
+  fluctuations are large, mostly slower than 2 Hz. A trial is high in relative power when its activity
+  comes in short 2–4 Hz bursts (the exemplar has 95% of its 0.4–10 Hz power in 2–4 Hz).
 - **Consequence for Fig 2g's absolute result** (variability ×2.35 from bottom to top quartile):
   trials with larger pre-stimulus fluctuations deviate more from the mean response. The
   stimulus-free control shows the same rise (×2.70), so this is the amplitude of ongoing activity,
@@ -123,14 +127,17 @@ Draft caption:
 > (four sessions), each z-scored within session (absolute power on a log scale); colors, sessions.
 > Circles mark the trials in **b**. Spearman ρ = 0.47.
 > **b**, Three trials from Mouse 1b chosen by rule: typical (both near the session mean), high absolute
-> and low relative power ($z_{abs} = +0.9$, $z_{rel} = −1.5$), and high relative and low absolute power
-> ($z_{abs} = −1.0$, $z_{rel} = +1.8$). Gray shading, the window over which power was measured; gray
-> line, trial-averaged response at the same amplitude; red, laser command.
+> and low relative power ($z_{abs} = +0.9$, $z_{rel} = −1.5$), and the highest relative power among
+> trials with at least average absolute power ($z_{abs} = +1.1$, $z_{rel} = +2.2$). The two have similar
+> absolute 2–4 Hz power. Light lines, each trial's 2–4 Hz component in the measurement window
+> (zero-phase band-pass, for display). Gray shading, the window over which power was measured; red,
+> laser command.
 > **c**, Mean spectra over the same window for Mouse 1b trials that were typical ($|z| < 0.5$ on both;
 > n = 72), high in absolute and below average in relative power ($z_{abs} > 1$, $z_{rel} < 0$; n = 20),
-> or the reverse (n = 29). Left, power spectral density; right, each frequency bin as a fraction of
-> 0.4–10 Hz power. Gray band, 2–4 Hz. Over all trials, absolute 2–4 Hz power followed total 0.4–10 Hz
-> power (Spearman ρ = 0.97), whereas relative power did not (ρ = 0.24).
+> or high in relative power with at least average absolute power ($z_{rel} > 1$, $z_{abs} \ge 0$;
+> n = 104). Left, power spectral density; right, each frequency bin as a fraction of 0.4–10 Hz power.
+> Gray band, 2–4 Hz. Over all trials, absolute 2–4 Hz power followed total 0.4–10 Hz power (Spearman
+> ρ = 0.97), whereas relative power did not (ρ = 0.24).
 
 Options still open:
 - (i) Add a per-session version (rows = sessions), as the controller supplement does, to answer "is

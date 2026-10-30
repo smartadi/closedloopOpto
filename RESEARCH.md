@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — imp_relabs_exemplars.m: high-relative exemplar re-picked to show 2–4 Hz bursts; 2–4 Hz component overlaid
+**Changed/Found:** `impulse-analysis/imp_relabs_exemplars.m`.
+- The high-relative rule is now the highest relative power among trials with z_abs ≥ 0. It was high relative and low absolute, mirroring `f4_delta_candidates.m`, but that picked trials too small for any rhythm to show (the dead end).
+- A gallery of the top 6 per session under the new rule (scratchpad `relcand_gallery.png`) shows 2–4 Hz bursts in all four sessions.
+- New Mouse 1b pick: amp 9, trial 54 (z_abs +1.1, z_rel +2.2, 95% of power in 2–4 Hz). Its absolute power is close to the high-absolute exemplar's (+0.9), so the two differ in spectral shape only.
+- The panel c group is now z_rel > 1 and z_abs ≥ 0 (n = 104): 11% of power at 1 Hz, 81% in 2–4 Hz, median absolute 9.3 against 12.2 for the high-absolute group. Similar 2–4 Hz power; the high-absolute group has 10× more at 1 Hz.
+- Panel b drops the amplitude-mean line and overlays each trial's 2–4 Hz component inside the window. This is a display-only 2nd-order Butterworth, zero phase, run on the whole trial and shifted to the trial's window mean.
+**Why:** Aditya: "these high relatives ones dont have the short bursts i was hoping exist pick some other candidates".
+**Next:** Aditya to approve; caption and table updated in `paper-writing/relative_vs_absolute_power.md`.
+
 ### 2026-10-29 — New imp_relabs_exemplars.m: relative vs absolute 2–4 Hz power on impulse trials; absolute ≈ total power (ρ = 0.97)
 **Changed/Found:** New supplementary candidate `impulse-analysis/imp_relabs_exemplars.m`, the impulse counterpart of `controller-analysis/f4_delta_candidates.m`. It uses Fig 2g's trials (1516), window ([−1, 0) s, 35 samples) and estimator (mean removed, Hann, 1 Hz bins). Panels go to `paper/images/supplementary/relabs/` (not in MANIFEST):
 - a: relative vs log-absolute power, z within session.
