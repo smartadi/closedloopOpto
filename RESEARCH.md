@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — NC Fig 1: mouse schematic dropped, frame carries its own markers; 7 pt text, 1 pt arrows
+**Changed/Found:** `paper-writing/fig1_nc_build.py`. Panels re-lettered a optics, b frame, c latency, d pipeline, e control loop (page now 180 × 120 mm).
+- New `panel_b_frame.pdf`: the frame plus a blue box (readout kernel) and a red dot (stimulation), a legend for both, and a 1 mm bar (field 560 px × 17.3 µm = 9.69 mm).
+- Marker positions are real, in native (row, col): readout (320, 380) from `d.params.pixel = [380 320]` (x, y), and laser (291, 405) from the measured dip in `controller-analysis/data/cp_stim_site_ctrl_AL_0039_0419_e1.mat`. The rig's `params.laser = [410 300]` is within 10 px of the dip.
+- Orientation checked: the frame and the stim-site brain mask correlate 0.74 as they are and 0.04 transposed. Readout and laser sit 38 px (0.66 mm) apart, both inside the inhibited zone.
+- The markers are not to scale: the kernel is 10 px (0.17 mm) but is drawn as a 0.8 mm-wide square.
+- d and e: all text is now 7 pt (labels were 6), subscripts 5.5 pt. Connectors went from 0.25 to 0.35 mm (1 pt). Arrowheads went from 1.6 to 2.0 mm, and each line now stops inside its head.
+- Panels a and c are placed so their text also lands at 7 pt: a at 7/20.95 scale, c at 1:1.
+- At 7 pt, e's "Input u" ran into the feedforward "+", so the label moved below the line.
+**Why:** Aditya: drop b, but then the output and stimulation markers need defining on the frame; and "even larger fonts and bolder arrows on d, e". 7 pt is the top of the Nature figure guide's 5–7 pt range, so going larger would break it.
+**Next:** NC caption and panel references follow the new letters (old b,c → b; old f → c). c still needs the F1.5 replot, which should also size it to fill its 60 mm slot. Then the Illustrator assembly from these panels.
+
 ### 2026-10-29 — NC Figure 1 draft built from Anna's SVGs: E signs restored, D timing to scale, one text size
 **Changed/Found:** new `paper-writing/fig1_nc_build.py`. It reads Anna's files (`paper/from_anna_2026-10-29/`, from her Claude chat) and writes `paper/figures_final/nc/fig1/`: `panel_d_architecture.svg`, `panel_e_control_loop.svg` and the 180 × 112 mm composition `Figure1_nc_draft.pdf/.png`. Fixes:
 - E: the summing junction is back to e = y − r (− on r, + on y; methods.tex eq:error).
