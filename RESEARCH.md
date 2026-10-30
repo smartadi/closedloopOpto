@@ -16,6 +16,24 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — New imp_relabs_exemplars.m: relative vs absolute 2–4 Hz power on impulse trials; absolute ≈ total power (ρ = 0.97)
+**Changed/Found:** New supplementary candidate `impulse-analysis/imp_relabs_exemplars.m`, the impulse counterpart of `controller-analysis/f4_delta_candidates.m`. It uses Fig 2g's trials (1516), window ([−1, 0) s, 35 samples) and estimator (mean removed, Hann, 1 Hz bins). Panels go to `paper/images/supplementary/relabs/` (not in MANIFEST):
+- a: relative vs log-absolute power, z within session.
+- b: three Mouse 1b trials picked by rule — typical, high absolute / low relative, and the reverse — on one y-axis over their amplitude means.
+- c: group mean spectra, as a density and as a fraction of 0.4–10 Hz power.
+
+Found:
+- Spearman(abs, rel) = 0.47 pooled (0.41–0.50 per session), which reproduces the Results number.
+- **Absolute 2–4 Hz power tracks total 0.4–10 Hz power at ρ = 0.97 (0.95–0.97 per session); relative power does not (ρ = 0.24, 0.13–0.29).**
+- Mouse 1b groups:
+  - high-absolute (n = 20): 53% of power at 1 Hz, 42% in 2–4 Hz, median total 28.3 (%ΔF/F)²;
+  - high-relative (n = 29): 8% at 1 Hz, 80% in 2–4 Hz, median total 0.45;
+  - typical (n = 72): 37% and 49%, median total 1.78.
+
+So absolute 2–4 Hz power is effectively the size of the pre-stimulus fluctuations, mostly slow, while relative power is where in frequency they sit. Display spectra are scaled to a one-sided density ((%ΔF/F)² Hz⁻¹). That scale is one constant, so z-scores and the ratio are unchanged. Two layout dead ends: the z-value subtitles in b collided at 6 pt (moved to the caption), and a 6 pt legend covered the curves in either tile of c (dropped; the colours are b's titles).
+**Why:** Aditya: "show example activity of both classes relative and absolute to show how they differ, put it in supplementary ... we already did this for controller trials".
+**Next:** Aditya to approve the panels; then add a `[supp_relabs]` MANIFEST section and a supplementary caption (drafted in `paper-writing/relative_vs_absolute_power.md`). The ρ = 0.97 also fixes the honest reading of Fig 2g's absolute result: trials with larger pre-stimulus fluctuations deviate more. The stimulus-free control already shows that, so the text should say "amplitude", not "rhythm".
+
 ### 2026-10-29 — Fig 2b: real laser-power x-axis (mW) replaces the 0.25 mW scale bar; labels moved off the data
 **Changed/Found:** `impulse-analysis/dose_response.m`, `DR_YAXIS` branch.
 - `paperAxes` (which draws the corner scale bar) is replaced by `cleanAxes`, then both axes are drawn: x from 0 to 5.1 V (1.7 mW), ticks at 0, 0.5, 1 and 1.5 mW (placed at 3 V per mW), labelled "Laser power (mW)".
