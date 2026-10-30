@@ -202,37 +202,41 @@ def text(page, x, y, s, size=7, anchor='start'):
     page.insert_text(fitz.Point(x * MM, y * MM), s, fontname='helv', fontsize=size)
 
 
-def frame_panel(w=46):
-    """Panel b: the frame with the readout kernel (blue box) and stimulation spot (red dot), their
-    legend (the dropped mouse schematic used to define them) and a 1 mm bar. Markers not to scale:
-    the kernel is 10 px = 0.17 mm, a 0.8 mm-wide square here."""
+def frame_panel(w=34):
+    """Panel b: the frame with the readout kernel (blue box) and stimulation spot (red dot), and a key
+    to its right (the dropped mouse schematic used to define them) with a 1 mm bar. Markers not to
+    scale: the kernel is 10 px = 0.17 mm, a 1.4 mm-wide square here."""
     src = fitz.open(PAN / 'svd_frame_AL_0039_2025-04-19.pdf')
     img = fitz.Rect(src[0].get_image_info()[0]['bbox'])
     hf = w * img.height / img.width
+    keys = ('Output (readout kernel)', 'Stimulation', '1 mm')
+    lx, col = w + 2.5, 3.6                            # key left edge, symbol column width
+    tx = lx + col + 1.0
     doc = fitz.open()
-    page = doc.new_page(width=w * MM, height=(hf + 8.4) * MM)
+    page = doc.new_page(width=(tx + max(fitz.get_text_length(k, 'helv', 7) for k in keys) / MM + 0.3) * MM,
+                        height=hf * MM)
     page.show_pdf_page(fitz.Rect(0, 0, w * MM, hf * MM), src, 0, clip=img)
 
     def px(r, c):
         return fitz.Point((c - 0.5) / 560 * w * MM, (r - 0.5) / 560 * hf * MM)
 
-    def square(p, s):
+    def square(p):
+        s = 0.7 * MM
         page.draw_rect(fitz.Rect(p.x - s, p.y - s, p.x + s, p.y + s), color=BLUE, width=LINE * MM)
 
     def dot(p):
-        page.draw_circle(p, 0.6 * MM, color=None, fill=RED)
+        page.draw_circle(p, 0.55 * MM, color=None, fill=RED)
 
-    square(px(*READOUT_RC), 0.8 * MM)
+    square(px(*READOUT_RC))
     dot(px(*LASER_RC))
-    y1, y2 = hf + 3.6, hf + 7.2                       # legend baselines; symbols centred on x-height
-    square(fitz.Point(1.1 * MM, (y1 - 0.9) * MM), 0.8 * MM)
-    text(page, 3.0, y1, 'Output (readout kernel)')
-    dot(fitz.Point(1.1 * MM, (y2 - 0.9) * MM))
-    text(page, 3.0, y2, 'Stimulation')
+    yc = [hf / 2 + 3.6 * i for i in (-1, 0, 1)]      # key rows centred on the frame; symbols on x-height
+    square(fitz.Point((lx + col / 2) * MM, yc[0] * MM))
+    dot(fitz.Point((lx + col / 2) * MM, yc[1] * MM))
     bar = w / FIELD_MM                                # 1 mm of cortex
-    page.draw_line(fitz.Point((w - 0.3 - bar) * MM, (y2 - 0.9) * MM), fitz.Point((w - 0.3) * MM, (y2 - 0.9) * MM),
-                   color=(0, 0, 0), width=0.5 * MM)
-    text(page, w - 1.3 - bar, y2, '1 mm', anchor='end')
+    page.draw_line(fitz.Point((lx + col / 2 - bar / 2) * MM, yc[2] * MM),
+                   fitz.Point((lx + col / 2 + bar / 2) * MM, yc[2] * MM), color=(0, 0, 0), width=0.5 * MM)
+    for y, k in zip(yc, keys):
+        text(page, tx, y + 0.9, k)
     return doc
 
 
@@ -251,16 +255,26 @@ def main():
     fb = frame_panel()
     fb.save(str(OUT / 'panel_b_frame.pdf'))
 
+    # Top row: a, b, c at 1:1 text (7 pt), equal gaps across 180 mm; c is sized for this slot by
+    # latencyAnalysis.m. Bottom row: d, e. Every panel is top-aligned under its letter.
+    sa = 7 / 20.95                                                     # wfpath text 20.95 pt -> 7 pt
+    top = [(fitz.open(PAN / 'wfpath.pdf'), True, sa), (fb, False, 1),
+           (fitz.open(OUT / 'panel_c_latency.pdf'), True, 1)]
+    sizes = [((content_clip(d[0]) if clip else d[0].rect) * s) for d, clip, s in top]
+    sizes = [(r.width / MM, r.height / MM) for r in sizes]
+    LET = 3.5                                                          # letter column
+    gap = (180 - 3 * LET - sum(w for w, _ in sizes)) / 2
+    y2 = 1 + max(h for _, h in sizes) + 2.5
+
     doc = fitz.open()
-    page = doc.new_page(width=180 * MM, height=120 * MM)
-    place(page, PAN / 'wfpath.pdf', 4, 1, scale=7 / 20.95)            # source text 20.95 pt -> 7 pt
-    _, hb = place(page, fb, 64, 1, clip=False, scale=1)
-    place(page, PAN / 'latency_histogram.pdf', 124, 1, clip=False, scale=1)   # source text 7 pt
-    y2 = 1 + hb + 2
+    page = doc.new_page(width=180 * MM, height=(y2 + 62.5) * MM)
+    x = 0
+    for letter, (src, clip, s), (w, _) in zip('abc', top, sizes):
+        page.insert_text(fitz.Point(x * MM, 3.3 * MM), letter, fontname='hebo', fontsize=8)
+        place(page, src, x + LET, 1, clip=clip, scale=s)
+        x += LET + w + gap
     place(page, svg_to_pdf(OUT / 'panel_d_architecture.svg'), 0, y2, 57, 62, clip=False)
     place(page, svg_to_pdf(OUT / 'panel_e_control_loop.svg'), 62, y2, 118, 62, clip=False)
-    for letter, x in (('a', 0), ('b', 60), ('c', 120)):
-        page.insert_text(fitz.Point(x * MM, 3.3 * MM), letter, fontname='hebo', fontsize=8)
     doc.save(str(OUT / 'Figure1_nc_draft.pdf'))
     page.get_pixmap(dpi=300).save(str(OUT / 'Figure1_nc_draft.png'))
     print('wrote', *sorted(p.name for p in OUT.iterdir()))

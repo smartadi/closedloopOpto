@@ -16,6 +16,25 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — NC Fig 1 re-packed: frame 46 → 34 mm with a key at its right, latency panel fills the row
+**Changed/Found:** `paper-writing/fig1_nc_build.py`.
+- `frame_panel` now draws a 34 mm frame with its key (output, stimulation, 1 mm bar) to the right, instead of a 46 mm frame with the key underneath.
+- The top row's panels, a, b and c, are all at 1:1 text (7 pt). They are spaced with equal gaps across 180 mm and top-aligned under their letters.
+- c is the new `panel_c_latency.pdf`, sized for its slot by `latencyAnalysis.m`.
+- The page is now 180 × 115 mm (it was 120). Closedloop_nc e16b76a (local) carries it as `images/Figure1.pdf`.
+- What white space remains is a ~14 mm band under b. b is shorter than a, which fixes the row height at 49 mm because its text is 7 pt.
+**Why:** Aditya: "so much white space", "b is too big can be made small". Before this, the top row had ~70 mm of spare width once the schematic was gone.
+**Next:** Aditya to review. Filling the band under b would need a taller b, which runs against the ask.
+
+### 2026-10-29 — latencyAnalysis.m: NC Fig 1c export; the panel has n = 175 cycles and a 29 ms median, not 200 and 24
+**Changed/Found:** `latencyAnalysis.m` gets a new NC block after the JN print. It writes the same data as a 5.4 × 4.4 cm panel, `paper/figures_final/nc/fig1/panel_c_latency.pdf`: 1 ms bins from 10 to 50 ms, ticks every 10 ms, axes "Loop latency (ms)" and "Loop cycles" (Anna F1.5). It also prints summary stats. The JN `paper/latency_histogram.pdf` is unchanged.
+- I ran it on the server session test 2026-04-23/1 (photodiode pairs, light-gated). Result: **n = 175, median 29.0 ms, 99th percentile 44.4 ms, range 14.0–47.0 ms**.
+- The range matches the old panel's end ticks, so it is the same data.
+- The caption and methods L100 say "200 loop cycles", which is wrong for this panel.
+- Fig 1d's bracket says "24 ms median" (methods L101: Mouse 4, exposure start to laser edge, 99th percentile 40 ms). So the figure now shows two different latency measurements side by side.
+**Why:** Make c fill its slot and fix the axis labels Anna flagged.
+**Next:** Aditya to decide which latency Fig 1 shows. Either c uses the Mouse 4 measurement that Methods quotes, or d's bracket and the text quote 29 ms from this test session. Then correct n in the caption and Methods (both drafts).
+
 ### 2026-10-29 — NC draft: Fig 1 caption and panel references follow the a–e layout
 **Changed/Found:** Closedloop_nc 6a5502a (local, not pushed).
 - `results.tex` caption: b is now the frame (Mouse 2a), with the kernel defined as 10 × 10 px (0.17 mm), "Markers are enlarged" and "Scale bar, 1 mm". The latency histogram is c. In d, the trigger trace is "drawn to scale" and the bracket marks the median latency.
