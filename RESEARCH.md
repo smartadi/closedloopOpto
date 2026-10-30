@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — NC intro restructured: model survey cut (N1), internal model principle stated
+**Changed/Found:** NC `introduction.tex` (NC ff2391e) — P2 (models of variability: switching LDS, LFADS, NDT, CEBRA, foundation models, POYO, POSSM, lu2025) cut; its point (feedback needs no model of what caused a deviation) closes P1. P1 reuses Nick's JN edits (mediate, input pattern chosen in advance, whisking/fidgeting, synchronized vs desynchronized). The third question now asks which fluctuations a linear controller leaves and whether they are predictable, stating the internal model principle (francis1976internal: PI contains a model of a constant, rejects offsets and slow drifts). The summary is split into setup and findings; findings in past tense, conclusions in present; the "procedure" sentences moved out (they stay in the Discussion). "Target level" replaces "reference".
+**Why:** Aditya, 2026-10-30: rewrite NC in Nick's style around the three bold points; approved cutting the model survey (Nick's N1 on JN) and the five-paragraph outline.
+**Next:** The ML forecasting citations (pandarinath, ye2021ndt, schneider2023cebra, wang2025foundation, azabou2023poyo, ryoo2025possm) now appear only if the Discussion's claim-3 block cites them; check after the Discussion rewrite.
+
+### 2026-10-30 — NC abstract rewritten in Nick's style (claims 1–2 only, 199 words)
+**Changed/Found:** NC `main.tex` abstract (NC 660d8fd) — 253 → 199 words (Nat Comms limit 200). Past tense for our results, "target level" for "reference", literal verbs ("increased" for "grows", "steered" for "holds"). Kept Nick's JN sentences (design: fluorescence in, laser out) where they fit. Added that single trials varied with state while the average was linear (claim 1's "despite"). State result stated as: open-loop error increased with movement and 1–4 Hz power; under feedback, no longer with movement but still with 1–4 Hz. Cut the disturbance, preview and MPC sentences.
+**Why:** Aditya's bold points 1–2; MPC cut from the abstract "for now" (Aditya, 2026-10-30, after Nick's N6 on JN). Style from Nick's three papers (`nick papers/`): past tense for what we did, present for general conclusions, no metaphorical verbs.
+**Next:** Revisit the MPC sentence if Aditya wants claim 3 back in the abstract.
+
 ### 2026-10-30 — Third bold point (MPC) added to PAPER.md
 **Changed/Found:** `PAPER.md` "Bold points" — new third point, Aditya's words verbatim: much of the variability the linear feedback leaves behind is a predictable, slow-moving disturbance, as the MPC stimulation shows.
 **Why:** Aditya asked for one more note, on MPC (Fig 6).
