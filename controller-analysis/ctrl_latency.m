@@ -113,3 +113,28 @@ title(tl, sprintf('%s %s/%d - frame exposure to laser latency', mn, td, en), 'In
 outDir = fullfile(fileparts(mfilename('fullpath')), '..', 'paper', 'images', 'latency');
 if ~exist(outDir, 'dir'), mkdir(outDir); end
 exportgraphics(fig, fullfile(outDir, sprintf('ctrl_latency_%s.png', mn)), 'Resolution', 300);
+
+%% [LAT-NC] Nature Comms Fig 1c: closed-loop latency over this whole session
+% Aditya 2026-10-30 (Anna F1.5, decision D8: "controller latency"). Replaces the 175-cycle test
+% recording that latencyAnalysis.m drew (median 29 ms), so Fig 1c, the 24 ms bracket in Fig 1d and
+% Methods now quote one measurement. paper-writing/fig1_nc_build.py places the panel at 1:1, so
+% 7 pt here is 7 pt in the figure. LAT_NC_YSCALE 'log' shows the late tail; 'linear' is the default.
+if ~exist('LAT_NC_YSCALE','var') || isempty(LAT_NC_YSCALE), LAT_NC_YSCALE = 'linear'; end
+NC_W = 5.4;  NC_H = 4.4;  % cm
+figNC = figure('Color','w');
+figNC.Units = 'centimeters';  figNC.PaperUnits = 'centimeters';
+figNC.Position = [0 0 NC_W NC_H];  figNC.PaperSize = [NC_W NC_H];  figNC.PaperPosition = [0 0 NC_W NC_H];
+xc = lat(mdE == 1);
+histogram(xc, 10:1:50, 'FaceColor', [0.2 0.2 0.2], 'EdgeColor', 'none', 'FaceAlpha', 0.85);
+set(gca, 'Box','off', 'TickDir','out', 'FontSize',7, 'FontName','Arial', 'LineWidth',0.75, ...
+    'XLim',[10 50], 'XTick',10:10:50, 'YScale',LAT_NC_YSCALE);
+yl = ylim;
+xline(TB, ':', 'Color', [0.5 0.5 0.5], 'LineWidth', 0.75);     % next blue frame
+text(TB + 0.8, yl(2), 'Next frame', 'FontSize',7, 'FontName','Arial', 'Color',[0.45 0.45 0.45], ...
+    'HorizontalAlignment','left', 'VerticalAlignment','top');
+xlabel('Loop latency (ms)', 'FontSize',7, 'FontName','Arial');
+ylabel('Loop cycles',       'FontSize',7, 'FontName','Arial');
+fprintf('[LAT-NC] CL n = %d, median %.1f ms, 99th pct %.1f ms, max %.1f ms, after next frame %.1f%%\n', ...
+    numel(xc), median(xc), prctile(xc,99), max(xc), 100*mean(xc > TB));
+ncDir = fullfile(fileparts(mfilename('fullpath')), '..', 'paper', 'figures_final', 'nc', 'fig1');
+print(figNC, fullfile(ncDir, 'panel_c_latency.pdf'), '-dpdf', '-painters');

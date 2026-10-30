@@ -46,6 +46,11 @@ if ~exist('CV_PANELB','var') || isempty(CV_PANELB), CV_PANELB = false; end
 % Uses the SAME engine/constraints as the cross-session fits, so consistency is automatic.
 if ~exist('CV_SINGLE','var')    || isempty(CV_SINGLE),    CV_SINGLE    = true;      end
 if ~exist('CV_SINGLE_MN','var') || isempty(CV_SINGLE_MN), CV_SINGLE_MN = 'AL_0033'; end
+% CV_SINGLE_K: pick the panel-C session by its index in CV instead (overrides CV_SINGLE_MN). The
+% two AL_0041 sessions share a name, so CV_SINGLE_MN alone cannot reach Mouse 5b (Anna F2.4).
+if ~exist('CV_SINGLE_K','var'), CV_SINGLE_K = []; end
+% CV_REUSE: keep a CV already in the workspace instead of re-running the split-half fits.
+if ~exist('CV_REUSE','var') || isempty(CV_REUSE), CV_REUSE = false; end
 % CV_SINGLE_NAMP: how many amplitudes to draw on the single-session panel (user, 2026-08-24:
 % "not so many amps, only a few"). Sub-threshold amplitudes (held-out R^2 <= 0, the SNR floor)
 % are dropped first, then this many are spaced across what remains.
@@ -78,9 +83,13 @@ end
 nS  = numel(Sprim);
 CVo = struct('nSplit',CV_NSPLIT,'seed',7,'minTrials',6,'verbose',true);
 fprintf('\n[CV] trial-level split-half CV, %d splits x 2 directions per session\n', CV_NSPLIT);
-CV = cell(nS,1);
-for k = 1:nS
-    CV{k} = imp_tf_cv_session(allExperiments(k), fs, tWin, Sprim{k}, CVo);
+if CV_REUSE && exist('CV','var') && iscell(CV) && ~isempty(CV)
+    fprintf('[CV] CV_REUSE: keeping the %d-session CV already in the workspace\n', numel(CV));
+else
+    CV = cell(nS,1);
+    for k = 1:nS
+        CV{k} = imp_tf_cv_session(allExperiments(k), fs, tWin, Sprim{k}, CVo);
+    end
 end
 ok = cellfun(@(c) isstruct(c) && isfield(c,'ok') && c.ok, CV);
 CV = CV(ok);
@@ -208,6 +217,9 @@ if CV_REVAMP
 
     % ---------- MAIN Fig-2D (user 2026-09-13): held-out R^2 only ----------
     % User: "only use held out r2 image that's the best, keep others for supplementary."
+    % 2026-10-30: this is Fig 2D again (Anna F2.5, "what is D left supposed to provide beyond C
+    % except scaling?"; user: "d we only need the right panel, ie the held out r2"). The sidebar
+    % above stays a candidate only.
     % Standalone per-session held-out R^2 (median o + IQR whisker), pooled-median guide.
     poolMed = median(cell2mat(cellfun(@(c) c.R2_out(:), CV, 'UniformOutput', false)), 'omitnan');
     fH = paperFig(PS.f2w, PS.f2h);  axH = axes(fH);  hold(axH,'on');
@@ -221,8 +233,11 @@ if CV_REVAMP
     set(axH,'XTick',1:n,'XTickLabel',mlabShort,'FontSize',PS.fs,'FontWeight',PS.fw,'TickDir','out','Box','off');
     axH.XAxis.FontSize = PS.fs-1;  ylabel(axH,'held-out R^2');
     title(axH,'LTI validation within session','FontSize',PS.fs,'FontWeight',PS.fw);
-    text(axH, n+0.45, poolMed, sprintf('%.2f', poolMed), 'Color',[.45 .45 .45], ...
-         'FontSize',PS.fs-1,'FontWeight',PS.fw,'HorizontalAlignment','right','VerticalAlignment','bottom');
+    % Pooled-median label at the LEFT end of its guide (2026-10-30): at the right end it sat on
+    % M3c's whisker. M5a's whisker tops out below the guide, so the left end is clear.
+    text(axH, 0.55, poolMed, sprintf('%.2f', poolMed), 'Color',[.45 .45 .45], ...
+         'FontSize',PS.fs-1,'FontWeight',PS.fw,'HorizontalAlignment','left','VerticalAlignment','bottom');
+    jnAxesAll(fH);   % rule-book font/axis pass, as on the other Fig-2 panels
     if CV_EXPORT
         paperExport(fH, fullfile(CV_OUTDIR,'tf_cv_heldout_r2.pdf'));
         fprintf('[CV] MAIN Fig-2D -> tf_cv_heldout_r2.pdf  (pooled median R^2 = %.3f)\n', poolMed);
@@ -261,6 +276,7 @@ end   % CV_PANELB
 % amplitudes within one session (Fig-2 colour policy); the session is named in the title.
 if CV_SINGLE
     ksel = find(cellfun(@(c) contains(c.mn, CV_SINGLE_MN), CV), 1);
+    if ~isempty(CV_SINGLE_K), ksel = CV_SINGLE_K; end
     if isempty(ksel), ksel = 1; end
     S1 = CV{ksel};
     if isfield(S1,'amp') && ~isempty(S1.amp.idx)

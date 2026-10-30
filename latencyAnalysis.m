@@ -158,37 +158,9 @@ ylabel('Count',        'FontSize', 7, 'FontName', 'Arial');
 
 print(fig, 'paper/latency_histogram.pdf', '-dpdf', '-painters');
 
-%% Nature Comms Fig 1c: same data, sized for the NC layout, with clearer axes (Anna F1.5)
-% paper-writing/fig1_nc_build.py places it at 1:1, so 7 pt here is 7 pt in the figure.
-% The JN panel above is left as it is.
-NC_W = 5.4;  NC_H = 4.4;  % cm
-figNC = figure('Color','w');
-figNC.Units         = 'centimeters';
-figNC.PaperUnits    = 'centimeters';
-figNC.Position      = [0 0 NC_W NC_H];
-figNC.PaperSize     = [NC_W NC_H];
-figNC.PaperPosition = [0 0 NC_W NC_H];
-
-histogram(latency_ms, 10:1:50, ...
-    'FaceColor', [0.2 0.2 0.2], ...
-    'EdgeColor', 'none', ...
-    'FaceAlpha', 0.85);
-
-set(gca, ...
-    'Box',      'off', ...
-    'TickDir',  'out', ...
-    'FontSize',  7, ...
-    'FontName', 'Arial', ...
-    'LineWidth', 0.75, ...
-    'XLim',     [10 50], ...
-    'XTick',    10:10:50);
-
-xlabel('Loop latency (ms)', 'FontSize', 7, 'FontName', 'Arial');
-ylabel('Loop cycles',       'FontSize', 7, 'FontName', 'Arial');
-
-fprintf('Latency: n = %d, median %.1f ms, 99th pct %.1f ms, range %.1f-%.1f ms\n', ...
-    numel(latency_ms), median(latency_ms), prctile(latency_ms, 99), min(latency_ms), max(latency_ms));
-print(figNC, 'paper/figures_final/nc/fig1/panel_c_latency.pdf', '-dpdf', '-painters');
+%% Nature Comms Fig 1c moved to controller-analysis/ctrl_latency.m [LAT-NC] (2026-10-30, D8).
+% This test recording (175 cycles, median 29 ms) is no longer the paper measurement; Fig 1c shows
+% the whole closed-loop session that Methods quotes (Mouse 4, 3539 updates, median 24.0 ms).
 
 %% Sample windows for lowest latency
 [~, sortIdx] = sort(latency);

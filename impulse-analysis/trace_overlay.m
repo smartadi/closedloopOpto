@@ -4,11 +4,14 @@
 
 %% Single-session trace overlay â€” session 3
 close all;
-imp3  = allExperiments(2).imp;
-uAmp3 = allExperiments(2).uAmp;
-mn3   = allExperiments(2).mn;
-td3   = allExperiments(2).td;
-en3   = allExperiments(2).en;
+% TO_EXP: which allExperiments entry to draw (default 2 = AL_0041 2025-12-02 e2, Mouse 5b).
+% Anna F2.4 (2026-10-29): A and C should show the same session; C is AL_0033 = entry 3.
+if ~exist('TO_EXP','var') || isempty(TO_EXP), TO_EXP = 2; end
+imp3  = allExperiments(TO_EXP).imp;
+uAmp3 = allExperiments(TO_EXP).uAmp;
+mn3   = allExperiments(TO_EXP).mn;
+td3   = allExperiments(TO_EXP).td;
+en3   = allExperiments(TO_EXP).en;
 
 PS = paperStyle();
 setPaperDefaults();
@@ -86,8 +89,14 @@ plot([-1 0 0 pulse_w pulse_w 1], lz_y + [0 0 lz_h lz_h 0 0], 'Color', 'r', ...
     'LineWidth', 0.75, 'HandleVisibility', 'off', 'Clipping', 'off');
 text(-0.97, lz_y + 0.02*span, 'Laser', 'Color','r','FontSize',PS.fs,'FontWeight','bold', ...
     'HorizontalAlignment','left','VerticalAlignment','bottom','Clipping','off');
-% The 'Model Fit Window' label (3.5 pt, below Nature's 5 pt floor) is gone; at 6 pt it is wider
-% than the band. The caption names the band.
+% Model-fit window label at full text size (user 2026-10-30: "make sure the text model fit window
+% is bigger"; it was 3.5 pt). At 6 pt it is wider than the band, so it sits just above the plot
+% box, centred on the band, where nothing else is drawn.
+if TO_FITWIN
+    text(mean(tShade), yl_s(2), 'Model fit window', ...
+        'FontSize', PS.fs, 'Color', [0.45 0.45 0.45], 'FontWeight', 'bold', ...
+        'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'Clipping', 'off');
+end
 
 % TALK LEGEND (2026-08-19, user: "needs the legend shifted farther to bottom right to not
 % overlap the traces, maybe make the text smaller"). The amplitude key is 5 rows deep, and at

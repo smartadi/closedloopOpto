@@ -16,6 +16,31 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — D6 (Fig 4e): kept the dense ridge map; the sparse "spot" version exists in ctrl_ols_spont.m
+**Changed/Found:** Nothing changed. Aditya: Fig 4e answers a different question from the map Anna expected (one hotspot at the mirror spot), so it does not need to be sparse. The sparse version exists: `controller-analysis/ctrl_ols_spont.m` with `fit_mode = 'lasso'` (`l1_frac` 0.1, debiased) gave 51 of 427 active contra pixels, held-out R² 0.675 against 0.874 dense, and the top-10 weight centroid sat 12 px from the laser site's mirror across the midline (RESEARCH_archive_2026H2, 2026-07-19).
+**Why:** Anna F4.2 ("are you sure about this? it looks bugged"). The dense weights cancel each other out (Haufe et al. 2014; RESEARCH 2026-10-29), but the panel is not meant as a hotspot map.
+**Next:** If a referee asks Anna's question, show the lasso map (or a forward pattern). The caption should still not read the weights as "where the information is".
+
+### 2026-10-30 — D8: NC Fig 1c is now the whole-session controller latency (Mouse 4, n = 3539, median 24 ms)
+**Changed/Found:** `controller-analysis/ctrl_latency.m` gets a `[LAT-NC]` block that writes `paper/figures_final/nc/fig1/panel_c_latency.pdf` from the closed-loop updates of AL_0051 2026-07-29/2: n = 3539, median 24.0 ms, 99th percentile 40.0 ms, maximum 43.5 ms, 12.6 % after the next blue frame (28.5 ms, drawn as a dotted "Next frame" line). The panel is 5.4 × 4.4 cm, 7 pt, with 1 ms bins on a linear y-axis; `LAT_NC_YSCALE = 'log'` shows the tail better but reads worse. `latencyAnalysis.m`'s NC block (175-cycle test recording, median 29 ms) is removed, so it can no longer overwrite the panel; the JN print is unchanged. Rebuilt `fig1_nc_build.py` and copied the result to NC `images/Figure1.pdf`. NC caption c and Methods L100–101 now describe this one measurement (the "200 loop cycles" claim is gone).
+**Why:** Aditya, D8: "controller latency". Fig 1c, the 24 ms bracket in d and Methods now quote the same session.
+**Next:** JN still says 200 cycles; port when JN gets its Anna pass.
+
+### 2026-10-30 — D7: NC intro P2 drops the rig specs; they move to the last intro paragraph
+**Changed/Found:** NC `introduction.tex`. P2 lines "We read it out as fluorescence across a field about 10 mm wide" and the 35 Hz / 24 ms latency / 0.11 s sentence are replaced by one general sentence: wide-field calcium imaging records mesoscale activity across the dorsal cortex at once (Wekselblatt et al. 2016), and a controller can update its input on every frame. The last paragraph now says "a field about 10 mm wide, at 35 Hz", followed by the latency sentence in Aditya's approved wording.
+**Why:** Anna T6: the specs are our system's, not properties of mesoscale imaging. Aditya: "do it".
+**Next:** Check the new P2 sentence in Overleaf. JN unchanged.
+
+### 2026-10-30 — D4: Fig 2d is the held-out R² panel alone; NC caption c/d say what each tests
+**Changed/Found:** `impulse-analysis/imp_tf_cv.m`. Fig 2d goes back to the existing `tf_cv_heldout_r2.pdf` (per-session median and IQR of held-out R², pooled-median guide 0.85). The pooled-median label moved to the left end of its guide, because at the right end it sat on M3c's whisker. The panel now gets the `jnAxesAll` pass like the others. The sidebar (overlay + R² strip) stays a candidate only. New knobs: `CV_SINGLE_K` (pick panel C's session by index; the two AL_0041 sessions share a name) and `CV_REUSE` (keep a workspace `CV` instead of the 18 min refit). NC `results.tex`: caption c = "Model fit within one session (Mouse 1b), one pair of curves per amplitude…"; d = "Model fit in every session: held-out R² of each session's model…". The Results sentence citing the peak-normalized overlay ("Accordingly, the peak-normalized responses share the dip time course…", old L82) is removed; the time-constant numbers before it carry the same point. Re-run numbers unchanged: held-out R² 0.56 / 0.83 / 0.95 / 0.85 (M5a/M5b/M1b/M3c).
+**Why:** Anna F2.5 ("what is D left supposed to provide beyond C except scaling?"). Aditya: c is per amplitude within one session; d needs only the held-out R².
+**Next:** MANIFEST 2D → `tf_cv_heldout_r2.pdf` and the `PAPER_FINAL` run together with 2a/2b/2g. NC `Figure2.pdf` is still the old assembly and needs re-assembly.
+
+### 2026-10-30 — D3 check: Fig 2a and 2c are different sessions; "Model fit window" label back at 6 pt
+**Changed/Found:** Confirmed in code: 2a = `trace_overlay.m` hard-codes `allExperiments(2)` = AL_0041 2025-12-02 e2 (Mouse 5b); 2c = `imp_tf_cv.m` `CV_SINGLE_MN = 'AL_0033'` (Mouse 1b). `trace_overlay.m` gets a `TO_EXP` knob (default 2) and the "Model fit window" label again, at 6 pt (was 3.5 pt, then removed), centred above the plot box over the band. Rendered both candidates to scratch. Mouse 1b: ten amplitudes (0–1.63 mW, 81–196 trials each), graded responses, panel C held-out R² 0.56 / 0.91 / 0.98. Mouse 5b: five amplitudes, 0.87 and 0.90 mW nearly the same, so panel C shows 0.63 / 0.87 / 0.90 mW out of order (R² 0.55 / 0.94 / 0.79).
+**Why:** Anna F2.4; Aditya: "make sure they are same session check in code then suggest, make sure the text model fit window is bigger".
+**Next:** Aditya picks the session (suggested: Mouse 1b for both). If 1b, re-render 2a with `TO_EXP = 3` and move its legend clear of the scale bar.
+
 ### 2026-10-29 — NC: all Fig 2 supplementary material in one figure (relative/absolute power + state quartiles)
 **Changed/Found:** New `paper-writing/supp_impulse_state_nc_build.py` (PyMuPDF; reuses the `fig1_nc_build.py` helpers). It builds `paper/figures_final/nc/supp_impulse_state/S_impulse_state_nc_draft.pdf` (180 × 128 mm) from the working panels in `paper/images/supplementary/`:
 - a–c: relative/absolute power.
