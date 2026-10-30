@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — NC Figure 1 draft built from Anna's SVGs: E signs restored, D timing to scale, one text size
+**Changed/Found:** new `paper-writing/fig1_nc_build.py`. It reads Anna's files (`paper/from_anna_2026-10-29/`, from her Claude chat) and writes `paper/figures_final/nc/fig1/`: `panel_d_architecture.svg`, `panel_e_control_loop.svg` and the 180 × 112 mm composition `Figure1_nc_draft.pdf/.png`. Fixes:
+- E: the summing junction is back to e = y − r (− on r, + on y; methods.tex eq:error).
+- E: the widefield placeholder is replaced by the real SVD frame (600 dpi).
+- One text size: 6 pt labels, 7 pt variables, 5 pt subscripts, 8 pt bold lowercase letters. Her chat used 6.5/8/5.4/10 pt; Nature allows 5–7 pt text.
+- D: the trigger trace is to scale. Blue exposures come every 28.6 ms with 14 ms exposure (Methods L66: blue/violet alternate at 70 Hz), and the laser update is drawn 24 ms after exposure start (Methods L101). It has a latency bracket and a 10 ms bar. Her trace had ~15 pulses, and its "Latency" bracket spanned ~9 frame periods (≈260 ms).
+- `<style>` CSS and SVG markers are inlined into attributes and drawn triangles, because MuPDF ignored both; this is also safer for Illustrator.
+The composition places the real a (wfpath), b (mouse schematic) and c (SVD frame). F is placed at 6/7 scale so its 7 pt text lands at 6 pt. Measured placed text: a 6.1 pt, F 6.0 pt. `.gitignore` now excludes `paper/figures_final/nc/` and `paper/from_anna_*/` (local assets, like the other assemblies).
+**Why:** Anna's F1.1, F1.3 and F1.4, plus the NC layout at the Nature double-column width. A rebuild is reproducible from the script, whereas hand edits in Illustrator are not.
+**Next:**
+- Aditya's calls: letter order (currently a b c f / d e), drop b (F1.2/D2), and whether E keeps the small widefield frame.
+- F1.5: replot F at 38 × 43 mm with normal ticks and the Methods latency definition.
+- A scale bar on c (needs the frame's field size).
+- Final assembly in Illustrator from the two SVGs. Anna's originals exist only on this PC.
+
 ### 2026-10-29 — Anna's Fig 1 redraw read from her Claude share; its E sign flip contradicts Methods
 **Changed/Found:** `paper-writing/REVIEW_ANNA_2026-10-29.md` (6b7a10b) — new subsection under Figure 1. It covers her chat "Scientific figure formatting" (shared to aditya.158@gmail.com, read through Claude in Chrome). The chat redrew Fig 1D and 1E as SVGs at print size and laid out the full figure at 180 × 112 mm, the NC double-column width. The share exposes the text but not the files ("This link doesn't give access to this file"), so Anna must send the 5 files. Her chat flipped the 1E summing junction to e = r − y, calling the original positive feedback. Our Methods define e_t = y_t − y_ref (`methods.tex` eq:error) because the light only lowers activity, so the original signs were correct.
 **Why:** her redraw is the starting point for Fig 1 (F1.1–F1.4). The sign error would put a figure into the paper that contradicts its own Methods equation.

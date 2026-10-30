@@ -48,5 +48,8 @@ manuscriptPanels/
 # themselves are rebuilt from the producers (PAPER_FINAL=true).
 *.ai
 paper/figures_final/panels/
+# Nature Comms assemblies (rebuilt by paper-writing/fig1_nc_build.py etc.) and co-author drops.
+paper/figures_final/nc/
+paper/from_anna_*/
 paper/*.zip
 paper-writing/stat_tables_preview/
