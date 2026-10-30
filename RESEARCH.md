@@ -16,6 +16,15 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — NC Fig 1e: gain triangles closed and enlarged so the K labels fit
+**Changed/Found:** `paper-writing/fig1_nc_build.py` — new `gain_blocks()` in `fix_e`.
+- Found: MuPDF stroked Anna's `<polygon>` gain blocks without their closing back edge, so K_r, K_p and K_i sat in open chevrons.
+- Found: at 7 pt the K and its subscript spilled over the slanted edges. Anna sized the blocks (8–9 × 6–7 mm) for her smaller text.
+- Changed: the triangles are now closed `<path … Z>` shapes, all 10 × 7 mm, with the K label in the tall back third.
+- Changed: the six wires that meet the triangles move to the new edges.
+**Why:** Aditya: "the triangular blocks dont have edges and the controller gains are overflowing" the blocks.
+**Next:** copy `Figure1_nc_draft.pdf` to Closedloop_nc `images/Figure1.pdf` once Acrobat releases the file, then compile and commit it in NC.
+
 ### 2026-10-29 — NC Fig 1 re-packed: frame 46 → 34 mm with a key at its right, latency panel fills the row
 **Changed/Found:** `paper-writing/fig1_nc_build.py`.
 - `frame_panel` now draws a 34 mm frame with its key (output, stimulation, 1 mm bar) to the right, instead of a 46 mm frame with the key underneath.

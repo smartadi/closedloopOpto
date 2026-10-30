@@ -140,8 +140,43 @@ def fix_e(frame_png):
     assert len(img) == 1
     img[0].set('id', 'widefield_image')
     img[0].set('href', 'data:image/png;base64,' + base64.b64encode(frame_png).decode())
+    gain_blocks(root)
     inline_css(root)
     return tree
+
+
+# Gain triangles: Anna's 8-9 x 6-7 mm blocks were sized for 8 pt variables at 10 pt letters; at
+# 7 pt the K and its subscript spill over the slanted edges. Redraw them 10 x 7 mm as closed paths
+# (MuPDF strokes <polygon> without its closing back edge) and slide the wires to the new edges.
+GAIN_W, GAIN_H = 10, 7
+GAINS = {  # Anna's polygon -> (back-edge x, centre y, label K, label subscript)
+    '51,6.5 60,10 51,13.5': (50.5, 10, ('54.120000000000005', '10.95'), ('55.17', '11.6')),
+    '49,19.0 57,22 49,25.0': (48, 22, ('51.74', '22.95'), ('52.79', '23.6')),
+    '54,31.0 62,34 54,37.0': (53, 34, ('56.74', '34.95'), ('57.79', '35.6'))}
+WIRES = {'19,28 19,10 51,10': '19,28 19,10 50.5,10', '60,10 80,10 80,25.2': '60.5,10 80,10 80,25.2',
+         '43,22 49,22': '43,22 48,22', '57,22 65,22': '58,22 65,22',
+         '51,34 54,34': '51,34 53,34', '62,34 65,34': '63,34 65,34'}
+
+
+def gain_blocks(root):
+    for p in list(root.iter(SVG + 'polygon')):
+        x0, yc, (kx, ky), (sx, sy) = GAINS[p.get('points')]
+        h = GAIN_H / 2
+        d = f'M{x0},{yc - h} L{x0 + GAIN_W},{yc} L{x0},{yc + h} Z'
+        path = etree.Element(SVG + 'path', {'d': d, 'fill': 'none', 'stroke': p.get('stroke'),
+                                            'stroke-width': p.get('stroke-width'), 'stroke-linejoin': 'round'})
+        p.getparent().replace(p, path)
+        k = [t for t in root.iter(SVG + 'text') if t.get('x') == kx and t.get('y') == ky]
+        s = [t for t in root.iter(SVG + 'text') if t.get('x') == sx and t.get('y') == sy]
+        assert len(k) == len(s) == 1
+        k[0].set('x', f'{x0 + 2.0:.2f}')         # K in the tall back third, where the block is widest
+        s[0].set('x', f'{x0 + 2.0 + 1.05:.2f}')
+    moved = 0
+    for e in root.iter(SVG + 'polyline'):
+        if e.get('points') in WIRES:
+            e.set('points', WIRES[e.get('points')])
+            moved += 1
+    assert moved == len(WIRES), f'moved {moved} of {len(WIRES)} wires'
 
 
 def fix_d():
