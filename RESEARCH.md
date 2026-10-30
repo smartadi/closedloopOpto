@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — Anna's Fig 1 redraw read from her Claude share; its E sign flip contradicts Methods
+**Changed/Found:** `paper-writing/REVIEW_ANNA_2026-10-29.md` (6b7a10b) — new subsection under Figure 1. It covers her chat "Scientific figure formatting" (shared to aditya.158@gmail.com, read through Claude in Chrome). The chat redrew Fig 1D and 1E as SVGs at print size and laid out the full figure at 180 × 112 mm, the NC double-column width. The share exposes the text but not the files ("This link doesn't give access to this file"), so Anna must send the 5 files. Her chat flipped the 1E summing junction to e = r − y, calling the original positive feedback. Our Methods define e_t = y_t − y_ref (`methods.tex` eq:error) because the light only lowers activity, so the original signs were correct.
+**Why:** her redraw is the starting point for Fig 1 (F1.1–F1.4). The sign error would put a figure into the paper that contradicts its own Methods equation.
+**Next:** get the SVG/PDF files from Anna. When placing E, restore "+" on y and "−" on r, and pick one text size for the figure (her 6.5 pt or the house 6 pt). Fig 1F's axis should state the latency definition used in Methods (exposure start to laser command).
+
 ### 2026-10-29 — Anna's review logged as a handoff file; opsin wording found wrong in Results
 **Changed/Found:** `paper-writing/REVIEW_ANNA_2026-10-29.md` (new) lists every note in Anna's review (she read through Fig 4), quoted verbatim, each with its manuscript line or producer script, a diagnosis, a proposed fix and a status, plus the G1 abstract draft and 7 decisions waiting on Aditya. Found while mapping her notes: `results.tex` L18 says the mice co-express "GCaMP and an inhibitory opsin". ChrimsonR (DLX2.0, interneurons) is an excitatory opsin, and GCaMP8s is in excitatory neurons, so they are not in the same cells (item T7). Fig 2 panels label sessions "Mouse 1"/"M3" while the captions say 1b/3c (X2.1). She read JN 98aebf1, which is also the NC fork point, so text fixes need a draft named; panel fixes reach both.
 **Why:** Aditya wants another agent able to work through the review one item at a time without this chat.
