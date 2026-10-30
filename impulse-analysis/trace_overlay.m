@@ -76,16 +76,18 @@ if TO_FITWIN
     uistack(hModelWin, 'bottom');
 end
 
-% Stimulation onset marker + labels, moved up near the top
-stim_y = yl_s(1) + 0.82*span;
-plot(0, stim_y, 'ro','MarkerSize',5,'MarkerFaceColor','red','HandleVisibility','off');
-text(0.05, stim_y + 0.03*span, 'Stim', 'Color','r','FontSize',PS.fs,'FontWeight','bold', ...
+% Stimulation: a laser-command row along the top with its one pulse at t = 0 (Anna F2.2,
+% 2026-10-29: "why a dot for the laser"). A dot reads as a data point; a pulse on a baseline reads
+% as the input. Width = one imaging frame (Methods: single pulse 23-28 ms), so at this x-range it
+% draws as a spike, which is what an impulse is.
+pulse_w = 0.025;
+lz_y = yl_s(1) + 0.86*span;  lz_h = 0.09*span;
+plot([-1 0 0 pulse_w pulse_w 1], lz_y + [0 0 lz_h lz_h 0 0], 'Color', 'r', ...
+    'LineWidth', 0.75, 'HandleVisibility', 'off', 'Clipping', 'off');
+text(-0.97, lz_y + 0.02*span, 'Laser', 'Color','r','FontSize',PS.fs,'FontWeight','bold', ...
     'HorizontalAlignment','left','VerticalAlignment','bottom','Clipping','off');
-if TO_FITWIN
-    text(mean(tShade), yl_s(2), 'Model Fit Window', ...
-        'FontSize', 3.5, 'Color', [0.45 0.45 0.45], 'FontWeight', 'bold', ...
-        'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'Clipping', 'off');
-end
+% The 'Model Fit Window' label (3.5 pt, below Nature's 5 pt floor) is gone; at 6 pt it is wider
+% than the band. The caption names the band.
 
 % TALK LEGEND (2026-08-19, user: "needs the legend shifted farther to bottom right to not
 % overlap the traces, maybe make the text smaller"). The amplitude key is 5 rows deep, and at

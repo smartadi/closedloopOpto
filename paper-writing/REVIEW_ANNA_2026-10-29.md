@@ -169,7 +169,32 @@ Producers: A `impulse-analysis/trace_overlay.m` (`imp_single_*`); B `impulse-ana
 | F2.5 | "what is D left supposed to provide beyond C except scaling?" | D-left (peak-normalized responses, all sessions) is meant to show that the dip shape is shared and only the rebound differs (results L83), but the panel doesn't say so. Either title it with that claim, or cut D-left and keep the R² summary (D-right). | DECIDE |
 | F2.6 | "what is the purpose of E? i guess to me it just describes how well the opsin expresses across subjects? is there more? what is a pole supposed to be? did i miss this" | E (cross-session model swap) shows that dynamics are only partly shared, which is why the feedforward gain is rough and feedback corrects it (results L76–78). The panel doesn't say this. "Pole" comes from F ("time constants from the fitted poles"), and Results L80–82 use pole language with no plain explanation. Options: say the purpose in E's title and caption and rename F's measure in plain words ("time constants of the fitted model"), or move E and F to the supplement. | DECIDE |
 | F2.7 | "in G i feel like just say 2-4hz power instead of del. also why del? isnt this supposed to be alpha? idk. what is relative vs absolute supposed to be" | Label by frequency and drop δ: "2–4 Hz power" and "2–4 Hz power (fraction of 0.4–10 Hz)". Fix the text to match (results L88, L94, L96–97, L102 use $\delta$; abstract "delta-band"). Define relative and absolute on the panel or in the caption. The naming background (why 2–4 Hz, why not alpha) is in `paper-writing/lit_delta_state_2026-10-15.md`. | OPEN |
+| F2.7a | (Aditya, 2026-10-29) "we need to be clear on the differnece between relative and absolute powers for 2-4hz, and use refernece to show why we are using these specific bands" | NC `results.tex` L87, L93–97, L101–102, Fig 2g caption; `methods.tex` L479–482, L490 | Draft below. It removes "the sub-band least attenuated by the controller" (Methods L479), which is outcome-informed (review M19, 2026-10-03) and wrong: feedback raises 2–4 Hz power 1.44-fold during stimulation (RESEARCH 2026-10-11). Sources: `paper-writing/lit_delta_state_2026-10-15.md` (every reference checked). | DRAFT |
 | X2.1 | (found while logging, not Anna's) | Panels B–F label sessions "Mouse 1", "Mouse 3", "M1", "M3", but the captions say 1b and 3c (session-label rule, `utils/paper_session_label.m`). The MANIFEST comment for 2A says "(Mouse 1b)", but the file is AL_0041 = Mouse 5b. | OPEN |
+
+### F2.7a draft text (NC; given in chat 2026-10-29, not applied)
+
+New bib keys, all checked in `lit_delta_state_2026-10-15.md`: Jacobs2020, Vanni2017, Donoghue2020eNeuro,
+Ma2016 (Phil Trans B), Wright2017. Existing keys used: Crochet2006, Poulet2008, Vinck2015, Arieli1996, Shimaoka2019.
+Reimer2014 is left out because its exact band was not verified.
+
+- **Results L87** → (1) three measures, 1 s before onset: motion energy, and two measures of 2–4 Hz power in the readout.
+  (2) Low-frequency power is high when cortex is synchronized and falls with movement and arousal
+  [Crochet2006, Poulet2008, Vinck2015]; wide-field calcium imaging follows such rhythms up to a few hertz [Vanni2017, Jacobs2020].
+  (3) Absolute = power in the band, so it grows with the amplitude of slow fluctuations.
+  (4) Relative = that power divided by 0.4–10 Hz power, i.e. the share of activity in the band whatever its amplitude:
+  doubling the signal quadruples absolute power and leaves relative power unchanged.
+- **Results L93–97**: "absolute/relative $\delta$ power" → "absolute/relative 2–4 Hz power".
+- **Results L101–102**: absolute = amplitude of ongoing activity that adds as a disturbance [Arieli1996, Shimaoka2019];
+  relative = spectral state normalized for amplitude; the 5 s Fig 4 window resolves the full 1–4 Hz band, hence 1–4 Hz there.
+- **Caption g**: "relative 2–4 Hz power (fraction of 0.4–10 Hz power) and absolute 2–4 Hz power"; drop "($\delta$)"; fix "state .".
+- **Methods L479–482**: definitions; what each measures; absolute scales with expression/illumination/hemoglobin
+  absorption, which act multiplicatively [Ma2016]; relative cancels that but follows the aperiodic slope [Donoghue2020eNeuro].
+  Remove "the sub-band least attenuated by the controller".
+- **Methods, new "Bands" paragraph**: low-frequency power indexes synchrony [Crochet2006, Poulet2008, Vinck2015];
+  wide-field GCaMP synchrony was measured at 3–6 Hz [Jacobs2020]; quiet-wake wide-field mode near 2.6 Hz [Vanni2017];
+  GCaMP–hemoglobin coherence peaks near 0.2 Hz [Wright2017]; 0.4–10 Hz spans the readout below its 17.5 Hz Nyquist;
+  Fig 2g's 1 s window has 1 Hz resolution, so its denominator is in practice 1–10 Hz and its band starts at 2 Hz.
 
 ## Figure 3
 

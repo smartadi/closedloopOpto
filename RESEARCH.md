@@ -16,6 +16,28 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — Fig 2b: real laser-power x-axis (mW) replaces the 0.25 mW scale bar; labels moved off the data
+**Changed/Found:** `impulse-analysis/dose_response.m`, `DR_YAXIS` branch.
+- `paperAxes` (which draws the corner scale bar) is replaced by `cleanAxes`, then both axes are drawn: x from 0 to 5.1 V (1.7 mW), ticks at 0, 0.5, 1 and 1.5 mW (placed at 3 V per mW), labelled "Laser power (mW)".
+- Found: the old reason for having no x ticks ("per-session x offsets make tick values misleading") no longer holds. The dodge is 0.005 V per session, which is 0.002 mW.
+- The session-label column moved from the top right, where it sat on the Mouse 1b/3c points, to start at 0.58 mW near the bottom. Hard left hit the steep Mouse 3c line, whose last point is at 0.54 mW; the new position was checked at 900 dpi.
+- Fits unchanged (slopes −0.29 / −0.44 / −0.51 / −1.04 %/V). Exported with `PAPER_FINAL` off.
+**Why:** Anna F2.3: "it's hard for me to interpret the laser power in B".
+**Next:** caption b says "versus stimulation amplitude"; change it to "versus laser power" with the panel. Run with `PAPER_FINAL` on after Aditya approves.
+
+### 2026-10-29 — Fig 2a: laser-command row with one pulse at t = 0 replaces the red "Stim" dot; 3.5 pt fit-window label removed
+**Changed/Found:** `impulse-analysis/trace_overlay.m`.
+- A red laser trace runs along the top of the panel (at 0.86 of the y-span), labelled "Laser". It has one 25 ms pulse at t = 0, one imaging frame long; Methods give 23–28 ms.
+- The "Model Fit Window" label is removed. It was 3.5 pt, below Nature's 5 pt minimum, and at 6 pt it would be wider than the gray band. The caption names the band.
+- Data were reloaded with `load_experiments` in a separate MATLAB batch (290 s, 4 sessions). Exported with `PAPER_FINAL` off.
+**Why:** Anna F2.2: "why a dot for the laser".
+**Next:** caption a "Red dot shows the stimulation impulse" → "Red trace, laser command (one 23–28 ms pulse at t = 0)". Run with `PAPER_FINAL` on after approval.
+
+### 2026-10-29 — Fig 2g axis names by frequency: "2–4 Hz power (relative/absolute)", no δ
+**Changed/Found:** `impulse-analysis/imp_state_var_combined.m` now labels the tiles from a tag → label map: "Motion", "2–4 Hz power (relative)" and "2–4 Hz power (absolute)". The cached `R.name` strings ("Rel \delta", "Abs \delta power") are no longer used for the panel. The first try, "Relative 2–4 Hz power" on one line, ran into the neighbouring tile at 6 pt, so the qualifier went on a second line. Rebuilt from `data/fig2g_state_stats.mat` with `PAPER_FINAL` off, so only `paper/images/figure2/` changed. Numbers unchanged (Q4/Q1 0.58 / 1.03 / 2.32).
+**Why:** Anna F2.7: "just say 2-4hz power instead of del ... what is relative vs absolute supposed to be". Aditya wants the difference made clear and the band choice referenced; that text is drafted separately.
+**Next:** once Aditya approves, run with `PAPER_FINAL` on to update `figures_final`; the Results/caption/Methods δ wording must change with it.
+
 ### 2026-10-29 — NC Fig 1e: gain triangles closed and enlarged so the K labels fit
 **Changed/Found:** `paper-writing/fig1_nc_build.py` — new `gain_blocks()` in `fix_e`.
 - Found: MuPDF stroked Anna's `<polygon>` gain blocks without their closing back edge, so K_r, K_p and K_i sat in open chevrons.

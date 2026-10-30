@@ -133,15 +133,22 @@ if DR_YAXIS
     % 2.5 %dF/F effect into a third of the panel.
     yb = [-3 1];
     ylim(ax, yb);
-    % XLength is in DATA units (V). mW = V/3 (user, 2026-10-11), so 0.25 mW = 0.75 V; the bar
-    % was 1 V labelled 0.25 mW.
-    paperAxes(gca,'XLength',0.75,'YLength',0.01,'XLabel','0.25 mW','YLabel',' ');
-    ax.YAxis.Visible   = 'on';
-    ax.YAxis.Color     = 'k';
-    ax.YAxis.LineWidth = 1.0;
+    % Real x axis too (Anna F2.3, 2026-10-29: "it's hard for me to interpret the laser power in
+    % B"). The old 0.25 mW corner bar made the reader measure each point against it. The
+    % per-session x dodge noted above is 0.005 V = 0.002 mW, far below a tick, so ticks no longer
+    % mislead. Data stay in volts; ticks are placed at 3 V per mW (mW = V/3, user 2026-10-11).
+    cleanAxes(ax);
+    mWt = 0:0.5:1.5;
+    xlim(ax, [0 3*1.7]);
+    for A = [ax.XAxis ax.YAxis]
+        A.Visible = 'on';  A.Color = 'k';  A.LineWidth = 1.0;
+    end
     ylim(ax, yb);
     ax.YTick      = yb(1):1:yb(2);
     ax.YTickLabel = compose('%d', (yb(1):1:yb(2))');
+    ax.XTick      = 3*mWt;
+    ax.XTickLabel = compose('%g', mWt');
+    xlabel(ax, 'Laser power (mW)', 'FontSize', PS.fs, 'FontWeight', PS.fw);
     ax.TickDir = 'out';  ax.Box = 'off';
     ax.FontSize = PS.fs; ax.FontWeight = PS.fw;
 else
@@ -174,15 +181,19 @@ if ~strcmpi(DR_LABEL, 'none')
     % Place the sequential legend INSIDE the axes at the top-right (the dose-response lines
     % descend, so that corner is empty) and right-align it, so it does NOT extend the panel
     % width. Keeps the panel within the <=4 cm Fig-2 canvas (user 2026-09-22).
+    % Bottom, left of centre, since 2026-10-29: at the top right the labels sat on the Mouse 1b
+    % and 3c points (seen in Anna's review copy). Hard left collided with the steep Mouse 3c line,
+    % whose last point is at 0.54 mW, so the column starts at ~0.58 mW, in the gap between that
+    % point and the Mouse 1b line (checked at 900 dpi).
     xl    = xlim(ax);   yl = ylim(ax);   xr = diff(xl);
-    labXc = xl(1) + 0.97*xr;                    % right edge, text grows leftward
-    ytop  = yl(2) - 0.06*diff(yl);
-    ystep = 0.115*diff(yl);                     % fixed row pitch -- sequential, no gaps
+    labXc = xl(1) + 0.34*xr;                    % left edge, text grows rightward
+    ystep = 0.095*diff(yl);                     % fixed row pitch -- sequential, no gaps
+    ytop  = yl(1) + 0.05*diff(yl) + (nExp-1)*ystep;
     for expIdx = 1:nExp
         yy = ytop - (expIdx-1)*ystep;
         text(ax, labXc, yy, labT{expIdx}, ...
             'Color', expColors(expIdx,:), 'FontSize', PS.fs, 'FontWeight', PS.fw, ...
-            'HorizontalAlignment','right', 'VerticalAlignment','middle', 'Clipping','off');
+            'HorizontalAlignment','left', 'VerticalAlignment','middle', 'Clipping','off');
     end
 end
 ylabTxt = 'Evoked suppression';

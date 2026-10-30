@@ -22,6 +22,14 @@ addpath(fullfile(root,'utils'));
 PS = paperStyle();
 
 mkOrder = {'MOT','DPr','DPa'};                       % motion | rel-delta | abs-delta
+% Axis names by frequency, not Greek band (Anna F2.7, 2026-10-29: "just say 2-4hz power instead
+% of del ... what is relative vs absolute supposed to be"). The text gives frequencies, and
+% "delta" invited "why not alpha?". The caption defines relative = fraction of 0.4-10 Hz power.
+% The cached R.name strings still say \delta; they are not used for the panel.
+en = char(8211);
+% "Relative 2-4 Hz power" on one line ran into its neighbour at 6 pt, so the qualifier goes below.
+xName = containers.Map(mkOrder, {{'Motion'}, {['2' en '4 Hz power'], '(relative)'}, ...
+                                 {['2' en '4 Hz power'], '(absolute)'}});
 idx = arrayfun(@(t) find(strcmpi({R.tag}, t{1}), 1), mkOrder, 'UniformOutput', false);
 idx = [idx{:}];
 if numel(idx) < 2, error('[2G] fewer than two of %s in R', strjoin(mkOrder,'/')); end
@@ -61,7 +69,7 @@ for m = 1:numel(idx)
     xtickangle(ax, 0);
     xlim(ax, [0 1]);  ylim(ax, yLimC);
     set(ax, 'Box', PS.ax_box, 'TickDir', PS.ax_tickdir, 'FontSize', PS.fs, 'FontWeight', PS.fw);
-    xlabel(ax, r.name, 'FontSize', PS.fs, 'FontWeight', PS.fw);
+    xlabel(ax, xName(r.tag), 'FontSize', PS.fs, 'FontWeight', PS.fw);
     if m > 1, set(ax, 'YTickLabel', [], 'YTick', [], 'YColor', 'none'); end
     fprintf('[2G] %-16s session-mean Q4/Q1 %.2f | per session %s | no-stim control Q4/Q1 %.2f\n', ...
             r.tag, yv(end)/yv(1), mat2str(Ys(:,end)./Ys(:,1), 2), yc(end)/yc(1));
