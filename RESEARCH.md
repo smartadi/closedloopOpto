@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — STYLE_NICK.md: measured style sheet from Nick's three papers
+**Changed/Found:** new `paper-writing/STYLE_NICK.md` — rules (tense, literal verbs, cut decorative clauses, "target level", hedge interpretations, paragraph openers, state claims on the robust test) and structure of his abstracts, intros and discussions, from Steinmetz 2019 Nature, Zatka-Haas/Steinmetz 2021 eLife and Steinmetz 2021 Science (`nick papers/`, untracked). Measured per 1000 words, Nick vs NC before → after: motion verbs (grew/fell/stayed/leaves) 0.1 vs 5.9 → 1.6; increase/decrease/correlate 4.9 vs 1.5 → 6.7; metaphorical verbs 1.3 vs 5.7 → 1.4; hedges 3.2 vs 1.4 → 2.9; "we" + past verb 83% vs 59% → 69%. Sentence length was the same throughout (~28 words), so it was never the issue.
+**Why:** Nick's N2 asked for a rewrite in the voice of his older papers; Aditya supplied the papers (2026-10-30).
+**Next:** Apply to JN after Overleaf is synced to GitHub; Nick reviews diffs, not rewrites.
+
+### 2026-10-30 — NC claim 2 restated on the Holm-robust tests (my rewrite had weakened it)
+**Changed/Found:** NC `main.tex`, `introduction.tex`, `results.tex`, `discussion.tex` (NC 3da79c0). The rewrite had phrased the state result as "open-loop error increased with movement; under feedback it no longer did". From `STATS_TABLE.csv`: OL motion slope +0.24 [0.07, 0.41], p = 0.011, **Holm 0.069**; CL motion slope −0.06 [−0.14, 0.03], p = 0.16 (a null). The robust tests are motion attenuation −0.14 log ratio/SD [−0.21, −0.06], p = 0.0023, Holm 0.009, 11/11 sessions, 4/4 mice; and the CL slope on abs 1–4 Hz +0.32 [0.16, 0.48], p = 0.0007, Holm 0.0057, 15/15, 4/4. All four places now say: feedback removed a larger fraction of the error as movement increased, but closed-loop error increased with 1–4 Hz power. Results says "the closed-loop slope was not significant (p = 0.16)" instead of "did not". Abstract now 194 words.
+**Why:** Aditya asked whether the stats reporting is good; the headline claim should rest on the tests that survive correction, as the pre-rewrite NC abstract did.
+**Next:** Other stats suggestions are for Aditya to decide (CIs in text, Fig 4g mouse-level CI and 13-session sensitivity, relative-power effects that fail Holm, linearity slope CIs).
+
+### 2026-10-30 — NC Methods pass: target level, past tense, plainer wording
+**Changed/Found:** NC `methods.tex` (NC 87839cd), 96 lines reworded, no number or equation changed. "Target level" in prose; `y_ref` defined once as "the reference, in control terms" (L128); "constant offset" for "standing offset"; jargon replaced or glossed: "fed back on" → "used for feedback", "persistent excitation and subspace identification" → "the long, varied input sequences that standard system identification requires (…)", "zeroth-order search" → "random search that used only measured costs", "actuator" → "laser"/"command", "clamped" → "limited", "leak" glossed once. Clarified which VARX is which in the MPC replay (the MPC's own model fitted without closed-loop trials; the replay model fitted to the whole session). Methods text is 7,250 words (Nat Comms guide < 3,000).
+**Why:** Aditya, 2026-10-30: "take a pass at methods too … less jargony and to the point".
+**Next:** Cutting Methods toward 3,000 words means moving detail to the Supplement; Aditya to decide.
+
 ### 2026-10-30 — Bug: NC Discussion bandwidth used the old 47 ms loop latency
 **Changed/Found:** NC `discussion.tex` (NC acbbc90) — the feedback-bandwidth sentence still said "loop delay at most 47 ms and about half that on average", giving an effective delay of 37–61 ms and a bandwidth of about 2.6–4 Hz. Fig 1c, Results and Methods L101 use the whole-session measurement (Mouse 4, n = 3539): median 24.0 ms, max 43.5 ms. Recomputed: effective delay = loop delay + 14 ms (half of one 28.6 ms frame) = 38–58 ms; crossover f ≤ 1/(2πτ) = 2.8–4.2 Hz. Now "about 2.8–4.2 Hz".
 **Why:** The earlier fix to the same stale latency (Results L39, 2026-10-30) missed the Discussion.
