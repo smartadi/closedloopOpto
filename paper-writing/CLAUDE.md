@@ -72,9 +72,10 @@ assemblies: lowercase panel letters, 88/180 mm widths). Both assemblies link the
 
 ## Start a paper session by reading
 1. This file (done)
-2. `FINDINGS.md` — grep for the finding/claim you are writing about
-3. `TASKS.md` 🔴 section — check what is blocking submission
-4. Grep `MEETINGS.md` for the most recent entry if context on Nick's decisions is needed
+2. `PAPER.md` → **"Bold points"** (top of file) — Aditya's headline claims; the text should serve these
+3. `FINDINGS.md` — grep for the finding/claim you are writing about
+4. `TASKS.md` 🔴 section — check what is blocking submission
+5. Grep `MEETINGS.md` for the most recent entry if context on Nick's decisions is needed
 
 ## Open questions (see TASKS.md for full list)
 1. What are actual Kp and Ki values? (needed for `results_edit.tex` L89)

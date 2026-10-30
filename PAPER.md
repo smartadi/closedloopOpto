@@ -5,6 +5,13 @@
 ## NOTE
 - large deviation in impulse prediction never have heavy motion energy / motion affected dynamics produce predictable impulse responses
 
+## Bold points (Aditya, 2026-10-30 — verbatim; the paper's headline claims)
+
+- despite changing brain states and variability and claearly non-linear dynamics, a LTI assumption and linear feedback controller is enough to closely track activity to target and reduce trial-to trial variability; ie optogenetic stimulation works under variable brain states
+- Using the internal model principle argument, we show that controller's tracking capacity is informative about brain states specialy motion and synchronicity.
+   - this informs us that for desgining precise control what states are more amenable and what are not.
+      - 
+
 
 ## Scientific Claims to Fix (require analysis before editing)
 

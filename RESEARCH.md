@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — Aditya's "bold points" (headline claims) recorded in PAPER.md
+**Changed/Found:** `PAPER.md` — new "Bold points" section at the top, Aditya's words verbatim: (1) despite variable brain states and non-linear dynamics, an LTI model plus a linear feedback controller tracks the target and cuts trial-to-trial variability; (2) via the internal model principle, tracking capacity reports brain state (motion, synchrony), which says which states suit precise control. `paper-writing/CLAUDE.md` start-of-session reading list now points to it.
+**Why:** Aditya asked for a note of the paper's bold points; manuscript sessions should write toward them.
+**Next:** The third sub-point under (2) is still blank for Aditya to fill. Check the abstract, significance and intro (JN and NC) state both points.
+
 ### 2026-10-30 — Nick's Overleaf review exported to a handoff file; reusable comment exporter added
 **Changed/Found:** Added `paper-writing/overleaf_comments_export.js`, a console snippet that exports an Overleaf project's comment threads and tracked changes to Markdown, using the editor's own read-only endpoints (`/threads`, `/ranges`, doc download). Added `paper-writing/REVIEW_NICK_2026-10-30.md`. On JN Overleaf (Closedloop_edit), Nick left 10 comments (abstract, significance, intro L10) and 106 tracked changes (main.tex L91–109, intro L3–8). All are logged verbatim there, with diagnoses, 8 problems in the tracked edits (E1–E8) and draft abstract (249 words) and significance (116 words). Found: Overleaf is ahead of GitHub. `main.tex`, `introduction.tex` and `results.tex` differ: Nick's tracked changes, plus untracked edits (title, author line, `results.tex` L12–14 and L202 by Aditya at 18:21–18:27 UTC). In Nick's edits, "compensated for system delays" is wrong: 71° of lag at 1 Hz is about 200 ms, against 24 ms of loop latency. "State during the stimulation" contradicts the locked −2 to +3 s window. The older `Closedloop` project holds 49 earlier Nick threads (2025-11 to 2026-04), not exported.
 **Why:** Aditya asked how to export Nick's comments and for help addressing them. Overleaf's GitHub sync carries no comments, so they had to come from the editor's endpoints.
