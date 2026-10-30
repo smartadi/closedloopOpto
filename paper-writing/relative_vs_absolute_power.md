@@ -129,9 +129,7 @@ Draft caption:
 > **b**, Three trials from Mouse 1b chosen by rule: typical (both near the session mean), high absolute
 > and low relative power ($z_{abs} = +0.9$, $z_{rel} = −1.5$), and the highest relative power among
 > trials with at least average absolute power ($z_{abs} = +1.1$, $z_{rel} = +2.2$). The two have similar
-> absolute 2–4 Hz power. Light lines, each trial's 2–4 Hz component in the measurement window
-> (zero-phase band-pass, for display). Gray shading, the window over which power was measured; red,
-> laser command.
+> absolute 2–4 Hz power. Gray shading, the window over which power was measured; red, laser command.
 > **c**, Mean spectra over the same window for Mouse 1b trials that were typical ($|z| < 0.5$ on both;
 > n = 72), high in absolute and below average in relative power ($z_{abs} > 1$, $z_{rel} < 0$; n = 20),
 > or high in relative power with at least average absolute power ($z_{rel} > 1$, $z_{abs} \ge 0$;

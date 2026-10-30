@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — imp_relabs_exemplars.m: 2–4 Hz band-pass overlay removed from panel b
+**Changed/Found:** `impulse-analysis/imp_relabs_exemplars.m` panel b now draws only the raw trial traces, plus the state-window shading and the laser row. The display-only 2–4 Hz Butterworth overlay added earlier today, and its `butter`/`filtfilt` code, are gone. Panels re-exported with `PAPER_FINAL` off; the caption draft in `relative_vs_absolute_power.md` no longer mentions light lines.
+**Why:** Aditya: "what is the lights tone trace you added we dont need that".
+**Next:** none.
+
 ### 2026-10-29 — imp_relabs_exemplars.m: high-relative exemplar re-picked to show 2–4 Hz bursts; 2–4 Hz component overlaid
 **Changed/Found:** `impulse-analysis/imp_relabs_exemplars.m`.
 - The high-relative rule is now the highest relative power among trials with z_abs ≥ 0. It was high relative and low absolute, mirroring `f4_delta_candidates.m`, but that picked trials too small for any rhythm to show (the dead end).

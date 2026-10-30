@@ -93,22 +93,16 @@ jnAxesAll(figA);
 paperExport(figA, fullfile(outDir, 'relabs_scatter.pdf'));
 
 %% (b) example trials, one y-axis
-% Each trial is overlaid, inside the state window only, with its 2-4 Hz component (2nd-order
-% Butterworth, zero phase, run on the whole -3..3 s trial so the window has no edge effect; DISPLAY
-% ONLY, the measures use the periodogram). Absolute power is the size of that component; relative
-% power is its size against the whole trace. The amplitude-mean line was dropped: this panel is
-% about the state before onset.
+% Raw trial traces only. A light 2-4 Hz band-pass overlay was tried 2026-10-29 and removed (Aditya:
+% "we dont need that"). The amplitude-mean line was dropped too: this panel is about the state
+% before onset.
 twin = [-1.5 1.0];  iT_ = tAxis >= twin(1) & tAxis <= twin(2);  tv = tAxis(iT_);
-iW = tAxis >= -1 & tAxis < 0;
-[bb, aa] = butter(2, [2 4] / (fs/2));
 ex = [iT iA iR];  cx = {C_typ, C_abs, C_rel};
 nm = {'Typical', 'High absolute', 'High relative'};
-Y = cell(1,3);  Yb = cell(1,3);
+Y = cell(1,3);
 for j = 1:3
     df = allExperiments(REX_SESS).imp.dfImp{T.amp(ex(j))};
-    y  = df(T.row(ex(j)), :);
-    Y{j} = y(iT_);  yb = filtfilt(bb, aa, y);
-    Yb{j} = yb(iW) + mean(y(iW), 'omitnan');   % ride at the trace's level, not at zero
+    Y{j} = df(T.row(ex(j)), iT_);
 end
 yl = [min(cellfun(@min, Y)), max(cellfun(@max, Y))];  yl = yl + [-0.08 0.18]*diff(yl);
 figB = paperFig(7.6, 3.3);
@@ -119,7 +113,6 @@ for j = 1:3
     lz = yl(1) + 0.90*diff(yl);  lh = 0.06*diff(yl);
     plot(ax, [twin(1) 0 0 0.025 0.025 twin(2)], lz + [0 0 lh lh 0 0], 'r', 'LineWidth', 0.6);
     plot(ax, tv, Y{j},  '-', 'Color', cx{j}, 'LineWidth', 1.0);
-    plot(ax, tAxis(iW), Yb{j}, '-', 'Color', 0.45*cx{j} + 0.55, 'LineWidth', 0.8);   % 2-4 Hz part
     xlim(ax, twin);  ylim(ax, yl);  xticks(ax, -1:1);
     title(ax, nm{j}, 'FontWeight', PS.fw, 'Color', cx{j});   % z values: panel a circles + caption
     set(ax, 'Box', 'off', 'TickDir', 'out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
