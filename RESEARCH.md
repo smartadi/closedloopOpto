@@ -16,6 +16,34 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — NC: all Fig 2 supplementary material in one figure (relative/absolute power + state quartiles)
+**Changed/Found:** New `paper-writing/supp_impulse_state_nc_build.py` (PyMuPDF; reuses the `fig1_nc_build.py` helpers). It builds `paper/figures_final/nc/supp_impulse_state/S_impulse_state_nc_draft.pdf` (180 × 128 mm) from the working panels in `paper/images/supplementary/`:
+- a–c: relative/absolute power.
+- d–f: quartile rows for motion, relative and absolute power.
+- g–i: per-mouse raster strips.
+- Then the session legend and the two colour bars.
+
+One common scale per block (0.946 top, 0.938 state rows), so 6 pt panel text prints at 5.7 / 5.6 pt. Spatial spread (S1) stays a separate figure.
+
+In Closedloop_nc:
+- `supplementary.tex`: the figure keeps `\label{fig:state_quartile}` and now shows `images/supplementary/S_impulse_state.pdf`. Its caption merges the new a–c text with the old a–c → d–f and d–f → g–i text.
+- `results.tex`: L92 "…}a)" → "…}d)" and L96 "a--c, second column" → "d--f, second column". The other citations (Results L102, Discussion L16, Methods L564, stat_tables L31) carry no letters.
+- `git rm` of the old `S_state_quartile.pdf`.
+
+Compiles clean: page 38, Supplementary Figure 2, no undefined references.
+**Why:** Aditya: "we can put all figure 2 related supplementary material into one single figure"; asked whether to include the spatial-spread maps: "No, leave S1".
+**Next:** panels a–c are not cited from the Results until the relative/absolute text (`relative_vs_absolute_power.md` §6) is approved. Once approved, run the relabs and quartile producers with `PAPER_FINAL` on and add a MANIFEST section. The JN draft still uses its own Illustrator assembly.
+
+### 2026-10-29 — imp_state_quartile_supp.m: quartile axes by frequency ("Rel./Abs. 2–4 Hz quartile")
+**Changed/Found:** `impulse-analysis/imp_state_quartile_supp.m`: `STATE_LAB` now reads "Absolute 2–4 Hz power" / "Relative 2–4 Hz power", so the axes read "Abs./Rel. 2–4 Hz quartile" instead of "Abs./Rel. δ quartile". Rebuilt from `data/fig2g_state_stats.mat` with `PAPER_FINAL` off; numbers unchanged (Q4/Q1 0.58 / 1.03 / 2.35). The raster strips (`imp_state_raster_peramp.m`) carry no δ label and already name sessions 5a/5b/1b/3c, so they were not re-run.
+**Why:** Anna F2.7 (frequency, not Greek band names), so the panels match Fig 2g.
+**Next:** run with `PAPER_FINAL` on once Aditya approves the F2.7 relabel.
+
+### 2026-10-29 — imp_relabs_exemplars.m: panel a points in one neutral gray
+**Changed/Found:** Panel a drew trials in the Fig 2 session blues, but the quartile rows in the same supplement use another session palette (M3c green), which clashed with the high-relative green. The values are z-scored within session, so session identity adds nothing; all points are now gray (0.70), with the three exemplar circles in colour.
+**Why:** consistency once the panels were merged into one supplementary figure.
+**Next:** none.
+
 ### 2026-10-29 — imp_relabs_exemplars.m: 2–4 Hz band-pass overlay removed from panel b
 **Changed/Found:** `impulse-analysis/imp_relabs_exemplars.m` panel b now draws only the raw trial traces, plus the state-window shading and the laser row. The display-only 2–4 Hz Butterworth overlay added earlier today, and its `butter`/`filtfilt` code, are gone. Panels re-exported with `PAPER_FINAL` off; the caption draft in `relative_vs_absolute_power.md` no longer mentions light lines.
 **Why:** Aditya: "what is the lights tone trace you added we dont need that".

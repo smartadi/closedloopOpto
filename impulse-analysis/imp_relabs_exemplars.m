@@ -76,10 +76,9 @@ fprintf('[REX] %s groups: typical n=%d, high-abs/low-rel n=%d, high-rel/abs>=mea
 
 %% (a) relative vs absolute, every trial
 figA = paperFig(4.0, 3.6);  axA = gca;  hold(axA, 'on');
-for e = unique(T.sess)'
-    s = T.sess == e;
-    scatter(axA, za(s), zr(s), 2, PS.sess(e,:), 'filled', 'MarkerFaceAlpha', 0.35);
-end
+% One neutral colour: values are z-scored within session, so session identity adds nothing here, and
+% the supplement's session palette (M3c green) would clash with the high-relative green.
+scatter(axA, za, zr, 2, [0.70 0.70 0.70], 'filled', 'MarkerFaceAlpha', 0.45);
 for q = [iT iA iR]
     c = C_typ;  if q == iA, c = C_abs; elseif q == iR, c = C_rel; end
     plot(axA, za(q), zr(q), 'o', 'MarkerSize', 4, 'MarkerEdgeColor', c, 'LineWidth', 1.2);

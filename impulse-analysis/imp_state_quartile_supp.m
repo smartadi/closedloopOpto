@@ -38,8 +38,9 @@ if ~exist('SQ_VAR','var')    || isempty(SQ_VAR),    SQ_VAR = false; end   % erro
 % STV_R.sess order. The mat file carries no session structs, so the sessions are named here.
 SESS_ID  = {'AL_0041 2025-12-02 e1','AL_0041 2025-12-02 e2','AL_0033 2025-01-29 e1','AL_0048 2026-07-15 e1'};
 SESS_LAB = imp_mouse_label(SESS_ID);          % 'Mouse 5a','Mouse 5b','Mouse 1b','Mouse 3c'
-STATE_LAB = struct('MOT','Motion','PVv','Pre-trial variance','DPa','Absolute δ power', ...
-                   'DPr','Relative δ power');   % unicode + Interpreter none: tex bold spaces words apart
+% Bands by frequency, not Greek (Anna F2.7, 2026-10-29); the axis reads "Rel. 2-4 Hz quartile".
+STATE_LAB = struct('MOT','Motion','PVv','Pre-trial variance','DPa','Absolute 2–4 Hz power', ...
+                   'DPr','Relative 2–4 Hz power');   % unicode + Interpreter none: tex bold spaces words apart
 C_stim = J.col_ol;  C_ctl = [0.55 0.55 0.55];
 C_sess = [0.30 0.45 0.70; 0.45 0.65 0.85; 0.85 0.55 0.20; 0.40 0.65 0.35];   % muted, distinct
 nB = size(R(1).sdRawNs,2);  qlab = "Q"+(1:nB);

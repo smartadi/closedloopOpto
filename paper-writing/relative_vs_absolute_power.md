@@ -137,12 +137,14 @@ Draft caption:
 > Gray band, 2–4 Hz. Over all trials, absolute 2–4 Hz power followed total 0.4–10 Hz power (Spearman
 > ρ = 0.97), whereas relative power did not (ρ = 0.24).
 
+**Done 2026-10-29 (NC):** merged with Supplementary Fig. state_quartile into one Fig 2 supplement
+(`paper-writing/supp_impulse_state_nc_build.py`; these panels are a–c, the quartile rows d–f, the
+raster strips g–i). The caption above is in NC `supplementary.tex`. S1 (spatial spread) stays separate.
+
 Options still open:
 - (i) Add a per-session version (rows = sessions), as the controller supplement does, to answer "is
   Mouse 1b cherry-picked?".
-- (ii) Add the controller counterpart as a second row, built from `f4_delta_candidates.m` on the Fig 4
-  window, so one supplementary figure explains both.
-- (iii) Merge this into the existing Supplementary Fig. state_quartile as a new first row.
+- (ii) Add the controller counterpart, built from `f4_delta_candidates.m` on the Fig 4 window.
 
 ## 6. Text changes (NC line numbers as of 2026-10-29)
 
