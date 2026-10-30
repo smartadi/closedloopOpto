@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — SfN 2026 poster draft (Figs 1–5) in LaTeX
+**Changed/Found:** new `poster/sfn2026/poster.tex` — 60×40 in landscape, 3 columns, assembled vector Figs 1–5 with claim headlines and numbers from JN `results.tex`. Fig 1 is read from `Closedloop_nc/images/Figure1.pdf` by full path because `paper/figures_final/Figure1.pdf` is in fact a stale Fig-2 assembly (Mouse 1 / M1 labels, stars in G). Fig 2 is the 10-20 assembly, so it predates today's A = Mouse 1b / D = held-out-R² swap.
+**Why:** SfN Neuroscience 2026 (DC, Nov 14–18); board is 6×4 ft, so 60×40 leaves a pin margin and prints on a 42 in roll. A virtual PDF is required, and it must name the funding sources. Fig 6 (MPC) is left out by request.
+**Next:** fill the [FILL] items (title vs abstract title, departments, poster number, funding, QR, logo); re-run once Fig 2 is reassembled; consider 70×46 in if figure text (~14 pt) reads too small.
+
 ### 2026-10-30 — T8: NC Fig 2 section now says the impulses were open loop; caption a rewritten for Mouse 1b
 **Changed/Found:** NC `results.tex`: heading "Under open-loop stimulation, trial-averaged cortical dynamics are well approximated by a linear system"; the first sentence says we "first stimulated open loop, without feedback", with amplitudes "fixed in advance". Fig 2a: "five of these amplitudes" (was three). Caption a: Mouse 1b (the session in c), five of ten amplitudes, 0–1.43 mW, and "Red trace, laser command, a single pulse at t = 0" in place of the red dot (F2.2).
 **Why:** Anna T8/F2.1: the reader has just seen the closed-loop rig, so the impulse experiment must say it is open loop. Caption a follows D3 and the laser-row panel.
