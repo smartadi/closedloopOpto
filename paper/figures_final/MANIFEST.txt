@@ -33,20 +33,23 @@ figure1/latency_histogram.pdf  # loop-latency distribution, Fig 1F
 [figure2]
 # Lettering LOCKED 2026-10-02 (user: "fig 2 caption panel is correct, change the manifest").
 # Follows the results.tex caption.
-#   A single-session      -> imp_single_AL_0041_2025-12-02_en2.pdf  (Mouse 1b)
+#   A single-session      -> imp_single_AL_0033_2025-01-29_en1.pdf  (Mouse 1b, same session as C)
 #   B dose-response       -> imp_response.pdf
 #   (A/B swapped 2026-10-12 to match results.tex: A = traces, B = evoked vs amplitude.)
-#   C LTI fit, 1 session  -> tf_cv_single_AL_0033.pdf
-#   D LTI validation      -> tf_cv_2D_sidebar.pdf
+#   C LTI fit, 1 session  -> tf_cv_single_AL_0033.pdf  (Mouse 1b)
+#   D LTI validation      -> tf_cv_heldout_r2.pdf  (held-out R2 only; Anna F2.5, D4 2026-10-30)
+# A was Mouse 5b (imp_single_AL_0041_2025-12-02_en2.pdf) and D was tf_cv_2D_sidebar.pdf until
+# 2026-10-30 (Anna F2.4/F2.5). The old files stay in panels/figure2/ unpruned until the JN draft
+# is ported, because its assembly still links them.
 #   E model swap          -> tf_model_swap.pdf
 #   F timescales          -> tf_tau_forest.pdf
 #   G state vs prediction -> imp_state_var_combined.pdf
 # Row 1: A B C D | Row 2: E F G (row widths to be re-set at Illustrator assembly).
 # The model swap (now E) moved to row 2 on 2026-09-30 so its cell numbers could be made legible.
-figure2/imp_single_AL_0041_2025-12-02_en2.pdf  # 3.03 x 3.00 cm
+figure2/imp_single_AL_0033_2025-01-29_en1.pdf  # 3.40 x 3.30 cm
 figure2/imp_response.pdf  # 2.89 x 3.10 cm
 figure2/tf_cv_single_AL_0033.pdf  # 5.36 x 3.21 cm
-figure2/tf_cv_2D_sidebar.pdf  # 3.99 x 3.35 cm
+figure2/tf_cv_heldout_r2.pdf
 figure2/tf_model_swap.pdf  # 4.73 x 3.32 cm
 figure2/tf_tau_forest.pdf  # 3.21 x 3.28 cm
 figure2/imp_state_var_combined.pdf  # 6.53 x 3.46 cm

@@ -4,9 +4,10 @@
 
 %% Single-session trace overlay â€” session 3
 close all;
-% TO_EXP: which allExperiments entry to draw (default 2 = AL_0041 2025-12-02 e2, Mouse 5b).
-% Anna F2.4 (2026-10-29): A and C should show the same session; C is AL_0033 = entry 3.
-if ~exist('TO_EXP','var') || isempty(TO_EXP), TO_EXP = 2; end
+% TO_EXP: which allExperiments entry to draw (default 3 = AL_0033 2025-01-29 e1, Mouse 1b).
+% Anna F2.4 (2026-10-29): A and C should show the same session. Aditya chose Mouse 1b for both
+% (2026-10-30): ten graded amplitudes; 5b (entry 2, the old default) has two near-equal ones.
+if ~exist('TO_EXP','var') || isempty(TO_EXP), TO_EXP = 3; end
 imp3  = allExperiments(TO_EXP).imp;
 uAmp3 = allExperiments(TO_EXP).uAmp;
 mn3   = allExperiments(TO_EXP).mn;
@@ -64,9 +65,11 @@ paperAxes(gca,'XLength',0.25,'YLength',1,'XLabel','250 ms','YLabel','1% dF/F');
 % traces run through the 'southeast' slot. This MUST come after paperAxes -- that
 % call resizes the axes, and an auto-located legend is re-laid-out when it does,
 % which silently undoes any Position set beforehand. Location='none' pins it.
+% Mouse 1b draws five amplitudes, and a five-row key there sits on the scale bars, so it parks
+% in the bottom-right corner instead, below the rebound (2026-10-30).
 drawnow; lgd.Units = 'normalized'; lgp = lgd.Position;
 lgd.Location = 'none';
-lgd.Position = [0.150, 0.075, lgp(3), lgp(4)];   % clear of the paperAxes scale bars
+lgd.Position = [1 - lgp(3) - 0.01, 0.075, lgp(3), lgp(4)];
 
 % Freeze the data-driven y-range, then draw the model-fit window spanning it
 % full height and send it to the back (behind traces and SD fills).

@@ -16,6 +16,36 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — T8: NC Fig 2 section now says the impulses were open loop; caption a rewritten for Mouse 1b
+**Changed/Found:** NC `results.tex`: heading "Under open-loop stimulation, trial-averaged cortical dynamics are well approximated by a linear system"; the first sentence says we "first stimulated open loop, without feedback", with amplitudes "fixed in advance". Fig 2a: "five of these amplitudes" (was three). Caption a: Mouse 1b (the session in c), five of ten amplitudes, 0–1.43 mW, and "Red trace, laser command, a single pulse at t = 0" in place of the red dot (F2.2).
+**Why:** Anna T8/F2.1: the reader has just seen the closed-loop rig, so the impulse experiment must say it is open loop. Caption a follows D3 and the laser-row panel.
+**Next:** Caption b still says "versus stimulation amplitude"; switch it to "laser power" when F2.3 is approved. JN not ported.
+
+### 2026-10-30 — T7: opsin wording fixed in the NC intro and Results
+**Changed/Found:** NC intro last paragraph: "The light excites inhibitory interneurons that express the opsin ChrimsonR, and these suppress the excitatory neurons whose activity we image, so the light can push the readout only below baseline" (was "excites inhibitory neurons that express an opsin, so it can only lower the activity"). Results L18: mice "expressed GCaMP8s in excitatory cortical neurons and the opsin ChrimsonR in inhibitory interneurons" (was "co-expressing GCaMP and an inhibitory opsin", which is wrong twice: ChrimsonR is excitatory, and the two are in different cells). Facts from Methods L21–23. NC has no significance statement, so the third place in the tracker does not apply.
+**Why:** Anna T7: "this is not precisely true". The light raises interneuron activity; only the imaged excitatory signal goes down, and it rebounds after the dip.
+**Next:** JN has the same errors in three places (intro, Results L18, significance); port.
+
+### 2026-10-30 — T4: NC intro Bolus sentence split in two
+**Changed/Found:** NC intro P4: "\citet{bolus2018design, bolus2021state} fitted a model of how light drives thalamic firing, the plant that a controller acts on, and designed controllers from it. These controllers made the firing track time-varying targets and reject unmeasured disturbances, and changed its trial-to-trial variability." The short "plant" definition stays because the intro (L39), Results and Discussion use the word later.
+**Why:** Anna T4: "five clauses!!!".
+**Next:** JN not ported.
+
+### 2026-10-30 — T3/T5: NC intro P1 ends on one bridge to variability; P2 separates unobserved drivers from short forecasts
+**Changed/Found:** NC intro P1 now ends: drivers include known states, unobserved states, unmeasured stimuli and input from other regions; "These drivers change from moment to moment, so the same stimulus meets a different circuit on each trial, and its response varies from trial to trial." P2 opens "One way to handle this variability is to model it, so that the factors that contribute to it can be identified. Several such approaches describe activity as a dynamical system." The old L12 is two sentences: these models do not observe movements and input from other areas; separately, "from its own past alone, spontaneous wide-field activity is forecast informatively for only about 1.5 s, even by the best current models" (lu2025benchmarking). Dropped "with considerable amount of uncertainty": the 1.5 s horizon already says that forecasts stop being informative.
+**Why:** Anna T3 (abrupt jump from state to variability, then back to spontaneous states) and T5 (unmodelled inputs read as the cause of the 1.5 s limit; Ziyu's benchmark uses no inputs). Also fixes "In literature", "through a dynamical systems" and a double space.
+**Next:** Aditya to read the new P1 ending; it replaces his Overleaf wording. JN not ported.
+
+### 2026-10-30 — D3: Fig 2a and 2d locked in the final panel folder (MANIFEST)
+**Changed/Found:** `paper/figures_final/MANIFEST.txt` [figure2]: A → `imp_single_AL_0033_2025-01-29_en1.pdf` (Mouse 1b), D → `tf_cv_heldout_r2.pdf`; comments fixed (the old 2A comment said "Mouse 1b" for the 5b file, X2.1). Ran `trace_overlay` and `imp_tf_cv` (`CV_REUSE`) with `PAPER_FINAL` on: panels/figure2 now has both new files (A 3.17 × 3.21 cm, D 3.56 × 3.28 cm) and a refreshed C. Did NOT run `collect_final_panels`, so the superseded `imp_single_AL_0041_2025-12-02_en2.pdf` and `tf_cv_2D_sidebar.pdf` stay on disk.
+**Why:** Aditya chose Mouse 1b for both A and C, and decided D4 (D = held-out R² only). The JN assembly still links the old files, so pruning waits for the JN port.
+**Next:** Re-assemble NC Figure 2 from panels/figure2 (A, D new). 2B and 2G still wait on approval before their `PAPER_FINAL` run. Prune with `collect_final_panels` once JN is ported.
+
+### 2026-10-30 — D3: Fig 2a now draws Mouse 1b by default, legend in the bottom-right corner
+**Changed/Found:** `impulse-analysis/trace_overlay.m`: `TO_EXP` default 2 → 3 (AL_0033 2025-01-29 e1, Mouse 1b, the session of Fig 2c). Mouse 1b draws five amplitudes (0, 0.37, 0.70, 1.07, 1.43 mW), and the five-row legend at the old bottom-left spot sat on the scale bars, so it now parks bottom-right, below the rebound, at `[1 - w - 0.01, 0.075]`. Re-rendered `paper/images/figure2/imp_single_AL_0033_2025-01-29_en1.pdf`.
+**Why:** Aditya, D3: "Mouse 1b for both". 1b has ten graded amplitudes; 5b has two near-equal ones (0.87/0.90 mW) whose responses come out of order in c.
+**Next:** none (locked in the next entry).
+
 ### 2026-10-30 — D6 (Fig 4e): kept the dense ridge map; the sparse "spot" version exists in ctrl_ols_spont.m
 **Changed/Found:** Nothing changed. Aditya: Fig 4e answers a different question from the map Anna expected (one hotspot at the mirror spot), so it does not need to be sparse. The sparse version exists: `controller-analysis/ctrl_ols_spont.m` with `fit_mode = 'lasso'` (`l1_frac` 0.1, debiased) gave 51 of 427 active contra pixels, held-out R² 0.675 against 0.874 dense, and the top-10 weight centroid sat 12 px from the laser site's mirror across the midline (RESEARCH_archive_2026H2, 2026-07-19).
 **Why:** Anna F4.2 ("are you sure about this? it looks bugged"). The dense weights cancel each other out (Haufe et al. 2014; RESEARCH 2026-10-29), but the panel is not meant as a hotspot map.
