@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — Third bold point (MPC) added to PAPER.md
+**Changed/Found:** `PAPER.md` "Bold points" — new third point, Aditya's words verbatim: much of the variability the linear feedback leaves behind is a predictable, slow-moving disturbance, as the MPC stimulation shows.
+**Why:** Aditya asked for one more note, on MPC (Fig 6).
+**Next:** Check that the Fig 6 Results text and the Discussion make this point in both drafts (JN and NC).
+
 ### 2026-10-30 — Aditya's "bold points" (headline claims) recorded in PAPER.md
 **Changed/Found:** `PAPER.md` — new "Bold points" section at the top, Aditya's words verbatim: (1) despite variable brain states and non-linear dynamics, an LTI model plus a linear feedback controller tracks the target and cuts trial-to-trial variability; (2) via the internal model principle, tracking capacity reports brain state (motion, synchrony), which says which states suit precise control. `paper-writing/CLAUDE.md` start-of-session reading list now points to it.
 **Why:** Aditya asked for a note of the paper's bold points; manuscript sessions should write toward them.

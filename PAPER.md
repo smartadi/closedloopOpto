@@ -11,6 +11,7 @@
 - Using the internal model principle argument, we show that controller's tracking capacity is informative about brain states specialy motion and synchronicity.
    - this informs us that for desgining precise control what states are more amenable and what are not.
       - 
+- the large portion of left over variability of the linear feedback is a predictable slow moving disturbance, as show by MPC stimulation
 
 
 ## Scientific Claims to Fix (require analysis before editing)
