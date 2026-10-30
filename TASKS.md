@@ -24,6 +24,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ## 🔴 Blocking submission
 
+- [ ] **Nick's review (2026-10-30, JN Overleaf): 10 comments + 106 tracked changes** on the abstract, significance and intro P1. They cover: the intro modelling paragraph (N1), "Claude voice" (N2, N8: cut decorative clauses and metaphorical verbs), "target level" vs "reference" (N3), past tense (N9), and what the abstract claims about state, disturbance and MPC (N4–N7, N10). Verbatim notes, problems in the tracked edits, and abstract and significance drafts are in `paper-writing/REVIEW_NICK_2026-10-30.md`. Decisions N1, N2 (which of Nick's papers to use as the style model) and N3 wait on Aditya. Overleaf is ahead of GitHub, so don't edit JN locally.
 - [ ] **Anna's review (2026-10-29, through Fig 4): 26 items** — prose "slop" sweep, abstract/significance framing, intro sentences, opsin wording, Fig 1–4 panel fixes, Fig 4E kernel map. Every note verbatim with location, fix and status in `paper-writing/REVIEW_ANNA_2026-10-29.md`; work it one item at a time; 7 decisions (D1–D7) wait on Aditya.
 - [ ] **Reassemble Figure5.pdf** in Illustrator from the re-exported `figures_final/panels/figure5/` (2026-10-28: all 10 panels moved to the rig signal), copy to `Closedloop_edit/images/`, then push Closedloop_edit main (text already committed locally). RESEARCH 2026-10-28.
 - [ ] **Reassemble S1.pdf** in Illustrator: its OL-variance-evolution panel was re-exported 2026-10-27 (figures_final/S1.pdf is from 2026-10-05).
