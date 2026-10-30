@@ -16,6 +16,14 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-29 — NC draft: Fig 1 caption and panel references follow the a–e layout
+**Changed/Found:** Closedloop_nc 6a5502a (local, not pushed).
+- `results.tex` caption: b is now the frame (Mouse 2a), with the kernel defined as 10 × 10 px (0.17 mm), "Markers are enlarged" and "Scale bar, 1 mm". The latency histogram is c. In d, the trigger trace is "drawn to scale" and the bracket marks the median latency.
+- References re-lettered: results L21 b,c → b; results L39 e,f → c,e; methods L100 f → c; discussion L49 f → c.
+- `images/Figure1.pdf` is now the `fig1_nc_build.py` composition, so the figure matches its caption. It compiles with no undefined references.
+**Why:** The schematic was dropped and the panels were re-lettered (entry below).
+**Next:** c's caption still says "camera trigger to laser-activation command", while Methods L100 says "camera exposure to stimulation command"; settle this with the F1.5 replot. Fig 1c is now first cited after 1d (results L39–40). The JN draft is unchanged.
+
 ### 2026-10-29 — NC Fig 1: mouse schematic dropped, frame carries its own markers; 7 pt text, 1 pt arrows
 **Changed/Found:** `paper-writing/fig1_nc_build.py`. Panels re-lettered a optics, b frame, c latency, d pipeline, e control loop (page now 180 × 120 mm).
 - New `panel_b_frame.pdf`: the frame plus a blue box (readout kernel) and a red dot (stimulation), a legend for both, and a 1 mm bar (field 560 px × 17.3 µm = 9.69 mm).
