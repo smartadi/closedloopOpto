@@ -14,6 +14,8 @@ Rules (Nature Comms / Nature figure guide, checked 2026-10-29):
   3. Caption panel tokens \\textbf{A:} -> \\textbf{a}, and \\textbf{B} -> \\textbf{b} (results, supplementary).
   4. Equation refs -> "equation~\\eqref{..}" (Nature: refer to equations as "equation (1)").
   5. "Materials and Methods" -> "Methods".
+  6. stat_tables.tex only: the Fig 4d state-table names -> OL slope / CL slope / CL/OL ratio (NC drops
+     predictability / regularizability / attenuation, user 2026-10-30; JN keeps them).
 Plain-text panel letters ("panel H", "(as in F)") are NOT converted; the dry run lists them for hand edits.
 Files are CRLF; line endings are preserved.
 """
@@ -38,6 +40,20 @@ tab_word = re.compile(r'(?P<pre>Supplementary\s+)?(?P<word>Tables|Table)~' + REF
 cap_tok = re.compile(re.escape(BS + 'textbf{') + r'(?P<tok>[A-Z](?:(?:--|,\s?)[A-Z])*)(?P<colon>:?)\}')
 eq_ref = re.compile(r'(?P<word>Eqs\.|Eq\.|Equations|Equation)~' + re.escape(BS) + r'(?:eq)?ref\{(?P<lab>eq:[^}]+)\}')
 mam = re.compile(r'Materials and Methods')
+# Rule 6: literal (JN text -> NC text) pairs, matched against paper_stats_tex.m's output.
+STATE_NAMES = [
+    (BS + 'quad Predictability &', BS + 'quad OL slope &'),
+    (BS + 'quad Regularizability &', BS + 'quad CL slope &'),
+    (BS + 'quad Attenuation (' + BS + '% per SD) &', BS + 'quad CL/OL ratio (' + BS + '% per SD) &'),
+    ('Predictability and regularizability, open- and closed-loop slopes.',
+     'OL slope and CL slope, open- and closed-loop slopes.'),
+    ('Attenuation, closed- minus open-loop slope of $' + BS + 'log$ RMSE, given as the percent change per SD of '
+     'the closed-to-open-loop RMSE ratio;',
+     'CL/OL ratio, closed- minus open-loop slope of $' + BS + 'log$ RMSE, given as the percent change per SD of '
+     'the ratio of closed- to open-loop RMSE;'),
+    ('within predictability and regularizability (eight tests) and within attenuation (four tests)',
+     'within the OL and CL slopes (eight tests) and within the CL/OL ratio (four tests)'),
+]
 leftover = re.compile(r'(panels?~?\s' + LET + r'|\(as in ' + LET + r'\)|\bin ' + LET + r'(?=[,.;)]))')
 
 
@@ -104,6 +120,11 @@ def convert(text, fname, supp_fig, supp_tab, counts):
             line = cap_tok.sub(f_cap, line)
         line = eq_ref.sub(f_eq, line)
         line = mam.sub(f_mam, line)
+        if fname == 'stat_tables.tex':
+            for old, new in STATE_NAMES:
+                if old in line:
+                    line = line.replace(old, new)
+                    bump('6 state-table names')
         out.append(line)
     return ''.join(out)
 

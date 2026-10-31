@@ -81,6 +81,7 @@ figure4/f4_state_exemplars.pdf  # 7.83 x 3.56 cm
 figure4/f4_1B_equation.pdf  # 3.14 x 1.87 cm
 figure4/f4_decomp_unique_sep.pdf  # 5.04 x 3.32 cm
 figure4/f4_row2_quartiles.pdf  # 16.58 x 3.39 cm
+figure4/f4_row2_quartiles_nc.pdf  # NC draft only (2026-10-30): panel d with OL slope / CL slope / CL/OL, arrows = slope sign
 figure4/f4_kernel_map.pdf  # 3.85 x 2.68 cm
 figure4/f4_agl.pdf  # 4.80 x 3.35 cm
 figure4/f4_cl_reject_RR.pdf  # 5.08 x 3.28 cm

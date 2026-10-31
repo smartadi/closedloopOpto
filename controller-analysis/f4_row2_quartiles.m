@@ -187,7 +187,7 @@ LME = struct();
 % _preview/, so the stitched panel's PNG read as hours stale while its PDF was current.
 outview=fullfile(fileparts(which('f4_row2_quartiles')),'_preview');
 if ~exist(outview,'dir'); mkdir(outview); end
-PQ=struct('qmO',{},'qmC',{},'qsO',{},'qsC',{},'qmOp',{},'qmCp',{},'qsOp',{},'qsCp',{},'medO',{},'medC',{},'iqO',{},'iqC',{},'predP',{},'predUp',{},'ctrlP',{},'ctrlUp',{},'attP',{},'attUp',{});   % per-state quantities for the stitched figure
+PQ=struct('qmO',{},'qmC',{},'qsO',{},'qsC',{},'qmOp',{},'qmCp',{},'qsOp',{},'qsCp',{},'medO',{},'medC',{},'iqO',{},'iqC',{},'predP',{},'predUp',{},'ctrlP',{},'ctrlUp',{},'attP',{},'attUp',{},'olPos',{},'clPos',{},'ratioPos',{});   % per-state quantities for the stitched figure
 for ip=1:numel(preds); nm=preds{ip};
     zx=Pl.(nm).zx; zy=Pl.(nm).zy; g=Pl.(nm).g;
     if isempty(zx); fprintf('%-9s (no data)\n',nm); continue; end
@@ -268,7 +268,8 @@ for ip=1:numel(preds); nm=preds{ip};
     % stash per-state quantities so the stitched paper figure reuses them (no recompute)
     PQ(ip)=struct('qmO',qmO,'qmC',qmC,'qsO',qsO,'qsC',qsC,'qmOp',qmOp,'qmCp',qmCp,'qsOp',qsOp,'qsCp',qsCp, ...
                   'medO',medO,'medC',medC,'iqO',iqO,'iqC',iqC, ...
-                  'predP',predP,'predUp',predUp,'ctrlP',ctrlP,'ctrlUp',ctrlUp,'attP',attP,'attUp',attUp); %#ok<AGROW>
+                  'predP',predP,'predUp',predUp,'ctrlP',ctrlP,'ctrlUp',ctrlUp,'attP',attP,'attUp',attUp, ...
+                  'olPos',sS.P.effect>0,'clPos',sS.R.effect>0,'ratioPos',sS.A.effect>0); %#ok<AGROW>  % slope SIGNS, for the NC view
 
     % ---- separate standalone panel: keep its own y-axis; legend ONLY on init-dev; colored title ----
     figP=jnFig(jnPanelWidth('double',4),3.3); ax=axes(figP);   % jn* v2 sizing
@@ -324,7 +325,12 @@ fprintf('\n[F4R2] row-2 four individual panels -> %s\n', outdir);
 % Two views (2026-10-10): SESSION-LEVEL = main panel f4_row2_quartiles.pdf (in MANIFEST);
 % POOLED-TRIAL = fallback f4_row2_quartiles_pooled.pdf (working dir only, not in MANIFEST).
 % + MEDIAN view (session median, IQR across sessions) -> f4_row2_quartiles_median.pdf (alternative).
-VIEWS={'session','f4_row2_quartiles'; 'pooled','f4_row2_quartiles_pooled'; 'median','f4_row2_quartiles_median'};
+% + NC view (user 2026-10-30): the session view with plain names (OL slope, CL slope, CL/OL) on
+% every tile, each arrow giving the SIGN of its slope (up = increases with the state), not the
+% direction of improvement -> f4_row2_quartiles_nc.pdf, NC draft only (in MANIFEST). The JN panel
+% keeps P/R/A until the JN text drops those names.
+VIEWS={'session','f4_row2_quartiles'; 'pooled','f4_row2_quartiles_pooled'; 'median','f4_row2_quartiles_median'; ...
+       'session_nc','f4_row2_quartiles_nc'};
 for iv=1:size(VIEWS,1)
     figR=jnFig(16.5,3.3); tlR=tiledlayout(figR,1,4,'TileSpacing','compact','Padding','tight');   % jn* v2 stitched: 16.5 canvas -> crops to ~16.6, fits 17.6 col w/ clearance
     for ip=1:numel(preds)
@@ -332,13 +338,17 @@ for iv=1:size(VIEWS,1)
         ax=nexttile(tlR);
         q=PQ(ip);
         switch VIEWS{iv,1}
-            case 'session', m={q.qmO,q.qmC,q.qsO,q.qsC}; sty='points';
+            case {'session','session_nc'}, m={q.qmO,q.qmC,q.qsO,q.qsC}; sty='points';
             case 'median',  m={q.medO,q.medC,q.iqO,q.iqC}; sty='points';
             otherwise,      m={q.qmOp,q.qmCp,q.qsOp,q.qsCp}; sty='bars';
         end
+        if strcmp(VIEWS{iv,1},'session_nc')
+            ann={q.predP,q.olPos,q.ctrlP,q.clPos,sty,q.attP,q.ratioPos,{'OL slope','CL slope','CL/OL'}};
+        else
+            ann={q.predP,q.predUp,q.ctrlP,q.ctrlUp,sty,q.attP,q.attUp};
+        end
         draw_panel(ax, m{:}, colOL,colCL, PS, ...
-            titR2{ip}, titCol(ip,:), ip==1, ip==1, ...   % showY only leftmost; legend only leftmost
-            PQ(ip).predP,PQ(ip).predUp,PQ(ip).ctrlP,PQ(ip).ctrlUp,sty,PQ(ip).attP,PQ(ip).attUp);
+            titR2{ip}, titCol(ip,:), ip==1, ip==1, ann{:});   % showY only leftmost; legend only leftmost
     end
     title(tlR,'Effect of state on controller performance','FontSize',PS.fs,'FontWeight','bold');
     xlabel(tlR,'sorted state quartile bins','FontSize',PS.fs,'FontWeight','bold');   % common x-label
@@ -377,7 +387,8 @@ bpRoot=fileparts(fileparts(mfilename('fullpath')));   % absolute: run() changes 
 try, save(fullfile(bpRoot,'data','f4_motion_slopes.mat'),'MOTSLOPE'); catch, end
 try, save(fullfile(bpRoot,'data','f4_row2_lme.mat'),'LME'); fprintf('[F4R2-LME] -> data/f4_row2_lme.mat\n'); catch ME; warning('[F4R2-LME] save skipped (%s)',ME.message); end
 
-function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, showLegend, predP,predUp,ctrlP,ctrlUp,sty,attP,attUp)
+function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, showLegend, predP,predUp,ctrlP,ctrlUp,sty,attP,attUp,labs)
+% labs (optional): {name1,name2,name3} printed on EVERY tile instead of P/R/A (NC view).
 % sty: 'bars' (pooled fallback, the original look) | 'points' (session views, user 2026-10-10:
 % point-and-line, OL/CL offset in x). qs* is a 1x4 symmetric error or a 2x4 [below; above].
     if nargin<17 || isempty(sty), sty='bars'; end
@@ -412,14 +423,21 @@ function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, 
     title(ax,ttl,'FontSize',PS.fs,'FontWeight','bold','Color',titleCol);   % colored to match state exemplars
     % ---- two-concept annotation (top-center, black): predictability + controllability, arrow + stars ----
     % First/leftmost panel spells the names out; the rest abbreviate to P / C.
-    if showLegend, pN='Predictability'; cN='Regularizability'; aN='Attenuation'; else, pN='P'; cN='R'; aN='A'; end
+    % NC view: plain names, Unicode arrows (the tex path widened every space in the line), and
+    % centred at x = 2.2, because the wider 'CL/OL n.s.' line hit the Abs-delta OL Q3 point at 2.5.
+    uni = nargin>=20 && ~isempty(labs);
+    if uni, pN=labs{1}; cN=labs{2}; aN=labs{3}; itp='none'; xA=2.2;
+    else
+        itp='tex'; xA=2.5;
+        if showLegend, pN='Predictability'; cN='Regularizability'; aN='Attenuation'; else, pN='P'; cN='R'; aN='A'; end
+    end
     yA=yl(2)-0.02*range(yl); dyA=0.105*range(yl);   % 0.085 -> 0.105 (2026-10-18): 3 lines with A collided
-    text(ax,2.5,yA,     [pN ' ' arrowstars(predP,predUp)],'Interpreter','tex','HorizontalAlignment','center', ...
+    text(ax,xA,yA,     [pN ' ' arrowstars(predP,predUp,uni)],'Interpreter',itp,'HorizontalAlignment','center', ...
         'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
-    text(ax,2.5,yA-dyA, [cN ' ' arrowstars(ctrlP,ctrlUp)],'Interpreter','tex','HorizontalAlignment','center', ...
+    text(ax,xA,yA-dyA, [cN ' ' arrowstars(ctrlP,ctrlUp,uni)],'Interpreter',itp,'HorizontalAlignment','center', ...
         'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
     if ~isempty(attP)
-        text(ax,2.5,yA-2*dyA, [aN ' ' arrowstars(attP,attUp)],'Interpreter','tex','HorizontalAlignment','center', ...
+        text(ax,xA,yA-2*dyA, [aN ' ' arrowstars(attP,attUp,uni)],'Interpreter',itp,'HorizontalAlignment','center', ...
             'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
     end
     if showY
@@ -439,11 +457,12 @@ function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, 
     jnAxes(ax);   % jn* v2: Arial, regular ticks, bold labels/title, TickDir out
     if ~showY, set(ax,'YTickLabel',[]); end   % jnAxes restores ticklabels; re-hide on non-leftmost
 end
-function s=arrowstars(p,isUp)
-% arrow (up/down) + significance stars; 'n.s.' if p>=0.05.
+function s=arrowstars(p,isUp,uni)
+% arrow (up/down) + significance stars; 'n.s.' if p>=0.05. uni: Unicode arrows, for Interpreter 'none'.
     nst=(p<0.05)+(p<0.01)+(p<0.001);
     if nst==0, s='n.s.'; return; end
-    if isUp, ar='\uparrow'; else, ar='\downarrow'; end
+    if nargin>2 && uni, ar=char(8595-2*isUp);         % U+2191 up / U+2193 down
+    elseif isUp, ar='\uparrow'; else, ar='\downarrow'; end
     s=[ar repmat('*',1,nst)];
 end
 function e=uniqedges(e); for i=2:numel(e); if e(i)<=e(i-1); e(i)=e(i-1)+eps(e(i-1))*1e3; end; end; end
