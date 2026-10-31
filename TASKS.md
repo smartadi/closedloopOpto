@@ -9,6 +9,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 ## ✅ Recently done (rolling — last ~10, oldest pruned to RESEARCH.md)
 
 <!-- When a task is completed, move it here with a date before deleting. -->
+- [x] 2026-10-31 — **NC Nature-style pass** (abstract, intro, Results, legends, Discussion; NC f0e01d7..5a955c7, local, not pushed). Nick's notes are advice, not the voice (user); guide `paper-writing/STYLE_NATURE.md`. Main text 7.8k → 7.3k, abstract 197, Fig 4 legend 342; no numbers, citations or refs lost. RESEARCH 2026-10-31.
 - [x] 2026-10-30 — **NC draft rewritten in Nick's style around the three bold points** (abstract, intro, Results, Discussion, Methods; NC 660d8fd..3da79c0, local, not pushed). Claim 2 now rests on the Holm-robust tests (movement attenuation; CL slope on 1–4 Hz power). No numbers changed. Style sheet `paper-writing/STYLE_NICK.md`. RESEARCH 2026-10-30.
 - [x] 2026-10-30 — **Stale items closed after a grep of the local JN draft:** Chrimson spread citation (`li2019spatiotemporal`, Discussion), every `%% CHECK` (tuning gains, power analysis/blinding), the `results.tex` `\todo` gaps, `\label{sec:disturbance}`, and the 2026-10-02 Methods FILLs are all resolved.
 - [x] 2026-10-28 — **Fig 5 vs Fig 6 reconciled:** Fig 5 now scores the rig's online dF/F (`sine_rig_dff.m`) on the rig's pairing; Mouse 3b numbers equal Fig 6's (71°, CL+p 3.00, variances 11.8/5.8). Panels re-exported, text updated (Closedloop_edit committed, not pushed). RESEARCH 2026-10-28.
@@ -18,7 +19,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 - [x] 2026-10-16 — **Fig 4 relative 2-4 Hz framed as in-stimulation** (Closedloop draft): Results L205 + Discussion L18/L42; no laser-off control added (user). Random-slope item was stale: adopted 2026-10-11, already in text. RESEARCH 2026-10-16.
 - [x] 2026-10-16 — **Fig 2G Results reworded as co-variation** (Closedloop draft): responses and ongoing activity change together with state; no claim either way about the stimulus effect itself. Discussion L16 still says "rather than as a change in the response itself" (user is writing the Discussion). RESEARCH 2026-10-16.
 - [x] 2026-10-16 — **Power scale bars: no change needed** — user checked the V→mW conversion by hand (2A/2B/3A/3C/S-MPC). RESEARCH 2026-10-16.
-- [x] 2026-10-12 — **Fig 2C–F on the seeded Mouse 3 fit + leak-free CV, manuscript made consistent** (Closedloop draft 8db98b1, not pushed). Held-out 0.85 pooled. Mouse 3's slowest pole is vestigial (< 0.2%), dip 0.14 s; the dip τ is order-sensitive. RESEARCH 2026-10-12.
 
 ---
 

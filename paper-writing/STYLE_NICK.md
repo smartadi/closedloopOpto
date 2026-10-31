@@ -1,5 +1,9 @@
 # Writing in Nick's voice (both drafts)
 
+> **Status (2026-10-31): advice, not a voice to imitate.** Aditya: "we dont want to emulate Nick but we want
+> to use it as advice". The NC target voice is a Nature paper (`STYLE_NATURE.md`). The rules below still apply;
+> the marker table is a diagnostic, not a target.
+
 Built 2026-10-30 from three papers Aditya chose (PDFs in `brain_paper/nick papers/`, untracked, lab PC
 only): Steinmetz et al. 2019 *Nature* (distributed coding), Zatka-Haas, Steinmetz et al. 2021 *eLife*
 (sensory coding and causal impact), Steinmetz et al. 2021 *Science* (Neuropixels 2.0). Plus Nick's

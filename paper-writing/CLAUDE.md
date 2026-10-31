@@ -57,6 +57,7 @@ assemblies: lowercase panel letters, 88/180 mm widths). Both assemblies link the
 | `introduction.tex` | Introduction |
 
 ## Target style: Li & Lu et al.
+- **NC (since 2026-10-31): a Nature-paper voice, `STYLE_NATURE.md`.** Nick's notes (`STYLE_NICK.md`) are advice, not a template.
 - Active voice ("We delivered…", "We quantified…")
 - Topic sentences state the finding, not the setup
 - No numbered equation references in Results
