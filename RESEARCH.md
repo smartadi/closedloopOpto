@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-10-30 — Found: Fig 2, Fig 5, S1 and S3 in both drafts were exported before their locked panels; S1.ai is stale
+**Changed/Found:** Opening the assemblies refreshes linked panels from disk (all links point to `figures_final/panels/`, all MANIFEST-listed except the superseded Fig 2a/2d files), so the NC re-export showed that both drafts carry old exports (the 10 old NC images were byte-identical to JN's). Fig 2: session labels Mouse 1/3 → 1b/3c (draft has the 10-16 export, `figures_final/Figure2.pdf` is 10-20). Fig 5g (rebuilt 10-28 with the rig-signal text, 98aebf1). S1 c–d (rebuilt 10-27; d's pre/post slopes −0.21/+0.21 → −0.10/+0.30, not quoted in the text). S3 b–d (rebuilt 10-11; caption quotes no numbers). Fig 5's other 9 panels were also rebuilt 10-28 but are embedded, so NC Fig 5 now has a new g next to old b–f, h–k. `figures_final/S1.ai` (saved 10-05 15:38) lacks panels c–d that its 16:21 PDF has; `nc/S1.ai` holds the full version. Fig 2a/2d still link the superseded `imp_single_AL_0041…` and `tf_cv_2D_sidebar`.
+**Why:** The assemblies were exported before their panels were rebuilt and never re-exported; Illustrator updates links silently on open.
+**Next:** NC: rebuild Fig 5 from the 10-28 panels; re-assemble Fig 2a/2d (D3). JN: re-export Fig 2, 5, S1, S3 (check the JN Overleaf copy first); save S1.ai from its PDF so c–d are not lost.
+
+### 2026-10-30 — NC Fig 4d relinked to the OL slope / CL slope / CL/OL panel
+**Changed/Found:** `paper/figures_final/nc/Figure4.ai` — panel d is a linked placed item; relinked from `panels/figure4/f4_row2_quartiles.pdf` to `f4_row2_quartiles_nc.pdf` (same 165.8 × 33.9 mm page, bounds unchanged to 0.000 mm). Render diff against the old Figure 4: only the panel-d label row and the panel letters changed.
+**Why:** NC dropped predictability / regularizability / attenuation (2026-10-30), and its caption already describes the new labels.
+**Next:** none.
+
+### 2026-10-30 — NC figure assemblies with lowercase panel letters (Figs 2–6, S1–S3, OLbest, S_varx)
+**Changed/Found:** new `paper/figures_final/nc/{Figure2..6,S1,S2,S3,OLbest,S_varx}.ai/.pdf`, made by scripted Illustrator (COM + ExtendScript) from the Illustrator data inside the PDFs the NC draft used; Fig 2 from the 10-20 export `figures_final/Figure2.pdf`, which has the 10-19 session labels. 68 panel letters (10 pt Arial Bold point text) set lowercase with Change Case; no other edits. Exported with `[Illustrator Default]` (no downsampling: the Fig 5a schematic is now 636 ppi, was 300). Copied into NC `images/` with `sync_figs.ps1 -Apply` (NC 42799f8, not pushed); build clean, 44 pp, main.pdf 16.2 → 13.0 MB. Widths stay 176 mm, inside NC's 180 mm column. JN `.ai` files untouched.
+**Why:** Nature Comms labels panels with lowercase bold letters, and the NC text already cites "Fig. 2a".
+**Next:** Push NC on Aditya's OK. Fig 1 and S_impulse_state were already NC builds.
+
 ### 2026-10-30 — NC: merged Overleaf's one edit (abstract sentence 3) into main
 **Changed/Found:** `Closedloop_nc/main.tex` — Overleaf could not sync: the NC Overleaf project had never pulled from GitHub since the fork (98aebf1) and held one edit of its own, abstract sentence 3 ("in real time toward a target level, using feedback from the ongoing dynamics"), which the Nick-style abstract (660d8fd) had also rewritten. Overleaf pushed it to branch `overleaf-2026-10-31-0207` (262b9ce). Merged into main keeping Overleaf's sentence and the rest of the rewrite (NC 1721b39, pushed 99985e2..1721b39). Abstract now 200 words (limit 200); build clean, 44 pages.
 **Why:** The Overleaf sentence is Aditya's own edit; a merge must never overwrite his text.
