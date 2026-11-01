@@ -18,6 +18,16 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 
 ---
 
+## Finding: Feedback suppresses slow residual power and amplifies 2–10 Hz (empirical sensitivity function)
+**Question:** In which frequency band does feedback remove trial-to-trial fluctuation, and does it add power in 1–4 Hz? (reviewer agent, 2026-11-01)
+**Analysis:** `stats_v2/sensitivity.py`. CL/OL power of the residual (trial minus condition mean), 0–3 s, per session; session t on log ratios; pre-stim window as the null.
+**Result (15 sessions, 4 mice):** CL/OL 0–1 Hz 0.32 (p = 7.8e-7, 15/15); 1–2 Hz 0.91 (n.s.); 2–4 Hz 1.38 (p = 9.5e-4, 13/15, 4/4 mice); 4–10 Hz 1.49 (p = 6.1e-5, 14/15). Crosses 1 at 1.5 Hz (bootstrap 1.1–2.6), peaks at 1.93× at 4.2 Hz (3.7–4.9). Pre-stim null flat at ~1. Same in the 1–3 s window and for the error about the reference.
+**Paper claim (draft):** Feedback removes two-thirds of the slow (<1 Hz) fluctuation, leaves 1–2 Hz unchanged and amplifies 2–10 Hz (power ×1.4 at 2–4 Hz), as the loop delay predicts. This is why the loop rejects motion-related error but not error tied to 2–4 Hz power.
+**Figure:** review sheet `paper/images/figure4/supp/sens_resid_sheet.png` (PNG, not a paper panel yet).
+**Status:** NEW 2026-11-01, not in the paper. Aditya to decide on a panel and the Discussion text. See RESEARCH 2026-11-01.
+
+---
+
 ## Finding: Brain state shapes OL error; feedback decouples motion but not relative 2–4 Hz power (Fig 4)
 **Question:** Which brain-state factors account for tracking error, and does closed-loop control remove their effect?
 **Analysis:** `controller-analysis/f4_row2_quartiles.m` + `utils/f4_row2_pool.m` / `f4_row2_fit.m` (LMM `RMSE ~ cond*state + (1+cond|sess) + (1|mouse)`, REML + Satterthwaite); `f4_error_decomp.m` (unique R², 'sep' mode); `f4_state_exemplars.m`. States over ONE window [−2, +3) s (`utils/f4_state_window.m` 'peri'), band power grid-independent (`utils/f4_bandpow.m` 'continuous'), motion = mean z (`f4_motion_stat.m`). Final 2026-10-02.
