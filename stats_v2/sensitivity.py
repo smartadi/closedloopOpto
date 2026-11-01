@@ -42,16 +42,19 @@ from scipy import signal, stats  # noqa: E402
 
 import loader  # noqa: E402
 import metrics as M  # noqa: E402
-from tests import sess_test  # noqa: E402
+from tests import holm, sess_test  # noqa: E402
 
 OUT = loader.ROOT / "data" / "stats_v2" / "corrected"
 FIG = loader.ROOT / "paper" / "images" / "figure4" / "supp"
 M14_SHIFT = 11
 NFFT = 1024
 BANDS = [(0.0, 1.0), (1.0, 2.0), (2.0, 4.0), (4.0, 10.0)]
+# 1 Hz bands up to Nyquist (17.5 Hz); Holm-adjusted within each window. Neighbouring bands are
+# not independent: the 3 s Hann window smears about 0.67 Hz.
+BANDS_1HZ = [(float(lo), min(lo + 1.0, M.FS / 2)) for lo in range(1, 18)]
 BW_PRED = (2.8, 4.2)  # Discussion's delay-limited bandwidth (discussion.tex:30)
 WINS = ["full", "late", "pre"]
-F_PLOT = (0.33, 15.0)
+F_PLOT = (0.33, M.FS / 2)
 N_BOOT = 5000
 RNG = np.random.default_rng(20261101)
 COL_OL, COL_CL = "#d62728", "#1f77b4"  # locked condition colours: OL red, CL blue
@@ -110,6 +113,29 @@ def crossings(S, lo=0.67, hi=10.0):
     return up, FREQ[ip], S[ip]
 
 
+def band_table(bands, P, E, sess, mice):
+    """One session test per (window, band) on log(CL/OL band power); Holm within each window."""
+    rows = []
+    for w in WINS + ["full_err"]:
+        src = E["full"] if w == "full_err" else P[w]
+        for lo, hi in bands:
+            r_s = np.array([band(src["CL"][i], lo, hi) / band(src["OL"][i], lo, hi)
+                            for i in range(len(sess))])
+            t = sess_test(r_s, mice, log=True)
+            rows.append({"window": w, "band": f"{lo:g}-{hi:g}", "lo": lo, "hi": hi,
+                         "ratio": t["effect"], "ci_lo": t["ci_lo"], "ci_hi": t["ci_hi"],
+                         "p": t["p"], "wilcoxon_p": t["wilcoxon_p"], "k": t["k"], "n": t["n"],
+                         "dir": "CL<OL" if t["sign"] == "neg" else "CL>OL",
+                         "mouse_k": t["mouse_k"], "mouse_n": t["mouse_n"],
+                         "lomo_worst_p": t["lomo_worst_p"],
+                         **{f"S_{x}": v for x, v in zip(sess, r_s)}})
+    bt = pd.DataFrame(rows)
+    bt["p_holm"] = np.nan
+    for w, g in bt.groupby("window"):
+        bt.loc[g.index, "p_holm"] = holm(g["p"].to_numpy())
+    return bt
+
+
 def main():
     oc = pd.read_csv(OUT.parent / "onsets_corrected.csv")
     onsets = {k: g["onset_frame"].to_numpy() - 1 for k, g in oc.groupby("session")}
@@ -158,22 +184,10 @@ def main():
     xo, fpk, spk = crossings(curves["full"][0])
 
     # ---------------------------------------------------------------- band tests
-    rows = []
-    for w in WINS + ["full_err"]:
-        src = E["full"] if w == "full_err" else P[w]
-        for lo, hi in BANDS:
-            r_s = np.array([band(src["CL"][i], lo, hi) / band(src["OL"][i], lo, hi)
-                            for i in range(len(sess))])
-            t = sess_test(r_s, mice, log=True)
-            rows.append({"window": w, "band": f"{lo:g}-{hi:g}", "ratio": t["effect"],
-                         "ci_lo": t["ci_lo"], "ci_hi": t["ci_hi"], "p": t["p"],
-                         "wilcoxon_p": t["wilcoxon_p"], "k": t["k"], "n": t["n"],
-                         "dir": "CL<OL" if t["sign"] == "neg" else "CL>OL",
-                         "mouse_k": t["mouse_k"], "mouse_n": t["mouse_n"],
-                         "lomo_worst_p": t["lomo_worst_p"],
-                         **{f"S_{x}": v for x, v in zip(sess, r_s)}})
-    bt = pd.DataFrame(rows)
+    bt = band_table(BANDS, P, E, sess, mice)
     bt.to_csv(OUT / "sensitivity_bands.csv", index=False)
+    b1 = band_table(BANDS_1HZ, P, E, sess, mice)
+    b1.to_csv(OUT / "sensitivity_bands_1hz.csv", index=False)
     pd.DataFrame({"f_hz": FREQ,
                   **{f"S_{w}": curves[w][0] for w in curves},
                   **{f"S_{w}_lo": curves[w][1] for w in curves},
@@ -194,6 +208,10 @@ def main():
     print("\nBand ratios CL/OL (geometric mean over sessions, 95% t CI):")
     print(bt[["window", "band", "ratio", "ci_lo", "ci_hi", "p", "wilcoxon_p", "k", "n", "dir",
               "mouse_k", "lomo_worst_p"]].to_string(index=False, float_format=lambda v: f"{v:.4g}"))
+    cols = ["band", "ratio", "ci_lo", "ci_hi", "p", "p_holm", "k", "n", "dir", "mouse_k"]
+    for w in ("full", "late", "pre"):
+        print(f"\n1 Hz bands, window '{w}' (Holm over {len(BANDS_1HZ)} bands):")
+        print(b1[b1["window"] == w][cols].to_string(index=False, float_format=lambda v: f"{v:.4g}"))
     print(f"\nfull 0-3 s: upward crossing of S=1 at {xo:.2f} Hz "
           f"(boot 95% {summ['crossover_boot_ci'][0]:.2f}-{summ['crossover_boot_ci'][1]:.2f}); "
           f"peak S {spk:.3f} at {fpk:.2f} Hz (boot {summ['peak_boot_ci_hz'][0]:.2f}-"
@@ -202,7 +220,9 @@ def main():
     # ---------------------------------------------------------------- figure (review sheet)
     kp = (FREQ >= F_PLOT[0]) & (FREQ <= F_PLOT[1])
     f = FREQ[kp]
-    fig, ax = plt.subplots(1, 3, figsize=(15, 4.4), constrained_layout=True)
+    fig = plt.figure(figsize=(15, 9), constrained_layout=True)
+    gs = fig.add_gridspec(2, 3)
+    ax = [fig.add_subplot(gs[0, j]) for j in range(3)] + [fig.add_subplot(gs[1, :])]
 
     a = ax[0]
     for c, col, lab in (("OL", COL_OL, "open loop"), ("CL", COL_CL, "closed loop")):
@@ -246,6 +266,24 @@ def main():
     a.set(yscale="log", xticks=xb, xticklabels=[f"{lo:g}–{hi:g} Hz" for lo, hi in BANDS],
           ylabel="CL / OL band power", title="c  Band power ratio (session dots, GM ± 95% CI)")
     a.legend(frameon=False)
+
+    a = ax[3]
+    for w, col, dx, lab in (("full", "k", -0.2, "stim 0–3 s"), ("late", "#6a3d9a", 0.0, "stim 1–3 s"),
+                            ("pre", "0.55", 0.2, "pre-stim (null)")):
+        sub = b1[b1["window"] == w]
+        xc = (sub["lo"].to_numpy() + sub["hi"].to_numpy()) / 2 + dx * 0.5
+        yr = sub["ratio"].to_numpy()
+        a.errorbar(xc, yr, yerr=[yr - sub["ci_lo"].to_numpy(), sub["ci_hi"].to_numpy() - yr],
+                   fmt="o-", color=col, ms=4, lw=1, capsize=2, label=lab)
+        if w != "pre":
+            sig = sub["p_holm"].to_numpy() < 0.05
+            a.scatter(xc[sig], sub["ci_hi"].to_numpy()[sig] * 1.08, marker="*", s=30, color=col, lw=0)
+    a.axhline(1, color="0.3", ls="--", lw=1)
+    a.axvspan(*BW_PRED, color="0.85", zorder=0)
+    a.set(yscale="log", xlim=(0.8, 17.7), xticks=np.arange(1, 18),
+          xlabel="Frequency (Hz), 1 Hz bands (last 17–17.5 Hz)", ylabel="CL / OL band power",
+          title="d  1 Hz bands up to Nyquist (GM ± 95% CI; ★ Holm p < 0.05 over 17 bands)")
+    a.legend(frameon=False, ncol=3, loc="upper right")
     out = FIG / "sens_resid_sheet.png"
     fig.savefig(out, dpi=300)
     print(f"\nwrote {out}")
