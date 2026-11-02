@@ -5,6 +5,7 @@
 A sentence is wrapped when at least `thresh` of its words trace back to AI and it did not change since --base
 (lines changed since the last sync were edited on Overleaf by Nick or Aditya, so they count as human).
 Stripping every wrapper must give back the input byte for byte; the script stops if it does not.
+Lines already holding a wrapper (sections pasted on Overleaf) stay as they are.
 """
 import collections, csv, difflib, json, re, subprocess, sys
 from pathlib import Path
@@ -136,7 +137,7 @@ for f in TARGETS:
             display = '\\]' not in code
             out_lines.append(line)
             continue
-        if not strip or not in_abs or any(e in SKIP_ENV for e in envs) or re.fullmatch(r'\\[\[\]].*', strip):
+        if not strip or not in_abs or OPEN in code or any(e in SKIP_ENV for e in envs) or re.fullmatch(r'\\[\[\]].*', strip):
             out_lines.append(line)
             continue
         if NONPROSE.match(strip):
@@ -214,7 +215,7 @@ for f in TARGETS:
                 i += 1
         out_lines.append(indent + pre + new_body + post + trail_ws + trailing_comment)
     labelled = '\n'.join(out_lines)
-    if strip_ai(labelled) != raw:
+    if strip_ai(labelled) != strip_ai(raw):  # raw has \ai{ too: the macro's comment on Overleaf, and pasted sections
         raise SystemExit(f'ROUND TRIP FAILED: {f}')
     (OUT / f).write_text(labelled, encoding='utf-8', newline='')
     print(f'{f:20s} wrapped {labelled.count(OPEN):4d} spans; round trip exact', flush=True)
