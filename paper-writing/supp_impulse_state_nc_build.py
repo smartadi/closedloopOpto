@@ -13,6 +13,7 @@ quartile panels are not in figures_final yet). Every panel goes in at one scale,
 180 mm wide; the scale is printed, and text stays at or above 5 pt (panels are 6 pt at 1:1).
 Output: paper/figures_final/nc/supp_impulse_state/S_impulse_state_nc_draft.{pdf,png}.
 Run: python -I paper-writing/supp_impulse_state_nc_build.py
+JN (add "jn"): uppercase 10 pt letters, written to jn/S_state_quartile.{pdf,png}, the name JN's supplementary.tex includes.
 """
 import sys
 from pathlib import Path
@@ -25,7 +26,10 @@ from fig1_nc_build import MM, content_clip, place   # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 RA = ROOT / 'paper' / 'images' / 'supplementary' / 'relabs'
 SQ = ROOT / 'paper' / 'images' / 'supplementary' / 'state_quartile'
-OUT = ROOT / 'paper' / 'figures_final' / 'nc' / 'supp_impulse_state'
+FINAL = ROOT / 'paper' / 'figures_final'
+DRAFTS = {'nc': dict(top='abc', rows='def', strips='ghi', size=8, drop=2.3,
+                     pdf=FINAL / 'nc' / 'supp_impulse_state' / 'S_impulse_state_nc_draft.pdf'),
+          'jn': dict(top='ABC', rows='DEF', strips='GHI', size=10, drop=2.7, pdf=FINAL / 'jn' / 'S_state_quartile.pdf')}
 W, LET, GAP = 180, 3.5, 1.5
 
 
@@ -34,12 +38,13 @@ def size(p):
     return c.width / MM, c.height / MM
 
 
-def letter(page, x, y, s):
-    page.insert_text(fitz.Point(x * MM, (y + 2.3) * MM), s, fontname='hebo', fontsize=8)
+def letter(page, x, y, s, cfg):
+    page.insert_text(fitz.Point(x * MM, (y + cfg['drop']) * MM), s, fontname='hebo', fontsize=cfg['size'])
 
 
-def main():
-    OUT.mkdir(parents=True, exist_ok=True)
+def main(draft='nc'):
+    cfg = DRAFTS[draft]
+    cfg['pdf'].parent.mkdir(parents=True, exist_ok=True)
     top = [RA / 'relabs_scatter.pdf', RA / 'relabs_traces_Mouse1b.pdf', RA / 'relabs_spectra_Mouse1b.pdf']
     rows = [[SQ / f'sq_{s}_{k}.pdf' for k in ('rms', 'ratio', 'dist')] for s in ('mot', 'dpr', 'dpa')]
     strips = [SQ / f'sq_{s}_rmice.pdf' for s in ('mot', 'dpr', 'dpa')]
@@ -64,8 +69,8 @@ def main():
     # a-c
     gap = (W - 3 * LET - sum(w for w, _ in wt) * s1) / 2
     x = 0
-    for L, p, (w, _) in zip('abc', top, wt):
-        letter(page, x, 1, L)
+    for L, p, (w, _) in zip(cfg['top'], top, wt):
+        letter(page, x, 1, L, cfg)
         place(page, p, x + LET, 1, scale=s1)
         x += LET + w * s1 + gap
 
@@ -75,23 +80,23 @@ def main():
     y += hl + 1
     xs = W - max(w for w, _ in ws) * s2                       # strips right-aligned
     for i, (r, wr, st, h) in enumerate(zip(rows, wq, strips, hr)):
-        letter(page, 0, y, 'def'[i])
+        letter(page, 0, y, cfg['rows'][i], cfg)
         x = LET
         for p, (w, _) in zip(r, wr):
             place(page, p, x, y, scale=s2)
             x += w * s2 + GAP
-        letter(page, xs - LET, y, 'ghi'[i])
+        letter(page, xs - LET, y, cfg['strips'][i], cfg)
         place(page, st, xs, y, scale=s2)
         y += h + 2
     place(page, SQ / 'sq_rmice_cbar_act.pdf', xs, y, scale=s2)
     wd = size(SQ / 'sq_rmice_cbar_dev.pdf')[0] * s2
     place(page, SQ / 'sq_rmice_cbar_dev.pdf', W - wd, y, scale=s2)
 
-    out = OUT / 'S_impulse_state_nc_draft.pdf'
+    out = cfg['pdf']
     doc.save(out)
-    page.get_pixmap(dpi=300).save(OUT / 'S_impulse_state_nc_draft.png')
+    page.get_pixmap(dpi=300).save(out.with_suffix('.png'))
     print(f'wrote {out.name} ({W} x {H:.1f} mm)')
 
 
 if __name__ == '__main__':
-    main()
+    main(*sys.argv[1:])

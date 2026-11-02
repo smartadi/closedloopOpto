@@ -1,12 +1,14 @@
-"""fig1_nc_build.py -- Nature Comms Figure 1 from Anna's redrawn schematics (2026-10-29) + the final panels.
+"""fig1_nc_build.py -- Figure 1 from Anna's redrawn schematics (2026-10-29) + the final panels, for either draft.
 
-    python paper-writing/fig1_nc_build.py
+    python paper-writing/fig1_nc_build.py        Nature Comms
+    python paper-writing/fig1_nc_build.py jn     JN: uppercase 10 pt letters like its other figures, and latency from
+                                                 the test recording (latencyAnalysis.m [LAT-JN]; Aditya 2026-11-02)
 
 Inputs (local, git-ignored):
   paper/from_anna_2026-10-29/files (1)/panel_{D_architecture,E_control_loop}.svg   (Anna's Claude chat)
   paper/figures_final/panels/figure1/{wfpath, schematic_optoephyswf (1),
                                        svd_frame_AL_0039_2025-04-19, latency_histogram}.pdf
-Outputs (paper/figures_final/nc/fig1/):
+Outputs (paper/figures_final/nc/fig1/; JN: jn/fig1/, with the composition at jn/Figure1.pdf):
   panel_b_frame.pdf                                     frame + readout/stimulation markers, legend, 1 mm bar
   panel_d_architecture.svg, panel_e_control_loop.svg   editable, for the Illustrator assembly
   Figure1_nc_draft.pdf / .png                           180 x 120 mm composition (preview of that assembly)
@@ -20,12 +22,14 @@ Fixes applied to Anna's SVGs (REVIEW_ANNA_2026-10-29.md, Figure 1):
   * All text 7 pt (labels and variables), 5.5 pt subscripts, 8 pt bold lowercase panel letters: the top
     of the Nature figure guide's 5-7 pt range, at Aditya's ask for larger text. Connectors 0.35 mm (1 pt).
   * D trigger trace drawn to scale: blue exposures every 28.6 ms (blue/violet alternate at 70 Hz),
-    14 ms exposure, laser update 24 ms after exposure start (median; methods.tex L66, L101), 10 ms bar.
+    14 ms exposure, laser update 24 ms after exposure start (median; methods.tex L66, L101; JN: 29 ms, the test
+    recording's mean), 10 ms bar.
   * E widefield placeholder replaced by the real SVD frame (panel b source).
 Panels a and c are placed so their text lands at 7 pt too; c's labels/ticks still need the F1.5 replot.
 """
 import base64
 import re
+import sys
 from pathlib import Path
 
 import fitz
@@ -34,7 +38,11 @@ from lxml import etree
 ROOT = Path(__file__).resolve().parents[1]
 ANNA = ROOT / 'paper' / 'from_anna_2026-10-29' / 'files (1)'
 PAN = ROOT / 'paper' / 'figures_final' / 'panels' / 'figure1'
-OUT = ROOT / 'paper' / 'figures_final' / 'nc' / 'fig1'
+FINAL = ROOT / 'paper' / 'figures_final'
+DRAFTS = {'nc': dict(letters='abcde', size=8, lat=24.0, lat_label='Latency, 24 ms median', out=FINAL / 'nc' / 'fig1',
+                     pdf=FINAL / 'nc' / 'fig1' / 'Figure1_nc_draft.pdf'),
+          'jn': dict(letters='ABCDE', size=10, lat=29.0, lat_label='Latency, 29 ms mean', out=FINAL / 'jn' / 'fig1',
+                     pdf=FINAL / 'jn' / 'Figure1.pdf')}
 SVG = '{http://www.w3.org/2000/svg}'
 MM = 72 / 25.4
 
@@ -52,15 +60,16 @@ FIELD_MM = 560 * 0.0173   # 9.69 mm field (methods.tex L66)
 BLUE, RED = (0.2, 0.6, 1.0), (0.89, 0.19, 0.17)
 
 
-def restyle(root, letter):
+def restyle(root, letter, size):
+    sizes = dict(SIZES, **{'font-size:3.53px': f'font-size:{size * 25.4 / 72:.3f}px'})
     for st in root.iter(SVG + 'style'):
-        for a, b in SIZES.items():
+        for a, b in sizes.items():
             st.text = st.text.replace(a, b)
         st.text = st.text.replace('stroke-width:0.25', f'stroke-width:{LINE}')
     for t in root.iter(SVG + 'text'):
         s = t.get('style')
         if s:
-            for a, b in SIZES.items():
+            for a, b in sizes.items():
                 s = s.replace(a, b)
             t.set('style', s)
         if t.get('class') == 'p':
@@ -128,10 +137,10 @@ def el(parent, tag, text=None, **attrs):
     return e
 
 
-def fix_e(frame_png):
+def fix_e(frame_png, cfg):
     tree = etree.parse(str(ANNA / 'panel_E_control_loop.svg'))
     root = tree.getroot()
-    restyle(root, 'e')
+    restyle(root, cfg['letters'][4], cfg['size'])
     find_text(root, '24', '26.4', '+').text = '−'     # reference enters with minus
     find_text(root, '31.6', '33.4', '−').text = '+'   # measured output enters with plus
     for x, s in (('89.478', 'Input'), ('90.178', 'u')):  # at 7 pt "Input" ran into the feedforward "+"
@@ -179,10 +188,10 @@ def gain_blocks(root):
     assert moved == len(WIRES), f'moved {moved} of {len(WIRES)} wires'
 
 
-def fix_d():
+def fix_d(cfg):
     tree = etree.parse(str(ANNA / 'panel_D_architecture.svg'))
     root = tree.getroot()
-    restyle(root, 'd')
+    restyle(root, cfg['letters'][3], cfg['size'])
     drop_lines = ('12.5,55 ', '23,52.2 ', '45.5,41.4 ', '23,56.6 ')
     for p in list(root.iter(SVG + 'polyline')):
         if p.get('points').startswith(drop_lines):
@@ -191,19 +200,21 @@ def fix_d():
         if t.text in ('Exposure', 'trigger', 'Latency'):
             root.remove(t)
     # to scale: 0.7 mm per ms; blue exposure starts at x = 22 and 42 (28.6 ms apart), 14 ms long
-    s, t0, period, expo, lat = 0.7, 22.0, 28.57, 14.0, 24.0
+    s, t0, period, expo, lat = 0.7, 22.0, 28.57, 14.0, cfg['lat']
     e1, e2 = t0, t0 + period * s
     pts = [(12.5, 55), (e1, 55), (e1, 52.5), (e1 + expo * s, 52.5), (e1 + expo * s, 55),
            (e2, 55), (e2, 52.5), (e2 + expo * s, 52.5), (e2 + expo * s, 55), (56.7, 55)]
     el(root, 'polyline', points=' '.join(f'{x:.2f},{y}' for x, y in pts), **{'class': 'l'})
     for i, w in enumerate(('Blue', 'exposure', 'trigger')):
         el(root, 'text', w, x=0, y=50.9 + 2.9 * i, text_anchor='start')
-    xl = t0 + lat * s                                        # laser update, 24 ms after exposure start
+    xl = t0 + lat * s                                        # laser update, lat ms after exposure start
+    tip = 52.2 if e2 <= xl <= e2 + expo * s else 54.7        # stop on top of an exposure, not inside it
     el(root, 'polyline', points=f'{t0},52.2 {t0},40.5', **{'class': 'ar'})
-    el(root, 'polyline', points=f'46.25,41.4 46.25,47.5 {xl:.2f},47.5 {xl:.2f},54.7', **{'class': 'ar'})
-    el(root, 'text', 'Laser update', x=f'{xl + 0.8:.2f}', y=50.6, text_anchor='start')
+    el(root, 'polyline', points=f'46.25,41.4 46.25,47.5 {xl:.2f},47.5 {xl:.2f},{tip}', **{'class': 'ar'})
+    fits = xl + 0.8 + fitz.get_text_length('Laser update', 'helv', 7) / MM <= 57    # panel width; else left of the arrow
+    el(root, 'text', 'Laser update', x=f'{xl + 0.8 if fits else xl - 0.8:.2f}', y=50.6, text_anchor='start' if fits else 'end')
     el(root, 'polyline', points=f'{t0},56.4 {t0},57.6 {xl:.2f},57.6 {xl:.2f},56.4', **{'class': 'l'})
-    el(root, 'text', 'Latency, 24 ms median', x=f'{(t0 + xl) / 2:.2f}', y=60.6, text_anchor='middle')
+    el(root, 'text', cfg['lat_label'], x=f'{(t0 + xl) / 2:.2f}', y=60.6, text_anchor='middle')
     el(root, 'line', x1=46.7, y1=57.6, x2=46.7 + 10 * s, y2=57.6, stroke='#000', stroke_width=0.35)
     el(root, 'text', '10 ms', x=f'{46.7 + 5 * s:.2f}', y=60.6, text_anchor='middle')
     inline_css(root)
@@ -280,12 +291,14 @@ def svg_to_pdf(path):
     return fitz.open('pdf', d.convert_to_pdf())
 
 
-def main():
+def main(draft='nc'):
+    cfg = DRAFTS[draft]
+    OUT = cfg['out']
     OUT.mkdir(parents=True, exist_ok=True)
     frame = fitz.open(PAN / 'svd_frame_AL_0039_2025-04-19.pdf')
     frame_png = frame[0].get_pixmap(dpi=600).tobytes('png')
-    fix_e(frame_png).write(str(OUT / 'panel_e_control_loop.svg'), xml_declaration=True, encoding='utf-8')
-    fix_d().write(str(OUT / 'panel_d_architecture.svg'), xml_declaration=True, encoding='utf-8')
+    fix_e(frame_png, cfg).write(str(OUT / 'panel_e_control_loop.svg'), xml_declaration=True, encoding='utf-8')
+    fix_d(cfg).write(str(OUT / 'panel_d_architecture.svg'), xml_declaration=True, encoding='utf-8')
 
     fb = frame_panel()
     fb.save(str(OUT / 'panel_b_frame.pdf'))
@@ -304,16 +317,16 @@ def main():
     doc = fitz.open()
     page = doc.new_page(width=180 * MM, height=(y2 + 62.5) * MM)
     x = 0
-    for letter, (src, clip, s), (w, _) in zip('abc', top, sizes):
-        page.insert_text(fitz.Point(x * MM, 3.3 * MM), letter, fontname='hebo', fontsize=8)
+    for letter, (src, clip, s), (w, _) in zip(cfg['letters'], top, sizes):
+        page.insert_text(fitz.Point(x * MM, 3.3 * MM), letter, fontname='hebo', fontsize=cfg['size'])
         place(page, src, x + LET, 1, clip=clip, scale=s)
         x += LET + w + gap
     place(page, svg_to_pdf(OUT / 'panel_d_architecture.svg'), 0, y2, 57, 62, clip=False)
     place(page, svg_to_pdf(OUT / 'panel_e_control_loop.svg'), 62, y2, 118, 62, clip=False)
-    doc.save(str(OUT / 'Figure1_nc_draft.pdf'))
-    page.get_pixmap(dpi=300).save(str(OUT / 'Figure1_nc_draft.png'))
+    doc.save(str(cfg['pdf']))
+    page.get_pixmap(dpi=300).save(str(cfg['pdf'].with_suffix('.png')))
     print('wrote', *sorted(p.name for p in OUT.iterdir()))
 
 
 if __name__ == '__main__':
-    main()
+    main(*sys.argv[1:])

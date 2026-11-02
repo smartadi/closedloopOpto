@@ -158,6 +158,24 @@ ylabel('Count',        'FontSize', 7, 'FontName', 'Arial');
 
 print(fig, 'paper/latency_histogram.pdf', '-dpdf', '-painters');
 
+%% [LAT-JN] JN Fig 1C: this test recording, drawn like NC Fig 1c
+% Aditya 2026-11-02: JN's latency comes from this recording, not a whole session. paper-writing/fig1_nc_build.py
+% (jn) places the panel at 1:1, so 7 pt here is 7 pt in the figure.
+JN_W = 5.4;  JN_H = 4.4;  % cm
+figJN = figure('Color','w');
+figJN.Units = 'centimeters';  figJN.PaperUnits = 'centimeters';
+figJN.Position = [0 0 JN_W JN_H];  figJN.PaperSize = [JN_W JN_H];  figJN.PaperPosition = [0 0 JN_W JN_H];
+histogram(latency_ms, 10:1:50, 'FaceColor', [0.2 0.2 0.2], 'EdgeColor', 'none', 'FaceAlpha', 0.85);
+set(gca, 'Box','off', 'TickDir','out', 'FontSize',7, 'FontName','Arial', 'LineWidth',0.75, ...
+    'XLim',[10 50], 'XTick',10:10:50);
+xlabel('Loop latency (ms)', 'FontSize',7, 'FontName','Arial');
+ylabel('Loop cycles',       'FontSize',7, 'FontName','Arial');
+fprintf('[LAT-JN] n = %d, mean %.2f ms, median %.2f ms, range %.1f-%.1f ms\n', ...
+    numel(latency_ms), mean(latency_ms), median(latency_ms), min(latency_ms), max(latency_ms));
+jnDir = fullfile('paper', 'figures_final', 'jn', 'fig1');
+if ~exist(jnDir, 'dir'), mkdir(jnDir); end
+print(figJN, fullfile(jnDir, 'panel_c_latency.pdf'), '-dpdf', '-painters');
+
 %% Nature Comms Fig 1c moved to controller-analysis/ctrl_latency.m [LAT-NC] (2026-10-30, D8).
 % NC Fig 1c shows the whole closed-loop session (Mouse 4, 3539 updates, median 24.0 ms). JN uses this
 % test recording (n = 175, mean 29.0 ms, median 29.0 ms, range 14.0-47.0 ms; Aditya 2026-11-02).
