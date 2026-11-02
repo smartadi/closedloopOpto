@@ -31,6 +31,7 @@
 - **AI does not rewrite JN text outside `\ai{...}`.** Until the labels are on Overleaf, all JN text is off-limits: snippets in chat only. A labelled sentence whose text changed since labelling also counts as human.
 - **No GitHub → Overleaf pull on JN while tracked changes or comments are open.** Overleaf's docs warn a pull can lose or displace them. Overleaf → GitHub pushes are fine, so GitHub is downstream of Overleaf for now. 98aebf1 (8 Fig 5 lines in `results.tex`) is on GitHub but not on Overleaf.
 - Labels: `jn_provenance.py` (word-level trace) then `jn_label.py` (wraps sentences in a copy, checks the round trip). Macro: `ai_macro_snippet.tex`. Preview and per-sentence table: `paper/_jn_ai_preview/`. RESEARCH 2026-11-02.
+- **Workflow (Aditya, 2026-11-02):** Aditya pastes and edits on Overleaf section by section; no JN pushes from here. Labels stay as traced, with no threshold tuning. NC figures and captions go into JN only after Aditya reviews each one, keeping Nick's edits. Notes: `REVIEW_NICK_2026-11-02.md`.
 
 ### Branch protocol (the review gate)
 Since 2026-10-27 each draft repo has ONLY `main` (the `draft` branch was deleted locally and on
