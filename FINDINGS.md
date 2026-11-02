@@ -21,11 +21,10 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 ## Finding: Feedback suppresses slow residual power and amplifies 3–6 Hz (empirical sensitivity function)
 **Question:** In which frequency band does feedback remove trial-to-trial fluctuation, and does it add power in 1–4 Hz? (reviewer agent, 2026-11-01)
 **Analysis:** `stats_v2/sensitivity.py`. CL/OL power of the residual (trial minus condition mean), 0–3 s, per session; session t on log ratios; pre-stim window as the null.
-**Result (15 sessions, 4 mice):** CL/OL 0–1 Hz 0.32 (p = 7.8e-7, 15/15); 1–2 Hz 0.91 (n.s.); 2–4 Hz 1.38 (p = 9.5e-4, 13/15, 4/4 mice); 4–10 Hz 1.49 (p = 6.1e-5, 14/15). Crosses 1 at 1.5 Hz (bootstrap 1.1–2.6), peaks at 1.93× at 4.2 Hz (3.7–4.9). Pre-stim null flat at ~1. Same in the 1–3 s window and for the error about the reference. In 1 Hz bands to Nyquist (Holm over 17): 2–3 Hz 1.09 (n.s.), 3–4 Hz 1.68, 4–5 Hz 1.79, 5–6 Hz 1.37 (all Holm < 0.02, 4/4 mice), nothing from 7 to 17.5 Hz.
-**Paper claim (draft):** Feedback removes two-thirds of the slow (<1 Hz) fluctuation, leaves 1–3 Hz unchanged and amplifies 3–6 Hz (power ×1.4–1.8), as the loop delay predicts. It adds nothing above 7 Hz. This is why the loop rejects motion-related error but not error tied to 2–4 Hz power.
+**Result (15 sessions, 4 mice; corrected 2026-11-02 for an m14 alignment bug):** CL/OL 0–1 Hz 0.32 (p = 7.9e-7, 15/15); 1–2 Hz 0.92 (n.s.); 2–3 Hz 1.09 (n.s.); 3–4 Hz 1.69, 4–5 Hz 1.80, 5–6 Hz 1.37 (Holm over 17 bands ≤ 0.015, 4/4 mice); nothing from 7 to 17.5 Hz. Crosses 1 at 1.45 Hz (bootstrap 1.10–2.57), peaks at 1.95× at 4.2 Hz (3.7–4.9). Pre-stim null flat at ~1. Same in the 1–3 s window and for the error about the reference.
+**Paper claim (draft):** Feedback removes two-thirds of the fluctuation below 1 Hz, leaves 1–3 Hz unchanged and amplifies 3–6 Hz (power ×1.4–1.8), and adds nothing above 7 Hz. One explanation for the upper limit (Aditya, 2026-11-02): opsin and indicator kinetics plus controller latency, not necessarily a state dependence of the input. Consistent with the delay bound; no predicted curve yet.
 **Figure:** review sheet `paper/images/figure4/supp/sens_resid_sheet.png` (PNG, not a paper panel yet).
-**Status:** NEW 2026-11-01, not in the paper. Aditya to decide on a panel and the Discussion text. See RESEARCH 2026-11-01.
-
+**Status:** NEW, not in the paper. Wording given as chat snippets 2026-11-02; Aditya to review and pick the draft. See RESEARCH 2026-11-02.
 ---
 
 ## Finding: Brain state shapes OL error; feedback decouples motion but not relative 2–4 Hz power (Fig 4)
@@ -35,6 +34,7 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
 **Paper claim:** Initial deviation owns the transient; low-frequency power carries the steady state; feedback decouples motion-driven error but not error tied to relative 2–4 Hz power.
 **Figure:** Fig 4A–E (`paper/figures_final/panels/figure4/`), supp S3/S4.
 **Status:** IN PAPER (results.tex Fig-4 section, 2026-10-02). Rel-δ controllability was band-edge fragile under the old bin estimator (p 0.009 ↔ 0.074 with a one-sample window change); the continuous estimator fixes it (p 0.031–0.034). See RESEARCH 2026-10-02.
+**Update 2026-11-02 (state windows, `stats_v2/f4d_windows.py`):** With power measured laser-off over [−5,0) s, absolute 1–4 Hz holds: OL +0.21 (p = 0.0054), CL +0.21 (p = 0.010), CL/OL +1.5% (p = 0.49), so it is not produced by the controller, and the flat ratio means feedback removes the same fraction. Relative 2–4 Hz's CL/OL effect (+5%, p = 0.029) is confounded: +1.8% (p = 0.57) laser-off. It should carry no claim. Motion is not shifted by the loop; its OL slope needs concurrent motion.
 **Update 2026-10-11:**
 - LMM is now the uncorrelated random state slope (Table 1).
   - Initial deviation: pred +0.18, p = 0.014; reg +0.15, p = 0.028. Neither clears Bonferroni.

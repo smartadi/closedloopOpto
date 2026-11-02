@@ -21,7 +21,8 @@ Windows (M.WINDOWS): 'full' 0-3 s (RMSE window), 'late' 1-3 s (disturbance-rejec
 skips the onset transient), 'pre' -3-0 s. A 3 s Hann window resolves about 0.67 Hz (2 s: 1 Hz),
 so the lowest band is reported as "slow", DC included, not resolved within.
 
-Onsets and the m14 mapping are the corrected ones (run_all.py --corrected).
+Onsets are the corrected ones. The caches already carry m14's 11-frame dFk padding
+(utils/ctrl_onset_fix.m), so no dfk_offset here: run_all.py's M14_SHIFT would shift m14 twice.
 
 Run from the project root:
     stats_v2/.venv/Scripts/python.exe -I stats_v2/sensitivity.py
@@ -46,7 +47,6 @@ from tests import holm, sess_test  # noqa: E402
 
 OUT = loader.ROOT / "data" / "stats_v2" / "corrected"
 FIG = loader.ROOT / "paper" / "images" / "figure4" / "supp"
-M14_SHIFT = 11
 NFFT = 1024
 BANDS = [(0.0, 1.0), (1.0, 2.0), (2.0, 4.0), (4.0, 10.0)]
 # 1 Hz bands up to Nyquist (17.5 Hz); Holm-adjusted within each window. Neighbouring bands are
@@ -147,8 +147,7 @@ def main():
     E = {w: {"OL": [], "CL": []} for w in WINS}
     nTr = []
     for sid in loader.SESSION_IDS:
-        s = loader.load_session(sid, dfk_offset=M14_SHIFT if sid == "m14" else 0,
-                                onset_frames=onsets.get(sid))
+        s = loader.load_session(sid, onset_frames=onsets.get(sid))
         n = {}
         for w in WINS:
             for cname, c in (("OL", 0), ("CL", 1)):
