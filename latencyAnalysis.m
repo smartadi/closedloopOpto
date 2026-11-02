@@ -159,8 +159,8 @@ ylabel('Count',        'FontSize', 7, 'FontName', 'Arial');
 print(fig, 'paper/latency_histogram.pdf', '-dpdf', '-painters');
 
 %% Nature Comms Fig 1c moved to controller-analysis/ctrl_latency.m [LAT-NC] (2026-10-30, D8).
-% This test recording (175 cycles, median 29 ms) is no longer the paper measurement; Fig 1c shows
-% the whole closed-loop session that Methods quotes (Mouse 4, 3539 updates, median 24.0 ms).
+% NC Fig 1c shows the whole closed-loop session (Mouse 4, 3539 updates, median 24.0 ms). JN uses this
+% test recording (n = 175, mean 29.0 ms, median 29.0 ms, range 14.0-47.0 ms; Aditya 2026-11-02).
 
 %% Sample windows for lowest latency
 [~, sortIdx] = sort(latency);

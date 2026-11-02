@@ -14,8 +14,8 @@ L12-41 edit in place with tracking on; do not paste over his tracked edits or co
 |---|---|---|---|
 | C11 | L12-14 | Delete the opening sentences; the intro's last paragraph sets the stage | Agree: that paragraph covers all three |
 | C12 | L19 | Cite two papers at "spontaneous activity" | Avitan & Stringer 2022 Neuron (10.1016/j.neuron.2022.06.019); Dimakou et al. 2025 Neuron (10.1016/j.neuron.2025.02.009). Neither is in `refs.bib` |
-| C13 | L20 | Harmonize Fig 1, redraw D and E | Port NC Fig 1 with uppercase letters, on Aditya's review. Frame becomes B, latency C. Refs: 1B,C to 1B; 1F to 1C. Keep his citation in the panel A legend |
-| C14 | L41 | Limit in Hz; is it 1/50 ms = 20 Hz? | No: 20 Hz is a full cycle of delay phase lag. Rule is crossover times delay below about 1 rad (Skogestad), so f is about 1/(2 pi tau): 3.2 Hz at 50 ms. Integrating-loop stability limit is 1/(4 tau): 5 Hz. With 38-58 ms: 2.8-4.2 Hz. JN Discussion L49 has this with the old 47 ms numbers (37-61 ms, 2.6-4 Hz) |
+| C13 | L20 | Harmonize Fig 1, redraw D and E | Port NC Fig 1 with uppercase letters, on Aditya's review, but with the latency panel from the test recording and panel D's bracket at 29 ms. Frame becomes B, latency C. Refs: 1B,C to 1B; 1F to 1C. Keep his citation in the panel A legend |
+| C14 | L41 | Limit in Hz; is it 1/50 ms = 20 Hz? | No: 20 Hz is a full cycle of delay phase lag. Rule is crossover times delay below about 1 rad (Skogestad), so f is about 1/(2 pi tau): 3.2 Hz at 50 ms. Integrating-loop stability limit is 1/(4 tau): 5 Hz. With 43-61 ms: 2.6-3.7 Hz. JN Discussion L49 has this as 37-61 ms and 2.6-4 Hz, using "about half" of 47 ms for the average; the measured mean is 29 ms |
 
 ## His tracked edits to check
 
@@ -27,9 +27,9 @@ L12-41 edit in place with tracking on; do not paste over his tracked edits or co
 
 ## Latency numbers for L40
 
-Whole closed-loop session, AL_0051 2026-07-29/2, same measurement as NC Fig 1c: n = 3539 laser updates, mean 25.46 ms,
-median 24.00, SD 3.82, min 19.50, 99th percentile 40.00, max 43.50, 12.6% after the next blue frame.
-JN's current panel 1F is the older test recording (n = 175, median 29 ms, 14-47 ms), and its caption says 200 cycles.
+Use the latency test recording, not a whole session (Aditya, 2026-11-02): test 2026-04-23/1, n = 175, mean 29.03 ms,
+median 29.00, SD 8.30, min 14.00, 99th percentile 44.37, max 47.00. JN's panel 1F already shows this recording, but its
+caption and Methods L100 say 200 cycles. NC Fig 1c and its text use the whole session (D8) and are on hold with NC.
 
 ## Knock-on for later sections
 
