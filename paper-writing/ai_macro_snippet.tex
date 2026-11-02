@@ -1,0 +1,6 @@
+% \ai{...}: text first written by AI and not yet rewritten or critically read by a person (maroon).
+% People: delete the wrapper once you have rewritten or vetted the sentence.
+% AI tools: do not rewrite anything outside \ai{...}. Clean build: \renewcommand{\ai}[1]{#1}
+\usepackage{xcolor}
+\definecolor{aimaroon}{RGB}{128,0,0}
+\DeclareRobustCommand{\ai}[1]{\textcolor{aimaroon}{\hypersetup{citecolor=aimaroon,linkcolor=aimaroon}#1}}
