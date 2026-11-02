@@ -25,6 +25,15 @@ L12-41 edit in place with tracking on; do not paste over his tracked edits or co
 - **L22:** "co-variate" to "covariate".
 - **L40:** present tense against his C9; "reference" against his C3; XX.X and YY.Y-ZZ.Z placeholders.
 
+## Figures are ahead of the text (JN 89b40a7, on Aditya's push 54fae66)
+
+- **Fig 1:** panels are now A-E. References: results L21 `1B,C` to `1B`; L40, Discussion L49 and Methods L100 `1F` to `1C`. Caption: port NC's with uppercase letters, n = 175, keep Nick's citation in A.
+- **Fig 2:** caption A, C, D, F, G and two text changes (five amplitudes; drop the peak-normalized sentence). Aditya has already typed edits in the section's opening lines, so re-cut it from the latest push.
+- **Fig 4:** panel D says OL slope, CL slope, CL/OL; the caption and text still say predictability, regularizability, attenuation. Aditya's frequency decision applies here (relative 2-4 Hz carries no claim; RESEARCH 2026-11-02).
+- **State supplement:** letters shift, A-F to D-I, with new A-C. Results L94, L98.
+- **Fig 5, S1, S3:** captions already fit.
+- **Frequency limit:** results L41-43 (Aditya, 54fae66) give about 1.5 Hz; Discussion L49 gives 37-61 ms and 2.6-4 Hz, which the test recording makes 43-61 ms and 2.6-3.7 Hz. Reconcile in the text pass.
+
 ## Latency numbers for L40
 
 Use the latency test recording, not a whole session (Aditya, 2026-11-02): test 2026-04-23/1, n = 175, mean 29.03 ms,
@@ -33,6 +42,6 @@ caption and Methods L100 say 200 cycles. NC Fig 1c and its text use the whole se
 
 ## Knock-on for later sections
 
-- Pasting the Fig 5 section from 5afa294 brings 98aebf1's corrected numbers; JN's `Figure5.pdf` must be reassembled with it.
+- Correction: Overleaf already has 98aebf1's Fig 5 numbers (Aditya's push 54fae66 carries them). JN's `Figure5.pdf` went up in 89b40a7.
 - From Fig 2 on, Results says "reference" 36 times and "target level" 0 times. Nick's C3 and his edits favour "target level".
 - Evidence-based answer to C14, not run: closed- to open-loop error spectrum (Discussion L52 names it; RESEARCH archive 2026-10-06).

@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-02 — Correction: Overleaf already has the Fig 5 text; figures-only pulls replace the no-pull rule
+**Changed/Found:** Wrong claim of mine, in TASKS, `paper-writing/CLAUDE.md`, the review notes and the hub worklog: that Overleaf lacks 98aebf1's 8 Fig 5 lines. Aditya's 13:50 push (54fae66) is a plain commit on the merge 5afa294, not a new branch, and it still carries all 8 lines, so Overleaf's `results.tex` has them. Nick has been reading the corrected numbers against the old Figure5.pdf. All four places corrected. Rule now: while tracked changes or comments are open, a GitHub to Overleaf pull may carry figures only. Check that `git diff --name-only <push> origin/main` lists no `.tex`, and compare Aditya's comment export before and after.
+**Why:** Overleaf's docs still warn that pulls can lose or displace tracked changes and comments, and they do not separate out pulls that touch no text file. Aditya proposed putting figures directly on his own push, which makes the pull figures-only.
+**Next:** Aditya exports, pulls, exports. Compare with the 12:41 export (14 threads, 132 tracked changes), allowing for edits since. If anything moved, stop pulling and upload figures by hand. Not yet shown safe.
+
 ### 2026-11-02 — JN figures pushed to GitHub ahead of the text: 89b40a7 on Aditya's 54fae66
 **Changed/Found:** JN `images/`: Figure1, Figure2, Figure4, Figure5, supplementary/S1, S3 and S_state_quartile, all from `paper/figures_final/jn/`. No `.tex` in the diff, the blobs are byte-identical to the built files, and a scratch build of 54fae66 with them compiles (43 pp, was 41, because Fig 1 and the state supplement are taller). Pixel comparison at 100 dpi: Figs 3 and 6, OLbest, S2 and S_varx match NC apart from letter case, so JN keeps its own. The new figures differ from NC only at the letters, except Fig 1's latency panel and bracket. What changes for a JN reader: Fig 4 only panel D's wording (OL slope, CL slope, CL/OL); Fig 5 the rig signal; S1 panels C and D; S3 panels B-D (JN still had the 10-05 version, init-dev R2 0.42 where Fig 4C shows 0.53).
 **Why:** Aditya: get NC's figures into JN first, hold the text, then edit section by section. It also ends Nick reading the new Fig 5 text against the old figure.

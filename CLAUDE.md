@@ -246,7 +246,7 @@ drift to be "unified"; do not reconcile them.
 - Export: `exportgraphics(..., 'ContentType', 'vector')` for line-art; 300 dpi PNG for heatmaps
 
 ### Manuscript
-- **JN is the active draft (2026-11-02).** AI must not rewrite JN text outside `\ai{...}`, and no GitHub → Overleaf pull while Nick's tracked changes or comments are open. See `paper-writing/CLAUDE.md`.
+- **JN is the active draft (2026-11-02).** AI must not rewrite JN text outside `\ai{...}`, and while Nick's tracked changes or comments are open a GitHub → Overleaf pull carries figures only. See `paper-writing/CLAUDE.md`.
 - Target style: Li & Lu et al. — active voice, results-first topic sentences, no equation refs in Results
 - Local editing, two independent drafts (2026-10-29): JN = `C:\Users\aditya\Documents\projects\Closedloop_edit\` (arXiv, then JNeurosci); NC = `C:\Users\aditya\Documents\projects\Closedloop_nc\` (Nature Communications). Each has its own GitHub repo and Overleaf project; every manuscript request names one. See `paper-writing/CLAUDE.md`.
 - Sync to Overleaf after editing
