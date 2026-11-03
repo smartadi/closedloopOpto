@@ -68,7 +68,7 @@ fprintf('[F4R2] state window: %s\n', W_state.label);
 relopts = struct('pre',2,'post',3,'rel_idx',W_state.spec,'bandpow',W_state.bandpow);   % window from f4_state_window
 colOL = PS.col_ol; colCL = PS.col_cl;
 preds = {'initdev','motion','delta','absdelta'};
-titR2 = {'Initial deviation','Motion','Rel 2-4 Hz','Abs \delta'};
+titR2 = {'Initial deviation','Motion','Rel 2-4 Hz','Abs 1-4 Hz'};
 titCol = [0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];  % init,motion,rel,abs -> match state exemplars/decomp
 fnout = {'f4_2A_initdev.pdf','f4_2B_motion.pdf','f4_2C_delta.pdf','f4_2D_absdelta.pdf'};
 
@@ -441,7 +441,7 @@ function draw_panel(ax, qmO,qmC,qsO,qsC, colOL,colCL, PS, ttl, titleCol, showY, 
             'VerticalAlignment','top','FontSize',5,'FontWeight','bold','Color',[0 0 0]);
     end
     if showY
-        ylabel(ax,'RMSE to ref (z)','FontSize',PS.fs,'FontWeight','bold');
+        ylabel(ax,'RMSE to target (z)','FontSize',PS.fs,'FontWeight','bold');
     else
         set(ax,'YTickLabel',[]);
     end

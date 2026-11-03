@@ -19,7 +19,7 @@ fprintf('[f4_state_exemplars_supp] state window: %s\n', W_state.label);
 delta_bnd=[1 4]; hi_bnd=[2 4]; tot_bnd=[0.4 10];
 bp=@(seg,lo,hi) f4_bandpow(seg,Fs,lo,hi,W_state.bandpow);   % shared estimator
 col=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];
-lbl={'high initial deviation','high motion','high rel 2-4 Hz','high abs \delta'};
+lbl={'high initial deviation','high motion','high rel 2-4 Hz','high abs 1-4 Hz'};
 
 % ---- collect per-session exemplar picks ----
 sessMn={}; picks={}; segs={}; mcount=containers.Map('KeyType','char','ValueType','double');

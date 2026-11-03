@@ -57,8 +57,8 @@ end
 ok=all(isfinite([X1 X2 Xrel Xdel Y]),2)&Xdel>0; f=@(v)v(ok);
 [X1,X2,Xrel,Xdel,Y,SESS,TRI]=deal(f(X1),f(X2),f(Xrel),f(Xdel),f(Y),f(SESS),f(TRI));
 Z=zscore([X1 X2 Xrel log10(Xdel)]); yz=zscore(Y);            % z of the 4 states + outcome
-lbl={'high init-dev','high motion','high rel 2-4 Hz','high abs \delta'};   % short titles: fit tile width, match panel-C labels
-eqlbl={'init-dev','motion','rel \delta','abs \delta'};
+lbl={'high init-dev','high motion','high rel 2-4 Hz','high abs 1-4 Hz'};   % short titles: fit tile width, match panel-C labels
+eqlbl={'init-dev','motion','rel 2-4 Hz','abs 1-4 Hz'};
 col=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];   % SHARED state colours
 
 % ---- error model: standardized betas + per-state R^2 (paper 'sep' framing) ----

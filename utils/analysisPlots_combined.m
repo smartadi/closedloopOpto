@@ -107,7 +107,7 @@ xline(ax_B, dur, 'HandleVisibility','off');
 ylim(ax_B, [-10 10]); xlim(ax_B, [-3 dur+3]);
 addStimPatch(ax_B, x1, x2);
 uistack(findobj(ax_B,'Type','line'), 'top');
-lgd = legend(ax_B, [hOL_s hCL_s hRef_s], {'Open-Loop','Closed-Loop','Ref'}, ...
+lgd = legend(ax_B, [hOL_s hCL_s hRef_s], {'Open-Loop','Closed-Loop','Target'}, ...
     'Orientation','horizontal');
 paperLegend(lgd);
 lgd.Units = 'normalized';

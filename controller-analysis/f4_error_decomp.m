@@ -103,7 +103,7 @@ end
 ok=all(isfinite([X1 X2 Xrel Xdel YE YL]),2)&Xdel>0; f=@(v)v(ok);
 [X1,X2,Xrel,Xdel,YE,YL,SESS]=deal(f(X1),f(X2),f(Xrel),f(Xdel),f(YE),f(YL),f(SESS));
 Xall=[X1 X2 Xrel log10(Xdel)];                         % F1..F4 (abs delta as log10)
-fac_lbl={'init-dev','motion','rel 2-4Hz','abs \delta'};
+fac_lbl={'init-dev','motion','rel 2-4Hz','abs 1-4Hz'};
 usess=unique(SESS); nS=numel(usess); n=numel(YE);
 assert_pooled(n,  'f4_error_decomp CL trials');
 assert_pooled(nS, 'f4_error_decomp motion sessions');
@@ -122,7 +122,7 @@ modeCols = {[1 2 3 4], [1 2 3], [1 2 4]};
 modeFac  = {fac_lbl, fac_lbl([1 2 3]), fac_lbl([1 2 4])};
 % combined groups per mode (indices into the mode's own column subset)
 modeGrp  = {{[1 2],[3 4],[1 2 3 4]}, {[1 2],[1 2 3]}, {[1 2],[1 2 3]}};
-modeGrpL = {{'init+motion','rel+abs \delta','all four'}, ...
+modeGrpL = {{'init+motion','rel+abs power','all four'}, ...
             {'init+motion','all three'}, {'init+motion','all three'}};
 
 % STATE COLOURS, shared with the exemplar strips (user, 2026-10-05: "for error comp

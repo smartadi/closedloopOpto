@@ -195,7 +195,7 @@ for m = 1:nMode
     text(axB(m), 0.5, 1.06, sprintf('%s (n=%d)', MODE_LABELS{m}, nTr(m)), ...
         'Units','normalized', 'HorizontalAlignment','center', 'Clipping','off');
 end
-lgd = legend(axB(1), [hLeg(1) hLeg(2)], {'mean \pm std','Ref'}, 'Orientation','horizontal');
+lgd = legend(axB(1), [hLeg(1) hLeg(2)], {'mean \pm std','Target'}, 'Orientation','horizontal');
 paperLegend(lgd); lgd.Units = 'normalized';
 lgd.Position(2) = 0.01; lgd.Position(1) = 0.5 - lgd.Position(3)/2;
 linkaxes(axB,'x');
