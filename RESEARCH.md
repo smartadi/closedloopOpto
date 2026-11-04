@@ -16,6 +16,12 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-04 — Fig 4G relinked in the JN and NC assemblies: paper-wide session labels, same data
+**Changed/Found:** New `paper-writing/fig4g_relink.py`. In `paper/figures_final/jn/Figure4.ai` and `nc/Figure4.ai`, panel G was an embedded vector group from before the 10-19 labels (letters within its 11 sessions, as the comment in `f4_cl_reject_panel.m` says). It is now a link to `panels/figure4/f4_cl_reject_RR.pdf`, shifted 0.06, 0.66 pt so its axes land where the old ones were. Checked on the vector coordinates: all 11 markers and 12 vertical lines match old to new with a uniform offset under 0.04 pt and spread at most 0.01 pt, so only tick labels changed. Render diff at 300 dpi: JN unchanged outside G. NC unchanged outside G and panel d. Text and stats tables cite no old G label. Builds clean: JN 44 pp, NC 43 pp. Committed locally, not pushed: JN fa5107d, NC c8d9a8d. Originals in `jn/_before_2026-11-04/` and `nc/_before_2026-11-04/`.
+**Why:** Aditya: "Yes, fix both", after the 2026-11-04 finding below.
+**Next:** Side effect in NC: panel d is a live link, so opening the file brought in the 11-03 words ("Abs 1-4 Hz", "RMSE to target (z)"), while NC panels a and c are embedded and still print "abs δ". NC text has no \delta, so a and c could be linked the same way if Aditya wants. JN push waits for Aditya's Overleaf push, figure commit on top. Old `figures_final/FIgure4.ai` and `Figure4.pdf` are not used by either draft and keep the old labels.
+
+
 ### 2026-11-04 — Fig 4G session labels in both assembled drafts differ from the panel and the registry
 **Changed/Found:** `Closedloop_edit/images/Figure4.pdf` and `Closedloop_nc/images/Figure4.pdf` label Fig 4G Mouse2a, 1d, 1c, 2c, 1a, 2b, 1b, 1e, 1g, 3a, 1f. The panel `panels/figure4/f4_cl_reject_RR.pdf` (10-20) reads Mouse2a, 1h, 1f, 2d, 1d, 2b, 1e, 1j, 1l, 3e, 1k, which matches `utils/paper_session_label.m` (AL_0048 2026-07-29 = 3e, and 3a is a sine session). The points look the same; only the tick labels differ. The assemblies were not changed.
 **Why:** Found while pulling the panel for the SfN poster. It breaks the rule of one label per session across the paper, and Results names 3a as a sine session.
