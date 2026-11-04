@@ -1,19 +1,22 @@
 % =============================================================================
-%  SfN Neuroscience 2026 poster (Washington DC, Nov 14-18) -- paper Figs 1-5.
+%  SfN Neuroscience 2026 poster (Washington DC, Nov 14-18) -- the story of paper Figs 1-5.
 %  Layout follows SfN example poster 3 (SFN_poster_template_V3.pdf): header with QR
 %  codes left / poster number + mouse right; Introduction | Results | Conclusions
-%  section bars; numbered result boxes with a square number badge. UW colours.
+%  section bars; numbered boxes with a square number badge. UW colours.
 %  Board is 6 ft x 4 ft (72 x 48 in, SfN 2026 poster-session page); the poster is
 %  60 x 40 in so it fits with a margin for pins and prints on a 42 in roll.
-%  To change size, edit paperwidth/paperheight in the geometry line (type sizes are absolute).
-%  Figures are the assembled vector PDFs, pulled straight from the paper:
-%    Fig 1  -> Closedloop_nc/images/Figure1.pdf  (newest, with latency panel)
-%    Fig 2-5 -> paper/figures_final/FigureN.pdf
-%  Build:  latexmk -pdf poster.tex      (from this folder)
+%
+%  Organised by story beat, not by paper figure. Each box is one claim with only the
+%  panels that show it. Panels are the paper's individual panels, cropped by
+%  build_panels.py and all printed at ONE scale (\PS), so figure text is the same
+%  size everywhere (6 pt x 3.3 = about 20 pt).
+%
+%  Build:  python build_panels.py  then  latexmk -pdf poster.tex   (from this folder)
+%  Numbers and wording follow the JN results.tex.
 %  [FILL] marks what only the authors can supply.
 % =============================================================================
 \documentclass{article}
-\usepackage[paperwidth=60in,paperheight=40in,margin=0.9in]{geometry}
+\usepackage[paperwidth=60in,paperheight=40in,margin=0.75in]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage[default]{opensans}   % UW brand body face
 \usepackage{amssymb}
@@ -27,53 +30,63 @@
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
 
-\graphicspath{{../../paper/figures_final/}}
-% Fig 1 is named by full path: figures_final/Figure1.pdf is a stale Fig-2 assembly.
-\newcommand{\figonepath}{../../../Closedloop_nc/images/Figure1.pdf}
 \newcommand{\mousepath}{../../talk/mousy.png}
 
 % ---- UW brand palette; CL blue / OL red come from the figures
 \definecolor{uwpurple}{HTML}{4B2E83}   % Husky Purple
 \definecolor{uwgold}{HTML}{B7A57A}     % Husky Gold
-\definecolor{uwmetal}{HTML}{85754D}    % Metallic Gold
-\definecolor{uwtint}{HTML}{F3F0F8}     % light purple wash for text boxes
+\definecolor{spirit}{HTML}{FFC700}     % Spirit Gold: placeholders on purple
 \definecolor{olred}{RGB}{220,60,45}
 \definecolor{clblue}{RGB}{50,95,200}
 \definecolor{ink}{RGB}{30,30,30}
 \definecolor{fill}{RGB}{200,30,30}
 \newcommand{\FILL}[1]{\textcolor{fill}{\textbf{[FILL: #1]}}}
+\newcommand{\FILLh}[1]{\textcolor{spirit}{\textbf{[FILL: #1]}}}
 
-% ---- type sizes (pt) -- body ~28 pt reads at 1.5 m
-\newcommand{\bodysize}{\fontsize{28}{34}\selectfont}
-\newcommand{\smallsize}{\fontsize{22}{27}\selectfont}
-\newcommand{\headsize}{\fontsize{38}{46}\selectfont}
+% ---- type sizes (pt)
+\newcommand{\bodysize}{\fontsize{34}{42}\selectfont}
+\newcommand{\smallsize}{\fontsize{25}{31}\selectfont}
+\newcommand{\headsize}{\fontsize{42}{50}\selectfont}
 
-\setlist[itemize]{leftmargin=1.1em,itemsep=0.25em,topsep=0.3em,label=\textcolor{uwpurple}{\(\blacktriangleright\)}}
+\setlist[itemize]{leftmargin=1.0em,itemsep=0.3em,topsep=0.3em,parsep=0pt,label=\textcolor{uwpurple}{\(\blacktriangleright\)}}
+
+% ---- one print scale for every panel
+\newcommand{\PS}{3.3}
+\newcommand{\pn}[1]{\includegraphics[scale=\PS]{panels/#1.pdf}}
+% a row of panels, separated by \hfil, spread evenly across the box
+\newcommand{\prow}[1]{\par\vspace{0.16in}\noindent\hbox to \linewidth{\hfil #1\hfil}\par\vspace{0.16in}}
+% numbers in the body face, not the thinner math font
+\newcommand{\Rsq}{\textit{R}\textsuperscript{2}}
+\newcommand{\pv}[1]{\textit{p}\,=\,#1}
+\newcommand{\sci}[2]{#1\,$\times$\,10\textsuperscript{--#2}}
+\newcommand{\dff}{$\Delta$F/F}
 
 % section bar (Introduction / Results / Conclusions): purple bar inside a purple frame
 \newcommand{\sectionbar}[1]{%
   \begin{tcolorbox}[enhanced,colback=uwpurple,colframe=uwpurple,boxrule=0pt,arc=0pt,
-    left=0pt,right=0pt,top=12pt,bottom=12pt,halign=center,
+    left=0pt,right=0pt,top=10pt,bottom=10pt,halign=center,
     borderline={4pt}{-12pt}{uwpurple},borderline south={6pt}{-2pt}{uwgold}]
   \color{white}\fontsize{50}{56}\selectfont\bfseries #1
-  \end{tcolorbox}\vspace{0.25in}}
+  \end{tcolorbox}\vspace{0.2in}}
 
-% numbered result box: square number badge + claim as the heading (template 3)
+% numbered box: square number badge + the claim as the heading (template 3)
 \newtcolorbox{resultbox}[2]{enhanced,colback=white,colframe=uwpurple,boxrule=4pt,arc=0pt,
-  left=14pt,right=14pt,top=10pt,bottom=12pt,
+  left=12pt,right=12pt,top=8pt,bottom=12pt,
   title={\begin{tabular}{@{}m{1.3in}@{\hspace{18pt}}m{\dimexpr\linewidth-1.3in-18pt\relax}@{}}
      \tikz\node[fill=uwpurple,text=white,minimum width=1.3in,minimum height=1.3in,inner sep=0pt,
-        font=\fontsize{96}{96}\selectfont\bfseries]{#1};
+        font=\fontsize{84}{84}\selectfont\bfseries]{#1};
      & \headsize\bfseries\raggedright\hyphenpenalty=10000 #2\end{tabular}},
-  coltitle=ink,colbacktitle=white,left skip=0pt,lefttitle=0pt,toptitle=0pt,bottomtitle=0pt,
-  titlerule=4pt,colframe=uwpurple,
-  before upper={\bodysize\color{ink}}}
+  coltitle=ink,colbacktitle=white,lefttitle=0pt,toptitle=0pt,bottomtitle=0pt,titlerule=4pt,
+  before upper={\bodysize\color{ink}\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000}}
 % plain text box under a section bar
 \newtcolorbox{textbox}{enhanced,colback=white,colframe=uwpurple,boxrule=4pt,arc=0pt,
-  left=16pt,right=16pt,top=12pt,bottom=14pt,before upper={\bodysize\color{ink}}}
+  left=16pt,right=16pt,top=12pt,bottom=14pt,before upper={\bodysize\color{ink}\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000}}
 
-\newcommand{\fig}[2][\linewidth]{\begin{center}\includegraphics[width=#1]{#2}\end{center}\vspace{-0.4em}}
-\newcommand{\gap}{\vspace{0.35in}}
+% columns: state story gets the widest column, because its quartile row is the widest panel
+\newlength{\colH}\setlength{\colH}{33.7in}
+\newlength{\colA}\setlength{\colA}{45.5cm}
+\newlength{\colB}\setlength{\colB}{45.5cm}
+\newlength{\colC}\setlength{\colC}{56cm}
 
 \begin{document}
 % =============================================================================
@@ -89,127 +102,131 @@
   \fcolorbox{white}{white}{\parbox[c][2.4in][c]{2.4in}{\centering\fontsize{24}{28}\selectfont\FILL{QR}}}\\[0.25em]
   {\fontsize{24}{28}\selectfont \makebox[2.4in]{Preprint}\hspace{0.25in}\makebox[2.4in]{Code}}
 \end{minipage}\hfill
-\begin{minipage}[c]{0.72\linewidth}\centering
+\begin{minipage}[c]{0.70\linewidth}\centering
   {\fontsize{84}{94}\selectfont\bfseries Brain state shapes how well feedback controls\\[0.1em]
    mesoscale cortical activity\par}
   \vspace{0.25em}
-  {\fontsize{46}{54}\selectfont\bfseries Aditya Deole, Anna Li, Eric Shea-Brown, Mehran Mesbahi, Nicholas A.\ Steinmetz\par}
+  {\fontsize{46}{54}\selectfont\bfseries Aditya Deole, Anna Li, Eric Shea-Brown, Mehran Mesbahi, Nick Steinmetz\par}
   \vspace{0.15em}
-  {\fontsize{36}{42}\selectfont\color{uwgold} University of Washington, Seattle, WA \quad \FILL{departments}\par}
+  {\fontsize{36}{42}\selectfont\color{uwgold} University of Washington, Seattle, WA \quad \FILLh{departments}\par}
 \end{minipage}\hfill
-\begin{minipage}[c]{0.13\linewidth}\raggedleft
-  {\fontsize{60}{64}\selectfont\bfseries \FILL{PSTR\#\#\#.\#\#}\par}
+\begin{minipage}[c]{0.14\linewidth}\raggedleft
+  {\fontsize{38}{44}\selectfont \FILLh{PSTR\#\#\#.\#\#}\par}
   \vspace{0.3em}
   \tikz\node[circle,fill=white,inner sep=4pt]{\includegraphics[height=2.3in,trim=45 43 45 18,clip]{\mousepath}};\par
 \end{minipage}
 \end{tcolorbox}
 
-\vspace{0.45in}
+\vspace{0.3in}
 % =============================================================================
 %  THREE COLUMNS
 % =============================================================================
 \noindent
-\begin{minipage}[t]{0.32\linewidth}\vspace{0pt}
-% ----------------------------------------------------------------------- col 1
+% ------------------------------------------- col 1: what we built, why it can work
+\begin{minipage}[t][\colH][t]{\colA}\vspace{0pt}
 \sectionbar{Introduction}
 \begin{textbox}
-Testing what mesoscale cortical dynamics \emph{cause} requires shaping them, not just perturbing them.
-We built a closed loop that holds one cortical region at a target with optogenetic inhibition.
-\begin{itemize}
-  \item How well does feedback hold activity at the target?
-  \item Which brain states make it harder -- and what does the error left under control tell us about state?
-\end{itemize}
+Mesoscale cortical activity is linked to perception, cognition and movement. Testing what
+it causes requires shaping it, not only perturbing it.\\[0.3em]
+\textbf{Can feedback hold a cortical site at a target level, and which brain states make that harder?}
 \end{textbox}
-\gap
+\vfill
 \sectionbar{Results}
-\begin{resultbox}{1}{A real-time imaging + optogenetics control loop}
-\fig[0.74\linewidth]{\figonepath}
+\begin{resultbox}{1}{We close the loop on cortex in real time}
+\prow{\pn{rig}\hfil\pn{loop}}
+\vspace{0.15in}\noindent\begin{minipage}[c]{19.3cm}\pn{frame}\end{minipage}\hfill
+\begin{minipage}[c]{\dimexpr\linewidth-20cm\relax}
 \begin{itemize}
-  \item Wide-field GCaMP imaging at 35\,Hz; the output is $\Delta F/F$ in a kernel beside a
-        red-laser inhibition spot (a, b).
-  \item Loop latency 24\,ms median, $\le$\,47\,ms -- inside one frame (c, d).
-  \item Controller: PI feedback ($K_p, K_i$) plus a feedforward gain $K_r$ (e).
+  \item Wide-field GCaMP8s imaging at 35\,Hz
+  \item Output: \dff{} beside the stimulation spot
+  \item Loop delay 29\,ms mean (14--47\,ms)
 \end{itemize}
+\end{minipage}
 \end{resultbox}
-\gap
-\begin{resultbox}{2}{Trial-averaged responses are near-linear; single trials vary with state}
-\fig{Figure2.pdf}
+\vfill
+\begin{resultbox}{2}{The average response is near-linear; single trials vary with brain state}
+\prow{\pn{imp_traces}\hfil\pn{imp_dose}\hfil\pn{imp_fit}}
+\prow{\pn{imp_r2}\hfil\pn{imp_state}}
 \begin{itemize}
-  \item Suppression scales linearly with laser power (B; $R^2 = 0.73$--$0.97$, 4 sessions, 3 mice);
-        a low-order LTI model predicts held-out trial averages (C, D; median $R^2 = 0.85$).
-  \item Models transfer only partly between sessions (E) $\Rightarrow$ a rough feedforward gain, corrected by feedback.
-  \item Single-trial variability follows state: $0.58\times$ in high motion, $2.35\times$ in high
-        absolute $\delta$ power -- stimulus-free activity does the same (G).
-\end{itemize}
-\end{resultbox}
-\end{minipage}\hfill
-% ----------------------------------------------------------------------- col 2
-\begin{minipage}[t]{0.32\linewidth}\vspace{0pt}
-\begin{resultbox}{3}{Feedback tracks the target better and cuts variability}
-\fig[0.96\linewidth]{Figure3.pdf}
-\vspace{-0.2em}
-{\smallsize Target $-5\%\,\Delta F/F$ for 3\,s; \textcolor{clblue}{\textbf{closed loop}} and
-\textcolor{olred}{\textbf{open loop}} (feedforward only) randomly interleaved. 15 sessions, 4 mice.\par}
-\begin{itemize}
-  \item Tracking error (RMSE) $-23\%$ over the stimulus (ratio 0.77, $p = 5.8\times10^{-8}$),
-        lower in \textbf{all 15 sessions}; $-32\%$ at steady state (H).
-  \item Across-trial variance $-42\%$ (0.58, $p = 6.3\times10^{-6}$); the ratio is 1 before and
-        after stimulation $\Rightarrow$ \textbf{disturbance rejection} (D, E, I).
-  \item Still 13\% better than the best \emph{fixed} input chosen in hindsight ($p = 6.5\times10^{-4}$),
-        so the gain is feedback, not calibration.
-\end{itemize}
-\end{resultbox}
-\gap
-\begin{resultbox}{4}{Controller performance is brain-state dependent}
-\fig[0.92\linewidth]{Figure4.pdf}
-\begin{itemize}
-  \item Transient error is set by the initial deviation (unique $R^2 = 0.53$); steady-state error
-        by large, slow absolute 1--4\,Hz power (B, C).
-  \item \textbf{Movement:} open-loop error rises, closed-loop error stays flat -- feedback removes
-        a larger share of the error the more the mouse moves ($-13\%$ per SD, $p = 0.0023$) (D).
-  \item \textbf{Slow $\delta$ fluctuations:} closed-loop error rises in all 15 sessions
-        ($p = 7.1\times10^{-4}$) -- feedback does not hold the target as $\delta$ power grows (D).
-  \item A contralateral$\to$ipsilateral model (held-out $R^2 = 0.76$) estimates each trial's
-        disturbance; closed loop leaves 0.58 of its energy ($p = 1.3\times10^{-4}$, 11 sessions) (E--G).
+  \item Suppression scales with laser power (\Rsq{} = 0.73--0.97), and a low-order
+        linear model predicts held-out trial averages (median \Rsq{} = 0.85; 4 sessions, 3 mice).
+  \item Single-trial variability falls at the highest motion (0.58$\times$) and rises with absolute
+        2--4\,Hz power (2.35$\times$), with or without stimulation.
 \end{itemize}
 \end{resultbox}
 \end{minipage}\hfill
-% ----------------------------------------------------------------------- col 3
-\begin{minipage}[t]{0.32\linewidth}\vspace{0pt}
-\begin{resultbox}{5}{Moving target: feedback cuts error, preview cancels lag}
-\fig{Figure5.pdf}
-{\smallsize 1\,Hz sinusoidal target; preview shifts the reference ahead by the cortical delay
-(5 samples, 143\,ms). OL, OL$+$preview, CL, CL$+$preview interleaved (Mouse 3, 3 sessions).\par}
+% ------------------------------------------- col 2: feedback works
+\begin{minipage}[t][\colH][t]{\colB}\vspace{0pt}
+\begin{resultbox}{3}{Feedback holds activity at the target and reduces trial-to-trial variability}
+\prow{\pn{cl_trial}\hfil\pn{cl_rmse}}
+\prow{\pn{cl_avg}\hfil\pn{cl_var}}
 \begin{itemize}
-  \item Feedback halves across-trial variance (11.8 $\to$ 5.8\,$(\%\Delta F/F)^2$) and lowers
-        median RMSE 3.59 $\to$ 2.26 (E--G).
-  \item Preview cancels the phase lag (OL $71^\circ \to 16^\circ$, CL $46^\circ \to 2^\circ$),
-        as the lookahead predicts (H).
-  \item Same direction in all 3 sessions (I--K; $n = 3$, no tests).
+  \item Target --5\%\,\dff{} for 3\,s, loops interleaved (15 sessions, 4 mice).
+  \item RMSE 23\% lower (ratio 0.77, \pv{\sci{5.8}{8}}), in all 15 sessions.
+  \item Across-trial variance 42\% lower (ratio 0.58, \pv{\sci{6.3}{6}}), in 14 of 15 sessions.
+  \item Also beats the best fixed input (13\%, \pv{\sci{6.5}{4}}): not only calibration.
 \end{itemize}
 \end{resultbox}
-\gap
+\vfill
+\begin{resultbox}{4}{Moving target: feedback reduces error, preview corrects the lag}
+\prow{\pn{sine_avg}}
+\prow{\pn{sine_lag}\hfil\pn{sine_rmse}\hfil\pn{sine_var}}
+\begin{itemize}
+  \item 1\,Hz target; preview gives the controller the target 143\,ms ahead. Mouse 3b shown;
+        same direction in all 3 sessions (no tests).
+  \item Feedback: variance 11.8 $\to$ 5.8\,(\%\,\dff)\textsuperscript{2}, median RMSE 3.59 $\to$ 2.26.
+  \item Preview: lag 71$^\circ$ $\to$ 16$^\circ$ in open loop, 46$^\circ$ $\to$ 2$^\circ$ in closed loop; it does not lower the error.
+\end{itemize}
+\end{resultbox}
+\vfill
+\begin{textbox}
+{\smallsize\color{ink}
+\textbf{Methods.} CaMKII-tTA;tetO-GCaMP8s mice with AAV PHP.eB DLX2.0-ChrimsonR in inhibitory
+interneurons, so 638\,nm light suppresses local excitatory activity. Head-fixed, awake, no task
+(rig and preparation: Matveev et al., 2024). Closed-loop \dff{} uses the controller's own
+trailing 40\,s mean; impulse \dff{} divides by the session mean image. Statistics: per-session log
+CL/OL ratios, one-sample \textit{t}-test across sessions, checked per mouse; state slopes fitted within
+session and tested across sessions; rejection ratio from a session-level mixed model.\par}
+\end{textbox}
+\end{minipage}\hfill
+% ------------------------------------------- col 3: the main result
+\begin{minipage}[t][\colH][t]{\colC}\vspace{0pt}
+\begin{resultbox}{5}{Controller performance depends on brain state}
+\prow{\pn{st_trials}\hfil\pn{st_unique}}
+\prow{\pn{st_quart}}
+\begin{itemize}
+  \item Initial deviation explains transient error (unique \Rsq{} = 0.53); absolute 1--4\,Hz power explains
+        a modest part of steady-state error (0.11), more than any other state.
+  \item \textbf{Movement:} open-loop error rises (\pv{0.011}), closed-loop error stays flat, so feedback
+        removes a larger fraction of the error (CL/OL --13\% per SD, \pv{0.0023}).
+  \item \textbf{Absolute 1--4\,Hz power:} closed-loop error rises (\pv{\sci{7.1}{4}}, all 15 sessions)
+        about as much as open-loop error; the fraction removed does not change significantly (\pv{0.094}).
+  \item One explanation: opsin and indicator kinetics and loop delay limit the controllable frequencies.
+\end{itemize}
+\end{resultbox}
+\vfill
+\begin{resultbox}{6}{Feedback partly rejects a disturbance predicted from the other hemisphere}
+\prow{\pn{d_kernel}\hfil\pn{d_agl}\hfil\pn{d_rr}}
+\begin{itemize}
+  \item A linear model fit on laser-off frames predicts the site from the contralateral hemisphere
+        (median held-out \Rsq{} = 0.76, 13 sessions).
+  \item Closed loop leaves less residual energy than the disturbance: rejection ratio 0.58
+        (\pv{\sci{1.3}{4}}; 11 sessions, 3 mice). It removes most of the constant offset and less of the fluctuations.
+\end{itemize}
+\end{resultbox}
+\vfill
 \sectionbar{Conclusions}
 \begin{textbox}
 \begin{itemize}
-  \item Near-linear, time-invariant trial-averaged dynamics are enough to design a controller
-        that \textbf{holds regional cortical activity at a target}, better than open loop in every
-        session and mouse.
-  \item \textbf{Brain state sets what feedback can cancel:} it absorbs the error that comes with
-        movement, but error still grows with slow $\delta$-band fluctuations.
-  \item The error left under control is \textbf{a readout of brain state}, and part of the
-        disturbance is predictable from the opposite hemisphere.
-  \item Feedback and preview fix different failures; together they track a moving target.
+  \item A near-linear average response is enough to design a controller that \textbf{holds a cortical
+        site at a target level}, better than open loop in every session and mouse.
+  \item \textbf{Performance depends on brain state:} feedback removes more of the error during movement,
+        while error rises with absolute 1--4\,Hz power.
+  \item Feedback rejects part of a disturbance predicted from the other hemisphere, and preview corrects
+        the lag when the target moves.
 \end{itemize}
 \vspace{0.3em}
-{\smallsize\textbf{Methods.} CaMKII-tTA;tetO-GCaMP8s mice; systemic AAV PHP.eB DLX2.0-ChrimsonR
-(inhibitory interneurons), so 638\,nm light suppresses local excitatory activity. Head-fixed,
-awake, no task. Wide-field imaging (470/405\,nm, 35\,Hz); galvo-steered laser. Closed-loop
-$\Delta F/F$ uses a trailing 40\,s mean (the loop's own online baseline). Statistics: per-session
-log CL/OL ratios, two-sided one-sample $t$-test across sessions, checked per mouse.
-Rig and preparation: Matveev et al.\ (2024).\par}
-\vspace{0.4em}
-{\smallsize\centering Supported by \FILL{grants -- SfN requires a funding acknowledgement}
+{\smallsize\centering Supported by \FILL{grants: SfN requires a funding acknowledgement}
 \quad Contact: \FILL{email}\par}
 \end{textbox}
 \end{minipage}
