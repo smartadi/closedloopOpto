@@ -9,10 +9,14 @@ Re-run after a producer changes a panel in paper/figures_final/.
 Sources: Figs 3-5 from panels/ (the one locked set); Figs 1-2 from jn/, whose panels were rebuilt for
 the active draft (latency from the test recording, 2026-11-02; Fig 2 labels, 2026-11-03).
 """
+import io
 from pathlib import Path
 
 import fitz
+import numpy as np
 from lxml import etree
+from PIL import Image
+from pptx import Presentation
 
 HERE = Path(__file__).resolve().parent
 FINAL = HERE.parents[1] / 'paper' / 'figures_final'
@@ -54,6 +58,8 @@ PANELS = {
 # Placed size of the SVG in JN's Figure 1 (fig1_nc_build.py), where its text is 7 pt.
 SVG_MM = {'loop': (118, 62)}
 MM = 72 / 25.4
+TEMPLATE = HERE.parents[1] / 'paper-writing' / 'PosterTemplate.pptx'
+ARIAL = 'C:/Windows/Fonts/arial.ttf'
 
 
 def open_pdf(path):
@@ -78,10 +84,52 @@ def ink(page):
     return (r + (-PAD, -PAD, PAD, PAD)) & page.rect
 
 
+def uw_logo():
+    """The white W from the old poster template's logo, on transparent, so it sits on the header purple."""
+    pic = next(sh for sh in Presentation(TEMPLATE).slides[0].shapes if sh.shape_type == 13 and sh.top < 914400)
+    im = Image.open(io.BytesIO(pic.image.blob)).convert('L').crop((70, 128, 440, 384))
+    im = im.resize((im.width * 4, im.height * 4), Image.LANCZOS)
+    alpha = np.clip((np.asarray(im, float) - 40) / 215 * 255, 0, 255).astype(np.uint8)
+    rgba = np.dstack([np.full_like(alpha, 255)] * 3 + [alpha])
+    Image.fromarray(rgba, 'RGBA').save(OUT / 'uw_w.png')
+
+
+def embed_font(page):
+    """Reset base-14 Helvetica as embedded Arial (same metrics): a print shop needs every font embedded."""
+    spans = [s for b in page.get_text('dict')['blocks'] for l in b.get('lines', []) for s in l['spans']
+             if s['font'] == 'Helvetica']
+    for s in spans:
+        page.add_redact_annot(fitz.Rect(s['bbox']), fill=False, cross_out=False)
+    page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE, graphics=fitz.PDF_REDACT_LINE_ART_NONE,
+                          text=fitz.PDF_REDACT_TEXT_REMOVE)
+    for f in page.get_fonts(full=True):         # the redaction leaves its now unused resource behind
+        if f[3] == 'Helvetica':
+            page.parent.xref_set_key(page.xref, f'Resources/Font/{f[4]}', 'null')
+    for s in spans:
+        page.insert_text(s['origin'], s['text'], fontname='ar', fontfile=ARIAL, fontsize=s['size'], color=(0, 0, 0))
+
+
+def smooth_rasters(doc, factor=6):
+    """Resample embedded images smoothly so their pixels don't show at poster size. In memory only: adds no data."""
+    for x in range(1, doc.xref_length()):
+        if doc.xref_get_key(x, 'Subtype')[1] != '/Image':
+            continue
+        im = Image.open(io.BytesIO(doc.extract_image(x)['image'])).convert('RGB')
+        im = im.resize((im.width * factor, im.height * factor), Image.BICUBIC)
+        doc.update_stream(x, im.tobytes(), compress=True)
+        doc.xref_set_key(x, 'Width', str(im.width))
+        doc.xref_set_key(x, 'Height', str(im.height))
+
+
 def main():
     OUT.mkdir(exist_ok=True)
+    uw_logo()
     for name, (src, scale) in PANELS.items():
         s = open_pdf(src)
+        if name == 'frame':
+            embed_font(s[0])
+        if name == 'd_kernel':      # 138 x 126 px in the panel, 44 dpi on the poster
+            smooth_rasters(s)
         clip = ink(s[0])
         if name in SVG_MM:
             scale *= SVG_MM[name][0] * MM / s[0].rect.width

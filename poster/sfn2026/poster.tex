@@ -1,7 +1,7 @@
 % =============================================================================
 %  SfN Neuroscience 2026 poster (Washington DC, Nov 14-18) -- the story of paper Figs 1-5.
-%  Layout follows SfN example poster 3 (SFN_poster_template_V3.pdf): header with QR
-%  codes left / poster number + mouse right; Introduction | Results | Conclusions
+%  Layout follows SfN example poster 3 (SFN_poster_template_V3.pdf): header with logo
+%  left / poster number + mouse right; Introduction | Results | Conclusions
 %  section bars; numbered boxes with a square number badge. UW colours.
 %  Board is 6 ft x 4 ft (72 x 48 in, SfN 2026 poster-session page); the poster is
 %  60 x 40 in so it fits with a margin for pins and prints on a 42 in roll.
@@ -97,18 +97,15 @@
    borderline south={10pt}{0pt}{uwgold}]
 \color{white}
 \begin{minipage}[c]{0.13\linewidth}\centering
-  \fcolorbox{white}{white}{\parbox[c][2.4in][c]{2.4in}{\centering\fontsize{24}{28}\selectfont\FILL{QR}}}%
-  \hspace{0.25in}%
-  \fcolorbox{white}{white}{\parbox[c][2.4in][c]{2.4in}{\centering\fontsize{24}{28}\selectfont\FILL{QR}}}\\[0.25em]
-  {\fontsize{24}{28}\selectfont \makebox[2.4in]{Preprint}\hspace{0.25in}\makebox[2.4in]{Code}}
+  \includegraphics[height=2.9in]{panels/uw_w.png}
 \end{minipage}\hfill
 \begin{minipage}[c]{0.70\linewidth}\centering
-  {\fontsize{84}{94}\selectfont\bfseries Brain state shapes how well feedback controls\\[0.1em]
-   mesoscale cortical activity\par}
+  {\fontsize{84}{94}\selectfont\bfseries Controlling cortex in real time: state-dependent\\[0.1em]
+   limits of closed-loop optogenetic regulation\par}   % title as submitted to SfN, June 2026
   \vspace{0.25em}
   {\fontsize{46}{54}\selectfont\bfseries Aditya Deole, Anna Li, Eric Shea-Brown, Mehran Mesbahi, Nick Steinmetz\par}
   \vspace{0.15em}
-  {\fontsize{36}{42}\selectfont\color{uwgold} University of Washington, Seattle, WA \quad \FILLh{departments}\par}
+  {\fontsize{36}{42}\selectfont\color{uwgold} University of Washington, Seattle, WA\par}
 \end{minipage}\hfill
 \begin{minipage}[c]{0.14\linewidth}\raggedleft
   {\fontsize{38}{44}\selectfont \FILLh{PSTR\#\#\#.\#\#}\par}
@@ -126,9 +123,9 @@
 \begin{minipage}[t][\colH][t]{\colA}\vspace{0pt}
 \sectionbar{Introduction}
 \begin{textbox}
-Mesoscale cortical activity is linked to perception, cognition and movement. Testing what
-it causes requires shaping it, not only perturbing it.\\[0.3em]
-\textbf{Can feedback hold a cortical site at a target level, and which brain states make that harder?}
+Mesoscale cortical activity is typically perturbed open loop. Whether feedback can reliably
+regulate it, and what limits that control, remains largely untested.\\[0.3em]
+\textbf{We built a closed-loop optogenetic controller, then asked which brain states limit it.}
 \end{textbox}
 \vfill
 \sectionbar{Results}
@@ -191,7 +188,7 @@ session and tested across sessions; rejection ratio from a session-level mixed m
 \end{minipage}\hfill
 % ------------------------------------------- col 3: the main result
 \begin{minipage}[t][\colH][t]{\colC}\vspace{0pt}
-\begin{resultbox}{5}{Controller performance depends on brain state}
+\begin{resultbox}{5}{State-dependent limits: feedback removes more error during movement, but error grows with 1--4\,Hz power}
 \prow{\pn{st_trials}\hfil\pn{st_unique}}
 \prow{\pn{st_quart}}
 \begin{itemize}
@@ -227,7 +224,7 @@ session and tested across sessions; rejection ratio from a session-level mixed m
 \end{itemize}
 \vspace{0.3em}
 {\smallsize\centering Supported by \FILL{grants: SfN requires a funding acknowledgement}
-\quad Contact: \FILL{email}\par}
+\quad Contact: adityad@uw.edu\par}
 \end{textbox}
 \end{minipage}
 
