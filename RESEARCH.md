@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — SfN poster: Steinmetz Lab long gold logo in the header, left of Aditya's QR code
+**Changed/Found:** New `poster/sfn2026/add_lab_logo.py`, which can be re-run. It reads `steinmetz-lab-logo-5-black-gold-horizontal-long.pdf` from the lab's labLogo folder on the data server (read only; the full path is in the script) and drops its one black background rectangle, so the gold art (#E1C48D) sits on the header purple; nothing else in the artwork changes. It renders a transparent 600 dpi PNG (`panels/lab_logo.png`, git-ignored), 7.52 x 1.70 in, placed at x 41.96, centred on the QR code's height, 0.35 in left of it, and 2.8 in clear of the title's right end (39.16 in, measured in PowerPoint). Built on Aditya's 14:47 online edit, which synced to this PC: QR code added ('Graphic 7', SVG), the empty mouse circle removed, the UW logo moved to x 1.00, and the funding placeholder removed. Saved over `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` after checking it was unchanged since that edit. Package check: every part of Aditya's file is kept at the same size; the file is 0.4 MB smaller only because the media are now deflated. Desktop PowerPoint: fine.
+**Why:** Aditya: put the long gold logo next to the QR code.
+**Next:** The funding line is gone from the poster. SfN asks for funding sources on the virtual poster (RESEARCH 2026-10-30), so Aditya should confirm where it goes. Not checked in PowerPoint online.
+
 ### 2026-11-05 — SfN poster box 5: site stars removed from the two mean maps
 **Changed/Found:** `poster/sfn2026/seedfc_panel.m`: the mean-of-12 maps no longer mark the 12 sites. The per-session maps keep their star, so the key line ("... with the site (star) ...") still holds. Swapped in with `panel_swap.py`: same size (15.27 x 5.37 in), same spot. Saved over `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` after checking it was unchanged since my 14:28 save. Desktop PowerPoint: fine. Without the stars, the closed-loop mean map shows its smallest drops near the sites (close to white), which the stars used to cover.
 **Why:** Aditya: 12 stars on one map were confusing.
