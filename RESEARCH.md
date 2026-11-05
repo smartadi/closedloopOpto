@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — SfN poster: 5-minute talk script as a one-page printable PDF
+**Changed/Found:** New `poster/sfn2026/talk_script.py` writes `poster/sfn2026/talk_script.pdf` (git-ignored): US Letter, one page, Arial embedded, body 9.5 pt (the script shrinks the font until the page fits, and won't go below 8.5 pt), 0.42 in margins (ink at least 0.48 in from every edge). Content: the 5-minute walkthrough box by box with timings and "point to" cues, plus five short answers for questions. All numbers are ones on the poster. The close uses the corrected line ("one likely limit is how fast the loop can respond"), since the earlier "speed, not the model" claimed more than the poster shows. Built with PyMuPDF's Story; reportlab isn't installed, and nothing new was installed.
+**Why:** Aditya asked for the 5-minute version on one page, ready to print.
+**Next:** The blood-flow question has no prepared answer on the sheet, only a reminder; Aditya writes his own.
+
 ### 2026-11-05 — SfN poster: Steinmetz Lab long gold logo in the header, left of Aditya's QR code
 **Changed/Found:** New `poster/sfn2026/add_lab_logo.py`, which can be re-run. It reads `steinmetz-lab-logo-5-black-gold-horizontal-long.pdf` from the lab's labLogo folder on the data server (read only; the full path is in the script) and drops its one black background rectangle, so the gold art (#E1C48D) sits on the header purple; nothing else in the artwork changes. It renders a transparent 600 dpi PNG (`panels/lab_logo.png`, git-ignored), 7.52 x 1.70 in, placed at x 41.96, centred on the QR code's height, 0.35 in left of it, and 2.8 in clear of the title's right end (39.16 in, measured in PowerPoint). Built on Aditya's 14:47 online edit, which synced to this PC: QR code added ('Graphic 7', SVG), the empty mouse circle removed, the UW logo moved to x 1.00, and the funding placeholder removed. Saved over `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` after checking it was unchanged since that edit. Package check: every part of Aditya's file is kept at the same size; the file is 0.4 MB smaller only because the media are now deflated. Desktop PowerPoint: fine.
 **Why:** Aditya: put the long gold logo next to the QR code.
