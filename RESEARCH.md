@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-04 — SfN poster: v2 is the only version, older copies sent to the Recycle Bin
+**Changed/Found:** Sent `OneDrive/Talks/SfN2026/SfN2026_poster.pptx` and the local build output `poster/sfn2026/poster.pptx` to the Windows Recycle Bin. Before that, confirmed the old OneDrive slide was identical to the one v2 was built from, so no hand edit was lost. `SfN2026_poster_v2.pptx` is now the only PowerPoint file. `poster.tex` and `poster.pdf` stay, with the older text and layout.
+**Why:** Aditya: "v2 is main delete other i dont like having multiple versions".
+**Next:** Don't re-run `build_pptx.py` (it recreates `poster.pptx` from the older text). `patch_online_v2.py` stays as the record of the changes; its input file is now in the bin. Future poster edits: work on a scratch copy, confirm v2 hasn't changed, save over it.
+
 ### 2026-11-04 — SfN poster v2: three typos fixed in boxes 2 and 3
 **Changed/Found:** `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx`, text only: "laser power, " now "laser power." and "response.." now "response." (box 2); "controller ." now "controller." (box 3). Applied on a copy, saved only after confirming v2 was still as I wrote it. Only those two text boxes changed, and their line counts are the same in desktop PowerPoint. Not in `patch_online_v2.py`, which applies to the earlier file.
 **Why:** Aditya asked for these typos to be fixed in v2.
