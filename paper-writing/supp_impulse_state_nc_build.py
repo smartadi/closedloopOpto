@@ -9,8 +9,11 @@ supplementary material into one single figure"; S1 spatial spread stays separate
   g-i  per-mouse raster strips              impulse-analysis/imp_state_raster_peramp.m
 
 Panels are read from the working copies in paper/images/supplementary/ (relabs and the relabelled
-quartile panels are not in figures_final yet). Every panel goes in at one scale, chosen so the page is
-180 mm wide; the scale is printed, and text stays at or above 5 pt (panels are 6 pt at 1:1).
+quartile panels are not in figures_final yet). Page width: NC 180 mm, JN 176 mm (JNeurosci maximum).
+The a-c and d-f panels are 6-7 pt at 1:1 and are scaled to fit. The legend, the g-i raster strips and
+their colour bars are drawn at 5 pt, the minimum, so they go in at 1:1 and never shrink (until
+2026-11-05 everything shared one scale, 0.94, which put them at 4.7 pt; found by utils/sls_audit_pdf.py).
+The scales and the smallest resulting type size are printed; the build stops if any falls below 5 pt.
 Output: paper/figures_final/nc/supp_impulse_state/S_impulse_state_nc_draft.{pdf,png}.
 Run: python -I paper-writing/supp_impulse_state_nc_build.py
 JN (add "jn"): uppercase 10 pt letters, written to jn/S_state_quartile.{pdf,png}, the name JN's supplementary.tex includes.
@@ -30,7 +33,9 @@ FINAL = ROOT / 'paper' / 'figures_final'
 DRAFTS = {'nc': dict(top='abc', rows='def', strips='ghi', size=8, drop=2.3,
                      pdf=FINAL / 'nc' / 'supp_impulse_state' / 'S_impulse_state_nc_draft.pdf'),
           'jn': dict(top='ABC', rows='DEF', strips='GHI', size=10, drop=2.7, pdf=FINAL / 'jn' / 'S_state_quartile.pdf')}
-W, LET, GAP = 180, 3.5, 1.5
+WIDTH = {'nc': 180, 'jn': 176}          # mm: Nature Comms double column; JNeurosci 2-column maximum
+LET, GAP = 3.5, 1.5
+PT_SCALED, PT_FIXED, PT_MIN = 6.0, 5.0, 5.0   # smallest type at 1:1 in scaled / fixed panels; journal minimum
 
 
 def size(p):
@@ -44,6 +49,7 @@ def letter(page, x, y, s, cfg):
 
 def main(draft='nc'):
     cfg = DRAFTS[draft]
+    W = WIDTH[draft]
     cfg['pdf'].parent.mkdir(parents=True, exist_ok=True)
     top = [RA / 'relabs_scatter.pdf', RA / 'relabs_traces_Mouse1b.pdf', RA / 'relabs_spectra_Mouse1b.pdf']
     rows = [[SQ / f'sq_{s}_{k}.pdf' for k in ('rms', 'ratio', 'dist')] for s in ('mot', 'dpr', 'dpa')]
@@ -53,15 +59,19 @@ def main(draft='nc'):
     s1 = min(1.0, (W - 3 * LET - 2 * 3) / sum(w for w, _ in wt))
     wq = [[size(p) for p in r] for r in rows]
     ws = [size(p) for p in strips]
-    need = max(sum(w for w, _ in r) for r in wq) + max(w for w, _ in ws)
-    s2 = min(1.0, (W - 2 * LET - 2 * GAP - 3) / need)
-    print(f'scale: top row {s1:.3f}, state rows {s2:.3f} (6 pt -> {6 * s1:.1f} / {6 * s2:.1f} pt)')
+    s3 = 1.0                                                  # 5 pt legend / strips / colour bars: 1:1
+    s2 = min(1.0, (W - 2 * LET - 2 * GAP - 3 - max(w for w, _ in ws) * s3) / max(sum(w for w, _ in r) for r in wq))
+    lo = min(PT_SCALED * s1, PT_SCALED * s2, PT_FIXED * s3)
+    print(f'scale: top row {s1:.3f}, quartile rows {s2:.3f}, strips/legend/bars {s3:.3f} '
+          f'(6 pt -> {PT_SCALED * s1:.2f} / {PT_SCALED * s2:.2f} pt; 5 pt -> {PT_FIXED * s3:.2f} pt)')
+    if lo < PT_MIN - 1e-6:
+        sys.exit(f'smallest type would be {lo:.2f} pt < {PT_MIN} pt: page too narrow for this layout')
 
     # page height: top row, legend, three state rows, colour bars
     h1 = max(h for _, h in wt) * s1
-    hl = size(SQ / 'sq_legend.pdf')[1] * s2
-    hr = [max(max(h for _, h in r), hs) * s2 for r, (_, hs) in zip(wq, ws)]
-    hc = max(size(SQ / 'sq_rmice_cbar_act.pdf')[1], size(SQ / 'sq_rmice_cbar_dev.pdf')[1]) * s2
+    hl = size(SQ / 'sq_legend.pdf')[1] * s3
+    hr = [max(max(h for _, h in r) * s2, hs * s3) for r, (_, hs) in zip(wq, ws)]
+    hc = max(size(SQ / 'sq_rmice_cbar_act.pdf')[1], size(SQ / 'sq_rmice_cbar_dev.pdf')[1]) * s3
     H = 1 + h1 + 3 + hl + 1 + sum(hr) + 2 * len(hr) + hc + 1
     doc = fitz.open()
     page = doc.new_page(width=W * MM, height=H * MM)
@@ -76,9 +86,9 @@ def main(draft='nc'):
 
     # legend, then d-f (quartile summaries) and g-i (raster strips)
     y = 1 + h1 + 3
-    place(page, SQ / 'sq_legend.pdf', LET, y, scale=s2)
+    place(page, SQ / 'sq_legend.pdf', LET, y, scale=s3)
     y += hl + 1
-    xs = W - max(w for w, _ in ws) * s2                       # strips right-aligned
+    xs = W - max(w for w, _ in ws) * s3                       # strips right-aligned
     for i, (r, wr, st, h) in enumerate(zip(rows, wq, strips, hr)):
         letter(page, 0, y, cfg['rows'][i], cfg)
         x = LET
@@ -86,11 +96,11 @@ def main(draft='nc'):
             place(page, p, x, y, scale=s2)
             x += w * s2 + GAP
         letter(page, xs - LET, y, cfg['strips'][i], cfg)
-        place(page, st, xs, y, scale=s2)
+        place(page, st, xs, y, scale=s3)
         y += h + 2
-    place(page, SQ / 'sq_rmice_cbar_act.pdf', xs, y, scale=s2)
-    wd = size(SQ / 'sq_rmice_cbar_dev.pdf')[0] * s2
-    place(page, SQ / 'sq_rmice_cbar_dev.pdf', W - wd, y, scale=s2)
+    place(page, SQ / 'sq_rmice_cbar_act.pdf', xs, y, scale=s3)
+    wd = size(SQ / 'sq_rmice_cbar_dev.pdf')[0] * s3
+    place(page, SQ / 'sq_rmice_cbar_dev.pdf', W - wd, y, scale=s3)
 
     out = cfg['pdf']
     doc.save(out)

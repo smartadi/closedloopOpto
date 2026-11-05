@@ -16,6 +16,62 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — Lab-style audit of the 12 JN figures: 4 with required problems, 2 fixed in code
+**Changed/Found:** Ran `utils/sls_audit_pdf.py` on every figure JN's `.tex` includes (`Closedloop_edit/images/`: Figures 1-6, OLbest, S1, S2, S3, S_state_quartile, S_varx).
+- No text overlaps, opacity seams, Hz-for-rate units, or jet/turbo/hsv/RGB blue-white-red colormaps in any of them.
+- Required problems (main type below 5 pt, or page over 17.6 cm), 43 in 4 figures:
+  - Figure1: page 18.00 cm.
+  - S_state_quartile: page 18.00 cm; legend, strip headers and colour bars at 4.69 pt.
+  - Figure5: panel A "Target level" at 2.9 pt (already a TASKS item).
+  - Figure6 (MPC): panel A schematic, 17 labels at 3.3-4.7 pt.
+- Notes only (super/subscripts at 4.5 pt inside 6 pt text; the lab's check measures text objects, not script glyphs): Fig 2 C/E (R²), Fig 5K ((%ΔF/F)²), S2 D (K_p, K_i), S_varx (exponents).
+- Fixed in code: Figure1 and S_state_quartile (separate entries). Left for Aditya: Fig 5A (raster schematic) and Fig 6A (locked MPC figure) are Illustrator edits; TASKS.
+- Anna's Fig 3 eval points against JN Figure 3: all fixed already (red/blue, units on the variance and input scale bars, CL/OL direction, sessions for both conditions). The H ratios as plotted match the text (0.85 / 0.68). The one gap: the H/I caption doesn't give the star threshold and exact p, only a pointer to Table 4.
+**Why:** Phase 1 of the lab-style adoption: the PDFs are what JNeurosci gets.
+**Next:** Aditya brings the two rebuilt figures into JN on his next figures-only push.
+
+### 2026-11-05 — CORRECTION: the Fig 2 blue-white-red map is not in any JN figure
+**Changed/Found:** The colormap check on all 12 JN figure PDFs found no linear-RGB blue-white-red. `local_div` (`utils/f2_fitfig.m`, `f2_subfig.m`, the GUIs) and the inline ramps in `ols_tf_pipeline.m` feed exploratory or retired panels only. JN's Fig 2E uses a sequential blue map, and Fig 4E and S_state_quartile G-I use maps that pass.
+**Why:** Today's earlier entry ("Fig 2 diverging maps fail the lab colormap rule") was true of the scripts, but it read as a paper problem.
+**Next:** Swap `local_div` for `sls_cmap('diverging')` only if one of those panels returns to the paper.
+
+### 2026-11-05 — `supp_impulse_state_nc_build.py`: JN at 17.6 cm; 5 pt parts no longer shrink
+**Changed/Found:** The builder put every panel on a 180 mm page at one scale (0.938 with today's panels). The legend, raster strips and colour bars are drawn at 5 pt by `imp_state_quartile_supp.m` / `imp_state_raster_peramp.m`, so they landed at 4.69 pt. The docstring said "text stays at or above 5 pt (panels are 6 pt at 1:1)", which held only for the 6-7 pt panels. Changes:
+- Page width is per draft: NC 180, JN 176 mm.
+- The 5 pt parts go in at 1:1, and only the a-c and d-f panels scale (JN: top 0.923, quartile rows 0.844, 6 pt -> 5.06 pt; NC: 0.946 / 0.885).
+- The build stops if any type would fall below 5 pt.
+- Rebuilt `jn/S_state_quartile.pdf` (176 x 120.1 mm, was 180 x 127.6) and the NC preview `nc/supp_impulse_state/S_impulse_state_nc_draft.pdf` (180 x 124.2 mm). Both audit at 0 required (NC judged against its own 180 mm limit).
+- Same layout, checked by eye. The quartile rows are 10% smaller than before, the strips 7% larger.
+**Why:** Required lab rule (type ≥ journal minimum) and the JNeurosci 17.6 cm maximum. Re-rendering the strips at 6 pt would need `imp_state_trialvar`'s full data load and would crowd their headers. The builder-only fix needs neither.
+**Next:** Aditya copies `jn/S_state_quartile.pdf` into JN on a figures-only push. NC's `images/` copy updates on its next `sync_figs`.
+
+### 2026-11-05 — `fig1_nc_build.py`: JN Figure 1 at 17.6 cm
+**Changed/Found:** Page width is now per draft (`W`: NC 180, JN 176 mm). In JN the top-row gaps narrow and panel E's box ends at W. E scales 0.97, so its 7 pt becomes 6.8 and its subscripts 5.5 -> 5.3. Rebuilt `jn/Figure1.pdf`: 17.60 x 11.53 cm (was 18.00), 0 required. It was byte-identical to JN's `images/Figure1.pdf` before the rebuild; old copy in scratch. NC not re-run (unchanged at 180).
+**Why:** JNeurosci's 2-column maximum is 17.6 cm; the audit flagged the 18.0 cm page. Scaling it down at the journal would shrink all type 2%.
+**Next:** Aditya brings it into JN with the state supplement.
+
+### 2026-11-05 — `utils/sls_report.m` + `paper_final_mirror` hook; MATLAB opacity check dropped
+**Changed/Found:**
+- New `sls_report(fig, pdf)`: prints only required problems, from `sls_check` on the live figure and `sls_audit_pdf.py` on the written PDF (`py -3`; skipped with a note if PyMuPDF is missing). Never errors.
+- `paper_final_mirror` calls it for every final panel (vector and raster), and `PAPER_FINAL_LOG` gets `lab_required`. So every `PAPER_FINAL` rebuild now reports itself.
+- `sls_check.m`: opacity check removed. `exportgraphics` writes a translucent patch as a fill-only path (alpha 0.2) plus a separate stroke path, the two-object form the lab rule asks for, so there is no Illustrator seam (tested on a planted patch). Its morning "opacity" result was a false positive for MATLAB output.
+- Tested: the planted figure gives 7 required problems from the two checks, and a clean panel gives 0.
+**Why:** The PDF is the only place export rescaling shows up (`reference_matlab_panel_print`), and the live figure is the only place overhang shows up.
+**Next:** none
+
+### 2026-11-05 — `utils/sls_audit_pdf.py`: lab-style required checks on figure PDFs
+**Changed/Found:** New script, run with the system Python 3.14, which has PyMuPDF: `py -3 utils/sls_audit_pdf.py FIG.pdf --png OUT`. Per page, it reports:
+- main type below `--min-pt` (5). Super/subscripts below it are notes only, matching the lab's text-object semantics.
+- page width over `--max-width-cm` (17.6)
+- text overlaps: exact ink quads from the PDF, rotated with the text, separating-axis test, so 45° tick labels don't false-alarm (the first version reported 19 in Fig 4G)
+- one path with differing fill/stroke opacity
+- Hz for rates
+- images or vector fills on jet, turbo, hsv or the linear-RGB blue-white-red, read from the page's image blocks. MATLAB writes `imagesc` content inline, which `get_images()` misses: first version, 0 hits.
+
+Tolerance: MATLAB's vector export re-encodes images as JPEG. At 0.05 RGB, jet 0.94 and RGB blue-white-red 0.97 of colours match, against at most 0.40 for the lab map, so a map is flagged at ≥ 80%. On a planted PDF it catches all five planted problems and passes the lab map.
+**Why:** `exportgraphics` / `print` can rescale small panels, so only the PDF shows the printed type size. Exact text boxes also beat `sls_check`'s estimated tick labels.
+**Next:** none
+
 ### 2026-11-05 — Lab style repo set up (Phase 0): skill, package, precedence in CLAUDE.md
 **Changed/Found:** Cloned Anna's `SteinmetzLab/steinmetzlab-style` to `projects/steinmetzlab-style` and added it to the hub `REPOS.md` as `pull`. Enabled its Claude Code skill at project scope: `.claude/settings.json` now has `extraKnownMarketplaces.steinmetzlab` and `enabledPlugins`. Installed the Python package editable in `.venv` (0.1.0, Python 3.14, matplotlib 3.10.8). `CLAUDE.md` has a new "Lab style repo" section. It says our locked decisions win over lab defaults, the skill's required rules and working loop always apply, and lab defaults that differ from ours (1 pt axes, ticks in, regular-weight labels, "Subject N") are open decisions. Also fixed the stale "Figure style" lines ("6 pt bold throughout", mean 1.5 pt, and so on) to the rule-book values that `jnStyle` / `jnAxesAll` already apply.
 **Why:** Aditya asked to add the lab style to the code setup (Phase 0 of the plan agreed today). Project scope puts the skill in a tracked file, so the home PC gets it, and other labs' projects don't.

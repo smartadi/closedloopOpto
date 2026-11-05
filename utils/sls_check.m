@@ -14,7 +14,6 @@ function issues = sls_check(fig, varargin)
 % REQUIRED (accuracy and legibility; fix them, cannot be ignored):
 %   font-size  text below MinFontPt (default 5 pt; set it from the journal)
 %   overlap    two texts overlap (tick-label boxes are ESTIMATED; MATLAB exposes none)
-%   opacity    translucent fill with an opaque edge: Illustrator shows a white seam
 %   units      a firing rate in Hz (it is spikes/s)
 %   colormap   colour-mapped data in a map that is not perceptually linear. MATLAB maps
 %              have no names, so this one is MEASURED (CIELAB L*): flagged if lightness
@@ -24,6 +23,9 @@ function issues = sls_check(fig, varargin)
 %              reproduce the Python package's name list. Maps < 16 colours are skipped
 %              (discrete category palettes).
 %   overhang   data drawn past the end of a visible axis line (objects with Clipping off)
+%   (opacity   not applicable in MATLAB: exportgraphics writes a translucent patch's fill
+%              and edge as two separate PDF paths -- the two-object form the lab rule asks
+%              for -- so Illustrator shows no seam. Tested 2026-11-05.)
 %   (clipped   not applicable in MATLAB: R2025b draws a marker whole whenever its centre
 %              is inside the limits, under both ClippingStyles -- tested 2026-11-05 --
 %              so an edge marker is never cut off as it is in matplotlib)
@@ -68,7 +70,6 @@ T = collect_texts(fig, axs, G);
 issues = empty_issues();
 issues = [issues, check_fonts(T, o.MinFontPt)];
 issues = [issues, check_overlap(T)];
-issues = [issues, check_opacity(fig)];
 issues = [issues, check_units(T)];
 issues = [issues, check_colormaps(fig, axs)];
 issues = [issues, check_overhang(axs, G)];
@@ -94,7 +95,7 @@ end
 
 % =======================================================================================
 function k = req_kinds()
-k = {'font-size', 'overlap', 'opacity', 'units', 'colormap', 'clipped', 'overhang'};
+k = {'font-size', 'overlap', 'opacity', 'units', 'colormap', 'clipped', 'overhang'};  % opacity/clipped: kept so Ignore rejects them
 end
 
 function I = empty_issues()
@@ -391,41 +392,6 @@ end
 end
 
 % ---------------------------------------------------------------------------------------
-function I = check_opacity(fig)
-I = empty_issues();
-objs = findall(fig, '-property', 'FaceAlpha');
-for k = 1:numel(objs)
-    h = objs(k);
-    if ~on(h.Visible) || ~isprop(h, 'EdgeAlpha') || ~isprop(h, 'LineWidth'), continue; end
-    fa = alpha_of(h.FaceAlpha, h.FaceColor);
-    ea = alpha_of(h.EdgeAlpha, h.EdgeColor);
-    if fa > 0 && ea > 0 && h.LineWidth > 0 && abs(fa - ea) > 1e-3
-        I(end+1) = mk('opacity', h.Type, sprintf(['fill alpha %.2g differs from edge alpha %.2g; ' ...
-            'Illustrator shows a white seam. Set ''EdgeColor'',''none'' (draw the edge as a ' ...
-            'separate line), or use an opaque, pre-blended fill'], fa, ea)); %#ok<AGROW>
-    end
-end
-for h = findall(fig, 'Type', 'scatter')'
-    if ~on(h.Visible), continue; end
-    fa = alpha_of(h.MarkerFaceAlpha, h.MarkerFaceColor);
-    ea = alpha_of(h.MarkerEdgeAlpha, h.MarkerEdgeColor);
-    if fa > 0 && ea > 0 && h.LineWidth > 0 && abs(fa - ea) > 1e-3
-        I(end+1) = mk('opacity', 'scatter', sprintf(['marker fill alpha %.2g differs from edge ' ...
-            'alpha %.2g; Illustrator shows a white seam'], fa, ea)); %#ok<AGROW>
-    end
-end
-end
-
-function a = alpha_of(alpha, col)
-if (ischar(col) || isstring(col)) && strcmpi(col, 'none')
-    a = 0;
-elseif isnumeric(alpha)
-    a = double(alpha);
-else
-    a = NaN;                                            % 'flat'/'interp': per-vertex, skip
-end
-end
-
 % ---------------------------------------------------------------------------------------
 function I = check_colormaps(fig, axs)
 I = empty_issues();

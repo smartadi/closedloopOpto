@@ -178,6 +178,11 @@ row, `push = pull`). Never edit or push it; feedback goes to Anna.
   run it after `jnAxesAll`, before export. `sls_cmap('diverging'|'diverging_dark')` and
   `sls_clim` give diverging maps. `sls_atlas` / `sls_draw_cortex` give Allen CCF dorsal outlines
   and the 52-target grid in mm from bregma. `sls_root` finds the clone.
+- **Checking what ships:** `py -3 utils/sls_audit_pdf.py FIG.pdf [--png DIR]` runs the required
+  checks on a finished PDF: type ≥ 5 pt, page ≤ 17.6 cm, overlaps, bad colormaps. Exporters
+  can rescale type, so the PDF is the ground truth. `paper_final_mirror` runs both checks on
+  every `PAPER_FINAL` panel via `sls_report` and prints any `[lab check]` problem. Audit every
+  assembled JN/NC figure before it goes to Overleaf (NC: `--max-width-cm 18`).
 - **Precedence.** This file's locked decisions win over the skill's lab defaults: condition
   colours, state windows, ΔF/F definitions, panel sizes (PAPER.md), the jn type spec, the
   PNG-by-default export rule, session labels ("Mouse N"), and `paper-writing/CLAUDE.md` for

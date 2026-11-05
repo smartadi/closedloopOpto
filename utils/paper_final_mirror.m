@@ -64,9 +64,11 @@ try
         pu = fig.Units; fig.Units = 'centimeters'; cv = fig.Position(3:4); fig.Units = pu;
         fprintf(['   [final+jn] panels%s%s%s%-46s %5.2f x %5.2f cm  @%d dpi' newline], ...
                 filesep, sec, filesep, [base ext], pw, ph, dpi);
+        nlab = sls_report(fig, out);                                % live-figure checks only
         if isempty(PAPER_FINAL_LOG); PAPER_FINAL_LOG = {}; end
         PAPER_FINAL_LOG{end+1} = struct('file',out, 'sec',sec, 'name',[base ext], ...
-                                        'page_cm',[pw ph], 'canvas_cm',cv, 'over_cm',[0 0]);
+                                        'page_cm',[pw ph], 'canvas_cm',cv, 'over_cm',[0 0], ...
+                                        'lab_required', nlab);
         return
     end
     exportgraphics(fig, out, 'ContentType','vector');
@@ -126,9 +128,14 @@ try
     fprintf('   [final+jn] panels%s%s%s%-46s %5.2f x %5.2f cm%s\n', ...
             filesep, sec, filesep, [base ext], pw, ph, tag);
 
+    % Lab-style required checks (steinmetzlab-style, 2026-11-05): the live figure AND the
+    % PDF as written. Prints only problems; never throws.
+    nlab = sls_report(fig, out);
+
     if isempty(PAPER_FINAL_LOG); PAPER_FINAL_LOG = {}; end
     PAPER_FINAL_LOG{end+1} = struct('file',out, 'sec',sec, 'name',[base ext], ...
-                                    'page_cm',[pw ph], 'canvas_cm',cv, 'over_cm',over);
+                                    'page_cm',[pw ph], 'canvas_cm',cv, 'over_cm',over, ...
+                                    'lab_required', nlab);
 catch ME
     if strcmp(ME.identifier,'MATLAB:print:CannotCreateOutputFile') || ...
        contains(lower(ME.message),'permission')

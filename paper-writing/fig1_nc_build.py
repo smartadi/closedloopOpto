@@ -11,7 +11,7 @@ Inputs (local, git-ignored):
 Outputs (paper/figures_final/nc/fig1/; JN: jn/fig1/, with the composition at jn/Figure1.pdf):
   panel_b_frame.pdf                                     frame + readout/stimulation markers, legend, 1 mm bar
   panel_d_architecture.svg, panel_e_control_loop.svg   editable, for the Illustrator assembly
-  Figure1_nc_draft.pdf / .png                           180 x 120 mm composition (preview of that assembly)
+  Figure1_nc_draft.pdf / .png                           180 x 120 mm composition (preview of that assembly); JN 176 mm
 
 Layout (2026-10-29, Aditya): the mouse schematic (old b) is dropped, so the frame carries the marker
 definitions it used to give. a optics, b frame, c latency, d pipeline, e control loop.
@@ -39,10 +39,12 @@ ROOT = Path(__file__).resolve().parents[1]
 ANNA = ROOT / 'paper' / 'from_anna_2026-10-29' / 'files (1)'
 PAN = ROOT / 'paper' / 'figures_final' / 'panels' / 'figure1'
 FINAL = ROOT / 'paper' / 'figures_final'
+# W = page width (mm): Nature Comms double column 180; JNeurosci 2-column maximum 176 (17.6 cm). The JN
+# build was 180 until 2026-11-05, when the lab-style audit (utils/sls_audit_pdf.py) flagged the 18.0 cm page.
 DRAFTS = {'nc': dict(letters='abcde', size=8, lat=24.0, lat_label='Latency, 24 ms median', out=FINAL / 'nc' / 'fig1',
-                     pdf=FINAL / 'nc' / 'fig1' / 'Figure1_nc_draft.pdf'),
+                     pdf=FINAL / 'nc' / 'fig1' / 'Figure1_nc_draft.pdf', W=180),
           'jn': dict(letters='ABCDE', size=10, lat=29.0, lat_label='Latency, 29 ms mean', out=FINAL / 'jn' / 'fig1',
-                     pdf=FINAL / 'jn' / 'Figure1.pdf')}
+                     pdf=FINAL / 'jn' / 'Figure1.pdf', W=176)}
 SVG = '{http://www.w3.org/2000/svg}'
 MM = 72 / 25.4
 
@@ -303,7 +305,7 @@ def main(draft='nc'):
     fb = frame_panel()
     fb.save(str(OUT / 'panel_b_frame.pdf'))
 
-    # Top row: a, b, c at 1:1 text (7 pt), equal gaps across 180 mm; c is sized for this slot by
+    # Top row: a, b, c at 1:1 text (7 pt), equal gaps across the page width; c is sized for this slot by
     # latencyAnalysis.m. Bottom row: d, e. Every panel is top-aligned under its letter.
     sa = 7 / 20.95                                                     # wfpath text 20.95 pt -> 7 pt
     top = [(fitz.open(PAN / 'wfpath.pdf'), True, sa), (fb, False, 1),
@@ -311,18 +313,19 @@ def main(draft='nc'):
     sizes = [((content_clip(d[0]) if clip else d[0].rect) * s) for d, clip, s in top]
     sizes = [(r.width / MM, r.height / MM) for r in sizes]
     LET = 3.5                                                          # letter column
-    gap = (180 - 3 * LET - sum(w for w, _ in sizes)) / 2
+    W = cfg['W']
+    gap = (W - 3 * LET - sum(w for w, _ in sizes)) / 2
     y2 = 1 + max(h for _, h in sizes) + 2.5
 
     doc = fitz.open()
-    page = doc.new_page(width=180 * MM, height=(y2 + 62.5) * MM)
+    page = doc.new_page(width=W * MM, height=(y2 + 62.5) * MM)
     x = 0
     for letter, (src, clip, s), (w, _) in zip(cfg['letters'], top, sizes):
         page.insert_text(fitz.Point(x * MM, 3.3 * MM), letter, fontname='hebo', fontsize=cfg['size'])
         place(page, src, x + LET, 1, clip=clip, scale=s)
         x += LET + w + gap
     place(page, svg_to_pdf(OUT / 'panel_d_architecture.svg'), 0, y2, 57, 62, clip=False)
-    place(page, svg_to_pdf(OUT / 'panel_e_control_loop.svg'), 62, y2, 118, 62, clip=False)
+    place(page, svg_to_pdf(OUT / 'panel_e_control_loop.svg'), 62, y2, W - 62, 62, clip=False)
     doc.save(str(cfg['pdf']))
     page.get_pixmap(dpi=300).save(str(cfg['pdf'].with_suffix('.png')))
     print('wrote', *sorted(p.name for p in OUT.iterdir()))
