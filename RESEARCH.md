@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — SfN poster: Methods box removed, box 5 fills column 2
+**Changed/Found:** New `poster/sfn2026/patch_v2_box5.py`, applied to `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` and saved over it, after checking the file was byte-identical to my 2026-11-04 23:11 write. Deletes the Methods frame and text. The box 5 frame goes from 4.62 to 7.78 in, down to the column bottom, level with box 2. New panel, 15.27 x 5.49 in at the poster's one print scale; bullet unchanged. The old panel image is dropped from the package (23 media files before and after). The script asserts every other shape keeps identical XML. Desktop PowerPoint: 85 shapes; the only flag is still Aditya's own box 4 heading. Not opened in PowerPoint online.
+**Why:** Aditya: "i dont think we need the methods block just expand number 5".
+**Next:** The poster no longer states the mouse line, opsin, ΔF/F definitions or statistics, so have them ready to explain at the poster. If OneDrive shows a conflict copy, it holds online edits made since 2026-11-04 23:11 that hadn't synced: merge them into v2, then delete the copy.
+
+### 2026-11-05 — Seed-FC poster panel made taller: mean maps and r base/stim under the session strip
+**Changed/Found:** `poster/sfn2026/seedfc_panel.m` rewritten. Top: the same 12-session OL and CL strip, with maps now 1.05 cm (were 0.845 cm) because the summary moved out of the strip. Bottom, added: the mean of the 12 maps on the common node grid (consensus outline, each session's site as a dot); r with the site at base and during stim per session; and the existing r_base - r_stim, OL vs CL. Panel 13.06 x 4.69 cm. Text 6 pt (row labels 7 pt, TeX subscripts 4.5 pt). Numbers match the 2026-10-29 log: CL r 0.739 -> 0.585 (p = 0.0005), OL 0.726 -> 0.737 (p = 0.30), CL vs OL paired p = 0.0005. Mean maps: CL loses coupling at all 61 nodes (0.024 to 0.244; 59/61 FDR), OL -0.055 to 0.048.
+**Why:** The Methods box was removed to give box 5 more height (entry above). The strip is width-limited, so a larger copy of it wouldn't fit; the extra height goes to the mean maps and the base/stim plot.
+**Next:** The mean maps average r_base - r_stim directly across sessions, while the node statistics average in Fisher z. That's fine for display, but say so if asked.
+
 ### 2026-11-05 — README: m1/m13 "skipped, no cache" reworded
 **Changed/Found:** `README.md` controller section. The roster now says all 15 sessions have a controller cache and are in Fig 3. m1 and m13 are out only of Fig 4E–G, because they have no usable contralateral predictor, and each row gives the reason. "Candidate"/"Qualifying counts" renamed to "Session counts (Fig 3)" / "Fig 4E–G counts (predictor pipeline)".
 **Why:** Anna Li read "skipped, no cache" as possibly contradicting Fig 3's 15 sessions (entry below); Aditya asked for the rewording.
