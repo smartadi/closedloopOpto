@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — SfN poster box 6: unique R^2 panel with a broken y-axis, so the smaller bars read
+**Changed/Found:** New `poster/sfn2026/unique_panel.m`, a poster-only copy of Fig 4C that reads `controller-analysis/data/f4_error_decomp.mat` (DEC.sep, 11 sessions; no refit). Same colours and session mean +- SEM as the paper panel. Its y-axis is broken: the lower segment, 0-0.2, takes 1.47 cm, and a 0.5 cm upper segment, 0.45-0.6, holds the initial-deviation 0-1 s bar (0.529 +- 0.054). The segments have different scales and slashes mark the break. The 1-4 Hz bars (0.106, 0.114) are now about 2x taller than before. Labels "rel 2–4 Hz" / "abs 1–4 Hz" use en dashes, as in the poster text. New `poster/sfn2026/panel_swap.py`, which can be re-run, replaces one picture in its old spot: it refuses if the new panel is taller than the old one or leaves its box, and asserts every other shape keeps its XML. The panel went from 5.89 x 3.88 to 6.02 x 3.88 in, and the box layout is unchanged. Saved over `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` after checking it was unchanged since my 13:34 save. Desktop PowerPoint: fine; the only flag is still box 4's heading. The paper panel `figures_final/panels/figure4/f4_decomp_unique_sep.pdf` is untouched.
+**Why:** Aditya: the initial-deviation bar took up most of the panel, so the other variables didn't show.
+**Next:** If a reviewer-facing version is ever wanted, the same broken axis could go into Fig 4C, but that is Aditya's call for the JN/NC drafts.
+
 ### 2026-11-05 — Lab-style audit of the 12 JN figures: 4 with required problems, 2 fixed in code
 **Changed/Found:** Ran `utils/sls_audit_pdf.py` on every figure JN's `.tex` includes (`Closedloop_edit/images/`: Figures 1-6, OLbest, S1, S2, S3, S_state_quartile, S_varx).
 - No text overlaps, opacity seams, Hz-for-rate units, or jet/turbo/hsv/RGB blue-white-red colormaps in any of them.
