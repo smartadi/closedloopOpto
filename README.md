@@ -18,15 +18,16 @@ Reference level: `d.ref = -5` %ΔF/F project-wide (bilateral: left/excit `+5`, r
 
 ## Controller analysis (CL/OL) — `load_sessions.m`
 
-15 candidate sessions (m1–m15), 4 mice. 13 qualify for the disturbance-rejection
-analysis; 2 are skipped (no Stage-1/2 predictor cache).
+15 sessions (m1–m15), 4 mice. All 15 have a controller cache and all 15 are in Figure 3.
+13 are in the disturbance-rejection analysis (Fig 4E–G): m1 and m13 have no usable
+Stage-1/2 contralateral predictor, which only that analysis needs.
 
-Candidate counts: AL_0033 = 9 · AL_0039 = 4 · AL_0048 = 1 · AL_0051 = 1
-Qualifying counts (R² pipeline): AL_0033 = 8 · AL_0039 = 3 · AL_0048 = 1 · AL_0051 = 1 → **13**
+Session counts (Fig 3): AL_0033 = 9 · AL_0039 = 4 · AL_0048 = 1 · AL_0051 = 1
+Fig 4E–G counts (predictor pipeline): AL_0033 = 8 · AL_0039 = 3 · AL_0048 = 1 · AL_0051 = 1 → **13**
 
 | id | mouse | date | exp | notes |
 |---|---|---|---|---|
-| m1  | AL_0033 | 2025-01-20 | e3 | **skipped** — no cache |
+| m1  | AL_0033 | 2025-01-20 | e3 | in Fig 3; out of Fig 4E–G: no predictor (widefield never decomposed into an SVD) |
 | m2  | AL_0033 | 2025-02-12 | e2 | |
 | m3  | AL_0033 | 2025-02-24 | e2 | |
 | m4  | AL_0033 | 2025-02-26 | e2 | step-response (`custom_idx`) |
@@ -38,7 +39,7 @@ Qualifying counts (R² pipeline): AL_0033 = 8 · AL_0039 = 3 · AL_0048 = 1 · A
 | m10 | AL_0039 | 2025-04-19 | e1 | |
 | m11 | AL_0039 | 2025-04-30 | e3 | step-response (`custom_idx`) |
 | m12 | AL_0033 | 2025-04-19 | e1 | |
-| m13 | AL_0039 | 2025-04-20 | e2 | **skipped** — no cache |
+| m13 | AL_0039 | 2025-04-20 | e2 | in Fig 3; out of Fig 4E–G: no predictor (online trace does not line up with its widefield SVD) |
 | m14 | AL_0048 | 2026-07-29 | e2 | dual-opsin, static-ref |
 | m15 | AL_0051 | 2026-07-29 | e2 | static-ref |
 

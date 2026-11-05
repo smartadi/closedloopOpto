@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — README: m1/m13 "skipped, no cache" reworded
+**Changed/Found:** `README.md` controller section. The roster now says all 15 sessions have a controller cache and are in Fig 3. m1 and m13 are out only of Fig 4E–G, because they have no usable contralateral predictor, and each row gives the reason. "Candidate"/"Qualifying counts" renamed to "Session counts (Fig 3)" / "Fig 4E–G counts (predictor pipeline)".
+**Why:** Anna Li read "skipped, no cache" as possibly contradicting Fig 3's 15 sessions (entry below); Aditya asked for the rewording.
+**Next:** none
+
 ### 2026-11-05 — Anna Li's Fig 3 `data` export written to sahale via a one-off guard exception, now removed
 **Changed/Found:** Aditya allowed the server write for this task. I added a temporary exception to `.claude/hooks/server_readonly_guard.py`: a call passed only if every server path in it was inside `\\sahale.biostr.washington.edu\data\temp\closedloop_fig3_export` and contained no `..`. 10 test cases behaved as intended. I ran the export, then removed the exception; the guard is identical to HEAD again and blocks that folder. A one-off `fig3_anna_export.m` (session scratchpad, not in the repo) wrote 15 `.mat` files (`data`, plus a `d` holding only `provenance` and `ref`) and MANIFEST.txt. Total 64.2 MB, 1.3-9.5 MB per session (average 4.3, not Anna's expected 6.6). All 15 reloaded and matched the caches field by field. No cache was modified. Found: the `data` field set is not uniform. `ncFreqPow`/`wcFreqPow` are absent in m9-m13; `F`, `dff_mode` and `dff_w` exist only in m14/m15; m2's `dFk` is single, the rest double; field order varies. `matfile` cannot index into a struct field (`m.d.provenance` errors), so `m.d` read all of d; no cache has `d.svd`. The manifest also answers Anna's question about the Fig 3 cohort (entry below).
 **Why:** Anna Li's figure-skill evals need the per-trial controller data. The guard exception was scoped to one folder and removed straight after, so the standing read-only rule is unchanged.
