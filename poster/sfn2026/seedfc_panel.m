@@ -5,9 +5,9 @@ function seedfc_panel()
 %   Shown value = r_during - r_before (G.dr), so a drop is negative; the colour map is the supp panel's BrBG
 %   flipped, so a drop is still teal. (The supp panel plots r_base - r_stim, "coupling lost".)
 %   Top: every session's map, OL row and CL row, ordered by paper label, with a one-line key.
-%   Bottom: the mean of the 12 maps on the common node grid (session-mean brain size, consensus outline, every
-%   session's site as a star), r with the site before and during stimulation per session, and the per-session
-%   change, OL vs CL.
+%   Bottom: the mean of the 12 maps on the common node grid (session-mean brain size, consensus outline; no site
+%   markers, Aditya 2026-11-05: 12 stars there were confusing), r with the site before and during stimulation
+%   per session, and the per-session change, OL vs CL.
 %   2026-11-05: taller layout after the Methods box was removed; then relabelled for poster viewers (Aditya:
 %   "coupling lost" is unintuitive): sign flipped, colour bar ends in words, key line, before/during. Text 6 pt.
 % OUT  poster/sfn2026/panels/seedfc_raw.pdf (git-ignored); box5_refresh.py crops it to its ink.
@@ -53,7 +53,6 @@ for c = 1:2
         'LineColor', [0.45 0.45 0.45], 'LineWidth', 0.4);
     v = mean(G.(cn{c}).dr, 1, 'omitnan').';
     scatter(ax, mlN * Lx, apN * Ly, dot(Wm / (2 * Lx)), col(v), 'filled', 'MarkerEdgeColor', 'none');
-    plot(ax, G.site_n(:,2) * Lx, G.site_n(:,1) * Ly, site{:}, 'MarkerSize', 2.6, 'LineStyle', 'none');
     set(ax, 'YDir', 'reverse'); axis(ax, 'equal', 'off'); xlim(ax, Lx * [-1 1]); ylim(ax, [0 Ly]);
     fprintf('[SEEDFC] %s mean map: %.3f..%.3f\n', cn{c}, min(v), max(v));
 end
