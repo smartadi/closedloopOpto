@@ -12,5 +12,16 @@
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "steinmetzlab": {
+      "source": {
+        "source": "github",
+        "repo": "SteinmetzLab/steinmetzlab-style"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "steinmetzlab-style@steinmetzlab": true
   }
 }

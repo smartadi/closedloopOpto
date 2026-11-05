@@ -16,6 +16,33 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — Lab style repo set up (Phase 0): skill, package, precedence in CLAUDE.md
+**Changed/Found:** Cloned Anna's `SteinmetzLab/steinmetzlab-style` to `projects/steinmetzlab-style` and added it to the hub `REPOS.md` as `pull`. Enabled its Claude Code skill at project scope: `.claude/settings.json` now has `extraKnownMarketplaces.steinmetzlab` and `enabledPlugins`. Installed the Python package editable in `.venv` (0.1.0, Python 3.14, matplotlib 3.10.8). `CLAUDE.md` has a new "Lab style repo" section. It says our locked decisions win over lab defaults, the skill's required rules and working loop always apply, and lab defaults that differ from ours (1 pt axes, ticks in, regular-weight labels, "Subject N") are open decisions. Also fixed the stale "Figure style" lines ("6 pt bold throughout", mean 1.5 pt, and so on) to the rule-book values that `jnStyle` / `jnAxesAll` already apply.
+**Why:** Aditya asked to add the lab style to the code setup (Phase 0 of the plan agreed today). Project scope puts the skill in a tracked file, so the home PC gets it, and other labs' projects don't.
+**Next:** Home PC: clone the repo next to brain_paper and run `pip install -e ../steinmetzlab-style` in its `.venv`. Phase 1: audit the MANIFEST panels with `sls_check`, fix required issues only. Phase 2 (defaults that differ from ours) is Aditya's and Nick's decision.
+
+### 2026-11-05 — Fig 2 diverging maps fail the lab colormap rule; widefield blueblackred passes
+**Changed/Found:** Ran `sls_check` on the maps our code uses. The hand-built blue-white-red `[t t 1; 1 1-t 1-t]` (`local_div` in `utils/f2_fitfig.m`, `utils/f2_subfig.m`, `impulse-analysis/f2_tuner.m`, `f2_affected_gui.m`, `controller-analysis/ctrl_affected_gui.m`; inline in `ols_tf_pipeline.m` at 3 places) fails: its two ends are L* 32 (blue) vs 53 (red). So +x reads weaker than -x, the same fault matplotlib's `bwr` has (on the lab's list of maps not to use). `colormap_blueblackred` (widefield) passes. So do `parula`, `gray` and `hot`. Nothing changed yet.
+**Why:** The lab skill treats perceptually linear colormaps as a required rule, not a default. Demo with the same ±30 field in both maps: scratchpad `sls_bridge_demo.png`.
+**Next:** Phase 1: check which MANIFEST panels come from these scripts, then swap to `sls_cmap('diverging')` with `sls_clim(...,'Nice',true)`. It's a figure-only change, so it's allowed into the JN Overleaf.
+
+### 2026-11-05 — `utils/sls_check.m`: MATLAB port of the lab's figure checks
+**Changed/Found:** New `utils/sls_check.m`, ported from `steinmetzlab_style.check_figure`.
+- Required checks: font-size, overlap, opacity, units, colormap, overhang. Preferences: font-family, spine, ticks, space. Not ported: panel-letter alignment, colorbar gaps, highlight rings.
+- MATLAB-specific choices:
+  - (a) The colormap check is measured, since MATLAB maps have no names. It uses CIELAB L*: a map is flagged if lightness rises and falls more than once, if a diverging map's two ends differ by > 12 L*, or if lightness strays > 30% from a straight line. Calibrated on all matplotlib maps; it flags every map on the Python list except `CMRmap` / `gnuplot2` (not in MATLAB), and passes viridis/gray/RdBu.
+  - (b) MATLAB exposes no tick-label boxes, so they are estimated. Calibrated by rendering with and without tick labels at 600 dpi: ink sits 5.2/4.3 pt (6 pt font), 5.5/4.3 (7 pt) and 3.1/2.1 (5 pt) beyond the outward ticks. The estimate uses 0.6×/0.4× the font size, so it errs toward missing an overlap. Rotated tick labels are skipped.
+  - (c) "clipped" dropped: R2025b prints edge markers whole under both ClippingStyles (dark-pixel counts identical).
+  - (d) "space" also flags content past the canvas, the case `jn_fit_canvas` fixes.
+- Tests: a clean jn-style panel gives 0 required issues, and the axis labels are untouched afterwards (PositionMode stays auto, no movement). Planted problems were all caught. Ignoring a required kind raises an error.
+**Why:** The lab check is Python only, and our paper figures are MATLAB. The skill's MATLAB fallback is "check by eye".
+**Next:** Run it from `paper_final_mirror` on every `PAPER_FINAL` rebuild (Phase 1). Offer the port to Anna for the lab repo.
+
+### 2026-11-05 — `utils/sls_*`: MATLAB bridge to the lab colormaps and atlas
+**Changed/Found:** New `sls_root.m` (finds the clone: `SLS_ROOT` env var, else the sibling of brain_paper). New `sls_cmap.m` (`'diverging'` white centre, `'diverging_dark'`; reads the repo's CSVs, optional resample). New `sls_clim.m` (port of `diverging_limits`, numpy ties-to-even rounding). New `sls_atlas.m` (Allen CCF dorsal outlines and the 52-target grid in mm from bregma, via a small `.npy`/`.npz` reader, no onCleanup). New `sls_draw_cortex.m` (mm with limits and equal aspect, or pixel overlay with `BregmaPx` / `PxPerMM`). Checked against the Python package: 60 segments, 35,370 points, the same first point (-4.3041, -3.1362), the same grid, and the same limits on 3 test cases.
+**Why:** The lab's colormaps and atlas outlines are data files. The bridge reads them from the clone rather than copying them into this repo, so Anna's updates arrive by `git pull`.
+**Next:** none
+
 ### 2026-11-05 — SfN poster box 5: heading and bullet say what happens and why
 **Changed/Found:** New `poster/sfn2026/box5_refresh.py`, which can be re-run on the current poster. It touches only box 5's badge, heading, rule, panel and bullet, and asserts every other shape keeps its XML. Heading: "Feedback cancels shared fluctuations: / the site stops following the rest of cortex" (two lines with a manual break, like boxes 3 and 8). Bullet: "Open-loop stimulation is the same on every trial, so it can't cancel them." The old "(12 sessions, 2 mice)" bullet is gone; the panel says "mean of 12". Saved over `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` after checking it was unchanged since my 13:08 save. Desktop PowerPoint: heading 2 lines and bullet 1 line, both fit; still the only flag is box 4's heading.
 **Why:** Aditya found "coupling lost" unintuitive and chose options 1, 4 and 5 from the brainstorm. The open-loop claim is checked against JN Results ("the open-loop input was fixed"). "Cancels" fits the 2026-10-19 decision: removing the laser's own signal restores the correlation, so the controller's light cancels the shared signal, and inputs are not cut off.

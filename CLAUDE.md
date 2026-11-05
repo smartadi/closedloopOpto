@@ -167,6 +167,28 @@ The mirror writes a panel ONLY if its basename is in `MANIFEST.txt`.
 - `paper/` is gitignored (PDFs are local-only), so the **manifest + collector .m + README are
   the tracked record**; the panel PDFs themselves live only on disk.
 
+## Lab style repo (steinmetzlab-style), added 2026-11-05
+
+Anna's lab-wide figure and writing style, `SteinmetzLab/steinmetzlab-style`, has three parts.
+A Claude Code skill (enabled for this project in `.claude/settings.json`). A Python package
+(`steinmetzlab_style`, installed editable in `brain_paper/.venv`). Data files (colormaps,
+atlas). The clone is `C:\Users\aditya\Documents\projects\steinmetzlab-style` (hub `REPOS.md`
+row, `push = pull`). Never edit or push it; feedback goes to Anna.
+- **MATLAB bridge (`utils/sls_*`):** `sls_check(fig)` is the port of the lab's figure checks:
+  run it after `jnAxesAll`, before export. `sls_cmap('diverging'|'diverging_dark')` and
+  `sls_clim` give diverging maps. `sls_atlas` / `sls_draw_cortex` give Allen CCF dorsal outlines
+  and the 52-target grid in mm from bregma. `sls_root` finds the clone.
+- **Precedence.** This file's locked decisions win over the skill's lab defaults: condition
+  colours, state windows, ΔF/F definitions, panel sizes (PAPER.md), the jn type spec, the
+  PNG-by-default export rule, session labels ("Mouse N"), and `paper-writing/CLAUDE.md` for
+  manuscript text (no AI rewrites of JN outside `\ai{...}`).
+- **Always apply** the skill's *required* rules: perceptually linear colormaps, text ≥ the
+  journal minimum, correct units, scale bars on images, nothing drawn past an axis end. Also
+  apply its working loop for paper, talk and poster figures: an unanchored critique of the
+  PNG, then an **Open scientific choices** list.
+- Lab defaults that differ from ours (1 pt axis lines, ticks in, regular-weight axis labels,
+  "Subject N") are open decisions for Aditya/Nick. Don't apply them to the paper unasked.
+
 ---
 
 ## Locked-in project decisions
@@ -238,8 +260,11 @@ drift to be "unified"; do not reconcile them.
 
 ### Figure style
 - Size: **6 cm W × 4 cm H** default; see PAPER.md for per-panel sizes
-- Font: **6 pt bold** throughout
-- Line widths: mean=1.5 pt, fit=1.2 pt, individual trials=0.4 pt, ref=1.0 pt
+- Font (JNeurosci rule book, `paper/FIGURE_RULEBOOK.md` §3; `jnStyle` / `jnAxesAll`): Arial;
+  axis labels and titles **7 pt bold**, tick labels **6 pt regular**, legend and annotations 6 pt;
+  never below 5 pt. (The old "6 pt bold throughout" was paperStyle's, superseded by the rule book.)
+- Line widths (rule book §4): axes 0.5 pt, mean = fit = 1.0 pt, individual trials 0.4 pt,
+  ref 0.75 pt, error bars 0.5 pt
 - Shading: ±std for single-session traces; ±SEM for cross-session means
 - Legend: `ItemTokenSize [6 6]`
 - Helper: `paperFig(w, h)` for figure creation; `paperStyle()` for style constants
