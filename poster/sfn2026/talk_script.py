@@ -34,10 +34,10 @@ SECTIONS = [
      'Open-loop light is fixed, so activity drifts away from the target. The controller keeps adjusting and stays close. '
      '<i>[ratio plots]</i> Across 15 sessions in 4 mice, closed loop lowers the error by 23% in every session, and '
      'trial-to-trial variability by 42%.'),
-    ('2:15', '4 · Moving target', 'We also asked it to follow a 1 Hz sine wave. <i>[four traces]</i> Feedback reduces the error '
-     'compared with open loop, but it lags behind the target, because it can only react once an error appears. Adding preview, '
-     'which uses the model to tell the controller what the target is about to need, removes most of that lag. '
-     '<i>[phase-lag bars]</i>'),
+    ('2:15', '4 · Moving target', 'We also asked it to follow a 1 Hz sine wave. <i>[three traces]</i> Feedback lowers the error '
+     'compared with open loop, but it still lags the target by about 46°, because it can only react once an error appears. '
+     'Adding preview, which uses the model to tell the controller what the target is about to need, brings the lag down to '
+     'about 2°. <i>[phase-lag bars]</i>'),
     ('2:45', '5 · What feedback does to the site', '<i>[maps]</i> Each dot is a point on cortex; its colour shows how its '
      'correlation with the site changed during stimulation. Teal means less correlated. Before stimulation the site rises and '
      'falls with the rest of cortex, correlation about 0.74. During closed loop that drops to about 0.59, in all 12 sessions, '

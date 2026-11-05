@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — Talk script box 4 lines match the three-condition panels
+**Changed/Found:** `poster/sfn2026/talk_script.py`, section 4: "[three traces]"; closed loop "still lags the target by about 46°", and preview "brings the lag down to about 2°". The PDF is still one page at 9.5 pt.
+**Why:** Box 4 now shows OL, CL and CL + preview only (entry below).
+**Next:** none
+
+### 2026-11-05 — SfN poster box 4: OL, CL and CL + preview only; bullet rewritten
+**Changed/Found:** New `poster/sfn2026/box4_refresh.py`, which can be re-run, swaps the four box 4 panels for the `sine_panels.m` prints, each kept on its old centre and never taller than before (`panel_swap.py` now exposes `swap()` for this). The bullet is now "1 Hz sine target: feedback lowers the error; preview removes the remaining lag." It replaces Aditya's "1 Hz sinusoid target; adding model information gives the controller more authority.", and still fits one line. Built on Aditya's 15:33 online edit (outlines around the Introduction and Results bars removed, Results bar moved, funding/contact text box deleted). My save was refused once because the file had changed since my 14:52 save, which is the check working as intended. Saved over `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` after checking it was unchanged since 15:33. Desktop PowerPoint: fine; the only flag is box 4's heading, as before.
+**Why:** Aditya: "help improve section 4 ... lets just do open loop closed loop and cl + preview".
+**Next:** Not checked in PowerPoint online.
+
+### 2026-11-05 — Poster copy of the Fig 5 sine panels with three conditions (OL, CL, CL + preview)
+**Changed/Found:** New `poster/sfn2026/sine_panels.m`, the trial-average, variance, trial-RMSE and phase-lag panels from `bilateral/sine_ff_plots_combined.m` with OL + preview dropped. Same session (s2 = AL_0048 2026-07-14/1, the rig's 40 s trailing dF/F via `sine_rig_dff`), trial selection and definitions; the jnAxesAll pass matches the final panels (6/7 pt Arial). The trial average now carries its own 1 s bar, since the input panel that carried it isn't on the poster. n = 51 / 46 / 57. Phase lag 70.7 / 46.1 / 1.7 deg (preview lookahead 51 deg). Median trial RMSE 3.59 / 2.26 / 3.00 % dF/F. Mean across-trial variance 0-4 s 11.82 / 5.81 / 8.85. Found: CL + preview removes the lag but has higher RMSE and variance than CL alone in this session, so the bullet claims only the lag for preview. The paper panels are untouched.
+**Why:** Aditya: box 4 should show only OL, CL and CL + preview.
+**Next:** Expect "why is CL + preview error higher than CL?" at the poster. The phase-lag bar is the preview result; RMSE isn't.
+
 ### 2026-11-05 — SfN poster: 5-minute talk script as a one-page printable PDF
 **Changed/Found:** New `poster/sfn2026/talk_script.py` writes `poster/sfn2026/talk_script.pdf` (git-ignored): US Letter, one page, Arial embedded, body 9.5 pt (the script shrinks the font until the page fits, and won't go below 8.5 pt), 0.42 in margins (ink at least 0.48 in from every edge). Content: the 5-minute walkthrough box by box with timings and "point to" cues, plus five short answers for questions. All numbers are ones on the poster. The close uses the corrected line ("one likely limit is how fast the loop can respond"), since the earlier "speed, not the model" claimed more than the poster shows. Built with PyMuPDF's Story; reportlab isn't installed, and nothing new was installed.
 **Why:** Aditya asked for the 5-minute version on one page, ready to print.

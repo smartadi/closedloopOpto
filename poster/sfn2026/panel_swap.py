@@ -33,12 +33,9 @@ def render(raw, name):
     return r.width / 72 * PS, r.height / 72 * PS
 
 
-def main(src, out, shape, raw, name, alt=None):
-    prs = Presentation(src)
-    sl = prs.slides[0]
+def swap(sl, shape, raw, name, alt=None):
+    """Replace picture `shape` on slide `sl` in place; returns the removed shape's id."""
     S = {sh.name: sh for sh in sl.shapes}
-    before = {sh.shape_id: copy.deepcopy(sh._element) for sh in sl.shapes}
-    c14n = lambda el: etree.tostring(el, method='c14n', exclusive=True)
     E = 914400
     old = S[shape]
     cx, cy = (old.left + old.width / 2) / E, (old.top + old.height / 2) / E
@@ -60,11 +57,19 @@ def main(src, out, shape, raw, name, alt=None):
     sl.part.drop_rel(rid)
     print(f'{shape}: {old.width / E:.2f} x {old.height / E:.2f} -> {pw:.2f} x {ph:.2f} in, at x {x:.2f} y {y:.2f} '
           f'(in {frame.name})')
+    return old.shape_id
 
+
+def main(src, out, shape, raw, name, alt=None):
+    prs = Presentation(src)
+    sl = prs.slides[0]
+    before = {sh.shape_id: copy.deepcopy(sh._element) for sh in sl.shapes}
+    c14n = lambda el: etree.tostring(el, method='c14n', exclusive=True)
+    gone = swap(sl, shape, raw, name, alt)
     now = {sh.shape_id: sh for sh in sl.shapes}
-    assert old.shape_id not in now and len(now) == len(before)
+    assert gone not in now and len(now) == len(before)
     for sid, el in before.items():
-        if sid != old.shape_id:
+        if sid != gone:
             assert c14n(now[sid]._element) == c14n(el), now[sid].name
     prs.save(out)
     print(f'{out}: {len(sl.shapes)} shapes')
