@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-04 — SfN poster v2: three typos fixed in boxes 2 and 3
+**Changed/Found:** `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx`, text only: "laser power, " now "laser power." and "response.." now "response." (box 2); "controller ." now "controller." (box 3). Applied on a copy, saved only after confirming v2 was still as I wrote it. Only those two text boxes changed, and their line counts are the same in desktop PowerPoint. Not in `patch_online_v2.py`, which applies to the earlier file.
+**Why:** Aditya asked for these typos to be fixed in v2.
+**Next:** none
+
 ### 2026-11-04 — SfN poster v2: Aditya's online edits kept, connectivity box added, box 5 split, column 3 text shortened
 **Changed/Found:** New `poster/sfn2026/patch_online_v2.py` opens Aditya's hand-edited `OneDrive/Talks/SfN2026/SfN2026_poster.pptx` and writes `SfN2026_poster_v2.pptx` beside it (the original is untouched). New box 5 under the moving-target box, "Feedback decouples the site from the rest of cortex". Old box 5 is split: box 6 (example trials + unique R2) and box 7 (quartile panel). Old box 6 is now box 8. Bullets in 6-8 shortened to match Aditya's boxes 1-4: no p values or n in the text, panels keep the stars. Wording checked against JN Results. The script asserts that every shape it doesn't touch keeps identical XML. Checked in desktop PowerPoint: render fine, 87 shapes; the only overflow flag is Aditya's own box 4 heading, which is slightly wider than its text box but inside the frame. Not opened in PowerPoint online. Found: the online edits took several hours to reach this PC (local copy still my 15:07 original until 22:52), and a later autosave at 22:56 changed metadata only.
 **Why:** Aditya: edit 5 and 6 like 1-4, split 5 into two parts, add the connectivity figure below box 4. Saved as a new file because the online copy may still be open; an overwrite could collide with autosave.
