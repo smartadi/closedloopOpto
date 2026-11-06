@@ -16,6 +16,29 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-06 — SfN talk script follows the reviewed poster
+**Changed/Found:** `poster/sfn2026/talk_script.py` — the intro now opens with the motivation line (activity across cortex changes with arousal and movement, and that shapes perception and action). Section 1 is called "The system". Section 2 drops the state panel and ends on "simple enough to design a controller around". Later sections start 10 s earlier. The PDF is still one page at 9.5 pt.
+**Why:** The script has to match the poster after Nick's review and Xander's box 2 cut. Nick also asked Aditya to practise a 5-minute script several times.
+**Next:** Aditya prints `talk_script.pdf` and practises it.
+
+### 2026-11-06 — Poster type audit (Nick): box 5 panel type raised; two Fig 4 copies still small
+**Changed/Found:** `poster/sfn2026/seedfc_panel.m` — poster type sizes FT 7 / FA 7.5 / FL 8 pt (were 6 / 6 / 7 from jnStyle), so box 5 prints at 20.8–23.8 pt on the poster (was 17.8). To fit: the "mean" labels are now "OL, mean" / "CL, mean", the gap between the mean maps went from 0.15 to 0.3 cm, the y-label room from 1.0 to 1.35 cm, the left plot is narrower (2.6 to 2.35 cm), the colour-bar words are regular weight, and the bottom-row gap is 0.4 cm. The ink is 13.08 × 4.62 cm, or 5.40 in on the poster against 5.37 before. `box5_refresh.py` placed it with 0.45 in to spare. Numbers unchanged: CL r 0.739 → 0.585 (p = 0.0005), 12/12 sessions drop. Audit of every panel (smallest printed size): sub- and superscripts are 13–14 pt (R², K_p); proportional, so left. **Still small:** `st_quart` stats labels (5 pt, 14.8 pt printed) and the `st_trials` "z-motion" label (5 pt, 14.9 pt). These are crops of paper Fig 4 panels, and changing them needs poster-only copies of `f4_row2_quartiles` / `f4_state_exemplars`.
+**Why:** Nick: check all font sizes; some in panel 5 are a bit small.
+**Next:** Ask Aditya whether the two Fig 4 labels are worth poster-only copies. Note `f4_state_exemplars` and `f4_error_decomp` are also waiting on the onset fix (entry 2026-11-05 below).
+
+### 2026-11-06 — SfN poster: Nick's review and Xander's box 2 cut (`nick_review.py`)
+**Changed/Found:** New `poster/sfn2026/nick_review.py`, re-runnable on the 11-05 15:41 poster. Changes:
+- Authors: "Nicholas A. Steinmetz".
+- Intro: a motivation sentence first (arousal and movement shape perception and action) and a plainer bold line ("We used real-time imaging and optogenetics to hold activity at one cortical site at a target level, and asked when this works and when it does not.", option A, Aditya's pick).
+- Box 1 heading: "Design of a real-time closed-loop system / with imaging and optogenetics" (Nick's wording, two lines).
+- Box 2: state panel (`imp_state`) and its bullet removed. Heading: "The average response to stimulation / is near-linear". Traces | dose on one row, fit | the two bullets on the next. All three are scaled ×1.398 to fill the column, so their type is 24.9 pt.
+- Column 1: re-stacked with 0.45 in gaps and the same bottom (35.33 in). The intro is now 6 lines.
+- Box 3 and box 4 bullets: in to x 17.28, w 15.72, so the purple markers sit 0.20 in inside the frame as in boxes 5–8 (they were 0.01 in, on the frame line).
+
+All other shapes keep their XML (asserted). Checked in PowerPoint: nothing new overflows; the authors fit on one line (16.15–37.85 in, logo at 41.96). Saved over `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` at 15:57 after confirming it still matched the 11-05 save.
+**Why:** Nick's review (items 1, 2, 3, 4, 8) and Xander's suggestion, which Aditya agreed to: no state-dependence in box 2.
+**Next:** Aditya checks it in PowerPoint online. The 11-05 15:41 save was still "Sync pending" on 11-06, even after a OneDrive restart. Nick's item 7 (is it all timescale? Movement-driven activity may be slow, so it is easy to control) is Aditya's call. The intro repeats "Mesoscale cortical activity" in its first two sentences (option A as chosen).
+
 ### 2026-11-05 — FOUND: Fig 4A, 4C and 4F in the paper are still on the old onsets
 **Changed/Found:** The lab-style comparison re-rendered every panel in jn style from today's code, and the drift sheets compare those renders with the paper copies (`paper/figures_labstyle/drift/`). Three Fig 4 panels predate the 10-27 onset port (6f72136): `paper/images/figure4/f4_state_exemplars.pdf` is from 09-28, `f4_decomp_unique_sep.pdf` from 10-11 and `f4_agl.pdf` (`f4_contra_model`) from 10-12. The 11-03 relabel changed their words only. Fig 4A shows a shorter pre-stimulus window than today's [−2, +3) s; its 09-28 export also predates the 10-02 window lock. Fig 4C init-dev unique R² (0–1 s) is **0.53 ± 0.05 in the paper** (`results.tex` L198, FINDINGS) and **0.562 ± 0.050 on the corrected onsets**. Same 11 sessions, session level, adjusted R². A clean run (`load_sessions`, then `f4_error_decomp` alone) gives the same 0.562, so the run order and workspace are ruled out. The other bars, 0–1 s / 1–3 s: init 0.562 / 0.031, abs 1–4 Hz 0.099 / 0.129, rel 2–4 Hz 0.050 / 0.033, motion 0.002 / −0.007. The ctrl stage overwrote `controller-analysis/data/f4_error_decomp.mat` at 16:53. That folder was outside the snapshot, so the old cache (0.529) is gone, and the SfN poster's `unique_panel.m` would now draw 0.562 (the poster itself is unchanged). The Fig 4 row-2 LMM caches came out identical, so Fig 4D is already on the corrected onsets.
 **Why:** The drift check was meant to keep content changes out of the style comparison; this is what it turned up.

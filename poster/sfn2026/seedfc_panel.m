@@ -9,13 +9,16 @@ function seedfc_panel()
 %   markers, Aditya 2026-11-05: 12 stars there were confusing), r with the site before and during stimulation
 %   per session, and the per-session change, OL vs CL.
 %   2026-11-05: taller layout after the Methods box was removed; then relabelled for poster viewers (Aditya:
-%   "coupling lost" is unintuitive): sign flipped, colour bar ends in words, key line, before/during. Text 6 pt.
+%   "coupling lost" is unintuitive): sign flipped, colour bar ends in words, key line, before/during.
+%   2026-11-06 (Nick: some text in panel 5 is a bit small): poster type sizes FT/FA/FL, larger than the
+%   paper's 6 pt, so ticks print at about 21 pt and labels at about 22 pt on the poster.
 % OUT  poster/sfn2026/panels/seedfc_raw.pdf (git-ignored); box5_refresh.py crops it to its ink.
 %   Printed with print -vector on a fixed page, not exportgraphics, which rescales small panels.
 here = fileparts(mfilename('fullpath')); root = fullfile(here, '..', '..');
 addpath(fullfile(root, 'utils'));
 G = load(fullfile(root, 'controller-analysis', 'data', 'ctrl_seed_fc_group.mat'));
-S = jnStyle(); cmD = flipud(brbg(256)); cl = [-0.3 0.3]; nS = numel(G.sessions); cn = {'OL', 'CL'};
+S = jnStyle(); FT = 7; FA = 7.5; FL = 8;                         % poster type: ticks, labels, row names
+cmD = flipud(brbg(256)); cl = [-0.3 0.3]; nS = numel(G.sessions); cn = {'OL', 'CL'};
 cc = {[0.85 0.2 0.15], [0.15 0.35 0.8]};                        % locked OL red, CL blue
 lab = paper_session_label(G.sessions, 'short'); [lab, ord] = sort(lab);
 mlN = (G.node(:,2) - 1)/50 - 1; apN = (G.node(:,1) - 1)/100;
@@ -28,7 +31,7 @@ site = {'p', 'MarkerFaceColor', 'w', 'MarkerEdgeColor', 'k', 'LineWidth', 0.3};
 Wp = 14; Hp = 7; fig = jnFig(Wp, Hp);
 x00 = 0.55; W = 1.05; dx = 1.06; Hh = W * diff(yl) / diff(xl); R = x00 + (nS - 1) * dx + W;
 yM = 0.8; Hm = 1.5;                                              % bottom row
-yT = yM + Hm + 0.45; yB = [yT + 0.22 + Hh + 0.04, yT + 0.22]; top = yB(1) + Hh;   % top strip
+yT = yM + Hm + 0.4; yB = [yT + 0.22 + Hh + 0.04, yT + 0.22]; top = yB(1) + Hh;   % top strip
 
 % ---- top: every session
 for c = 1:2
@@ -46,7 +49,7 @@ for c = 1:2
 end
 
 % ---- bottom left: mean of the 12 maps, common node grid
-Lx = G.Lml / G.pxmm; Ly = G.Lap / G.pxmm; Wm = Hm * 2 * Lx / Ly; xm = [x00, x00 + Wm + 0.15];
+Lx = G.Lml / G.pxmm; Ly = G.Lap / G.pxmm; Wm = Hm * 2 * Lx / Ly; xm = [x00, x00 + Wm + 0.3];
 for c = 1:2
     ax = axes(fig, 'Units', 'centimeters', 'Position', [xm(c), yM, Wm, Hm]); hold(ax, 'on');
     contourf(ax, G.ml * Lx, G.ap * Ly, double(G.cons), [0.5 0.5], 'FaceColor', [0.92 0.92 0.92], ...
@@ -60,10 +63,10 @@ xcb = xm(2) + Wm + 0.12; ycb = yM + 0.25; hcb = Hm - 0.5;
 ax = axes(fig, 'Units', 'centimeters', 'Position', [xcb, ycb, 0.1, hcb]);
 imagesc(ax, [0 1], cl, (1:256).'); colormap(ax, cmD);
 set(ax, 'YDir', 'normal', 'XTick', [], 'YTick', [-0.3 0 0.3], 'YTickLabel', {'-0.3', '0', '+0.3'}, 'YAxisLocation', 'right', ...
-    'TickDir', 'out', 'TickLength', [0.03 0.03], 'FontSize', S.fs_tick, 'LineWidth', S.lw_axis, 'Box', 'on');
+    'TickDir', 'out', 'TickLength', [0.03 0.03], 'FontSize', FT, 'LineWidth', S.lw_axis, 'Box', 'on');
 
 % ---- bottom right: two per-session summaries, spread over the rest of the row
-lab_w = 1.0; wa = 2.6; ws = 1.7;                                 % two-line y-label room, axes widths
+lab_w = 1.35; wa = 2.35; ws = 1.7;                                 % two-line y-label room, axes widths
 x_free = R - (xcb + 1.55) - (lab_w + wa) - (lab_w + ws);
 xa = xcb + 1.55 + x_free / 2 + lab_w; xs = xa + wa + x_free / 2 + lab_w;
 ya = yM + 0.3; ha = Hm - 0.3;
@@ -78,7 +81,7 @@ for c = 1:2
     errorbar(ax, [1 2], [mean(b) mean(s)], [std(b) std(s)] / sqrt(nS), '-', 'Color', cc{c}, 'LineWidth', 1.2, 'CapSize', 0);
 end
 set(ax, 'XTick', [1 2], 'XTickLabel', {'before', 'during'}, 'XLim', [0.8 2.75], 'YLim', [0.25 0.9], 'YTick', [0.3 0.6 0.9], ...
-    'FontSize', S.fs_tick, 'TickLength', [0.03 0.03]);
+    'FontSize', FT, 'TickLength', [0.03 0.03]);
 
 ax = axes(fig, 'Units', 'centimeters', 'Position', [xs, ya, ws, ha]); hold(ax, 'on');
 yo = G.OL.sess_dr(:); yc = G.CL.sess_dr(:);                      % during - before
@@ -92,31 +95,31 @@ end
 errorbar(ax, [0.6 2.4], [mean(yo) mean(yc)], [std(yo) std(yc)] / sqrt(nS), 'k_', 'LineWidth', S.lw_err, 'CapSize', 0);
 yline(ax, 0, ':', 'Color', [0.3 0.3 0.3], 'LineWidth', S.lw_ref);
 set(ax, 'XTick', [1 2], 'XTickLabel', {'OL', 'CL'}, 'XLim', [0.4 2.6], 'YLim', [-0.4 0.1], 'YTick', [-0.4 -0.2 0], ...
-    'FontSize', S.fs_tick, 'TickLength', [0.03 0.03]);
+    'FontSize', FT, 'TickLength', [0.03 0.03]);
 p = signrank(yc, yo);
 
 % ---- text and scale bars on one overlay in cm
 ov = axes(fig, 'Units', 'centimeters', 'Position', [0 0 Wp Hp], 'XLim', [0 Wp], 'YLim', [0 Hp], 'Visible', 'off'); hold(ov, 'on');
-B = {'FontSize', S.fs_annot, 'FontWeight', 'bold'};
+B = {'FontSize', FA, 'FontWeight', 'bold'};
 for j = 1:nS
     text(ov, x00 + (j - 1) * dx + W / 2, top + 0.02, lab{j}, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', B{:});
 end
 for c = 1:2
-    text(ov, x00 - 0.14, yB(c) + Hh / 2, cn{c}, 'Rotation', 90, 'HorizontalAlignment', 'center', 'FontSize', S.fs_label, 'FontWeight', 'bold');
-    text(ov, xm(c) + Wm / 2, yM + Hm + 0.03, sprintf('%s, mean of %d', cn{c}, nS), 'HorizontalAlignment', 'center', ...
+    text(ov, x00 - 0.14, yB(c) + Hh / 2, cn{c}, 'Rotation', 90, 'HorizontalAlignment', 'center', 'FontSize', FL, 'FontWeight', 'bold');
+    text(ov, xm(c) + Wm / 2, yM + Hm + 0.03, sprintf('%s, mean', cn{c}), 'HorizontalAlignment', 'center', ...
         'VerticalAlignment', 'bottom', B{:});
 end
 text(ov, (x00 + R) / 2, yT + 0.11, 'Each dot: change in its correlation with the site (star), during stimulation vs before', ...
-    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', S.fs_annot);
+    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', FA);
 bar1 = 2 * W / diff(xl); bar2 = 2 * Wm / (2 * Lx);
 plot(ov, x00 + [0 bar1], (yT + 0.11) * [1 1], 'k', 'LineWidth', 1);
-text(ov, x00 + bar1 + 0.06, yT + 0.11, '2 mm', 'VerticalAlignment', 'middle', 'FontSize', S.fs_tick);
+text(ov, x00 + bar1 + 0.06, yT + 0.11, '2 mm', 'VerticalAlignment', 'middle', 'FontSize', FT);
 plot(ov, x00 + [0 bar2], (yM - 0.14) * [1 1], 'k', 'LineWidth', 1);
-text(ov, x00 + bar2 + 0.06, yM - 0.14, '2 mm', 'VerticalAlignment', 'middle', 'FontSize', S.fs_tick);
-text(ov, xcb - 0.02, ycb + hcb + 0.05, 'more correlated', 'VerticalAlignment', 'bottom', B{:});
-text(ov, xcb - 0.02, ycb - 0.05, 'less correlated', 'VerticalAlignment', 'top', B{:});
-text(ov, xa - 0.72, ya + ha / 2, {'correlation', 'with site'}, 'Rotation', 90, 'HorizontalAlignment', 'center', B{:});
-text(ov, xs - 0.72, ya + ha / 2, {'change in', 'correlation'}, 'Rotation', 90, 'HorizontalAlignment', 'center', B{:});
+text(ov, x00 + bar2 + 0.06, yM - 0.14, '2 mm', 'VerticalAlignment', 'middle', 'FontSize', FT);
+text(ov, xcb - 0.02, ycb + hcb + 0.05, 'more correlated', 'VerticalAlignment', 'bottom', 'FontSize', FA);
+text(ov, xcb - 0.02, ycb - 0.05, 'less correlated', 'VerticalAlignment', 'top', 'FontSize', FA);
+text(ov, xa - 1.05, ya + ha / 2, {'correlation', 'with site'}, 'Rotation', 90, 'HorizontalAlignment', 'center', B{:});
+text(ov, xs - 1.05, ya + ha / 2, {'change in', 'correlation'}, 'Rotation', 90, 'HorizontalAlignment', 'center', B{:});
 text(ov, xs + ws / 2, ya + ha + 0.04, ['CL vs OL ' star(p)], 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', B{:});
 ux = @(x) xa + (x - 0.8) / (2.75 - 0.8) * wa; uy = @(y) ya + (y - 0.25) / (0.9 - 0.25) * ha;
 for c = 1:2

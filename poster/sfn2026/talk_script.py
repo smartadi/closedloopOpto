@@ -5,7 +5,8 @@
 Writes poster/sfn2026/talk_script.pdf (git-ignored). Arial is embedded. The body font shrinks in 0.25 pt
 steps from 11 pt until the whole page fits; main() refuses below 8.5 pt. Text = the 5-minute version from
 2026-11-05, with the corrected close ("one likely limit is how fast the loop can respond"), plus short
-answers for questions. Numbers are the ones on the poster.
+answers for questions. Numbers are the ones on the poster. 2026-11-06: motivation line in the intro and no
+state panel in box 2, as the poster after Nick's review and Xander's cut.
 """
 from pathlib import Path
 
@@ -16,48 +17,47 @@ FONTS = 'C:/Windows/Fonts'
 MARGIN = 0.42 * 72
 
 SECTIONS = [
-    ('0:00', 'Intro', 'Most optogenetic experiments are open loop. You choose a stimulus in advance, deliver it, and average over '
+    ('0:00', 'Intro', 'Activity across cortex changes with arousal and movement, and those changes shape how animals '
+     'perceive and act. Most optogenetic experiments are open loop. You choose a stimulus in advance, deliver it, and average over '
      'whatever the brain happened to be doing. But cortex is never in the same state twice, so the same light gives a different '
      'result on every trial. We asked a simple question: can feedback hold cortical activity at a level we choose, and if it '
      'can, what limits it?'),
-    ('0:30', '1 · The loop', '<i>[rig]</i> The mice express GCaMP8s in excitatory neurons and the opsin ChrimsonR in inhibitory '
+    ('0:30', '1 · The system', '<i>[rig]</i> The mice express GCaMP8s in excitatory neurons and the opsin ChrimsonR in inhibitory '
      'interneurons, so red light on a spot turns local excitatory activity down. We image the whole dorsal cortex with wide-field '
      'calcium imaging and read ΔF/F at the stimulated spot. <i>[frame]</i> A PI controller compares that signal to a target and '
      'updates the laser power 35 times a second. <i>[loop]</i> The mice are awake and head-fixed, with no task.'),
     ('1:00', '2 · Is it controllable?', 'Before you can control a system, it has to be predictable. <i>[traces]</i> Short '
-     'open-loop pulses give a clean suppression that scales with laser power. A low-order linear model predicts held-out '
-     'trials, with R<sup>2</sup> from 0.56 at the lowest power to 0.98 at the highest. <i>[fit]</i> But single trials vary, and '
-     'that depends on brain state. <i>[state panel]</i> Variability falls at the highest levels of movement and rises with '
-     '2–4 Hz power, with or without stimulation. The average is simple but single trials aren’t, and that’s exactly where '
-     'feedback should help.'),
-    ('1:40', '3 · It works', '<i>[example trials]</i> Open loop on the left, closed loop on the right, target 5% below baseline. '
+     'open-loop pulses give a clean suppression <i>[dose]</i> that scales with laser power. <i>[fit]</i> A low-order linear '
+     'model predicts held-out trials, with R<sup>2</sup> from 0.56 at the lowest power to 0.98 at the highest. So on average '
+     'the response is simple enough to design a controller around.'),
+    ('1:30', '3 · It works', '<i>[example trials]</i> Open loop on the left, closed loop on the right, target 5% below baseline. '
      'Open-loop light is fixed, so activity drifts away from the target. The controller keeps adjusting and stays close. '
      '<i>[ratio plots]</i> Across 15 sessions in 4 mice, closed loop lowers the error by 23% in every session, and '
      'trial-to-trial variability by 42%.'),
-    ('2:15', '4 · Moving target', 'We also asked it to follow a 1 Hz sine wave. <i>[three traces]</i> Feedback lowers the error '
+    ('2:05', '4 · Moving target', 'We also asked it to follow a 1 Hz sine wave. <i>[three traces]</i> Feedback lowers the error '
      'compared with open loop, but it still lags the target by about 46°, because it can only react once an error appears. '
      'Adding preview, which uses the model to tell the controller what the target is about to need, brings the lag down to '
      'about 2°. <i>[phase-lag bars]</i>'),
-    ('2:45', '5 · What feedback does to the site', '<i>[maps]</i> Each dot is a point on cortex; its colour shows how its '
+    ('2:35', '5 · What feedback does to the site', '<i>[maps]</i> Each dot is a point on cortex; its colour shows how its '
      'correlation with the site changed during stimulation. Teal means less correlated. Before stimulation the site rises and '
      'falls with the rest of cortex, correlation about 0.74. During closed loop that drops to about 0.59, in all 12 sessions, '
      'across the whole cortex. Open loop barely changes it. Open-loop light is the same on every trial, so it can’t cancel '
      'fluctuations that differ from trial to trial. The controller’s light can, so the site stops following the rest of cortex.'),
-    ('3:25', '6 · What explains the remaining error', 'So the controller works; why isn’t it perfect? <i>[example trials]</i> We '
+    ('3:15', '6 · What explains the remaining error', 'So the controller works; why isn’t it perfect? <i>[example trials]</i> We '
      'looked at four things that might make a trial hard: how far the site started from the target, movement, and two measures '
      'of delta-band power. <i>[R<sup>2</sup> plot]</i> Each bar is how much of the remaining error that variable explains on its '
      'own. In the first second, the starting deviation explains about half; after that almost nothing, because the controller '
      'has corrected it. Absolute 1–4 Hz power explains a smaller part, about a tenth, but it’s the largest factor once the '
      'controller has settled.'),
-    ('3:55', '7 · Error across brain states', '<i>[quartiles: open loop red, closed loop blue]</i> Movement makes open-loop '
+    ('3:45', '7 · Error across brain states', '<i>[quartiles: open loop red, closed loop blue]</i> Movement makes open-loop '
      'error worse, but closed-loop error stays flat, so during movement feedback removes more of the error. Delta power is '
      'different: closed-loop error rises about as much as open-loop error. One explanation is speed: the opsin, the calcium '
      'indicator and the loop delay limit how fast the controller can respond, so faster fluctuations get through.'),
-    ('4:25', '8 · Disturbance from the other hemisphere', '<i>[kernel map]</i> A linear model fit on laser-off frames predicts '
+    ('4:15', '8 · Disturbance from the other hemisphere', '<i>[kernel map]</i> A linear model fit on laser-off frames predicts '
      'the site from the opposite hemisphere, R<sup>2</sup> 0.75 in this example. <i>[rejection ratios]</i> Closed loop rejects '
      'part of that predicted disturbance: most of the steady offset, less of the faster fluctuations, which fits the same '
      'speed limit.'),
-    ('4:50', 'Close', 'A near-linear average response is enough to design a controller that holds a cortical site at a target, '
+    ('4:40', 'Close', 'A near-linear average response is enough to design a controller that holds a cortical site at a target, '
      'better than open loop in every session and mouse. How well it works depends on brain state, and one likely limit is how '
      'fast the loop can respond. Happy to go into any part in more detail.'),
 ]
