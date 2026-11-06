@@ -54,3 +54,7 @@ paper/figures_final/jn/
 paper/from_anna_*/
 paper/*.zip
 paper-writing/stat_tables_preview/
+# Lab-style comparison (2026-11-05): rebuilt by paper-writing/labstyle_remake.m and
+# labstyle_assemble.py; only its README is tracked.
+paper/figures_labstyle/*
+!paper/figures_labstyle/README.md

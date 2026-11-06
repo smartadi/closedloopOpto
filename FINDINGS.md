@@ -48,6 +48,7 @@ Paper-writing sessions **read** this file — no need to grep RESEARCH.md or sub
   - abs 0.11 (p 0.051) → 0.11 (p 0.021);
   - rel 0.05 (p 0.012) → 0.03 (n.s.);
   - motion 0.
+  - ⚠ **2026-11-05: these numbers are on the OLD onsets.** `f4_error_decomp` last ran 10-11; the corrected onsets reached the MATLAB pipeline on 10-27. A clean rerun on the corrected onsets gives, for 0–1 s → 1–3 s: init **0.562 ± 0.050** → 0.031; abs 0.099 → 0.129; rel 0.050 → 0.033; motion 0. Same 11 sessions and settings. Not yet in the paper; RESEARCH 2026-11-05.
 - The pooled numbers above were inflated by between-session differences.
 - The claim narrows: the initial deviation owns the transient, and ABSOLUTE low-frequency power is the largest steady-state term. Rel alone does not carry it.
 **Update 2026-10-27 (session rule, onset-fixed caches):** Fig 4D is now tested at the session level: per-session OLS slopes on the within-session z-scored state, with a one-sample t across sessions (`utils/f4_row2_sess.m`). MATLAB and the Python rebuild agree to 4 decimals. The panel stars use raw p; Table 5 has a Holm column.

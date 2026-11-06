@@ -33,7 +33,17 @@ FINAL = ROOT / 'paper' / 'figures_final'
 DRAFTS = {'nc': dict(top='abc', rows='def', strips='ghi', size=8, drop=2.3,
                      pdf=FINAL / 'nc' / 'supp_impulse_state' / 'S_impulse_state_nc_draft.pdf'),
           'jn': dict(top='ABC', rows='DEF', strips='GHI', size=10, drop=2.7, pdf=FINAL / 'jn' / 'S_state_quartile.pdf')}
-WIDTH = {'nc': 180, 'jn': 176}          # mm: Nature Comms double column; JNeurosci 2-column maximum
+# 'jnlab': the JN layout from the lab-style panels (paper-writing/labstyle_remake.m), for the lab-vs-jn comparison
+# (2026-11-05). Reads and writes only paper/figures_labstyle/.
+LABSTYLE = ROOT / 'paper' / 'figures_labstyle'
+DRAFTS['jnlab'] = dict(DRAFTS['jn'], pdf=LABSTYLE / 'assembled' / 'S_state_quartile_lab.pdf',
+                       ra=LABSTYLE / 'images' / 'supplementary' / 'relabs',
+                       sq=LABSTYLE / 'images' / 'supplementary' / 'state_quartile')
+# 'jnrerun': the same panels re-rendered in our jn style by today's code (the comparison's baseline)
+DRAFTS['jnrerun'] = dict(DRAFTS['jn'], pdf=LABSTYLE / 'assembled' / 'S_state_quartile_jnrerun.pdf',
+                         ra=LABSTYLE / 'jnrerun' / 'images' / 'supplementary' / 'relabs',
+                         sq=LABSTYLE / 'jnrerun' / 'images' / 'supplementary' / 'state_quartile')
+WIDTH = {'nc': 180, 'jn': 176, 'jnlab': 176, 'jnrerun': 176}          # mm: Nature Comms double column; JNeurosci 2-column maximum
 LET, GAP = 3.5, 1.5
 PT_SCALED, PT_FIXED, PT_MIN = 6.0, 5.0, 5.0   # smallest type at 1:1 in scaled / fixed panels; journal minimum
 
@@ -50,6 +60,7 @@ def letter(page, x, y, s, cfg):
 def main(draft='nc'):
     cfg = DRAFTS[draft]
     W = WIDTH[draft]
+    RA, SQ = cfg.get('ra', globals()['RA']), cfg.get('sq', globals()['SQ'])
     cfg['pdf'].parent.mkdir(parents=True, exist_ok=True)
     top = [RA / 'relabs_scatter.pdf', RA / 'relabs_traces_Mouse1b.pdf', RA / 'relabs_spectra_Mouse1b.pdf']
     rows = [[SQ / f'sq_{s}_{k}.pdf' for k in ('rms', 'ratio', 'dist')] for s in ('mot', 'dpr', 'dpa')]

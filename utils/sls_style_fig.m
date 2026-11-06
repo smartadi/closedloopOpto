@@ -19,7 +19,7 @@ function R = sls_style_fig(fig, varargin)
 %   legends           regular, no box; size kept (paper.mplstyle says 7 pt: 'LegendPt',7 applies it.
 %                     Off by default because our panels are laid out for 6 pt legends, and at 7 pt
 %                     they ran off the canvas in Fig 2A/2C, 2026-11-05)
-%   colour bars       no tick marks, no outline, 6 pt labels (axes.py colorbar)
+%   colour bars       no tick marks, no outline, regular label (axes.py colorbar); type size kept
 %   axis ends         on the first and last tick (axes.py spines_to_ticks), see SnapSpines
 %   reference lines   0.5 pt dashed 50% gray   (axes.py REFERENCE_STYLE), see RefLines
 %   diverging maps    CET-D1A, white centre    (colors.py cmap_diverging), see Diverging
@@ -80,8 +80,8 @@ end
 
 cb = findobj(fig, 'Type', 'colorbar');
 for k = 1:numel(cb)
-    set(cb(k), 'FontName','Arial', 'FontSize',6, 'TickLength',0, 'Box','off');
-    set(cb(k).Label, 'FontName','Arial', 'FontSize',7, 'FontWeight','normal');
+    set(cb(k), 'FontName','Arial', 'TickLength',0, 'Box','off');       % size kept: some keys are 5 pt on purpose
+    set(cb(k).Label, 'FontName','Arial', 'FontWeight','normal');
     R.colorbars = R.colorbars + 1;
 end
 end
@@ -92,7 +92,10 @@ n = 0;
 isgray = @(c) isnumeric(c) && numel(c) == 3 && (max(c) - min(c)) < 0.05;
 cl = findall(a, 'Type', 'constantline');
 for k = 1:numel(cl)
-    if isgray(cl(k).Color)
+    % xline/yline in gray: horizontal ones (zero, chance, target) and any already dashed or dotted.
+    % A solid vertical line marks an event (stimulus on/off edges), not a reference value: left alone.
+    ref = strcmp(cl(k).InterceptAxis, 'y') || any(strcmp(cl(k).LineStyle, {'--', ':', '-.'}));
+    if isgray(cl(k).Color) && ref
         set(cl(k), 'LineWidth',0.5, 'LineStyle','--', 'Color',gray);
         n = n + 1;
     end
@@ -120,6 +123,7 @@ kids = kids(kids ~= a);
 skip = [a.XLabel; a.Title; a.Subtitle; a.ZLabel];
 for y = 1:numel(a.YAxis), skip(end+1) = a.YAxis(y).Label; end %#ok<AGROW>
 kids = kids(~ismember(kids, skip));
+if isempty(kids), return; end                                  % e.g. the hidden axes behind a colour bar
 types = get(kids, 'Type');
 if ischar(types), types = {types}; end
 ok = {'line','scatter','patch','area','bar','errorbar','histogram','stair','text', ...

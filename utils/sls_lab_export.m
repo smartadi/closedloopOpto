@@ -1,23 +1,26 @@
 function done = sls_lab_export(fig, path, dpi)
-% SLS_LAB_EXPORT  Lab-style comparison run: write a steinmetzlab-style copy of a panel into
-% paper/figures_labstyle/ INSTEAD OF the normal export. No-op unless the global PAPER_LABSTYLE
-% is true.
+% SLS_LAB_EXPORT  Style-comparison run: instead of the normal export, render a panel in BOTH our jn
+% style and the lab (steinmetzlab-style) style into paper/figures_labstyle/. No-op unless the global
+% PAPER_LABSTYLE is true.
 %
-%   global PAPER_LABSTYLE; PAPER_LABSTYLE = true;   % then run any producer
+%   global PAPER_LABSTYLE; PAPER_LABSTYLE = true;   % then run any producer (paper-writing/labstyle_remake.m)
 %
-% Called first thing by jnExport and paperExport. When it returns true the exporter returns at
-% once, so a comparison run writes nothing to paper/images/ and never reaches
-% paper_final_mirror, so figures_final/ cannot change. Everything lands under
-% paper/figures_labstyle/ (git-ignored, like all of paper/):
-%   images/<path under paper/images>   every panel the exporters write, lab-styled (other/ for
-%                                      paths outside paper/images)
-%   panels/<section>/<name>            the MANIFEST-listed (final) panels, as in figures_final
-%   src/<same path>.fig                the figure as the producer drew it, before the lab pass,
-%                                      so the lab pass can be redone without rerunning producers
-% The lab pass is sls_style_fig (paper.mplstyle in MATLAB). Each panel is then checked with
-% sls_report (lab required rules). Failures are warnings, never errors: a comparison run must
-% not abort a producer. Added 2026-11-05 to compare the lab style with ours (Aditya).
-global PAPER_LABSTYLE PAPER_LABSTYLE_LOG                           %#ok<GVMIS>
+% Called first thing by jnExport and paperExport. When it returns true the exporter returns at once,
+% so a comparison run writes nothing to paper/images/ and never reaches paper_final_mirror:
+% figures_final/ cannot change. The producer's live figure is not touched either: it is saved as a
+% .fig, and both styles are rendered from that file, so they start from the same drawing.
+%   src/<path>.fig                          the figure as the producer drew it (line transparency kept
+%                                           in appdata, since .fig files drop it)
+%   jnrerun/images/<path>, jnrerun/panels/  our jn style (jnAxesAll), as paper_final_mirror would
+%                                           write it today: the baseline for the comparison
+%   images/<path>, panels/<section>/        the lab style (sls_style_fig)
+% <path> is the path under paper/images (other/... for anything outside it); panels/ holds the
+% MANIFEST-listed (final) panels. Both renders go through the same export: a re-print when the vector
+% writer squeezes a small panel, and paper_final_mirror's oversize refit (jn_fit_canvas). The lab
+% render is checked with sls_report (lab required rules). Failures are warnings, never errors.
+% sls_lab_render redoes both renders from the .fig files (paper-writing/labstyle_reexport.m).
+% Added 2026-11-05 to compare the lab style with ours (Aditya).
+global PAPER_LABSTYLE                                               %#ok<GVMIS>
 done = false;
 if isempty(PAPER_LABSTYLE) || ~PAPER_LABSTYLE, return; end
 done = true;
@@ -37,48 +40,25 @@ try
     else
         [~, b, e] = fileparts(p); rel = fullfile('other', [b e]);
     end
-    [rd, base, ext] = fileparts(rel);
-    out = fullfile(lab, rel);
-    if ~exist(fileparts(out), 'dir'), mkdir(fileparts(out)); end
-
-    % the producer's own figure, once per figure, before any restyle
-    if ~isappdata(fig, 'sls_lab_src')
-        sd = fullfile(lab, 'src', rd);
-        if ~exist(sd, 'dir'), mkdir(sd); end
-        setappdata(fig, 'sls_lab_src', true);
+    [rd, base] = fileparts(rel);
+    sd = fullfile(lab, 'src', rd);
+    if ~exist(sd, 'dir'), mkdir(sd); end
+    src = fullfile(sd, [base '.fig']);
+    % line transparency (Color = [r g b a]) is not saved in a .fig: keep it in appdata. Edge (where
+    % the alpha lives) is only built when the figure is drawn, so draw first: without this every
+    % panel exported before its first drawnow lost its alpha (S1D, 2026-11-05)
+    drawnow;
+    ln = findall(fig, 'Type', 'line');
+    for k = 1:numel(ln)
         try
-            savefig(fig, fullfile(sd, [base '.fig']));
+            if strcmp(ln(k).Edge.ColorType, 'truecoloralpha')
+                setappdata(ln(k), 'sls_alpha', double(ln(k).Edge.ColorData(4)) / 255);
+            end
         catch
         end
     end
-
-    R = sls_style_fig(fig);
-    isVec = any(strcmpi(ext, {'.pdf', '.svg', '.eps'}));
-    if isVec
-        exportgraphics(fig, out, 'ContentType', 'vector', 'BackgroundColor', 'white');
-        exportgraphics(fig, regexprep(out, '\.(pdf|svg|eps)$', '.png'), 'Resolution', 300, ...
-                       'BackgroundColor', 'white');
-    else
-        exportgraphics(fig, out, 'Resolution', dpi, 'BackgroundColor', 'white');
-    end
-
-    sec = local_manifest_section([base ext]);
-    if ~isempty(sec)
-        pd = fullfile(lab, 'panels', sec);
-        if ~exist(pd, 'dir'), mkdir(pd); end
-        copyfile(out, fullfile(pd, [base ext]));
-        if isVec
-            copyfile(regexprep(out, '\.(pdf|svg|eps)$', '.png'), fullfile(pd, [base '.png']));
-        end
-    end
-    tag = '';
-    if ~isempty(sec), tag = sprintf('  -> panels/%s', sec); end
-    fprintf('   [lab] %-60s ax %d, ends %d, ref %d, maps %d, legends %d, bars %d%s\n', rel, ...
-            R.axes, R.snapped, R.reflines, R.cmaps, R.legends, R.colorbars, tag);
-    nlab = sls_report(fig, out);
-    if isempty(PAPER_LABSTYLE_LOG), PAPER_LABSTYLE_LOG = {}; end
-    PAPER_LABSTYLE_LOG{end+1} = struct('file', out, 'sec', sec, 'name', [base ext], ...
-                                       'restyle', R, 'lab_required', nlab);
+    savefig(fig, src);
+    sls_lab_render(src, rel, dpi);
 catch ME
     warning('sls_lab_export:failed', 'lab-style export failed for %s (%s)', char(path), ME.message);
 end
@@ -87,30 +67,4 @@ end
 % -----------------------------------------------------------------------------------------
 function tf = local_isabs(p)
 tf = numel(p) > 1 && (p(2) == ':' || startsWith(p, '\\') || startsWith(p, '/'));
-end
-
-% -----------------------------------------------------------------------------------------
-function sec = local_manifest_section(base)
-% Same parse as paper_final_mirror: the [section] that lists this basename, or ''.
-persistent MAP
-if isempty(MAP)
-    MAP  = containers.Map('KeyType', 'char', 'ValueType', 'char');
-    root = fileparts(fileparts(mfilename('fullpath')));
-    mf   = fullfile(root, 'paper', 'figures_final', 'MANIFEST.txt');
-    if ~isfile(mf), sec = ''; return; end
-    txt = strsplit(fileread(mf), newline);
-    cur = '';
-    for i = 1:numel(txt)
-        ln = strtrim(txt{i});
-        if isempty(ln) || startsWith(ln, '#'), continue; end
-        if startsWith(ln, '[') && endsWith(ln, ']'), cur = ln(2:end-1); continue; end
-        if isempty(cur), continue; end
-        hh = strfind(ln, '#');
-        if ~isempty(hh), ln = strtrim(ln(1:hh(1)-1)); end
-        if isempty(ln), continue; end
-        [~, nm, ex] = fileparts(ln);
-        MAP([nm ex]) = cur;
-    end
-end
-if isKey(MAP, base), sec = MAP(base); else, sec = ''; end
 end

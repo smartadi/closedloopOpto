@@ -16,6 +16,69 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — FOUND: Fig 4A, 4C and 4F in the paper are still on the old onsets
+**Changed/Found:** The lab-style comparison re-rendered every panel in jn style from today's code, and the drift sheets compare those renders with the paper copies (`paper/figures_labstyle/drift/`). Three Fig 4 panels predate the 10-27 onset port (6f72136): `paper/images/figure4/f4_state_exemplars.pdf` is from 09-28, `f4_decomp_unique_sep.pdf` from 10-11 and `f4_agl.pdf` (`f4_contra_model`) from 10-12. The 11-03 relabel changed their words only. Fig 4A shows a shorter pre-stimulus window than today's [−2, +3) s; its 09-28 export also predates the 10-02 window lock. Fig 4C init-dev unique R² (0–1 s) is **0.53 ± 0.05 in the paper** (`results.tex` L198, FINDINGS) and **0.562 ± 0.050 on the corrected onsets**. Same 11 sessions, session level, adjusted R². A clean run (`load_sessions`, then `f4_error_decomp` alone) gives the same 0.562, so the run order and workspace are ruled out. The other bars, 0–1 s / 1–3 s: init 0.562 / 0.031, abs 1–4 Hz 0.099 / 0.129, rel 2–4 Hz 0.050 / 0.033, motion 0.002 / −0.007. The ctrl stage overwrote `controller-analysis/data/f4_error_decomp.mat` at 16:53. That folder was outside the snapshot, so the old cache (0.529) is gone, and the SfN poster's `unique_panel.m` would now draw 0.562 (the poster itself is unchanged). The Fig 4 row-2 LMM caches came out identical, so Fig 4D is already on the corrected onsets.
+**Why:** The drift check was meant to keep content changes out of the style comparison; this is what it turned up.
+**Next:** Aditya decides. Then re-run `f4_state_exemplars`, `f4_error_decomp` and `f4_contra_model` with PAPER_FINAL, and update Fig 4C's text in both drafts (TASKS 🔴). The pre-fix session caches are in `data/_pre_onset_fix/` if the old numbers are needed. The state-quartile supplement also differs from today's render (0.78–0.92); its cause has not been checked.
+
+### 2026-11-05 — Comparison run cleaned up: paper folders restored, writers listed, folder README
+**Changed/Found:** After the runs, `paper/figures_final`, `paper/images` and `data/` were compared with the pre-run snapshot (path, size, mtime) and restored from the backup. That covered 40 files after the first run and 6 after the alpha re-run. The 24 `_lab.png` files the run added to `images/.../_native` were deleted, and `paper/latency_histogram.pdf` was restored. After the restore the snapshot matches with 0 changed, 0 missing and 0 new. Writers outside `figures_labstyle/` when PAPER_FINAL is on:
+- `ctrl_mpc_direct_panels` writes `mpcd_0b_problem` and `ctrl_mpc_varx_supp_panels` writes `varx_B_construction` (TikZ copies) into `figures_final/panels/` and `images/`.
+- `ctrl_best_fixed_ol`, `sine_ff_across_sessions`, `f4_state_exemplars_supp` and `imp_state_quartile_supp` (`sq_stats.csv`) export straight to `images/`.
+- `latencyAnalysis` (run by hand for the Fig 1C lab panel) writes `figures_final/jn/fig1/panel_c_latency.pdf`.
+- Caches: `f4_row2_quartiles`, `variance_mse`, `load_grid` (`data/`, content identical); `f4_error_decomp`, `ctrl_best_fixed_ol` (`controller-analysis/data/`); `load_experiments` (`impulse-analysis/data/stim_vars_*`).
+
+Also: `imp_state_raster_peramp.m` now writes its raster PNGs and the heat-map PNGs it swaps in to `figures_labstyle/` during a lab run. `.gitignore` now ignores `paper/figures_labstyle/*` except its README. New `paper/figures_labstyle/README.md` covers the layout, what the lab pass changes, the audit, the kept panels, the drift and how to rebuild.
+**Why:** The 9642b4f entry asked for the writer list and for the git-ignore fix. A comparison run must leave the paper's files as they were.
+**Next:** The `imp_state_raster_peramp` redirect hasn't been run; check it on the next `imp` stage. Snapshot `controller-analysis/data` and `impulse-analysis/data` too before any future run.
+
+### 2026-11-05 — BUG (lab comparison): line transparency lost on panels exported before their first draw
+**Changed/Found:** `utils/sls_lab_export.m` read the alpha from `line.Edge`, but MATLAB builds `Edge` only when the figure is drawn. Any producer that exported before a `drawnow` therefore lost its alpha, and the `.fig` round trip draws those lines opaque. S1D's 15 session traces were affected (drift 0.93 against the paper copy). Fix: `drawnow` before the read. Re-ran only the four producers that draw transparent lines (`variance_mse`, `ctrl_best_fixed_ol`, `ctrl_mpc_direct_panels`, `ctrl_mpc_sine_panels`). For that, new `RUN_LS_ONLY` in `paper-writing/labstyle_remake.m` runs a subset of a stage. Then re-assembled: S1 is now 0.974 against the paper, and S1D has 15 of 19 lines transparent.
+**Why:** Opaque trial traces made both renders look unlike the paper. That's a comparison artifact, not a style difference.
+**Next:** none
+
+### 2026-11-05 — Lab audit of the assembled figures: lab version passes; Fig 5A has 2.9 pt text in the paper
+**Changed/Found:** Ran `utils/sls_audit_pdf.py` on all 12 assembled JN figures in each version: paper copy, jn re-run and lab. Reports are in `paper/figures_labstyle/audit/`. The lab version passes every required check except one, and the paper copy has the same problem: "Target level" in the Fig 5A schematic is 2.9 pt, under the 5 pt floor. It is outlined art in `Figure5.ai`, not a MATLAB panel. The jn re-run alone has two text overlaps, in Fig 4 at (6.8, 9.7) cm and in S_varx at (13.6, 0.2) cm. The paper copies don't have them, so they come from today's re-render and not from the style. The live-figure lab checks (`sls_report`) also flagged scale-bar label overlaps in `mpcd_E3`, `mpcs_J` and `mpcs_M`, and the ρ label in `supp_bfo_command`. The PDF audit doesn't see these in the assembled figures.
+**Why:** Aditya wants the two styles compared, and the lab's required rules are part of that comparison.
+**Next:** The Fig 5A "Target level" at 2.9 pt needs fixing in the JN figure whichever style wins (Illustrator edit, Aditya's file).
+
+### 2026-11-05 — Lab comparison assembled three ways, with drift sheets
+**Changed/Found:** `paper-writing/labstyle_assemble.py`:
+- Panels are matched to the slots in each JN .ai by appearance, because text in embedded panels is outlined. The match uses ink correlation at 96 px with aspect ratio within 8 %, and ambiguous slots (the S2 nodes) get a greedy one-to-one assignment.
+- `build` writes `assembled/<Figure>_{current,jnrerun,lab}.pdf`, plus `compare/` sheets (jn re-run left, lab right) and `ALL_compare.pdf`.
+- `drift` compares the paper copy with today's jn re-run, using page correlation after a 1 mm blur. It writes `drift/` and `drift_panels.txt`.
+- The .ai files are only opened and saved as PDF, never saved.
+- `fig1_nc_build.py` has a new `jnlab` draft; `supp_impulse_state_nc_build.py` has new `jnlab` and `jnrerun` drafts with their own panel folders. All three write only to `figures_labstyle/`.
+
+Kept as in the paper: Fig 4G (needs the SVD rerun), the TikZ panels, the Fig 5A schematic and one unmatched S1 group. Figure-level drift: Fig 4 0.960, Fig 6 0.964, OLbest 0.891 (identical by eye; the score is low because of size), all others ≥ 0.97.
+**Why:** The jn re-run baseline separates style from content changes made since the paper copies were exported.
+**Next:** none
+
+### 2026-11-05 — Lab comparison renders both styles from one saved figure
+**Changed/Found:**
+- `utils/sls_lab_export.m` (rewritten) now saves the producer's figure to `figures_labstyle/src/<path>.fig` and calls the new `utils/sls_lab_render.m`.
+- `sls_lab_render.m` opens the .fig twice. One copy gets `jnAxesAll` and goes to `jnrerun/`; the other gets `sls_style_fig` and goes to `figures_labstyle/`. Both go through the same export, with MANIFEST sections copied to `panels/`.
+- Squeeze guard: a vector PDF smaller than 0.8 × the 300-dpi PNG is printed again. `supp_tune_node_01` had come out 1.16 × 1.16 cm.
+- `paper_final_mirror`'s oversize refit (`jn_fit_canvas`) runs too, and is kept only when it helps. The state-quartile panels had grown 0.25 cm without it.
+- New `paper-writing/labstyle_reexport.m` redoes either render from the saved .figs without re-running producers.
+- `imp_state_raster_peramp.m` in a lab run writes a second set of heat-map PNGs in the lab's diverging map. It swaps our set into the jn renders and the lab set into the lab renders, so each strip matches its colour key.
+
+**Why:** Restyling the producer's live figure in place would mix the two styles. Comparing with the paper copy would mix in content changes.
+**Next:** none
+
+### 2026-11-05 — sls_style_fig: legend and colour-bar sizes kept, reference-line rule narrowed
+**Changed/Found:** `utils/sls_style_fig.m`:
+- Legends keep their size. The lab's 7 pt is opt-in (`'LegendPt', 7`), because 7 pt legends ran off the canvas in Figs 2A and 2C.
+- Colour bars keep their type size, since some keys are 5 pt on purpose. They lose tick marks and outline, as in the lab's `colorbar` helper.
+- Reference-line pass: gray `xline`s are converted only when already dashed or dotted. Solid vertical lines are stimulus edges and stay solid. Gray horizontal `yline`s and gray dashed or dotted two-point lines still become 0.5 pt dashed 50 % gray.
+- The axis-end snap returns early on an empty axes; the hidden axes behind `supp_spatial_cbar` crashed `ismember`.
+
+**Why:** Each fix came from a panel that came out wrong in the first full run.
+**Next:** Open choices for Aditya and Nick, from the compare sheets:
+- Ticks pointing in on heat maps: in Fig 2E an inward tick next to "0.12" reads as "−0.12".
+- Corner crowding when the axis ends sit on the ticks, e.g. Q1 and 0.5 in Fig 2G.
+- Regular-weight labels vs bold.
+
 ### 2026-11-05 — Lab-style comparison run for the paper figures (PAPER_LABSTYLE), committed
 **Changed/Found:** Written by the "Steinmetz plotting library integration" session and committed from the SfN poster session at Aditya's request ("just do it"). New `utils/sls_style_fig.m` is the lab's paper.mplstyle in MATLAB: 1 pt axes, ticks in at 4 pt, regular 7 pt labels, CET-D1A diverging maps, axis ends snapped to ticks; data line widths, colours and panel sizes are untouched. New `utils/sls_lab_export.m` is called first by `paperExport.m` and `jnExport.m`. With the global PAPER_LABSTYLE on, it writes a lab-styled copy under `paper/figures_labstyle/` instead of the normal export, so nothing reaches paper/images or figures_final. `fig2_jn_panels.m` and `fig2_jn_crop.py` take the same switch for Fig 2. New `paper-writing/labstyle_remake.m` re-runs the producers stage by stage, and `paper-writing/labstyle_assemble.py` swaps the lab panels into the JN .ai layouts (read only, saved as PDFs) for side-by-side sheets. Checked before committing: with the switch off, `sls_lab_export` returns false, so the normal exports are unchanged; code analyzer shows no errors; both Python files parse. The outputs in `paper/figures_labstyle/` are not committed.
 **Why:** Aditya wants the paper figures in the lab style next to the current ones to compare. Comparison only: the jn style stays the paper style until Aditya and Nick decide.

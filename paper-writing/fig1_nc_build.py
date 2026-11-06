@@ -45,6 +45,10 @@ DRAFTS = {'nc': dict(letters='abcde', size=8, lat=24.0, lat_label='Latency, 24 m
                      pdf=FINAL / 'nc' / 'fig1' / 'Figure1_nc_draft.pdf', W=180),
           'jn': dict(letters='ABCDE', size=10, lat=29.0, lat_label='Latency, 29 ms mean', out=FINAL / 'jn' / 'fig1',
                      pdf=FINAL / 'jn' / 'Figure1.pdf', W=176)}
+# 'jnlab': JN layout with the lab-style latency panel (labstyle_remake / latencyAnalysis + sls_style_fig),
+# written to paper/figures_labstyle/ for the lab-vs-jn comparison (2026-11-05); nothing in figures_final changes.
+LABSTYLE = ROOT / 'paper' / 'figures_labstyle'
+DRAFTS['jnlab'] = dict(DRAFTS['jn'], out=LABSTYLE / 'jn' / 'fig1', pdf=LABSTYLE / 'assembled' / 'Figure1_lab.pdf')
 SVG = '{http://www.w3.org/2000/svg}'
 MM = 72 / 25.4
 

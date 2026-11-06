@@ -20,7 +20,12 @@ if ~exist('RSA_CLIM','var') || isempty(RSA_CLIM), RSA_CLIM = 5;   end
 if ~exist('RSA_DLIM','var') || isempty(RSA_DLIM), RSA_DLIM = 5;   end
 if ~exist('RSA_NAMP','var') || isempty(RSA_NAMP), RSA_NAMP = 3;   end
 if ~exist('RS_PRE','var')   || isempty(RS_PRE),   RS_PRE   = 0.2; end
+global PAPER_LABSTYLE %#ok<GVMIS,TLEV>
+LABRUN = ~isempty(PAPER_LABSTYLE) && PAPER_LABSTYLE;   % style-comparison run (sls_lab_export, 2026-11-05)
 outDir = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'paper','images','supplementary','state_raster_peramp');
+if LABRUN   % a comparison run writes nothing to paper/images (RESEARCH 2026-11-05)
+    outDir = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'paper','figures_labstyle','other','state_raster_peramp');
+end
 if ~exist(outDir,'dir'), mkdir(outDir); end
 
 %% ---- per-trial traces (raw % dF/F), same loop order as imp_state_trialvar ----------------------
@@ -100,7 +105,9 @@ if RSA_S2
     global PAPER_FINAL %#ok<GVMIS,TLEV>
     root = fileparts(fileparts(mfilename('fullpath')));
     rDir = fullfile(root, 'paper','images','supplementary','state_quartile');
-    nDir = fullfile(rDir, '_native');  if ~exist(nDir,'dir'), mkdir(nDir); end
+    nDir = fullfile(rDir, '_native');
+    if LABRUN, nDir = fullfile(root, 'paper','figures_labstyle','src','_native_rmice'); end   % keep paper/images untouched
+    if ~exist(nDir,'dir'), mkdir(nDir); end
     swp  = fullfile(root, 'utils', 'pdf_swap_images.py');
     tagF = {'mot','dpr','dpa'};  rowN = {'Motion','Rel. \delta','Abs. \delta'};
     sOrd = unique(sS).';                                  % load order = Mouse 5a, 5b, 1, 3
@@ -112,7 +119,7 @@ if RSA_S2
     pw = (W - x0 - 0.05 - 3*gG - 4*gW) / 8;              % ~0.86 cm per heatmap; 3 tiles (3.07 cm exported, note text sets it) + 8.2 = 17.4 cm
     cms = {cmA, cmD};  lims = {[-1 1]*RSA_CLIM, [0 RSA_DLIM]};  colT = {'Activity', '|Dev.|'};
     for k = 1:3
-        f = jnFig(W, H);  pngs = {};
+        f = jnFig(W, H);  pngs = {};  pngsL = {};
         for is = 1:numel(sOrd)
             s = sOrd(is);  amps = unique(aS(sS == s));  if strcmp(RSA_S2_AMP,'top'), a2 = amps(end); else, a2 = amps(end-1); end
             m = find(sS == s & aS == a2 & isfinite(T.(tags{k})));
@@ -154,15 +161,29 @@ if RSA_S2
                 ci(~isfinite(V{j})) = 128;
                 pngs{end+1} = fullfile(nDir, sprintf('sq_%s_rmice%s_%d_%d.png', tagF{k}, sfx, is, j)); %#ok<AGROW>
                 imwrite(ind2rgb(flipud(ci), cms{j}), pngs{end});
+                if LABRUN                                % lab render: its diverging map replaces ours (sls_style_fig)
+                    cmL = cms{j};  if j == 1, cmL = sls_cmap('diverging', 256); end
+                    pngsL{end+1} = strrep(pngs{end}, '.png', '_lab.png'); %#ok<AGROW>
+                    imwrite(ind2rgb(flipud(ci), cmL), pngsL{end});
+                end
             end
         end
         pdfOut = fullfile(rDir, sprintf('sq_%s_rmice%s.pdf', tagF{k}, sfx));
         jnExport(f, pdfOut);  close(f);
         fin = fullfile(root, 'paper','figures_final','panels','supp_state_quartile', sprintf('sq_%s_rmice%s.pdf', tagF{k}, sfx));
-        targets = {pdfOut};
-        if ~isempty(PAPER_FINAL) && PAPER_FINAL && exist(fin,'file'), targets{end+1} = fin; end %#ok<AGROW>
+        targets = {pdfOut};  tpng = {pngs};
+        if ~isempty(PAPER_FINAL) && PAPER_FINAL && exist(fin,'file'), targets{end+1} = fin; tpng{end+1} = pngs; end %#ok<AGROW>
+        if LABRUN   % jnExport wrote only the comparison copies: jn render gets our map, lab render the lab's
+            lab = fullfile(root, 'paper','figures_labstyle');  nm = sprintf('sq_%s_rmice%s.pdf', tagF{k}, sfx);
+            targets = {fullfile(lab,'jnrerun','images','supplementary','state_quartile', nm), ...
+                       fullfile(lab,'jnrerun','panels','supp_state_quartile', nm), ...
+                       fullfile(lab,'images','supplementary','state_quartile', nm), ...
+                       fullfile(lab,'panels','supp_state_quartile', nm)};
+            tpng = {pngs, pngs, pngsL, pngsL};
+            ok = cellfun(@(x) exist(x,'file') == 2, targets);  targets = targets(ok);  tpng = tpng(ok);
+        end
         for t = 1:numel(targets)
-            [rc, msg] = system(sprintf('python -I "%s" "%s" %s', swp, targets{t}, strjoin(strcat('"', pngs, '"'), ' ')));
+            [rc, msg] = system(sprintf('python -I "%s" "%s" %s', swp, targets{t}, strjoin(strcat('"', tpng{t}, '"'), ' ')));
             fprintf('%s', msg);  assert(rc == 0, '[RSA] image swap failed for %s', targets{t});
         end
     end

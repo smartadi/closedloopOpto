@@ -26,6 +26,7 @@ Hand edits made in Illustrator to an embedded panel are lost in the lab version 
 log says which groups were swapped, so check those panels for edits that matter.
 """
 import json
+import shutil
 
 import sys
 
@@ -39,12 +40,17 @@ ROOT = Path(__file__).resolve().parents[1]
 FINAL = ROOT / 'paper' / 'figures_final'
 LAB = ROOT / 'paper' / 'figures_labstyle'
 MM = 72 / 25.4
+NL = '\n'
+FIG_DRIFT, PANEL_DRIFT = 0.97, 0.95   # blurred-render correlation below which a paper copy is said to differ
 MIN_R, MARGIN = 0.60, 0.05          # appearance match: correlation of ink images, and lead over the runner-up
 
 # JN include name -> assembly (relative to figures_final). Figure 1 and S_state_quartile are Python builds.
 FIGS = [('Figure2', 'jn/Figure2.ai'), ('Figure3', 'jn/Figure3.ai'), ('Figure4', 'jn/Figure4.ai'),
         ('Figure5', 'jn/Figure5.ai'), ('Figure6', 'FigureMPC.ai'), ('S1', 'jn/S1.ai'), ('S2', 'S2.ai'),
         ('OLbest', 'OLbest.ai'), ('S3', 'jn/S3.ai'), ('S_varx', 'varx.ai')]
+# paper order (JN main.tex, supplementary.tex): the comparison sheets follow it
+ORDER = ['Figure1', 'Figure2', 'Figure3', 'Figure4', 'Figure5', 'Figure6',
+         'S1', 'S_state_quartile', 'S2', 'OLbest', 'S3', 'S_varx']
 
 JS_DUMP = r"""
 (function (src, curPdf) {
@@ -163,6 +169,20 @@ def match(crop, cands):
     return sorted(out, key=lambda x: -x[0])
 
 
+def assign(pending, used):
+    """One-to-one assignment for groups whose best match did not lead by MARGIN (the S2 gain-grid nodes look
+    alike): repeatedly take the highest-scoring (group, panel) pair whose group and panel are both still free.
+    pending: {item index: [(r, path), ...]}; used: panels already taken in this figure. Returns {item: (r, path)}."""
+    pairs = sorted(((r, i, p) for i, sc in pending.items() for r, p in sc if r >= MIN_R and p not in used),
+                   key=lambda x: -x[0])
+    got, taken = {}, set(used)
+    for r, i, p in pairs:
+        if i not in got and p not in taken:
+            got[i] = (r, p)
+            taken.add(p)
+    return got
+
+
 def lab_twin(cur: Path):
     """The lab-style file for a current panel path, or None."""
     rel = cur.resolve().relative_to(FINAL.resolve())
@@ -189,12 +209,29 @@ def make_map(app):
         abL, abT = [float(x) for x in ab.split(',')][:2]
         page = gray(fitz.open(cur)[0].get_pixmap(dpi=DPI))
         k = DPI / 72
-        items, ops = [], []
+        items, ops, pending, used = [], [], {}, set()
+
+        def accept(item, p1, r1, how):
+            b = item['bounds']
+            w, h = b[2] - b[0], b[1] - b[3]
+            cw, chh = cands[p1]['size']
+            sx, sy = w / cw, h / chh
+            scale = sx if abs(sx - sy) / max(sx, sy) < 0.05 else 1.0
+            item.update(best=str(p1), score=round(r1, 3), how=how, scale=round(scale, 4),
+                        scale_xy=[round(sx, 4), round(sy, 4)])
+            used.add(p1)
+            twin = lab_twin(p1)
+            item['lab'] = str(twin) if twin else None
+            if twin:
+                ops.append(dict(kind='swap', layer=item['layer'], idx=item['idx'], name=p1.name,
+                                lab=twin.as_posix(), scale=scale))
+
         for r in rows:
             L, i, typ, bnds, f, _ = r.split('\u0002')
             b = [float(x) for x in bnds.split(',')]
             w, h = b[2] - b[0], b[1] - b[3]
             item = dict(layer=int(L), idx=int(i), type=typ, bounds=b)
+            items.append(item)
             if typ == 'PlacedItem':
                 p = Path(f)
                 item.update(file=str(p))
@@ -211,16 +248,11 @@ def make_map(app):
                     r2 = sc[1][0] if len(sc) > 1 else 0.0
                     item.update(best=str(p1), score=round(r1, 3), runner_up=round(r2, 3))
                     if r1 >= MIN_R and r1 - r2 >= MARGIN:
-                        cw, chh = cands[p1]['size']
-                        sx, sy = w / cw, h / chh
-                        scale = sx if abs(sx - sy) / max(sx, sy) < 0.05 else 1.0
-                        item.update(scale=round(scale, 4), scale_xy=[round(sx, 4), round(sy, 4)])
-                        twin = lab_twin(p1)
-                        item['lab'] = str(twin) if twin else None
-                        if twin:
-                            ops.append(dict(kind='swap', layer=int(L), idx=int(i), name=p1.name,
-                                            lab=twin.as_posix(), scale=scale))
-            items.append(item)
+                        accept(item, p1, r1, 'clear')
+                    elif r1 >= MIN_R:
+                        pending[len(items) - 1] = sc
+        for j, (r1, p1) in assign(pending, used).items():
+            accept(items[j], p1, r1, 'assigned')
         out[name] = dict(ai=ai, artboard=ab, items=items, ops=ops)
         sw = sum(o['kind'] == 'swap' for o in ops)
         rl = sum(o['kind'] == 'relink' for o in ops)
@@ -234,6 +266,7 @@ def make_map(app):
                 print(f'   group   {Path(it["best"]).parent.name + "/" + Path(it["best"]).name:58s} r {it["score"]:.2f} '
                       f'(next {it["runner_up"]:.2f}) {bw:5.2f}x{bh:4.2f} cm'
                       f'{"  UNMATCHED" if not ok else ("  x%.3f" % it["scale"])}'
+                      f'{"  (assigned 1:1)" if it.get("how") == "assigned" else ""}'
                       f'{"" if not ok else ("  lab: yes" if it.get("lab") else "  lab: NO")}')
             elif it['type'] == 'GroupItem':
                 bw, bh = (it['bounds'][2] - it['bounds'][0]) / 28.3465, (it['bounds'][1] - it['bounds'][3]) / 28.3465
@@ -242,57 +275,136 @@ def make_map(app):
     return out
 
 
-def compare_sheet(name, cur, lab, outdir):
-    a, b = fitz.open(cur), fitz.open(lab)
+def compare_sheet(name, left, right, labels, out_png):
+    """Two versions of a figure side by side on one page; saves a 200-dpi PNG and returns the page."""
+    a, b = fitz.open(left), fitz.open(right)
     ra, rb = a[0].rect, b[0].rect
     gap, head = 24, 22
-    W = ra.width + rb.width + 3 * gap
-    H = max(ra.height, rb.height) + head + 2 * gap
     doc = fitz.open()
-    pg = doc.new_page(width=W, height=H)
-    pg.insert_text(fitz.Point(gap, gap + 8), f'{name}: current (jn style)', fontname='hebo', fontsize=10)
-    pg.insert_text(fitz.Point(2 * gap + ra.width, gap + 8), f'{name}: lab style (steinmetzlab-style)', fontname='hebo',
-                   fontsize=10)
+    pg = doc.new_page(width=ra.width + rb.width + 3 * gap, height=max(ra.height, rb.height) + head + 2 * gap)
+    pg.insert_text(fitz.Point(gap, gap + 8), f'{name}: {labels[0]}', fontname='hebo', fontsize=10)
+    pg.insert_text(fitz.Point(2 * gap + ra.width, gap + 8), f'{name}: {labels[1]}', fontname='hebo', fontsize=10)
     r1 = fitz.Rect(gap, gap + head, gap + ra.width, gap + head + ra.height)
     r2 = fitz.Rect(2 * gap + ra.width, gap + head, 2 * gap + ra.width + rb.width, gap + head + rb.height)
-    pg.draw_rect(r1, color=(0.8, 0.8, 0.8), width=0.5)
-    pg.draw_rect(r2, color=(0.8, 0.8, 0.8), width=0.5)
+    for r in (r1, r2):
+        pg.draw_rect(r, color=(0.8, 0.8, 0.8), width=0.5)
     pg.show_pdf_page(r1, a, 0)
     pg.show_pdf_page(r2, b, 0)
-    out = outdir / f'{name}_compare.png'
-    pg.get_pixmap(dpi=200).save(out)
-    return out
+    pg.get_pixmap(dpi=200).save(out_png)
+    return doc
+
+
+def page_similarity(p1, p2, dpi=72, blur_mm=1.0):
+    """Correlation of two single-page PDFs rendered at the same size (1.0 = identical ink). Both are blurred by
+    about 1 mm first: two renders of the same line art sit a pixel or two apart, which alone sends the raw
+    correlation of thin lines to 0.3-0.5 (seen 2026-11-05 on panels that are identical by eye)."""
+    from PIL import ImageFilter
+    a, b = fitz.open(p1)[0], fitz.open(p2)[0]
+    ia, ib = gray(a.get_pixmap(dpi=dpi)), gray(b.get_pixmap(dpi=dpi))
+    h, w = ia.shape
+    rad = blur_mm / 25.4 * dpi
+    f = lambda x: np.asarray(Image.fromarray(np.clip(x, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(rad)), float)
+    return corr(f(ia), f(small(ib, w, h)))
+
+
+def drift_report():
+    """Every final panel against today's jn re-render of it: where the paper's panel no longer matches what
+    its producer draws now (data, code or wording changed since the panel was locked), the style comparison
+    is not like for like for that panel, so it is listed."""
+    rows = []
+    for jn in sorted((LAB / 'jnrerun' / 'panels').rglob('*.pdf')):
+        fin = FINAL / 'panels' / jn.parent.name / jn.name
+        if not fin.exists():
+            continue
+        fa, fb = fitz.open(fin)[0].rect, fitz.open(jn)[0].rect
+        rows.append((page_similarity(fin, jn), f'{jn.parent.name}/{jn.name}', fa.width / MM / 10, fa.height / MM / 10,
+                     fb.width / MM / 10, fb.height / MM / 10))
+    rows.sort()
+    lines = ['Final panels vs the same panel re-rendered today in jn style (correlation of the rendered pages; '
+             "1.00 = identical). Below PANEL_DRIFT the paper's panel differs from what its producer draws now.", '']
+    lines += [f'{r:5.3f}  {n:62s} paper {aw:5.2f} x {ah:5.2f} cm   today {bw:5.2f} x {bh:5.2f} cm'
+              for r, n, aw, ah, bw, bh in rows]
+    (LAB / 'drift_panels.txt').write_text(NL.join(lines) + NL, encoding='utf-8')
+    return [(r, n) for r, n, *_ in rows if r < PANEL_DRIFT]
+
+
+def figure_drift():
+    """Paper copy vs jn re-render, per figure: a side-by-side sheet in drift/ for each figure below FIG_DRIFT."""
+    asm, dft = LAB / 'assembled', LAB / 'drift'
+    shutil.rmtree(dft, ignore_errors=True)
+    dft.mkdir(parents=True, exist_ok=True)
+    drift, changed = fitz.open(), []
+    for name in ORDER:
+        cur, jn = asm / f'{name}_current.pdf', asm / f'{name}_jnrerun.pdf'
+        if not (cur.exists() and jn.exists()):
+            continue
+        r = page_similarity(cur, jn)
+        print(f'   drift {name:18s} {r:.3f}')
+        if r < FIG_DRIFT:
+            changed.append(f'{name} {r:.3f}')
+            drift.insert_pdf(compare_sheet(name, cur, jn, ('in the paper now', 'jn style, re-rendered today'),
+                                           dft / f'{name}_paper_vs_today.png'))
+    if len(drift):
+        drift.save(dft / 'ALL_paper_vs_today.pdf')
+    return changed, drift_report()
 
 
 def build(app, M):
-    asm, cmp_ = LAB / 'assembled', LAB / 'compare'
-    asm.mkdir(parents=True, exist_ok=True)
-    cmp_.mkdir(parents=True, exist_ok=True)
+    asm, cmp_, dft = LAB / 'assembled', LAB / 'compare', LAB / 'drift'
+    for d in (asm, cmp_, dft):
+        d.mkdir(parents=True, exist_ok=True)
     log = []
     for name, ai in FIGS:
         m = M[name]
-        cur, lab = asm / f'{name}_current.pdf', asm / f'{name}_lab.pdf'
-        ops = [dict(kind=o['kind'], layer=o['layer'], idx=o['idx'], name=o['name'], lab=o['lab'],
-                    scale=o.get('scale', 1.0)) for o in m['ops']]
-        res = app.DoJavaScript(JS_BUILD % ((FINAL / ai).as_posix(), json.dumps(ops), cur.as_posix(), lab.as_posix()))
+        cur = asm / f'{name}_current.pdf'
+        for tag, top in (('jnrerun', LAB / 'jnrerun'), ('lab', LAB)):
+            ops = []
+            for o in m['ops']:
+                twin = top / Path(o['lab']).relative_to(LAB)
+                if twin.exists():
+                    ops.append(dict(kind=o['kind'], layer=o['layer'], idx=o['idx'], name=o['name'],
+                                    lab=twin.as_posix(), scale=o.get('scale', 1.0)))
+            out = asm / f'{name}_{tag}.pdf'
+            res = app.DoJavaScript(JS_BUILD % ((FINAL / ai).as_posix(), json.dumps(ops), cur.as_posix(), out.as_posix()))
+            log.append(f'== {name} ({ai}) {tag}: {len(ops)} panels swapped{NL}{res}')
+            print(f'{name} {tag}: {len(ops)} swapped')
         kept = [it for it in m['items'] if it['type'] == 'PlacedItem' and not it.get('lab')]
         kept += [it for it in m['items'] if it['type'] == 'GroupItem' and 'scale' in it and not it.get('lab')]
-        log.append(f'== {name} ({ai}): {len(ops)} panels swapped\n{res}')
         for it in kept:
-            log.append(f'   KEPT (no lab version): {Path(it.get("file") or it.get("best")).name}')
-        for p in (cur, lab):
+            log.append(f'   KEPT as in the paper (no re-render): {Path(it.get("file") or it.get("best")).name}')
+    # Python-built figures (fig1_nc_build.py / supp_impulse_state_nc_build.py with jnlab / jnrerun)
+    shutil.copyfile(FINAL / 'jn' / 'Figure1.pdf', asm / 'Figure1_current.pdf')
+    shutil.copyfile(FINAL / 'jn' / 'Figure1.pdf', asm / 'Figure1_jnrerun.pdf')   # its one plot: same code + data
+    shutil.copyfile(FINAL / 'jn' / 'S_state_quartile.pdf', asm / 'S_state_quartile_current.pdf')
+    log.append('== Figure1, S_state_quartile: Python builds (jnlab / jnrerun drafts); Figure 1 jn = the paper copy')
+    sheets = fitz.open()
+    for name in ORDER:
+        cur, jn, lab = (asm / f'{name}_{t}.pdf' for t in ('current', 'jnrerun', 'lab'))
+        if not (lab.exists() and jn.exists()):
+            log.append(f'== {name}: missing a version')
+            continue
+        for p in (cur, jn, lab):
             fitz.open(p)[0].get_pixmap(dpi=300).save(p.with_suffix('.png'))
-        compare_sheet(name, cur, lab, cmp_)
-        print(f'{name}: {len(ops)} swapped, {len(kept)} kept')
-    (LAB / 'assembly_log.txt').write_text('\n'.join(log) + '\n', encoding='utf-8')
+        sheets.insert_pdf(compare_sheet(name, jn, lab, ("our jn style (today's code)", 'lab style (steinmetzlab-style)'),
+                                        cmp_ / f'{name}_compare.png'))
+    sheets.save(cmp_ / 'ALL_compare.pdf')
+    changed, low = figure_drift()
+    log.append('== figures whose jn re-render differs from the paper copy: ' + ', '.join(changed))
+    log.append(f'== panels below {PANEL_DRIFT} (see drift_panels.txt): ' + ', '.join(f'{n} {r:.2f}' for r, n in low))
+    (LAB / 'assembly_log.txt').write_text(NL.join(log) + NL, encoding='utf-8')
+    print(NL.join(log[-2:]))
 
 
 def main(cmd='map'):
-    app = illustrator()
+    app = illustrator() if cmd != 'drift' else None
     if cmd == 'map':
         make_map(app)
     elif cmd == 'build':
         build(app, make_map(app))
+    elif cmd == 'drift':
+        changed, low = figure_drift()
+        print('figures:', ', '.join(changed))
+        print('panels:', ', '.join(f'{n} {r:.2f}' for r, n in low))
     else:
         sys.exit(__doc__)
 
