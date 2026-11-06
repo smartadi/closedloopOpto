@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-05 — Lab-style comparison run for the paper figures (PAPER_LABSTYLE), committed
+**Changed/Found:** Written by the "Steinmetz plotting library integration" session and committed from the SfN poster session at Aditya's request ("just do it"). New `utils/sls_style_fig.m` is the lab's paper.mplstyle in MATLAB: 1 pt axes, ticks in at 4 pt, regular 7 pt labels, CET-D1A diverging maps, axis ends snapped to ticks; data line widths, colours and panel sizes are untouched. New `utils/sls_lab_export.m` is called first by `paperExport.m` and `jnExport.m`. With the global PAPER_LABSTYLE on, it writes a lab-styled copy under `paper/figures_labstyle/` instead of the normal export, so nothing reaches paper/images or figures_final. `fig2_jn_panels.m` and `fig2_jn_crop.py` take the same switch for Fig 2. New `paper-writing/labstyle_remake.m` re-runs the producers stage by stage, and `paper-writing/labstyle_assemble.py` swaps the lab panels into the JN .ai layouts (read only, saved as PDFs) for side-by-side sheets. Checked before committing: with the switch off, `sls_lab_export` returns false, so the normal exports are unchanged; code analyzer shows no errors; both Python files parse. The outputs in `paper/figures_labstyle/` are not committed.
+**Why:** Aditya wants the paper figures in the lab style next to the current ones to compare. Comparison only: the jn style stays the paper style until Aditya and Nick decide.
+**Next:** `labstyle_remake.m` says RESEARCH 2026-11-05 lists the producers that copy straight into figures_final when PAPER_FINAL is on (TikZ panels, padded maps), but that list isn't written yet; the comparison session should add it. `paper/figures_labstyle/` isn't fully git-ignored (json and .fig files show as untracked), despite the header saying "git-ignored, like all of paper/".
+
 ### 2026-11-05 — Talk script box 4 lines match the three-condition panels
 **Changed/Found:** `poster/sfn2026/talk_script.py`, section 4: "[three traces]"; closed loop "still lags the target by about 46°", and preview "brings the lag down to about 2°". The PDF is still one page at 9.5 pt.
 **Why:** Box 4 now shows OL, CL and CL + preview only (entry below).

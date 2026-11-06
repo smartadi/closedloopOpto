@@ -4,11 +4,14 @@ MATLAB cannot be trusted to hold a small figure window on Windows, so fig2_jn_pa
 window with everything placed in cm from the bottom-left corner, and this keeps that corner.
 Run: python -X utf8 -I impulse-analysis/fig2_jn_crop.py
 """
+import sys
 from pathlib import Path
 
 import fitz
 
 OUT = Path(__file__).resolve().parents[1] / 'paper' / 'figures_final' / 'jn' / 'fig2'
+if len(sys.argv) > 1:                       # another panel folder, e.g. paper/figures_labstyle/jn/fig2
+    OUT = Path(sys.argv[1]).resolve()
 for n in 'ABCDEFG':
     pdf = OUT / f'{n}.pdf'
     w, h = (float(x) * 72 / 2.54 for x in (OUT / f'{n}.size').read_text().split())

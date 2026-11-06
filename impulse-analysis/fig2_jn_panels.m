@@ -10,6 +10,11 @@ root = fileparts(fileparts(mfilename('fullpath')));
 addpath(genpath(fullfile(root,'utils')));
 src = fullfile(root,'paper','figures_final','jn','fig2','src');
 out = fullfile(root,'paper','figures_final','jn','fig2');
+global PAPER_LABSTYLE                          %#ok<GVMIS> lab-style comparison run (sls_style_fig), 2026-11-05
+if ~isempty(PAPER_LABSTYLE) && PAPER_LABSTYLE
+    out = fullfile(root,'paper','figures_labstyle','jn','fig2');
+    if ~exist(out,'dir'), mkdir(out); end
+end
 en = char(8211);
 
 H = 3.0;  y0 = 0.72;  yh = 1.90;              % row height; plot box bottom and height (cm)
@@ -182,6 +187,8 @@ function save_panel(f, out, n)
 % between calls (type came out 5.5 or 8.5 pt instead of 6). print scales positions by page/window, so the
 % window size is checked too.
 W = f.UserData(1);  H = f.UserData(2);
+global PAPER_LABSTYLE                          %#ok<GVMIS>
+if ~isempty(PAPER_LABSTYLE) && PAPER_LABSTYLE, sls_style_fig(f); end
 drawnow;
 pinned = findall(f,'-function',@(h) isappdata(h,'pinned'));
 for h = pinned', h.Position = getappdata(h,'pinned'); end

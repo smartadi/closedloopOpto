@@ -27,6 +27,7 @@ function paperExport(fig, path, dpi)
 % rule-book values, so only typography differed between the two styles. Colours are
 % identical in both (col_ol [1 0 0], col_cl [0 0.40 0.85]) — verified, not assumed.
 if nargin < 3 || isempty(dpi), dpi = 300; end
+if sls_lab_export(fig, path, dpi), return; end   % PAPER_LABSTYLE comparison run only
 
 % Read figure size before export (Units may be anything — convert to cm)
 prevUnits = fig.Units;

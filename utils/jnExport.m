@@ -2,6 +2,7 @@ function jnExport(fig, pdfpath, dpi)
 % JNEXPORT  Save fig as a vector PDF (line art) + a 300-dpi PNG preview, white bg.
 %   jnExport(fig, 'paper/images/figure4/panelG.pdf')
 if nargin < 3 || isempty(dpi); dpi = 300; end
+if sls_lab_export(fig, pdfpath, dpi), return; end   % PAPER_LABSTYLE comparison run only
 d = fileparts(pdfpath);
 if ~isempty(d) && ~exist(d,'dir'); mkdir(d); end
 % TIGHT-CROP vector (reverted 2026-09-29): page = content bbox, so nothing clips.
