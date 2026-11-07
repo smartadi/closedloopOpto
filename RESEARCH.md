@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-06 — SfN poster master is now `SfN2026_poster_v3.pptx` (v2 stuck on OneDrive upload)
+**Changed/Found:** `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` had been stuck at "Sync pending" since 11-05 15:41: Shell `System.StorageProviderState` 4 and no ReparsePoint attribute, though it kept its online item id. So neither the 11-05 box 4 save nor today's 15:57 save reached the online copy, which still holds Aditya's 11-05 15:33 version. The OneDrive panel said "Backed up and synced". A OneDrive restart did not clear it. Moving a fresh identical copy over the file did not clear it. Closing the PowerPoint online tabs had not cleared it 2 minutes later. Tests with a dummy file in the same folder (since deleted): new files sync in about 5 s, and both `Copy-Item -Force` and a move-over keep the same online item. So the save method is not the cause. Aditya: "just add a new version". `SfN2026_poster_v3.pptx` (same bytes as the 15:57 save) synced in 5 s with a new item id. New `poster/sfn2026/od_state.ps1` prints the state, the attributes and the item id.
+**Why:** The online copy is what Aditya edits and prints from. A file whose upload is stuck is invisible there.
+**Next:** Edit and save v3 from now on, and run `od_state.ps1` after each save (state 2 = uploaded). v2 is still in the folder. Its upload may still go through, and it can be deleted once Aditya confirms v3 online.
+
 ### 2026-11-06 — SfN talk script follows the reviewed poster
 **Changed/Found:** `poster/sfn2026/talk_script.py` — the intro now opens with the motivation line (activity across cortex changes with arousal and movement, and that shapes perception and action). Section 1 is called "The system". Section 2 drops the state panel and ends on "simple enough to design a controller around". Later sections start 10 s earlier. The PDF is still one page at 9.5 pt.
 **Why:** The script has to match the poster after Nick's review and Xander's box 2 cut. Nick also asked Aditya to practise a 5-minute script several times.
