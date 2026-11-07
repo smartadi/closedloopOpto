@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-06 — SfN poster v2 deleted from OneDrive; only v3 remains
+**Changed/Found:** Aditya: "Yes, delete v2". Deleting the stuck local v2 (no ReparsePoint, state 4) did not delete anything online. OneDrive restored the online copy within 20 s: 8,086,667 bytes, Aditya's 11-05 15:33 version, state 2, same item id. Deleting that tracked copy then went through, and it stayed gone for a minute. The folder is synced and holds only `SfN2026_poster_v3.pptx` and the QR files. v2 is in the OneDrive recycle bin.
+**Why:** Aditya keeps one version of the poster. v3 holds everything v2 had plus the 11-05 and 11-06 changes.
+**Next:** none.
+
 ### 2026-11-06 — SfN poster master is now `SfN2026_poster_v3.pptx` (v2 stuck on OneDrive upload)
 **Changed/Found:** `OneDrive/Talks/SfN2026/SfN2026_poster_v2.pptx` had been stuck at "Sync pending" since 11-05 15:41: Shell `System.StorageProviderState` 4 and no ReparsePoint attribute, though it kept its online item id. So neither the 11-05 box 4 save nor today's 15:57 save reached the online copy, which still holds Aditya's 11-05 15:33 version. The OneDrive panel said "Backed up and synced". A OneDrive restart did not clear it. Moving a fresh identical copy over the file did not clear it. Closing the PowerPoint online tabs had not cleared it 2 minutes later. Tests with a dummy file in the same folder (since deleted): new files sync in about 5 s, and both `Copy-Item -Force` and a move-over keep the same online item. So the save method is not the cause. Aditya: "just add a new version". `SfN2026_poster_v3.pptx` (same bytes as the 15:57 save) synced in 5 s with a new item id. New `poster/sfn2026/od_state.ps1` prints the state, the attributes and the item id.
 **Why:** The online copy is what Aditya edits and prints from. A file whose upload is stuck is invisible there.
