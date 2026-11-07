@@ -63,6 +63,20 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ## 🟡 Next sprint
 
+### Nick's poster review (2026-11-06)
+- [ ] **Is timescale the whole state effect? (Nick, item 7)** Nick: "if movement-induced activity is slow, then it would be trivial that it's controllable while 2-4Hz (above the 1.5Hz limit you are claiming) isn't". **Known:**
+  - Closed-loop/open-loop residual power is 0.32 below 1 Hz, about 1 at 1–3 Hz, and 1.4–1.8 at 3–6 Hz (FINDINGS, sensitivity function).
+  - log(CL/OL) falls 9% per unit of motion but is flat with absolute 1–4 Hz power (+1.5%, n.s.).
+  - So motion fits a fixed-filter (timescale) story, and absolute 1–4 Hz power looks like overall amplitude, not fast power.
+
+  **Test:**
+  1. Open-loop error spectra, top vs bottom quartile, for motion, absolute and relative power: where does each state add power?
+  2. Predict each quartile's closed-loop error from its open-loop spectrum × the pooled S(f), and compare with the LMM attenuation slopes.
+  3. S(f) separately in low vs high state: the same curve means state changes only the input, not the loop.
+  4. Side check: laser at 0 or at max, and above- vs below-target error, per quartile (the actuator can only inhibit).
+
+  Reuse `stats_v2/sensitivity.py`, in 0–3 s and 1–3 s; the Fig 4 windows stay locked. The outcome decides box 7's third bullet on the poster and the Fig 4 framing.
+
 ### New controller mice (AL_0048, AL_0051)
 - [ ] **Run a dedicated controller-tuning experiment for BOTH AL_0048 and AL_0051** (user 2026-07-30). The 2026-07-29 sessions embed the Kp sweep in their early trials (locked-Kp OL/CL is only the LAST ~100), so a clean standalone gain-grid/auto-tune session per mouse is still needed (cf. `controller-tuning`). Feeds a proper per-mouse tuned gain + the cost-landscape methods figure.
 - [~] Fold AL_0048 + AL_0051 (last-100 locked-Kp block) into the Fig 3 session-pooled figures + repeat the Fig 4 state-dependence analysis with them included (in progress 2026-07-30). See [[project_new_controller_mice]].
@@ -100,7 +114,6 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
 
 ## 🟢 Deferred / waiting
 - [ ] S4 single-trial RR figure (A-r vs D, `f4_supp_reject_trials.m`) TABLED 2026-10-10; float + 2 Discussion refs commented out. Revive only if reviewers ask for single trials.
-
 - [ ] **Fig 2G stim-free control — rebuild on REAL catch trials, then revisit the overlay** (tabled by user 2026-10-03). Today's control is a within-trial pre-stimulus surrogate (`iSham`, −1.200 to −1.029 s), not an unstimulated trial. The 0 V events in `uAmp` are NOT usable as catch trials — they are SYNTHETIC times the gap-fill code inserts every 5 s into laser-off gaps > 7.5 s (`load_experiments.m:106-156`); the detector misses no pulses (corrected 2026-10-12: they are not missed stimulations). Real no-light trials: AL_0033 90 designed + 62 commanded-but-unfired (input_params), AL_0041 e1 ~44, AL_0041 e2 none, AL_0048 100 R-site shams (Block). Real catch trials have no laser onset and must be recovered from Block via the Block↔Timeline clock offset — same mechanism as the open bilateral item. Do this together with the `Lresp` 7-vs-8 length fix (`imp_state_trialvar.m:170`, see RESEARCH 2026-10-03). Preview of both overlay framings already built: `impulse-analysis/_preview/stv_2g_ctrl_preview.m` (`PV_MODE` = 'shape' reproduces the caption's 0.80/1.00/2.25 exactly; 'magnitude' does not).
 
 - [ ] **[TABLED 2026-08-12, user] Fig-5 spectral / tracking-fidelity panel.** Analysis is done and parked in `bilateral/sine_ff_error_decomp.m` (runs, reproduces the numbers, nothing registered). Three sections: error-power decomposition (offset / at-f0 / broadband, exact via Parseval), per-trial `|1−T|` at the drive frequency, and the trade-off plane. **If picked up: promote the trade-off plane** — it is the only version that supports "CL+preview is best" honestly (it dominates plain CL on both axes, 3/3 sessions), and 5H's 4.2 × 5.4 slot is free. Do **not** re-run the shape-similarity family: eight framings tested, all name OL+preview, for the structural reason that shape normalises out the offset term where CL+preview wins. RESEARCH 2026-08-12.
