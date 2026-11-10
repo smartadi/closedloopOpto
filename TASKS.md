@@ -68,6 +68,7 @@ Freeform thinking + diary lives in JOURNAL.md (Claude gleans tasks from it).
   - Closed-loop/open-loop residual power is 0.32 below 1 Hz, about 1 at 1–3 Hz, and 1.4–1.8 at 3–6 Hz (FINDINGS, sensitivity function).
   - log(CL/OL) falls 9% per unit of motion but is flat with absolute 1–4 Hz power (+1.5%, n.s.).
   - So motion fits a fixed-filter (timescale) story, and absolute 1–4 Hz power looks like overall amplitude, not fast power.
+  - **2026-11-10, test 1 done (descriptive, locked window, `state_ratio_poster.py`):** high-motion trials have about half the power above 1 Hz, and feedback removes their slow excess. High 1–4 Hz trials have 3–5× the power at every frequency from 0.5 to 6.6 Hz, in OL and CL alike. Now drawn in the box 7 panel. Tests 2–4 still open.
 
   **Test:**
   1. Open-loop error spectra, top vs bottom quartile, for motion, absolute and relative power: where does each state add power?
