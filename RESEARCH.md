@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-10 — Readout spectra by Fig 4d state quartile (look at the data, no tests)
+**Changed/Found:** New `stats_v2/state_spectra.py`. Trials are split into within-session quartiles of each Fig 4d state, with cut points set on OL and CL pooled. The readout's 0–3 s spectrum is averaged per quartile (Hann, NFFT 1024, mean of trial periodograms with at least 3 trials, geometric mean over sessions). It runs both signals: the residual (trial minus condition mean, x n/(n−1)) and the error from the reference (trial minus d.ref). The states are motion over [−2,+3) s (11 sessions), and absolute 1–4 Hz and relative 2–4 Hz over both laser-off [−5,0) s and the locked [−2,+3) s, which is circular for delta (15 sessions). Outputs: `paper/images/figure4/supp/state_spectra_{resid,err}.png` and `data/stats_v2/corrected/state_spectra.csv`. What the plots show (read by eye, untested):
+- **Motion, OL:** the high-motion quartile has more power below about 1 Hz and less at 1–10 Hz. The curves cross near 1 Hz.
+- **Motion, CL:** the low-frequency excess is gone, and the high-motion quartile still has less power at 1–8 Hz.
+- **Absolute 1–4 Hz, laser-off:** the high quartile has more power from about 0.6 to 6 Hz in OL, with the quartiles meeting below 0.5 Hz. In CL the spread persists from 0.3 to 6 Hz, including the band feedback amplifies.
+- **Relative 2–4 Hz, laser-off:** the quartiles nearly overlap in both conditions.
+- **Locked delta windows:** the spreads are larger and broader, as expected from circularity.
+- **Residual vs error:** both give the same shapes. The error adds power from the trial offset below about 0.5 Hz.
+**Why:** Aditya wants Fig 4d's states tied to frequency: motion is controlled better because its fluctuations are slow, and delta the reverse. My first draft of this script picked its own windows, signal and tests (a low-vs-mid tilt, the share below 1 Hz, survival predicted from S(f)) before he had seen them. He stopped it: he decides the math for any new analysis (memory `feedback_math_checkin`). His choices: both delta windows, 0–3 s spectra, both signals, and no tests until he has looked. The draft never produced numbers and was replaced.
+**Next:** Aditya picks the delta window and signal from the two sheets, then which test, if any. Some quartiles have fewer than 3 trials in a session (minimum 1–2), which leaves that session out of that quartile's mean. The CSV records n_sessions per quartile.
+
 ### 2026-11-06 — SfN poster v2 deleted from OneDrive; only v3 remains
 **Changed/Found:** Aditya: "Yes, delete v2". Deleting the stuck local v2 (no ReparsePoint, state 4) did not delete anything online. OneDrive restored the online copy within 20 s: 8,086,667 bytes, Aditya's 11-05 15:33 version, state 2, same item id. Deleting that tracked copy then went through, and it stayed gone for a minute. The folder is synced and holds only `SfN2026_poster_v3.pptx` and the QR files. v2 is in the OneDrive recycle bin.
 **Why:** Aditya keeps one version of the poster. v3 holds everything v2 had plus the 11-05 and 11-06 changes.
