@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-10 — SfN poster box 7: two-state quartile panel (motion, absolute 1–4 Hz)
+**Changed/Found:** `poster/sfn2026/st_quart_panel.m` (new) — poster-only redraw of Fig 4D for box 7. It keeps only Motion and Absolute 1–4 Hz. Values come from the saved `figures_labstyle/.../f4_row2_quartiles_nc.fig` (session mean ± SEM of z-scored RMSE per quartile, plus its slope stars), so nothing is refit. The stars sit beside each plot in the line colours (OL red, CL blue), which doubles as the key. The super-title is dropped (the box heading carries it), and the x label "sorted state quartile bins" becomes "state quartile". Poster type: 7 / 7.5 / 8 pt, which is 20.8 / 22.3 / 23.8 pt at PS 2.97. `sls_check` is clean. Canvas 16.51 × 3.30 cm as before; it inks to 18.09 × 3.60 in vs the 19.30 × 4.00 in slot. Only a scratch preview was rendered; `panels/poster/st_quart_raw.pdf` is not written yet.
+**Why:** Aditya: box 7 should show motion + absolute 1–4 Hz, to match its heading. Initial deviation is already in box 6, and relative 2–4 Hz carries no claim (its CL/OL effect does not hold laser off, 2026-11-02).
+**Next:** Hook it into the poster session's pipeline: `poster_restyle.m` still has `T.st_quart` (the four-state restyle) writing the same `st_quart_raw.pdf`. Remove it there, run `st_quart_panel`, then run `poster_swap_all.py`. Box 7's third bullet waits on Nick's item-7 spectral test (`stats_v2/state_spectra.py`, another session).
+
 ### 2026-11-10 — SfN poster: all restyled panels assembled in a scratch copy; box 1 "sample" label uncovered
 **Changed/Found:** `poster/sfn2026/poster_swap_all.py` (new) — crops each `panels/poster/<name>_raw.pdf` to ink at PS, swaps it into picture 'panel <name>' centred on the old slot (shrinks ≤ 4% if it runs over; most was ×0.966, sine_rmse), box 5 fills its frame under the rule; box 1: rig up 0.15 in, widefield image + its key + scale-bar crops down 0.12 in (same picture, so the bar keeps its scale), which uncovers the rig's "sample" label. Asserts all other shapes keep their XML. Run on a copy of OneDrive v3 (11-09 16:52, checked unchanged) → scratch `v11.pptx`; 15 panels swapped, 4 moved, 81 shapes.
 **Why:** Aditya: "each image can be redone for poster level readability and beautification".
