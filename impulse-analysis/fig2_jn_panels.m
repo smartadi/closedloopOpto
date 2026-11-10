@@ -15,6 +15,16 @@ if ~isempty(PAPER_LABSTYLE) && PAPER_LABSTYLE
     out = fullfile(root,'paper','figures_labstyle','jn','fig2');
     if ~exist(out,'dir'), mkdir(out); end
 end
+% SfN poster box 2 (2026-11-10): panels A-C only, with the poster's lab axes (poster_lab_axes: regular-weight
+% text) and B's mouse key moved off the data. Box 2 is printed x1.398 larger than the poster's other panels,
+% so these paper type sizes already read at ~25 pt. Output poster/sfn2026/panels/poster/box2/; paper untouched.
+global POSTER_BOX2                             %#ok<GVMIS>
+poster = ~isempty(POSTER_BOX2) && POSTER_BOX2;
+if poster
+    out = fullfile(root,'poster','sfn2026','panels','poster','box2');
+    if ~exist(out,'dir'), mkdir(out); end
+    addpath(fullfile(root,'poster','sfn2026'));
+end
 en = char(8211);
 
 H = 3.0;  y0 = 0.72;  yh = 1.90;              % row height; plot box bottom and height (cm)
@@ -73,6 +83,20 @@ for o = findall(a,'Type','text')'
         k = lower(strrep(s,'Mouse ','m'));  o.Position(1:2) = [0.30 yy.(k)];  o.FontSize = 6;   % lower left, below the steep Mouse 3c line
     end
 end
+if poster   % the column above touches Mouse 3c's 0.5 mW point: the key goes right of the plot box, like A's
+    f.UserData(1) = 4.3;                       % (x data are not in mW; the ticks are relabelled, so place in cm)
+    ids = {'5a','5b','1b','3c'};
+    for o = findall(a,'Type','text')'
+        s = string(o.String);
+        if isscalar(s) && startsWith(s,'Mouse')
+            j = find(strcmp(ids, erase(s,'Mouse ')));
+            set(o, 'String', ids{j}, 'Units','centimeters', 'Position',[2.80 1.25-0.27*j 0], ...
+                'HorizontalAlignment','left', 'VerticalAlignment','middle');
+        end
+    end
+    text(a, 2.80, 1.25, 'Mouse', 'Units','centimeters', 'FontSize',6, 'Color',[0.35 0.35 0.35], ...
+        'HorizontalAlignment','left', 'VerticalAlignment','middle');
+end
 a.XLabel.String = 'Laser power (mW)';
 save_panel(f, out, 'B');
 
@@ -87,6 +111,7 @@ lg = findall(f,'Type','legend');
 lg.ItemTokenSize = [7 6];  lg.FontSize = 6;  lg.FontWeight = 'bold';
 lg.Location = 'none';  pin(lg,[2.60 0.80 2.20 0.98]);
 save_panel(f, out, 'C');
+if poster, return; end                         % the poster uses A-C only
 
 %% D: held-out R2 per session; short title, level ticks
 f = open_panel(src,'D',3.3,H);  a = only_ax(f);
@@ -187,8 +212,9 @@ function save_panel(f, out, n)
 % between calls (type came out 5.5 or 8.5 pt instead of 6). print scales positions by page/window, so the
 % window size is checked too.
 W = f.UserData(1);  H = f.UserData(2);
-global PAPER_LABSTYLE                          %#ok<GVMIS>
-if ~isempty(PAPER_LABSTYLE) && PAPER_LABSTYLE, sls_style_fig(f); end
+global PAPER_LABSTYLE POSTER_BOX2              %#ok<GVMIS>
+if ~isempty(POSTER_BOX2) && POSTER_BOX2, poster_lab_axes(f);
+elseif ~isempty(PAPER_LABSTYLE) && PAPER_LABSTYLE, sls_style_fig(f); end
 drawnow;
 pinned = findall(f,'-function',@(h) isappdata(h,'pinned'));
 for h = pinned', h.Position = getappdata(h,'pinned'); end

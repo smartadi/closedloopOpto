@@ -141,6 +141,7 @@ for c = 1:2
     text(ov, ux(2.05), uy(s), sprintf('%s %s', cn{c}, t), 'Color', cc{c}, 'VerticalAlignment', 'middle', B{:});
 end
 
+poster_lab_axes(fig, false);   % lab axes (Aditya 2026-11-10); no snapping: the inline labels are placed from the limits
 drawnow;
 sls_check(fig, 'MinFontPt', 7, 'Ignore', {'spine', 'space'});
 print(fig, fullfile(here, 'panels', 'seedfc_raw.pdf'), '-dpdf', '-vector');

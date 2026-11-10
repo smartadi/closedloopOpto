@@ -26,13 +26,19 @@ from build_pptx import PS, PX_ZOOM
 HERE = Path(__file__).resolve().parent
 RAW, OUT = HERE / 'panels' / 'poster', HERE / 'panels' / 'poster'
 E = 914400
-NAMES = ['cl_trial', 'cl_avg', 'cl_rmse', 'cl_var', 'sine_avg', 'sine_lag', 'sine_rmse', 'sine_var', 'seedfc',
-         'st_trials', 'st_unique', 'st_quart', 'd_kernel', 'd_agl', 'd_rr']
+NAMES = ['imp_traces', 'imp_dose', 'imp_fit', 'cl_trial', 'cl_avg', 'cl_rmse', 'cl_var', 'sine_avg', 'sine_lag',
+         'sine_rmse', 'sine_var', 'seedfc', 'st_trials', 'st_unique', 'st_quart', 'd_kernel', 'd_agl', 'd_rr']
 SHRINK = 0.96
+# Box 2 is printed larger than PS (x1.398, nick_review.py), so its paper panels already read at 25 pt. For the
+# lab axes (Aditya 2026-11-10) it takes JN Fig 2 A-C laid out by impulse-analysis/fig2_jn_panels.m with
+# POSTER_BOX2 on (the paper layout, poster_lab_axes, B's mouse key off the data), at box 2's scale K2.
+FIG2 = RAW / 'box2'
+BOX2 = {'imp_traces': FIG2 / 'A.pdf', 'imp_dose': FIG2 / 'B.pdf', 'imp_fit': FIG2 / 'C.pdf'}
+K2 = 1.398   # box 2's print scale relative to PS (nick_review.py): one scale for A-C, so their type matches
 
 
 def render(name):
-    d = fitz.open(str(RAW / f'{name}_raw.pdf'))
+    d = fitz.open(str(BOX2.get(name, RAW / f'{name}_raw.pdf')))
     r = ink(d[0])
     n = fitz.open()
     q = n.new_page(width=r.width, height=r.height)
@@ -61,6 +67,10 @@ def swap(sl, name):
         k = min(1, (bot - top - 0.2) / ph, (fw - 0.3) / pw)
         pw, ph = pw * k, ph * k
         x, y = fx + (fw - pw) / 2, top + (bot - top - ph) / 2
+    elif name in BOX2:                         # box 2's own scale, same centre as the old panel
+        k = K2
+        pw, ph = pw * k, ph * k
+        x, y = (old.left + old.width / 2) / E - pw / 2, (old.top + old.height / 2) / E - ph / 2
     else:
         k = min(1, oh / ph, (ow + 0.3) / pw)  # no taller than the old panel, at most 0.3 in wider
         assert k >= SHRINK, f'{name}: {pw:.2f} x {ph:.2f} in needs x{k:.3f} to fit {ow:.2f} x {oh:.2f}'

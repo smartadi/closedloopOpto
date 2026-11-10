@@ -151,11 +151,16 @@ function export(fig, path)
 % 2026-11-10: then the poster type standard (poster_type.m) and a second print, panels/poster/sine_<x>_raw.pdf,
 % on the figure's own page (print -vector; exportgraphics rescales small panels). poster_fix() holds what a
 % size change alone can't do.
+% Then poster_lab_axes (the lab's axis style, Aditya's pick 2026-11-10).
 jnAxesAll(fig);
 exportgraphics(fig, path, 'ContentType', 'vector');
 [d, n] = fileparts(path); n = strrep(erase(n, '_raw'), 'sine3_', '');
-poster_type(fig); poster_fix(fig, n); drawnow;
+poster_type(fig); poster_fix(fig, n); poster_lab_axes(fig); drawnow;
 fig.Units = 'centimeters'; cm = fig.Position(3:4);
+if isappdata(fig, 'canvas')        % a resized canvas sometimes springs back (3.00 -> 3.41 cm): set it again, check
+    cm = getappdata(fig, 'canvas'); fig.Position(3:4) = cm; drawnow;
+    assert(all(abs(fig.Position(3:4) - cm) < 0.02), 'sine %s: canvas %.2f x %.2f cm', n, fig.Position(3:4));
+end
 set(fig, 'PaperUnits', 'centimeters', 'PaperSize', cm, 'PaperPosition', [0 0 cm]);
 if ~isfolder(fullfile(d, 'poster')), mkdir(fullfile(d, 'poster')); end
 sls_check(fig, 'MinFontPt', 7, 'Ignore', {'spine', 'space'});
@@ -164,8 +169,36 @@ close(fig);
 end
 
 function poster_fix(fig, n)
-% Poster-only layout fixes after poster_type (box 4).
+% Poster-only layout fixes after poster_type (box 4). Layout ideas (Aditya 2026-11-10, from a lab-style
+% Fig 3): no dark lines at target on/off, the grey band marks it; column titles left-aligned in the
+% condition colours; the variance panel gets a y axis in %^2 (it had no scale), time keeps its 1 s bar.
+delete(findall(fig, 'Type', 'constantline'));
+cols = {'Open loop', [1.00 0.00 0.00]; 'Closed loop', [0.00 0.40 0.85]; 'CL + preview', [0.00 0.50 0.00]};
 switch n
+    case 'avg'
+        for t = findall(fig, 'Type', 'text').'
+            s = strjoin(cellstr(t.String), '');
+            k = find(cellfun(@(c) startsWith(s, c), cols(:, 1)), 1);   % startsWith(s, list) is one logical: always picked red
+            if ~isempty(k), set(t, 'Color', cols{k, 2}, 'Position', [0 1.06 0], 'HorizontalAlignment', 'left'); end
+        end
+    case 'var'                                                      % rig dF/F is in %, so its variance is in %^2
+        ax = findall(fig, 'Type', 'axes'); ax = ax(1);
+        delete(findall(ax, 'Type', 'text', 'String', 'Variance across trials'));
+        set(ax, 'Visible', 'on', 'Color', 'none', 'Box', 'off', 'YTickMode', 'auto', 'YTickLabelMode', 'auto', 'YColor', 'k');
+        ax.XAxis.Visible = 'off';
+        ylabel(ax, {'Across-trial', ['variance (%' char(178) ')']}, 'FontSize', 7.5, 'Visible', 'on');   % two lines: one line made the panel too tall for its slot
+        % room on the left for ticks + label, and no taller than the slot it replaces (3.57 in = 3.05 cm printed)
+        fig.Units = 'centimeters'; fig.Position(4) = 3.0; W = fig.Position(3); setappdata(fig, 'canvas', [W 3.0]);
+        ax.Units = 'centimeters'; ax.Position = [1.55 0.5 W - 1.65 2.3];
+        % the 1 s bar sat on the corner, where it now reads as part of the y axis: move it to the right end
+        bar = findall(ax, 'Type', 'line', '-function', @(h) numel(h.XData) == 2 && diff(h.YData) == 0 ...
+            && abs(diff(h.XData) - 1) < 1e-9);
+        sb = findall(ax, 'Type', 'text', 'String', '1 s');
+        dx = ax.XLim(2) - max(bar.XData);
+        bar.XData = bar.XData + dx;
+        set(sb, 'VerticalAlignment', 'top', 'Position', [sb.Position(1) + dx, bar.YData(1) - 0.05 * diff(ax.YLim), 0]);
+    case 'rmse'
+        set(findall(fig, 'Type', 'text', 'String', 'Trial RMSE (% \DeltaF/F)'), 'String', 'Per-trial RMSE (%)');   % window = the whole 4 s sine
     case 'lag'                                                      % rotated ticks need not be: 3 short names
         ax = findall(fig, 'Type', 'axes'); ax(1).XTickLabelRotation = 0;
 end

@@ -10,7 +10,11 @@ function poster_restyle(names)
 %   type      poster_type.m, the box-5 poster standard: ticks FT = 7 pt, labels and notes FA = 7.5 pt, titles FL = 8 pt
 %             (about 21 / 22 / 24 pt on the poster; the paper's 5-6 pt printed at 15-18 pt).
 %   lines     at least 0.6 pt, markers 20% larger.
-%   fix       a per-panel function for what a size change alone can't do (moved notes, tighter limits).
+%   axes      poster_lab_axes.m, the lab's axis style (Aditya 2026-11-10): 1 pt axes, ticks in, axis ends
+%             on the end ticks, regular-weight text, titles left-aligned.
+%   fix       a per-panel function for what a size change alone can't do: labels on the data instead of
+%             legends, no dark lines at laser on/off (the grey band marks it), ratio panels shaded below 1.
+% Box 7 (st_quart) is built by st_quart_panel.m since 2026-11-10 (Motion and Abs 1-4 Hz only, Aditya).
 % OUT  poster/sfn2026/panels/poster/<name>_raw.pdf (git-ignored), printed with print -vector on the
 %      figure's own page (exportgraphics rescales small panels). panel_swap.py crops and places it.
 root = fullfile(fileparts(mfilename('fullpath')), '..', '..');
@@ -30,6 +34,7 @@ for k = 1:numel(names)
     end
     g.Units = 'centimeters';
     poster_type(g);
+    poster_lab_axes(g);                                            % before the fix: snapping ignores notes in normalised units
     if ~isempty(e.fix), e.fix(g); end
     drawnow; cm = g.Position(3:4);
     sls_check(g, 'MinFontPt', 7, 'Ignore', {'spine', 'space'});
@@ -43,7 +48,6 @@ end
 % ------------------------------------------------------------------------------------------------
 function T = table_of_panels()
 f = @(fig, fix) struct('fig', fig, 'fix', fix);
-T.st_quart = f(fullfile('figure4', 'f4_row2_quartiles_nc.fig'), @fix_st_quart);
 T.st_trials = f(fullfile('figure4', 'f4_state_exemplars.fig'), @fix_st_trials);
 T.d_kernel = f(fullfile('figure4', 'f4_kernel_map.fig'), @fix_d_kernel);
 T.d_agl = f(fullfile('figure4', 'f4_agl.fig'), @fix_d_agl);
@@ -56,25 +60,56 @@ end
 
 function fix_cl_ab(g, trial)
 % Box 3 traces. Canvas 2.5% smaller so the larger type still fits the slot (axes are in normalised units,
-% so they shrink, the type doesn't). The panel title in B is an annotation, which restyle() misses.
-% A: "1 mW" sat left of its bar, on the red trace; it moves right of the bar, above "OL Stim".
+% so they shrink, the type doesn't). The panel title in B is an annotation, which poster_type misses.
+% Layout ideas (Aditya 2026-11-10, from a lab-style Fig 3): no dark lines at laser on/off, the grey band
+% marks it; column titles "Open loop" / "Closed loop" left-aligned in the condition colours; A's legend
+% goes and "Target" sits on its dashed line; "OL Stim" becomes "laser" on the grey command trace, "CL Stim"
+% goes (one label is enough). "1 mW" moves right of its bar, off the red trace.
+% Not done: a separate laser strip with an mW axis. The producer (analysisPlots_combined.m) draws the
+% command as 5*v in OL and 4*v in CL under one "1 mW" bar, so the two can't share an mW axis as drawn.
 g.Position(3:4) = g.Position(3:4) * (0.975 - 0.02 * ~trial);
-for t = findall(g, 'Type', 'textboxshape').', t.FontSize = 8; end
+ax = findall(g, 'Type', 'axes'); [~, o] = sort(arrayfun(@(a) a.Position(1), ax)); ax = ax(o);   % OL left, CL right
+delete(findall(g, 'Type', 'constantline'));
+for t = findall(g, 'Type', 'textboxshape').'                       % B's "Trial-averaged response"
+    t.FontSize = 8; t.HorizontalAlignment = 'left'; t.Position(1) = ax(1).Position(1) - 0.01;
+end
+names = {'Open-Loop', 'Open loop'; 'Closed-Loop', 'Closed loop'};
+for k = 1:2
+    tx = findall(ax(k), 'Type', 'text');
+    s = arrayfun(@(t) strjoin(cellstr(t.String), ''), tx, 'UniformOutput', false);
+    r = tx(startsWith(s, 'RMSE')); col = r(1).Color;                % the condition colour
+    h = tx(strcmp(s, names{k, 1}));
+    if ~isempty(h), set(h, 'String', names{k, 2}, 'Color', col, 'Position', [0 1.06 0], 'HorizontalAlignment', 'left'); end
+end
 if trial                                                            % y units: %dF/F, limits -10..10
+    delete(findall(g, 'Type', 'legend'));
     set(findall(g, 'Type', 'text', 'String', '1 mW'), 'Position', [0.15 8.4 0], 'HorizontalAlignment', 'left');
-    set(findall(g, 'Type', 'text', 'String', 'OL Stim'), 'Position', [2.25 6.0 0]);   % above the laser trace (~4.3)
-    set(findall(g, 'Type', 'text', 'String', 'CL Stim'), 'Position', [2.25 7.8 0]);   % above the CL laser trace (5.5-7)
+    set(findall(g, 'Type', 'text', 'String', 'OL Stim'), 'String', 'laser', 'Position', [2.25 6.0 0]);
+    delete(findall(g, 'Type', 'text', 'String', 'CL Stim'));
+    ln = findall(ax(1), 'Type', 'line', 'LineStyle', '--');
+    yr = ln(1).YData(1);
+    text(ax(1), -0.15, yr, 'Target', 'Color', [0.45 0.45 0.45], 'FontSize', 7.5, 'HorizontalAlignment', 'right', ...
+        'VerticalAlignment', 'middle');
 end
 end
 
 function fix_cl_ratio(g)
-% Box 3 ratios. At poster size the window names touched and the variance title ran off the canvas:
-% limits pulled in to the
-% outer windows, axes run to the right edge; title 7.5 pt.
+% Box 3 ratios. Axes run to the right edge, less the half of "Post" that hangs past the axis end, which
+% now ends on the Pre and Post ticks (lab axes). Shaded below 1, where closed loop is better. The title
+% names the measure ("CL lowers RMSE"), so the y label only says which way the ratio runs: "RMSE ratio
+% (closed/open)" was longer than the axis and was cut off at the panel's left edge. Title 7.5 pt.
 a = findall(g, 'Type', 'axes'); a = a(1); a.Units = 'centimeters';
-p = a.Position; a.Position = [p(1) p(2) g.Position(3) - p(1) - 0.08 p(4)];
-a.XLim = [0.6 4.4]; a.XTickLabel = strrep(a.XTickLabel, '-', char(8211));
+p = a.Position; a.Position = [p(1) p(2) g.Position(3) - p(1) - 0.32 p(4)];
+a.XTickLabel = strrep(a.XTickLabel, '-', char(8211));
 a.Title.FontSize = 7.5;
+yl = a.YLim; xl = a.XLim;
+a.YLabel.String = 'Closed / open';
+drawnow; ti = a.TightInset(1) + 0.05;                    % the variance panel's "0.25" pushes its label off the page
+if ti > a.Position(1), a.Position([1 3]) = [ti a.Position(3) - (ti - a.Position(1))]; end
+a.Title.Units = 'centimeters';                            % title from the panel's left edge, not the axis: the
+a.Title.Position(1) = 0.15 - a.Position(1);               % moved axis pushed the stars past the right edge
+pt = patch(a, xl([1 2 2 1]), [yl(1) yl(1) 1 1], [0.90 0.94 0.98], 'EdgeColor', 'none');
+uistack(pt, 'bottom'); a.Layer = 'top'; a.YLim = yl; a.XLim = xl;
 end
 
 function g = build_d_rr(root)
@@ -110,7 +145,7 @@ set(ax, 'YScale', 'log', 'XTick', 1:nS, 'XTickLabel', cellstr(lab), 'XTickLabelR
 jnAxes(ax);
 star = repmat('*', 1, (p < 0.05) + (p < 0.01) + (p < 0.001)); if isempty(star), star = 'n.s.'; end
 title(ax, {'CL rejects', sprintf('disturbances %s', star)});
-ylabel(ax, {'rejection', 'ratio (RR)'}, 'FontWeight', 'bold');
+ylabel(ax, {'Rejection', 'ratio (RR)'});
 fprintf('[poster_restyle] d_rr: %d sessions, geomean RR %.2f [%.2f, %.2f], p = %.2g, from %s\n', nS, gmS, ciS, p, src);
 end
 
@@ -145,7 +180,7 @@ delete(findall(g, 'Type', 'legend'));
 ln = findall(a, 'Type', 'line'); ln = ln(arrayfun(@(l) numel(l.XData) > 50, ln));
 col = arrayfun(@(l) {l.Color(1:3)}, ln); blk = cellfun(@(c) all(c < 0.2), col);
 yb = ln(blk).YData; xb = ln(blk).XData; yend = mean(yb(xb > 2.3));
-B = {'FontSize', 7.5, 'FontWeight', 'bold', 'HorizontalAlignment', 'right'};
+B = {'FontSize', 7.5, 'HorizontalAlignment', 'right'};
 text(a, 2.95, yend - 0.35, 'Actual', B{:}, 'Color', 'k', 'VerticalAlignment', 'top');
 text(a, 2.95, 0.4, 'Global (contra pred.)', B{:}, 'Color', col{find(~blk, 1)}, 'VerticalAlignment', 'bottom');
 tx = findall(a, 'Type', 'text'); r = tx(arrayfun(@(t) startsWith(strjoin(cellstr(t.String), ''), 'R^2'), tx)); r.Position(2) = -3.5;
@@ -154,13 +189,14 @@ end
 function fix_st_trials(g)
 % Box 6. "high abs 1-4 Hz" at poster size is wider than its tile: titles on two lines ("high" / the
 % variable), axes shortened to make room. The four tiles share one time scale, so one "1 s" bar is
-% kept (leftmost) and the other three go.
+% kept (leftmost) and the other three go. The dotted line at laser onset goes: the grey band marks it.
 % Canvas = the poster slot at PS (7.83 x 3.55 cm), the tile layout inset so the scale bars, which hang
 % outside the first tile, stay on the page.
 cm = [9.16 4.15] / 2.97 * 2.54; g.Position(3:4) = cm;
 tl = findall(g, 'Type', 'tiledlayout'); tl.Units = 'centimeters'; tl.OuterPosition = [0.45 0.42 cm(1) - 0.45 cm(2) - 0.42];
 ax = findall(g, 'Type', 'axes'); [~, o] = sort(arrayfun(@(a) a.Layout.Tile, ax)); ax = ax(o);
 assert(all(arrayfun(@(a) isequal(a.XLim, ax(1).XLim), ax)), 'tiles do not share a time axis');
+delete(findall(g, 'Type', 'constantline'));
 for a = ax.'
     s = char(a.Title.String); a.Title.String = {'high', strtrim(erase(s, 'high'))};
     a.Title.FontSize = 7.5;
@@ -184,35 +220,4 @@ set(t1, 'Position', [mean(h(1).XData), h(1).YData(1) - dy], 'HorizontalAlignment
 a = ax(2); tz = findall(a, 'Type', 'text', 'String', 'z-motion');
 gr = findall(a, 'Type', 'line'); gr = gr(arrayfun(@(l) numel(l.XData) > 10 && all(abs(l.Color(1:3) - 0.55) < 0.01), gr));
 set(tz, 'Position', [tz.Position(1), min(gr(1).YData) - dy], 'VerticalAlignment', 'top');
-end
-
-function fix_st_quart(g)
-% Box 7. The three stacked notes per tile (OL slope, CL slope, CL/OL) collide at poster size. Same
-% notes on two lines at the top of each tile, OL and CL in their line colours, which also makes the
-% separate OL/CL key redundant. The super-title repeats the box heading, so it goes.
-OLc = [0.85 0.2 0.15]; CLc = [0.15 0.35 0.8];
-for t = findall(g, 'Type', 'tiledlayout').', t.Title.String = ''; end
-rgb = @(c) sprintf('\\color[rgb]{%.2f,%.2f,%.2f}', c);
-ax = findall(g, 'Type', 'axes');
-ymax = -inf;
-for a = ax.'
-    tx = findall(a, 'Type', 'text');
-    s = arrayfun(@(t) char(strjoin(cellstr(t.String), '')), tx, 'UniformOutput', false);
-    pick = @(p) strtrim(erase(s{startsWith(s, p)}, p));
-    if ~any(startsWith(s, 'OL slope')), continue; end
-    o = pick('OL slope'); c = pick('CL slope'); r = pick('CL/OL');
-    key = ismember(s, {'OL', 'CL'});                               % the manual key in the first tile
-    delete(tx(startsWith(s, {'OL slope', 'CL slope', 'CL/OL'}) | key));
-    if any(key)
-        ln = findall(a, 'Type', 'line'); delete(ln(arrayfun(@(l) numel(l.XData) == 1, ln)));
-    end
-    for l = findall(a, 'Type', 'line').', ymax = max(ymax, max(l.YData)); end
-    for e = findall(a, 'Type', 'errorbar').', ymax = max(ymax, max(e.YData + e.YPositiveDelta)); end
-    B = {'Units', 'normalized', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', 'FontSize', 7.5, ...
-        'FontWeight', 'bold', 'Interpreter', 'tex'};
-    text(a, 0.5, 1.0, sprintf('slope: %sOL %s%s, %sCL %s', rgb(OLc), o, rgb([0 0 0]), rgb(CLc), c), B{:});
-    text(a, 0.5, 0.80, sprintf('CL/OL %s', r), B{:});
-end
-yl = ax(1).YLim; yt = ax(1).YTick;                                  % shared limits; notes take the top 40%
-for a = ax.', a.YLim = [yl(1), yl(1) + (ymax - yl(1)) / 0.6]; a.YTick = yt(yt <= ymax + 0.05); end
 end

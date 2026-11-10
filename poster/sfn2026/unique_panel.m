@@ -41,7 +41,7 @@ for ax = [ax1 ax2]
 end
 yline(ax1, 0, '-', 'Color', [.6 .6 .6], 'LineWidth', 0.5);
 set(ax1, 'YLim', lo, 'YTick', [0 0.1 0.2], 'XTick', 1:4, 'XTickLabel', {});
-set(ax2, 'YLim', hi, 'YTick', [0.5 0.6], 'XTick', [], 'XColor', 'none'); ax2.XAxis.Visible = 'off';
+set(ax2, 'YLim', hi, 'YTick', 0.6, 'XTick', [], 'XColor', 'none'); ax2.XAxis.Visible = 'off';   % one tick: 0.5 sat on top of the lower axis's 0.2 across the break
 
 % window key, as the paper panel: grey swatches, because colour already encodes the variable
 ov = axes(fig, 'Units', 'centimeters', 'Position', [0 0 Wp Hp], 'XLim', [0 Wp], 'YLim', [0 Hp], 'Visible', 'off'); hold(ov, 'on');
@@ -65,6 +65,7 @@ text(ov, x0 - 0.78, y0 + (h1 + gap + h2) / 2, 'unique R^2', 'Rotation', 90, 'Hor
 text(ov, x0 + w / 2, y0 + h1 + gap + h2 + 0.1, sprintf('Unique R^2 (%d sessions)', nS), 'HorizontalAlignment', 'center', ...
     'VerticalAlignment', 'bottom', 'FontSize', FL, 'FontWeight', 'bold');
 
+poster_lab_axes(fig);   % lab axes (Aditya 2026-11-10)
 drawnow;
 print(fig, fullfile(here, 'panels', 'poster', 'st_unique_raw.pdf'), '-dpdf', '-vector');
 close(fig);
