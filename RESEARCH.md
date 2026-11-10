@@ -16,6 +16,36 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-10 — SfN poster: all restyled panels assembled in a scratch copy; box 1 "sample" label uncovered
+**Changed/Found:** `poster/sfn2026/poster_swap_all.py` (new) — crops each `panels/poster/<name>_raw.pdf` to ink at PS, swaps it into picture 'panel <name>' centred on the old slot (shrinks ≤ 4% if it runs over; most was ×0.966, sine_rmse), box 5 fills its frame under the rule; box 1: rig up 0.15 in, widefield image + its key + scale-bar crops down 0.12 in (same picture, so the bar keeps its scale), which uncovers the rig's "sample" label. Asserts all other shapes keep their XML. Run on a copy of OneDrive v3 (11-09 16:52, checked unchanged) → scratch `v11.pptx`; 15 panels swapped, 4 moved, 81 shapes.
+**Why:** Aditya: "each image can be redone for poster level readability and beautification".
+**Next:** Aditya to look at the render and say whether to save over v3 (and whether the corrected box 6 R² goes in, entry below); then `od_state.ps1`. Box 6 and box 8 bullet text runs to the frame bottom (Aditya's 11-09 text); not touched.
+
+### 2026-11-10 — SfN poster: decided not to restyle box 1's loop diagram or box 2's panels; box 5 colour map kept
+**Changed/Found:** none — box 2 panels already print at 19–25 pt (placed ×4.15); box 1 loop SVG labels are 7 pt in the SVG = ~18 pt on the poster (subscripts 14 pt), and enlarging them needs a re-layout of a crowded schematic. The scratch audit had reported box 1's key/scale bar at ~9 pt: wrong, it ignores picture crops (true ~15–18 pt). Box 5: tried rebuilding the brown–teal map in CIELAB; it washed out the mid values, and the original RGB ramp already passes `sls_check` (L* 38 / 100 / 41, quarter points 69 / 71), so it stays.
+**Why:** effort vs gain 4 days before printing; the colormap rule is already met.
+**Next:** box 1 loop labels only if Aditya wants them larger (needs SVG edits in a poster copy).
+
+### 2026-11-10 — SfN poster: box 6 unique-R² panel to poster type; rerun picks up the corrected decomposition
+**Changed/Found:** `poster/sfn2026/unique_panel.m` — poster type (ticks 7 / labels 7.5 / title 8 pt), variable names on two lines drawn as text (MATLAB staggers two-line tick labels), upper segment 0.45–0.65 (was 0.6), output now `panels/poster/st_unique_raw.pdf`. Rerunning reads the current `f4_error_decomp.mat`: init-dev 0–1 s is now **0.562 ± 0.050** (poster showed 0.53, 11-05 render); abs 1–4 Hz 0–1 s 0.099 ± 0.049, 1–3 s 0.129 ± 0.061; 11 sessions, mean ± SEM. The error bar reaches 0.61, hence the new top.
+**Why:** smallest poster type was 13 pt (R² superscript), slanted labels; the value change comes from the other session's corrected decomposition, not from this edit.
+**Next:** Aditya decides whether the corrected values go on the poster (pending since 11-06).
+
+### 2026-11-10 — SfN poster: box 4 sine panels get poster-type copies
+**Changed/Found:** `poster/sfn2026/sine_panels.m` — `export()` now also applies `poster_type` and prints `panels/poster/sine_<avg|var|rmse|lag>_raw.pdf` (print -vector, figure page); lag ticks unrotated. Paper-style `sine3_*` outputs unchanged. Same numbers: n 51/46/57, median RMSE 3.59/2.26/3.00, lag 70.7/46.1/1.7°, preview 51°.
+**Why:** 17.8 pt type on the poster; poster standard is 21–24 pt.
+**Next:** the across-trial variance panel has no y scale (as in the paper panel) — open choice for Aditya.
+
+### 2026-11-10 — SfN poster: poster_type.m + poster_restyle.m, poster copies of 9 paper panels
+**Changed/Found:** `poster/sfn2026/poster_type.m` (new) — the poster standard (ticks 7, labels/notes 7.5, titles 8 pt at panel size = ~21/22/24 pt; lines ≥ 0.6 pt; markers +20%). `poster/sfn2026/poster_restyle.m` (new) — opens the .figs labstyle_remake saved (paper/figures_labstyle/src, all newer than figures_final), applies `poster_type` and a per-panel fix, prints `panels/poster/<name>_raw.pdf`. Fixes: box 7 `st_quart` notes as two colour-coded lines per tile, OL/CL key and the super-title (repeats the heading) dropped; box 6 `st_trials` two-line titles, one "1 s" bar, "z-motion" under its trace; box 8 `d_agl` lines labelled directly (legend sat on the traces), `d_kernel` "stimulation site" as a white-on-black label, dots kept at paper size (larger ones smeared), `d_rr` redrawn from `f4_cl_reject_lmm.mat` with short session names (no .fig); box 3 `cl_*` "1 mW"/"Stim" labels moved off the traces, ratio limits pulled in, canvas 2.5–4.5% smaller to fit. No paper panel or producer touched.
+**Why:** paper panels printed at 13–18 pt on the poster; Aditya asked for every image at poster readability.
+**Next:** this PC's `f4_cl_reject_lmm.mat` has no `ST` (session t-test, 2026-10-27), so `d_rr` uses the session LMM band (RR 0.58 [0.46, 0.72], p 1.3e-4) — identical to the current figures_final panel, which also predates ST. Rerun f4_cl_reject_lmm on the lab PC before the paper's final Fig 4.
+
+### 2026-11-10 — SfN poster box 5: restyled for the poster (critique + polish)
+**Changed/Found:** `poster/sfn2026/seedfc_panel.m` — same data, panels and layout. White cortex with hairline grey node rings (no change = empty circle; was white dots on grey that read as holes), session outlines smoothed with holes filled and closed at the grid edge, black site star with white edge, session names regular grey, OL/CL names in condition colours, mean maps 1.5 → 1.8 cm tall (fills the box's empty 0.45 in), change panel mean ± SEM as coloured dots (were black crosses) plus a bracket with the stars. Numbers unchanged: CL r 0.739 → 0.585 (p 0.0005), OL 0.726 → 0.737 (p 0.30), CL vs OL p 0.0005, n = 12 sessions, 2 mice. Unanchored critic (sub-agent, PNG + claim only) flagged: white-on-grey zero dots, small star, black "+" markers, ragged M2 outlines, empty band at the bottom; also the heading's "cancels shared fluctuations" claims a mechanism the figure doesn't show, and a skeptic will ask whether clamping the site lowers its correlation mechanically (variance), and about distance dependence. Its "ticks ~12–14 pt" was wrong: they print at 21 pt.
+**Why:** Aditya: "what can we do to this to make it look gorgeous".
+**Next:** the mechanism/variance questions are open scientific choices for Aditya, not changed here.
+
 ### 2026-11-10 — Readout spectra by Fig 4d state quartile (look at the data, no tests)
 **Changed/Found:** New `stats_v2/state_spectra.py`. Trials are split into within-session quartiles of each Fig 4d state, with cut points set on OL and CL pooled. The readout's 0–3 s spectrum is averaged per quartile (Hann, NFFT 1024, mean of trial periodograms with at least 3 trials, geometric mean over sessions). It runs both signals: the residual (trial minus condition mean, x n/(n−1)) and the error from the reference (trial minus d.ref). The states are motion over [−2,+3) s (11 sessions), and absolute 1–4 Hz and relative 2–4 Hz over both laser-off [−5,0) s and the locked [−2,+3) s, which is circular for delta (15 sessions). Outputs: `paper/images/figure4/supp/state_spectra_{resid,err}.png` and `data/stats_v2/corrected/state_spectra.csv`. What the plots show (read by eye, untested):
 - **Motion, OL:** the high-motion quartile has more power below about 1 Hz and less at 1–10 Hz. The curves cross near 1 Hz.

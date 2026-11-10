@@ -147,8 +147,26 @@ end
 end
 
 function export(fig, path)
-% the final panels' rule-book typography pass, then the vector export every panel uses
+% the final panels' rule-book typography pass, then the vector export every panel uses.
+% 2026-11-10: then the poster type standard (poster_type.m) and a second print, panels/poster/sine_<x>_raw.pdf,
+% on the figure's own page (print -vector; exportgraphics rescales small panels). poster_fix() holds what a
+% size change alone can't do.
 jnAxesAll(fig);
 exportgraphics(fig, path, 'ContentType', 'vector');
+[d, n] = fileparts(path); n = strrep(erase(n, '_raw'), 'sine3_', '');
+poster_type(fig); poster_fix(fig, n); drawnow;
+fig.Units = 'centimeters'; cm = fig.Position(3:4);
+set(fig, 'PaperUnits', 'centimeters', 'PaperSize', cm, 'PaperPosition', [0 0 cm]);
+if ~isfolder(fullfile(d, 'poster')), mkdir(fullfile(d, 'poster')); end
+sls_check(fig, 'MinFontPt', 7, 'Ignore', {'spine', 'space'});
+print(fig, fullfile(d, 'poster', ['sine_' n '_raw.pdf']), '-dpdf', '-vector');
 close(fig);
+end
+
+function poster_fix(fig, n)
+% Poster-only layout fixes after poster_type (box 4).
+switch n
+    case 'lag'                                                      % rotated ticks need not be: 3 short names
+        ax = findall(fig, 'Type', 'axes'); ax(1).XTickLabelRotation = 0;
+end
 end
