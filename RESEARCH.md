@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v10 (48 × 36 in) saved to OneDrive
+**Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v10_48x36.pptx` (8454497 bytes, md5 38db92f6…) and `SfN2026_poster_v10_48x36.pdf` (16615259 bytes, md5 1d8f31f5…), the scratch build in the entry below, unchanged. Before saving, OneDrive v9 (md5 f91a09b0…) and v9_48x36 (md5 30e3f9a1…) were unchanged since they were saved, so there were no online edits to carry; v3–v9 untouched.
+**Why:** Aditya: "Yes, save v10".
+**Next:** He edits the Introduction (online or here). If its length changes, rerun the column 1 chain (`poster_box2_48.py`) on a rebuild that carries his edits.
+
 ### 2026-11-11 — SfN poster v10 at 48 × 36 in built in scratch (not in OneDrive)
 **Changed/Found:** Scratch `build_48.sh` (v3 → swap with the reprinted panels → … → `poster_text.py` with FIXES → `heading_fit.py` → `poster_resize.py 48` → `poster_ack.py`) → `poster_box2_48.py build` → `poster_pdf.py` gives `f48k.pptx` and `SfN2026_poster_v10_48x36.pdf` (48.0 × 36.0 in, 16.6 MB, 23 pictures at full resolution). Column 1 gaps 0.89 in (were 1.71), column 2 0.90, column 3 0.84 in. PowerPoint: no text box overflows. Box 2 printed type, measured (PDF font size × placed scale): before 18.3 / 18.0 / 17.9 pt, after 18.2 / 18.0 / 17.9 pt (A / B / C). Introduction wording unchanged (Aditya will edit it himself; only "Wide-ranging" from the typo fixes).
 **Why:** Aditya: "48inch version is final, lets do it in that"; the feedback, review and gap changes below.
