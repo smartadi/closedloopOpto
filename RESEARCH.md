@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v9 at 48 × 36 in saved to OneDrive
+**Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v9_48x36.pptx` (8063709 bytes, md5 30e3f9a1…) and `SfN2026_poster_v9_48x36.pdf` (16910554 bytes, md5 5624c4be…), the scratch build in the entry below, unchanged. Before saving, OneDrive v9 was unchanged since the 12:01 check (md5 f91a09b0…), so there were no online edits to carry; v3–v9 untouched. The 54 × 36 v9 stays next to it.
+**Why:** Aditya: "Yes, save it".
+**Next:** If he edits either v9 online, diff it against the file as saved and carry the edits into the next version (at both widths if he keeps both).
+
 ### 2026-11-11 — SfN poster v9 at 48 × 36 in, built in scratch (not in OneDrive)
 **Changed/Found:** OneDrive v9 → no edits to carry (entry below), so scratch v9 (before `poster_ack.py`) → `poster_resize.py … 48` → `poster_ack.py` → `poster_pdf.py` gives `v9_48.pptx` (8063709 bytes, md5 30e3f9a1…) and `SfN2026_poster_v9_48x36.pdf` (16910554 bytes, md5 5624c4be…, 48.0 × 36.0 in). Header ×0.886 (title 67.3 pt, authors 36.3 pt, QR 2.65 in square, RAIN Lab logo 5.58 × 1.02 in at x 6.37 in). Columns ×0.897 (gutters 1.2 in); column 2 then ×0.990 for the Acknowledgements (2.98 in high, gaps 0.90 in, ends at 35.32 in). Gaps: column 1 1.71 in, column 3 0.84 in. PowerPoint: no text box overflows; shape ids unique. Panel tick labels (7 pt × 2.97 × 0.95 × scale): columns 1 and 3 about 17.7 pt, column 2 about 17.5 pt, all under the 17.8 pt poster floor by 0.1–0.3 pt (54 in: 19.75 pt in columns 1 and 3, 17.9 pt in column 2). The 54 × 36 v9 stays the main version.
 **Why:** Aditya: "make a 48 by 36 version of v9".
