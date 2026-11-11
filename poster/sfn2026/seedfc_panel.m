@@ -76,25 +76,19 @@ imagesc(ax, [0 1], cl, (1:256).'); colormap(ax, cmD);
 set(ax, 'YDir', 'normal', 'XTick', [], 'YTick', [-0.3 0 0.3], 'YTickLabel', {'-0.3', '0', '+0.3'}, 'YAxisLocation', 'right', ...
     'TickDir', 'out', 'TickLength', [0.03 0.03], 'FontSize', FT, 'LineWidth', S.lw_axis, 'Box', 'on');
 
-% ---- bottom right: per-session summaries
-ws = 1.5; xa = xcb + 1.83 + 0.6;                                  % 0.6 cm: tick labels; titles go above (v7)
-wa = R + 0.2 - ws - 0.95 - xa; xs = xa + wa + 0.95;               % right plot may run 2 mm past the grid
-assert(wa >= 2.0, 'seedfc: left plot only %.2f cm wide', wa);
-ya = yM + 0.35; ha = Hm - 0.35;                                   % plot tops level with the maps; titles level with their names
-ax = axes(fig, 'Units', 'centimeters', 'Position', [xa, ya, wa, ha]); hold(ax, 'on');
+% ---- bottom right: the per-session change, OL vs CL (v9: the only plot here)
+% 2026-11-11 (Aditya: "lets only use the change in correlation plot not the correlation with site graph, and
+% make that figure look good by fixing its title it has offset from center"): the before/during plot is gone
+% (its values are still printed below); the change plot is wider, centred in the space right of the colour
+% bar, and its title is centred on the plot. Same data and statistics.
 pc = zeros(1, 2);
 for c = 1:2
-    b = G.(cn{c}).sess_base(:); s = G.(cn{c}).sess_stim(:); pc(c) = signrank(b, s);
-    plot(ax, [1 2], [b s].', '-', 'Color', cc{c} + (1 - cc{c}) * 0.6, 'LineWidth', S.lw_ind);
+    pc(c) = signrank(G.(cn{c}).sess_base(:), G.(cn{c}).sess_stim(:));
 end
-for c = 1:2
-    b = G.(cn{c}).sess_base(:); s = G.(cn{c}).sess_stim(:);
-    errorbar(ax, [1 2], [mean(b) mean(s)], [std(b) std(s)] / sqrt(nS), '-o', 'Color', cc{c}, 'LineWidth', 1.4, ...
-        'CapSize', 0, 'MarkerSize', 3, 'MarkerFaceColor', cc{c});
-end
-set(ax, 'XTick', [1 2], 'XTickLabel', {'before', 'during'}, 'XLim', [0.8 2.6], 'YLim', [0.25 0.9], 'YTick', [0.3 0.6 0.9], ...
-    'FontSize', FT, 'TickLength', [0.03 0.03], 'TickDir', 'out', 'Box', 'off', 'LineWidth', S.lw_axis);
-
+ws = 3.2; tk = 0.6;                                               % plot width; room for the y tick labels
+x0r = xcb + 1.83; x1r = R + 0.2;                                  % free space right of the colour-bar words
+xs = (x0r + x1r - ws + tk) / 2;                                   % tick labels + plot centred in it
+ya = yM + 0.35; ha = Hm - 0.35;                                   % plot top level with the maps; title level with their names
 ax2 = axes(fig, 'Units', 'centimeters', 'Position', [xs, ya, ws, ha]); hold(ax2, 'on');
 yo = G.OL.sess_dr(:); yc = G.CL.sess_dr(:);
 yline(ax2, 0, ':', 'Color', [0.45 0.45 0.45], 'LineWidth', S.lw_ref);
@@ -140,13 +134,8 @@ plot(ov, x00 + [0 bar2], (yM - 0.16) * [1 1], 'k', 'LineWidth', 1);
 text(ov, x00 + bar2 + 0.06, yM - 0.16, '2 mm', 'VerticalAlignment', 'middle', 'FontSize', FT);
 text(ov, xcb - 0.22, ycb + hcb + 0.20, 'more correlated', 'VerticalAlignment', 'bottom', 'FontSize', FA);
 text(ov, xcb - 0.22, ycb - 0.20, 'less correlated', 'VerticalAlignment', 'top', 'FontSize', FA);
-text(ov, xa - 0.6, ya + ha + 0.22, {'Correlation', 'with site'}, 'VerticalAlignment', 'bottom', 'FontSize', FL);
-text(ov, xs - 0.6, ya + ha + 0.22, {'Change in', 'correlation'}, 'VerticalAlignment', 'bottom', 'FontSize', FL);
-ux = @(x) xa + (x - 0.8) / (2.6 - 0.8) * wa; uy = @(y) ya + (y - 0.25) / (0.9 - 0.25) * ha;
-for c = 1:2
-    s = mean(G.(cn{c}).sess_stim); t = star(pc(c)); if isempty(t), t = 'n.s.'; end
-    text(ov, ux(2.12), uy(s), sprintf('%s %s', cn{c}, t), 'Color', cc{c}, 'VerticalAlignment', 'middle', B{:});
-end
+text(ov, xs + ws / 2, ya + ha + 0.22, 'Change in correlation', 'HorizontalAlignment', 'center', ...
+    'VerticalAlignment', 'bottom', 'FontSize', FL);
 
 poster_lab_axes(fig, false);   % lab axes (Aditya 2026-11-10); no snapping: the inline labels are placed from the limits
 drawnow;
