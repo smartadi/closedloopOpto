@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — v9 online re-save: no edits; duplicate shape ids from `poster_ack.py`
+**Changed/Found:** OneDrive v9.pptx changed at 12:01 (8063688 → 8550832 bytes, md5 f91a09b0…) after Aditya opened it. Against v9 as saved: same shapes, same paragraph text and positions; only PowerPoint Online housekeeping (spell-check `err` runs merged in the Introduction and box 8 bullets) and two renumbered ids: `copy_shape` in `poster_ack.py` copies the Conclusions bar and rule with their cNvPr ids (74, 75), so the slide held duplicate ids, which PowerPoint Online renumbered (4, 9). Harmless here, but the copy should take a new id.
+**Why:** Aditya asked for "a 48 by 36 version of v9"; his online copy has to be checked for edits first.
+**Next:** Give copied shapes a fresh id. The 48 × 36 build (header scaled with the width, RAIN logo sized from the UW signature) waits on his approval of the method-gate block.
+
 ### 2026-11-11 — SfN poster v9 in OneDrive, with its full-resolution PDF
 **Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v9.pptx` (8063688 bytes, md5 3f9e566a…) and `SfN2026_poster_v9.pdf` (16910492 bytes, md5 e3c154a4…), both OneDrive state 2 at 11:58. Before saving, OneDrive v8 was unchanged since it was saved (md5 b89f9188…); v3–v8 untouched (md5 checked). v9 = v8 + Acknowledgements (NSF, SfN TPDA / Eli Lilly and Company Foundation, NSF and Lilly logos), RAIN Lab logo in the header, box 5 with only the change-in-correlation plot.
 **Why:** Aditya: "Yes, save v9".
