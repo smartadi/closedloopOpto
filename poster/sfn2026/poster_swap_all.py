@@ -7,15 +7,14 @@ unique_panel.m (st_unique), sine_panels.m (sine_*) and seedfc_panel.m (copied th
 Each is cropped to its ink at the one print scale (PS) and replaces picture 'panel <name>', centred where the
 old one was. A panel that comes out up to 4% larger than its slot is scaled down to fit (type stays >= 20 pt);
 more than that is an error. Box 5's panel is taller on purpose: it fills its box under the rule.
-Box 1 (v5, box1_panels.py: labels x1.25): the rig drawing goes in at its true shape (v3 had it 10% too wide),
-as tall as the old slot after the rig moved up 0.15 in; the loop diagram moves right to keep 0.3 in from it;
-the widefield image and its two crops (key, scale bar) move down 0.12 in, each crop re-cut round the larger
-key text so every marker stays where it was. The image no longer covers the rig's "sample" label.
+Box 1 (v6, box1_diagram.py): the rig drawing, the loop diagram and the three crops of the widefield image
+(image, key, scale bar) give way to one picture, 'panel system', the control diagram with the rig in it,
+under the rule and centred across the box at PS (or up to 4% smaller to fit). The box's bullets move under it,
+their markers 0.20 in inside the box as in the other boxes. (v5's box1_panels.py layout is in git, b7cf639.)
 Plot tops line up within a row (ALIGN): each panel moves up or down so the top of its y axis is level with
 its reference panel's. Horizontal positions don't change.
 Every other shape keeps its XML; main() asserts that.
 """
-import copy
 import sys
 from pathlib import Path
 
@@ -42,8 +41,10 @@ BOX2 = {'imp_traces': FIG2 / 'A.pdf', 'imp_dose': FIG2 / 'B.pdf', 'imp_fit': FIG
 K2 = 1.398   # box 2's print scale relative to PS (nick_review.py): one scale for A-C, so their type matches
 # panel -> the panel in its row whose plot top it lines up with (v5, approved by Aditya 2026-11-10: "approve")
 ALIGN = {'d_rr': 'd_agl', 'sine_rmse': 'sine_lag', 'sine_var': 'sine_lag', 'imp_dose': 'imp_traces'}
-OLD_FRAME = HERE / 'panels' / 'frame.pdf'   # the picture v3's three 'panel frame' crops cut from
-GAP_RIG_LOOP = 0.3                          # in: keeps "dichroic" (rig) and "Reference r" (loop) apart
+# v6: box 8's kernel map gained a key under it, so it may be as tall as its row (d_agl's slot) and its title
+# lines up with d_agl's (both panels start with their title, so the picture tops line up)
+MAX_H = {'d_kernel': 3.90}
+TOP_ALIGN = {'d_kernel': 'd_agl'}
 
 
 def axis_top(page, r):
@@ -101,7 +102,7 @@ def swap(sl, name, placed):
         pw, ph = pw * k, ph * k
         x, y = (old.left + old.width / 2) / E - pw / 2, (old.top + old.height / 2) / E - ph / 2
     else:
-        k = min(1, oh / ph, (ow + 0.3) / pw)  # no taller than the old panel, at most 0.3 in wider
+        k = min(1, max(oh, MAX_H.get(name, 0)) / ph, (ow + 0.3) / pw)  # no taller than its slot, <= 0.3 in wider
         assert k >= SHRINK, f'{name}: {pw:.2f} x {ph:.2f} in needs x{k:.3f} to fit {ow:.2f} x {oh:.2f}'
         pw, ph = pw * k, ph * k
         x, y = (old.left + old.width / 2) / E - pw / 2, (old.top + old.height / 2) / E - ph / 2
@@ -128,87 +129,48 @@ def align(placed):
         pic.top = Emu(pic.top + round(dy * E))
         assert fr.top <= pic.top and pic.top + pic.height <= fr.top + fr.height, f'{name} leaves {fr.name}'
         print(f'{name:10s} plot top level with {ref}: moved {dy:+.3f} in')
-
-
-def set_image(sl, pic, png):
-    """Point the picture at a new image; returns the old relationship id."""
-    _, rid = sl.part.get_or_add_image_part(str(png))
-    old = pic._element.blip_rId
-    pic._element.blipFill.find(qn('a:blip')).set(qn('r:embed'), rid)
-    return old
-
-
-def key_lines(page):
-    """Glyph box of each text line on the widefield-image key: Arial ascender 0.73 em, descender 0.21 em."""
-    out = []
-    for b in page.get_text('dict')['blocks']:
-        for ln in b.get('lines', []):
-            sp = ln['spans'][0]
-            x, y = sp['origin']
-            out.append((x, y - 0.73 * sp['size'], ln['bbox'][2], y + 0.21 * sp['size']))
-    return sorted(out, key=lambda v: v[1])
+    for name, ref in TOP_ALIGN.items():
+        if name in placed and ref in placed:
+            pic, fr, _ = placed[name]
+            dy = (placed[ref][0].top - pic.top) / E
+            pic.top = placed[ref][0].top
+            assert fr.top <= pic.top and pic.top + pic.height <= fr.top + fr.height, f'{name} leaves {fr.name}'
+            print(f'{name:10s} top level with {ref}: moved {dy:+.3f} in')
 
 
 def box1(sl):
-    """Box 1 at poster type: rig, loop and the widefield image with its key; returns the ids changed."""
-    sh = {n: [x for x in sl.shapes if x.name == n] for n in ('panel rig', 'panel loop', 'panel frame')}
-    rig, loop, frames = sh['panel rig'][0], sh['panel loop'][0], sh['panel frame']
-    assert len(frames) == 3
+    """Box 1: one control diagram replaces the rig, the loop and the widefield image; returns (removed, moved, added)."""
     f1 = next(x for x in sl.shapes if x.name == 'box 1 frame')
     rule = next(x for x in sl.shapes if x.name == 'box 1 rule')
-    fx, fw = f1.left / E, f1.width / E
-    old_rel = set()
-
-    # widefield image, key and scale bar: three crops of one picture, now the page of frame_raw.pdf
-    po, pn = fitz.open(str(OLD_FRAME))[0], fitz.open(str(RAW / 'frame_raw.pdf'))[0]
-    lo, ln_ = key_lines(po), key_lines(pn)
-    assert len(lo) == len(ln_) == 3 and all(abs(a[0] - b[0]) < 0.01 for a, b in zip(lo, ln_)), 'key lines moved'
-    cut = (ln_[1][3] + ln_[2][1]) / 2                     # between "Stimulation" and "1 mm"
-    W0, H0, W1, H1 = po.rect.width, po.rect.height, pn.rect.width, pn.rect.height
-    render('frame', crop_to_ink=False)
-    for f in frames:
-        sr = f._element.blipFill.find(qn('a:srcRect'))
-        l, t, r, b = (int(sr.get(a, 0)) / 1e5 for a in 'ltrb')
-        x0, y0, x1, y1 = W0 * l, H0 * t, W0 * (1 - r), H0 * (1 - b)   # the crop in pt
-        s = f.width / E / (x1 - x0)                                    # in per pt, kept
-        if x1 < lo[0][0]:                                              # the image: same crop
-            n0, m0, n1, m1 = x0, y0, x1, y1
-        elif y0 < lo[0][1]:                                            # key: output and stimulation lines
-            n0, m0, n1, m1 = x0, min(y0, ln_[0][1] - 1), max(x1, ln_[0][2] + 2), cut
-        else:                                                          # scale bar and "1 mm"
-            n0, m0, n1, m1 = x0, cut, max(x1, ln_[2][2] + 2), max(y1, ln_[2][3] + 1)
-        old_rel.add(set_image(sl, f, OUT / 'png' / 'frame.png'))
-        for a, v in zip('ltrb', (n0 / W1, m0 / H1, 1 - n1 / W1, 1 - m1 / H1)):
-            sr.set(a, str(round(v * 1e5)))
-        f.left = Emu(f.left + round((n0 - x0) * s * E))
-        f.top = Emu(f.top + round(((m0 - y0) * s + 0.12) * E))
-        f.width, f.height = Emu(round((n1 - n0) * s * E)), Emu(round((m1 - m0) * s * E))
-    img = next(f for f in frames if f.height == max(g.height for g in frames))
-
-    # rig: true shape, from just under the rule to just above the image
-    pw, ph, _ = render('rig')
-    top = (rule.top + rule.height) / E + 0.09
-    h = img.top / E - 0.05 - top
-    k_rig = h / ph
-    old_rel.add(set_image(sl, rig, OUT / 'png' / 'rig.png'))
-    rig.top, rig.height, rig.width = Emu(round(top * E)), Emu(round(h * E)), Emu(round(pw * k_rig * E))
-
-    # loop: GAP_RIG_LOOP right of the rig, as wide as the frame allows (at most PS)
-    pw, ph, _ = render('loop')
-    x = max(loop.left / E, (rig.left + rig.width) / E + GAP_RIG_LOOP)
-    k_loop = min(1, (fx + fw - 0.08 - x) / pw)
-    assert k_loop >= SHRINK, f'loop needs x{k_loop:.3f}'
-    old_rel.add(set_image(sl, loop, OUT / 'png' / 'loop.png'))
-    loop.left, loop.width, loop.height = Emu(round(x * E)), Emu(round(pw * k_loop * E)), Emu(round(ph * k_loop * E))
-
-    for rid in old_rel:
-        sl.part.drop_rel(rid)
-    assert max(f.top + f.height for f in frames) <= f1.top + f1.height, 'image leaves box 1'
-    for f in (rig, loop, *frames):
-        assert f1.left <= f.left and f.left + f.width <= f1.left + f1.width, f'{f.name} leaves box 1'
-    print(f'box 1: rig x{k_rig:.3f} ({rig.width / E:.2f} x {h:.2f} in), loop x{k_loop:.3f} at x = {x:.2f} in, '
-          f'rig bottom {(rig.top + rig.height) / E:.2f}, image top {img.top / E:.2f} in')
-    return {rig.shape_id, loop.shape_id, *(f.shape_id for f in frames)}
+    bul = next(x for x in sl.shapes if x.name == 'box 1 bullets')
+    old = [x for x in sl.shapes if x.name in ('panel rig', 'panel loop', 'panel frame')]
+    assert len(old) == 5, [x.name for x in old]
+    fx, fy, fw, fh = (v / E for v in (f1.left, f1.top, f1.width, f1.height))
+    pw, ph, _ = render('system')
+    k = min(1, (fw - 0.16) / pw)
+    assert k >= SHRINK, f'system needs x{k:.3f}'
+    pw, ph = pw * k, ph * k
+    x, y = fx + (fw - pw) / 2, (rule.top + rule.height) / E + 0.09
+    pic = sl.shapes.add_picture(str(OUT / 'png' / 'system.png'), Inches(x), Inches(y), Inches(pw), Inches(ph))
+    pic.name = 'panel system'
+    pic._element.nvPicPr.cNvPr.set('descr', 'Closed-loop control diagram with the widefield rig: the PI controller '
+                                   'and feedforward drive a 638 nm laser, galvos steer it to the stimulation site '
+                                   'on the widefield image of cortex, a camera with 470/405 nm LEDs reads the '
+                                   'readout site, and dF/F is fed back.')
+    old[0]._element.addprevious(pic._element)
+    removed = set()
+    for o in old:
+        rid = o._element.blip_rId
+        removed.add(o.shape_id)
+        o._element.getparent().remove(o._element)
+        if not any(q._element.tag.endswith('pic') and q._element.blip_rId == rid for q in sl.shapes
+                   if q.shape_type == 13):
+            sl.part.drop_rel(rid)
+    bul.left, bul.top = Inches(fx + 0.20), Inches(y + ph + 0.12)
+    assert (bul.top + bul.height) / E <= fy + fh, 'box 1 bullets leave the box'
+    print(f'box 1: system {pw:.2f} x {ph:.2f} in (x{k:.3f}) at ({x:.2f}, {y:.2f}); bullets at {(bul.top / E):.2f}-'
+          f'{(bul.top + bul.height) / E:.2f} in, box ends {fy + fh:.2f}')
+    return removed, {bul.shape_id}, {pic.shape_id}
 
 
 def main(src, out, names):
@@ -219,14 +181,15 @@ def main(src, out, names):
     placed = {}
     gone = {swap(sl, n, placed) for n in names}
     align(placed)
-    moved = box1(sl)
+    removed, moved, added = box1(sl)
     now = {sh.shape_id: sh for sh in sl.shapes}
-    assert not gone & set(now) and len(now) == len(before)
+    assert not (gone | removed) & set(now) and len(now) == len(before) - len(removed) + len(added)
     for sid, x in before.items():
-        if sid not in gone and sid not in moved:
+        if sid not in gone | removed | moved:
             assert c14n(now[sid]._element) == x, now[sid].name
     prs.save(out)
-    print(f'{out}: {len(now)} shapes, {len(gone)} panels swapped, {len(moved)} moved')
+    print(f'{out}: {len(now)} shapes, {len(gone)} panels swapped, {len(removed)} removed for 1 added, '
+          f'{len(moved)} moved')
 
 
 if __name__ == '__main__':

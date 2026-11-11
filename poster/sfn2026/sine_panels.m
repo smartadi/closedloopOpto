@@ -69,7 +69,10 @@ for m = 1:nMode
     text(axB(m), 0.5, 1.06, sprintf('%s (n=%d)', MODE_LABELS{m}, nTr(m)), 'Units','normalized', ...
         'HorizontalAlignment','center', 'Clipping','off');
 end
-lgd = legend(axB(1), hLeg, {'mean \pm std','Target'}, 'Orientation','horizontal');
+% v6 (Aditya 2026-11-10): box 4's bullet goes, so the legend names the target's frequency, read from the rig's
+% sine parameters (sess.sine.hz, load_bilateral.m).
+lgd = legend(axB(1), hLeg, {'mean \pm std', sprintf('%g Hz target', sn.hz)}, 'Orientation','horizontal');
+fprintf('[sine_panels] target %g Hz\n', sn.hz);
 paperLegend(lgd); lgd.Units = 'normalized'; lgd.Position(2) = 0.01; lgd.Position(1) = 0.5 - lgd.Position(3)/2;
 linkaxes(axB,'x');
 export(fig, fullfile(out, 'sine3_avg_raw.pdf'));

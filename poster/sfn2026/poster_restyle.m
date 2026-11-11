@@ -102,6 +102,16 @@ a = findall(g, 'Type', 'axes'); a = a(1); a.Units = 'centimeters';
 p = a.Position; a.Position = [p(1) p(2) g.Position(3) - p(1) - 0.32 p(4)];
 a.XTickLabel = strrep(a.XTickLabel, '-', char(8211));
 a.Title.FontSize = 7.5;
+% v6 (Aditya 2026-11-10, "Move them into panels"): box 3's bullets go, so the title carries their number, the
+% 0-3 s geometric-mean ratio from paper_stats_table.m (3H_rmse_full / 3I_var_full) as a percentage drop.
+S = readtable(fullfile(fileparts(mfilename('fullpath')), '..', '..', 'paper-writing', 'STATS_TABLE.csv'), ...
+    'TextType', 'string', 'Delimiter', ',');
+t = a.Title.String; if iscell(t), t = strjoin(t, ' '); end
+if contains(t, 'RMSE'), id = "3H_rmse_full"; w = 'RMSE'; else, id = "3I_var_full"; w = 'variance'; end
+pct = round(100 * (1 - S.effect(S.id == id)));
+assert(isscalar(pct) && contains(t, w), 'stats row or title word missing');
+a.Title.String = strrep(t, w, sprintf('%s %d%%', w, pct));
+fprintf('[poster_restyle] %s title: %s (%s, ratio %.4f)\n', w, a.Title.String, id, S.effect(S.id == id));
 yl = a.YLim; xl = a.XLim;
 a.YLabel.String = 'Closed / open';
 drawnow; ti = a.TightInset(1) + 0.05;                    % the variance panel's "0.25" pushes its label off the page
@@ -141,7 +151,7 @@ ax = axes(g, 'Units', 'centimeters', 'Position', [1.5 cm(2) - TOP - H_PLOT cm(1)
 patch(ax, [0.3 nS+0.7 nS+0.7 0.3], [ciS(1) ciS(1) ciS(2) ciS(2)], [0.85 0.90 0.98], 'EdgeColor', 'none');
 plot(ax, [0.3 nS+0.7], gmS * [1 1], '-', 'Color', PS.col_cl, 'LineWidth', 1.2);
 plot(ax, [0.3 nS+0.7], [1 1], '--', 'Color', [0.55 0.55 0.55], 'LineWidth', 0.75);
-for i = 1:nS, plot(ax, [i i], [lo(i) hi(i)], '-', 'Color', PS.col_cl, 'LineWidth', 1.0); end
+for i = 1:nS, plot(ax, [i i], [lo(i) hi(i)], '-', 'Color', [0.72 0.72 0.72], 'LineWidth', 0.6); end   % v6: thin grey (Aditya 2026-11-10)
 scatter(ax, 1:nS, gm, 22, PS.col_cl, 'filled', 'MarkerEdgeColor', 'none');
 set(ax, 'YScale', 'log', 'XTick', [], 'YTick', [0.25 0.5 1 2], 'YMinorTick', 'off', 'XLim', [0.3 nS+0.7], 'YLim', [0.22 2.9]);
 jnAxes(ax);
@@ -164,30 +174,50 @@ end
 % ------------------------------------------------------------------------------------------------
 function fix_d_kernel(g)
 % Box 8 map. The 408 weight dots tile the hemisphere, so they keep their paper size (larger ones smear
-% into stripes). "stimulation site" on two lines, white on a small black label under the site marker, so it
-% reads over the weights, the grey image and the white background alike.
+% into stripes). v6 (Aditya 2026-11-10, "Strip annotations"): the site is a black ring instead of a black
+% disc with a black label box, and a one-line key under the map names it (the map
+% fills its axes, so a label on it would cover weights or cortex). The dotted midline goes (the weights stop
+% at the midline anyway).
 for s = findall(g, 'Type', 'scatter').', s.SizeData = s.SizeData / 1.44; end
 a = findall(g, 'Type', 'axes'); a = a(1);
-t = findall(a, 'Type', 'text', 'String', 'stimulation site');
+delete(findall(a, 'Type', 'text', 'String', 'stimulation site'));
+delete(findall(a, 'Type', 'line', 'LineStyle', ':'));
 ln = findall(a, 'Type', 'line'); ln = ln(arrayfun(@(l) numel(l.XData) == 1, ln));
 assert(~isempty(ln), 'no site marker found');
-dn = 1 - 2 * strcmp(a.YDir, 'reverse');                             % +1 if y grows upward
-set(t, 'String', {'stimulation', 'site'}, 'Color', 'w', 'BackgroundColor', 'k', 'Margin', 0.5, ...
-    'HorizontalAlignment', 'center', 'VerticalAlignment', 'top', ...
-    'Position', [ln(1).XData, ln(1).YData - dn * 0.07 * diff(a.YLim)]);
+ms = ln(1).MarkerSize; x = ln(1).XData; y = ln(1).YData;
+ring = @(xx, yy) plot(a, xx, yy, 'o', 'MarkerSize', ms, 'MarkerEdgeColor', 'k', 'LineWidth', 1.5, 'Clipping', 'off');
+delete(ln(1)); ring(x, y);
+yk = a.YLim(2) + 0.075 * diff(a.YLim);                              % under the axes (image axes: y grows downward)
+xk = a.XLim(1) + 0.30 * diff(a.XLim);
+ring(xk, yk);
+text(a, xk + 0.11 * diff(a.XLim), yk, 'stimulation site', 'FontSize', 7.5, 'Color', 'k', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'middle', 'Clipping', 'off');
 end
 
 function fix_d_agl(g)
 % Box 8 trace. The legend sat on the traces: label each line directly instead, and lift R^2 off the axis.
+% v6 (Aditya 2026-11-10, "Strip annotations"): no beige stimulation window, dashed zero line or dotted onset
+% line; a red bar above the traces marks the laser (0-3 s); labels in regular weight; "Local" alone (the
+% title already says Actual = Global + Local).
 a = findall(g, 'Type', 'axes'); a = a(1);
 delete(findall(g, 'Type', 'legend'));
+pt = findall(a, 'Type', 'patch'); delete(pt(arrayfun(@(q) all(abs(q.FaceColor - [0.93 0.90 0.82]) < 0.03), pt)));
+delete(findall(a, 'Type', 'constantline'));
+delete(findall(a, 'Type', 'line', 'LineStyle', '--'));
 ln = findall(a, 'Type', 'line'); ln = ln(arrayfun(@(l) numel(l.XData) > 50, ln));
 col = arrayfun(@(l) {l.Color(1:3)}, ln); blk = cellfun(@(c) all(c < 0.2), col);
 yb = ln(blk).YData; xb = ln(blk).XData; yend = mean(yb(xb > 2.3));
-B = {'FontSize', 7.5, 'HorizontalAlignment', 'right'};
+B = {'FontSize', 7.5, 'FontWeight', 'normal', 'HorizontalAlignment', 'right'};
 text(a, 2.95, yend - 0.35, 'Actual', B{:}, 'Color', 'k', 'VerticalAlignment', 'top');
 text(a, 2.95, 0.4, 'Global (contra pred.)', B{:}, 'Color', col{find(~blk, 1)}, 'VerticalAlignment', 'bottom');
-tx = findall(a, 'Type', 'text'); r = tx(arrayfun(@(t) startsWith(strjoin(cellstr(t.String), ''), 'R^2'), tx)); r.Position(2) = -3.5;
+tx = findall(a, 'Type', 'text');
+loc = tx(arrayfun(@(t) startsWith(strjoin(cellstr(t.String), ''), 'Local'), tx)); set(loc, 'String', 'Local', 'FontWeight', 'normal');
+r = tx(arrayfun(@(t) startsWith(strjoin(cellstr(t.String), ''), 'R^2'), tx)); r.Position(2) = -3.5;
+yl = a.YLim; red = [0.85 0.12 0.10];
+plot(a, [0 3], yl(2) - 0.12 * [1 1], '-', 'Color', red, 'LineWidth', 3);
+text(a, -0.08, yl(2) - 0.12, 'laser', 'FontSize', 7.5, 'Color', red, 'HorizontalAlignment', 'right', ...
+    'VerticalAlignment', 'middle');
+a.YLim = yl;
 end
 
 function fix_st_trials(g)
