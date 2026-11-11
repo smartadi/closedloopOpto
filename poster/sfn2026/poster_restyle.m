@@ -50,7 +50,7 @@ end
 function T = table_of_panels()
 f = @(fig, fix) struct('fig', fig, 'fix', fix);
 T.st_trials = f(fullfile('figure4', 'f4_state_exemplars.fig'), @fix_st_trials);
-T.d_kernel = f(fullfile('figure4', 'f4_kernel_map.fig'), @fix_d_kernel);
+T.d_kernel = f(fullfile('figure4', 'f4_kernel_map.fig'), @fix_d_kernel_diagram);
 T.d_agl = f(fullfile('figure4', 'f4_agl.fig'), @fix_d_agl);
 T.d_rr = f(@build_d_rr, []);
 T.cl_trial = f(fullfile('figure3', 'panel_A.fig'), @(g) fix_cl_ab(g, true));
@@ -177,6 +177,43 @@ end
 end
 
 % ------------------------------------------------------------------------------------------------
+function fix_d_kernel_diagram(g)
+% Box 8, v10 (Aditya 2026-11-11, "C: diagram"): a visitor could not read the per-pixel weight map (weights
+% sum to 1.55 while their absolute values sum to 19.7; half of neighbouring pixels flip sign, so it looks
+% like noise, and 3x3 block means or smoothing showed no clearer pattern). The panel now says only what the
+% model uses: every grid pixel of the other hemisphere (all 408 kept) predicts the site. The weights, the
+% colour bar and the "kernel" title go; the other hemisphere is shaded in the Global line's blue (f4_agl:
+% [0.2 0.4 0.75]), linking it to "Global (contra pred.)" in the next panel. Same canvas, outline and site ring.
+fix_d_kernel(g);
+blue = [0.2 0.4 0.75];
+a = findall(g, 'Type', 'axes'); a = a(1); a.Units = 'centimeters'; p = a.Position;
+delete(findall(g, 'Type', 'colorbar')); delete(findall(a, 'Type', 'scatter'));
+a.Position = p;                                                    % keep its place now the colour bar is gone
+root = fullfile(fileparts(mfilename('fullpath')), '..', '..');
+S = load(fullfile(root, 'controller-analysis', 'data', 'ctrl_ols_spont_AL_0033_0415_e2.mat'), 'contra_mask');
+m = S.contra_mask;
+[ry, rx] = find(m); c0 = [mean(rx), mean(ry)];                     % the hemisphere's centre (x = column)
+hold(a, 'on');
+ov = image(a, repmat(reshape(blue, 1, 1, 3), size(m)), 'AlphaData', 0.35 * double(m));
+uistack(ov, 'up', 1);                                              % over the grey brain, under outline and ring
+ln = findall(a, 'Type', 'line'); ln = ln(arrayfun(@(l) numel(l.XData) == 1 && strcmp(l.Marker, 'o') ...
+    && l.YData >= a.YLim(1) && l.YData <= a.YLim(2), ln));          % the site's ring, not the key's below the map
+assert(isscalar(ln), 'expected one site ring on the map');
+site = [ln(1).XData, ln(1).YData];
+for l = findall(a, 'Type', 'line').', uistack(l, 'top'); end
+% arrow from the shaded hemisphere to the ring; it stops at the ring's edge (ring radius in data units)
+a.Units = 'points'; ppd = a.Position(3) / diff(a.XLim); a.Units = 'centimeters';
+rr = ln(1).MarkerSize / 2 / ppd * 1.6;
+u = (site - c0) / norm(site - c0);
+p0 = c0 + 0.10 * (site - c0); p1 = site - rr * u; hw = 26;       % head half-width and length, data units
+plot(a, [p0(1) p1(1) - 1.6 * hw * u(1)], [p0(2) p1(2) - 1.6 * hw * u(2)], '-', 'Color', blue, 'LineWidth', 2);
+nrm = [-u(2) u(1)];
+patch(a, p1(1) + [0, -2 * hw * u(1) + hw * nrm(1), -2 * hw * u(1) - hw * nrm(1)], ...
+    p1(2) + [0, -2 * hw * u(2) + hw * nrm(2), -2 * hw * u(2) - hw * nrm(2)], blue, 'EdgeColor', 'none');
+a.Title.String = 'Input: other hemisphere'; a.Title.FontSize = 8;   % a label inside did not fit the hemisphere
+set(findall(g, 'Type', 'text'), 'FontWeight', 'normal'); a.Title.FontWeight = 'normal';
+end
+
 function fix_d_kernel(g)
 % Box 8 map. The 408 weight dots tile the hemisphere, so they keep their paper size (larger ones smear
 % into stripes). v6 (Aditya 2026-11-10, "Strip annotations"): the site is a black ring instead of a black

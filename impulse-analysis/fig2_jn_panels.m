@@ -25,6 +25,14 @@ if poster
     if ~exist(out,'dir'), mkdir(out); end
     addpath(fullfile(root,'poster','sfn2026'));
 end
+% 48 x 36 in poster (2026-11-11, method approved by Aditya: "approve"): box 2's plots are s times larger
+% (s per panel from poster_box2_48.py factors, panels/poster/box2_48/grow.json) while type, lines, ticks and
+% markers keep the size of the rest of the poster: printed on a page s times larger (save_panel). Output box2_48/.
+global POSTER_BOX2_48                          %#ok<GVMIS>
+if poster && ~isempty(POSTER_BOX2_48) && POSTER_BOX2_48
+    out = fullfile(root,'poster','sfn2026','panels','poster','box2_48');
+    assert(isfile(fullfile(out,'grow.json')), 'run poster_box2_48.py factors first');
+end
 en = char(8211);
 
 H = 3.0;  y0 = 0.72;  yh = 1.90;              % row height; plot box bottom and height (cm)
@@ -222,6 +230,17 @@ function tf = all_equal(a,b)
 tf = isequal(a(:)',b(:)');
 end
 
+function s = box2_grow(out, n)
+% s for panel n (A-C) on the 48 x 36 in poster, from box2_48/grow.json; 1 for the 54 in prints (box2/).
+s = 1;
+j = fullfile(out, 'grow.json');
+if endsWith(out, 'box2_48') && isfile(j)
+    g = jsondecode(fileread(j));
+    assert(isfield(g, n), 'grow.json has no factor for %s', n);
+    s = g.(n);
+end
+end
+
 function shrink_type(f, k)
 % SfN poster v5 (2026-11-10, approved by Aditya: "approve"): box 2 is placed 1.398x larger than the poster's
 % other panels (K2 in poster_swap_all.py), so its type printed at ~24-27 pt against ~20-23 pt elsewhere.
@@ -245,7 +264,12 @@ function save_panel(f, out, n)
 % window size is checked too.
 W = f.UserData(1);  H = f.UserData(2);
 global PAPER_LABSTYLE POSTER_BOX2              %#ok<GVMIS>
+sp = box2_grow(out, n);                        % 1 except on the 48 x 36 in poster
 if ~isempty(POSTER_BOX2) && POSTER_BOX2, poster_type(f); poster_lab_axes(f); shrink_type(f, 1 / 1.398);
+    % 48 in: the page is sp times larger (below), which scales positions only; fonts, line widths and markers
+    % keep their point size. Tick lengths (a fraction of the axes) would grow with the axes, so hold them.
+    % (Scaling the type by 1/sp instead failed: print rounds font sizes to 0.5 pt, so 5/1.31 = 3.81 came out 3.5.)
+    if sp ~= 1, for a = findall(f, 'Type', 'axes').', a.TickLength = a.TickLength / sp; end, end
 elseif ~isempty(PAPER_LABSTYLE) && PAPER_LABSTYLE, sls_style_fig(f); end
 drawnow;
 pinned = findall(f,'-function',@(h) isappdata(h,'pinned'));
@@ -259,7 +283,7 @@ for h = pinned'
     assert(norm(q - p) < 0.02, '[F2JN] %s: %s moved to %s', n, h.Type, mat2str(h.Position,4));
 end
 assert(all(abs(f.Position(3:4) - [12 6]) < 0.05), '[F2JN] %s: window is %.2f x %.2f', n, f.Position(3:4));
-set(f,'PaperUnits','centimeters','PaperPositionMode','manual','PaperSize',[12 6],'PaperPosition',[0 0 12 6],'InvertHardcopy','off');
+set(f,'PaperUnits','centimeters','PaperPositionMode','manual','PaperSize',[12 6] * sp,'PaperPosition',[0 0 12 6] * sp,'InvertHardcopy','off');
 % print sometimes squeezes the page vertically by 9%, at random: check each print and print again if so
 pdf = fullfile(out,[n '.pdf']);
 chk = fullfile(fileparts(mfilename('fullpath')),'fig2_jn_boxcheck.py');
@@ -272,7 +296,7 @@ if poster   % poster: print sometimes puts a gap in a word ("pow er"); plain tex
 end
 for attempt = 1:10
     print(f, pdf, '-dpdf', '-vector');
-    [st, txt] = system(sprintf('python -X utf8 -I "%s" "%s" %s', chk, pdf, n));
+    [st, txt] = system(sprintf('python -X utf8 -I "%s" "%s" %s %.4f', chk, pdf, n, sp));
     if st == 0 && poster, [st, txt] = system(sprintf('python -X utf8 -I "%s" "%s" "%s"', tchk, pdf, lst)); end
     if st == 0, break; end
     f.Position(4) = 6.05;  drawnow;  f.Position(4) = 6;  drawnow;   % force a new layout of the window

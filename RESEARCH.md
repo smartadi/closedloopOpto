@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v10 at 48 × 36 in built in scratch (not in OneDrive)
+**Changed/Found:** Scratch `build_48.sh` (v3 → swap with the reprinted panels → … → `poster_text.py` with FIXES → `heading_fit.py` → `poster_resize.py 48` → `poster_ack.py`) → `poster_box2_48.py build` → `poster_pdf.py` gives `f48k.pptx` and `SfN2026_poster_v10_48x36.pdf` (48.0 × 36.0 in, 16.6 MB, 23 pictures at full resolution). Column 1 gaps 0.89 in (were 1.71), column 2 0.90, column 3 0.84 in. PowerPoint: no text box overflows. Box 2 printed type, measured (PDF font size × placed scale): before 18.3 / 18.0 / 17.9 pt, after 18.2 / 18.0 / 17.9 pt (A / B / C). Introduction wording unchanged (Aditya will edit it himself; only "Wide-ranging" from the typo fixes).
+**Why:** Aditya: "48inch version is final, lets do it in that"; the feedback, review and gap changes below.
+**Next:** Save to OneDrive (pptx + PDF) on his OK. If he edits the Introduction, rerun `poster_box2_48.py factors`, MATLAB, `build`, `refine`, MATLAB, `build`, so column 1 refits.
+
+### 2026-11-11 — Box 8: the weight map becomes a diagram (`poster_restyle.m` fix_d_kernel_diagram)
+**Changed/Found:** `poster/sfn2026/poster_restyle.m`: d_kernel now runs `fix_d_kernel_diagram`: the 408 weight squares and the colour bar go; the other hemisphere (`contra_mask` of `ctrl_ols_spont_AL_0033_0415_e2.mat`) is shaded in the Global line's blue ([0.2 0.4 0.75], read from `f4_agl.fig`) at alpha 0.35; an arrow goes from the hemisphere to the site's ring; title "Input: other hemisphere". All 408 grid pixels are in the model (`nKept` 408, none dropped), so "other hemisphere" is accurate. Same canvas (4.52 × 3.30 cm), outline and ring key. A label inside the hemisphere did not fit (first try); the arrowhead was enlarged after the first full render. The paper panel (Fig 4E) is untouched.
+**Why:** Aditya picked "C: diagram" after the previews (entry below) showed no clearer pattern in coarser maps.
+**Next:** none.
+
+### 2026-11-11 — Column 1 gap at 48 in: box 2 larger with its type held (`poster_box2_48.py`, `fig2_jn_panels.m`)
+**Changed/Found:** New `poster/sfn2026/poster_box2_48.py` (factors / build / refine). k_t = (x_R − i − c)/(x_1 − c) = 1.0856 for the top row (A, B), s_f from the approved formula 1.3114 for C. `impulse-analysis/fig2_jn_panels.m` (POSTER_BOX2 branch only, paper output untouched): with new global POSTER_BOX2_48 it prints A–C to `panels/poster/box2_48/` on a page s times larger, which scales positions only, so type, line widths and markers keep their point size; tick lengths are divided by s to hold them; `fig2_jn_boxcheck.py` takes the page scale. Fix to match the approved math, not a math change: the approved route (type × 1/(1.398 s)) failed because MATLAB's print rounds font sizes to 0.5 pt (C: 5/1.31 = 3.81 pt printed as 3.5). With the type held, C's picture grew less than s_f (its text does not scale), so the gaps came out 1.00 in, not 0.90; `refine` fits C's height as linear in s (2.604 in per unit s, from that build) and solves for 0.90 in gaps: s_f = 1.3886. Result: A 6.09 × 4.55 in, B 6.73 × 4.40 in, C 12.26 × 4.91 in; gaps 0.89 in. Math approved by Aditya 2026-11-11: "approve" (method-gate block in chat: k_t, s_f, type held, equal gaps G = 0.90 in).
+**Why:** Aditya: "fix the column 1 gap in the 48 version".
+**Next:** Rerun the factors / refine chain whenever column 1's text changes.
+
 ### 2026-11-11 — Box 8 weight map: coarser versions previewed, no clearer pattern
 **Changed/Found:** Scratch preview only (no repo code). The box 8 map is the stim-blind ridge model's 408 weights (`ctrl_ols_ol_stimblind_ridge_AL_0033_0415_e2.mat`, grid step 13 px on the contralateral hemisphere). Sum of weights 1.554 vs sum of |weights| 19.70; adjacent pairs with opposite signs: 50% horizontally (n = 375), 46% vertically (n = 391), so the per-pixel map reads as noise. 3 × 3-pixel block means: 54 blocks (32 full), range −0.050 to 0.048. Gaussian smoothing over the grid, σ = 1 step: range −0.059 to 0.058. Neither shows a clear spatial pattern; the weights are spread over the hemisphere (the paper's "distributed" reading).
 **Why:** A visitor was confused by the kernel; Aditya: "can we create a more discretized version? or simplify it for display?"
