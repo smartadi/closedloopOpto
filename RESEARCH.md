@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v7 in OneDrive (highlight style A), with its full-resolution PDF
+**Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v7.pptx` (8099088 bytes, md5 314d0263…) and `SfN2026_poster_v7.pdf` (15203558 bytes), both OneDrive state 2 at 00:22. Built by v3 → swap → drop_bullets → intro_bullets → clean → logos → `highlight.py tint` (style A: pale purple fill, thin purple outline on Introduction and Conclusions) → `carry_edits.py` from the OneDrive v6, unchanged since 22:37 (md5 a86337f0…), so no new online edits; his six heading edits are carried. v3-v6 untouched (md5 checked).
+**Why:** Aditya: "A, save v7."
+**Next:** If he edits v7 online, diff it against a rebuild (v7e before carry) and carry the edits into the next version. Box 6's R² (0.562), poster number and printing remain.
+
 ### 2026-11-10 — Poster box 1: light paths to the image edge, with arrows
 **Changed/Found:** `poster/sfn2026/box1_diagram.py`: the camera and LEDs form one unit centred under the image, 7 mm below it. The green beam now runs from the image's lower edge down into the camera with an arrowhead; blue and violet run from the LEDs up to the image's lower edge with arrowheads. None of them goes to the readout square any more, so the drawing shows the camera imaging the whole cortex; the square and the stimulation dot stay on the image. `beam()` gained arrowheads in the beam's colour. Drawing 137.5 × 70 mm. Rebuilt v7 and its PDF; column gaps 0.98 / 1.17 / 0.98 in.
 **Why:** Aditya: "the camera green with an arrow from brain towards camera, the leds blue and violet from camera to brain arrow direction, but they dont all go to the primary spot they go from cmaera/led block to the boundary of brain image showing that this is captureing entire brain".
