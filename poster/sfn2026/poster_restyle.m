@@ -130,21 +130,25 @@ for i = 1:nS
     lr = T.logRR(T.sess == u{i}); m = mean(lr); s = std(lr);
     gm(i) = exp(m); lo(i) = exp(m - s); hi(i) = exp(m + s);
 end
-lab = string(paper_session_label(u, 'short'));
-[gm, o] = sort(gm); lo = lo(o); hi = hi(o); lab = lab(o);
+[gm, o] = sort(gm); lo = lo(o); hi = hi(o);
 cm = [5.92 3.84] / 2.97 * 2.54;
 g = figure('Visible', 'off', 'Units', 'centimeters', 'Position', [2 2 cm], 'Color', 'w');
-ax = axes(g, 'Units', 'centimeters', 'Position', [1.5 0.95 cm(1) - 1.62 cm(2) - 1.7]); hold(ax, 'on');
+% v5 (2026-11-10, approved): no session names (11 rotated names in ~2.5 cm could not be read), so the plot box
+% gets d_agl's height, 2.17 cm, with its top 0.55 cm below the canvas top as d_agl's is; the title goes on
+% one line from the canvas's left edge.
+H_PLOT = 2.17; TOP = 0.55;
+ax = axes(g, 'Units', 'centimeters', 'Position', [1.5 cm(2) - TOP - H_PLOT cm(1) - 1.62 H_PLOT]); hold(ax, 'on');
 patch(ax, [0.3 nS+0.7 nS+0.7 0.3], [ciS(1) ciS(1) ciS(2) ciS(2)], [0.85 0.90 0.98], 'EdgeColor', 'none');
 plot(ax, [0.3 nS+0.7], gmS * [1 1], '-', 'Color', PS.col_cl, 'LineWidth', 1.2);
 plot(ax, [0.3 nS+0.7], [1 1], '--', 'Color', [0.55 0.55 0.55], 'LineWidth', 0.75);
 for i = 1:nS, plot(ax, [i i], [lo(i) hi(i)], '-', 'Color', PS.col_cl, 'LineWidth', 1.0); end
 scatter(ax, 1:nS, gm, 22, PS.col_cl, 'filled', 'MarkerEdgeColor', 'none');
-set(ax, 'YScale', 'log', 'XTick', 1:nS, 'XTickLabel', cellstr(lab), 'XTickLabelRotation', 45, 'TickLabelInterpreter', 'none', ...
-    'YTick', [0.25 0.5 1 2], 'XLim', [0.3 nS+0.7], 'YLim', [0.22 2.9]);
+set(ax, 'YScale', 'log', 'XTick', [], 'YTick', [0.25 0.5 1 2], 'YMinorTick', 'off', 'XLim', [0.3 nS+0.7], 'YLim', [0.22 2.9]);
 jnAxes(ax);
+xlabel(ax, sprintf('Session (%d, sorted by RR)', nS));
 star = repmat('*', 1, (p < 0.05) + (p < 0.01) + (p < 0.001)); if isempty(star), star = 'n.s.'; end
-title(ax, {'CL rejects', sprintf('disturbances %s', star)});
+text(ax, -1.4, H_PLOT + 0.12, sprintf('CL rejects disturbances %s', star), 'Units', 'centimeters', ...
+    'FontSize', 8, 'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom', 'Clipping', 'off');
 ylabel(ax, {'Rejection', 'ratio (RR)'});
 fprintf('[poster_restyle] d_rr: %d sessions, geomean RR %.2f [%.2f, %.2f], p = %.2g, from %s\n', nS, gmS, ciS, p, src);
 end

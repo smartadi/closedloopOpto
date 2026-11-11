@@ -206,6 +206,22 @@ function tf = all_equal(a,b)
 tf = isequal(a(:)',b(:)');
 end
 
+function shrink_type(f, k)
+% SfN poster v5 (2026-11-10, approved by Aditya: "approve"): box 2 is placed 1.398x larger than the poster's
+% other panels (K2 in poster_swap_all.py), so its type printed at ~24-27 pt against ~20-23 pt elsewhere.
+% poster_type sets the poster standard (7 / 7.5 / 8 pt at panel size); this scales type, lines, ticks and
+% markers by k = 1/1.398 so they print the same size as in the other boxes. Every size is read first and
+% then set, so an axes' FontSize change can't rescale its labels a second time. Geometry is untouched.
+h = findall(f, '-property', 'FontSize');
+fs = arrayfun(@(o) o.FontSize, h);
+for j = 1:numel(h), h(j).FontSize = fs(j) * k; end
+for o = findall(f, '-property', 'LineWidth').', o.LineWidth = o.LineWidth * k; end
+for o = findall(f, '-property', 'MarkerSize').', o.MarkerSize = o.MarkerSize * k; end
+for o = findall(f, 'Type', 'scatter').', o.SizeData = o.SizeData * k^2; end
+for o = findall(f, 'Type', 'errorbar').', o.CapSize = o.CapSize * k; end
+for a = findall(f, 'Type', 'axes').', a.TickLength = a.TickLength * k; end
+end
+
 function save_panel(f, out, n)
 % print on a page the same size as the 12 x 6 cm window, then fig2_jn_crop.py keeps the bottom-left canvas
 % and checks the type sizes. Not exportgraphics, which scaled by an on-screen window size that changed
@@ -213,7 +229,7 @@ function save_panel(f, out, n)
 % window size is checked too.
 W = f.UserData(1);  H = f.UserData(2);
 global PAPER_LABSTYLE POSTER_BOX2              %#ok<GVMIS>
-if ~isempty(POSTER_BOX2) && POSTER_BOX2, poster_lab_axes(f);
+if ~isempty(POSTER_BOX2) && POSTER_BOX2, poster_type(f); poster_lab_axes(f); shrink_type(f, 1 / 1.398);
 elseif ~isempty(PAPER_LABSTYLE) && PAPER_LABSTYLE, sls_style_fig(f); end
 drawnow;
 pinned = findall(f,'-function',@(h) isappdata(h,'pinned'));
