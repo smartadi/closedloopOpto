@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v8 in OneDrive, with its full-resolution PDF
+**Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v8.pptx` (8099941 bytes, md5 b89f9188…) and `SfN2026_poster_v8.pdf` (17024028 bytes, md5 d2d8c375…), both OneDrive state 2 at 10:45. Before saving, the OneDrive v7 was unchanged since the build (md5 c86b3104…). v3–v7 untouched (md5 checked). Box 7's third bullet is his wording; suggested wordings A/B were not used.
+**Why:** Aditya: "Yes, save v8".
+**Next:** If he edits v8 online, diff it against v8e (the build before its carry) and carry the edits into the next version. Box 6's R² (0.562), poster number and printing remain.
+
 ### 2026-11-11 — SfN poster v8 built in scratch (not in OneDrive)
 **Changed/Found:** v8 = v3 → swap → drop_bullets → intro_bullets → clean → logos (QR square + PNG fallback) → `highlight.py tint` → `carry_edits.py` (OneDrive v7 vs v7e) → `poster_text.py` → `heading_fit.py` → `poster_pdf.py` (scratch `build_v8.sh`). The OneDrive v7 had changed since 00:21 (md5 c86b3104, file time 09:52): the only difference from the saved v7 is the Conclusions indent, 367982 → 367665 EMU (0.0003 in), written by PowerPoint Online, so it is carried as is. Checks on the v8 PDF: all eight headings wrap only at the bar end; QR 2.99 × 2.99 in with its PNG fallback (743 ppi); logos 534/600/615 ppi; box 7's new sentence fits one line; column gaps 0.98 / 1.17 / 0.98 in. PowerPoint flags box 6 and box 8 bullets (as in v7) and box 8's heading; that line ends at 53.07 in inside its 53.20 in box, so the heading flag is a false alarm.
 **Why:** Aditya's 2026-11-11 requests (headings, sentence, QR and image resolution).
