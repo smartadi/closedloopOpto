@@ -1,0 +1,243 @@
+\subsection*{Single-trial variability reflects state-dependent ongoing activity}
+
+\ai{The LTI model described the trial-averaged response, but individual trials deviated from it by amounts that depended on brain state.}
+\ai{We measured state over the 1\,s before each stimulus with three measures (Materials and Methods): motion energy of the face, which measures movement, and two measures of 2--4\,Hz power of the activity.}
+\ai{Low-frequency power is high when the cortex is synchronized and decreases with movement and arousal~\citep{Crochet2006,Poulet2008,Vinck2015}, and wide-field calcium imaging resolves such rhythms up to a few hertz~\citep{Vanni2017,Jacobs2020}.}
+\ai{Absolute 2--4\,Hz power increases with the amplitude of ongoing fluctuations and, across trials, closely followed total 0.4--10\,Hz power (Spearman $\rho = 0.97$).}
+\ai{Relative 2--4\,Hz power, the fraction of 0.4--10\,Hz power in the band, measures spectral shape regardless of amplitude ($\rho = 0.24$ with total power; Figure~\ref{fig:state_quartile}A--C).}
+\ai{We quantified each trial's variability as the root-mean-square deviation of its response from the trial-averaged response at its amplitude, which the LTI model describes, over $0$ to $0.5$\,s.}
+\ai{We normalized this variability within each session and grouped trials by quartile of each state measure (1516 trials, 4 sessions; Figure~\ref{fig:figure2}G).}
+\ai{To check whether ongoing activity without stimulation showed the same state dependence, we computed the same measure over a stimulus-free window before each stimulus (Materials and Methods).}
+
+\ai{Single trials were least variable when the animal moved most.}
+\ai{In every session, variability in the top motion quartile was $0.57$--$0.71$ times that of the session's typical trial, against $0.88$--$1.30$ in the three lower quartiles; across sessions, it was $0.58$ times that in the bottom quartile (geometric mean; range $0.50$--$0.81$; Figure~\ref{fig:state_quartile}D).}
+\ai{Variability increased from quartile to quartile with absolute 2--4\,Hz power in all 4 sessions (top versus bottom quartile $2.35$, range $1.70$--$2.71$) and showed no consistent pattern with relative 2--4\,Hz power ($1.03$, range $0.83$--$1.16$).}
+
+\ai{Ongoing activity in the stimulus-free window showed the same pattern (Figure~\ref{fig:figure2}G, dashed line; top versus bottom quartile $0.60$, $1.08$ and $2.70$ for motion, relative and absolute power) and deviated from its own trial average about as much as the evoked response did (ratio of within-session variabilities $0.92$--$1.06$ across sessions).}
+\ai{Relative to this control, response variability changed little across quartiles (top versus bottom quartile $0.98$, $0.95$ and $0.87$; Figure~\ref{fig:state_quartile}D--F, second column).}
+\ai{Single-trial responses and the ongoing activity on which they were superimposed therefore changed together with state, both being less variable during movement and more variable when ongoing fluctuations were larger (Table~\ref{tab:stat_fig2g}).}
+\ai{We did not separate a state-dependent change in the effect of the stimulus from a state-dependent change in ongoing activity.}
+\ai{The co-variation is consistent with brain state acting as a disturbance added to an otherwise fixed response to light, the situation for which feedback control is designed, and such a disturbance also limits how well any fixed model can predict an individual trial.}
+\ai{We examined this in closed loop (Figure~\ref{fig:figure4}).}
+\ai{Figure~\ref{fig:figure2}G is descriptive; per-session values for every quartile, the trial-level distributions and the response relative to the stimulus-free control are in Figure~\ref{fig:state_quartile}D--I, and supporting tests in Table~\ref{tab:stat_fig2g}.}
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=\linewidth]{images/Figure3.pdf}
+    \caption{\ai{\textbf{Feedback steers activity to the target level and reduces trial-to-trial variability} (4 mice, 15 sessions).}\\
+    \small{
+    \ai{\textbf{A:} Single-trial example of open-loop (red) and closed-loop (blue) $\Delta F/F$ responses. Gray shading, 3\,s stimulation window; dashed line, target level ($-5\%\,\Delta F/F$). Gray traces above each response, optogenetic input. Numbers, RMSE of each trial over the stimulation window (as in F).}\\
+    \ai{\textbf{B:} Trial-averaged $\Delta F/F$ responses under open-loop (red) and closed-loop (blue) control for a representative session. Bold line, trial mean; shading, $\pm1$\,SD across trials. Numbers, RMSE of the trial-averaged trace over the stimulation window. Per-trial RMSE is shown in F.}\\
+    \ai{\textbf{C:} Trial-averaged optogenetic input (gray) for the same open-loop (left) and closed-loop (right) trials. Bold line, mean input; shading, $\pm1$\,SD across trials.}\\
+    \ai{\textbf{D:} Cross-trial variance of $\Delta F/F$ over time for open-loop and closed-loop conditions in a representative session. Gray shading, stimulation window. D and E share one $y$-axis range.}\\
+    \ai{\textbf{E:} Cross-trial variance of $\Delta F/F$ over time, averaged across all 15 sessions, for open-loop and closed-loop conditions.}\\
+    \ai{\textbf{F:} Distribution of per-trial tracking RMSE (over the 3\,s stimulation window) for open-loop and closed-loop trials in the session of A--D. Half-violins, kernel density estimate; asterisks, condition means.}\\
+    \ai{\textbf{G:} Trial-averaged tracking error (RMSE, $\%\,\Delta F/F$) over time. Thin lines, individual sessions (15); bold lines, mean across sessions. Error is defined only within the 3\,s stimulation window and is zero outside it.}\\
+    \ai{\textbf{H:} Ratio of closed-loop to open-loop tracking RMSE per session (log scale; below one, closed loop tracked better) in four windows: pre-stimulation (3\,s before onset), transient (0--1\,s), steady state (1--3\,s) and post-stimulation (1\,s after offset, the end of the stored trial segment). Gray lines, sessions; black, geometric mean across sessions with 95\% CI; dashed line, ratio of one; gray band, stimulation windows. Stars in the title, two-sided one-sample $t$-test on the per-session log ratio over the whole 0--3\,s stimulation window, the primary window, which is not plotted separately ($n = 15$ sessions, 4 mice; Table~\ref{tab:stat_fig3}; Materials and Methods).}\\
+    \ai{\textbf{I:} As H, for the ratio of across-trial variance; here the post-stimulation window spans 3\,s after offset.}\\
+    }}
+    \label{fig:figure3}
+\end{figure}
+% --------------------------------% ------------------------------------------------------------
+\subsection*{\ai{Closed-loop control tracks the target level more accurately than open-loop stimulation}}
+% ------------------------------------------------------------
+\ai{We used the PI controller to steer activity to a target level of $-5\%\,\Delta F/F$ for 3\,s on each trial (Figure~\ref{fig:figure1}E; Materials and Methods).}
+\ai{For each mouse, we first tuned the feedforward gain $K_r$ and the feedback gains $K_p$ and $K_i$ (Materials and Methods) and adjusted them slightly at the start of each session to account for changes between sessions.}
+\ai{We then ran a validation block with fixed gains, in which closed-loop trials and open-loop trials (feedforward only, no feedback) were randomly interleaved (Table~\ref{tab:gains}).}
+\ai{Figure~\ref{fig:figure3}A--D and F show one representative session (Mouse~2a; $K_r = 0.1$, $K_p = 0.07$, $K_i = 0.1$), and Figure~\ref{fig:figure3}E and G--I pool all 15 sessions.}
+\ai{On single trials, the closed-loop controller adjusted the stimulation as activity changed, whereas the open-loop input was fixed (Figure~\ref{fig:figure3}A).}
+\ai{As a result, trial-averaged closed-loop activity remained close to the target level throughout stimulation, whereas open-loop activity was offset by the error in the feedforward calibration (Figure~\ref{fig:figure3}B).}
+\ai{The average closed-loop input departed from the fixed open-loop input (Figure~\ref{fig:figure3}C), a correction that may reflect errors in the model or biases related to stimulation.}
+
+\ai{Closed loop tracked the target level more accurately in every session.}
+\ai{We quantified tracking on each trial as the root-mean-square error (RMSE) between activity and the target level.}
+\ai{In the representative session, closed loop lowered both the mean RMSE and its spread across trials (Figure~\ref{fig:figure3}F), and across sessions, it lowered the instantaneous RMSE of the trial-averaged response (Figure~\ref{fig:figure3}G).}
+\ai{To compare sessions on one scale, we divided each session's mean closed-loop RMSE by its mean open-loop RMSE in each window (0--1\,s, transient response; 1--3\,s, steady-state response), so that a ratio below one represents closed-loop improvement (Figure~\ref{fig:figure3}H).}
+\ai{We tested the log ratio across sessions with a one-sample $t$-test and checked the result in each mouse (Materials and Methods).}
+\ai{Over the full 3\,s window, closed loop lowered RMSE in all 15 sessions and in all 4 mice, by 23\% on average (geometric-mean ratio $0.77$, $p = 5.8\times10^{-8}$; Table~\ref{tab:stat_fig3}).}
+\ai{At stimulation onset, activity differed from the target level by an initial deviation that decayed within about 1\,s, so the transient window contains this correction, and error in the steady-state window reflects ongoing disturbances.}
+\ai{Closed loop lowered RMSE by 15\% in the transient (ratio $0.85$; $p = 1.0\times10^{-5}$) and by 32\% in the steady state ($0.68$; $p = 4.9\times10^{-7}$), with the ratio below one in all 15 sessions and all 4 mice in both windows, whereas before and after stimulation the ratio remained at one (geometric mean $1.01$, 95\% CI $[1.00, 1.03]$, and $1.00$, $[0.98, 1.03]$; Figure~\ref{fig:figure3}H).}
+
+\ai{Part of this advantage reflects the rough feedforward calibration; during stimulation, open-loop activity differed from the target level by a median of $1.5\%\,\Delta F/F$ (Figure~\ref{fig:figure3}B).}
+\ai{To separate the effect of feedback from that of calibration, we compared closed loop with the best fixed input, the constant command that would have minimized each session's open-loop error under the linear model, computed on the same trials, which favors open loop (Figure~\ref{fig:best_fixed}A; Materials and Methods).}
+\ai{This input would have brought open-loop activity to within $0.3\%\,\Delta F/F$ of the target level and lowered its steady-state RMSE by 15\%.}
+\ai{Closed loop still tracked better than the best fixed input, by 13\% over the stimulation window (ratio $0.87$, $p = 6.5\times10^{-4}$; below one in 13 of 15 sessions and 3 of 4 mice), 8\% in the transient ($0.92$, $p = 0.026$) and 20\% in the steady state ($0.80$, $p = 1.4\times10^{-4}$) (Figure~\ref{fig:best_fixed}B,C; Table~\ref{tab:stat_fig3}).}
+\ai{Feedback alone moved the average command toward this input; the mean closed-loop command was 1.16 times the open-loop command (median over sessions), against 1.28 times for the best fixed input, and the two ratios were correlated across sessions (Spearman $\rho = 0.67$, $p = 0.0081$; Figure~\ref{fig:best_fixed}D).}
+\ai{Under the same model, recalibration does not change across-trial variance, so the reduction in variance described next is not an effect of calibration.}
+% ------------------------------------------------------------
+\subsection*{Closed-loop control reduces trial-to-trial variability}
+% ------------------------------------------------------------
+\ai{In the representative session, across-trial variance was similar in the two conditions before stimulation but diverged after stimulation onset (Figure~\ref{fig:figure3}D).}
+\ai{Open-loop variance decreased slightly, whereas closed-loop variance decreased much more, as expected if feedback corrects each trial's deviation.}
+\ai{Averaged across all 15 sessions, variance decreased in the same way during stimulation, so the effect was not specific to one session (Figure~\ref{fig:figure3}E).}
+\ai{Closed loop lowered across-trial variance by 42\% over the stimulation window (ratio $0.58$; $p = 6.3\times10^{-6}$; 14 of 15 sessions, all 4 mice), by 33\% in the transient ($0.67$; $p = 5.5\times10^{-4}$) and by 46\% in the steady state ($0.54$; $p = 1.3\times10^{-6}$; Figure~\ref{fig:figure3}I; same test as above).}
+\ai{Before and after stimulation, the ratio remained near one (geometric mean $1.04$, 95\% CI $[0.91, 1.18]$, and $1.05$, $[0.93, 1.19]$), so trials in the two conditions were drawn from similar distributions and the reduction in variance was confined to the period in which feedback was active.}
+\ai{This is consistent with disturbance rejection, in which feedback cancels part of the ongoing activity that differs from trial to trial; this activity may reflect input from other brain areas or external stimuli, and the controller treats it as a disturbance.}
+\ai{The size of the improvement varied across sessions, possibly reflecting differences in arousal, opsin expression and the overlap between the stimulated and recorded regions.}
+
+\begin{figure}[!t]
+    \centering
+    % ===== ASSEMBLED FIGURE (2026-09-29; lettering A--G) ========================
+    % Panels: A state exemplars | B error-decomposition model | C unique R^2 |
+    % D four states vs performance (stitched quartiles) | E contra kernel weights |
+    % F A=G+L model example | G CL disturbance rejection (all reacher sessions).
+    % Source: figures_final/Figure4.pdf (FIgure4.ai), MANIFEST [figure4].
+    \includegraphics[width=\linewidth]{images/Figure4.pdf}
+    % ===========================================================================
+    \caption{\small{\ai{\textbf{Brain-state dependence of controller performance and rejection of disturbance.}}\\
+    \small{\ai{Open loop red, closed loop blue. Steady state, 1--3\,s after laser onset.}\\
+    \ai{\textbf{A:} Closed-loop trials, each high in one state variable: initial deviation (blue), motion (orange), relative 2--4\,Hz power (green) and absolute 1--4\,Hz power (purple). Dashed line, target level; gray shading, stimulation; gray trace, $z$-scored motion energy.}\\
+    \ai{\textbf{B:} Error-decomposition model: per-trial tracking error (RMSE) regressed on the state variables within each session; colors as in A.}\\
+    \ai{\textbf{C:} Unique $R^2$ of each state variable for closed-loop RMSE in the transient (0--1\,s, light) and steady-state (dark) windows; relative and absolute power enter separate models with initial deviation and motion. Bars, mean over sessions of the adjusted unique $R^2$ fitted within each session; error bars, SEM ($n = 11$ sessions, 613 trials, 16--108 per session; Materials and Methods).}\\
+    \ai{\textbf{D:} Open- and closed-loop steady-state RMSE ($z$-scored within session) by within-session quartile of each state. Points, mean $\pm$ SEM across sessions ($n = 15$ sessions, 1670 trials; 11 sessions, 1190 trials for motion). OL and CL slope, slopes of open- and closed-loop RMSE on the state; CL/OL, slope of their ratio (fitted on log RMSE). Slopes were fitted to the continuous state within each session and tested across sessions (one-sample $t$-test); quartiles are for display. Arrows, sign of each significant slope; stars, uncorrected $p$; n.s., $p \geq 0.05$; Holm-adjusted values in Table~\ref{tab:fig4_state_stats}.}\\
+    \ai{\textbf{E:} Ridge weights of the contralateral$\rightarrow$ipsilateral predictor of the controlled activity (representative session, Mouse~1k); black dot, stimulation site.}\\
+    \ai{\textbf{F:} The open-loop trial average $A$ (black; same session) split into the Global component $G$ (blue; predicted from the contralateral hemisphere) and the Local component $L = A - G$ (red shading). Beige shading, stimulation window; $R^2_{\mathrm{te}}$, held-out $R^2$ of the predictor on spontaneous frames.}\\
+    \ai{\textbf{G:} Closed-loop rejection ratio (RR; Results) over the steady-state window; $\mathrm{RR} < 1$ indicates rejection. Dots, per-session geometric mean $\pm$1 SD (log scale); blue line and band, geometric mean and 95\% CI from a session-level mixed model; dashed line, $\mathrm{RR} = 1$. Stars, one-sided $t$-test of $\mathrm{RR} < 1$ on the model intercept ($n = 11$ sessions from 3 mice, 595 trials).}}}}
+    \label{fig:figure4}
+\end{figure}
+% ------------------------------------------------------------
+% \subsection*{Controller Performance is brain state dependent}
+% % ------------------------------------------------------------
+% ------------------------------------------------------------
+\subsection*{Controller performance is brain-state dependent}
+% ------------------------------------------------------------
+\aditya{The internal model principle states that a feedback controller can robustly and fully reject a disturbance only if it contains a model of the process that generates it~\citep{francis1976internal}.
+The PI controller in our setup modelled the average response and a constant offset, its RMSE performance on a given trial can help show which disturbances it did not account for. 
+We show that these disturbances and the controller's performance are state dependent.}
+\ai{To test this, we described each trial with four state variables: the initial deviation of activity from the target level at onset, motion energy, 2--4\,Hz power relative to 0.4--10\,Hz power, and absolute 1--4\,Hz power (Figure~\ref{fig:figure4}A).}
+\ai{Absolute power measures the amplitude of ongoing activity, which adds to the response as a disturbance~\citep{Arieli1996,Shimaoka2019}, whereas relative power measures spectral state regardless of amplitude; the two were correlated but not redundant (within-session Spearman $\rho$, median $0.42$, range $0.07$--$0.77$ over 15 sessions).}
+\ai{Motion and power were measured from 2\,s before onset to the end of stimulation, a 5\,s window that resolves the full 1--4\,Hz band, so absolute power was taken over 1--4\,Hz (Materials and Methods).}
+\ai{Face video was available for 11 of the 15 sessions; the other 4 were excluded from all motion analyses.}
+
+\ai{Within closed-loop trials, different variables explained the error in the transient and in the steady state (Figure~\ref{fig:figure4}B,C).}
+\ai{We regressed each trial's RMSE on the state variables within each of the 11 sessions with face video and computed how much of its trial-to-trial variation each variable explained beyond the others (unique $R^2$); the two power measures entered separate models with the initial deviation and motion (Materials and Methods).}
+\ai{The initial deviation explained much of the variation in transient error (unique $R^2 = 0.53 \pm 0.05$, mean $\pm$ SEM over sessions) but almost none in the steady state ($0.03 \pm 0.03$).}
+\ai{Absolute 1--4\,Hz power explained a modest part in both windows ($0.11 \pm 0.05$ and $0.11 \pm 0.06$), more than any other variable in the steady state, and remained the largest when relative power was added to the same model (Figure~\ref{fig:f4_exemplars}B,C).}
+\ai{Relative power explained little ($0.05 \pm 0.03$ and $0.03 \pm 0.02$) and motion nothing beyond the other variables ($\le 0.001$), so closed-loop error varied with the amplitude of 1--4\,Hz activity but not with motion.}
+
+\ai{We then compared open- and closed-loop steady-state error across the range of each state, fitting RMSE against the state within each session and testing the slopes across sessions (Figure~\ref{fig:figure4}D; 15 sessions from 4 mice, or 11 for motion; Materials and Methods).}
+\ai{Each slope is per within-session standard deviation (SD) of the state.}
+\ai{A positive open-loop (OL) slope means that the error of a fixed input increases with the state, that is, the state brings larger disturbances.}
+\ai{If the closed-loop (CL) slope is nevertheless flat or negative, feedback corrects these disturbances, and we call the state more controllable.}
+Closed-loop alone cannot characterize the effect of state on improvement of ability to control over open loop, as the open-loop could also be just as effective if disturbances are perturbing the trial.
+\ai{Dividing closed- by open-loop error gives the fraction of error that remained under feedback (CL/OL ratio), which decreases when feedback removes a larger fraction of the error as the state increases and remains constant when closed-loop error is a fixed fraction of open-loop error, even if both increase.}
+\ai{Table~\ref{tab:fig4_state_stats} gives every estimate with its $p$ value and, as a check, a Holm-adjusted value.}
+
+\ai{Closed loop lowered error across the range of every state, but the states differed in how controllable they were.}
+\ai{Of the four states, only movement met the criterion for a more controllable state.}
+\ai{Open-loop error increased with movement (OL slope $+0.24\,\%\,\Delta F/F$ per SD, $p = 0.011$), the CL slope was not significant ($-0.06$, $p = 0.16$), and the CL/OL ratio decreased by 13\% per SD ($p = 0.0023$, significant after Holm adjustment; in all 11 sessions and all 4 mice).}
+\ai{Thus, the more the animal moved, the larger the fraction of error that feedback removed.}
+\ai{By contrast, the fraction of error that feedback removed did not change significantly with absolute 1--4\,Hz power (CL/OL ratio $+7\%$ per SD, $p = 0.094$): open-loop error increased with it ($+0.28$, $p = 0.0098$) and closed-loop error by a similar amount ($+0.32$, $p = 7.1\times10^{-4}$, significant after Holm adjustment; in all 15 sessions and all 4 mice).}
+\ai{Relative 2--4\,Hz power was not associated with open-loop error ($p = 0.98$), whereas closed-loop error ($p = 0.035$) and the CL/OL ratio ($+5\%$ per SD, $p = 0.029$) increased slightly with it; neither effect survived the Holm adjustment.}
+\ai{Closed-loop error also increased with the initial deviation ($p = 0.014$), and open-loop error by a similar amount that was not significant ($p = 0.056$), so the CL/OL ratio did not change significantly ($0\%$ per SD, 95\% confidence interval $-7$ to $7\%$, $p = 0.91$) and feedback removed a similar fraction of error whether a trial began far from or near the target level.}
+\ai{Because the power measures spanned the stimulation period, which the loop affects, we repeated the fits with power measured over the 5\,s before onset, with the laser off.}
+\ai{The result for absolute power was similar (OL slope $+0.21$, $p = 0.0054$; CL slope $+0.21$, $p = 0.010$; CL/OL ratio $+1.5\%$, $p = 0.49$), whereas the increase in the ratio with relative power was no longer significant ($+1.8\%$, $p = 0.57$).}
+
+\ai{Thus, as movement increased, feedback removed a larger fraction of the error, whereas as 1--4\,Hz power increased, closed-loop error increased, and this power accounted for more of the variation in steady-state closed-loop error than any other state (Figure~\ref{fig:figure4}C).}
+\ai{One explanation for these results is the limit on the frequencies that the loop can control, which the kinetics of the opsin and indicator and the delay of the controller would set (see Discussion).}
+\ai{Error that accompanies 1--4\,Hz power would then persist under feedback without any change in how cortex responds to the laser, and the movement result would follow if the fluctuations that accompany movement are slow enough to fall within the controllable range.}
+
+% ------------------------------------------------------------
+\subsection*{Feedback partly rejects a disturbance predicted from the contralateral hemisphere}
+% ------------------------------------------------------------
+\ai{To test disturbance rejection directly, we estimated each trial's disturbance from the opposite hemisphere.}
+\ai{We fitted a linear predictor of the controlled activity from contralateral pixels using only spontaneous frames without laser stimulation, so that it reflected how the two hemispheres covaried but contained no information about the stimulation (Figure~\ref{fig:figure4}E).}
+\ai{It predicted held-out frames well ($R^2 = 0.75$ in the session of Figure~\ref{fig:figure4}F; median $0.76$, range $0.44$--$0.98$, 13 sessions).}
+\ai{On a stimulation trial, the prediction gave the \emph{Global} component $G$, an estimate of the activity the site would have shown without controller input, and the remainder of the measured response $A$ gave the \emph{Local} component $L = A - G$, the part added by the laser and the controller (Figure~\ref{fig:figure4}F).}
+\ai{The split is a linear projection, not a causal decomposition.}
+\ai{Although the predictor did not use the laser command, contralateral activity also changed during stimulation, so $G$ contained part of the laser response (median $23\%$ of the open-loop dip of the controlled activity over 0--3\,s).}
+\ai{After subtracting this average contribution of the laser in each session and referencing $G$ to its pre-onset baseline, we took the remaining trial-to-trial variation in $G$ as the disturbance $D$ (Materials and Methods).}
+
+\ai{We quantified rejection with a rejection ratio (RR), the residual energy (the energy of the deviation of activity from the target level) divided by the energy of $D$, both over the steady-state window; an RR below one indicates rejection.}
+\ai{Of the 13 sessions with a predictor, we excluded two in which a constant offset accounted for more than one third of the closed-loop residual energy ($38\%$ and $59\%$; Materials and Methods).}
+\ai{In the remaining 11, closed loop partly rejected the disturbance (geometric-mean RR $0.58$, one-sided $p = 1.3\times10^{-4}$, session-level mixed model; 595 trials, 3 mice; session median below one in all 11; Figure~\ref{fig:figure4}G; Table~\ref{tab:stat_fig4g}).}
+\ai{Under open loop, by contrast, the residual energy exceeded the energy of the disturbance (median session RR $1.25$, against $0.72$ in closed loop; lower in closed loop in all 11 sessions, $p = 4.9\times10^{-4}$).}
+\ai{Most of this difference was in the mean level of activity, which open loop sets only through calibration.}
+\ai{The constant offset accounted for a median of $35\%$ of the residual energy in open loop and $7\%$ in closed loop ($p = 9.8\times10^{-4}$), whereas the energy of the fluctuations decreased less, from $0.66$ to $0.54$ of the disturbance energy ($p = 0.0024$; both lower in closed loop in 10 of 11 sessions).}
+\ai{Consistent with the internal model principle, feedback removed most of the constant offset, which the controller models, and a smaller part of the fluctuations, which it does not.}
+
+% % ------------------------------------------------------------
+\subsection*{\ai{Preview of the target level corrects the lag of the cortical response}}
+% ------------------------------------------------------------
+\ai{To test tracking of a time-varying target level, we used a 1\,Hz sinusoidal target over a 4\,s window, in one mouse.}
+\ai{With preview, the controller received the target level a fixed time in advance, set to the delay of the cortical response, so that it could compensate for that delay (5 samples, 143\,ms, in all three sessions; Figure~\ref{fig:figure5}A; Materials and Methods).}
+\ai{Each session randomly interleaved four modes: open loop (OL), open loop with preview (OL$+$p), closed loop (CL) and closed loop with preview (CL$+$p).}
+\ai{We describe one session (Mouse~3b, 200 trials) in detail and then all three sinusoidal sessions of Mouse~3 (3a, 3b and 3d).}
+\begin{figure}[!tp]
+    \centering
+    \includegraphics[width=\linewidth]{images/Figure5.pdf}
+    \caption{\ai{\textbf{Feedback and preview correct different errors in tracking a sinusoidal target level.}}\\
+\small{
+\ai{B--H, Mouse~3b; I--K, sessions 3a, 3b and 3d of Mouse~3. Modes: OL, open loop (red); OL$+$p, OL with preview (orange); CL, closed loop (blue); CL$+$p, CL with preview (green). Gray, laser power ($\times 2$ in B); black dashed, target level.}\\
+\ai{\textbf{A:} Controller architecture. A preview block shifts the target level forward by a fixed lookahead before it reaches the PI controller.}
+\ai{\textbf{B:} One representative trial per mode; vertical lines and shading mark the stimulation window.}
+\ai{\textbf{C:} Trial average $\pm$ SD ($n = 51, 46, 46, 57$ trials for OL, OL$+$p, CL, CL$+$p).}
+\ai{\textbf{D:} Trial-average laser power $\pm$ SD (mW); panels B--D share the time axis of D.}\\
+\ai{\textbf{E:} Across-trial variance over time.} \ai{\textbf{F:} RMSE over time, mean $\pm$ SEM of the squared error, square-rooted after averaging (so the bands are asymmetric).}\\
+\ai{\textbf{G:} Per-trial RMSE by mode, sample-normalized over the full 4\,s stimulation window. Half-violins, full distribution (density estimated in log space); dots, individual trials; bars, median and interquartile range; logarithmic axis. Per-trial RMSE SD: OL $1.22$, OL$+$p $1.64$, CL $0.99$, CL$+$p $1.01$.}\\
+\ai{\textbf{H:} Phase lag relative to the target level from a 1\,Hz fundamental fit to the trial average; dashed line, preview lookahead ($51^\circ$ at 1\,Hz).}\\
+\ai{\textbf{I--K:} Per-session values for the three sessions: per-trial RMSE (I), phase lag (J) and across-trial variance (K). One point per session per mode, joined by faint lines; bold bar, across-session mean; horizontal line in J, zero lag. Controller gains, target amplitude and delivered optical power differ between sessions. No significance tests are reported for this figure ($n = 3$ sessions). Pooled per-trial RMSE, mean $\pm$ SD: OL $4.08 \pm 1.40$ ($n = 136$ trials), OL$+$p $3.77 \pm 1.38$ ($n = 110$), CL $3.00 \pm 1.12$ ($n = 100$), CL$+$p $3.08 \pm 1.11$ ($n = 132$).}\\
+}}
+    \label{fig:figure5}
+\end{figure}
+\ai{Under open loop, the response followed the shape of the target level but lagged it and varied from trial to trial (Figure~\ref{fig:figure5}B; laser power in D).}
+\ai{The trial average was sinusoidal in every mode, with the widest across-trial spread under open loop (Figure~\ref{fig:figure5}C).}
+
+\ai{Feedback reduced both the trial-to-trial spread and the error.}
+\ai{From OL to CL, across-trial variance decreased from $11.8$ to $5.8\,(\%\,\Delta F/F)^2$ (Figure~\ref{fig:figure5}E), the time-resolved error decreased with it (Figure~\ref{fig:figure5}F), and median per-trial RMSE decreased from $3.59$ to $2.26$\,\%\,$\Delta F/F$ (Figure~\ref{fig:figure5}G).}
+
+\ai{Preview corrected the lag of the response behind the target level.}
+\ai{The response lagged the target level by $71^\circ$ under OL and $46^\circ$ under CL, and preview reduced both lags to near zero ($16^\circ$ and $2^\circ$; Figure~\ref{fig:figure5}H).}
+\ai{The open-loop shift ($55^\circ$) was close to the five-sample lookahead ($51^\circ$), as expected from the design, and pooled over the three sessions, the per-trial lag decreased by $5.7$ samples on average (6 in the median).}
+\ai{Preview did not lower the error as feedback did; median RMSE changed little from OL to OL$+$p ($3.59$ and $3.58$), and adding preview to closed loop did not improve it (CL $2.26$, CL$+$p $3.00$; Figure~\ref{fig:figure5}G).}
+
+\ai{With three sessions, we report no significance tests and take the direction of each effect and its consistency across sessions as the result.}
+\ai{In each session, per-trial RMSE (Figure~\ref{fig:figure5}I) and across-trial variance (Figure~\ref{fig:figure5}K) were lower under closed loop than under open loop, and preview removed the lag (Figure~\ref{fig:figure5}J).}
+\ai{Pooled over sessions, mean per-trial RMSE decreased from $4.08$ under OL to $3.00$ under CL, with a smaller change from preview (OL$+$p $3.77$, CL$+$p $3.08$).}
+\ai{CL$+$p, the controller with both feedback and preview, therefore removed the lag while keeping its error below open loop, and its per-trial RMSE was as tightly spread as under closed loop (SD $1.01$ and $0.99$ in the detailed session, $1.11$ and $1.12$ pooled over sessions).}
+
+% ------------------------------------------------------------
+\subsection*{\ai{In simulation, predicting the disturbance lowers the error left by feedback}}
+% ------------------------------------------------------------
+\ai{The PI controller corrects error after it has occurred and cannot anticipate disturbances.}
+\ai{To test whether the error it left was predictable, we simulated a model-predictive controller (MPC)~\citep{rawlings2017model}, which uses a model to predict how activity will respond to stimulation, given its recent history.}
+\ai{At every frame, the MPC computes the laser commands over the next second that best track the target level, with a penalty on abrupt changes in the command, applies the first command and repeats the calculation at the next frame (Figure~\ref{fig:mpc_direct}A,B), so it also corrects disturbances that its model did not predict.}
+\ai{Its model was a linear vector autoregressive model with exogenous input (VARX)~\citep{lutkepohl2005new}, which predicts the controlled site from the past second of the controlled site, of 100 sites across the cortex and of the laser command.}
+\ai{On held-out open-loop trials, the VARX predicted the controlled site 200\,ms ahead with $R^2 = 0.41$, against $0.37$ without the cortical sites and $0.10$ for the last observed value, and the cortical sites helped most at longer leads (Figure~\ref{fig:mpc_direct}H; Figure~\ref{fig:supp_varx}).}
+
+\ai{Running MPC in real time would require new software and lower-latency hardware, so we instead replayed recorded closed-loop trials with the MPC in place of the PI controller.}
+\ai{In each replay, a VARX fitted to the whole session served as the simulated cortex, driven by the trial's recorded one-step prediction residuals, whereas the MPC's own model was fitted without any closed-loop trials (Materials and Methods).}
+\ai{All results in this section are descriptive simulations.}
+
+\ai{With a constant target level (Mouse~1e), the MPC lowered the median per-trial RMSE over the steady-state window (1--3\,s) from $1.46$ under the recorded PI controller to $0.88\%\,\Delta F/F$, and its RMSE was lower on 107 of 108 trials (Figure~\ref{fig:mpc_direct}C--E).}
+\ai{Across-trial variance over the same window decreased by $37\%$ (Figure~\ref{fig:mpc_direct}F), and the reduction in RMSE persisted across the penalties on command changes that we tested (Figure~\ref{fig:mpc_direct}G).}
+\ai{With perfect prediction (the simulated cortex and the trial's future residuals), the median per-trial RMSE decreased to $0.27\%\,\Delta F/F$.}
+\ai{On most trials, the limits on the laser command therefore constrained performance only slightly, and most of the error that remained under MPC came from errors in prediction, both from mismatch between the MPC's model and the simulated cortex and from disturbances that could not be forecast.}
+\ai{The exception was the quarter of trials with the largest PI error ($n = 27$), whose median RMSE remained $1.97\%\,\Delta F/F$ with perfect prediction, against $0.21$ for the other trials; $89\%$ of this squared error occurred while the command was at a limit that prevented further correction (activity above the target level at the maximum command, or below it with the laser off).}
+
+\ai{With the sinusoidal target level, we replayed the 57 CL$+$p trials of the session of Figure~\ref{fig:figure5} (Mouse~3b), the mode that, like the MPC, combined feedback with advance knowledge of the target level.}
+\ai{The MPC lowered the median per-trial RMSE over the 4\,s window from $3.00$ under CL$+$p to $2.67\%\,\Delta F/F$, with lower RMSE on 56 of 57 trials (Figure~\ref{fig:mpc_direct}I--K), lowered across-trial variance to $0.71$ times that of CL$+$p (Figure~\ref{fig:mpc_direct}L) and, as with preview, kept the phase lag near zero, against $71^\circ$ under open loop (Figure~\ref{fig:mpc_direct}M).}
+\ai{In both replays, predicting activity lowered the error and the trial-to-trial variability that feedback left; with a constant target level, the MPC lowered the median error left by feedback by about 40\% with a model fitted to recorded activity and by about 80\% with perfect prediction.}
+\begin{figure}[!tp]
+    \centering
+    \includegraphics[width=\linewidth]{images/Figure6.pdf}
+    %% Promoted from the supplement 2026-10-16. I-L (sine replay) added 2026-10-16; assembled as figures_final/FigureMPC.pdf:
+    %% panels brain_paper/paper/figures_final/panels/supp_mpc/mpcs_*.pdf (ctrl_mpc_sine_panels.m).
+    \caption{\small{
+    \ai{\textbf{In a replay of recorded trials, a model-predictive controller lowers the error that the PI controller leaves.} Simulation on recorded data; descriptive, no statistical tests (Materials and Methods). Gray band, stimulation; dashed line, target level.}
+    \ai{\textbf{A--H:} Constant target level, Mouse~1e (108 closed-loop trials).}
+    \ai{\textbf{A:} The MPC predicts the controlled signal over 1\,s from the controlled site, 100 cortical sites and the laser command (VARX model), plans the laser so that the prediction tracks the target level, applies the first command and replans every frame.}
+    \ai{\textbf{B:} One planning step: signal and laser so far (purple), predicted signal and planned laser over the horizon (magenta), and what followed (gray).}
+    \ai{\textbf{C:} The trial at the median MPC improvement: recorded PI (blue), MPC (purple) and MPC with perfect prediction (light purple); lower traces, laser.}
+    \ai{\textbf{D:} Trial average $\pm$ SD.}
+    \ai{\textbf{E:} Per-trial RMSE over the steady-state window (1--3\,s); lines join trials, bars mark medians.}
+    \ai{\textbf{F:} Variance across trials over time.}
+    \ai{\textbf{G:} MPC/PI RMSE against the command-smoothness penalty $\lambda$; circle, value used.}
+    \ai{\textbf{H:} Prediction $R^2$ against lead time on held-out open-loop trials for the VARX, the same model given only the controlled site and the laser (site $+$ laser) and the last observed value (naive).}
+    \ai{\textbf{I--M:} Sinusoidal target level, Mouse~3b, the session of Fig.~\ref{fig:figure5}B--H; MPC replayed on the 57 CL$+$p trials. Red, OL; green, CL$+$p.}
+    \ai{\textbf{I:} A trial with a large MPC improvement.}
+    \ai{\textbf{J:} Per-trial RMSE over the 4\,s window, paired with the recorded trial.}
+    \ai{\textbf{K:} RMSE across trials over time.}
+    \ai{\textbf{L:} Variance across trials over time.}
+    \ai{\textbf{M:} Phase lag of the trial average (OL bar, $71^\circ$, truncated).}}}
+    \label{fig:mpc_direct}
+\end{figure}

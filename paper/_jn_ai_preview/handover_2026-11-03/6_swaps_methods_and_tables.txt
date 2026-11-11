@@ -1,0 +1,46 @@
+JN small swaps, all exact find/replace on Overleaf. Base: JN 02089bb (Aditya's push of 2026-11-03).
+
+methods.tex
+-----------
+FIND:    within two families: predictability and regularizability (eight tests), and attenuation (four tests).
+REPLACE: within two families: the OL and CL slopes (eight tests), and the CL/OL ratio (four tests).
+
+FIND:    We report the mean and SEM over sessions.
+REPLACE: We report the mean and SEM over sessions; excluding the two sessions with fewer than 30 trials changes no mean by more than 0.03.
+
+Blocks, each replacing a longer stretch:
+  File 2 replaces from "The \emph{initial deviation} (Fig.~\ref{fig:figure4} only)" through "shows in the absolute measure only."
+  File 3 replaces from the line with "\emph{State dependence}" through the line with "The error decomposition of".
+
+stat_tables.tex
+---------------
+FIND (4 times):  \quad Predictability &
+REPLACE:         \quad OL slope &
+
+FIND (4 times):  \quad Regularizability &
+REPLACE:         \quad CL slope &
+
+FIND (4 times):  \quad Attenuation (\% per SD) &
+REPLACE:         \quad CL/OL ratio (\% per SD) &
+
+FIND:    Predictability and regularizability, open- and closed-loop slopes. Attenuation, closed- minus open-loop slope of $\log$ RMSE, given as the percent change per SD of the closed-to-open-loop RMSE ratio;
+REPLACE: OL slope and CL slope, open- and closed-loop slopes. CL/OL ratio, closed- minus open-loop slope of $\log$ RMSE, given as the percent change per SD of the ratio of closed- to open-loop RMSE;
+
+FIND:    Holm-adjusted within predictability and regularizability (eight tests) and within attenuation (four tests)
+REPLACE: Holm-adjusted within the OL and CL slopes (eight tests) and within the CL/OL ratio (four tests)
+
+supplementary.tex
+-----------------
+File 4 replaces from "\caption{\textbf{Single-trial variability by state quartile" up to, not including, "\label{fig:state_quartile}".
+
+refs.bib
+--------
+Append file 5 (Vanni2017, Jacobs2020, Donoghue2020eNeuro, Ma2016, Wright2017). None of these keys is in refs.bib at 02089bb.
+
+results.tex
+-----------
+File 1 replaces everything from "\subsection*{Single-trial variability reflects state-dependent ongoing activity}" to the end of results.tex.
+Nothing before that heading changes. Figures 4 and 5 are at width=\linewidth inside file 1, and the Figure 5 and 6 floats are [!tp].
+
+Preview: main_preview.pdf (44 pp) is this whole set compiled on 02089bb with the new local figures.
+Figure 2's own caption text is before the cut, so it is not in these files. The new Figure 2 PDF has the same panel letters A to G.

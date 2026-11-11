@@ -1,0 +1,967 @@
+file	line	status	ai_share	words	first_commit	first_date	text
+main.tex	89	ai	0.62	16	b7cde5f	2026-05-13	Mesoscale brain dynamics have been linked to a wide range of perceptual, cognitive and motor functions.
+main.tex	90	ai	0.54	24	b7cde5f	2026-05-13	However, establishing causal links between mesoscale dynamics and behavior remains challenging, because it requires not only perturbing these dynamics but also precisely shaping them.
+main.tex	91	human_changed_since_sync		0			Here we show that closed-loop optogenetic inhibition can steer cortical activity in real time toward a target level, using feedback from the ongoing dynamics. We employed a system with simultaneous wide-field calcium imaging and laser-driven optogenetic stimulation at the cortical surface in mice.
+main.tex	92	human_changed_since_sync		0			In this preparation, the trial-averaged response of a cortical site when stimulated in open-loop is approximately linear and, within a session, time-invariant.
+main.tex	93	human_changed_since_sync		0			On this basis, we designed a closed-loop linear feedback controller with measured fluorescence as the input and laser intensity as the output.
+main.tex	94	human_changed_since_sync		0			The controller steered the activity to the target level more accurately than open-loop stimulation and reduced trial-to-trial variability.
+main.tex	95	human_changed_since_sync		0			Controller performance depended on brain state:
+main.tex	96	human_changed_since_sync		0			feedback removed more of the error that accompanied overt bodily movements of the mouse, despite the activity being less predictable whereas its error grew with spontaneous delta-band (1--4\,Hz) synchronized cortical activity.
+main.tex	97	ai	1.00	17	e1af389	2026-08-12	Predicting the disturbance on each trial from the opposite hemisphere, we show that feedback partially rejects it.
+main.tex	98	human_changed_since_sync		0			For time-varying target levels, a preview component of the controller successfully compensated for system delays.
+main.tex	99	ai	1.00	33	53fa201	2026-10-18	Finally, in a simulated replay of recorded trials with a constant reference, a model-predictive controller using a linear model of cortex and the laser lowers the error left by feedback by about 40\%.
+main.tex	100	ai	1.00	30	6228a1b	2026-10-07	Together, these results show that approximately linear, time-invariant trial-averaged dynamics can be used to control regional cortical activity, and that the error left under control is informative about brain state.
+main.tex	104	ai	1.00	2	e47efb2	2026-10-10	Significance Statement
+main.tex	105	human_changed_since_sync		0			We introduce a closed-loop control framework to steer cortical activity toward a target level.
+main.tex	106	human_changed_since_sync		0			Using wide-field calcium imaging, we read out activity at one cortical site in real time and used it to set optogenetic inhibition delivered next to it.
+main.tex	107	human_changed_since_sync		0			Closed-loop stimulation tracked the target level more accurately than open-loop, fixed stimulation and reduced trial-to-trial variability across sessions and animals.
+main.tex	108	human_changed_since_sync		0			The remaining error depended on cortical state during the stimulation, and a feedforward preview corrected phase lags when tracking time-varying targets.
+main.tex	109	human_changed_since_sync		0			Finally, a linear model based on measured activity of the opposite hemisphere predicted much of the spontaneous activity in the controlled region, allowing us estimate the disturbance the controller rejects on each trial.
+introduction.tex	1	human	0.00	1	b091bca	2026-10-26	Introduction
+introduction.tex	3	human_changed_since_sync		0			Precisely modulating the activity of a neuronal population can establish how it contributes to or affects behavior, which pathways mediate its influence, and how its effect depends on brain state.
+introduction.tex	4	human_changed_since_sync		0			Yet modulation, whether optical, electrical, or magnetic, is often delivered open loop, with an input pattern chosen in advance.
+introduction.tex	5	human_changed_since_sync		0			The response to any input depends on the circuit's current state, that is, its ongoing pattern of activity, as has been shown for sensory, optogenetic, and magnetic stimulation~\citep{Arieli1996, Petersen2003, Goris2014, Mateo2011, Massimini2005}.
+introduction.tex	6	human_changed_since_sync		0			In the cortex of awake mice, brain state is influenced by movements such as whisking or fidgeting and by arousal~\citep{Niell2010, McGinley2015, Vinck2015, musall2019single, stringer2019spontaneous, Salkoff2020}. State fluctuates between slow, synchronized rhythms during quiet wakefulness and desynchronized activity during engaged states ~\citep{Crochet2006, Poulet2008, Reimer2014}, and is shared across the two hemispheres~\citep{Mohajerani2010, Shimaoka2019, Ye2026}.
+introduction.tex	7	human_changed_since_sync		0			Momentary cortical activity is presumably driven by these well-characterized states along with unobservable states,  unmeasurable stimuli, and interactions from other brain regions.
+introduction.tex	8	human_changed_since_sync		0			Therefore, activity appears highly variable across trials of responses to a fixed stimulus.
+introduction.tex	10	human	0.40	20	3f75ae2	2026-10-21	One way to handle this variability is to adequately model it such that factors contributing to variability can be determined.
+introduction.tex	10	human	0.00	17	40f07f5	2026-10-27	In literature several approaches have been explored, where the activity can be modeled through a dynamical systems.
+introduction.tex	11	ai	0.86	35	43fabaf	2026-10-20	Switching linear dynamical systems treat the state as a parameter that changes the dynamics~\citep{linderman2017rslds}, other models isolate the dynamics relevant to a behavior~\citep{sani2021modeling}, and cortical state can be estimated in real time~\citep{weiss2024realtime}.
+introduction.tex	12	ai	0.77	44	3f75ae2	2026-10-21	Such models, however, do not observe the movements and the input from other areas that also drive a region~\citep{musall2019single, stringer2019spontaneous, zagha2013motor}, and even the best current models forecast spontaneous wide-field activity informatively only about 1.5\,s ahead~\citep{lu2025benchmarking} with considerable amount of uncertainty.
+introduction.tex	13	ai	1.00	39	9354e56	2026-10-27	Machine-learning models of neural population dynamics have grown more capable, from sequential autoencoders~\citep{pandarinath2018lfads} and transformers~\citep{ye2021ndt} to learned latent embeddings~\citep{schneider2023cebra}, foundation models~\citep{wang2025foundation} and transformers that tokenize spikes and are pretrained across many recordings and animals~\citep{azabou2023poyo}.
+introduction.tex	14	ai	1.00	57	9354e56	2026-10-27	For control, however, they have two limits: many infer activity from whole recorded trials~\citep{pandarinath2018lfads} or are computationally costly for real-time use, which recent hybrid state-space models address~\citep{ryoo2025possm}, and apart from models of responses to sensory stimuli~\citep{wang2025foundation}, they reconstruct or decode activity rather than forecast how it will respond to stimulation, as a controller needs.
+introduction.tex	15	ai	1.00	17	43fabaf	2026-10-20	A stimulus planned in advance would need a model that identifies and forecasts each trial's state precisely.
+introduction.tex	16	ai	1.00	43	3f75ae2	2026-10-21	Closed-loop control, which adjusts the input continuously from a real-time measurement of the activity it is meant to control, can in principle correct for such differences, provided the activity can be read out fast enough and the input acts on that same activity.
+introduction.tex	17	ai	1.00	36	6228a1b	2026-10-07	Because it acts on each trial's measured deviation, feedback needs no model of what caused that deviation, so state-dependent activity that adds to the response becomes a disturbance to reject rather than a confound to average.
+introduction.tex	19	ai	1.00	26	3f75ae2	2026-10-21	Mesoscale activity is the combined activity of local neural populations across millimeters of cortex, between the scale of single neurons and that of the whole brain.
+introduction.tex	20	ai	1.00	28	3f75ae2	2026-10-21	Its spontaneous spatial patterns follow the axonal projections between regions~\citep{mohajerani2013spontaneous}, and it is closely tied to behavior, carrying task variables, learning-related change and movement~\citep{allen2017global, makino2017transformation, musall2019single}.
+introduction.tex	21	ai	1.00	13	3f75ae2	2026-10-21	We read it out as fluorescence across a field about 10\,mm wide.
+introduction.tex	22	ai	1.00	42	3f75ae2	2026-10-21	Wide-field imaging samples the field at 35\,Hz, and the latency, the delay from a camera exposure to the light it triggers, has a median of 24\,ms, about a fifth of the 0.11\,s timescale on which light moves the activity.
+introduction.tex	23	ai	1.00	38	6228a1b	2026-10-07	Spatially targeted optogenetic stimulation has been combined with wide-field imaging to map and silence cortical areas~\citep{Lim2012, ZatkaHaas2021, Matveev2024, Ambrosone2025}, but open loop: the stimulus is fixed in advance, and the variability it meets is averaged away afterwards.
+introduction.tex	24	ai	1.00	18	3f75ae2	2026-10-21	In our setup, the light suppresses the cortex around the stimulated spot, including the region we read out.
+introduction.tex	25	ai	1.00	18	3f75ae2	2026-10-21	Mesoscale activity is therefore a convenient scale at which to test closed-loop control, though not the only one.
+introduction.tex	27	ai	1.00	36	3f75ae2	2026-10-21	Closed-loop stimulation has revealed what particular rhythms contribute to behavior: optogenetic stimulation triggered at chosen phases of hippocampal theta, or by bursts of amygdala gamma, showed their roles in encoding, retrieving and consolidating memories~\citep{Siegle2014, kanta2019closed}.
+introduction.tex	28	ai	0.71	17	b7cde5f	2026-05-13	Closed-loop optogenetic feedback has also reshaped ongoing oscillations, in brain slices and in anesthetized monkeys~\citep{nicholson2018analogue, Zaaimi2022}.
+introduction.tex	29	ai	1.00	29	3f75ae2	2026-10-21	Continuous control, which adjusts the input at every update instead of delivering a preset one, has held neuronal firing at a chosen level in culture and in vivo~\citep{newman2015optogenetic}.
+introduction.tex	30	ai	1.00	37	3f75ae2	2026-10-21	Controllers designed from a model of the plant, the system the controller acts on, fitted to its responses to light, made thalamic firing track time-varying targets and reject unmeasured disturbances, and changed its trial-to-trial variability~\citep{bolus2018design, bolus2021state}.
+introduction.tex	31	ai	1.00	25	43fabaf	2026-10-20	For electrical stimulation, input--output models of multiregional responses have been built for model-based control~\citep{Yang2018, Yang2021} and tested in closed loop in simulation~\citep{Yang2018}.
+introduction.tex	32	ai	1.00	14	3f75ae2	2026-10-21	All-optical loops have tailored two-photon stimulation to activity imaged in real time~\citep{Zhang2018, Zhang2025}.
+introduction.tex	33	ai	1.00	41	3f75ae2	2026-10-21	Activity has also been fed back to animals as sound, from cortical neurons~\citep{clancy2014volitional, Neely2018} to mesoscale regions~\citep{Gupta2026}, but there the loop closes through the animal learning to change its activity for reward, not through a stimulus to the cortex.
+introduction.tex	35	ai	0.77	31	3f75ae2	2026-10-21	Closed-loop stimulation of mesoscale activity thus remains largely unexplored: to our knowledge, a framework for closed-loop all-optical control of cortex-wide activity has so far appeared only in a conference abstract~\citep{deAlteriis2026}.
+introduction.tex	36	ai	1.00	4	3f75ae2	2026-10-21	Three questions remain open.
+introduction.tex	37	ai	1.00	23	3f75ae2	2026-10-21	First, is the response of a mesoscale signal to optogenetic input close enough to linear and time-invariant to design a controller from it?
+introduction.tex	38	ai	1.00	24	3f75ae2	2026-10-21	Open-loop work shows that suppression of wide-field activity deepens with laser power~\citep{Ambrosone2025}, but a controller also needs the time course of the response.
+introduction.tex	39	ai	0.68	19	f06d2f7	2026-10-18	A linear description is plausible, because linear models often predict brain activity about as well as nonlinear ones~\citep{Nozari2024}.
+introduction.tex	40	ai	0.58	31	43fabaf	2026-10-20	Control theory suggests it would also be enough, because low-gain integral control of a stable linear plant needs only the sign of its steady-state gain~\citep{logemann2000absolute}, which a monotonic response supplies.
+introduction.tex	41	ai	1.00	15	3f75ae2	2026-10-21	Second, does feedback make the signal less variable from trial to trial than open-loop input?
+introduction.tex	42	ai	1.00	18	3f75ae2	2026-10-21	Third, how does the error that feedback leaves depend on the circuit's state, which makes open-loop responses vary?
+introduction.tex	43	ai	1.00	31	43fabaf	2026-10-20	A controller designed on the average response is not designed for single-trial deviations, so relating the error it leaves to the measured state can show which fluctuations lie beyond its reach.
+introduction.tex	44	ai	1.00	29	3f75ae2	2026-10-21	The answers decide whether closed-loop control can set mesoscale activity precisely enough to test what it contributes to behavior, and whether a controller should take the state into account.
+introduction.tex	46	ai	1.00	12	6228a1b	2026-10-07	Here we close the loop on mesoscale activity in awake, head-fixed mice.
+introduction.tex	47	ai	1.00	47	3f75ae2	2026-10-21	A camera images calcium-dependent fluorescence across the dorsal cortex at 35\,Hz, and on every frame a controller compares the activity of a 0.17\,mm patch of somatosensory cortex with a reference level below baseline and sets the power of a laser aimed next to the patch.
+introduction.tex	48	ai	1.00	16	3f75ae2	2026-10-21	The light excites inhibitory neurons that express an opsin, so it can only lower the activity.
+introduction.tex	49	ai	1.00	39	6228a1b	2026-10-07	We first characterized how the activity responds to pulses of light of different amplitudes and, on that basis, built a proportional--integral controller with feedforward compensation, tuned to the experiment, which we compared with open-loop stimulation within each session.
+introduction.tex	50	ai	1.00	33	03f9eaa	2026-09-19	Trial-averaged suppression deepened with laser power, as in open-loop silencing~\citep{Ambrosone2025}, and was approximately linear and time-invariant within a session, so a low-order linear model predicted it, in four sessions from three mice.
+introduction.tex	51	ai	0.79	24	cec0b7c	2026-10-12	Single responses, however, varied from trial to trial about as much as ongoing activity did without stimulation, and both changed together with the state.
+introduction.tex	52	ai	0.76	25	dfa0e93	2026-09-07	Closed loop held the activity at the reference more accurately than open loop in all 15 sessions from four mice, and reduced its trial-to-trial variability.
+introduction.tex	53	ai	1.00	42	3f75ae2	2026-10-21	Power at 1--4\,Hz, which marks large, slow fluctuations, raised the error of both by similar amounts, so feedback did not hold the activity at the reference as this power grew, whereas feedback removed more of the error that accompanied movement.
+introduction.tex	54	ai	0.83	29	b7cde5f	2026-05-13	These results outline a procedure: characterize the input--output relationship, check that the average response is monotonic and approximately linear, and tune a proportional--integral controller to the experiment.
+introduction.tex	55	ai	1.00	42	43fabaf	2026-10-20	It assumes only a readout that is fast relative to the response and an input whose effect is close to linear, so it is not tied to wide-field imaging or optogenetics, although we test it here with one readout and one input.
+introduction.tex	56	ai	1.00	37	f06d2f7	2026-10-18	The error that such a controller leaves then carries information about the state: it shows which components of ongoing variability lie beyond a fixed linear design, a starting point for controllers that take the state into account.
+results.tex	10	human	0.00	1	09abcc7	2026-10-15	Results
+results.tex	12	human_changed_since_sync		0			We built a closed-loop optogenetic system that precisely regulates (i.e., steers) the activity of a cortical region, monitored with wide-field calcium imaging in mice.
+results.tex	13	human_changed_since_sync		0			The evoked responses to stimulation scaled monotonically with stimulus amplitude, and a linear time-invariant model captured their dynamics, which gave us an empirical basis for designing a controller.
+results.tex	14	human_changed_since_sync		0			We then show that this controller holds cortical activity at a target level and its regulation performance is informative about brain states.
+results.tex	16	human	0.00	6	b7cde5f	2026-05-13	Experimental setup and closed-loop control architecture
+results.tex	18	human	0.00	14	b7cde5f	2026-05-13	We performed closed-loop experiments in head-fixed transgenic mice co-expressing GCaMP and an inhibitory opsin.
+results.tex	19	human_changed_since_sync		0			Each mouse sat in a behavioral chamber facing a blank screen, with its forelimbs resting on a freely moving wheel, and was not engaged in any task, so all recordings captured spontaneous activity.
+results.tex	20	human_changed_since_sync		0			We recorded cortical activity at 35\,Hz with wide-field calcium imaging (Figure~\ref{fig:figure1}A) and delivered spatially targeted optogenetic stimulation to a fixed cortical spot, which suppressed activity in the surrounding cortex (\citep{Matveev2024} ; Figure~\ref{fig:spatial_spread}A,B).
+results.tex	21	human_changed_since_sync		0			We quantified cortical activity as the fractional change in fluorescence relative to its mean ($\Delta F/F$), averaged over pixels near the stimulation spot (Figure~\ref{fig:figure1}B,C; see Materials and Methods), and take this signal, which we call the 'output', as the quantity to be controlled.
+results.tex	22	human_changed_since_sync		0			In a subset of experiments, we also recorded video of the face and computed its motion energy as a behavioral co-variate.
+results.tex	27	human	0.00	6	b7cde5f	2026-05-13	\textbf{Experimental setup and closed-loop control architecture.}
+results.tex	29	human_changed_since_sync		0			\textbf{A:} Optical path of the wide-field microscope \citep{Matveev2024}. Blue (470\,nm) and violet (405\,nm) LEDs illuminate the dorsal cortex, and the camera collects emitted green light through two dichroics. A red (638\,nm) galvanometer-steered laser passes through both dichroics for spatially targeted optogenetic stimulation.\\
+results.tex	30	human	0.08	13	1772218	2026-05-14	\textbf{B:} Optogenetic stimulation target (red) and the adjacent $\Delta F/F$ output region (blue box).
+results.tex	31	human	0.09	22	1772218	2026-05-14	\textbf{C:} Representative wide-field frame with the stimulation spot (red) and the adjacent spatial kernel used as the closed-loop feedback output (blue box).
+results.tex	31	ai	1.00	5	6fe8933	2026-10-10	Markers are not to scale.
+results.tex	32	ai	1.00	9	6fe8933	2026-10-10	\textbf{D:} Hardware and software layers of the closed-loop pipeline.
+results.tex	32	ai	1.00	7	6fe8933	2026-10-10	The blue-light exposure trigger starts each frame.
+results.tex	32	ai	0.79	24	1772218	2026-05-14	The imaging API passes the frame to signal processing ($\Delta F/F$) and to the controller, and the command drives the optogenetic stimulator through a microcontroller.
+results.tex	32	ai	1.00	10	6fe8933	2026-10-10	The bracket on the trigger trace marks the loop latency.
+results.tex	33	human	0.17	6	1772218	2026-05-14	\textbf{E:} Block diagram of the controller.
+results.tex	33	ai	1.00	6	6fe8933	2026-10-10	The kernel-averaged $\Delta F/F$ is the output.
+results.tex	33	ai	1.00	29	6fe8933	2026-10-10	The PI controller ($K_p$, $K_i$) acts on the tracking error, and its output is summed with the open-loop (feedforward) term $K_r$ to form the laser input.
+results.tex	34	human	0.46	24	1772218	2026-05-14	\textbf{F:} Distribution of end-to-end control-loop latency over 200 loop cycles, measured from camera trigger to laser-activation command (image transfer, $\Delta F/F$ computation and digital-to-analog conversion).
+results.tex	39	human_changed_since_sync		0			We built an end-to-end software system for real-time closed-loop control  (Figure~\ref{fig:figure1}D).
+results.tex	40	human_changed_since_sync		0			At each imaging frame acquisition, the software collects the frame data, computes the error between the measured output and a reference $\Delta F/F$ value, and computes the required optogenetic stimulus amplitude. The system has a measured end-to-end loop delay of XX.X ms on average (mean; YY.Y-ZZ.Z range; Figure~\ref{fig:figure1}F).
+results.tex	41	ai	1.00	22	c83e0e6	2026-09-30	This delay, together with the kinetics of the indicator and the opsin, limits the bandwidth over which feedback can act (see Discussion).
+results.tex	43	human	0.47	17	b7cde5f	2026-05-13	The controller combines a proportional--integral (PI) feedback term with open-loop (feedforward) compensation (Figure~\ref{fig:figure1}E).
+results.tex	44	ai	0.90	21	b7cde5f	2026-05-13	The feedforward term supplies the nominal stimulus needed to reach the reference, scaled by a gain calibrated from open-loop stimulation experiments.
+results.tex	45	ai	0.78	27	b7cde5f	2026-05-13	The PI term corrects the remaining error in real time as the brain state changes, compensating for an inaccurate feedforward gain, residual nonlinearities, and spontaneous trial-to-trial fluctuations.
+results.tex	47	human	0.00	10	b7cde5f	2026-05-13	Trial-averaged cortical dynamics are well approximated by a linear system
+results.tex	49	ai	0.50	24	b7cde5f	2026-05-13	To characterize the input--output relationship, we delivered brief optogenetic impulses at discrete amplitudes, randomly interleaved across trials, in four sessions from three mice.
+results.tex	50	ai	0.50	16	67a807a	2026-05-31	Figure~\ref{fig:figure2}A shows the trial-averaged responses to three of these amplitudes in one session.
+results.tex	55	ai	1.00	10	463cf88	2026-09-23	\textbf{A low-order linear model captures the trial-averaged cortical impulse response.}
+results.tex	57	ai	0.53	32	1772218	2026-05-14	\textbf{A:} Trial-averaged $\Delta F/F$ impulse responses for a representative session (Mouse 5b) at three of the delivered stimulation amplitudes (0.23--0.90\,mW); shading, $\pm$1\,SD across trials for the lowest and highest amplitudes.
+results.tex	57	ai	0.80	10	8db98b1	2026-10-12	Gray band, $-0.2$ to $0.5$\,s, spanning the model-fit window.
+results.tex	57	human	0.00	6	53fa201	2026-10-18	Red dot shows the stimulation impulse.
+results.tex	58	ai	1.00	30	929cf5f	2026-05-27	\textbf{B:} Evoked suppression (mean $\Delta F/F$ over the 200\,ms after onset) versus stimulation amplitude for four sessions from three mice (Mice 5a and 5b are two sessions of one animal).
+results.tex	58	ai	0.76	33	463cf88	2026-09-23	Points, mean $\pm$ SEM across trials ($n = 44$--$59$, $45$--$58$, $81$--$85$ and $100$ trials per amplitude for Mice 5a, 5b, 1b and 3c; Table~\ref{tab:stat_counts}), the lines are linear fits.
+results.tex	59	ai	1.00	42	e1af389	2026-08-12	\textbf{C:} Measured trial-averaged response of held-out trials (solid) and the prediction of a low-order LTI model fit to the trial average of the other half (dashed) at three amplitudes (Mouse 1b), with the held-out $R^2$ of this split at each amplitude.
+results.tex	60	ai	1.00	21	6fe8933	2026-10-10	\textbf{D:} Left, peak-normalized measured responses (solid; trough scaled to $-1$) and each session's held-out LTI prediction (dashed), one color per session.
+results.tex	60	ai	1.00	14	09abcc7	2026-10-15	Right, held-out $R^2$ per session (median and interquartile range over 100 random split-halves).
+results.tex	61	ai	1.00	25	463cf88	2026-09-23	\textbf{E:} Cross-session model swap: $R^2$ of each session's LTI model (rows) on every session's measured response (columns), with a gain fitted for each pair.
+results.tex	61	ai	1.00	9	37280b9	2026-10-13	The diagonal entries are in-sample fits (Materials and Methods).
+results.tex	62	ai	0.93	15	37280b9	2026-10-13	\textbf{F:} Dip (open squares) and rebound (solids) time constants from the fitted poles, per session.
+results.tex	62	human	0.00	8	53fa201	2026-10-18	The dotted line shows median dip time constant.
+results.tex	63	human	0.00	8	09abcc7	2026-10-15	\textbf{G:} Per session single-trial variability against pre-stimulus state .
+results.tex	63	ai	1.00	18	52e2591	2026-10-15	Trial-to-trial variability is the root-mean-square deviation of each trial's response from the trial-averaged response at the same amplitude.
+results.tex	63	ai	1.00	15	c538e52	2026-10-12	Normalized within each session and amplitude so that 1 marks a typical trial (dotted line).
+results.tex	63	ai	1.00	36	e1af389	2026-08-12	From left to right, panels group trials by quartile of motion energy, relative 2--4\,Hz ($\delta$) power and absolute 2--4\,Hz power over the 1\,s before onset (1516 trials, 4 sessions; Materials and Methods).
+results.tex	63	ai	0.79	14	37280b9	2026-10-13	Thin gray lines, sessions; bold line, mean of sessions; dashed line, no stimulus trials.
+results.tex	68	ai	0.93	30	67a807a	2026-05-31	The mean evoked suppression grew monotonically with stimulation amplitude: the stronger the stimulation, the deeper the trial-averaged suppression, even though single-trial responses varied (Figure~\ref{fig:figure2}B; Materials and Methods).
+results.tex	69	ai	0.65	34	67a807a	2026-05-31	This input--output relationship was approximately linear (slopes $-0.88$, $-1.32$, $-1.53$ and $-3.11\,\%\,\Delta F/F$ per mW; $R^2 = 0.97$, $0.73$, $0.88$ and $0.88$), which supports a linear feedforward controller calibrated from impulse-response data~\citep{astrom1995pid}.
+results.tex	70	ai	0.70	20	e47efb2	2026-10-10	To capture the response dynamics, we fit an LTI model to the impulse-response data of each session (Materials and Methods).
+results.tex	71	ai	0.84	63	e47efb2	2026-10-10	Models fit to the trial-averaged response of a random half of the trials predicted the trial-averaged response of the other half (Figure~\ref{fig:figure2}C), with a pooled median held-out $R^2$ of $0.85$ across the four sessions; the median over splits ranged by session from $0.56$ in Mouse 5a (interquartile range $0.09$--$0.79$) to $0.95$ in Mouse 1b (Figure~\ref{fig:figure2}D).
+results.tex	72	ai	0.95	19	553e034	2026-10-10	The spread of held-out $R^2$ within each session reflects trial-to-trial variability in the response, which we examine below.
+results.tex	73	ai	1.00	49	8db98b1	2026-10-12	We allowed up to five poles and four zeros, selected the order once per session on all trials, and held it fixed when scoring held-out trials (Mouse 5a, three poles and one zero; Mice 5b and 1b, four poles and three zeros; Mouse 3c, five poles and four zeros).
+results.tex	74	ai	1.00	22	e5fd510	2026-10-10	A two-pole model predicted held-out trials almost as well (pooled held-out $R^2 = 0.81$ against $0.85$; $0.87$ against $0.85$ in Mouse 3c).
+results.tex	76	human_changed_since_sync		0			A model fit in one session described the responses of other sessions inconsistently (Figure~\ref{fig:figure2}E): although the cross-session $R^2$ was moderate on average ($0.69$, against $0.99$ within session), it ranged from $0.97$ for some session pairs to $0.12$ for others.
+results.tex	77	human_changed_since_sync		0			We conclude that we can use linear models for open loop gain design but cant reuse them across sessions. Since we have some level of similarity between sessions, we calibrate the open loop gains we can adjust them per session to fine tune using observations of trail activity (Table~\ref{tab:gains}, Materials and Methods).
+results.tex	79	ai	0.50	10	553e034	2026-10-10	The fitted poles yield two timescales (Figure~\ref{fig:figure2}F).
+results.tex	79	ai	0.97	30	553e034	2026-10-10	The two modes overlap in time, so neither maps onto one feature of the response alone (in Mice 5b and 1b the slower mode contributes $60$--$68\%$ of the trough).
+results.tex	80	ai	0.96	81	e5fd510	2026-10-10	The dip timescale, the decay of the fastest mode (a damped 2.4--4.2\,Hz oscillation that shapes the initial suppression), was consistent across sessions (median $0.113$\,s; $0.106$--$0.114$\,s in Mice 5a, 5b and 1b, and $0.14$\,s in Mouse 3c; Materials and Methods), although it depends on model order: the one other model fitting almost as well ($R^2$ within $0.005$) gave $0.117$ instead of $0.106$\,s in Mouse 5a and $0.154$ instead of $0.114$\,s in Mouse 1b.
+results.tex	81	ai	0.99	96	30eb736	2026-10-02	The rebound timescale, the slowest mode, which governs how activity returns after the dip, varied across sessions ($0.27$\,s in Mouse 1b, $0.50$\,s in Mouse 3c at the edge of the $0.5$\,s fit window, and beyond it in Mice 5a and 5b, where in Mouse 5a it adds a small sustained suppression, $6\%$ of the trough) and is correspondingly less well constrained: it exceeded the fit window in $39\%$ and $72\%$ of bootstrap refits in Mice 5a and 5b and in all refits in Mouse 3c, against $3\%$ in Mouse 1b (Materials and Methods).
+results.tex	82	ai	0.85	26	6fe8933	2026-10-10	Accordingly, the peak-normalized responses share the dip time course and diverge only during the rebound, which was small relative to the dip (Figure~\ref{fig:figure2}D).
+results.tex	83	ai	0.97	32	553e034	2026-10-10	The dip, consistent across sessions, therefore sets how quickly stimulation can move cortical activity, whereas the session-variable rebound acts on slower timescales, at which the integral term of the controller can compensate.
+results.tex	85	ai	1.00	6	52e2591	2026-10-15	Single-trial variability reflects state-dependent ongoing activity
+results.tex	86	ai	1.00	23	463cf88	2026-09-23	The LTI model captured the trial-averaged response, but individual trials deviated from it, and the size of these deviations depended on brain state.
+results.tex	87	ai	0.92	73	eb19a84	2026-07-20	We characterized the state before each stimulus with three measures, all taken over the 1\,s before onset (Materials and Methods): motion energy from face video, a measure of the animal's movement; relative 2--4\,Hz ($\delta$) power, the fraction of 0.4--10\,Hz cortical power in the $\delta$ band, which reflects how strongly the spectrum is concentrated in slow rhythms; and absolute 2--4\,Hz power, which reflects the overall amplitude of slow fluctuations.
+results.tex	88	ai	1.00	36	c538e52	2026-10-12	We quantified each trial's variability as the root-mean-square deviation of its response over the LTI fit window ($0$ to $0.5$\,s) from the trial-averaged response at its amplitude, which is the response the LTI model describes.
+results.tex	89	ai	0.71	24	01344d3	2026-09-30	We normalized this variability within each session and binned trials by quartile of each state measure (1516 trials, four sessions; Figure~\ref{fig:figure2}G).
+results.tex	90	ai	0.75	28	52e2591	2026-10-15	We computed the same measure over a stimulus-free window sampled between stimulus trials, to ask whether ongoing activity without stimulation shows the same state dependence (Materials and Methods).
+results.tex	92	ai	0.98	57	7e54b60	2026-10-16	In every session, single trials were least variable in the top motion quartile ($0.57$--$0.71$ times the session's typical trial), whereas the three lower quartiles stayed between $0.88$ and $1.30$, so the observation was a drop at the highest motion (top versus bottom quartile, geometric mean over sessions $0.58$, range $0.50$--$0.81$; Figure~\ref{fig:state_quartile}A).
+results.tex	93	ai	1.00	29	7e54b60	2026-10-16	Variability rose from quartile to quartile with absolute $\delta$ power in all four sessions ($2.35$, range $1.70$--$2.71$), and showed no consistent pattern with relative $\delta$ power ($1.03$, range $0.83$--$1.16$).
+results.tex	95	ai	1.00	57	30eb736	2026-10-02	Ongoing activity in the stimulus-free window followed the same pattern in each state (Figure~\ref{fig:figure2}G, dashed line; top versus bottom quartile $0.60$, $1.08$ and $2.70$ for motion, relative and absolute $\delta$ power), and it deviated from its own trial average about as much as the evoked response did (ratio of within-session variabilities, $0.92$--$1.06$ across sessions).
+results.tex	96	ai	1.00	42	7e54b60	2026-10-16	Expressed relative to the stimulus-free window, response variability changed little across quartiles (top versus bottom quartile $0.98$, $0.95$ and $0.87$; Figure~\ref{fig:state_quartile}A--C, second column); if anything, the response varied slightly less with absolute $\delta$ power than ongoing activity did.
+results.tex	97	ai	1.00	38	a9fc0f5	2026-10-16	Single-trial responses and the ongoing activity they ride on therefore changed together with state: during movement both were less variable, and with higher absolute $\delta$ power both were more variable (per-session values and supporting tests, Table~\ref{tab:stat_fig2g}).
+results.tex	98	ai	1.00	22	a9fc0f5	2026-10-16	We report this co-variation and do not separate a state-dependent change in the stimulus effect from a state-dependent change in ongoing activity.
+results.tex	99	ai	1.00	53	463cf88	2026-09-23	This is consistent with brain state acting as a disturbance added to an otherwise fixed plant, which is the situation feedback control is designed to handle, and it sets a floor on how well any fixed model can predict an individual trial; we test this directly in closed loop below (Figure~\ref{fig:figure4}).
+results.tex	101	ai	1.00	14	01344d3	2026-09-30	The two $\delta$ measures are correlated but not redundant (Spearman $\rho = 0.47$ over the impulse trials).
+results.tex	102	ai	1.00	53	30eb736	2026-10-02	We therefore carry both into the closed-loop analysis, relative power as a candidate state variable normalized for overall power and absolute power as a measure of disturbance amplitude; there, absolute power is taken over 1--4\,Hz and all state measures are computed from $-2$ to $+3$\,s around onset (Materials and Methods).
+results.tex	102	ai	1.00	36	37280b9	2026-10-13	Figure~\ref{fig:figure2}G is descriptive; per-session values for every quartile, the trial-level distributions and the response relative to the stimulus-free control are in Figure~\ref{fig:state_quartile}, and supporting tests in Table~\ref{tab:stat_fig2g}.
+results.tex	106	human	0.00	10	1772218	2026-05-14	\textbf{Closed-loop versus open-loop cortical activity control} (4 mice, 15 sessions).
+results.tex	108	human	0.18	11	1772218	2026-05-14	\textbf{A:} Single-trial example of open-loop (red) and closed-loop (blue) $\Delta F/F$ responses.
+results.tex	108	human	0.45	11	1772218	2026-05-14	Gray shading, 3\,s stimulation window; dashed line, target ($-5\%\,\Delta F/F$).
+results.tex	108	ai	1.00	7	cfb406a	2026-10-03	Grey traces above each response, optogenetic input.
+results.tex	108	ai	1.00	12	e5fd510	2026-10-10	Numbers, RMSE of each trial over the stimulation window (as in F).
+results.tex	109	human	0.00	15	1772218	2026-05-14	\textbf{B:} Trial-averaged $\Delta F/F$ responses under open-loop (red) and closed-loop (blue) control for a representative session.
+results.tex	109	ai	0.89	9	1772218	2026-05-14	Bold line, trial mean; shading, $\pm1$\,SD across trials.
+results.tex	109	ai	1.00	10	e5fd510	2026-10-10	Numbers, RMSE of the trial-averaged trace over the stimulation window.
+results.tex	109	ai	1.00	6	6fe8933	2026-10-10	Per-trial RMSE is shown in F.
+results.tex	110	ai	1.00	14	b385659	2026-09-30	\textbf{C:} Trial-averaged optogenetic input (grey) for the same open-loop (left) and closed-loop (right) trials.
+results.tex	110	ai	0.89	9	1772218	2026-05-14	Bold line, mean input; shading, $\pm1$\,SD across trials.
+results.tex	111	human	0.06	16	1772218	2026-05-14	\textbf{D:} Cross-trial variance of $\Delta F/F$ over time for open-loop and closed-loop conditions in a representative session.
+results.tex	111	ai	0.50	4	1772218	2026-05-14	Gray shading, stimulation window.
+results.tex	111	ai	1.00	8	e5fd510	2026-10-10	D and E share one $y$-axis range.
+results.tex	112	human	0.41	17	1772218	2026-05-14	\textbf{E:} Cross-trial variance of $\Delta F/F$ over time, averaged across all 15 sessions, for open-loop and closed-loop conditions.
+results.tex	113	ai	0.50	30	1772218	2026-05-14	\textbf{F:} Distribution of per-trial tracking RMSE (over the 3\,s stimulation window) for open-loop and closed-loop trials in the session of A--D. Half-violins, kernel density estimate; asterisks, condition means.
+results.tex	114	ai	1.00	8	baca73a	2026-09-23	\textbf{G:} Trial-averaged tracking error (RMSE, $\%\,\Delta F/F$) over time.
+results.tex	114	ai	1.00	10	e5fd510	2026-10-10	Thin lines, individual sessions (15); bold lines, mean across sessions.
+results.tex	114	ai	0.67	15	1772218	2026-05-14	Error is defined only within the 3\,s stimulation window and is zero outside it.
+results.tex	115	ai	0.92	48	7e2a78a	2026-09-23	\textbf{H:} Ratio of closed-loop to open-loop tracking RMSE per session (log scale; below one, closed loop tracked better) in four windows: pre-stimulation (3\,s before onset), transient (0--1\,s), steady state (1--3\,s) and post-stimulation (1\,s after offset, the end of the stored trial segment).
+results.tex	115	ai	1.00	20	6fe8933	2026-10-10	Gray lines, sessions; black, geometric mean across sessions with 95\% CI; dashed line, ratio of one; grey band, stimulation windows.
+results.tex	115	ai	0.88	41	67a807a	2026-05-31	Stars in the title, two-sided one-sample $t$-test on the per-session log ratio over the whole 0--3\,s stimulation window, the primary window, which is not plotted separately ($n = 15$ sessions, 4 mice; Table~\ref{tab:stat_fig3}; Materials and Methods).
+results.tex	116	ai	0.72	18	6fe8933	2026-10-10	\textbf{I:} As H, for the ratio of across-trial variance; here the post-stimulation window spans 3\,s after offset.
+results.tex	121	human	0.00	5	67a807a	2026-05-31	Closed-loop control improves reference-tracking accuracy
+results.tex	123	ai	0.58	24	f6b40d9	2026-09-30	We used the PI controller (Figure~\ref{fig:figure1}E; Materials and Methods) to target spontaneous activity to $-5\%\,\Delta F/F$ for 3\,s per trial.
+results.tex	124	ai	0.82	40	b7cde5f	2026-05-13	For each mouse, we first tuned the feedforward gain $K_r$ and the feedback gains $K_p$ and $K_i$ (Materials and Methods), and at the start of each session we adjusted them slightly to account for session specific changes.
+results.tex	125	ai	1.00	26	52e2591	2026-10-15	We then ran a validation block with fixed gains, in which closed-loop trials and open-loop trials (feedforward only, no feedback) were randomly interleaved (Table~\ref{tab:gains}).
+results.tex	126	ai	0.74	34	67a807a	2026-05-31	Figure~\ref{fig:figure3}A--D and F show one representative session (Mouse~2a; $K_r = 0.1$, $K_p = 0.07$, $K_i = 0.1$), and Figure~\ref{fig:figure3}E and G--I pool all 15 sessions.
+results.tex	127	ai	0.89	27	52e2591	2026-10-15	On single trials, the closed-loop controller adjusted the stimulation as activity changed, whereas the open-loop input was fixed regardless of the cortical output (Figure~\ref{fig:figure3}A).
+results.tex	128	ai	0.85	27	e47efb2	2026-10-10	As a result, trial-averaged closed-loop activity stayed close to the reference throughout stimulation, whereas open-loop activity carried the error of the feedforward calibration (Figure~\ref{fig:figure3}B).
+results.tex	128	ai	0.92	26	553e034	2026-10-10	The trial-averaged closed-loop input departed from the fixed open-loop input (Figure~\ref{fig:figure3}C), a correction that reflects errors in the nominal model or stimulation-related biases.
+results.tex	130	ai	1.00	17	e47efb2	2026-10-10	We quantified tracking accuracy on each trial as the root-mean-square error (RMSE) between activity and the reference.
+results.tex	131	ai	0.75	20	553e034	2026-10-10	In the representative session, closed loop lowered both the typical RMSE and its spread across trials (Figure~\ref{fig:figure3}F).
+results.tex	132	ai	1.00	20	52e2591	2026-10-15	Across sessions, closed loop kept the trial-averaged error below open loop over the whole stimulation window (Figure~\ref{fig:figure3}G).
+results.tex	133	ai	1.00	36	63a6607	2026-10-10	To compare sessions on one scale, we divided each session's mean closed-loop RMSE by its mean open-loop RMSE in each window, so that a ratio below one means closed loop tracked better (Figure~\ref{fig:figure3}H).
+results.tex	134	ai	1.00	22	63a6607	2026-10-10	We tested the log ratio across sessions with a one-sample $t$-test and checked the result in each mouse (Materials and Methods).
+results.tex	135	ai	1.00	34	c0d9288	2026-10-07	Over the full 3\,s window, closed loop lowered RMSE in all 15 sessions and in all 4 mice, by 23\% on average (geometric-mean ratio $0.77$, $p = 5.8\times10^{-8}$; Table~\ref{tab:stat_fig3}).
+results.tex	137	ai	0.81	16	b2212d3	2026-10-16	The initial deviation, the difference between output and reference at stimulation onset, settles within 1\,s.
+results.tex	138	ai	1.00	30	30eb736	2026-10-02	We therefore split the stimulation window into a transient (0--1\,s), which captures this settling, and a steady state (1--3\,s), which reflects the response to ongoing disturbances.
+results.tex	139	ai	1.00	47	c0d9288	2026-10-07	Closed loop lowered RMSE by 15\% in the transient (ratio $0.85$; $p = 1.0\times10^{-5}$) and by 32\% in the steady state ($0.68$; $p = 4.9\times10^{-7}$), with the ratio below one in all 15 sessions and all 4 mice in both windows (Figure~\ref{fig:figure3}H).
+results.tex	140	ai	1.00	20	746f9b4	2026-10-16	Before and after stimulation the ratio stayed at one (geometric mean $1.01$, 95\% CI $[1.00, 1.03]$, and $1.00$, $[0.98, 1.03]$).
+results.tex	141	ai	1.00	28	40a9323	2026-10-20	Part of this advantage reflects the rough feedforward calibration, which left open-loop activity a median of $1.5\%\,\Delta F/F$ short of the reference during stimulation (Figure~\ref{fig:figure3}B).
+results.tex	142	ai	1.00	46	40a9323	2026-10-20	To separate calibration from feedback, we compared closed loop with the best fixed input, the constant command that would have minimized each session's open-loop error under the linear model, computed on the same trials, which favors open loop (Figure~\ref{fig:best_fixed}A; Materials and Methods).
+results.tex	143	ai	1.00	18	40a9323	2026-10-20	This brought open-loop activity to within $0.3\%\,\Delta F/F$ of the reference and lowered its steady-state RMSE by 15\%.
+results.tex	144	ai	1.00	62	40a9323	2026-10-20	Closed loop still tracked better than the best fixed input, by 13\% over the stimulation window (ratio $0.87$, $p = 6.5\times10^{-4}$; below one in 13 of 15 sessions and 3 of 4 mice), 8\% in the transient ($0.92$, $p = 0.026$) and 20\% in the steady state ($0.80$, $p = 1.4\times10^{-4}$) (Figure~\ref{fig:best_fixed}B,C; Table~\ref{tab:stat_fig3}).
+results.tex	145	ai	1.00	12	40a9323	2026-10-20	Feedback also moved the average command toward this input on its own.
+results.tex	145	ai	1.00	37	40a9323	2026-10-20	The mean closed-loop command was 1.16 times the open-loop command (median over sessions), against 1.28 times for the best fixed input, and the two were correlated across sessions (Spearman $\rho = 0.67$, $p = 0.0081$, Figure~\ref{fig:best_fixed}D).
+results.tex	146	ai	1.00	19	40a9323	2026-10-20	Under the same model, recalibration leaves across-trial variance unchanged, so the variance reduction below is not a calibration effect.
+results.tex	148	human	0.00	5	b7cde5f	2026-05-13	Closed-loop control reduces trial-to-trial variability
+results.tex	150	ai	0.83	23	b7cde5f	2026-05-13	In the representative session, across-trial variance was similar in the two conditions before stimulation but diverged upon stimulation onset (Figure~\ref{fig:figure3}D).
+results.tex	151	ai	0.60	20	baca73a	2026-09-23	Open-loop variance reduced slightly, whereas closed-loop variance was significantly reduced, because feedback acts on each trial's deviation in real time.
+results.tex	152	human	0.16	25	dfa0e93	2026-09-07	Averaged across all 15 sessions, we observe the drop in variance during stimulation holds showing its not a session specific effect (Figure~\ref{fig:figure3}E).
+results.tex	153	ai	1.00	63	746f9b4	2026-10-16	In the per-session ratio of closed- to open-loop across-trial variance (Figure~\ref{fig:figure3}I; same test as above), closed loop lowered variance by 42\% over the stimulation window (ratio $0.58$; $p = 6.3\times10^{-6}$; 14 of 15 sessions, all 4 mice), by 33\% in the transient ($0.67$; $p = 5.5\times10^{-4}$) and by 46\% in the steady state ($0.54$; $p = 1.3\times10^{-6}$).
+results.tex	154	ai	0.75	44	52e2591	2026-10-15	Before and after stimulation, the ratio stayed near one (geometric mean $1.04$, 95\% CI $[0.91, 1.18]$, and $1.05$, $[0.93, 1.19]$), so the reduction was confined to the period in which feedback was active, showing that trials were sampled from similar distributions in both cases.
+results.tex	155	ai	0.67	42	eafb9f6	2026-10-19	This is consistent with disturbance rejection: feedback cancels part of the ongoing activity that differs from trial to trial, which we interpret as input from other brain areas or external stimuli and the controller treats them as disturbance to the local dynamics.
+results.tex	156	ai	1.00	24	52e2591	2026-10-15	The size of the improvement varied across sessions, likely reflecting differences in arousal, opsin expression and the overlap between the stimulated and recorded regions.
+results.tex	167	ai	1.00	9	6fe8933	2026-10-10	\textbf{Brain-state dependence of controller performance and rejection of disturbance.}
+results.tex	168	ai	1.00	6	e1af389	2026-08-12	Open loop red, closed loop blue.
+results.tex	168	human	0.25	8	c0411a2	2026-09-07	Steady state, 1--3\,s after laser onset.
+results.tex	169	ai	1.00	35	e1af389	2026-08-12	\textbf{A:} Representative closed-loop trials, drawn from the 11 motion-tracked sessions, that are high in one state factor: initial deviation (blue), motion (orange), relative 2--4\,Hz power (green) and absolute 1--4\,Hz power (purple).
+results.tex	169	ai	1.00	13	6fe8933	2026-10-10	Dashed line, reference; gray shading, stimulation window; grey trace, $z$-scored motion energy.
+results.tex	170	ai	1.00	19	e1af389	2026-08-12	\textbf{B:} Error-decomposition model: per-trial tracking error (RMSE) regressed on the state factors within each session; colours as in A.
+results.tex	171	ai	1.00	22	222c25a	2026-09-29	\textbf{C:} Unique $R^2$ of each state factor for closed-loop RMSE in the transient (0--1\,s, light) and steady-state (dark) windows.
+results.tex	171	ai	1.00	14	6fe8933	2026-10-10	Relative and absolute power each enter a separate model with initial deviation and motion.
+results.tex	171	ai	1.00	42	6fe8933	2026-10-10	Bars, mean over sessions of the adjusted unique $R^2$ fitted within each session; error bars, SEM ($n = 11$ sessions, 613 trials, 16--108 per session; without the two sessions with fewer than 30 trials, no mean changes by more than 0.03).
+results.tex	171	ai	0.92	26	8d32f4a	2026-10-20	Unique $R^2$ (transient, steady state): initial deviation $0.53 \pm 0.05$, $0.03 \pm 0.03$; absolute power $0.11 \pm 0.05$, $0.11 \pm 0.06$; relative power $0.05 \pm 0.03$, $0.03 \pm 0.02$; motion $\le 0.001$.
+results.tex	172	ai	1.00	18	222c25a	2026-09-29	\textbf{D:} Open- and closed-loop steady-state RMSE ($z$-scored within session) by within-session quartile of each state (low~$\rightarrow$~high).
+results.tex	172	ai	1.00	16	6fe8933	2026-10-10	Points, mean $\pm$ SEM across sessions ($n = 15$ sessions, 1670 trials; 11 sessions, 1190 trials for motion).
+results.tex	172	ai	1.00	63	9f5db52	2026-10-07	P, predictability (open-loop slope); R, regularizability (closed-loop slope); A, attenuation (slope of the log closed-to-open-loop RMSE ratio; up arrow, the loop removes a larger share of the error); slopes are fitted to the continuous state within each session (A on log RMSE) and tested across sessions with a one-sample $t$-test, and the quartiles are for display; arrows, direction of improvement or degradation.
+results.tex	172	ai	1.00	15	6fe8933	2026-10-10	Stars, uncorrected $p$ of each slope; Table~\ref{tab:fig4_state_stats} also gives Holm-adjusted values.
+results.tex	173	ai	1.00	20	6fe8933	2026-10-10	\textbf{E:} Ridge weights of the contralateral$\rightarrow$ipsilateral predictor of the control readout (representative session, Mouse~1k); black dot, stimulation site.
+results.tex	174	ai	1.00	30	e1af389	2026-08-12	\textbf{F:} The open-loop trial average $A$ (black; same session) split into the Global component $G$ (blue; predicted from the contralateral hemisphere) and the Local component $L = A - G$ (red shading).
+results.tex	174	ai	1.00	16	6fe8933	2026-10-10	Beige shading, stimulation window; $R^2_{\mathrm{te}}$, held-out $R^2$ of the predictor on spontaneous frames.
+results.tex	175	ai	1.00	31	b262ef0	2026-09-14	\textbf{G:} Closed-loop rejection ratio (RR), the residual energy of the response about the reference divided by the energy of the contralaterally predicted disturbance, over the steady-state window; $\mathrm{RR} < 1$ indicates rejection.
+results.tex	175	ai	1.00	26	c0d9288	2026-10-07	Dots, per-session geometric mean $\pm$1 SD (log scale); blue line and band, geometric mean and 95\% CI from a session-level mixed model; dashed line, $\mathrm{RR} = 1$.
+results.tex	175	ai	1.00	26	6fe8933	2026-10-10	Stars, one-sided $t$-test of $\mathrm{RR} < 1$ on the intercept of the session-level mixed model ($n = 11$ sessions from 3 mice, 595 trials; inclusion in Results).
+results.tex	182	ai	1.00	5	f9ad347	2026-10-01	Controller performance is brain-state dependent
+results.tex	184	ai	1.00	10	e47efb2	2026-10-10	How well feedback tracked the reference depended on brain state.
+results.tex	185	ai	0.97	36	d4718e4	2026-10-01	We described each trial's state with four variables: the initial deviation of activity from the reference at onset, motion energy, 2--4\,Hz power relative to 0.4--10\,Hz power, and absolute 1--4\,Hz power.
+results.tex	186	ai	1.00	18	30eb736	2026-10-02	Motion and power were measured from 2\,s before onset to the end of stimulation (Materials and Methods).
+results.tex	187	ai	1.00	12	e47efb2	2026-10-10	Figure~\ref{fig:figure4}A shows closed-loop trials, each high in one state.
+results.tex	188	ai	0.74	19	d83fc0d	2026-09-07	Face video was available for 11 of the 15 sessions; the other 4 were excluded from all motion analyses.
+results.tex	190	ai	1.00	15	68250de	2026-10-15	Within closed-loop trials, different states mattered in the two windows (Figure~\ref{fig:figure4}B,C).
+results.tex	191	ai	0.91	55	e1af389	2026-08-12	We regressed each trial's tracking error (RMSE) on the state variables within each of the 11 sessions with face video and measured how much of its trial-to-trial variation each variable explained beyond the others; the two power measures are correlated, so each entered its own model with the initial deviation and motion (Materials and Methods).
+results.tex	192	ai	1.00	18	09689af	2026-10-12	The initial deviation explained much of the variation in transient error but almost none in the steady state.
+results.tex	193	ai	0.88	40	d4718e4	2026-10-01	Absolute 1--4\,Hz power explained a modest part in both windows, more than any other variable in the steady state, and remained the largest when relative power was added to the same model (Figure~\ref{fig:f4_exemplars}B,C).
+results.tex	194	ai	1.00	12	8d32f4a	2026-10-20	Relative power explained little, and motion explained nothing beyond the other variables.
+results.tex	195	ai	1.00	12	8d32f4a	2026-10-20	Closed-loop error thus varied with large, slow fluctuations but not with motion.
+results.tex	197	ai	0.89	44	dfa0e93	2026-09-07	We then compared open- and closed-loop tracking across the range of each state, fitting steady-state RMSE against the state within each session and testing the slopes across sessions (Figure~\ref{fig:figure4}D; 15 sessions from 4 mice, or 11 for motion; Materials and Methods).
+results.tex	198	ai	0.75	16	6fe8933	2026-10-10	We summarized each state with three slopes, each per within-session standard deviation (SD) of the state.
+results.tex	199	ai	1.00	30	68250de	2026-10-15	The open-loop slope measures \emph{predictability}: a positive slope means that error rises with the state in a way a fixed feedforward input cannot anticipate, which we treat as a disturbance.
+results.tex	200	ai	1.00	18	68250de	2026-10-15	The closed-loop slope measures \emph{regularizability}: a flat slope means that feedback tracks the reference regardless of the state.
+results.tex	201	human_changed_since_sync		0			Closed-loop alone cannot characterize the effect of state on improvement of ability to control over open loop, as the open-loop could also be just as effective if disturbances are perturbing the trial.
+results.tex	202	ai	1.00	35	9f5db52	2026-10-07	We therefore also measured \emph{attenuation}, the change with state in the error ratio, the fraction of open-loop error left under feedback; a falling ratio means that feedback removes proportionally more error as the state grows.
+results.tex	203	ai	1.00	39	6fe8933	2026-10-10	Each slope is its own question; Table~\ref{tab:fig4_state_stats} gives every estimate with its $p$ value and, as a check, a Holm-adjusted value, under which the motion attenuation and the closed-loop slope on absolute power remain significant.
+results.tex	205	ai	1.00	15	37280b9	2026-10-13	Closed loop lowered error across the range of every state, and two states stood out.
+results.tex	206	ai	1.00	37	ea2e7ff	2026-10-18	Feedback attenuated the error that accompanied motion: the more the animal moved, the more of the error feedback removed (the error ratio fell by 13\% per SD, $p = 0.0023$, in all 11 sessions and all 4 mice).
+results.tex	207	ai	1.00	14	222c25a	2026-09-29	Open-loop error rose with motion ($p = 0.011$) while closed-loop error stayed flat ($p = 0.16$).
+results.tex	208	ai	1.00	59	d4718e4	2026-10-01	Absolute 1--4\,Hz power raised closed-loop error in all 15 sessions and all 4 mice ($p = 7.1\times10^{-4}$) and open-loop error by a similar amount ($p = 0.0098$), so feedback did not hold the output at the reference as this power grew; the fraction of error left under feedback did not change significantly ($+7\%$ per SD, $p = 0.094$).
+results.tex	209	ai	0.75	48	6b048f4	2026-09-14	The initial deviation raised closed-loop error ($p = 0.014$); its effect on open-loop error was of similar size but not significant ($p = 0.056$), and their ratio did not change ($p = 0.91$), so feedback removed the same fraction of error whether a trial began far from or near the reference.
+results.tex	210	ai	1.00	37	e1af389	2026-08-12	Relative 2--4\,Hz power raised closed-loop error slightly ($p = 0.035$) but not open-loop error ($p = 0.98$), so the fraction of error left under feedback rose with it ($+5\%$ per SD, $p = 0.029$); these effects are small.
+results.tex	211	ai	0.59	27	30eb736	2026-10-02	The power measures span the stimulation period, so they describe activity during stimulation, which the loop itself shapes, rather than the state in which the trial began.
+results.tex	213	ai	0.98	42	d4718e4	2026-10-01	Absolute 1--4\,Hz power, which indexes large, slow fluctuations, therefore accounted for more of the variation in steady-state closed-loop error than any other state (Figure~\ref{fig:figure4}C), and feedback did not hold the output at the reference as it grew.
+results.tex	218	ai	1.00	10	e1af389	2026-08-12	Feedback partly rejects a disturbance predicted from the contralateral hemisphere
+results.tex	220	ai	1.00	14	3d59c44	2026-10-19	To test disturbance rejection directly, we estimated each trial's disturbance from the opposite hemisphere.
+results.tex	221	ai	0.94	35	e1af389	2026-08-12	A linear predictor from contralateral pixels to the ipsilateral control readout was fit only on spontaneous, no-laser frames, so it learned how the two hemispheres covary but nothing about the stimulation (Figure~\ref{fig:figure4}E).
+results.tex	222	ai	1.00	23	222c25a	2026-09-29	It generalized to held-out frames ($R^2 = 0.75$ in the session of Figure~\ref{fig:figure4}F; median $0.76$, range $0.44$--$0.98$, 13 sessions).
+results.tex	223	ai	0.98	52	e1af389	2026-08-12	On a stimulation trial, the prediction gave the \emph{Global} component $G$, an estimate of what the site would have done without controller input, and the remainder of the measured response $A$ gave the \emph{Local} component $L = A - G$, what the laser and controller added on top of $G$ (Figure~\ref{fig:figure4}F).
+results.tex	224	ai	1.00	10	f06d2f7	2026-10-18	The split is a linear projection, not a causal decomposition.
+results.tex	225	ai	1.00	37	8528b88	2026-10-10	The predictor was blind to the laser but its input was not: contralateral activity also changed during stimulation, so $G$ carried part of the laser response (median $23\%$ of the readout's open-loop dip over 0--3\,s).
+results.tex	226	ai	1.00	26	3d59c44	2026-10-19	After subtracting the session's average leak and referencing $G$ to its pre-onset baseline, we took the remaining trial-to-trial excursion as the disturbance $D$ (Materials and Methods).
+results.tex	228	ai	0.75	32	b262ef0	2026-09-14	We scored rejection with a rejection ratio (RR), the residual energy of the response about the reference divided by the energy of $D$, both over the steady-state window; $\mathrm{RR} < 1$ indicates rejection.
+results.tex	229	ai	0.84	31	97c23bb	2026-10-07	Of the 13 sessions with a predictor, we excluded two in which a standing offset supplied more than one third of the closed-loop residual energy ($38\%$ and $59\%$; Materials and Methods).
+results.tex	230	ai	1.00	40	97c23bb	2026-10-07	In the remaining 11, closed loop partly rejected the disturbance (session-level mixed model, geometric-mean RR $0.58$, one-sided $p = 1.3\times10^{-4}$; 595 trials, 3 mice; session median below one in all 11; Figure~\ref{fig:figure4}G; Table~\ref{tab:stat_fig4g}).
+results.tex	231	ai	0.82	34	c0411a2	2026-09-07	Open loop, by contrast, left more residual energy than the disturbance it faced (median session RR $1.25$, against $0.72$ in closed loop; lower in closed loop in all 11 sessions, $p = 4.9\times10^{-4}$).
+results.tex	232	ai	1.00	16	3d59c44	2026-10-19	Most of this difference lay in the response level, which open loop sets only by calibration.
+results.tex	233	ai	0.59	49	c0411a2	2026-09-07	The standing offset supplied a median $35\%$ of the residual energy in open loop and $7\%$ in closed loop ($p = 9.8\times10^{-4}$), whereas the fluctuation energy fell less, from $0.66$ to $0.54$ of the disturbance energy ($p = 0.0024$; both lower in closed loop in 10 of 11 sessions).
+results.tex	236	human	0.43	7	3d59c44	2026-10-19	Preview based controller tracks a sinusoidal reference
+results.tex	238	ai	0.83	18	e1af389	2026-08-12	We tested feedback and reference preview on a 1\,Hz sinusoidal reference tracked over a 4\,s window.
+results.tex	239	ai	0.68	41	e1af389	2026-08-12	Preview advanced the reference by a fixed lookahead, set to the delay of the cortical response, so that the PI controller could compensate for that delay (5 samples, 143\,ms, in all three sessions; Figure~\ref{fig:figure5}A; Materials and Methods).
+results.tex	240	ai	0.77	26	30eb736	2026-10-02	Each session ran four randomly interleaved modes: open loop (OL), open loop with preview (OL$+$p), closed loop (CL) and closed loop with preview (CL$+$p).
+results.tex	241	ai	0.83	23	8d32f4a	2026-10-20	We describe one session (Mouse~3b, 200 trials) in detail and then all three sinusoidal sessions of Mouse~3 (3a, 3b and 3d).
+results.tex	245	ai	1.00	10	e1af389	2026-08-12	\textbf{Feedback and preview correct different failures of sinusoidal reference tracking.}
+results.tex	247	ai	1.00	14	43fabaf	2026-10-20	B--H, Mouse~3b; I--K, sessions 3a, 3b and 3d of Mouse~3.
+results.tex	247	ai	1.00	21	8d32f4a	2026-10-20	Modes: OL, open loop (red); OL$+$p, OL with preview (orange); CL, closed loop (blue); CL$+$p, CL with preview (green).
+results.tex	247	ai	1.00	9	e1af389	2026-08-12	Grey, laser power ($\times 2$ in B); black dashed, reference.
+results.tex	248	ai	1.00	3	e1af389	2026-08-12	\textbf{A:} Controller architecture.
+results.tex	248	ai	1.00	17	e1af389	2026-08-12	A preview block shifts the reference forward by a fixed lookahead before it reaches the PI controller.
+results.tex	249	ai	1.00	14	e1af389	2026-08-12	\textbf{B:} One representative trial per mode; vertical lines and shading mark the stimulation window.
+results.tex	250	ai	1.00	17	e1af389	2026-08-12	\textbf{C:} Trial average $\pm$ SD ($n = 51, 46, 46, 57$ trials for OL, OL$+$p, CL, CL$+$p).
+results.tex	251	ai	0.81	16	e1af389	2026-08-12	\textbf{D:} Trial-average laser power $\pm$ SD (mW); panels B--D share the time axis carried by D.
+results.tex	252	ai	1.00	5	e1af389	2026-08-12	\textbf{E:} Across-trial variance over time.
+results.tex	252	ai	1.00	18	e1af389	2026-08-12	\textbf{F:} RMSE over time, mean $\pm$ SEM of the squared error, square-rooted after averaging (so the bands are asymmetric).
+results.tex	253	human	0.38	13	e1af389	2026-08-12	\textbf{G:} Per-trial RMSE by mode, sample-normalised over the full 4\,s stimulation window.
+results.tex	253	ai	1.00	18	e1af389	2026-08-12	Half-violins, full distribution (density estimated in log space); dots, individual trials; bars, median and interquartile range; logarithmic axis.
+results.tex	253	ai	0.69	13	8d32f4a	2026-10-20	Per-trial RMSE SD: OL $1.22$, OL$+$p $1.64$, CL $0.99$, CL$+$p $1.01$.
+results.tex	254	ai	1.00	25	e1af389	2026-08-12	\textbf{H:} Phase lag relative to the reference from a 1\,Hz fundamental fit to the trial average; dashed line, preview lookahead ($51^\circ$ at 1\,Hz).
+results.tex	255	ai	1.00	18	e1af389	2026-08-12	\textbf{I--K:} Per-session values for the three sessions: per-trial RMSE (I), phase lag (J) and across-trial variance (K).
+results.tex	255	ai	1.00	20	e1af389	2026-08-12	One point per session per mode, joined by faint lines; bold bar, across-session mean; horizontal line in J, zero lag.
+results.tex	255	ai	1.00	11	e1af389	2026-08-12	Controller gains, reference amplitude and delivered optical power differ between sessions.
+results.tex	255	ai	1.00	11	30eb736	2026-10-02	No significance tests are reported for this figure ($n = 3$ sessions).
+results.tex	255	ai	0.54	28	8d32f4a	2026-10-20	Pooled per-trial RMSE, mean $\pm$ SD: OL $4.08 \pm 1.40$ ($n = 136$ trials), OL$+$p $3.77 \pm 1.38$ ($n = 110$), CL $3.00 \pm 1.12$ ($n = 100$), CL$+$p $3.08 \pm 1.11$ ($n = 132$).
+results.tex	259	human	0.33	27	e1af389	2026-08-12	The open loop the response followed the reference in shape but lagged it and varied from trial to trial (Figure~\ref{fig:figure5}B; laser power in D).
+results.tex	260	human	0.27	22	f54391d	2026-10-01	The trial average kept the sinusoid in every mode, and the across-trial spread was widest under open loop (Figure~\ref{fig:figure5}C).
+results.tex	262	ai	1.00	9	f54391d	2026-10-01	Feedback reduced both the trial-to-trial spread and the error.
+results.tex	263	human	0.22	41	553e034	2026-10-10	From OL to CL, across-trial variance fell from $11.8$ to $5.8\,(\%\,\Delta F/F)^2$ (Figure~\ref{fig:figure5}E), the time-resolved error fell with it (Figure~\ref{fig:figure5}F), and median per-trial RMSE fell from $3.59$ to $2.26$\,\%\,$\Delta F/F$ (Figure~\ref{fig:figure5}G).
+results.tex	265	ai	0.92	12	553e034	2026-10-10	Preview corrected the lag, the delay of the response behind the reference.
+results.tex	266	ai	0.58	31	e1af389	2026-08-12	The response lagged the reference by $71^\circ$ under OL and $46^\circ$ under CL, and preview moved both close to zero, with or without feedback ($16^\circ$ and $2^\circ$; Figure~\ref{fig:figure5}H).
+results.tex	267	ai	0.97	33	553e034	2026-10-10	The open-loop shift ($55^\circ$) was close to the five-sample lookahead ($51^\circ$), as the design predicts; pooled over the three sessions, the per-trial lag fell by $5.7$ samples on average (6 in the median).
+results.tex	268	ai	0.78	40	3d59c44	2026-10-19	Preview did not lower the error as feedback did: median RMSE changed little from OL to OL$+$p ($3.59$ and $3.58$), and adding preview to closed loop did not improve it (CL $2.26$, CL$+$p $3.00$; Figure~\ref{fig:figure5}G).
+results.tex	270	ai	0.78	23	30eb736	2026-10-02	With three sessions we report no significance tests and take the direction of each effect and its consistency across sessions as the result.
+results.tex	271	human	0.30	33	f54391d	2026-10-01	In each session, per-trial RMSE (Figure~\ref{fig:figure5}I) and across-trial variance (Figure~\ref{fig:figure5}K) were lower under closed loop than open loop, and preview canceled the lag (Figure~\ref{fig:figure5}J).
+results.tex	272	ai	0.67	27	3d59c44	2026-10-19	Pooled over sessions, mean per-trial RMSE fell from $4.08$ under OL to $3.00$ under CL, with a smaller change from preview (OL$+$p $3.77$, CL$+$p $3.08$).
+results.tex	273	ai	0.98	46	8d32f4a	2026-10-20	CL$+$p, the controller with both feedback and preview, therefore removed the lag while keeping its error below open loop, and its per-trial RMSE was as tightly spread as under closed loop (SD $1.01$ and $0.99$ in the detailed session, $1.11$ and $1.12$ pooled over sessions).
+results.tex	276	human	0.00	9	8d32f4a	2026-10-20	A model-predictive controller optimizes reference tracking on data replay
+results.tex	278	human	0.00	12	8d32f4a	2026-10-20	The PI controller corrects instantaneous error but is blind to incoming disturbances.
+results.tex	280	ai	1.00	20	8d32f4a	2026-10-20	A model-predictive controller (MPC;~\citealp{rawlings2017model}) uses a model that predicts how activity will respond to stimulation, given its recent history.
+results.tex	281	ai	1.00	42	ef0c7cb	2026-10-09	At every frame, it solves a constrained optimization for the stimulation sequence over the next second that best tracks the reference while penalizing abrupt command changes, applies the first command, and replans at the next frame (Figure~\ref{fig:mpc_direct}A,B).
+results.tex	282	ai	1.00	15	e1b13e4	2026-10-26	Replanning from each new measurement lets it correct for disturbances its model did not predict.
+results.tex	283	ai	0.84	31	a5cebf4	2026-10-09	Its predictions came from a linear vector autoregressive model with exogenous input (VARX;~\citealp{lutkepohl2005new}) built from the past second of the controlled site, 100 sites over the cortex and the stimulation.
+results.tex	284	ai	0.74	47	6cdc262	2026-10-16	On held-out open-loop trials the VARX predicted the controlled site better than the last observed value for a short horizon forward in time, and the 100 cortical sites improved on a model of the site and laser alone (Figure~\ref{fig:mpc_direct}H; Figure~\ref{fig:supp_varx}).
+results.tex	286	ai	0.61	31	3d59c44	2026-10-19	Running MPC in real time needs new software and hardware on the rig with lower latency, so we replayed recorded closed-loop trials with the MPC in place of the PI controller.
+results.tex	287	ai	1.00	20	6cdc262	2026-10-16	Each replay drove a VARX fitted to the whole session with the trial's recorded one-step prediction residuals (Materials and Methods).
+results.tex	288	human	0.33	15	6cdc262	2026-10-16	We used this model to predict activity over a short horizon (Figure~\ref{fig:supp_varx}).
+results.tex	289	ai	1.00	9	ec311a7	2026-10-16	The MPC's own model never saw a closed-loop trial.
+results.tex	290	ai	1.00	8	3d59c44	2026-10-19	All results in this section are descriptive simulations.
+results.tex	292	ai	0.88	49	67a807a	2026-05-31	In one session with a constant reference (Mouse~1e), the MPC lowered the median per-trial RMSE over the steady-state window (1--3\,s) from $1.46$ under the recorded PI controller to $0.88\%\,\Delta F/F$, and its RMSE was lower on 107 of 108 trials (Figure~\ref{fig:mpc_direct}C--E).
+results.tex	293	ai	0.80	30	67a807a	2026-05-31	Across-trial variance over the same window fell by $37\%$ (Figure~\ref{fig:mpc_direct}F), and the RMSE gain held across the command-smoothness penalties we tried (Figure~\ref{fig:mpc_direct}G).
+results.tex	294	ai	0.62	24	3d59c44	2026-10-19	With perfect prediction (the replay model and the trial's future residuals), the MPC's median per-trial RMSE over the same window improved to $0.27\%\,\Delta F/F$.
+results.tex	295	ai	0.96	26	cfc0de9	2026-10-26	The input constraints thus imposed only a small performance limit; most of the MPC's residual error was prediction error, from plant--model mismatch and unforecastable disturbance.
+results.tex	297	ai	0.67	9	8d32f4a	2026-10-20	With the sinusoidal reference the MPC lowered the error.
+results.tex	298	ai	0.69	32	09689af	2026-10-12	We replayed the 57 CL$+$p trials of the representative session of Figure~\ref{fig:figure5} (Mouse~3b), the controller mode that, like the MPC, combined feedback with advance knowledge of the reference.
+results.tex	299	ai	1.00	34	15df1e2	2026-10-16	Median per-trial RMSE over the 4\,s window fell from $3.00$ under CL$+$p to $2.67\%\,\Delta F/F$, and the MPC's RMSE was lower on 56 of 57 trials (Figure~\ref{fig:mpc_direct}I--K).
+results.tex	300	ai	0.86	35	553e034	2026-10-10	Across-trial variance fell to $0.71$ times that of CL$+$p (Figure~\ref{fig:mpc_direct}L), and as with preview the phase lag stayed near zero, against $71^\circ$ under open loop (Figure~\ref{fig:mpc_direct}M).
+results.tex	302	ai	1.00	21	f06d2f7	2026-10-18	In both replays, predicting the disturbance lowered the error that feedback left, and in the sinusoidal replay also its trial-to-trial variability.
+results.tex	309	ai	1.00	11	6cdc262	2026-10-16	In a replay of recorded trials, a model-predictive controller lowers the
+results.tex	310	ai	1.00	6	6cdc262	2026-10-16	error that the PI controller leaves.
+results.tex	311	ai	1.00	6	c9f556e	2026-10-16	no statistical tests (Materials and Methods).
+results.tex	311	ai	1.00	5	a5cebf4	2026-10-09	Grey band, stimulation; dashed line,
+results.tex	312	ai	1.00	1	a5cebf4	2026-10-09	reference.
+results.tex	313	ai	1.00	9	c9f556e	2026-10-16	\textbf{A--H:} Constant reference, Mouse~1e (108 closed-loop trials).
+results.tex	314	ai	1.00	14	c9f556e	2026-10-16	\textbf{A:} The MPC predicts the controlled signal over 1\,s from the controlled site,
+results.tex	315	ai	1.00	15	c9f556e	2026-10-16	100 cortical sites and the laser command (VARX model), plans the laser so that the
+results.tex	316	ai	1.00	12	ef0c7cb	2026-10-09	prediction tracks the reference, applies the first command and replans every frame.
+results.tex	317	ai	1.00	13	c9f556e	2026-10-16	\textbf{B:} One planning step: signal and laser so far (purple), predicted signal and
+results.tex	318	ai	1.00	10	c9f556e	2026-10-16	planned laser over the horizon (magenta), and what followed (grey).
+results.tex	319	ai	0.85	13	a5cebf4	2026-10-09	\textbf{C:} The trial at the median MPC improvement: recorded PI (blue), MPC (purple)
+results.tex	320	ai	1.00	10	c9f556e	2026-10-16	and MPC with perfect prediction (light purple); lower traces, laser.
+results.tex	321	ai	1.00	4	c9f556e	2026-10-16	\textbf{D:} Trial average $\pm$ SD.
+results.tex	322	ai	1.00	16	e1af389	2026-08-12	\textbf{E:} Per-trial RMSE over the steady-state window (1--3\,s); lines join trials, bars mark medians.
+results.tex	323	ai	1.00	6	a5cebf4	2026-10-09	\textbf{F:} Variance across trials over time.
+results.tex	324	ai	1.00	8	a5cebf4	2026-10-09	\textbf{G:} MPC/PI RMSE against the command-smoothness penalty $\lambda$; circle,
+results.tex	325	ai	1.00	2	c9f556e	2026-10-16	value used.
+results.tex	326	ai	1.00	13	1a252bb	2026-10-16	\textbf{H:} Prediction $R^2$ against lead time on held-out open-loop trials for the
+results.tex	327	ai	1.00	15	a5cebf4	2026-10-09	VARX, the same model given only the controlled site and the laser (site $+$ laser) and
+results.tex	328	ai	1.00	5	a5cebf4	2026-10-09	the last observed value (naive).
+results.tex	329	ai	1.00	14	30eb736	2026-10-02	\textbf{I--M:} Sinusoidal reference, Mouse~3b, the session of Fig.~\ref{fig:figure5}B--H;
+results.tex	330	ai	1.00	8	c9f556e	2026-10-16	MPC replayed on the 57 CL$+$p trials.
+results.tex	330	ai	1.00	5	a72eed2	2026-10-16	Red, OL; green, CL$+$p.
+results.tex	331	ai	1.00	8	c9f556e	2026-10-16	\textbf{I:} A trial with a large MPC improvement.
+results.tex	332	ai	1.00	13	c9f556e	2026-10-16	\textbf{J:} Per-trial RMSE over the 4\,s window, paired with the recorded trial.
+results.tex	333	ai	1.00	6	1a252bb	2026-10-16	\textbf{K:} RMSE across trials over time.
+results.tex	334	ai	1.00	6	a5cebf4	2026-10-09	\textbf{L:} Variance across trials over time.
+results.tex	335	ai	1.00	11	1a252bb	2026-10-16	\textbf{M:} Phase lag of the trial average (OL bar, $71^\circ$, truncated).
+discussion.tex	1	ai	1.00	1	eafb9f6	2026-10-19	Discussion
+discussion.tex	2	ai	1.00	25	e47efb2	2026-10-10	A cortical region's response to local optogenetic inhibition was approximately linear and time-invariant on average, but single trials varied with brain state and ongoing activity.
+discussion.tex	3	ai	1.00	24	43fabaf	2026-10-20	A proportional--integral controller that assumed this linear, time-invariant model tracked the reference and reduced trial-to-trial variability on average by correcting deviations from it.
+discussion.tex	4	ai	1.00	14	43fabaf	2026-10-20	Its single-trial performance depended on brain state, consistent with disturbances that vary with state.
+discussion.tex	5	ai	0.67	15	6cdc262	2026-10-16	Replayed on recorded trials, a model-predictive controller that forecast the disturbance lowered the error further.
+discussion.tex	7	ai	1.00	7	43fabaf	2026-10-20	The impulse experiments set our design choices.
+discussion.tex	8	ai	0.63	27	3261854	2026-06-16	The trial-averaged response grew monotonically with laser power, and a low-order linear model fitted each session's average (Figure~\ref{fig:figure2}B--D), so the controller assumed linearity.
+discussion.tex	9	ai	0.72	36	f06d2f7	2026-10-18	The fitted models transferred only inconsistently between sessions (Figure~\ref{fig:figure2}E), so we used them only for a rough feedforward gain, carried it over between sessions with small adjustments, and let feedback correct the rest.
+discussion.tex	10	ai	1.00	31	4acfe97	2026-10-20	The best fixed input was a median of 1.28 times the command this gain produced, and the closed-loop command moved toward that input on its own (Figure~\ref{fig:best_fixed}D).
+discussion.tex	12	ai	1.00	19	37280b9	2026-10-13	Single trials also varied with state (Figure~\ref{fig:figure2}G), but what counts as brain state differs between studies.
+discussion.tex	13	ai	1.00	25	43fabaf	2026-10-20	It can be the activity at stimulus onset, which shaped optogenetic responses in macaque sensorimotor cortex~\citep{bryan2025temporal} and enters our analysis as the initial deviation.
+discussion.tex	14	ai	1.00	33	43fabaf	2026-10-20	It can also be a variable that changes the dynamics themselves, such as movement and arousal~\citep{Niell2010,Vinck2015,McGinley2015waking} or the synchrony of ongoing activity~\citep{Poulet2008,Harris2011}, which our slow-wave power measures track.
+discussion.tex	15	ai	1.00	30	43fabaf	2026-10-20	These variables shape the dynamics but are hard to predict, so we measured them post hoc, though identifying them in real time could inform the controller, as we plan next.
+discussion.tex	16	ai	1.00	41	c538e52	2026-10-12	Sorted by movement or slow-wave power, single trials departed from their average about as much as stimulus-free activity did from its own, with similar state dependence (Figure~\ref{fig:state_quartile}), consistent with a fixed response riding on ongoing activity~\citep{Arieli1996,Shimaoka2019}.
+discussion.tex	17	ai	1.00	24	f06d2f7	2026-10-18	State that adds an offset is a disturbance that feedback subtracts, whereas state that changes gain is a model error that feedback must tolerate.
+discussion.tex	18	ai	1.00	30	43fabaf	2026-10-20	Models that treat state as a parameter of the dynamics switch between linear systems~\citep{linderman2017rslds} or model dynamics within a regime, such as the subspace relevant to a behavior~\citep{sani2021modeling}.
+discussion.tex	19	ai	1.00	26	f06d2f7	2026-10-18	Input--output models fitted per state would separate offset from gain, but would require precise identification of each state switch and, for control, ideally its forecast.
+discussion.tex	20	ai	1.00	49	43fabaf	2026-10-20	A real-time decoder of discrete cortical states, such as a hidden semi-Markov model of LFP spectra in mouse somatosensory cortex~\citep{weiss2024realtime}, labels the state without modelling the response to stimulation, so it could select among interpretable per-state models, although its estimates lag offline ones by about 120--240\,ms.
+discussion.tex	21	ai	1.00	31	43fabaf	2026-10-20	All such models must contend with inputs they cannot observe, as cortical activity tracks uninstructed movements~\citep{musall2019single,stringer2019spontaneous} and drive from other areas~\citep{zagha2013motor,harris2013topdown} as well as its own dynamics.
+discussion.tex	23	ai	1.00	13	43fabaf	2026-10-20	We therefore simplified, treating the trial-averaged system as stationary (Assumption~\ref{assm:trial_avg}).
+discussion.tex	24	ai	1.00	25	43fabaf	2026-10-20	A single linear model is then enough for control if, within a session, the laser's average effect on the readout is well defined and monotonic.
+discussion.tex	25	ai	1.00	27	43fabaf	2026-10-20	The distribution of states is unknown, and over-sampling one state shifts the average toward that state's mean response but not beyond the range of the per-state means.
+discussion.tex	26	ai	1.00	10	43fabaf	2026-10-20	That range, unmeasured here, loosely bounds the design model's error.
+discussion.tex	27	ai	0.81	31	2efa96b	2026-09-30	Averages therefore need enough trials, and in three sessions the cross-trial variance of spontaneous activity changed by only 1--2\% with the number of trials averaged (Figure~\ref{fig:spatial_spread}C).
+discussion.tex	28	ai	0.73	41	43fabaf	2026-10-20	A nonlinear model is the usual alternative, but linear ones often predict brain activity, including responses to stimulation, about as well~\citep{Nozari2024,sani2024dissociative,Yang2021}, and the richer the model of the dynamics, the more must be known to control with it.
+discussion.tex	29	ai	1.00	33	f06d2f7	2026-10-18	Both kinds forecast ongoing activity only briefly, and stimulus-blind, univariate forecasts of spontaneous mouse wide-field activity stay informative for about 1.5\,s, with deep models modestly ahead of a linear autoregressive one~\citep{lu2025benchmarking}.
+discussion.tex	30	ai	0.84	32	2faf7f7	2026-10-20	Part of this limit cannot be removed, because brain activity has random sources and depends on unobserved processes such as neuromodulation, so even a perfect forecasting model would leave some error~\citep{lueckmann2025zapbench}.
+discussion.tex	31	ai	1.00	11	43fabaf	2026-10-20	Feedback partly opposes such unforecastable inputs through the error they cause.
+discussion.tex	32	ai	1.00	28	f06d2f7	2026-10-18	A model for feedback design need only capture how the laser moves the readout~\citep{gevers2005identification}, and a low-order linear model makes stability, gain limits and bandwidth computable~\citep{astrom2008feedback}.
+discussion.tex	34	ai	0.57	23	553e034	2026-10-10	Proportional--integral control needs only the sign of the laser's effect, which was consistently suppressive (Figure~\ref{fig:figure2}B; Figure~\ref{fig:figure3}B).
+discussion.tex	35	ai	0.94	17	553e034	2026-10-10	The simplest optimal regulator of a system must model it~\citep{conant1970every}, and ours modelled only its average.
+discussion.tex	36	ai	0.72	32	f06d2f7	2026-10-18	The feedforward gain approximately inverted the average response, and the integrator, an internal model of a constant signal rather than of cortex, drives a constant offset toward zero within its clamp~\citep{francis1976internal}.
+discussion.tex	37	ai	0.68	28	f06d2f7	2026-10-18	Monotonicity gives each attainable reference one steady-state light drive, which low-gain integral control of an exponentially stable linear plant reaches despite a saturating actuator and input delay~\citep{logemann2000absolute}.
+discussion.tex	38	ai	1.00	16	f06d2f7	2026-10-18	Session-to-session variability therefore limits the gains, not whether some correctly signed gain stabilizes the loop~\citep{morari1985robust}.
+discussion.tex	39	ai	0.85	33	553e034	2026-10-10	With this minimal model, feedback lowered error in every session and, on average, trial-to-trial variability (Figure~\ref{fig:figure3}H,I), and about half of the error reduction remained against the best fixed input.
+discussion.tex	40	ai	1.00	44	b2212d3	2026-10-16	Against the contralaterally predicted disturbance~\citep{Shimaoka2019,Ye2026}, feedback lowered residual energy in all 11 retained sessions (two excluded for large closed-loop offsets), mostly by shrinking the standing offset left by open-loop calibration, while fluctuations fell less (Figure~\ref{fig:figure4}G; Table~\ref{tab:stat_fig4g}).
+discussion.tex	42	ai	1.00	30	43fabaf	2026-10-20	Earlier closed-loop optogenetic controllers held neuronal firing rates in culture and in rodent thalamus~\citep{newman2015optogenetic,bolus2018design,bolus2021state}, clamped single-neuron calcium signals~\citep{Zhang2018} or phase-locked light to oscillations~\citep{nicholson2018analogue,kanta2019closed,Zaaimi2022}.
+discussion.tex	43	ai	1.00	46	43fabaf	2026-10-20	In anesthetized rat thalamus, proportional--integral feedback held firing rates although its fitted model predicted open-loop responses poorly, lowered Fano factors below open loop in five cells, and could not lower rates above target with an excitatory opsin~\citep{bolus2018design}, the mirror image of our one-sided limit.
+discussion.tex	43	ai	1.00	53	40a9323	2026-10-20	Closest to our readout, on/off two-photon feedback in awake mouse cortex held the calcium signal of single neurons near set levels, with a mean absolute error of about 5\%\,$\Delta F/F$, and made optogenetic responses more uniform across cells and trials~\citep{Zhang2018}, whereas our controller graded the light continuously and regulated a mesoscale signal.
+discussion.tex	44	ai	0.81	26	43fabaf	2026-10-20	Changing brain state was anticipated as a disturbance~\citep{bolus2021state} or a change in the plant~\citep{grosenick2015closed}, whereas here we related residual closed-loop error to measured state.
+discussion.tex	46	ai	1.00	37	68250de	2026-10-15	Poorly regulated trials may reflect activity outside the controller's model, so per-trial error probes brain state: slow 1--4\,Hz power explained part of the 1--3\,s error, and movement none (Figure~\ref{fig:figure4}B,C).
+discussion.tex	47	ai	1.00	10	ea2e7ff	2026-10-18	Open-loop error rose with movement while closed-loop error stayed flat.
+discussion.tex	48	ai	0.83	30	6fe8933	2026-10-10	Slow, large-amplitude 1--4\,Hz fluctuations were reduced, but closed-loop error still rose with their power as much as open-loop error (Figure~\ref{fig:figure4}D; Table~\ref{tab:fig4_state_stats}).
+discussion.tex	49	ai	0.96	46	746f9b4	2026-10-16	An effective delay of 37--61\,ms (loop delay at most 47\,ms and about half that on average, Figure~\ref{fig:figure1}F, plus the 14\,ms half-sample hold) caps the feedback bandwidth at about 2.6--4\,Hz by the crossover criterion $\omega_c\tau \lesssim 1$\,rad~\citep{skogestad2005multivariable}.
+discussion.tex	50	ai	1.00	12	f06d2f7	2026-10-18	Cortical lag (Figure~\ref{fig:figure5}H) probably lowers the unmeasured crossover further.
+discussion.tex	51	ai	1.00	16	43fabaf	2026-10-20	Large slow excursions may also saturate the command, which can suppress activity but not raise it.
+discussion.tex	52	ai	1.00	16	f06d2f7	2026-10-18	A closed- to open-loop error spectrum and time at the ceiling would separate delay from saturation.
+discussion.tex	53	ai	0.59	22	f06d2f7	2026-10-18	The band-power window spans stimulation, which the loop shapes, and motion and slow power are anticorrelated~\citep{McGinley2015waking}, so state effects are associations.
+discussion.tex	54	ai	1.00	28	43fabaf	2026-10-20	Where state changes the plant itself, the alternative to a single time-invariant model is a context-dependent model whose controller switches, or schedules its gains, with state~\citep{rugh2000research,grosenick2015closed}.
+discussion.tex	55	ai	1.00	39	43fabaf	2026-10-20	Adaptive deep brain stimulation switches on when a measured biomarker crosses a threshold~\citep{little2013adaptive}, rather than adjusting stimulation continuously, and optogenetic feedback in mouse thalamus paired a first-order model with an adaptive estimator that compensated for mismatch online~\citep{bolus2021state}.
+discussion.tex	57	ai	1.00	32	f06d2f7	2026-10-18	Model-predictive control is a modest step beyond proportional--integral control, adding prediction to a linear model that now includes the rest of cortex and treating the one-sided laser as a constraint~\citep{mayne2000constrained}.
+discussion.tex	58	ai	0.53	19	553e034	2026-10-10	Preview, which predicts only the reference, already cancelled the cortical phase lag that feedback left (Figure~\ref{fig:figure5}H).
+discussion.tex	59	ai	0.93	14	553e034	2026-10-10	The contralateral hemisphere predicted much of the site's spontaneous activity (Figure~\ref{fig:figure4}F).
+discussion.tex	60	ai	1.00	49	6cdc262	2026-10-16	Yet in one session, 100 cortical sites added little to a 200\,ms forecast of the site beyond its own past and the laser (Figure~\ref{fig:mpc_direct}H; Figure~\ref{fig:supp_varx}E), so drive from the rest of cortex was observable but largely unforecastable at short leads.
+discussion.tex	61	ai	1.00	11	f06d2f7	2026-10-18	A linear model without subcortical signals may understate what is forecastable.
+discussion.tex	62	ai	0.81	31	a5cebf4	2026-10-09	In a replay of one session, the controller lowered the error that feedback left by about 40\%, and by about 80\% given the future residuals (Figure~\ref{fig:mpc_direct}C--F).
+discussion.tex	63	human	0.40	10	f06d2f7	2026-10-18	What remained was mostly activity its model could not predict.
+discussion.tex	64	ai	0.97	38	0fe1284	2026-10-12	The replayed cortex shares the controller's model class and responds to the laser identically in every state, so these values bound, rather than measure, live performance, as for model-based designs for electrical stimulation tested in simulation~\citep{Yang2018,Yang2021}.
+discussion.tex	65	ai	1.00	8	f06d2f7	2026-10-18	A live controller should keep integral action~\citep{pannocchia2003disturbance}.
+discussion.tex	67	ai	1.00	28	f06d2f7	2026-10-18	The data comprise four impulse sessions in three mice, 15 separate controller sessions in four mice (11 in the disturbance analysis) and three sinusoidal sessions in one mouse.
+discussion.tex	68	ai	1.00	35	e47efb2	2026-10-10	In every impulse session the average response grew monotonically with power and was predicted by a linear model (Figure~\ref{fig:figure2}B--D), so with a comparable preparation it should be predictable enough for control.
+discussion.tex	69	human	0.42	26	f06d2f7	2026-10-18	All sessions inhibited one somatosensory site in awake, head-fixed mice, leaving excitation, other areas and task performance untested, though the preparation reaches all dorsal cortex~\citep{Matveev2024}.
+discussion.tex	70	human	0.37	35	629ad1a	2026-10-05	Inhibition spreads toward the adjacent readout (Figure~\ref{fig:spatial_spread}A,B;~\citealp{li2019spatiotemporal}), in this setup though we only show control over the kernel, extension to wide bran activity can be derived in future work.
+discussion.tex	71	ai	0.75	12	f06d2f7	2026-10-18	Interleaved trials limit, but cannot remove, drift in brain state between conditions.
+discussion.tex	72	ai	1.00	46	f06d2f7	2026-10-18	Gains were tuned empirically, and the low-gain guarantee is asymptotic and assumes a fixed plant, whereas our integrator ran over 3\,s trials and was reset between them, so the theory motivates the design and stability rests on the observation that no session showed sustained oscillation.
+discussion.tex	74	ai	1.00	68	43fabaf	2026-10-20	We present a procedure for precise feedback control that makes cortical activity follow a chosen reference without an explicit model of its dynamics: if brief stimuli at several intensities evoke a monotonic average response that a low-order linear model fits, and the trial average is stable in the number of trials (Assumption~\ref{assm:trial_avg}), proportional--integral control with feedforward compensation, tuned to the experiment, can be used.
+discussion.tex	75	ai	1.00	31	43fabaf	2026-10-20	Nothing in it is specific to wide-field imaging or optogenetics, so it should carry over to two-photon imaging, electrophysiology, electrocorticography or functional MRI, and to electrical stimulation, within each readout's bandwidth.
+discussion.tex	76	ai	1.00	11	43fabaf	2026-10-20	Model-predictive control may add precision where the disturbance is partly predictable.
+discussion.tex	77	ai	1.00	25	f06d2f7	2026-10-18	A site that tracks a chosen reference also lets its influence on dorsal cortex, striatum~\citep{Peters2021} or behavior~\citep{ZatkaHaas2021} be tested at defined activity levels.
+discussion.tex	78	human	0.47	32	f06d2f7	2026-10-18	As in the voltage clamp and the optoclamp~\citep{newman2015optogenetic}, the laser command needed to track the reference should then report the drive that the loop opposes, a prediction we did not test.
+methods.tex	11	ai	1.00	3	943347c	2026-10-16	Materials and Methods
+methods.tex	14	ai	1.00	3	943347c	2026-10-16	Animals and preparation
+methods.tex	17	human	0.03	29	b7cde5f	2026-05-13	All procedures were approved by the Institutional Animal Care and Use Committee at the University of Washington and followed NIH guidelines for the care and use of laboratory animals.
+methods.tex	19	ai	1.00	13	943347c	2026-10-16	Animals, surgery and the imaging and stimulation system were as described by \citet{Matveev2024}.
+methods.tex	20	ai	1.00	13	943347c	2026-10-16	We give in full only what differs from, or adds to, that system.
+methods.tex	21	ai	1.00	14	64ce6cb	2026-09-30	We used CaMKII-tTA;tetO-GCaMP8s mice, which express the calcium indicator in excitatory cortical neurons.
+methods.tex	22	ai	1.00	23	64ce6cb	2026-09-30	To express the opsin, we injected mice retro-orbitally at P28--42 with ChrimsonR-tdTomato under the DLX2.0 promoter, packaged in a PHP.eB-serotype AAV \citep{Matveev2024}.
+methods.tex	23	ai	1.00	14	64ce6cb	2026-09-30	DLX2.0 restricts expression to forebrain inhibitory interneurons, so red light suppressed local excitatory activity.
+methods.tex	27	ai	1.00	26	64ce6cb	2026-09-30	Mice were implanted with a cleared-skull chamber and a headpost under isoflurane anesthesia with carprofen analgesia \citep{Matveev2024}, and recovered for at least one week before recording.
+methods.tex	28	ai	1.00	13	943347c	2026-10-16	Housing, habituation to head fixation, light water restriction and sucrose rewards followed \citet{Matveev2024}.
+methods.tex	29	ai	1.00	13	64ce6cb	2026-09-30	During recordings, mice were head-fixed on a wheel, awake, and performed no task.
+methods.tex	30	ai	1.00	11	44f91fd	2026-10-06	Animals were 5--14 months old over the sessions reported here.
+methods.tex	32	ai	1.00	14	2efa96b	2026-09-30	Table~\ref{tab:cohort} lists every animal, its sessions and the analyses each contributed to.
+methods.tex	33	ai	1.00	9	2efa96b	2026-09-30	All counts in the Results refer to this table.
+methods.tex	37	human	0.00	0			\small
+methods.tex	49	ai	1.00	3	43fabaf	2026-10-20	Animals and sessions.
+methods.tex	50	ai	1.00	18	43fabaf	2026-10-20	A session is one experiment, and two can share a recording day (1g and 1h, 2b and 2c).
+methods.tex	51	ai	1.00	22	40a9323	2026-10-20	Mice 1--4, which contributed closed-loop sessions, are numbered in order of their first session, and Mouse 5 contributed only impulse sessions.
+methods.tex	52	ai	1.00	23	43fabaf	2026-10-20	A session is named by its mouse number, followed by a letter when that mouse contributed more than one session to the paper.
+methods.tex	53	ai	1.00	22	43fabaf	2026-10-20	Letters run in date order over all of a mouse's sessions, so each session keeps one label in every figure and table.
+methods.tex	54	ai	0.83	29	dfa0e93	2026-09-07	Closed- versus open-loop comparison (Figs.~\ref{fig:figure3} and~\ref{fig:figure4}): 15 sessions from 4 mice, 1a, 1c--1f, 1h, 1j--1l, 2a--2d, 3e and 4 (Table~\ref{tab:gains}).
+methods.tex	55	ai	1.00	10	943347c	2026-10-16	Impulse responses (Fig.~\ref{fig:figure2}): 1b, 3c, 5a and 5b.
+methods.tex	56	ai	1.00	17	943347c	2026-10-16	Sinusoidal reference (Fig.~\ref{fig:figure5}): 3a, 3b and 3d (one at $A = 3$, two at $A = 2$).
+methods.tex	57	ai	1.00	13	943347c	2026-10-16	Gain grid and online gain search (Fig.~\ref{fig:cost_landscape}): 1g and 1i.
+methods.tex	62	ai	1.00	4	943347c	2026-10-16	Imaging and optogenetic stimulation
+methods.tex	65	ai	1.00	17	64ce6cb	2026-09-30	We imaged through the single-photon mesoscope of \citet{Matveev2024}, which shares one light path between imaging and photostimulation.
+methods.tex	66	ai	0.79	38	b7cde5f	2026-05-13	Blue (470\,nm) and violet (405\,nm) illumination alternated frame by frame at 70\,Hz, giving 35\,Hz per channel, over a $9.7 \times 9.7$\,mm field (17.3\,\textmu m per pixel), with an exposure of 14\,ms per frame.
+methods.tex	67	ai	1.00	13	943347c	2026-10-16	Illumination was as in \citet{Matveev2024}, where it did not detectably activate the opsin.
+methods.tex	71	ai	1.00	29	64ce6cb	2026-09-30	The controller received only the blue frames and fed back on the blue-channel signal without hemodynamic correction, which needs both channels and cannot be done within one control interval.
+methods.tex	72	ai	1.00	27	64ce6cb	2026-09-30	Offline, we removed hemodynamic signals by regressing the violet- on the blue-channel signal, compressed the movies by singular value decomposition and registered them to the atlas \citep{Matveev2024}.
+methods.tex	73	ai	1.00	10	30eb736	2026-10-02	The impulse analysis (Fig.~\ref{fig:figure2}) used the corrected signal.
+methods.tex	74	ai	1.00	22	30eb736	2026-10-02	Every closed-loop analysis (Figs.~\ref{fig:figure3}--\ref{fig:figure5}), including the band-power state measures, used the uncorrected signal the controller fed back on.
+methods.tex	76	ai	1.00	14	943347c	2026-10-16	Stimulation used the 638\,nm galvanometer-steered laser of \citet{Matveev2024}, delivered through the imaging objective.
+methods.tex	77	ai	1.00	14	6fe8933	2026-10-10	The target was fixed within a session and placed adjacent to the readout site.
+methods.tex	78	ai	1.00	18	629ad1a	2026-10-05	Suppression spread beyond the stimulation spot (Fig.~\ref{fig:spatial_spread}A,B) and lowered $\Delta F/F$ at the readout.
+methods.tex	79	ai	1.00	22	943347c	2026-10-16	Stimulation targets were about 2\,mm lateral and 1\,mm posterior to bregma ($(x, y) \approx (+2, -1)$\,mm), varying slightly between mice.
+methods.tex	80	ai	1.00	15	943347c	2026-10-16	Laser power was calibrated at the focal plane once a month, as described by \citet{Matveev2024}.
+methods.tex	82	ai	1.00	27	2efa96b	2026-09-30	The controller computed its command in volts, so $K_r$ and $K_p$ are in V per $\%\,\Delta F/F$ and $K_i$ in V per $\%\,\Delta F/F$ per s.
+methods.tex	83	ai	1.00	24	2efa96b	2026-09-30	Commands were quantized to 0.01\,V and limited to 2.45\,V (in the first two sessions, the laser input itself saturated at that level).
+methods.tex	84	ai	1.00	43	6fe8933	2026-10-10	We converted the recorded laser modulation voltage to peak power at the focal plane with the laser calibration \citep{Matveev2024} (1\,mW per 3\,V for the impulse and 2025 sessions; the calibration nearest each session in 2026) and report all amplitudes in mW.
+methods.tex	85	ai	1.00	12	7633db8	2026-10-13	Each command set the laser power for one control sample (28.6\,ms).
+methods.tex	86	ai	1.00	31	7633db8	2026-10-13	In a few early sessions the laser was instead modulated by a 40\,Hz sine whose peak the controller set at each sample, so mean power was half the reported peak.
+methods.tex	89	ai	1.00	2	943347c	2026-10-16	Behavioral monitoring
+methods.tex	92	ai	1.00	19	64ce6cb	2026-09-30	An infrared camera filmed the face and forepaws during a subset of sessions, synchronized with imaging as in \citet{Matveev2024}.
+methods.tex	93	ai	1.00	26	2efa96b	2026-09-30	We computed a scalar motion energy signal per video frame as the squared pixel norm of the difference between consecutive frames, and z-scored it within session.
+methods.tex	96	ai	1.00	2	64ce6cb	2026-09-30	Real-time control
+methods.tex	99	ai	0.86	22	943347c	2026-10-16	The control loop ran as a dedicated real-time process, triggered by each blue frame and managed separately from display and disk writing.
+methods.tex	100	ai	1.00	18	2efa96b	2026-09-30	End-to-end latency, from camera exposure to stimulation command, was measured over 200 loop cycles (Fig.~\ref{fig:figure1}F).
+methods.tex	101	ai	1.00	56	40a9323	2026-10-20	Over a whole session (Mouse~4; 3539 closed-loop laser updates, timed from the exposure start of the source frame to the laser edge recorded on the Timeline), latency had a median of 24.0\,ms, a 99th percentile of 40.0\,ms and a maximum of 43.5\,ms, and 12.6\% of updates arrived after the next blue frame.
+methods.tex	103	ai	1.00	28	2efa96b	2026-09-30	\emph{Online signal.} The feedback signal was the mean fluorescence in a $10 \times 10$ pixel square (0.173\,mm on a side) centered on the readout site in somatosensory cortex.
+methods.tex	104	ai	1.00	10	2efa96b	2026-09-30	With $F_t$ that regional mean at control sample $t$,
+methods.tex	111	ai	0.77	22	b7cde5f	2026-05-13	in percent, where $\bar{F}_{t}$ is the running mean of $F$ over the preceding 40.0\,s (1400 control samples at 35\,Hz).
+methods.tex	112	ai	1.00	15	30eb736	2026-10-02	This length is the controller's horizon parameter and was the same in all 15 sessions.
+methods.tex	113	ai	1.00	7	943347c	2026-10-16	No filtering was applied to $y_t$.
+methods.tex	114	ai	1.00	13	2efa96b	2026-09-30	The baseline was frozen at trial onset and resumed updating at trial end.
+methods.tex	115	ai	1.00	26	2efa96b	2026-09-30	Otherwise the evoked suppression would enter $\bar F$, compress $y_t$ toward zero over repeated trials, and change the meaning of the reference from trial to trial.
+methods.tex	116	ai	1.00	9	f6eb5d4	2026-10-13	Offline, we re-extracted this signal from the compressed movie.
+methods.tex	117	ai	1.00	22	f6eb5d4	2026-10-13	It matched the logged online signal ($r = 0.995$) and did not depend on region size between $10 \times 10$ and $21 \times 21$ pixels.
+methods.tex	119	ai	1.00	25	30eb736	2026-10-02	\emph{Two $\Delta F/F$ normalizations.} Equation~\eqref{eq:dff} is the signal the controller computed online, and every closed-loop analysis (Figs.~\ref{fig:figure3}--\ref{fig:figure5}) uses it unchanged.
+methods.tex	120	ai	1.00	24	30eb736	2026-10-02	The loop could use only past samples, so re-normalizing these data by a retrospective whole-session mean would describe a signal the controller never had.
+methods.tex	121	ai	1.00	21	1907236	2026-10-02	The open-loop impulse experiments (Fig.~\ref{fig:figure2}) enter no feedback path and are analyzed retrospectively, so they need no online baseline.
+methods.tex	122	ai	1.00	25	30eb736	2026-10-02	They are normalized by a fixed denominator, $\Delta F/F = 100 \times F / \bar{F}_{\mathrm{img}}$, where $\bar{F}_{\mathrm{img}}$ is the session mean image averaged over the readout kernel.
+methods.tex	123	ai	1.00	36	30eb736	2026-10-02	The state analysis of Fig.~\ref{fig:figure2}G is invariant to any constant rescaling of $\Delta F/F$ (its quartiles are rank-based and its dependent variable is scaled within amplitude), so it does not depend on this choice.
+methods.tex	125	ai	1.00	9	2efa96b	2026-09-30	\emph{Trial structure.} Stimulation was delivered in 3\,s trials.
+methods.tex	126	ai	1.00	28	2efa96b	2026-09-30	Inter-trial intervals were 15\,s plus a uniform random jitter of up to 1\,s, so that laser onset times were not predictable and did not entrain adaptation.
+methods.tex	127	ai	1.00	6	943347c	2026-10-16	No light was applied between trials.
+methods.tex	128	ai	0.87	23	b7cde5f	2026-05-13	The reference was held at $y_{\mathrm{ref}} = -5\%\,\Delta F/F$ throughout the stimulation window, a suppression of five percentage points below the running baseline.
+methods.tex	129	ai	0.77	22	b7cde5f	2026-05-13	Each session began with a tuning phase (\nameref{sec:gain_opt}), followed by a validation block of 30--200 trials (Table~\ref{tab:gains}).
+methods.tex	130	ai	0.79	34	b7cde5f	2026-05-13	On each validation trial the condition was drawn independently with probability one half, so open- and closed-loop trials were interleaved in random order, balanced only approximately, and sampled the same distribution of brain states.
+methods.tex	131	ai	1.00	25	2efa96b	2026-09-30	In Mice 3e and 4 the tuning phase swept $K_p$, and only the final 100 trials, with $K_p$ held fixed, entered the comparison.
+methods.tex	132	ai	1.00	5	2efa96b	2026-09-30	Sessions lasted about one hour.
+methods.tex	134	ai	1.00	12	deec011	2026-10-27	\emph{Trial onsets.} Time zero of each trial is its logged stimulation start.
+methods.tex	135	ai	1.00	30	43fabaf	2026-10-20	In eight sessions of Mouse~1 (1a, 1c--1f, 1h, 1j and 1k) the logged starts drifted relative to the recorded laser command, by up to 7 frames (0.2\,s).
+methods.tex	136	ai	1.00	53	deec011	2026-10-27	In these sessions we re-derived each open-loop onset from the rise of its recorded command, minus the fixed lag between the logged start and the first command in the sessions without drift (1.9 frames: one frame of trial bookkeeping plus the loop latency), so that time zero means the same in every session.
+methods.tex	137	ai	1.00	33	30eb736	2026-10-02	A closed-loop command need not rise at onset, because the controller's output is small when the error is, so each closed-loop trial took the lag of the open-loop trials around it in time.
+methods.tex	138	ai	1.00	14	deec011	2026-10-27	We checked every corrected session by eye against the command and the evoked response.
+methods.tex	139	ai	1.00	24	deec011	2026-10-27	In one session (Mouse~3e) the recorded readout trace was offset by 11 frames from the frame clock, and we realigned it before analysis.
+methods.tex	142	ai	1.00	1	943347c	2026-10-16	Controller
+methods.tex	145	ai	1.00	5	943347c	2026-10-16	Nominal model and trial averaging
+methods.tex	147	ai	1.00	19	2efa96b	2026-09-30	The cortical response at the readout site is nonlinear and depends on ongoing brain state, which we cannot measure.
+methods.tex	148	ai	1.00	6	2efa96b	2026-09-30	We write the underlying system as
+methods.tex	155	human	0.47	47	b7cde5f	2026-05-13	where $x_t \in \mathbb{R}^{n}$ is a latent cortical state, $u_t \in \mathbb{R}$ the scalar optogenetic input, $\rho_t$ an unmeasured brain-state variable (arousal, movement, cortical synchrony), $d_t$ an unobserved input from other regions, $y_t$ the measured $\Delta F/F$ of \eqref{eq:dff}, and $v_t$ measurement noise.
+methods.tex	156	human	0.00	7	b7cde5f	2026-05-13	The functions $f$ and $h$ are unknown.
+methods.tex	158	ai	0.82	33	b7cde5f	2026-05-13	We did not identify \eqref{eq:nl_state}--\eqref{eq:nl_out}: $\rho_t$ is unmeasured, and physiological limits on input amplitude, stimulus duration and trial count rule out frequency sweeps, persistent excitation and subspace identification.
+methods.tex	159	ai	1.00	13	2efa96b	2026-09-30	We designed instead against a nominal linear time-invariant model of the trial-averaged response,
+methods.tex	166	ai	1.00	19	2efa96b	2026-09-30	in which $C$ is the fixed spatial averaging kernel of \eqref{eq:dff} and $(\bar A, \bar B)$ are the trial-averaged dynamics.
+methods.tex	170	ai	0.50	38	b7cde5f	2026-05-13	Averaged over initial conditions, disturbances, and brain states, the output of \eqref{eq:nl_state}--\eqref{eq:nl_out} is well approximated by the output of the nominal system \eqref{eq:lti_state}--\eqref{eq:lti_out} driven by the same input:
+methods.tex	177	ai	0.65	26	b7cde5f	2026-05-13	where $Y_{0:T}$ is the output trajectory of the true system under input $U_{0:T-1}$ and $\bar{Y}_{0:T}$ that of the nominal system.
+methods.tex	178	ai	1.00	17	2efa96b	2026-09-30	We take $x_0$, $d$, and $\rho$ to be drawn from stationary distributions with $\mathbb{E}[d_t] = 0$.
+methods.tex	181	ai	1.00	17	2efa96b	2026-09-30	Equation~\eqref{eq:trial_avg} is an approximation, since $\mathbb{E}[f(x)] \neq f(\mathbb{E}[x])$ for nonlinear $f$.
+methods.tex	182	ai	1.00	23	2efa96b	2026-09-30	It assumes that the residual is small and close enough to zero mean for a controller designed on $(\bar A, \bar B, C)$ to work.
+methods.tex	183	ai	0.58	12	b7cde5f	2026-05-13	Trial-to-trial departures from the averaged response are then treated as zero-mean disturbances.
+methods.tex	184	ai	1.00	4	c83e0e6	2026-09-30	Two observations support it.
+methods.tex	185	ai	1.00	34	c83e0e6	2026-09-30	First, the cross-trial variance of spontaneous $\Delta F/F$ is estimated consistently: its mean is flat in trial count to within 1--2\%, while its SEM falls roughly as $N^{-1/2}$ (Fig.~\ref{fig:spatial_spread}C).
+methods.tex	186	ai	1.00	23	629ad1a	2026-10-05	Second, the stimulus does not inflate across-trial variance: in open-loop trials it falls during stimulation and recovers afterwards (Fig.~\ref{fig:spatial_spread}D).
+methods.tex	188	ai	1.00	5	88b9f1e	2026-10-05	Tracking error and feedforward term
+methods.tex	190	ai	1.00	21	2efa96b	2026-09-30	Light output is positive only and stimulation suppresses activity, so the command must rise when activity is above a negative reference.
+methods.tex	191	ai	1.00	4	2efa96b	2026-09-30	The tracking error is
+methods.tex	198	ai	1.00	18	2efa96b	2026-09-30	so $e_t > 0$ means the cortex is not yet suppressed enough and the controller raises the command.
+methods.tex	199	ai	1.00	15	2efa96b	2026-09-30	The feedforward term supplies the nominal command needed to bring the output near the reference.
+methods.tex	200	ai	1.00	14	2efa96b	2026-09-30	It is constant over the stimulation window and does not depend on the measurement:
+methods.tex	207	ai	1.00	11	2efa96b	2026-09-30	We estimated $K_{r}$ by least squares from the impulse-response experiments.
+methods.tex	208	human	0.07	28	b7cde5f	2026-05-13	Let $U = [u_{1},\ldots,u_{K}]$ be the stimulus amplitudes and $Y = [\,y_{1} - y_{\mathrm{ref}},\ldots,y_{K} - y_{\mathrm{ref}}\,]$ the corresponding trial-averaged output deviations from the reference.
+methods.tex	209	ai	1.00	1	2efa96b	2026-09-30	Then
+methods.tex	216	human	0.14	7	b7cde5f	2026-05-13	where $Y^{\dagger}$ is the Moore--Penrose pseudoinverse.
+methods.tex	217	ai	0.96	24	b7cde5f	2026-05-13	This regresses amplitude on measured output, the direction an actuator command needs, and so is not the reciprocal of the forward dose--response slope.
+methods.tex	218	ai	1.00	8	943347c	2026-10-16	$K_r$ is a rough calibration by design.
+methods.tex	219	ai	1.00	24	5d1140a	2026-10-12	It was fit on the impulse-response signal, whose $\Delta F/F$ uses a constant baseline, rather than on the trailing-baseline signal the controller fed back on.
+methods.tex	220	ai	1.00	26	40a9323	2026-10-20	Learning it precisely would have needed open-loop trials at several powers in every session, which the session time did not allow next to the controller experiments.
+methods.tex	221	ai	1.00	27	52e2591	2026-10-15	$K_r$ was instead carried over between sessions and adjusted by hand at the start of each session (\nameref{sec:gain_opt}), and feedback corrected the remaining error.
+methods.tex	222	ai	1.00	21	2efa96b	2026-09-30	Open- and closed-loop trials within a session share the same $K_r$, so open-loop error includes the error of this calibration.
+methods.tex	223	ai	0.91	35	40a9323	2026-10-20	To separate the two, we compared closed loop with the best fixed input (\nameref{sec:stats}), which was a median of 1.28 times the feedforward input we used (interquartile range 1.06--1.40, Fig.~\ref{fig:best_fixed}).
+methods.tex	225	ai	1.00	3	2efa96b	2026-09-30	Proportional--integral feedback
+methods.tex	228	ai	0.81	27	b7cde5f	2026-05-13	Feedforward alone cannot correct bias in $K_r$, residual nonlinearity, or state-dependent trial-to-trial deviation, so we added proportional and integral feedback on the error of \eqref{eq:error}.
+methods.tex	229	ai	1.00	6	2efa96b	2026-09-30	The command at sample $t$ was
+methods.tex	241	ai	0.94	16	b7cde5f	2026-05-13	where $g = 1$ on closed-loop trials and $g = 0$ on open-loop trials, and $u_{\max} = 2.45$\,V.
+methods.tex	242	ai	1.00	19	943347c	2026-10-16	The proportional term was clamped at $p = 5$\,V, above $u_{\max}$, and the integral term at $q = 1$\,V.
+methods.tex	243	ai	1.00	11	2efa96b	2026-09-30	The integral is a trailing boxcar rather than an unbounded sum,
+methods.tex	251	ai	1.00	7	2efa96b	2026-09-30	which spans the whole 3\,s trial.
+methods.tex	252	ai	1.00	26	2efa96b	2026-09-30	It was reset during every inter-trial interval, so it can never hold more than 3\,s of error and no error carries into the next trial.
+methods.tex	253	ai	1.00	30	2efa96b	2026-09-30	On open-loop trials ($g = 0$) the constant $\bar u$ of \eqref{eq:ff} is the only input: no measurement enters the command, so the baseline is open loop in the strict sense.
+methods.tex	254	ai	1.00	27	6fe8933	2026-10-10	The most power the laser could deliver at $u_{\max}$ was about 1\,mW at the focal plane in most 2025 sessions (1.6\,mW in the first two).
+methods.tex	256	ai	1.00	13	2efa96b	2026-09-30	Gains and trial counts for every session are listed in Table~\ref{tab:gains}.
+methods.tex	257	ai	1.00	10	40b2108	2026-10-03	No session showed oscillatory instability or divergence at these gains.
+methods.tex	258	ai	1.00	46	40b2108	2026-10-03	We therefore treat the closed loop as stable over the operating range used here, rather than certifying gain and phase margins: with a saturating, one-sided actuator and a finite-window integral, margins from a linear nominal model would describe a controller other than the one that ran.
+methods.tex	259	ai	1.00	22	f06d2f7	2026-10-18	With a stable plant and a bounded command the output cannot diverge, so oscillation is the instability the data could have shown.
+methods.tex	261	ai	1.00	4	30eb736	2026-10-02	Sinusoidal reference and preview
+methods.tex	263	ai	1.00	9	30eb736	2026-10-02	For Fig.~\ref{fig:figure5} the reference varied in time:
+methods.tex	271	ai	1.00	23	30eb736	2026-10-02	with $f = 1$\,Hz, so the setpoint swings between 0 and $-2A\%\,\Delta F/F$ and the 4\,s stimulation window holds exactly four cycles.
+methods.tex	272	ai	1.00	10	e1af389	2026-08-12	Preview acts on the reference before it reaches the controller,
+methods.tex	281	ai	1.00	28	30eb736	2026-10-02	and the previewed setpoint replaces $y_{\mathrm{ref}}$ in both the feedforward term and the error: $\bar{u}_{k} = K_{r}\,\tilde{r}_{k}$ and $e_{k} = y_{k} + \tilde{r}_{k}$.
+methods.tex	282	ai	1.00	41	30eb736	2026-10-02	In every session $K_{v} = K_{a} = 0$ and $K_{\mathrm{pv}} = 1$, so $\tilde{r}_{k} = r_{k+d}$, a pure lookahead of $d = 5$ samples (143\,ms, or $51.4^{\circ}$ at 1\,Hz), chosen to match the lag of the open-loop response.
+methods.tex	283	ai	1.00	53	30eb736	2026-10-02	Each trial was assigned independently and uniformly at random to one of four modes: open loop (OL; $g = 0$, $K_{\mathrm{pv}} = 0$), open loop with preview (OL$+$p; $g = 0$, $K_{\mathrm{pv}} = 1$), closed loop (CL; $g = 1$, $K_{\mathrm{pv}} = 0$) and closed loop with preview (CL$+$p; $g = 1$, $K_{\mathrm{pv}} = 1$).
+methods.tex	284	ai	1.00	9	943347c	2026-10-16	Three sessions from one mouse contributed (Table~\ref{tab:cohort}).
+methods.tex	286	ai	1.00	15	30eb736	2026-10-02	All sinusoidal metrics are computed from stimulation onset to $+4$\,s against the logged reference.
+methods.tex	287	ai	1.00	12	30eb736	2026-10-02	Per-trial RMSE is as in the static case (Eq.~\ref{eq:trial_cost}).
+methods.tex	288	ai	1.00	14	b385659	2026-09-30	Across-trial variance is the variance across trials at each sample, averaged over the window.
+methods.tex	289	ai	1.00	32	30eb736	2026-10-02	Phase lag is the difference between the phases of least-squares fits of $b_{0} + b_{1}\sin(2\pi f t) + b_{2}\cos(2\pi f t)$ to the trial-averaged response and to the reference.
+methods.tex	290	ai	1.00	18	30eb736	2026-10-02	Per-trial lag is the lag of the cross-correlation peak between response and reference, searched within half a period.
+methods.tex	291	ai	0.97	39	30eb736	2026-10-02	The window holds an integer number of cycles, so 1\,Hz falls on a discrete Fourier bin, and Parseval's theorem partitions each trial's mean squared error exactly into a constant offset, the 1\,Hz component and a broadband remainder.
+methods.tex	292	ai	1.00	9	929cf5f	2026-05-27	These are averaged within session and then across sessions.
+methods.tex	295	ai	1.00	3	943347c	2026-10-16	Model-predictive control replay
+methods.tex	299	ai	1.00	15	943347c	2026-10-16	We simulated a model-predictive controller (MPC) on one closed-loop session (Mouse~1e; 108 closed-loop trials).
+methods.tex	300	ai	1.00	51	ef0c7cb	2026-10-09	Activity at the controlled site and at 100 sites over dorsal cortex, with the laser command as input, was modeled as a linear vector autoregressive process with exogenous input (VARX; 35 lags, 1\,s, of every channel and of the laser command; construction and held-out prediction in Fig.~\ref{fig:supp_varx}).
+methods.tex	301	ai	1.00	17	943347c	2026-10-16	The 100 sites were an evenly spaced grid of $5 \times 5$ pixel boxes over the brain mask.
+methods.tex	302	ai	1.00	7	943347c	2026-10-16	The VARX was fitted by ridge regression.
+methods.tex	303	ai	1.00	30	2b828d1	2026-10-16	The penalty (100) and the history length were checked on validation data over $10$--$10^{4}$ and 5--35 frames, where prediction was nearly flat (Fig.~\ref{fig:supp_varx}D).
+methods.tex	304	ai	1.00	47	a5cebf4	2026-10-09	At every frame the MPC chose the laser commands over a 1\,s horizon that minimized the squared deviation of the predicted controlled signal from the reference, plus a penalty ($\lambda = 0.1$) on command changes and a small penalty pulling the command toward the median recorded closed-loop command.
+methods.tex	305	ai	1.00	12	943347c	2026-10-16	Commands were bounded between 0 and the largest command the rig delivered.
+methods.tex	306	ai	1.00	13	a5cebf4	2026-10-09	The MPC applied the first command and planned again at the next frame.
+methods.tex	308	ai	1.00	19	a5cebf4	2026-10-09	To replay a trial, we drove the VARX fitted to the whole session with that trial's recorded one-step residuals.
+methods.tex	309	ai	1.00	28	a5cebf4	2026-10-09	Under the recorded laser this reproduces the recorded trial exactly, so the PI baseline is the trial as it ran and needs no model of the PI loop.
+methods.tex	310	ai	0.88	24	a5cebf4	2026-10-09	The model was trained on the session's spontaneous and open-loop frames only, so no closed-loop trial, including the one being replayed, entered its training.
+methods.tex	311	ai	0.57	21	b091bca	2026-10-26	As a bound, we also replayed each trial with the MPC given the actual data instead of model's prediction (perfect prediction).
+methods.tex	312	ai	1.00	10	e1af389	2026-08-12	RMSE was scored over the steady-state window (1--3\,s).
+methods.tex	313	ai	0.98	41	15df1e2	2026-10-16	We repeated the replay on the 57 CL$+$p trials of the representative sinusoidal session of Fig.~\ref{fig:figure5} (Mouse~3b), with the 1\,Hz reference in the MPC cost over its horizon, and scored RMSE over the 4\,s window.
+methods.tex	314	ai	1.00	31	ec311a7	2026-10-16	Here too the MPC's model was fitted without any closed-loop (CL or CL$+$p) trial, on spontaneous and open-loop frames, with the replayed trial's fold (one of five) also held out.
+methods.tex	315	ai	1.00	5	943347c	2026-10-16	All MPC results are descriptive.
+methods.tex	318	ai	1.00	2	943347c	2026-10-16	System characterization
+methods.tex	321	ai	1.00	5	2efa96b	2026-09-30	Impulse responses and evoked suppression
+methods.tex	324	ai	1.00	10	5d3bf16	2026-10-13	Impulse experiments were run open loop with the same imaging.
+methods.tex	325	ai	1.00	24	5d3bf16	2026-10-13	Each stimulus was a single pulse about one imaging frame long (23--28\,ms), separated by randomized intervals (median 5.7--9.8\,s across sessions).
+methods.tex	326	ai	1.00	20	5d3bf16	2026-10-13	Responses were read out offline from the hemodynamically corrected movie over the readout region, normalized as in \emph{Two $\Delta F/F$ normalizations}.
+methods.tex	327	ai	1.00	29	2efa96b	2026-09-30	To test whether the input--output relation was linear and monotonic, we delivered stimuli at three to nine nonzero amplitudes per session, up to 1.6\,mW, in pseudorandom order.
+methods.tex	328	ai	1.00	8	cad5a9c	2026-10-10	Every nonzero amplitude had at least 44 trials.
+methods.tex	330	ai	1.00	16	929cf5f	2026-05-27	We summarized each response by its mean $\Delta F/F$ over the 200\,ms after onset (evoked suppression),
+methods.tex	338	ai	1.00	15	929cf5f	2026-05-27	where $j$ indexes trials and $W$ spans the eight samples from onset to 200\,ms.
+methods.tex	339	ai	1.00	18	d18cbe9	2026-10-12	Each trial's trace is referenced to its value at the onset sample, so $y_{j,t_{\mathrm{on}}} = 0$.
+methods.tex	340	ai	1.00	16	2efa96b	2026-09-30	We use the window mean because it is less sensitive to single-sample noise than the trough.
+methods.tex	341	ai	1.00	10	2efa96b	2026-09-30	We regressed mean evoked suppression on amplitude to test linearity.
+methods.tex	343	ai	1.00	37	3261854	2026-06-16	\emph{Spatial extent.} We mapped the trial-averaged $\Delta F/F$ across the imaged cortex at each amplitude and counted pixels whose background-subtracted response fell below 50\% of the median response within 0.2\,mm of the peak at the strongest amplitude.
+methods.tex	344	ai	1.00	20	3261854	2026-06-16	Background was estimated per amplitude from an annulus 0.6--0.9\,mm from the peak, which removes the global hemodynamic component.
+methods.tex	345	ai	1.00	13	629ad1a	2026-10-05	Areas use the 17.3\,\textmu m pixel size (Fig.~\ref{fig:spatial_spread}A,B).
+methods.tex	347	ai	1.00	2	2efa96b	2026-09-30	Transfer-function fitting
+methods.tex	350	ai	1.00	12	2efa96b	2026-09-30	We fitted a continuous-time transfer function to each session's amplitude-normalized impulse response.
+methods.tex	351	ai	1.00	41	30eb736	2026-10-02	The trial-averaged response at each amplitude $a$ was divided by $a$, and these normalized responses were averaged with weights proportional to $a^{2}$, so that the high signal-to-noise amplitudes set the dynamics, giving $h(t)$ over the 0.5\,s after onset.
+methods.tex	352	ai	1.00	14	30eb736	2026-10-02	Under linearity the normalized responses coincide, so the fit itself tests the linear assumption.
+methods.tex	353	ai	1.00	39	2efa96b	2026-09-30	We fitted $h(t)$ by prediction-error minimization, sweeping 1--5 poles, 0--4 zeros (strictly proper, so $h(0) = 0$) and 0--3 samples of pure delay (0--85.7\,ms), and selected the order by the Akaike Information Criterion.
+methods.tex	354	ai	1.00	29	30eb736	2026-10-02	When the selected model reproduced $h(t)$ with $R^{2} < 0.98$, we instead took the model with the fewest parameters among those within 0.002 of the best $R^{2}$.
+methods.tex	355	ai	1.00	24	e43b12f	2026-10-11	In one session (Mouse 3c), whose onset-referenced response stayed offset from zero, no order fitted well from the default initialization (best $R^2 = 0.94$).
+methods.tex	356	ai	1.00	22	8db98b1	2026-10-12	We therefore added, in every session, one candidate initialized from a fit to the baseline-referenced response plus one pole near the origin.
+methods.tex	357	ai	1.00	14	8db98b1	2026-10-12	It was selected only in Mouse 3c (five poles, four zeros, $R^{2} = 0.99$).
+methods.tex	358	ai	1.00	14	8db98b1	2026-10-12	The near-origin pole contributes less than 0.2\% of the response and is not interpreted.
+methods.tex	359	ai	1.00	9	943347c	2026-10-16	Held-out refits rebuilt this initialization from training trials only.
+methods.tex	361	ai	1.00	7	30eb736	2026-10-02	\emph{Held-out validation} (Fig.~\ref{fig:figure2}C,D).
+methods.tex	362	ai	1.00	23	30eb736	2026-10-02	For each of 100 random splits, trials were divided in half within each amplitude, so that both halves span the full dose range.
+methods.tex	363	ai	1.00	28	30eb736	2026-10-02	We rebuilt $h(t)$ on one half, refitted the model at the session's selected order, and scored its prediction against the other half, in both directions (200 folds).
+methods.tex	364	ai	1.00	14	30eb736	2026-10-02	The prediction carries the model's own gain, so a gain mismatch counts against it.
+methods.tex	365	ai	1.00	25	d4718e4	2026-10-01	We report the median and interquartile range of held-out $R^{2}$ over the folds whose refit succeeded (90\% in Mouse 3c, at least 98\% elsewhere).
+methods.tex	366	ai	1.00	14	8db98b1	2026-10-12	The pooled value is the median over all such folds of the four sessions.
+methods.tex	367	ai	1.00	13	30eb736	2026-10-02	Model order was selected once on all trials and is not itself cross-validated.
+methods.tex	369	ai	1.00	7	30eb736	2026-10-02	\emph{Cross-session model swap} (Fig.~\ref{fig:figure2}E).
+methods.tex	370	ai	1.00	29	30eb736	2026-10-02	Entry $(i,j)$ is the $R^{2}$ of session $i$'s fitted unit response against session $j$'s measured $h(t)$, after a single least-squares gain for that pair.
+methods.tex	371	ai	1.00	17	30eb736	2026-10-02	The free gain restricts the comparison to the shape of the response, which a controller cannot re-tune.
+methods.tex	372	ai	1.00	7	30eb736	2026-10-02	The diagonal is each model's in-sample fit.
+methods.tex	374	ai	1.00	6	0acb096	2026-09-24	\emph{Time constants} (Fig.~\ref{fig:figure2}F).
+methods.tex	375	ai	1.00	8	30eb736	2026-10-02	Each continuous-time pole $p$ gives $\tau = -1/\mathrm{Re}(p)$.
+methods.tex	376	ai	1.00	11	30eb736	2026-10-02	We report the fastest (dip) and slowest (rebound) modes per session.
+methods.tex	377	ai	1.00	23	30eb736	2026-10-02	A time constant longer than the 0.5\,s fit window is not resolved by the fit and is drawn at the window edge.
+methods.tex	378	ai	1.00	49	30eb736	2026-10-02	To check identifiability, we refitted 300 bootstrap resamples of trials within amplitude, each rebuilding $h(t)$ and refitting at the selected order, and computed the fraction of refits whose slowest $\tau$ exceeded the fit window (18 samples, 0--0.49\,s), counting failed refits (fewer than 3\%) as not exceeding it.
+methods.tex	379	ai	1.00	15	0acb096	2026-09-24	This fraction was large in three of four sessions (Results), so we show no intervals.
+methods.tex	382	ai	1.00	2	2efa96b	2026-09-30	Controller tuning
+methods.tex	386	ai	1.00	10	2efa96b	2026-09-30	We scored tracking by the root-mean-squared deviation from the reference.
+methods.tex	387	ai	1.00	16	2efa96b	2026-09-30	For trial $i$, with the errors over the evaluation window collected in $e_{i} \in \mathbb{R}^{T}$,
+methods.tex	396	ai	1.00	25	2efa96b	2026-09-30	so values carry the units of $\Delta F/F$, and the cost of a gain pair $K$ is the mean of per-trial RMSE over its $N$ trials.
+methods.tex	398	ai	1.00	6	3261854	2026-06-16	We used three named evaluation windows.
+methods.tex	399	ai	1.00	16	3261854	2026-06-16	The \textbf{full stimulation window}, $t = 0$ to $+3$\,s, was used for per-trial and cross-session RMSE.
+methods.tex	400	ai	0.90	40	f24121a	2026-06-22	Within it, the \textbf{transient window}, $t = 0$ to $+1$\,s, covers the approach to the reference after the laser-evoked inhibitory deflection, and the \textbf{steady-state window}, $t = +1$ to $+3$\,s, covers the interval over which the controller tracks the reference.
+methods.tex	401	ai	1.00	16	36b9817	2026-10-01	The 1\,s boundary is a fixed convention, about five times the $\sim$200\,ms impulse dip.
+methods.tex	402	ai	0.55	38	36b9817	2026-10-01	The steady-state window excludes the laser-evoked transient, and it alone was used for the state dependence and disturbance rejection of Fig.~\ref{fig:figure4} (panels D and G; panel C reports both windows) and for the constant-reference MPC replay.
+methods.tex	404	ai	1.00	16	2efa96b	2026-09-30	\emph{Gain grid.} Gradients of the cost require a model, so we mapped the cost surface directly.
+methods.tex	405	ai	1.00	32	3f9968d	2026-06-01	In one session (Mouse~1g) the controller cycled through 10 fixed PI gain pairs, and we estimated $\hat{J}(K)$ at each node over the full window (Fig.~\ref{fig:cost_landscape}A,D).
+methods.tex	406	ai	1.00	13	bfcdce7	2026-10-01	The minimum fell at $(K_p, K_i) = (0.05,\,0.10)$, with $\hat{J} = 16.1$.
+methods.tex	407	ai	1.00	20	bfcdce7	2026-10-01	We read the grid as showing a smooth cost surface with a low-cost basin, not as locating a global optimum.
+methods.tex	409	ai	0.72	39	b7cde5f	2026-05-13	\emph{Online gain search.} In a second session of the same mouse (136 trials), the controller tuned its own gains during the experiment with the zeroth-order search of Algorithm~\ref{alg:zo}, starting from open loop ($K_p = K_i = 0$).
+methods.tex	410	ai	1.00	14	2efa96b	2026-09-30	A candidate replaced the current gains only if it lowered the running best cost.
+methods.tex	411	ai	0.76	21	6f76f4d	2026-07-01	The online cost was evaluated over the stimulation window less two samples, so its values are not comparable with the grid.
+methods.tex	412	ai	0.78	36	3f9968d	2026-06-01	Two candidates were accepted, lowering the online cost from 16.6 to 12.3, and the search ended at $(K_p, K_i) = (0.07,\,0.06)$, inside the low-cost region of the grid (Fig.~\ref{fig:cost_landscape}A--C).
+methods.tex	413	ai	1.00	13	bfcdce7	2026-10-01	We report this run as a feasibility demonstration, not as a reliable optimizer.
+methods.tex	438	ai	1.00	30	bfcdce7	2026-10-01	\emph{Gains used for validation.} For each mouse, initial gains were set by hand within the range the grid had explored, starting from the least-squares $K_r$ of Eq.~\eqref{eq:kr}.
+methods.tex	439	ai	1.00	32	52e2591	2026-10-15	Later sessions, including the first sessions of Mice 2 and 4, which had no impulse session, started from the gains of earlier sessions, with small adjustments at the start of each session.
+methods.tex	440	ai	1.00	12	943347c	2026-10-16	Gains were then held fixed for the validation block (Table~\ref{tab:gains}).
+methods.tex	443	ai	1.00	4	2efa96b	2026-09-30	Session and trial selection
+methods.tex	446	ai	1.00	5	2efa96b	2026-09-30	All exclusions are collected here.
+methods.tex	449	ai	1.00	1	f401e29	2026-10-13	\emph{Motion.}
+methods.tex	450	ai	1.00	6	f401e29	2026-10-13	No trial was excluded on motion.
+methods.tex	451	ai	1.00	9	f401e29	2026-10-13	Motion enters the analyses only as a state variable.
+methods.tex	452	ai	1.00	2	2efa96b	2026-09-30	\emph{Behavioral video.}
+methods.tex	453	ai	1.00	15	2efa96b	2026-09-30	Motion analyses used the 11 of 15 sessions with a usable motion trace (1190 trials).
+methods.tex	454	ai	1.00	2	f401e29	2026-10-13	\emph{Predictor availability.}
+methods.tex	455	ai	0.82	22	d83fc0d	2026-09-07	The disturbance analysis (Fig.~\ref{fig:figure4}E--G) needs a contralateral predictor, which could be fitted in 13 of the 15 sessions.
+methods.tex	456	ai	0.92	13	d83fc0d	2026-09-07	The other two lacked a usable full-frame recording aligned to the control readout.
+methods.tex	457	ai	1.00	7	df62ee0	2026-10-04	No session was excluded on predictor quality.
+methods.tex	458	ai	1.00	7	df62ee0	2026-10-04	We report the predictor's held-out performance instead.
+methods.tex	459	ai	1.00	3	97c23bb	2026-10-07	\emph{Standing setpoint offset.}
+methods.tex	460	ai	0.83	29	2efa96b	2026-09-30	For the disturbance-rejection analysis only, we excluded sessions whose closed-loop response stayed above the reference throughout stimulation, because the rejection ratio would count that standing offset as unrejected disturbance.
+methods.tex	461	ai	1.00	37	97c23bb	2026-10-07	Over the steady-state window the residual energy splits exactly into $\overline{(A-r)^{2}} = (\bar{A}-r)^{2} + \mathrm{var}(A)$, and we excluded a session when the first term, the standing offset, supplied more than one third of the total.
+methods.tex	462	ai	1.00	9	943347c	2026-10-16	This removed sessions 1c and 4 (Table~\ref{tab:gains}).
+methods.tex	463	ai	0.69	36	97c23bb	2026-10-07	In these two sessions the closed-loop average sat $2.2$ and $1.4\,\%\,\Delta F/F$ above the reference, and the offset supplied $38\%$ and $59\%$ of the residual energy, against $17\%$ or less in each of the other eleven.
+methods.tex	464	ai	1.00	8	6fe8933	2026-10-10	We chose the threshold after inspecting the sessions.
+methods.tex	465	ai	1.00	10	97c23bb	2026-10-07	Any threshold between 20\% and 37\% selects the same eleven.
+methods.tex	469	ai	1.00	2	2efa96b	2026-09-30	Brain-state measures
+methods.tex	473	ai	1.00	12	2efa96b	2026-09-30	We characterized cortical state on each trial with up to four quantities.
+methods.tex	474	ai	1.00	25	30eb736	2026-10-02	The impulse analysis (Fig.~\ref{fig:figure2}G) and the controller analysis (Fig.~\ref{fig:figure4}) measure them over different windows, deliberately, because they ask different questions.
+methods.tex	476	ai	1.00	29	d4718e4	2026-10-01	The \emph{initial deviation} (Fig.~\ref{fig:figure4} only) is the absolute distance of the readout from the reference at the onset sample, $\lvert y(t_{\mathrm{on}}) - r \rvert$, with $r = -5\%\,\Delta F/F$.
+methods.tex	477	ai	1.00	9	d4718e4	2026-10-01	It measures how far from target a trial starts.
+methods.tex	478	ai	1.00	44	2efa96b	2026-09-30	\emph{Motion energy} is the mean over the window of the z-scored motion signal (Behavioral monitoring): the mean, not the mean square, of the z-score, because the square is smallest for trials near the session mean and would rank unusually still trials alongside active ones.
+methods.tex	479	ai	1.00	29	e1af389	2026-08-12	\emph{Relative 2--4\,Hz power} is the ratio of band power in 2--4\,Hz, the sub-band least attenuated by the controller, to total power in 0.4--10\,Hz.
+methods.tex	480	ai	0.88	24	8d36a15	2026-09-08	The ratio avoids the confound that any absolute spectral measure co-varies with the overall magnitude of the signal, which differs between conditions by construction.
+methods.tex	481	ai	1.00	28	d4718e4	2026-10-01	\emph{Absolute low-frequency power} is band power without that normalization: 2--4\,Hz in Fig.~\ref{fig:figure2}G and $\log_{10}$ of 1--4\,Hz power in Fig.~\ref{fig:figure4}.
+methods.tex	482	ai	1.00	24	01344d3	2026-09-30	We report it alongside the relative measure because a factor that acts through the amplitude of ongoing activity shows in the absolute measure only.
+methods.tex	484	ai	1.00	27	30eb736	2026-10-02	\emph{Windows.} In Fig.~\ref{fig:figure2}G, motion, relative and absolute power are taken over the same strictly pre-stimulus window, $[-1, 0)$\,s, the 35 samples before onset.
+methods.tex	485	ai	1.00	37	30eb736	2026-10-02	An impulse is a single brief input, so the question there is how the state in which the stimulus arrives alters its response, and a pre-stimulus window measures that state without overlapping the 0--200\,ms response.
+methods.tex	486	ai	1.00	49	30eb736	2026-10-02	In Fig.~\ref{fig:figure4} all three are taken over one common window, $[-2, +3)$\,s, the 175 samples from 2\,s before onset to the end of stimulation, because tracking performance depends both on the state a trial begins in and on activity that develops while the controller acts.
+methods.tex	487	ai	1.00	11	30eb736	2026-10-02	These measures therefore describe concurrent activity rather than a pre-stimulus state.
+methods.tex	488	ai	1.00	19	30eb736	2026-10-02	The effect of feedback is assessed through the open- versus closed-loop contrast, in which both conditions are measured identically.
+methods.tex	490	ai	1.00	35	01344d3	2026-09-30	\emph{Spectral estimation.} In Fig.~\ref{fig:figure2}G each 35-sample segment was mean-subtracted and Hann-tapered, and band power was the sum of the one-sided periodogram over the native 1\,Hz bins inside the band, edges inclusive.
+methods.tex	491	ai	1.00	27	30eb736	2026-10-02	In Fig.~\ref{fig:figure4} each 175-sample segment $x$ was linearly detrended, Hann-tapered with window $w$ and zero-padded to at least 8192 points, giving the one-sided spectral density
+methods.tex	500	ai	1.00	13	30eb736	2026-10-02	with the integral evaluated by the trapezoid rule between the exact band edges.
+methods.tex	501	ai	1.00	37	30eb736	2026-10-02	Integrating between exact edges makes the measure independent of segment length (Spearman $\rho = 0.9999$ across 174-, 175- and 176-sample windows), which summing native bins is not: at 0.2\,Hz resolution a one-sample change moves the nominal band edges.
+methods.tex	503	ai	1.00	6	222c25a	2026-09-29	\emph{Quartile display} (Fig.~\ref{fig:figure4}D).
+methods.tex	504	ai	0.96	45	3261854	2026-06-16	We binned each session's trials into quartiles of that session's state distribution (open- and closed-loop trials together), z-scored per-trial RMSE within session using the pooled open- and closed-loop distribution, averaged it within each quartile and condition, and averaged these session means across sessions (mean $\pm$ SEM).
+methods.tex	505	ai	1.00	18	2efa96b	2026-09-30	Pooling the conditions for the z-score keeps the level difference between them while removing session-to-session differences in scale.
+methods.tex	506	ai	1.00	13	943347c	2026-10-16	The test of state dependence is the per-session slope analysis under \nameref{sec:stats}.
+methods.tex	509	ai	1.00	5	30eb736	2026-10-02	State exemplars and error decomposition
+methods.tex	512	ai	0.82	38	dfa0e93	2026-09-07	To ask which state accounts for closed-loop tracking error, and when within the trial, we analyzed the closed-loop trials of the 11 sessions with motion capture (613 trials; 16 to 108 per session) one session at a time.
+methods.tex	513	ai	1.00	11	36b9817	2026-10-01	The outcome was per-trial RMSE in the transient and steady-state windows.
+methods.tex	514	ai	1.00	15	30eb736	2026-10-02	The four state measures were z-scored within session, with absolute power entered as its logarithm.
+methods.tex	515	ai	1.00	31	30eb736	2026-10-02	For each session and window we fitted ordinary least-squares models with an intercept and report each factor's \emph{unique} $R^2$, the drop in adjusted $R^2$ when that factor is removed,
+methods.tex	523	ai	1.00	10	e43b12f	2026-10-11	for a model with $p$ factors fitted to $n$ trials.
+methods.tex	524	ai	1.00	17	943347c	2026-10-16	Adjusted $R^2$ removes the positive floor that in-sample $R^2$ differences have at these trial counts.
+methods.tex	525	ai	1.00	21	30eb736	2026-10-02	Relative and absolute power are correlated, and in one four-factor model one would absorb the variance the other shares with it.
+methods.tex	526	ai	1.00	27	30eb736	2026-10-02	In Fig.~\ref{fig:figure4}C each power measure therefore enters its own three-factor model on the same base, $\{\text{initial deviation}, \text{motion}, \text{relative}\}$ and $\{\text{initial deviation}, \text{motion}, \text{absolute}\}$.
+methods.tex	527	ai	0.57	14	c0411a2	2026-09-07	The unique $R^2$ of initial deviation and motion are taken from the first.
+methods.tex	528	ai	1.00	8	e43b12f	2026-10-11	We report the mean and SEM over sessions.
+methods.tex	529	ai	1.00	20	30eb736	2026-10-02	Fig.~\ref{fig:f4_exemplars}B--D repeats the decomposition with both power terms in one model, and with each alone.
+methods.tex	531	ai	1.00	16	30eb736	2026-10-02	The exemplar trials (Fig.~\ref{fig:figure4}A) illustrate each state as cleanly as the data allow.
+methods.tex	532	ai	1.00	55	30eb736	2026-10-02	With $z_{ij}$ the value of state $j$ on trial $i$, z-scored over the trials from which the exemplar is drawn, the exemplar for state $j$ is the trial that maximizes $z_{ij} - \max_{k \neq j} z_{ik}$ among trials with $z_{ij} > 1$ (or, if none exceeds 1, the trial with the largest $z_{ij}$).
+methods.tex	533	ai	1.00	21	30eb736	2026-10-02	Exemplars are drawn from the pool for Fig.~\ref{fig:figure4}A and within each session for Fig.~\ref{fig:f4_exemplars}A.
+methods.tex	536	ai	1.00	5	30eb736	2026-10-02	Impulse-response variability and brain state
+methods.tex	540	ai	1.00	22	6da5997	2026-09-23	For Fig.~\ref{fig:figure2}G we asked whether brain state changes how far a single impulse response departs from the trial average.
+methods.tex	541	ai	1.00	39	30eb736	2026-10-02	Any fixed amplitude-to-response model, the LTI model included, predicts the same response for every trial at a given amplitude, so we took as each trial's variability the root-mean-square distance between its response and the trial-averaged response at its amplitude,
+methods.tex	548	ai	1.00	35	30eb736	2026-10-02	for trial $j$ at amplitude $a$ in session $s$, where $x_{j}(t)$ is the onset-referenced trace and the sum runs over the $N = 18$ samples from 0 to 0.49\,s, the LTI fit window.
+methods.tex	549	ai	1.00	27	30eb736	2026-10-02	Unlike the evoked suppression (Eq.~\ref{eq:inhib_energy}), $e_{j}$ counts a dip that arrives early or late, or a rebound of the wrong size, as error.
+methods.tex	550	ai	1.00	10	30eb736	2026-10-02	Only nonzero amplitudes were analyzed (1516 trials in four sessions).
+methods.tex	551	ai	1.00	21	30eb736	2026-10-02	To pool amplitudes we scaled the error by its within-amplitude root mean square, $z_{j} = e_{j} / \mathrm{RMS}_{s,a}(e)$.
+methods.tex	553	ai	1.00	22	30eb736	2026-10-02	Each state measure ($[-1, 0)$\,s window) was converted to a within-session percentile, and trials were binned into quartiles of that percentile.
+methods.tex	554	ai	1.00	34	7e54b60	2026-10-16	We summarize the pattern as the ratio of variability in the top to the bottom quartile, computed in each session and reported as the geometric mean of the four per-session ratios with their range.
+methods.tex	555	ai	1.00	8	7e54b60	2026-10-16	With four sessions we attach no confidence intervals.
+methods.tex	556	ai	1.00	26	7e54b60	2026-10-16	This analysis is descriptive: it sets up the pattern that the closed-loop experiments then test (Fig.~\ref{fig:figure4}), and the Results draw no inference from it.
+methods.tex	557	ai	1.00	39	b42e90e	2026-10-12	For completeness, Table~\ref{tab:stat_fig2g} lists a supporting test: within each session, the ordinary least-squares slope of $z$ on state (standardized within session), and a one-sample $t$-test of the four slopes against zero (three degrees of freedom).
+methods.tex	558	ai	1.00	9	30eb736	2026-10-02	Two of the four sessions come from one mouse.
+methods.tex	559	ai	1.00	18	b42e90e	2026-10-12	Pooled Spearman correlations are effect sizes only, without $p$-values, because trials within a session are not independent.
+methods.tex	561	ai	1.00	58	30eb736	2026-10-02	\emph{Stimulus-free window.} We repeated the quartile ratio and the pooled Spearman correlation on a matched quantity that contains no stimulus: Eq.~\eqref{eq:l2_error} over the 18 samples from $-1.51$ to $-1.03$\,s, referenced to the first sample of that window and compared with that window's mean trace at the same amplitude, then scaled in the same way.
+methods.tex	562	ai	1.00	15	30eb736	2026-10-02	This window lies before the state window, and the response window does not overlap it.
+methods.tex	563	ai	1.00	31	01344d3	2026-09-30	A state that changes the spread of this control as much as that of the response acts on the amplitude of ongoing activity rather than on the response to the stimulus.
+methods.tex	564	ai	1.00	30	943347c	2026-10-16	Fig.~\ref{fig:state_quartile} divides each session's response variability by its stimulus-free variability in every quartile, a ratio that stays flat for such a state, and shows the single-trial errors.
+methods.tex	565	ai	1.00	19	d0f02e4	2026-10-16	It also shows single trials sorted by state at one amplitude per session (each session's second-highest), in raw $\Delta F/F$.
+methods.tex	566	ai	1.00	34	b42e90e	2026-10-12	Its supporting test (Table~\ref{tab:stat_fig2g}) compares the top quartile of this ratio with the mean of the other three (one-sample $t$-test on the four per-session log ratios, three degrees of freedom).
+methods.tex	569	ai	1.00	5	7e54b60	2026-10-16	Contralateral prediction and disturbance rejection
+methods.tex	573	ai	1.00	17	e1af389	2026-08-12	On spontaneous, no-laser frames we fitted a ridge-regularized linear predictor from contralateral pixels to the ipsilateral readout.
+methods.tex	574	ai	1.00	19	57ad7c0	2026-10-13	Predictors were about 500 pixels on a uniform lattice over the contralateral cortex, each z-scored on the training data.
+methods.tex	575	ai	1.00	25	57ad7c0	2026-10-13	Spontaneous frames were split in time, the first two thirds for training and the last third for testing, and we report the held-out $R^{2}$.
+methods.tex	576	ai	1.00	33	cfb406a	2026-10-03	The ridge penalty was chosen without stimulation trials: it was the smallest penalty at which the predictor's spurious deflection on 200 laser-free catch windows (trial-shaped windows baselined like a real trial) stopped falling.
+methods.tex	577	ai	1.00	11	943347c	2026-10-16	Held-out $R^2$ peaks near zero penalty and cannot set it.
+methods.tex	579	ai	1.00	13	e1af389	2026-08-12	On each stimulation trial we applied the fixed predictor to concurrent contralateral activity.
+methods.tex	580	ai	1.00	35	e1af389	2026-08-12	This gives the \emph{Global} component $G(t)$, an estimate of the ipsilateral activity expected with no controller input, and the \emph{Local} component $L(t) = A(t) - G(t)$, where $A(t)$ is the measured response.
+methods.tex	581	ai	1.00	28	929cf5f	2026-05-27	We checked the decomposition by reconstructing $A$ as $G$ plus the leave-one-trial-out average local response, and report the cross-validated $R^{2}$ of that reconstruction over 0--3\,s.
+methods.tex	583	ai	1.00	9	2efa96b	2026-09-30	We quantified rejection per trial as the energy ratio
+methods.tex	590	ai	0.81	37	c0411a2	2026-09-07	where the numerator is the energy of the measured response about the reference $r = -5\%\,\Delta F/F$ and the denominator the energy of the disturbance $D$, the contralaterally predicted excursion referenced to its own no-laser baseline and leak-corrected.
+methods.tex	591	ai	1.00	28	8528b88	2026-10-10	Contralateral activity also changes during stimulation, so $G$ dips with the laser (in open loop by $6$--$42\%$ of the readout's dip over 0--3\,s, median $23\%$).
+methods.tex	592	ai	1.00	32	8528b88	2026-10-10	The leak correction subtracts, from each trial's $G$ referenced to the 1\,s before onset, the session's mean open-loop $G$ over the same window, so that $D$ keeps only the trial-to-trial excursion.
+methods.tex	593	ai	1.00	8	36b9817	2026-10-01	Both terms were evaluated over the steady-state window.
+methods.tex	594	ai	1.00	37	200f575	2026-09-21	Referencing the disturbance to its own baseline rather than to the target keeps the fixed setpoint offset from being counted as disturbance, so $\mathrm{RR} < 1$ means the controlled response carries less energy than the disturbance it opposes.
+methods.tex	595	ai	1.00	35	79e2c2d	2026-10-07	We also computed $\mathrm{RR}$ on the open-loop trials of the same sessions, with the same window and leak correction, as a paired comparator in which any error in the scale of $D$ cancels between conditions.
+methods.tex	596	ai	1.00	36	79e2c2d	2026-10-07	For that comparison the numerator was split into the standing offset $(\bar{A}-r)^{2}$ and the fluctuation $\mathrm{var}(A)$, which separates a response sitting at the wrong level from one that fails to follow the disturbance.
+methods.tex	599	ai	1.00	5	c0d9288	2026-10-07	Experimental Design and Statistical Analysis
+methods.tex	603	ai	1.00	34	3261854	2026-06-16	\emph{Design.} Every closed-loop experiment is a within-session comparison: open- and closed-loop trials, with the same reference and feedforward term, were interleaved at random by the control software, so each session is its own control.
+methods.tex	604	ai	1.00	46	c0d9288	2026-10-07	Sample sizes are 15 closed-loop sessions from 4 mice (2 male, 2 female; 1670 trials) for Figs.~\ref{fig:figure3} and~\ref{fig:figure4}, four impulse-response sessions from three mice for Fig.~\ref{fig:figure2}, and three sinusoidal-tracking sessions from one mouse for Fig.~\ref{fig:figure5} (Table~\ref{tab:cohort}).
+methods.tex	605	ai	1.00	21	c0d9288	2026-10-07	The unit of replication for every between-condition claim is the session, and we state $n$ with its unit for every test.
+methods.tex	606	ai	1.00	9	c0d9288	2026-10-07	No statistical method was used to predetermine sample size.
+methods.tex	607	ai	1.00	14	2efa96b	2026-09-30	We recorded as many sessions per animal as window clarity and opsin expression allowed.
+methods.tex	608	ai	1.00	6	c0d9288	2026-10-07	Analyses were not blinded to condition.
+methods.tex	609	ai	1.00	10	943347c	2026-10-16	All analyses were automated and applied identically to every condition.
+methods.tex	611	ai	1.00	9	2efa96b	2026-09-30	\emph{Software and inference.} Analyses were performed in MATLAB R2025b.
+methods.tex	612	ai	1.00	36	c0d9288	2026-10-07	The statistics of Figs.~\ref{fig:figure3} and~\ref{fig:figure4}D were reproduced independently in Python (SciPy 1.18) from the stored session data; per-trial RMSE agreed to within $10^{-6}$ and every state slope to four decimals.
+methods.tex	613	ai	1.00	20	2e762a4	2026-10-09	Except for the disturbance-rejection model of Fig.~\ref{fig:figure4}G (below), each between-condition test is on one number per session.
+methods.tex	614	ai	1.00	26	c0d9288	2026-10-07	The primary test is a two-sided one-sample $t$-test of these session values ($n_{\mathrm{sessions}} - 1$ degrees of freedom), with a $t$-based 95\% confidence interval.
+methods.tex	615	ai	1.00	20	09689af	2026-10-12	The exact Wilcoxon signed-rank test on the same values is reported alongside, as a check that does not assume normality.
+methods.tex	616	ai	1.00	44	746f9b4	2026-10-16	We did not base inference on a model with mouse as a random effect: with four mice, two of which contributed one session each, the mouse variance cannot be estimated, and in our data its degrees of freedom were close to one or below.
+methods.tex	617	ai	1.00	35	deec011	2026-10-27	Instead we report the mouse level directly, as the number of mice whose mean agrees in sign with the overall effect, and as the largest $p$ obtained when each mouse is left out in turn.
+methods.tex	618	ai	1.00	8	3261854	2026-06-16	Significance was taken at $\alpha = 0.05$, two-sided unless stated.
+methods.tex	619	ai	1.00	38	22568f3	2026-09-29	The Statistical tables give each effect as an estimate with its 95\% confidence interval, the test statistic with its degrees of freedom, the exact $p$-value and $n$ with its unit; the text gives the estimate and $p$.
+methods.tex	620	ai	1.00	19	c0d9288	2026-10-07	Signed-rank tests are reported with their $V$ statistic for Fig.~\ref{fig:figure4}G and by their exact $p$ elsewhere.
+methods.tex	621	ai	1.00	17	943347c	2026-10-16	Every test is listed in full in the Statistical tables (Tables~\ref{tab:stat_counts}--\ref{tab:stat_fig4g}).
+methods.tex	622	ai	1.00	18	b2212d3	2026-10-16	Fig.~\ref{fig:figure2}G is descriptive, with its supporting tests in Table~\ref{tab:stat_fig2g} (\nameref{sec:imp_state}).
+methods.tex	623	ai	1.00	36	30eb736	2026-10-02	Fig.~\ref{fig:figure5} rests on three sessions in one mouse, too few for a session-level test, so it is reported descriptively: the per-session direction of each effect and the pooled mean $\pm$ SD, with no significance tests.
+methods.tex	624	ai	1.00	12	943347c	2026-10-16	The MPC replay (\nameref{sec:mpc}) is a simulation and is reported descriptively.
+methods.tex	626	human	0.29	7	f6b40d9	2026-09-30	\emph{Closed versus open loop} (Fig.~\ref{fig:figure3}).
+methods.tex	627	ai	1.00	40	943347c	2026-10-16	The session value is the ratio $r$ of the closed- to the open-loop value in a window (mean per-trial RMSE, or across-trial variance averaged over the window), so that $r < 1$ means closed loop was better, and we test $\log r$.
+methods.tex	628	ai	1.00	18	22568f3	2026-09-29	We report the geometric-mean ratio with its 95\% confidence interval and as a percentage reduction, $100\,(1 - r)$.
+methods.tex	629	ai	1.00	22	36b9817	2026-10-01	The primary window is the 3\,s of stimulation; its transient (0--1\,s) and steady-state (1--3\,s) parts are secondary.
+methods.tex	630	ai	0.83	29	eb19a84	2026-07-20	The pre- and post-stimulation windows are controls, reported as the ratio and its confidence interval without a test, because a large $p$ there would not show that nothing changed.
+methods.tex	631	ai	1.00	16	c0d9288	2026-10-07	The comparisons are pre-specified, one per metric and window, and are not corrected for multiple comparisons.
+methods.tex	633	ai	1.00	33	40a9323	2026-10-20	\emph{Best fixed input.} To separate the error that feedback removes from the error of the rough feedforward calibration, we compared closed loop with the best fixed input that each session's open-loop trials allow.
+methods.tex	634	ai	1.00	51	6fe8933	2026-10-10	Under the trial-averaged model with an additive disturbance, an open-loop trial is $y_i(t) = b + h(t) + n_i(t)$, where $b$ is the trial-averaged level over the 1\,s before onset, $h$ the trial-averaged effect of the open-loop command and $n_i$ the trial's deviation from the trial average.
+methods.tex	635	ai	1.00	14	40a9323	2026-10-20	A command scaled by $c$ would give $b + c\,h(t) + n_i(t)$.
+methods.tex	636	ai	1.00	34	e1af389	2026-08-12	We chose $c$ to minimize the squared error to the reference over the 0--3\,s stimulation window on the same open-loop trials, which favors open loop, and capped it at the command limit.
+methods.tex	637	ai	1.00	14	40a9323	2026-10-20	We then compared closed-loop RMSE with the RMSE of these rescaled trials, as above.
+methods.tex	638	ai	1.00	11	40a9323	2026-10-20	Under this model the across-trial variance does not depend on $c$.
+methods.tex	639	ai	1.00	35	40a9323	2026-10-20	To ask whether feedback moved the command toward this input on its own, we correlated across sessions (Spearman) the best $c$ with the mean closed-loop command over 1--3\,s divided by the open-loop command.
+methods.tex	641	ai	1.00	6	943347c	2026-10-16	\emph{State dependence} (Fig.~\ref{fig:figure4}D).
+methods.tex	642	ai	1.00	32	9f5db52	2026-10-07	Within each session we standardized each state over that session's trials (open and closed loop together), so every slope is in $\%\,\Delta F/F$ of steady-state RMSE per within-session standard deviation of the state.
+methods.tex	643	ai	1.00	29	3261854	2026-06-16	In each session we fitted ordinary least-squares lines of steady-state RMSE on the standardized state, separately for open- and closed-loop trials, and tested each slope across sessions as above.
+methods.tex	644	ai	1.00	7	9f5db52	2026-10-07	This gives three properties of each state.
+methods.tex	645	ai	1.00	26	42f2763	2026-10-06	\emph{Predictability} is the open-loop slope: a positive slope means the uncontrolled disturbance grows with the state, so a fixed feedforward input anticipates the trial less well.
+methods.tex	646	ai	1.00	29	9f5db52	2026-10-07	\emph{Regularizability} is the closed-loop slope: a slope indistinguishable from zero means the loop keeps the output regulated as the state changes, and a positive slope means it loses it.
+methods.tex	647	ai	1.00	41	9f5db52	2026-10-07	\emph{Attenuation} is the closed- minus the open-loop slope of $\log \mathrm{RMSE}$, that is, the slope of $\log(\mathrm{RMSE}_{\mathrm{CL}}/\mathrm{RMSE}_{\mathrm{OL}})$ against state: how the fraction of open-loop error left by the loop, the empirical counterpart of the sensitivity function, changes with state.
+methods.tex	648	ai	1.00	13	b262ef0	2026-09-14	We report it as the percentage change of that fraction per standard deviation.
+methods.tex	649	ai	1.00	53	2efa96b	2026-09-30	The open-minus-closed-loop gap in mean RMSE, and the open- minus the closed-loop slope (gap trend), are listed in Table~\ref{tab:fig4_state_stats} but not interpreted: the gap is the result of Fig.~\ref{fig:figure3}, and the gap can widen through a rising open loop as much as through a holding closed loop.
+methods.tex	650	ai	0.86	14	c0d9288	2026-10-07	The error decomposition of Fig.~\ref{fig:figure4}C is descriptive and carries no test.
+methods.tex	652	ai	1.00	6	943347c	2026-10-16	\emph{Disturbance rejection} (Fig.~\ref{fig:figure4}G).
+methods.tex	653	ai	1.00	33	22568f3	2026-09-29	We tested $\log \mathrm{RR} \sim 1 + (1 \mid \mathrm{session})$, one-sided on the intercept, and report the geometric mean of $\mathrm{RR}$ with its 95\% confidence interval, corroborated by a one-sided signed-rank test on the per-session median ratios.
+methods.tex	654	ai	1.00	41	2efa96b	2026-09-30	The mixed models were fitted by restricted maximum likelihood and tested with Satterthwaite degrees of freedom, capped at $n_{\mathrm{sessions}} - 1$ so that no test borrows trial-level degrees of freedom, with $t$-based confidence intervals on the same degrees of freedom.
+methods.tex	655	ai	1.00	22	09689af	2026-10-12	Tests of $\mathrm{RR} < 1$, and of closed- below open-loop $\mathrm{RR}$, were one-sided because the hypothesis was directional and fixed before the analysis.
+methods.tex	656	ai	1.00	17	222c25a	2026-09-29	We report the mouse-nested model, $\log \mathrm{RR} \sim 1 + (1 \mid \mathrm{mouse}) + (1 \mid \mathrm{mouse}\!:\!\mathrm{session})$, alongside as the mouse-level result.
+methods.tex	657	ai	1.00	23	c0d9288	2026-10-07	With three mice, one contributing a single session, its degrees of freedom are ${\approx}1.2$ and the mouse and session variances cannot be separated.
+methods.tex	659	ai	1.00	18	30eb736	2026-10-02	\emph{Multiple comparisons.} The state analysis of Fig.~\ref{fig:figure4}D asks three questions of each of four states.
+methods.tex	660	ai	1.00	18	37280b9	2026-10-13	Each is a separate, pre-specified question, and the stars in Fig.~\ref{fig:figure4}D give its uncorrected $p$.
+methods.tex	661	ai	1.00	25	6fe8933	2026-10-10	As a check, Table~\ref{tab:fig4_state_stats} also gives Holm-adjusted $p$-values within two families: predictability and regularizability (eight tests), and attenuation (four tests).
+methods.tex	662	ai	1.00	20	943347c	2026-10-16	Each claim rests on one primary test; the Statistical tables also give the Wilcoxon test on the same session values.
+methods.tex	663	ai	1.00	14	ade7772	2026-10-19	In figures, *, ** and *** denote $p < 0.05$, $0.01$ and $0.001$, and n.s.\ denotes $p \ge 0.05$.
+methods.tex	664	ai	1.00	12	ade7772	2026-10-19	Each legend names the test, and the tables give exact $p$ values.
+methods.tex	667	ai	1.00	4	2efa96b	2026-09-30	Data and code availability
+methods.tex	670	ai	1.00	12	2efa96b	2026-09-30	Acquisition and control software and analysis code are available at [repository URL].
+methods.tex	671	ai	1.00	13	2efa96b	2026-09-30	Each session records the exact revision of the acquisition software that ran it.
+methods.tex	672	ai	1.00	16	2efa96b	2026-09-30	The processed per-trial data behind each figure will be deposited in a public repository on acceptance.
+methods.tex	673	ai	1.00	12	2efa96b	2026-09-30	Raw wide-field imaging data are available from the corresponding author on request.
+supplementary.tex	28	ai	1.00	2	e928780	2026-10-05	Supplementary figures
+supplementary.tex	35	ai	1.00	9	3261854	2026-06-16	Spatial spread of optogenetic inhibition, and the validity of
+supplementary.tex	36	ai	1.00	2	629ad1a	2026-10-05	trial averaging.
+supplementary.tex	37	ai	1.00	6	41d9b19	2026-10-01	\textbf{A:} Suppressed area against stimulation amplitude
+supplementary.tex	38	ai	1.00	2	c9f556e	2026-10-16	(Mouse~1b).
+supplementary.tex	38	ai	1.00	7	41d9b19	2026-10-01	A pixel counts as suppressed if its
+supplementary.tex	39	ai	1.00	9	2efa96b	2026-09-30	background-corrected response falls below half the median response within
+supplementary.tex	40	ai	1.00	14	2efa96b	2026-09-30	$0.2$\,mm of the peak at the strongest amplitude; background is the mean over
+supplementary.tex	41	ai	1.00	8	2efa96b	2026-09-30	an annulus $0.6$--$0.9$\,mm from that peak.
+supplementary.tex	41	ai	1.00	5	6fe8933	2026-10-10	Areas are therefore relative to
+supplementary.tex	42	ai	1.00	6	6fe8933	2026-10-10	the response at the strongest amplitude.
+supplementary.tex	43	ai	1.00	10	41d9b19	2026-10-01	\textbf{B:} Trial-averaged $\Delta F/F$ (\%) over 0--200\,ms post-onset at each
+supplementary.tex	44	ai	1.00	12	41d9b19	2026-10-01	of the nine delivered amplitudes, masked to the brain, on a symmetric
+supplementary.tex	45	ai	1.00	8	41d9b19	2026-10-01	blue--white--red scale (zero white, suppression blue).
+supplementary.tex	45	ai	1.00	1	6fe8933	2026-10-10	Black
+supplementary.tex	46	ai	1.00	14	6fe8933	2026-10-10	square, a $10\times10$\,pixel box, the size of the readout kernel, centered on
+supplementary.tex	47	ai	1.00	3	6fe8933	2026-10-10	the suppression peak.
+supplementary.tex	47	ai	1.00	1	41d9b19	2026-10-01	Scale
+supplementary.tex	48	ai	1.00	7	41d9b19	2026-10-01	bar, $1$\,mm (pixel scale $0.0173$\,mm).
+supplementary.tex	49	ai	0.89	9	1772218	2026-05-14	\textbf{C:} Total cross-trial variance of spontaneous $\Delta F/F$ against the
+supplementary.tex	50	ai	0.67	12	1772218	2026-05-14	number of trials $N$ entering the average, for three of the closed-loop
+supplementary.tex	51	ai	1.00	9	629ad1a	2026-10-05	sessions, each divided by its own mean over $N$.
+supplementary.tex	51	ai	0.80	5	1772218	2026-05-14	Points, means over 500 random
+supplementary.tex	52	ai	0.60	10	1772218	2026-05-14	subsamples per batch size; error bars, SEM; dotted line, 1.
+supplementary.tex	52	ai	1.00	5	6fe8933	2026-10-10	Batch sizes at or above
+supplementary.tex	53	ai	1.00	9	629ad1a	2026-10-05	the full trial count of a session are omitted.
+supplementary.tex	54	ai	1.00	9	629ad1a	2026-10-05	\textbf{D:} Across-trial variance of $\Delta F/F$ against time from stimulation
+supplementary.tex	55	ai	1.00	4	629ad1a	2026-10-05	onset for open-loop trials.
+supplementary.tex	55	ai	1.00	7	7e2a78a	2026-09-23	Thin lines, individual sessions; bold line and
+supplementary.tex	56	ai	0.64	11	1772218	2026-05-14	shading, mean $\pm$ SEM across sessions; gray band, the 3\,s stimulation
+supplementary.tex	57	human	0.00	1	1772218	2026-05-14	window.
+supplementary.tex	57	ai	0.86	7	1772218	2026-05-14	Dashed lines, least-squares fits within the pre-stimulus,
+supplementary.tex	58	ai	1.00	10	629ad1a	2026-10-05	stimulation and post-stimulus epochs, labeled with their slopes (variance per
+supplementary.tex	59	ai	1.00	1	629ad1a	2026-10-05	second).
+supplementary.tex	69	ai	1.00	8	7c31560	2026-10-16	\textbf{Single-trial variability by state quartile, session by session.}
+supplementary.tex	70	ai	1.00	15	01344d3	2026-09-30	Rows, the three pre-stimulus states of Fig.~\ref{fig:figure2}G, each over the 1\,s
+supplementary.tex	71	ai	0.91	11	e1af389	2026-08-12	before onset: motion energy (\textbf{A}, \textbf{D}), relative 2--4\,Hz power
+supplementary.tex	72	ai	1.00	11	6da5997	2026-09-23	(\textbf{B}, \textbf{E}) and absolute 2--4\,Hz power (\textbf{C}, \textbf{F}); 1516
+supplementary.tex	73	ai	1.00	16	03f9eaa	2026-09-19	trials in four sessions from three mice (Mouse 5a and 5b are two sessions of one
+supplementary.tex	74	ai	1.00	1	7c31560	2026-10-16	mouse).
+supplementary.tex	74	ai	1.00	2	7c31560	2026-10-16	Colors, sessions.
+supplementary.tex	75	ai	1.00	9	7c31560	2026-10-16	\textbf{A--C:} From left, root-mean-square trial-to-trial variability in each
+supplementary.tex	76	ai	1.00	13	7c31560	2026-10-16	quartile, normalized to the session's typical trial (dotted line, 1; red, mean of
+supplementary.tex	77	ai	1.00	10	7c31560	2026-10-16	sessions; gray dashed, the stimulus-free control); response variability divided by
+supplementary.tex	78	ai	1.00	12	7c31560	2026-10-16	stimulus-free variability, per quartile, which stays flat for a state that acts
+supplementary.tex	79	ai	1.00	12	7c31560	2026-10-16	only on ongoing activity (black, mean of sessions); and single-trial errors per
+supplementary.tex	80	ai	1.00	11	7c31560	2026-10-16	quartile and session (box, 25th--75th percentile; whiskers, 10th--90th; line,
+supplementary.tex	81	ai	1.00	1	7c31560	2026-10-16	median).
+supplementary.tex	81	ai	1.00	10	1320962	2026-10-16	Annotations: top versus bottom quartile, geometric mean of the four
+supplementary.tex	82	ai	1.00	5	7c31560	2026-10-16	per-session ratios with their range.
+supplementary.tex	83	ai	1.00	13	5235f66	2026-10-16	\textbf{D--F:} Single trials at one stimulation amplitude per session, chosen by a
+supplementary.tex	84	ai	1.00	12	d0f02e4	2026-10-16	fixed rule (each session's second-highest amplitude: Mouse 5a, 0.80\,mW, 59 trials;
+supplementary.tex	85	ai	1.00	17	d0f02e4	2026-10-16	Mouse 5b, 0.87\,mW, 50; Mouse 1b, 1.43\,mW, 82; Mouse 3c, 0.33\,mW, 100), one trial
+supplementary.tex	86	ai	1.00	15	d0f02e4	2026-10-16	per row, sorted by the row's state with the lowest at the bottom; horizontal lines,
+supplementary.tex	87	ai	1.00	2	d0f02e4	2026-10-16	quartile boundaries.
+supplementary.tex	87	ai	1.00	10	d0f02e4	2026-10-16	Activity, $\Delta F/F$ from 0.2\,s before to 0.49\,s after
+supplementary.tex	88	ai	1.00	10	d0f02e4	2026-10-16	onset (dashed line), blue negative to red positive over $\pm 5\%$.
+supplementary.tex	88	ai	1.00	2	5235f66	2026-10-16	$|$Dev.$|$, the
+supplementary.tex	89	ai	1.00	13	d0f02e4	2026-10-16	absolute difference between each trial and the mean of all trials at that
+supplementary.tex	90	ai	1.00	12	d0f02e4	2026-10-16	amplitude, 0--0.49\,s after onset, white (0) to black (5\% $\Delta F/F$).
+supplementary.tex	90	ai	1.00	2	d0f02e4	2026-10-16	Both in
+supplementary.tex	91	ai	1.00	4	d0f02e4	2026-10-16	raw $\Delta F/F$, not normalized.
+supplementary.tex	91	ai	1.00	6	7e54b60	2026-10-16	Descriptive figure; supporting tests are in
+supplementary.tex	92	ai	1.00	4	7e54b60	2026-10-16	Table~\ref{tab:stat_fig2g}.
+supplementary.tex	99	ai	1.00	21	629ad1a	2026-10-05	\textbf{Controller gain tuning.} All panels are from Mouse~1: the grid sweep (Mouse~1g) and the online gain search (Mouse~1i).
+supplementary.tex	100	human	0.25	12	6f76f4d	2026-07-01	\textbf{A:} Empirical cost surface $\hat{J}(K)$ over the grid of fixed PI
+supplementary.tex	101	ai	0.90	10	6f76f4d	2026-07-01	gains, interpolated between the occupied nodes (circles); star, the final
+supplementary.tex	102	ai	1.00	9	6fe8933	2026-10-10	gains accepted in the auto-tuning session (as in \textbf{B}).
+supplementary.tex	103	ai	1.00	12	629ad1a	2026-10-05	\textbf{B:} The gain pairs accepted by the online zeroth-order search in the
+supplementary.tex	104	ai	0.62	13	b7cde5f	2026-05-13	separate auto-tuning session, from the open-loop start at $K_p = K_i = 0$
+supplementary.tex	105	ai	1.00	8	629ad1a	2026-10-05	(open circle) to the final accepted gains (star).
+supplementary.tex	106	ai	1.00	11	629ad1a	2026-10-05	\textbf{C:} Running cost over tuning iterations in that session; dotted line,
+supplementary.tex	107	ai	1.00	4	629ad1a	2026-10-05	the final accepted cost.
+supplementary.tex	108	ai	1.00	10	629ad1a	2026-10-05	\textbf{D:} Trial-averaged closed-loop response at each grid node, labeled with
+supplementary.tex	109	ai	0.62	13	b7cde5f	2026-05-13	its gains and its cost $\hat{J}$, including the $K_p = K_i = 0$
+supplementary.tex	110	ai	1.00	2	629ad1a	2026-10-05	feedforward-only node.
+supplementary.tex	110	ai	0.75	8	22568f3	2026-09-29	Mean (bold) $\pm$ 1 SD across trials; dashed line,
+supplementary.tex	111	ai	1.00	10	22568f3	2026-09-29	reference ($-5\%\,\Delta F/F$); shading, stimulation window; scale bars 1\,s
+supplementary.tex	112	ai	1.00	2	22568f3	2026-09-29	and 5\%.
+supplementary.tex	113	ai	1.00	9	bfcdce7	2026-10-01	$\hat{J}$ in \textbf{A} and \textbf{D} is scored offline over
+supplementary.tex	114	ai	1.00	5	3261854	2026-06-16	$t = 0$ to $+3$\,s.
+supplementary.tex	114	ai	1.00	11	629ad1a	2026-10-05	The cost in \textbf{C} is the cost the rig computed online
+supplementary.tex	115	ai	1.00	13	2efa96b	2026-09-30	over the stimulation window less two samples, so its absolute values are not
+supplementary.tex	116	ai	1.00	5	6fe8933	2026-10-10	comparable with \textbf{A} and \textbf{D}.
+supplementary.tex	124	human	0.00	0			\small
+supplementary.tex	146	ai	1.00	9	bfcdce7	2026-10-01	Controller gains and trial counts for all 15 closed-loop
+supplementary.tex	147	ai	1.00	1	bfcdce7	2026-10-01	sessions.
+supplementary.tex	148	ai	1.00	11	bfcdce7	2026-10-01	session's validation block, the trials that enter every analysis; OL and
+supplementary.tex	149	ai	1.00	11	bfcdce7	2026-10-01	CL are the open- and closed-loop trial counts in that block.
+supplementary.tex	149	ai	1.00	2	bfcdce7	2026-10-01	Gains were
+supplementary.tex	150	ai	0.60	15	d83fc0d	2026-09-07	held fixed within a block in 14 of the 15 sessions; session 1e interleaved three
+supplementary.tex	151	ai	1.00	9	bfcdce7	2026-10-01	$K_p$ values and is given as a range.
+supplementary.tex	151	ai	1.00	43	baca73a	2026-09-23	Excluding 1e left the closed-loop/open-loop         ratios of Fig.~\ref{fig:figure3}H,I essentially unchanged (RMSE $0.76$ over 0--3\,s, $0.85$ and $0.67$ at 0--1 and 1--3\,s; variance $0.57$, $0.66$ and $0.53$; 14 sessions, all $p < 0.001$, session $t$-test).
+supplementary.tex	151	ai	1.00	5	943347c	2026-10-16	$K_r$ (V per $\%\,\Delta F/F$)
+supplementary.tex	152	ai	1.00	13	bfcdce7	2026-10-01	scales the feedforward term, and $K_p$ (V per $\%\,\Delta F/F$) and $K_i$
+supplementary.tex	153	ai	1.00	12	bfcdce7	2026-10-01	(V per $\%\,\Delta F/F$ per s) the feedback terms of Equation~\eqref{eq:pi}.
+supplementary.tex	154	ai	1.00	8	bfcdce7	2026-10-01	The reference was $-5\%\,\Delta F/F$ in every session.
+supplementary.tex	161	ai	1.00	8	4acfe97	2026-10-20	\textbf{Closed loop against the best fixed open-loop input.}
+supplementary.tex	162	ai	1.00	31	4acfe97	2026-10-20	\textbf{A:} Laser command in Mouse 1d, the session with the median rescaling, for open loop as run (red), the best fixed input (gray) and closed loop (blue, mean $\pm$ SD over trials).
+supplementary.tex	163	ai	1.00	31	e1af389	2026-08-12	The best fixed input is the open-loop command scaled by the constant that minimizes the squared error to the reference over the 0--3\,s stimulation window under the linear model.
+supplementary.tex	164	ai	1.00	17	4acfe97	2026-10-20	It is computed on the same open-loop trials and capped at the command limit (Materials and Methods).
+supplementary.tex	165	ai	1.00	21	4acfe97	2026-10-20	The command is shown as its peak over 40\,ms, which gives the drive level in sessions with 40\,Hz modulation.
+supplementary.tex	166	ai	1.00	27	36b9817	2026-10-01	\textbf{B, C:} Mean trial RMSE in each session for the three inputs, in the transient (0--1\,s, \textbf{B}) and the steady state (1--3\,s, \textbf{C}).
+supplementary.tex	167	ai	1.00	8	4acfe97	2026-10-20	Lines join one session (15 sessions, 4 mice).
+supplementary.tex	168	ai	1.00	18	4acfe97	2026-10-20	Above each panel, the closed-loop/best-fixed ratio (geometric mean with its $t$-based 95\% CI, Table~\ref{tab:stat_fig3}).
+supplementary.tex	169	ai	1.00	23	4acfe97	2026-10-20	\textbf{D:} Mean closed-loop command over 1--3\,s against the best fixed input, both relative to the open-loop command, one point per session.
+supplementary.tex	170	ai	1.00	14	4acfe97	2026-10-20	Open circles, sessions where the best fixed input was capped at the command limit.
+supplementary.tex	171	ai	1.00	3	4acfe97	2026-10-20	Dotted line, identity.
+supplementary.tex	172	ai	1.00	4	4acfe97	2026-10-20	Spearman $\rho = 0.67$, $p = 0.0081$.
+supplementary.tex	179	ai	1.00	10	629ad1a	2026-10-05	State exemplars for every session, and the error decomposition under
+supplementary.tex	180	ai	1.00	6	6fe8933	2026-10-10	three definitions of the low-frequency factor.
+supplementary.tex	181	ai	1.00	10	22568f3	2026-09-29	\textbf{A:} For every session with motion capture (rows), a representative
+supplementary.tex	182	ai	1.00	11	22568f3	2026-09-29	closed-loop trial for each of four state measures (columns: high initial
+supplementary.tex	183	ai	1.00	14	e1af389	2026-08-12	deviation, high motion, high relative 2--4\,Hz power, high absolute 1--4\,Hz
+supplementary.tex	184	ai	1.00	15	22568f3	2026-09-29	power), chosen as the trial highest in that state and low in the others within
+supplementary.tex	185	skipped_unbalanced		0			that session (Materials and Methods, \emph{State exemplars and error
+supplementary.tex	186	ai	1.00	1	30eb736	2026-10-02	decomposition
+supplementary.tex	187	ai	1.00	10	22568f3	2026-09-29	Fig.~\ref{fig:figure4}A. Dashed line, reference ($-5\%\,\Delta F/F$); shading,
+supplementary.tex	188	ai	1.00	8	22568f3	2026-09-29	stimulation window; scale bars 1\,s and 5\%.
+supplementary.tex	189	ai	1.00	12	222c25a	2026-09-29	\textbf{B--D:} Unique $R^2$ of each state factor for closed-loop tracking
+supplementary.tex	190	ai	1.00	14	2efa96b	2026-09-30	error, in the transient (0--1\,s, light) and steady-state (1--3\,s, dark)
+supplementary.tex	191	ai	1.00	9	22568f3	2026-09-29	windows, under three specifications of the low-frequency term: relative
+supplementary.tex	192	ai	1.00	14	22568f3	2026-09-29	2--4\,Hz and absolute 1--4\,Hz power entered together in one model
+supplementary.tex	193	ai	1.00	8	629ad1a	2026-10-05	(\textbf{B}), absolute only (\textbf{C}), and relative only (\textbf{D}).
+supplementary.tex	194	ai	1.00	13	629ad1a	2026-10-05	Bars, mean over sessions of the unique $R^2$ fitted within each session
+supplementary.tex	195	ai	1.00	10	6fe8933	2026-10-10	(adjusted $R^2$, 11 sessions); error bars, SEM across sessions.
+supplementary.tex	195	ai	1.00	10	6fe8933	2026-10-10	Fig.~\ref{fig:figure4}C takes initial deviation, motion and the
+supplementary.tex	196	ai	1.00	10	6fe8933	2026-10-10	relative term from \textbf{D} and the absolute term from \textbf{C}.
+supplementary.tex	206	ai	1.00	12	2b828d1	2026-10-16	The model inside the model-predictive controller: how it is built and how
+supplementary.tex	207	ai	1.00	3	2b828d1	2026-10-16	well it predicts.
+supplementary.tex	208	ai	1.00	6	2b828d1	2026-10-16	Fig.~\ref{fig:mpc_direct}A--H.
+supplementary.tex	209	ai	1.00	2	2b828d1	2026-10-16	\textbf{A:} Construction.
+supplementary.tex	209	ai	1.00	14	2b828d1	2026-10-16	At frame $t$ the model takes the past 35 frames (1\,s) of the
+supplementary.tex	210	ai	1.00	15	2b828d1	2026-10-16	controlled (output) site $y$ and of 100 sites over dorsal cortex $x_1,\dots,x_{100}$,
+supplementary.tex	211	ai	1.00	18	2b828d1	2026-10-16	stacked into $z_t$, together with the past 35 frames of the laser command $u$ up to the
+supplementary.tex	212	ai	1.00	15	2b828d1	2026-10-16	next command, and predicts all 101 channels one frame ahead with a single linear map
+supplementary.tex	213	ai	1.00	6	2b828d1	2026-10-16	fitted by ridge regression (a VARX).
+supplementary.tex	213	ai	1.00	9	2b828d1	2026-10-16	Applying the map to its own predictions, with the
+supplementary.tex	214	ai	1.00	11	2b828d1	2026-10-16	laser commands given, extends the forecast up to 1\,s ahead.
+supplementary.tex	214	ai	1.00	5	2b828d1	2026-10-16	The model was fitted on
+supplementary.tex	215	ai	1.00	12	a5cebf4	2026-10-09	spontaneous and open-loop frames and tested on held-out open-loop trials (five folds);
+supplementary.tex	216	ai	1.00	5	2b828d1	2026-10-16	no closed-loop trial was used.
+supplementary.tex	217	ai	1.00	16	2b828d1	2026-10-16	\textbf{B:} Each cortical site colored by the size of its weights in the equation for the
+supplementary.tex	218	ai	1.00	8	2b828d1	2026-10-16	controlled site (star), normalized to the largest site.
+supplementary.tex	218	ai	1.00	5	2b828d1	2026-10-16	The controlled site's own history
+supplementary.tex	219	ai	1.00	12	2b828d1	2026-10-16	carries most of the weight and is not drawn on this scale.
+supplementary.tex	220	ai	1.00	10	2b828d1	2026-10-16	\textbf{C:} One held-out open-loop trial: recorded controlled-site activity (black) and
+supplementary.tex	221	ai	1.00	17	2b828d1	2026-10-16	1\,s forecasts started about once per second (pink, light to dark in time; dot, start of
+supplementary.tex	222	ai	1.00	10	2b828d1	2026-10-16	each forecast), each given the recorded laser command (bottom, grey).
+supplementary.tex	222	ai	1.00	2	2b828d1	2026-10-16	Grey band,
+supplementary.tex	223	ai	1.00	10	2b828d1	2026-10-16	stimulation; scale bars 1\,s, 2\%\,$\Delta F/F$ and 0.5\,mW.
+supplementary.tex	224	ai	1.00	15	2b828d1	2026-10-16	\textbf{D:} Validation $R^2$ of the 200\,ms forecast against the history length (the same
+supplementary.tex	225	ai	1.00	11	2b828d1	2026-10-16	number of frames for cortex and laser) and the ridge penalty $\lambda$.
+supplementary.tex	225	ai	1.00	3	2b828d1	2026-10-16	Square, the setting
+supplementary.tex	226	ai	1.00	7	2b828d1	2026-10-16	used (35 frames, $\lambda = 100$; $R^2 = 0.63$).
+supplementary.tex	226	ai	1.00	7	2b828d1	2026-10-16	The surface is flat: every setting with
+supplementary.tex	227	ai	1.00	8	2b828d1	2026-10-16	$\lambda \le 10^{3}$ lies within $0.025$ of the best.
+supplementary.tex	228	ai	1.00	13	a5cebf4	2026-10-09	\textbf{E:} Prediction $R^2$ of the controlled site against forecast lead on held-out
+supplementary.tex	229	ai	1.00	15	a5cebf4	2026-10-09	open-loop trials (92 trials, five folds) for the full model (VARX), the same model given
+supplementary.tex	230	ai	1.00	14	a5cebf4	2026-10-09	only the controlled site and the laser (site $+$ laser), and the last observed value
+supplementary.tex	231	ai	1.00	1	a5cebf4	2026-10-09	(naive).
+supplementary.tex	231	ai	1.00	7	a5cebf4	2026-10-09	Dotted lines, 200\,ms and 1\,s.
+supplementary.tex	231	ai	1.00	9	2b828d1	2026-10-16	At 200\,ms, $R^2 = 0.41$, $0.37$ and $0.10$;
+supplementary.tex	232	ai	1.00	13	2b828d1	2026-10-16	the cortical sites add most at longer leads, where the naive forecast fails.

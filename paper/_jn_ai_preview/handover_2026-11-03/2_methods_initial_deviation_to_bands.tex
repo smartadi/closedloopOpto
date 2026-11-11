@@ -1,0 +1,16 @@
+\ai{The \emph{initial deviation} (Fig.~\ref{fig:figure4} only) is the absolute distance of the readout from the target level at the onset sample, $\lvert y(t_{\mathrm{on}}) - r \rvert$, with $r = -5\%\,\Delta F/F$.}
+\ai{It measures how far from the target level a trial started.}
+\ai{\emph{Motion energy} is the mean over the window of the z-scored motion signal (Behavioral monitoring): the mean, not the mean square, of the z-score, because the square is smallest for trials near the session mean and would rank unusually still trials alongside active ones.}
+\ai{\emph{Relative 2--4\,Hz power} is the ratio of band power in 2--4\,Hz to total power in 0.4--10\,Hz.}
+\ai{\emph{Absolute low-frequency power} is band power without that normalization: 2--4\,Hz in Fig.~\ref{fig:figure2}G and $\log_{10}$ of 1--4\,Hz power in Fig.~\ref{fig:figure4}.}
+\ai{The two measure different things.}
+\ai{Absolute power increases with the amplitude of ongoing fluctuations, which add to an evoked response~\citep{Arieli1996,Shimaoka2019}.}
+\ai{It also increases with anything that scales the whole signal, such as indicator expression, illumination or hemoglobin absorption, which act multiplicatively on wide-field fluorescence~\citep{Ma2016}, and in Fig.~\ref{fig:figure4} with the difference in signal magnitude between open and closed loop.}
+\ai{Relative power cancels such multiplicative factors and describes how activity is distributed across frequencies, although, like any band ratio, it also follows changes in the aperiodic slope of the spectrum~\citep{Donoghue2020eNeuro}.}
+
+\ai{\emph{Bands.} Power below about 4\,Hz is high in synchronized cortical states and decreases with whisking, locomotion and arousal~\citep{Crochet2006,Poulet2008,Vinck2015}.}
+\ai{In wide-field calcium imaging, the indicator's kinetics attenuate faster rhythms; earlier work measured cortical synchrony from wide-field GCaMP power at 3--6\,Hz~\citep{Jacobs2020}, and quiet wakefulness shows a spontaneous wide-field mode near 2.6\,Hz~\citep{Vanni2017}.}
+\ai{Hemodynamic signals are slower: GCaMP--hemoglobin coherence peaks near 0.2\,Hz~\citep{Wright2017}.}
+\ai{The 2--4\,Hz band is therefore within the low-frequency activity that indicates state, above most of the hemodynamic signal and within the range that the indicator follows; we used it for relative power in both figures so that they measure the same quantity.}
+\ai{The 0.4--10\,Hz denominator is below the 17.5\,Hz Nyquist frequency of the 35\,Hz signal and excludes drifts slower than 0.4\,Hz.}
+\ai{In Fig.~\ref{fig:figure2}G the 1\,s window gives 1\,Hz resolution, so the denominator is in practice 1--10\,Hz and the absolute band starts at 2\,Hz; the 5\,s window of Fig.~\ref{fig:figure4} resolves the conventional 1--4\,Hz band, which its absolute measure uses.}
