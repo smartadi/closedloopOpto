@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — Poster header: RAIN Lab logo from Aditya's zip
+**Changed/Found:** `poster/sfn2026/poster_ack.py`: the gold text stand-in becomes the RAIN Lab logo, the white horizontal version from `Downloads/RAIN-Lab-logos.zip` (extracted to scratch; the SVGs hold only path shapes). `panels/rain-lab-logo-white.svg` is embedded as the picture's vector original with `rain-lab-logo-white.png` (2000 × 365 px) as the fallback, as PowerPoint stores SVGs (new `add_svg`). 6.30 × 1.15 in at x 7.04 in, centred on the title band. In the v9 PDF the logo is vector (133 path items, no image). Rebuilt v9 and its PDF.
+**Why:** Aditya: "rain lab logos in zip file i just downloaded".
+**Next:** none.
+
 ### 2026-11-11 — SfN poster v9 built in scratch (not in OneDrive)
 **Changed/Found:** v9 = the v8 pipeline (scratch `build_v9.sh`: v3 → swap with the new box 5 panel → drop_bullets → intro_bullets → clean → logos → `highlight.py tint` → carry from OneDrive v7 vs v7e → `poster_text.py` → `heading_fit.py`) → `poster_ack.py` → `poster_pdf.py`. OneDrive v8 was unchanged since it was saved (md5 b89f9188…), so no new online edits. Checks: column 2 pictures ×0.907, Acknowledgements 2.54 in high, column 2 ends at 35.32 in; PowerPoint flags the same three shapes as in v8 (box 6 and box 8 bullets, and the box 8 heading false alarm); PDF 16.9 MB, 23 pictures at full resolution.
 **Why:** Aditya's 2026-11-11 requests: Acknowledgements (NSF, TPDA, Lilly), RAIN Lab, box 5 with only the change plot.
