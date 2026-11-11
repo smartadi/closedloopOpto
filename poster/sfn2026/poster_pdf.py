@@ -3,9 +3,10 @@
     python poster/sfn2026/poster_pdf.py <poster.pptx> <out.pdf>
 
 PowerPoint writes the PDF (text and shapes stay vector). Its export reduces every picture to 200 ppi, so each
-panel picture ('panel ...') is then put back from the pptx at full resolution (the panel PNGs are 400 dpi at
-print size), cropped as the slide crops it. Pictures are matched to the PDF's images by position (within
-1 pt). Logos and the QR code keep PowerPoint's copy.
+picture is then put back from the pptx at full resolution, cropped as the slide crops it: the panels (335-470
+ppi at print size) and, since 2026-11-11, the logos too (UW signature, NSF, lab logo; 530-615 ppi), with
+their transparency. Pictures are matched to the PDF's images by position (within 1 pt). The QR code is an
+SVG, which PowerPoint writes as vector paths, so there is no image of it to replace.
 """
 import io
 import os
@@ -19,6 +20,7 @@ from pptx import Presentation
 from pptx.oxml.ns import qn
 
 EMU_PT = 12700
+SVG = '{http://schemas.microsoft.com/office/drawing/2016/SVG/main}svgBlip'
 
 
 def export(src, pdf):
@@ -30,11 +32,11 @@ def export(src, pdf):
         pres.Close()
 
 
-def panels(src):
-    """(bbox in pt, PNG bytes cropped as on the slide) for every panel picture."""
+def pictures(src):
+    """(name, bbox in pt, PNG bytes cropped as on the slide, size) for every raster picture."""
     out = []
     for sh in Presentation(src).slides[0].shapes:
-        if sh.shape_type != 13 or not sh.name.startswith('panel '):
+        if sh.shape_type != 13 or sh._element.find('.//' + SVG) is not None:
             continue
         im = Image.open(io.BytesIO(sh.image.blob))
         x0, y0, x1, y1 = (v / EMU_PT for v in (sh.left, sh.top, sh.left + sh.width, sh.top + sh.height))
@@ -48,7 +50,7 @@ def panels(src):
             im = im.crop((round(W * u0), round(H * v0), round(W * u1), round(H * v1)))
             x0, y0, x1, y1 = fx(u0), fy(v0), fx(u1), fy(v1)
         buf = io.BytesIO()
-        im.convert('RGB').save(buf, 'PNG')
+        im.convert('RGBA' if 'A' in im.mode else 'RGB').save(buf, 'PNG')
         bb = fitz.Rect(x0, y0, x1, y1)
         out.append((sh.name, bb, buf.getvalue(), im.size))
     return out
@@ -62,7 +64,7 @@ def main(src, out):
         page = doc[0]
         infos = page.get_image_info(xrefs=True)
         used, n = set(), 0
-        for name, bb, png, size in panels(src):
+        for name, bb, png, size in pictures(src):
             hit = [i for i in infos if all(abs(a - b) < 1 for a, b in zip(i['bbox'], bb))]
             assert len(hit) == 1, f'{name}: {len(hit)} images at {bb}'
             x = hit[0]['xref']
@@ -72,7 +74,7 @@ def main(src, out):
             n += 1
         doc.save(out, garbage=3, deflate=True)
         doc.close()
-    print(f'{out}: {n} panels at full resolution, {os.path.getsize(out) / 1e6:.1f} MB')
+    print(f'{out}: {n} pictures at full resolution, {os.path.getsize(out) / 1e6:.1f} MB')
 
 
 if __name__ == '__main__':

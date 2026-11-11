@@ -16,6 +16,41 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v8 built in scratch (not in OneDrive)
+**Changed/Found:** v8 = v3 → swap → drop_bullets → intro_bullets → clean → logos (QR square + PNG fallback) → `highlight.py tint` → `carry_edits.py` (OneDrive v7 vs v7e) → `poster_text.py` → `heading_fit.py` → `poster_pdf.py` (scratch `build_v8.sh`). The OneDrive v7 had changed since 00:21 (md5 c86b3104, file time 09:52): the only difference from the saved v7 is the Conclusions indent, 367982 → 367665 EMU (0.0003 in), written by PowerPoint Online, so it is carried as is. Checks on the v8 PDF: all eight headings wrap only at the bar end; QR 2.99 × 2.99 in with its PNG fallback (743 ppi); logos 534/600/615 ppi; box 7's new sentence fits one line; column gaps 0.98 / 1.17 / 0.98 in. PowerPoint flags box 6 and box 8 bullets (as in v7) and box 8's heading; that line ends at 53.07 in inside its 53.20 in box, so the heading flag is a false alarm.
+**Why:** Aditya's 2026-11-11 requests (headings, sentence, QR and image resolution).
+**Next:** Save v8 to OneDrive (pptx + PDF) on his OK. He may still pick suggested wording A or B for box 7's sentence.
+
+### 2026-11-11 — UW signature outline trace tried, not used
+**Changed/Found:** Scratch `uw_trace.py` (approved trial): traced the binary 746 × 367 signature along pixel edges, took edge midpoints, simplified with Douglas–Peucker at τ = 0.8 source px, filled at 16× and reduced to 4×. The W's diagonals came out straight, but curved letters (S, o, G) came out visibly faceted, and some W edges kinked. Blur-and-threshold (σ 0.5, 0.7 source px) left the W's edges wavy. The poster keeps the current signature (0.19 mm steps at print).
+**Why:** Aditya asked to check that images are high resolution; the signature is the one picture whose detail (133 ppi) is below its pixel count (534 ppi).
+**Next:** The real fix is UW's official vector signature (UW brand site, needs his UW NetID); swap it into `poster_logos.py` if he gets it.
+
+### 2026-11-11 — Poster headings fill their bars (`heading_fit.py`)
+**Changed/Found:** New `poster/sfn2026/heading_fit.py`, run after `poster_text.py`. Each box heading becomes one paragraph (manual breaks, extra paragraphs and non-breaking spaces become spaces), spans its bar less 0.15 in left and 0.10 in right, 37 pt, centred vertically. Ties: last two words (no one-word last line), hyphens inside words become non-breaking hyphens (box 3 had split "trial-to-trial"), and a range such as 1–4 Hz uses a figure dash (U+2012) plus a non-breaking space before the unit. PowerPoint broke after an en dash even with a word joiner (U+2060) or a zero-width no-break space (U+FEFF) after it; a minus sign held but draws differently; the figure dash held and draws as Arial-BoldMT at the en dash's size. Bars, gold rules and the Introduction/Conclusions frames take their column's left edge and width (box 7 bar 34.47/18.85 → 34.60/18.70 in, Introduction bar 0.71/15.05 → 0.68/15.32 in), and the Results gold rule moves from under box 1's rule (y 15.06) to under the Results bar (y 13.13). The script stops if any word changes. Method gate: Aditya approved 2026-11-11 ("Approve") for the heading layout.
+**Why:** Aditya: "the panel titles are not filling up their space, the return appears midline in some of them check".
+**Next:** none.
+
+### 2026-11-11 — Poster: v7 heading line breaks and the UW signature's stepped edges (found; fixes wait for approval)
+**Changed/Found:** In v7, three box headings break in mid-bar: box 3 has a manual line break after "reduces", box 7 is split into two paragraphs ("…grows with" / " 1–4 Hz power"), and box 6 has non-breaking spaces from "4 Hz" to the end, so it wraps after "1–". The heading text boxes of boxes 2, 3 and 5 are 1.45 in narrower than their bars, box 7's bar sits 0.13 in left of boxes 6 and 8, the Introduction bar is 0.27 in narrower than the column, and the Results bar's gold rule lies hidden under box 1's rule. The UW signature comes from a 746 × 367 two-colour image (133 ppi at 5.59 in), so its diagonals print as 0.19 mm steps even though the picture is 2984 px. Widths in Arial Bold 37 pt (PIL): boxes 1, 3, 4, 5 need two lines in a 15.07 in bar; box 8 (18.32 in) fits one line at 18.45 in.
+**Why:** Aditya: "the panel titles are not filling up their space, the return appears midline in some of them check", and "also check for other high res images".
+**Next:** The method-gate hook stopped `heading_fit.py` (a function named fit_text) and a scratch trace of the UW outline. Both are layout/logo changes, not analysis; the block is with Aditya. Build v8 after his answer.
+
+### 2026-11-11 — Poster PDF: logos at full resolution
+**Changed/Found:** `poster/sfn2026/poster_pdf.py`: after PowerPoint's export (which reduces every picture to 200 ppi), every raster picture is now put back from the pptx, not only the panels, keeping transparency (RGBA PNG). Test on v7: UW signature 534 ppi, lab logo 600 ppi, NSF logo 615 ppi in the PDF (were 200 ppi each); transparency checked in a render. Panels unchanged (335–471 ppi). The QR code is an SVG, which PowerPoint writes as vector paths (905 path items), so nothing to replace.
+**Why:** Aditya: "make sure the qr code is high res in the 54" by 36" format, also check for other high res images".
+**Next:** Use it for the v8 PDF.
+
+### 2026-11-11 — Poster QR code square, with a PNG fallback
+**Changed/Found:** `poster/sfn2026/poster_logos.py` gained `square_qr`: the QR code ('Graphic 7') was stretched to 3.25 × 2.99 in (its SVG is square); it becomes 2.99 × 2.99 in about the same centre. It also gets his 2220 px black-and-white PNG (`QR_adityadeole.png`, copied to the ignored `panels/`) as the fallback picture PowerPoint normally keeps beside an SVG; the v7 picture had only the SVG. Checked: the poster's SVG path equals OneDrive `QR_adityadeole.svg`, and the PNG matches the SVG module by module (440 dark of 1369, 0 differ).
+**Why:** Aditya: "make sure the qr code is high res in the 54" by 36" format". The SVG already prints sharp at any size; the stretch and the missing fallback were the two faults.
+**Next:** Runs in the v8 build. Not checked: a phone scan of the printed code.
+
+### 2026-11-11 — Poster box 7: Aditya's sentence on frequency limits
+**Changed/Found:** New `poster/sfn2026/poster_text.py` (runs after `carry_edits.py`) swaps whole paragraphs by exact match. First entry: box 7's third bullet "One explanation: opsin and indicator kinetics and loop delay limit the controllable frequencies." becomes his "Frequency composition limits stabilizability of a state due to system limits owing to opsin kinetics." (first letter capitalised, otherwise his words).
+**Why:** Aditya: "change this sentence(...) to: frequency composition limits stabilizability of a state due to system limits owing to opsin kinetics.( suggest edit for me if required)". His wording goes in; my suggested edit stays in chat for him to pick.
+**Next:** If he takes a suggested wording, change the SWAPS entry.
+
 ### 2026-11-11 — SfN poster v7 in OneDrive (highlight style A), with its full-resolution PDF
 **Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v7.pptx` (8099088 bytes, md5 314d0263…) and `SfN2026_poster_v7.pdf` (15203558 bytes), both OneDrive state 2 at 00:22. Built by v3 → swap → drop_bullets → intro_bullets → clean → logos → `highlight.py tint` (style A: pale purple fill, thin purple outline on Introduction and Conclusions) → `carry_edits.py` from the OneDrive v6, unchanged since 22:37 (md5 a86337f0…), so no new online edits; his six heading edits are carried. v3-v6 untouched (md5 checked).
 **Why:** Aditya: "A, save v7."

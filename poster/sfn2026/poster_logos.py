@@ -12,6 +12,12 @@ Approved 2026-11-10 ("approve"), with the image steps below.
 - NSF: panels/NSF_Official_logo_Med_Res_600ppi.png, NSF's official logo from its media hub
   (mediahub.nsf.gov/c/wc3fwkos, 5100 px original, stored at 1600 px), full colour as NSF's brand policy asks
   of award recipients, right of the UW signature. Skipped with a note if the file isn't there.
+- QR code ('Graphic 7', Aditya's, 2026-11-11: "make sure the qr code is high res in the 54" by 36" format"):
+  it is his vector SVG (OneDrive Talks/SfN2026/QR_adityadeole.svg, 29 modules + 4-module margin), so it
+  prints sharp at any size, but it sat stretched to 3.25 x 2.99 in. It becomes square (side = its height,
+  same centre), and gets his matching 2220 px black-and-white PNG (panels/QR_adityadeole.png, 60 px per
+  module, ~740 ppi here; checked module by module against the SVG, 0 of 1369 differ) as the fallback picture
+  that PowerPoint normally stores beside an SVG, for any program that can't draw SVG.
 Other shapes are untouched.
 """
 import io
@@ -21,11 +27,14 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from pptx import Presentation
+from pptx.oxml.ns import qn
 from pptx.util import Inches
 
 HERE = Path(__file__).resolve().parent
 UW_SRC = HERE / 'panels' / 'uw_signature_purple.png'
 NSF_SRC = HERE / 'panels' / 'NSF_Official_logo_Med_Res_600ppi.png'
+QR_PNG = HERE / 'panels' / 'QR_adityadeole.png'
+QR = 'Graphic 7'
 E = 914400
 UW_H = 2.75     # in: signature height on the 3.87 in band
 NSF_H = 2.6     # in
@@ -46,6 +55,20 @@ def white_signature(src, up=4):
     Image.fromarray(out, 'RGBA').save(buf, 'PNG')
     buf.seek(0)
     return buf, a.shape[1] / a.shape[0]
+
+
+def square_qr(sl):
+    """The QR code square about its centre, with the PNG fallback (module docstring)."""
+    qr = next(sh for sh in sl.shapes if sh.name == QR)
+    cx, cy = qr.left + qr.width / 2, qr.top + qr.height / 2
+    s = qr.height
+    print(f'QR code {qr.width / E:.2f} x {qr.height / E:.2f} in -> {s / E:.2f} x {s / E:.2f} in')
+    qr.left, qr.top, qr.width, qr.height = int(cx - s / 2), int(cy - s / 2), s, s
+    blip = qr._element.blipFill.find(qn('a:blip'))
+    if QR_PNG.exists() and blip.get(qn('r:embed')) is None:
+        _, rid = sl.part.get_or_add_image_part(str(QR_PNG))
+        blip.set(qn('r:embed'), rid)
+        print(f'QR code: PNG fallback {QR_PNG.name}')
 
 
 def main(src, dst):
@@ -76,6 +99,7 @@ def main(src, dst):
         print(f'NSF logo {nw / E:.2f} x {NSF_H:.2f} in at x {nsf.left / E:.2f}-{(nsf.left + nw) / E:.2f} in')
     else:
         print(f'NSF logo skipped: {NSF_SRC.name} not in panels/')
+    square_qr(sl)
     prs.save(dst)
     print(dst)
 
