@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — Independent review of the 48 × 36 poster; panel type measured
+**Changed/Found:** A separate reviewer (read-only subagent, crops in scratch `review/`) read `SfN2026_poster_v9_48x36.pdf`. Checked here against the pptx and its crops: Conclusions "a controller that control" and "model informed"; box 4's "preview 51°" has no line and sits over the CL bar (about 46°), and the bar chart's x ticks are drawn into the bars (over CL+p it looks like an error bar); box 6's high init-dev example trace is clipped at the top; box 6's heading ends with a period and its bullet 2 has none; "dF/F" in boxes 3–4 vs "ΔF/F" elsewhere. Unverified or his call: box 8 bullet 2 ("most of the constant offset, less of the fluctuations") has no panel that splits the two; box 7 bullet 3 states a cause the poster doesn't test; condition colours reused for state variables in box 6. Panel type measured from each panel PDF's font sizes × its placed scale (picture width / PDF ink width): main text at 48 in 17.1–19.5 pt (box 3 ratio panels 17.1, box 4 legend 16.7), at 54 in 17.5–21.4 pt (box 3 ratio panels 17.5); sub- and superscripts 14–16 pt at both. The earlier "17.5–17.7 pt" (48) and "17.9 pt" (54, column 2) were nominal (7 pt × 2.97 × 0.95 × scale), not measured.
+**Why:** Aditya: "also do a review".
+**Next:** He picks which fixes to make; the column 1 gap fix waits on his approval of the method-gate block.
+
 ### 2026-11-11 — SfN poster v9 at 48 × 36 in saved to OneDrive
 **Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v9_48x36.pptx` (8063709 bytes, md5 30e3f9a1…) and `SfN2026_poster_v9_48x36.pdf` (16910554 bytes, md5 5624c4be…), the scratch build in the entry below, unchanged. Before saving, OneDrive v9 was unchanged since the 12:01 check (md5 f91a09b0…), so there were no online edits to carry; v3–v9 untouched. The 54 × 36 v9 stays next to it.
 **Why:** Aditya: "Yes, save it".
