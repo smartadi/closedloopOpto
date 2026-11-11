@@ -15,6 +15,10 @@ the camera sits under the image, its lens up, and the green readout beam runs st
 square. Its signal goes left under the LEDs and up to the feedback row, so every wire is horizontal or vertical
 and the space under the dF/F box stays free: poster_swap_all.py puts box 1's bullets there, beside the camera.
 The 1 mm bar moves to the right of the image. system_raw.json gives that free corner (mm).
+Then (Aditya 2026-11-10: "Move the exogenous inputs and parameters to the right, move the leds to the bottom
+next to the camera or in the same block to keep widefield architerure true"): exogenous inputs and parameters
+enter the cortex from the right; the LEDs sit beside the camera under the image, their 470/405 nm light going
+up into the cortex along the camera's path. The image moves 6 mm left (IX 98 -> 92) to make room on the right.
 """
 import json
 import sys
@@ -27,7 +31,7 @@ from build_panels import ARIAL
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'panels' / 'poster'
 FRAME = HERE / 'panels' / 'frame.pdf'
-W, H = 137.5, 64.0                   # H: the camera's bottom + 1.4 mm (v7; was 57)
+W, H = 137.5, 66.5                   # H: the LEDs' label + 1 mm (v7; was 57)
 FS = 7.5 * 25.4 / 72                 # 7.5 pt in mm
 SUB = 0.75 * FS
 LINE, BOX = 0.7, 0.5                 # stroke widths (mm); JN Fig 1E used 0.35 and 0.25
@@ -124,7 +128,7 @@ def build():
     im, dot, sq, bar_pt = image_geometry()
     S = 30.0                                       # image side (mm)
     k = S / im.width
-    IX, IY = 98.0, 21.5
+    IX, IY = 92.0, 21.5
     to = lambda r: (IX + (r.x0 + r.x1) / 2 * k, IY + (r.y0 + r.y1) / 2 * k)
     (dx, dy), (sx, sy) = to(dot), to(sq)
     yt, yf, yb = 6.0, 17.0, 49.5                   # feedforward, forward and feedback rows
@@ -155,10 +159,12 @@ def build():
     text(s2 + 3.4, yf - 3.6, '+', anchor='middle')
 
     # input -> laser -> galvos -> stimulation site
-    line((s2 + 3.0, yf), (90.0, yf))
-    label(84.6, yf + 6.0, 'Input', 'u')
-    dark_block(90.0, yf - 3.5, 19.0, 7.0, '638 nm laser', nub='right')
-    beam([(110.6, yf), (dx, yf), (dx, dy - 1.4)], RED)
+    xl = 87.0                                      # laser 3 mm left of v6 so the galvos clear it (image moved left)
+    line((s2 + 3.0, yf), (xl, yf))
+    label(84.0, yf + 6.0, 'Input', 'u')
+    dark_block(xl, yf - 3.5, 19.0, 7.0, '638 nm laser', nub='right')
+    assert dx - 2.2 > xl + 19.0 + 1.6 + 0.8, 'galvo mirror touches the laser'
+    beam([(xl + 20.6, yf), (dx, yf), (dx, dy - 1.4)], RED)
     els.append(f'<line x1="{dx - 2.2:.2f}" y1="{yf - 2.2:.2f}" x2="{dx + 2.2:.2f}" y2="{yf + 2.2:.2f}" stroke="#111"'
                f' stroke-width="0.9" stroke-linecap="round"/>')
     text(dx + 3.0, yf - 0.8, 'galvos')
@@ -172,23 +178,27 @@ def build():
     text(IX + S + 1.2, IY + 3.0, 'mouse')
     text(IX + S + 1.2, IY + 3.0 + 1.15 * FS, 'cortex')
 
-    # other inputs to the cortex
-    for j, s in enumerate(['Exogenous inputs', 'Parameters']):
-        y = IY + 5.0 + j * 6.0
-        line((IX - 9.0, y), (IX - 0.4, y))
-        text(IX - 10.0, y + 0.36 * FS, s, anchor='end')
+    # other inputs to the cortex, from the right; each name above its arrow, right-aligned at the edge
+    for names, y in ((['Exogenous', 'inputs'], IY + 14.0), (['Parameters'], IY + 22.0)):
+        line((W - 0.6, y), (IX + S + 0.4, y))
+        for i, nm in enumerate(reversed(names)):
+            text(W - 0.6, y - 1.2 - i * 1.15 * FS, nm, anchor='end')
+        assert W - 0.6 - width(max(names, key=width)) > IX + S + 0.5, f'{names} reaches the image'
 
-    # LEDs light the cortex; the camera reads the readout site
-    lx, ly = 72.0, 38.0
-    dark_block(lx, ly, 13.0, 5.5, 'LEDs')
-    text(lx - 1.2, ly + 2.75 + 0.36 * FS, '470/405 nm', anchor='end')
-    beam([(lx + 13.0, ly + 1.7), (IX - 0.6, ly + 1.7)], BLUE, w=0.9)
-    beam([(lx + 13.0, ly + 3.8), (IX - 0.6, ly + 3.8)], VIOLET, w=0.9)
-    cw, ch = 13.0, 7.0                             # camera under the image, lens up (v7)
+    # camera under the image, lens up, reading the readout site; the LEDs beside it light the cortex
+    # along the same path (widefield epi-illumination), their label under them
+    cw, ch, lw = 11.0, 7.0, 12.0
     cx0, cy0 = sx - cw / 2, IY + S + 3.6
     dark_block(cx0, cy0, cw, ch, 'camera', nub='top')
     beam([(sx, sy + 1.0), (sx, cy0 - 1.7)], GREEN)
-    assert cy0 + ch + 1.4 <= H, f'camera ends at {cy0 + ch:.1f} mm'
+    lx0 = cx0 + cw + 0.6
+    dark_block(lx0, cy0, lw, ch, 'LEDs')
+    text(lx0 + lw / 2, cy0 + ch + 1.15 * FS, '470/405 nm', anchor='middle')
+    for j, col in enumerate((BLUE, VIOLET)):
+        xl = lx0 + 1.4 + 1.2 * j
+        assert xl < IX + S - 0.4, 'LED light misses the image'
+        beam([(xl, cy0), (xl, IY + S - 5.0)], col, w=0.9)
+    assert cy0 + ch + 1.15 * FS + 1.0 <= H, f'LED label ends at {cy0 + ch + 1.15 * FS:.1f} mm'
 
     # dF/F back to the controller: left from the camera, up at xv, along the feedback row
     xv = 88.0

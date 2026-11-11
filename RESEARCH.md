@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-10 — Poster box 1: inputs from the right, LEDs beside the camera
+**Changed/Found:** `poster/sfn2026/box1_diagram.py`: "Exogenous inputs" and "Parameters" now enter the cortex image from the right, each name right-aligned above its arrow (they were on the left). The LEDs moved from the left of the image to beside the camera under it, their blue and violet light going up into the cortex along the camera's path, "470/405 nm" under them. The image moved 6 mm left (IX 98 → 92) and the laser block 3 mm left so the galvo mirror clears it (asserted). Drawing 137.5 × 66.5 mm. Rebuilt v7 (box 1 frame 9.46 in before the ×0.95; column gaps 1.18 / 1.17 / 0.98 in) and its full-resolution PDF.
+**Why:** Aditya: "Move the exogenous inputs and parameters to the right, move the leds to the bottom next to the camera or in the same block to keep widefield architerure true".
+**Next:** He picks the Introduction/Conclusions highlight style and says whether v7 goes to OneDrive.
+
 ### 2026-11-10 — SfN poster v7 built (not yet in OneDrive), with four highlight styles for Introduction and Conclusions
 **Changed/Found:** v7 = 11-09 v3 → `poster_swap_all.py` → `drop_bullets.py` → new `intro_bullets.py` → `poster_clean.py` → `poster_logos.py` → new `highlight.py tint` → `carry_edits.py` (OneDrive v6, identical to what was saved at 22:37, md5 a86337f0…, against its pre-carry build v6d: his six heading edits carried again, three moved with the layout). Column gaps 1.21 / 1.17 / 0.98 in (v6: 1.19 / 2.54 / 0.98). PowerPoint flags the same three text fits as v4-v6 (box 5 heading, box 6 and box 8 bullets). Full-resolution PDF via `poster_pdf.py`, 15.2 MB. `highlight.py` styles: tint (pale purple fill), gold (pale gold fill), outline (thick purple outline), dark (purple fill, white text, gold bullets); the Conclusions get a frame of their own under their gold rule. Rendered side by side for him.
 **Why:** Aditya: "i want to highlight intro and conclusion compared to other block suggest styles" and the other six points of the same message.
