@@ -18,6 +18,11 @@ function seedfc_panel()
 %   session names regular grey, OL / CL names in the condition colours; mean maps larger, filling the box;
 %   change panel: coloured mean +- SEM beside the dots (were black crosses) and a bracket with the stars.
 %   The colour map is unchanged: the BrBG ramp passes sls_check (L* 38 / 100 / 41, even steps).
+%   2026-11-10 v7 (Aditya: "beautify the correlation panel figures a bit more"; approved "Approve"): bottom
+%   row taller (Hm 1.8 -> 2.4 cm, box 5 had spare height); the two plots get titles above them instead of
+%   rotated two-line y labels, which gives the room; the key sentence moves to the top left; the colour-bar
+%   words sit clear of the -0.3 / +0.3 labels; the change panel shows each condition's mean +- SEM as a
+%   shaded box with a mean line on its own column (was a dot beside it). Same data and statistics.
 % OUT  poster/sfn2026/panels/seedfc_raw.pdf (git-ignored); panel_swap.py crops it to its ink.
 %   Printed with print -vector on a fixed page, not exportgraphics, which rescales small panels.
 here = fileparts(mfilename('fullpath')); root = fullfile(here, '..', '..');
@@ -36,10 +41,10 @@ star = @(p) char(repmat('*', 1, (p < 0.05) + (p < 0.01) + (p < 0.001)));
 site = {'p', 'MarkerFaceColor', 'k', 'MarkerEdgeColor', 'w', 'LineWidth', 0.4};
 clean = @(m) edge0(imgaussfilt(double(imfill(m, 'holes')), 1.5));   % smoothed, closed at the grid edge
 
-Wp = 14; Hp = 7.5; fig = jnFig(Wp, Hp);
+Wp = 14; Hp = 7.0; fig = jnFig(Wp, Hp);
 x00 = 0.6; W = 1.05; dx = 1.06; Hh = W * diff(yl) / diff(xl); R = x00 + (nS - 1) * dx + W;
-yM = 0.75; Hm = 1.8;                                              % bottom row, taller
-yT = yM + Hm + 0.4; yB = [yT + 0.22 + Hh + 0.05, yT + 0.22]; top = yB(1) + Hh;
+yM = 0.75; Hm = 2.4;                                              % bottom row, taller (v7)
+yT = yM + Hm + 0.62; yB = [yT + 0.22 + Hh + 0.05, yT + 0.22]; top = yB(1) + Hh;
 
 % ---- top: every session
 for c = 1:2
@@ -72,9 +77,10 @@ set(ax, 'YDir', 'normal', 'XTick', [], 'YTick', [-0.3 0 0.3], 'YTickLabel', {'-0
     'TickDir', 'out', 'TickLength', [0.03 0.03], 'FontSize', FT, 'LineWidth', S.lw_axis, 'Box', 'on');
 
 % ---- bottom right: per-session summaries
-lab_w = 1.3; wa = 2.0; ws = 1.5;
-xa = xcb + 1.83 + lab_w; xs = xa + 3.85; x_free = R + 0.2 - (xs + ws);   % right plot may run 2 mm past the grid
-ya = yM + 0.35; ha = Hm - 0.35;
+ws = 1.5; xa = xcb + 1.83 + 0.6;                                  % 0.6 cm: tick labels; titles go above (v7)
+wa = R + 0.2 - ws - 0.95 - xa; xs = xa + wa + 0.95;               % right plot may run 2 mm past the grid
+assert(wa >= 2.0, 'seedfc: left plot only %.2f cm wide', wa);
+ya = yM + 0.35; ha = Hm - 0.35;                                   % plot tops level with the maps; titles level with their names
 ax = axes(fig, 'Units', 'centimeters', 'Position', [xa, ya, wa, ha]); hold(ax, 'on');
 pc = zeros(1, 2);
 for c = 1:2
@@ -99,15 +105,16 @@ for m = 1:2
     scatter(ax2, ones(nnz(i), 1), yo(i), 7, cc{1}, mk{m}, 'filled');
     scatter(ax2, 2 * ones(nnz(i), 1), yc(i), 7, cc{2}, mk{m}, 'filled');
 end
-xo = [0.62 2.38]; mu = [mean(yo) mean(yc)]; se = [std(yo) std(yc)] / sqrt(nS);
+mu = [mean(yo) mean(yc)]; se = [std(yo) std(yc)] / sqrt(nS); hw = 0.26;   % mean +- SEM on each column (v7)
 for c = 1:2
-    plot(ax2, xo(c) * [1 1], mu(c) + se(c) * [-1 1], '-', 'Color', cc{c}, 'LineWidth', 1.0);
-    plot(ax2, xo(c), mu(c), 'o', 'MarkerSize', 4, 'MarkerFaceColor', cc{c}, 'MarkerEdgeColor', 'w', 'LineWidth', 0.4);
+    pt = patch(ax2, c + hw * [-1 1 1 -1], mu(c) + se(c) * [-1 -1 1 1], cc{c}, 'FaceAlpha', 0.22, 'EdgeColor', 'none');
+    uistack(pt, 'bottom');
+    plot(ax2, c + hw * [-1 1], mu(c) * [1 1], '-', 'Color', cc{c}, 'LineWidth', 1.8);
 end
 p = signrank(yc, yo);
 yb = 0.13; plot(ax2, [1 1 2 2], yb + [-0.025 0 0 -0.025], 'k-', 'LineWidth', 0.5);
 text(ax2, 1.5, yb + 0.005, star(p), 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', 'FontSize', FA, 'FontWeight', 'bold');
-set(ax2, 'XTick', [1 2], 'XTickLabel', {'OL', 'CL'}, 'XLim', [0.45 2.55], 'YLim', [-0.4 0.2], 'YTick', [-0.4 -0.2 0], ...
+set(ax2, 'XTick', [1 2], 'XTickLabel', {'OL', 'CL'}, 'XLim', [0.55 2.45], 'YLim', [-0.4 0.2], 'YTick', [-0.4 -0.2 0], ...
     'FontSize', FT, 'TickLength', [0.03 0.03], 'TickDir', 'out', 'Box', 'off', 'LineWidth', S.lw_axis);
 ax2.XAxis.TickLabelColor = 'k';
 
@@ -121,24 +128,24 @@ end
 for c = 1:2
     text(ov, x00 - 0.06, yB(c) + Hh / 2, cn{c}, 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', ...
         'FontSize', FL + 0.5, 'FontWeight', 'bold', 'Color', cc{c});
-    text(ov, xm(c) + Wm / 2, yM + Hm + 0.05, sprintf('%s, mean', cn{c}), 'HorizontalAlignment', 'center', ...
+    text(ov, xm(c) + Wm / 2, yM + Hm + 0.22, sprintf('%s, mean', cn{c}), 'HorizontalAlignment', 'center', ...
         'VerticalAlignment', 'bottom', B{:}, 'Color', cc{c});
 end
-text(ov, (x00 + R) / 2, yT + 0.1, 'Each dot: change in its correlation with the site (star), during stimulation vs before', ...
-    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', 'FontSize', FA, 'Color', gry);
+text(ov, x00 - 0.45, top + 0.42, 'Each dot: change in its correlation with the site (star), during stimulation vs before', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom', 'FontSize', FA, 'Color', gry);
 bar1 = 2 * W / diff(xl); bar2 = 2 * Wm / (2 * Lx);
 plot(ov, x00 + [0 bar1], (yT + 0.1) * [1 1], 'k', 'LineWidth', 1);
 text(ov, x00 + bar1 + 0.06, yT + 0.1, '2 mm', 'VerticalAlignment', 'middle', 'FontSize', FT);
 plot(ov, x00 + [0 bar2], (yM - 0.16) * [1 1], 'k', 'LineWidth', 1);
 text(ov, x00 + bar2 + 0.06, yM - 0.16, '2 mm', 'VerticalAlignment', 'middle', 'FontSize', FT);
-text(ov, xcb - 0.22, ycb + hcb + 0.06, 'more correlated', 'VerticalAlignment', 'bottom', 'FontSize', FA);
-text(ov, xcb - 0.22, ycb - 0.06, 'less correlated', 'VerticalAlignment', 'top', 'FontSize', FA);
-text(ov, xa - 0.98, ya + ha / 2, {'correlation', 'with site'}, 'Rotation', 90, 'HorizontalAlignment', 'center', B{:});
-text(ov, xs - 0.98, ya + ha / 2, {'change in', 'correlation'}, 'Rotation', 90, 'HorizontalAlignment', 'center', B{:});
+text(ov, xcb - 0.22, ycb + hcb + 0.20, 'more correlated', 'VerticalAlignment', 'bottom', 'FontSize', FA);
+text(ov, xcb - 0.22, ycb - 0.20, 'less correlated', 'VerticalAlignment', 'top', 'FontSize', FA);
+text(ov, xa - 0.6, ya + ha + 0.22, {'Correlation', 'with site'}, 'VerticalAlignment', 'bottom', 'FontSize', FL);
+text(ov, xs - 0.6, ya + ha + 0.22, {'Change in', 'correlation'}, 'VerticalAlignment', 'bottom', 'FontSize', FL);
 ux = @(x) xa + (x - 0.8) / (2.6 - 0.8) * wa; uy = @(y) ya + (y - 0.25) / (0.9 - 0.25) * ha;
 for c = 1:2
     s = mean(G.(cn{c}).sess_stim); t = star(pc(c)); if isempty(t), t = 'n.s.'; end
-    text(ov, ux(2.05), uy(s), sprintf('%s %s', cn{c}, t), 'Color', cc{c}, 'VerticalAlignment', 'middle', B{:});
+    text(ov, ux(2.12), uy(s), sprintf('%s %s', cn{c}, t), 'Color', cc{c}, 'VerticalAlignment', 'middle', B{:});
 end
 
 poster_lab_axes(fig, false);   % lab axes (Aditya 2026-11-10); no snapping: the inline labels are placed from the limits

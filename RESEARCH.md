@@ -16,6 +16,46 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-10 — SfN poster v7 built (not yet in OneDrive), with four highlight styles for Introduction and Conclusions
+**Changed/Found:** v7 = 11-09 v3 → `poster_swap_all.py` → `drop_bullets.py` → new `intro_bullets.py` → `poster_clean.py` → `poster_logos.py` → new `highlight.py tint` → `carry_edits.py` (OneDrive v6, identical to what was saved at 22:37, md5 a86337f0…, against its pre-carry build v6d: his six heading edits carried again, three moved with the layout). Column gaps 1.21 / 1.17 / 0.98 in (v6: 1.19 / 2.54 / 0.98). PowerPoint flags the same three text fits as v4-v6 (box 5 heading, box 6 and box 8 bullets). Full-resolution PDF via `poster_pdf.py`, 15.2 MB. `highlight.py` styles: tint (pale purple fill), gold (pale gold fill), outline (thick purple outline), dark (purple fill, white text, gold bullets); the Conclusions get a frame of their own under their gold rule. Rendered side by side for him.
+**Why:** Aditya: "i want to highlight intro and conclusion compared to other block suggest styles" and the other six points of the same message.
+**Next:** He picks a highlight style (v7 has tint) and says whether to save v7 (pptx + PDF) to OneDrive.
+
+### 2026-11-10 — Poster intro bullets in the boxes' purple triangle style
+**Changed/Found:** New `poster/sfn2026/intro_bullets.py`: copies the bullet character, colour (UW 4B2E83), 75% size, hanging indent and 8.55 pt space between paragraphs from 'box 1 bullets' onto the four Introduction paragraphs. Words and sizes unchanged. The added space made the last line run past the frame (seen in the first v7 render), so the frame and text box grow by the added space + 0.10 in (0.47 in).
+**Why:** Aditya: "bullet styles are differnent in intro block and other make them same uw style".
+**Next:** none
+
+### 2026-11-10 — Poster box 1: camera under the brain image, straight readout beam
+**Changed/Found:** `poster/sfn2026/box1_diagram.py`: camera block moved under the widefield image, lens up; the green beam now runs straight down from the readout square (was a diagonal to a camera at the left). The camera's output goes left, up at x = 88 mm and along the feedback row, so every wire is horizontal or vertical. The 1 mm bar moved to the right of the image. Drawing 137.5 × 64 mm (was 57 mm tall). Writes `system_raw.json` with the free corner under the ΔF/F box; `poster_swap_all.py` box1() puts the bullets there, beside the camera, above the picture in z-order, and ends box 1's frame 0.30 in under the lower of picture and bullets (frame 9.83 → 9.39 in before the ×0.95).
+**Why:** Aditya: "lets move the camera below the brain image so that the camera line is not inclined like it is now".
+**Next:** none
+
+### 2026-11-10 — Poster box 7: state names on the spectrum curves
+**Changed/Found:** `poster/sfn2026/st_quart_panel.m`: "Motion" (orange) and "Absolute 1–4 Hz" (purple) written on the third panel in each state's colour, in the empty corners (purple above its band at the left, orange below its band at the left), placed in cm so axis snapping can't move them. Same names as the two panel titles. Data, bars and OL/CL key unchanged; run printed the same quartile values as before.
+**Why:** Aditya: "in the feedback vs state panel write on the panel three which is motmion which is abd delta as color only is not that clear"; approved "Approve" after the method-gate block.
+**Next:** none
+
+### 2026-11-10 — Poster box 5 restyle: taller bottom row, plot titles, mean ± SEM on each column
+**Changed/Found:** `poster/sfn2026/seedfc_panel.m`, layout only: bottom row Hm 1.8 → 2.4 cm (box 5 had spare height); the two small plots get titles above them ("Correlation / with site", "Change in / correlation", two lines so the second fits the canvas) instead of rotated y labels, which frees the width for the larger mean maps (left plot 2.15 cm wide, asserted ≥ 2.0); key sentence moved to the top left; colour-bar words 0.20 cm clear of the ±0.3 labels (they touched); change panel shows each condition's mean ± SEM as a shaded box with a mean line on its own column (was a dot and bar beside it). Same statistics; the run printed the same values (CL r 0.739 → 0.585, p = 0.0005; OL 0.726 → 0.737, p = 0.3013; n = 12). `poster_swap_all.py`: box 5's panel keeps the box width and the frame grows to fit it.
+**Why:** Aditya: "also can we beautify the correlation panel figures a bit more"; approved "Approve".
+**Next:** none
+
+### 2026-11-10 — Poster boxes 3-4 placed 1.10-1.15× larger at the same type size; boxes 2-4 laid out in rows
+**Changed/Found:** New `poster/sfn2026/poster_grow.m`: panel n is placed at PS·s_n (s = 1.10 for box 3 and box 4's top row, 1.15 for box 4's bottom row) and its type, line widths, markers and legend samples are scaled by 1/s_n first, so they print at the poster standard; writes `<name>_raw.grow`. Called from `poster_restyle.m` (cl_*) and `sine_panels.m` (sine_*; rerun printed the same values: n 51/46/57, lag 70.7/46.1/1.7°, preview 51°). Math approved by Aditya 2026-11-10: "Approve" (printed size = (size/s)·PS·s = size·PS; same as box 2's shrink_type). `poster_swap_all.py` LAYOUT: boxes 2-4 placed row by row under the rule (rows spread evenly; shared columns in box 3; titles level, or plot tops level in box 4's bottom row); ALIGN keeps only d_rr. `drop_bullets.py` now always ends the frame 0.30 in under the lowest panel (no centring).
+**Why:** Aditya: "there is some white space where the texts were removed we can increase the figure sizes and optimally place them in their blocks".
+**Next:** none
+
+### 2026-11-10 — Found: MATLAB print split words in box 2's titles ("pow er")
+**Changed/Found:** `impulse-analysis/fig2_jn_panels.m` (poster branch only): titles printed as "pow er" in some prints and not others. The title text objects had no FontName (the figure default, not the axes' Arial); setting Arial removed most of it, and a print at -r600 did not help (reverted). New `poster/sfn2026/poster_textcheck.py`: save_panel now checks every plain text of 10+ characters appears as written in the PDF and prints again if not, as it already did for the plot-box check (B needed 4 prints, C 2).
+**Why:** The gap was visible in the v7 render of box 2.
+**Next:** none
+
+### 2026-11-10 — Poster box 2 (v7): panel titles, no mouse names, wider fit panel
+**Changed/Found:** `impulse-analysis/fig2_jn_panels.m` POSTER_BOX2 branch only (paper panels untouched). A gets the title "Average response by laser power" above its fit-window label. B loses its mouse key; it gets the title "Suppression vs laser power" and the note "One line per session (4 sessions, 3 mice)", both counts taken from the key's labels in code before they are deleted; its plot box widens 2.66 → 3.50 cm into the key's old margin. C's title becomes "Linear model vs held-out trials" (was "Held-out LTI fit, Mouse 1b"), its plot widens 3.98 → 5.95 cm into the row the bullets left, the legend's "fit" becomes "model", and the legend line samples go from 7 to 20 pt so the dashes show. Rendered to `poster/sfn2026/panels/poster/box2/`: A 6.67 × 4.97 in, B 7.32 × 4.90 in, C 10.61 × 4.58 in at box 2's scale (before the ×0.95 of poster_clean).
+**Why:** Aditya: "lti block has no title on the figures it add title that explain what figures they are, we can also drop mouse names and just convey the lines are differnet sessions, lastly help out lti figure has lengend with dashed trace but its too short to show that its a dash".
+**Next:** Lay out box 2's rows in `poster_swap_all.py` (A and B across row 1, C centred in row 2) and check column 1 still fits with the taller A and B.
+
 ### 2026-11-10 — SfN poster v6 in OneDrive, with a full-resolution PDF
 **Changed/Found:** v6 = 11-09 v3 → `poster_swap_all.py` → new `drop_bullets.py` → `poster_clean.py` → `poster_logos.py` → `carry_edits.py` (from the OneDrive v5 against its pre-carry build: his six heading edits, box 4's moved with the new column 2 layout; `carry_edits.py` now shifts a carried shape when the new layout only moved it, and allows shapes the new version adds or drops). Saved as `OneDrive/Talks/SfN2026/SfN2026_poster_v6.pptx` (7934391 bytes) and `SfN2026_poster_v6.pdf` (14777551 bytes), both OneDrive state 2 at 22:37. New `poster/sfn2026/poster_pdf.py`: PowerPoint writes the PDF (its export reduces pictures to 200 ppi, checked on v5), then each panel picture is put back from the pptx at full resolution (about 470 ppi at print size), cropped as the slide crops it. v3 (11-09 16:52, 7632661 bytes), v4 and v5 unchanged; v5 byte-identical to what was saved at 21:39. PowerPoint reports the same three text-fit flags as v4 and v5.
 **Why:** Aditya: "yes continue, send me the pdf AND PPT ON ONEDRIVE", and earlier "start showing me the high resolution pdf version".

@@ -57,6 +57,11 @@ pin(a,[0.34 0.38 2.72 2.26]);
 lg = findall(f,'Type','legend');
 lg.ItemTokenSize = [6 6];  lg.FontSize = 6;  lg.FontWeight = 'bold';
 lg.Location = 'none';  pin(lg,[3.02 0.70 1.08 1.30]);
+if poster   % v7 (Aditya 2026-11-10: box 2's panels need titles): one line above the fit-window label
+    f.UserData(2) = H + 0.40;
+    text(a, 0, 2.26 + 0.32, 'Average response by laser power', 'Units','centimeters', 'FontSize',8, 'FontName','Arial', ...
+        'HorizontalAlignment','left', 'VerticalAlignment','bottom');
+end
 save_panel(f, out, 'A');
 
 %% B: suppression vs laser power, real axes
@@ -83,19 +88,21 @@ for o = findall(a,'Type','text')'
         k = lower(strrep(s,'Mouse ','m'));  o.Position(1:2) = [0.30 yy.(k)];  o.FontSize = 6;   % lower left, below the steep Mouse 3c line
     end
 end
-if poster   % the column above touches Mouse 3c's 0.5 mW point: the key goes right of the plot box, like A's
-    f.UserData(1) = 4.3;                       % (x data are not in mW; the ticks are relabelled, so place in cm)
-    ids = {'5a','5b','1b','3c'};
+if poster   % v7 (Aditya 2026-11-10): no mouse names; a title, and a note that each line is one session.
+    % The key's labels are counted and then deleted; the plot box takes the key's old margin.
+    ids = {};
     for o = findall(a,'Type','text')'
         s = string(o.String);
-        if isscalar(s) && startsWith(s,'Mouse')
-            j = find(strcmp(ids, erase(s,'Mouse ')));
-            set(o, 'String', ids{j}, 'Units','centimeters', 'Position',[2.80 1.25-0.27*j 0], ...
-                'HorizontalAlignment','left', 'VerticalAlignment','middle');
-        end
+        if isscalar(s) && startsWith(s,'Mouse'), ids{end+1} = char(erase(s,'Mouse ')); delete(o); end %#ok<AGROW>
     end
-    text(a, 2.80, 1.25, 'Mouse', 'Units','centimeters', 'FontSize',6, 'Color',[0.35 0.35 0.35], ...
-        'HorizontalAlignment','left', 'VerticalAlignment','middle');
+    nMice = numel(unique(cellfun(@(c) c(1:end-1), ids, 'UniformOutput', false)));   % '5a','5b' = mouse 5
+    f.UserData(1:2) = [4.8 H+0.40];
+    pin(a,[0.98 y0 3.50 yh]);
+    text(a, 0, yh + 0.32, 'Suppression vs laser power', 'Units','centimeters', 'FontName','Arial', 'FontSize',8, ...
+        'HorizontalAlignment','left', 'VerticalAlignment','bottom');
+    text(a, 0, yh + 0.06, sprintf('One line per session (%d sessions, %d mice)', numel(ids), nMice), ...
+        'Units','centimeters', 'FontName','Arial', 'FontSize',7.5, 'Color',[0.35 0.35 0.35], ...
+        'HorizontalAlignment','left', 'VerticalAlignment','bottom');
 end
 a.XLabel.String = 'Laser power (mW)';
 save_panel(f, out, 'B');
@@ -110,6 +117,15 @@ a.Title.String = 'Held-out LTI fit, Mouse 1b';
 lg = findall(f,'Type','legend');
 lg.ItemTokenSize = [7 6];  lg.FontSize = 6;  lg.FontWeight = 'bold';
 lg.Location = 'none';  pin(lg,[2.60 0.80 2.20 0.98]);
+if poster   % v7 (Aditya 2026-11-10): no mouse name; the plot widens into the row the bullets left, and the
+    % legend's line samples are long enough to show the model's dashes
+    f.UserData(1) = 7.0;
+    pin(a,[0.82 y0 5.95 yh]);
+    a.Title.String = 'Linear model vs held-out trials';
+    lg.String{end} = 'model';
+    lg.ItemTokenSize = [20 6];
+    pin(lg,[4.30 0.78 2.40 1.02]);
+end
 save_panel(f, out, 'C');
 if poster, return; end                         % the poster uses A-C only
 
@@ -247,9 +263,17 @@ set(f,'PaperUnits','centimeters','PaperPositionMode','manual','PaperSize',[12 6]
 % print sometimes squeezes the page vertically by 9%, at random: check each print and print again if so
 pdf = fullfile(out,[n '.pdf']);
 chk = fullfile(fileparts(mfilename('fullpath')),'fig2_jn_boxcheck.py');
+poster = ~isempty(POSTER_BOX2) && POSTER_BOX2;
+if poster   % poster: print sometimes puts a gap in a word ("pow er"); plain texts of 10+ characters are checked
+    s = arrayfun(@(t) t.String, findall(f,'Type','text'), 'UniformOutput', false);
+    s = s(cellfun(@(c) ischar(c) && isrow(c) && numel(c) >= 10 && ~any(ismember(c,'\^_{}')), s));
+    lst = [tempname '.txt'];  fid = fopen(lst,'w','n','UTF-8');  fprintf(fid,'%s\n',s{:});  fclose(fid);
+    tchk = fullfile(fileparts(fileparts(mfilename('fullpath'))),'poster','sfn2026','poster_textcheck.py');
+end
 for attempt = 1:10
     print(f, pdf, '-dpdf', '-vector');
     [st, txt] = system(sprintf('python -X utf8 -I "%s" "%s" %s', chk, pdf, n));
+    if st == 0 && poster, [st, txt] = system(sprintf('python -X utf8 -I "%s" "%s" "%s"', tchk, pdf, lst)); end
     if st == 0, break; end
     f.Position(4) = 6.05;  drawnow;  f.Position(4) = 6;  drawnow;   % force a new layout of the window
 end

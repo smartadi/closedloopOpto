@@ -36,8 +36,9 @@ for k = 1:numel(names)
     poster_type(g);
     poster_lab_axes(g);                                            % before the fix: snapping ignores notes in normalised units
     if ~isempty(e.fix), e.fix(g); end
+    s = poster_grow(g, n);                                         % v7: placed s times larger, type scaled 1/s
     drawnow; cm = g.Position(3:4);
-    sls_check(g, 'MinFontPt', 7, 'Ignore', {'spine', 'space'});
+    sls_check(g, 'MinFontPt', 7 / s - 0.01, 'Ignore', {'spine', 'space'});
     set(g, 'PaperUnits', 'centimeters', 'PaperSize', cm, 'PaperPosition', [0 0 cm]);
     print(g, fullfile(out, [n '_raw.pdf']), '-dpdf', '-vector');
     close(g);

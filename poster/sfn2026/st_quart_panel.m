@@ -118,6 +118,11 @@ plot(ov, kx + [0 0.35], [ky ky], 'k-', 'LineWidth', 1.0);
 text(ov, kx + 0.42, ky, 'OL', 'FontSize', FT, 'VerticalAlignment', 'middle');
 plot(ov, kx + 0.95 + [0 0.35], [ky ky], 'k--', 'LineWidth', 1.0);
 text(ov, kx + 1.37, ky, 'CL', 'FontSize', FT, 'VerticalAlignment', 'middle');
+% v7 (Aditya 2026-11-10: colour alone didn't say which state is which): each state's name on its curves, in
+% its colour, in the empty corners (purple above its band at the left, orange below its band at the left)
+fy = @(v) y0 + hs * log(v / YX(1)) / log(YX(2) / YX(1));
+text(ov, fx(0.53), fy(6.3), show{2}, 'FontSize', FA, 'Color', T(2).tcol, 'VerticalAlignment', 'bottom');
+text(ov, fx(0.53), fy(0.2), show{1}, 'FontSize', FA, 'Color', T(1).tcol, 'VerticalAlignment', 'bottom');
 
 uistack(ov, 'top');                                                         % else the plots' white hides it
 drawnow;

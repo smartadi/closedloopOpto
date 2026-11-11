@@ -166,7 +166,8 @@ if isappdata(fig, 'canvas')        % a resized canvas sometimes springs back (3.
 end
 set(fig, 'PaperUnits', 'centimeters', 'PaperSize', cm, 'PaperPosition', [0 0 cm]);
 if ~isfolder(fullfile(d, 'poster')), mkdir(fullfile(d, 'poster')); end
-sls_check(fig, 'MinFontPt', 7, 'Ignore', {'spine', 'space'});
+s = poster_grow(fig, ['sine_' n]);                 % v7: placed s times larger, type scaled 1/s
+sls_check(fig, 'MinFontPt', 7 / s - 0.01, 'Ignore', {'spine', 'space'});
 print(fig, fullfile(d, 'poster', ['sine_' n '_raw.pdf']), '-dpdf', '-vector');
 close(fig);
 end

@@ -10,7 +10,13 @@ e = y - r: '-' on the reference, '+' on the feedback, as the inhibitory opsin ne
 square and the stimulation dot are JN Fig 1B's (panels/frame.pdf), placed unchanged; the 1 mm bar is
 measured from that figure's own bar. Units: 1 = 1 mm at panel size; text 7.5 pt, the poster's label size.
 Writes panels/poster/system_raw.pdf (+ png preview in panels/poster/png/).
+v7 (Aditya 2026-11-10: "lets move the camera below the brain image so that the camera line is not inclined"):
+the camera sits under the image, its lens up, and the green readout beam runs straight down from the readout
+square. Its signal goes left under the LEDs and up to the feedback row, so every wire is horizontal or vertical
+and the space under the dF/F box stays free: poster_swap_all.py puts box 1's bullets there, beside the camera.
+The 1 mm bar moves to the right of the image. system_raw.json gives that free corner (mm).
 """
+import json
 import sys
 from pathlib import Path
 
@@ -21,7 +27,7 @@ from build_panels import ARIAL
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'panels' / 'poster'
 FRAME = HERE / 'panels' / 'frame.pdf'
-W, H = 137.5, 57
+W, H = 137.5, 64.0                   # H: the camera's bottom + 1.4 mm (v7; was 57)
 FS = 7.5 * 25.4 / 72                 # 7.5 pt in mm
 SUB = 0.75 * FS
 LINE, BOX = 0.7, 0.5                 # stroke widths (mm); JN Fig 1E used 0.35 and 0.25
@@ -110,6 +116,8 @@ def dark_block(x, y, w, h, word, nub=None):
     text(x + w / 2, y + h / 2 + 0.36 * FS, word, anchor='middle', fill='#fff')
     if nub == 'right':
         rect(x + w, y + h / 2 - 1.6, 1.6, 3.2, fill='#1a1a1a', stroke='#1a1a1a', rx=0.3)
+    elif nub == 'top':
+        rect(x + w / 2 - 1.6, y - 1.6, 3.2, 1.6, fill='#1a1a1a', stroke='#1a1a1a', rx=0.3)
 
 
 def build():
@@ -155,12 +163,12 @@ def build():
                f' stroke-width="0.9" stroke-linecap="round"/>')
     text(dx + 3.0, yf - 0.8, 'galvos')
 
-    # widefield image: placed in fitz below the drawing (see main); its scale bar and name
+    # widefield image: placed in fitz below the drawing (see main); its scale bar (right of it, v7) and name
     bar = bar_pt * k
-    xb = IX + S - 7.5
-    els.append(f'<line x1="{xb - bar:.2f}" y1="{IY + S + 2.4:.2f}" x2="{xb:.2f}" y2="{IY + S + 2.4:.2f}"'
+    xb, ybar = IX + S + 1.2, IY + S - 2.6
+    els.append(f'<line x1="{xb:.2f}" y1="{ybar:.2f}" x2="{xb + bar:.2f}" y2="{ybar:.2f}"'
                f' stroke="#000" stroke-width="0.7"/>')
-    text(xb + 1.0, IY + S + 2.4 + 0.36 * FS, '1 mm')
+    text(xb, ybar + 1.15 * FS, '1 mm')
     text(IX + S + 1.2, IY + 3.0, 'mouse')
     text(IX + S + 1.2, IY + 3.0 + 1.15 * FS, 'cortex')
 
@@ -176,20 +184,26 @@ def build():
     text(lx - 1.2, ly + 2.75 + 0.36 * FS, '470/405 nm', anchor='end')
     beam([(lx + 13.0, ly + 1.7), (IX - 0.6, ly + 1.7)], BLUE, w=0.9)
     beam([(lx + 13.0, ly + 3.8), (IX - 0.6, ly + 3.8)], VIOLET, w=0.9)
-    dark_block(72.0, yb - 3.5, 13.0, 7.0, 'camera', nub='right')
-    beam([(sx - 1.0, sy + 1.0), (86.6, yb)], GREEN)
+    cw, ch = 13.0, 7.0                             # camera under the image, lens up (v7)
+    cx0, cy0 = sx - cw / 2, IY + S + 3.6
+    dark_block(cx0, cy0, cw, ch, 'camera', nub='top')
+    beam([(sx, sy + 1.0), (sx, cy0 - 1.7)], GREEN)
+    assert cy0 + ch + 1.4 <= H, f'camera ends at {cy0 + ch:.1f} mm'
 
-    # dF/F back to the controller
-    line((72.0, yb), (61.0, yb))
+    # dF/F back to the controller: left from the camera, up at xv, along the feedback row
+    xv = 88.0
+    line((cx0, cy0 + ch / 2), (xv, cy0 + ch / 2), (xv, yb), (61.0, yb))
     rect(47.0, yb - 4.5, 14.0, 9.0)
     text(54.0, yb + 0.36 * FS, 'ΔF/F', anchor='middle')
     line((47.0, yb), (s1, yb), (s1, yf + 3.0))
     label(37.0, yb - 1.6, 'Output', 'y')
-    return (IX, IY, S), im
+    free = {'left_bottom_mm': yb + 4.5, 'left_right_mm': xv - 1.5, 'W_mm': W, 'H_mm': H}
+    return (IX, IY, S), im, free
 
 
 def main():
-    (IX, IY, S), im = build()
+    (IX, IY, S), im, free = build()
+    (OUT / 'system_raw.json').write_text(json.dumps(free), encoding='utf-8')
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}mm" height="{H}mm" viewBox="0 0 {W} {H}">'
            + ''.join(els) + '</svg>')
     (OUT / 'system.svg').write_text(svg, encoding='utf-8')
