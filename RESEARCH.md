@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v11 (48 × 36 in) saved to OneDrive
+**Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v11_48x36.pptx` (8543486 bytes, md5 38c81d84…) and `SfN2026_poster_v11_48x36.pdf` (16780035 bytes, md5 393954cf…), the scratch build in the entry below, unchanged (copied with no-overwrite). Before saving, OneDrive v10 pptx (md5 38db92f6…) and PDF (md5 1d8f31f5…) were unchanged since they were saved, so there were no online edits to carry; v3–v10 untouched. `od_state.ps1` right after the copy: pptx state 2 (uploaded), PDF state 4 (still uploading).
+**Why:** Aditya: "Yes, save v11".
+**Next:** For v12, carry from v11 online vs v11 as saved. Still open: poster number, NSF award number, printing.
+
 ### 2026-11-11 — SfN poster v11 rebuilt with the new Introduction (scratch, not in OneDrive)
 **Changed/Found:** `build_48.sh` (with the new `poster_text.py`) → `poster_box2_48.py factors` (k_t 1.0856, s_f 0.9653) → MATLAB → `build` (gaps 0.88 in) → `refine` (s 0.9532) → MATLAB → `build`. Column 1 gaps 0.91 in (columns 2 and 3 unchanged, 0.90 / 0.84 in). Box 2: A 6.09 × 4.52 in, B 6.73 × 4.40 in, C 8.65 × 3.76 in (v10: C 12.26 × 4.91 in), type unchanged (build check: type x1.000). PowerPoint: no text box overflows. Scratch `f48k.pptx` (8543486 bytes, md5 38c81d84…) and `SfN2026_poster_v11_48x36.pdf` (16780035 bytes, md5 393954cf…), replacing the v11 files in the entry two below. Against OneDrive v10 (md5 still 38db92f6…, no online edits) only column 1 and `panel d_kernel` differ.
 **Why:** Aditya's new Introduction text and his pick of 26 pt (entries below).
