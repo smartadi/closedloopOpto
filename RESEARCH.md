@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v11 rebuilt with the new Introduction (scratch, not in OneDrive)
+**Changed/Found:** `build_48.sh` (with the new `poster_text.py`) → `poster_box2_48.py factors` (k_t 1.0856, s_f 0.9653) → MATLAB → `build` (gaps 0.88 in) → `refine` (s 0.9532) → MATLAB → `build`. Column 1 gaps 0.91 in (columns 2 and 3 unchanged, 0.90 / 0.84 in). Box 2: A 6.09 × 4.52 in, B 6.73 × 4.40 in, C 8.65 × 3.76 in (v10: C 12.26 × 4.91 in), type unchanged (build check: type x1.000). PowerPoint: no text box overflows. Scratch `f48k.pptx` (8543486 bytes, md5 38c81d84…) and `SfN2026_poster_v11_48x36.pdf` (16780035 bytes, md5 393954cf…), replacing the v11 files in the entry two below. Against OneDrive v10 (md5 still 38db92f6…, no online edits) only column 1 and `panel d_kernel` differ.
+**Why:** Aditya's new Introduction text and his pick of 26 pt (entries below).
+**Next:** Save to OneDrive as v11 (pptx + PDF) only on his OK.
+
+### 2026-11-11 — Box 2 C legend 0.16 cm higher on the poster (`fig2_jn_panels.m`)
+**Changed/Found:** `impulse-analysis/fig2_jn_panels.m`, POSTER_BOX2 branch of panel C: legend pinned at y 0.94 cm instead of 0.78 cm (12 × 6 cm window). With the longer Introduction, C prints at 0.953 of its 48 in size with its type held, so the legend sat on the x axis and the 0.4 tick ran into "model". Now it clears the tick, and its top row sits just under the zero line. Paper panels and the 54 in prints (`panels/poster/box2/`) are not reprinted.
+**Why:** Collision seen in the v11 render (zoom of the legend).
+**Next:** none.
+
+### 2026-11-11 — Introduction: Aditya's new text at 26 pt (`poster_text.py`)
+**Changed/Found:** `poster/sfn2026/poster_text.py`: new `INTRO` (his six bullets, verbatim, from chat) and `set_intro`, which replaces the first three paragraphs with his first five bullets and keeps the old last paragraph (identical to his last bullet, bold). Type `INTRO_PT` = 26 pt, with line spacing and space before paragraphs scaled by 26/28.98 = 0.8972. The "Wide ranging" fix is dropped (the sentence is gone). At 29 pt his text ran 18 lines (9.59 in) and column 1 came out with gaps of −0.01 in; it needed 1.83 in back. Probes in PowerPoint (type and spacing scaled together): 28 pt 17 lines 8.55 in, 27 pt 17 lines 8.32 in, 26 pt 15 lines 7.19 in, 24 pt 14 lines 6.29 in. Bug found on the first build: the frame kept its old height, so bullets 5 and 6 sat below the tint. `poster_resize.py` refits the frame from its padding in the input, and that padding was negative after the text grew. Fix: `poster_text.py` measures the text in PowerPoint before and after (`poster_resize.measure`) and grows the text box and frame by the difference (+1.91 in at 54 in).
+**Why:** Aditya: "new intro:" (his text). Asked how to make column 1 fit, he picked "A: Intro 26 pt" over shrinking box 2's plots to about 0.72 or box 1's diagram to 0.73.
+**Next:** If he edits the Introduction again, change `INTRO` and rerun the column 1 chain.
+
 ### 2026-11-11 — SfN poster v11 at 48 × 36 in built in scratch (not in OneDrive)
 **Changed/Found:** Same chain as v10 (`build_48.sh` → `poster_box2_48.py build` → `poster_pdf.py`) with the new box 8 panel below. Scratch `f48k.pptx` (8609600 bytes, md5 ab28eb22…) and `SfN2026_poster_v11_48x36.pdf` (16936502 bytes, md5 5f7f9e2b…, 23 pictures). Diff against OneDrive v10: only `panel d_kernel` changed (now 3.09 × 2.80 in at x 31.58 in; v10's diagram was 4.00 × 2.82 in at x 31.13 in). Column 1 gaps 0.89 in, as in v10. PowerPoint: no text box overflows. OneDrive v10 pptx md5 still 38db92f6…, so no online edits to carry.
 **Why:** Aditya's box 8 request (entry below).

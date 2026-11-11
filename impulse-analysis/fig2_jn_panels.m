@@ -132,7 +132,9 @@ if poster   % v7 (Aditya 2026-11-10): no mouse name; the plot widens into the ro
     a.Title.String = 'Linear model vs held-out trials';
     lg.String{end} = 'model';
     lg.ItemTokenSize = [20 6];
-    pin(lg,[4.30 0.78 2.40 1.02]);
+    % 0.16 cm higher than v7-v11a: at 48 in with the longer Introduction C prints at 0.95 with its type held,
+    % so the legend sat on the axis and the 0.4 tick ran into "model" (2026-11-11)
+    pin(lg,[4.30 0.94 2.40 1.02]);
 end
 save_panel(f, out, 'C');
 if poster, return; end                         % the poster uses A-C only
