@@ -61,7 +61,7 @@ for m = 1:nMode
     addStimPatch(axB(m), x1, x2);
     uistack(findobj(axB(m),'Type','line'), 'top'); hold(axB(m),'off');
     if m == 1
-        paperAxes(axB(m), 'XLength',1, 'YLength',2, 'XLabel','1 s', 'YLabel','2% dF/F');
+        paperAxes(axB(m), 'XLength',1, 'YLength',2, 'XLabel','1 s', 'YLabel',['2% ' char(916) 'F/F']);   % was "dF/F" (2026-11-11: one name poster-wide)
         hLeg = [h1 h2];
     else
         paperAxes(axB(m));
@@ -159,6 +159,17 @@ jnAxesAll(fig);
 exportgraphics(fig, path, 'ContentType', 'vector');
 [d, n] = fileparts(path); n = strrep(erase(n, '_raw'), 'sine3_', '');
 poster_type(fig); poster_fix(fig, n); poster_lab_axes(fig); drawnow;
+if strcmp(n, 'lag')                 % 2026-11-11: the lab axes' inward x ticks ran into the bars (over the small
+    ax = findall(fig, 'Type', 'axes'); ax = ax(1);   % CL+p bar one read as an error bar): names as text, no ticks
+    xt = ax.XTick; lb = ax.XTickLabel; fs = ax.FontSize; ax.XTick = [];
+    for m = 1:numel(xt)
+        text(ax, xt(m), ax.YLim(1) - 0.03 * diff(ax.YLim), lb{m}, 'HorizontalAlignment', 'center', ...
+            'VerticalAlignment', 'top', 'FontSize', fs, 'FontWeight', 'normal', 'Clipping', 'off');
+    end
+    pv = findall(ax, 'Type', 'text', '-function', @(t) startsWith(t.String, 'preview'));   % label clear of its line
+    pv.Position(2) = pv.Position(2) + 0.03 * diff(ax.YLim);
+    drawnow;
+end
 fig.Units = 'centimeters'; cm = fig.Position(3:4);
 if isappdata(fig, 'canvas')        % a resized canvas sometimes springs back (3.00 -> 3.41 cm): set it again, check
     cm = getappdata(fig, 'canvas'); fig.Position(3:4) = cm; drawnow;
@@ -176,7 +187,9 @@ function poster_fix(fig, n)
 % Poster-only layout fixes after poster_type (box 4). Layout ideas (Aditya 2026-11-10, from a lab-style
 % Fig 3): no dark lines at target on/off, the grey band marks it; column titles left-aligned in the
 % condition colours; the variance panel gets a y axis in %^2 (it had no scale), time keeps its 1 s bar.
-delete(findall(fig, 'Type', 'constantline'));
+if ~strcmp(n, 'lag')                % the lag panel's lines are its zero and its preview reference (2026-11-11:
+    delete(findall(fig, 'Type', 'constantline'));   % deleting them left "preview 51" with no line, over the CL bar)
+end
 cols = {'Open loop', [1.00 0.00 0.00]; 'Closed loop', [0.00 0.40 0.85]; 'CL + preview', [0.00 0.50 0.00]};
 switch n
     case 'avg'

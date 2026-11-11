@@ -92,6 +92,10 @@ if trial                                                            % y units: %
     text(ax(1), -0.15, yr, 'Target', 'Color', [0.45 0.45 0.45], 'FontSize', 7.5, 'HorizontalAlignment', 'right', ...
         'VerticalAlignment', 'middle');
 end
+for t = findall(g, 'Type', 'text').'                                % 2026-11-11: "ΔF/F" poster-wide (the scale
+    s = t.String;                                                   % bars said "dF/F", every other box "ΔF/F")
+    if ischar(s) && contains(s, 'dF/F'), t.String = strrep(s, 'dF/F', [char(916) 'F/F']); end
+end
 end
 
 function fix_cl_ratio(g)
@@ -232,8 +236,20 @@ tl = findall(g, 'Type', 'tiledlayout'); tl.Units = 'centimeters'; tl.OuterPositi
 ax = findall(g, 'Type', 'axes'); [~, o] = sort(arrayfun(@(a) a.Layout.Tile, ax)); ax = ax(o);
 assert(all(arrayfun(@(a) isequal(a.XLim, ax(1).XLim), ax)), 'tiles do not share a time axis');
 delete(findall(g, 'Type', 'constantline'));
+% 2026-11-11: the high init-dev example ran past the top of its tile and was cut off. The tiles share one y
+% scale (one 5% bar for all four), so every tile gets the same higher top: the highest point in view + 2%.
+yl = cell2mat(arrayfun(@(a) a.YLim, ax, 'UniformOutput', false));
+assert(all(all(abs(yl - yl(1, :)) < 1e-9)), 'tiles do not share a y range');
+tr = findall(ax, 'Type', 'line'); tr = tr(arrayfun(@(l) numel(l.XData) > 10, tr));
+xv = ax(1).XLim;
+hi = max(arrayfun(@(l) double(max([-Inf, l.YData(l.XData >= xv(1) & l.XData <= xv(2))])), tr));
+if hi > yl(1, 2)
+    set(ax, 'YLim', [yl(1, 1), hi + 0.02 * (hi - yl(1, 1))]);
+    fprintf('[poster_restyle] st_trials: y top %.2f -> %.2f\n', yl(1, 2), ax(1).YLim(2));
+end
 for a = ax.'
     s = char(a.Title.String); a.Title.String = {'high', strtrim(erase(s, 'high'))};
+    a.Title.String{2} = regexprep(a.Title.String{2}, '(\d)-(\d)', ['$1' char(8211) '$2']);   % 2026-11-11: en dash in ranges, as elsewhere
     a.Title.FontSize = 7.5;
 end
 for a = ax(2:end).'
@@ -250,6 +266,7 @@ h = ln(arrayfun(@(l) numel(l.XData) == 2 && abs(diff(l.YData)) < 1e-9 && abs(dif
 t5 = findall(a, 'Type', 'text', 'String', '5%'); t1 = findall(a, 'Type', 'text', 'String', '1 s');
 dx = diff(a.XLim) * 0.04; dy = diff(a.YLim) * 0.03;
 set(t5, 'Position', [v(1).XData(1) - dx, mean(v(1).YData)], 'Rotation', 90, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom');
+set(t5, 'String', ['5% ' char(916) 'F/F']);                       % 2026-11-11: the unit, as in the other boxes
 set(t1, 'Position', [mean(h(1).XData), h(1).YData(1) - dy], 'HorizontalAlignment', 'center', 'VerticalAlignment', 'top');
 % motion tile: "z-motion" under its grey trace, not on it
 a = ax(2); tz = findall(a, 'Type', 'text', 'String', 'z-motion');

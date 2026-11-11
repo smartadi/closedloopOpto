@@ -115,10 +115,10 @@ ax2.XAxis.TickLabelColor = 'k';
 % ---- text and scale bars
 ov = axes(fig, 'Units', 'centimeters', 'Position', [0 0 Wp Hp], 'XLim', [0 Wp], 'YLim', [0 Hp], 'Visible', 'off'); hold(ov, 'on');
 B = {'FontSize', FA, 'FontWeight', 'bold'};
-for j = 1:nS
-    text(ov, x00 + (j - 1) * dx + W / 2, top + 0.03, lab{j}, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', ...
-        'FontSize', FA, 'Color', gry);
-end
+% one label over the row instead of the 12 session names (Aditya 2026-11-11, after a visitor read M1c...M2d as
+% stimulation sites: "lets say sessions and remove the sessions name taglines"); maps stay in paper-label order
+text(ov, (x00 + R) / 2, top + 0.03, 'Sessions', 'HorizontalAlignment', 'center', 'VerticalAlignment', 'bottom', ...
+    'FontSize', FA, 'Color', gry);
 for c = 1:2
     text(ov, x00 - 0.06, yB(c) + Hh / 2, cn{c}, 'HorizontalAlignment', 'right', 'VerticalAlignment', 'middle', ...
         'FontSize', FL + 0.5, 'FontWeight', 'bold', 'Color', cc{c});
