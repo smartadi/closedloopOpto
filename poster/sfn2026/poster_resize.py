@@ -5,9 +5,11 @@
 Aditya: "make 48 by 36 versions. first check with sfn poster guidlines". SfN 2026 boards are 6 ft wide x 4 ft
 high (sfn.org, Neuroscience 2026 > Poster Sessions), so 48 x 36 in landscape fits. Run on the finished poster
 (after heading_fit.py). Words, type sizes and panels are the input's.
-- Header: the purple band and its gold rule end at the new right margin. The lab logo and QR code move left
-  with the right edge. Title, authors and affiliation are centred in the gap between the NSF logo and the
-  lab logo (the slide centre would put the 23.75 in first title line against the lab logo).
+- Header: the purple band and its gold rule end at the new right margin. Everything on the band (logos, QR
+  code, title, authors, affiliation, with their type) shrinks by the band's width ratio hs about the band's
+  left edge and vertical centre, so the header keeps its arrangement (48 in: hs = 0.886, title 76 -> 67 pt).
+  For v9 and later run it before poster_ack.py, which then fits the Acknowledgements into column 2 at the new
+  width and puts the RAIN Lab logo beside the UW signature at the signature's scale (approved 2026-11-11).
 - Body: each column narrows by its factor g (default: all three alike, so the columns, the gutters GUTTER
   and the margins fill the width). Inside a column every position and every picture scales by g about the
   column's top left, so panels keep their shape and their type shrinks by g. Text keeps its size: text boxes
@@ -24,12 +26,12 @@ import win32com.client as w
 from pptx import Presentation
 from pptx.util import Emu, Inches
 
+from poster_clean import scale_text
+
 E = 914400
 GUTTER = 1.2                      # in, between columns
 BODY_TOP, BODY_BOT = 4.82, 35.32  # in
 HEADS = ('Introduction bar', 'Results bar', 'Conclusions bar')
-RIGHT = ('lab logo', 'Graphic 7')
-TITLE = ('title', 'authors', 'affiliation')
 
 
 def measure(path, names):
@@ -89,16 +91,25 @@ def main(src, dst, width, g=None):
     for gc, wc in zip(g[:2], wid[:2]):
         left.append(left[-1] + int(gc * wc) + Inches(GUTTER))
 
-    # ---- header
+    # ---- header: the band and its gold rule end at the new right margin; everything on the band (logos, QR
+    # code, title, authors, affiliation, type included) shrinks by hs, the band's width ratio, about the band's
+    # left edge and its vertical centre, so the header looks as it did, only narrower (v9 at 48 in, approved
+    # 2026-11-11: the RAIN Lab logo and the title would not both fit at full size)
     prs.slide_width = Inches(width)
+    band = by['header']
+    hs = (band.width + dW) / band.width
+    cy = band.top + band.height / 2
+    for sh in sl.shapes:
+        if sh.top / E > 4.6 or sh.name in ('header', 'header gold rule'):
+            continue
+        sh.left = Emu(int(m + (sh.left - m) * hs))
+        sh.top = Emu(int(cy + (sh.top - cy) * hs))
+        sh.width, sh.height = Emu(int(sh.width * hs)), Emu(int(sh.height * hs))
+        if sh.has_text_frame:
+            scale_text(sh._element, hs)
     for n in ('header', 'header gold rule'):
         by[n].width = by[n].width + dW
-    for n in RIGHT:
-        by[n].left = by[n].left + dW
-    x0 = by['NSF logo'].left + by['NSF logo'].width + Inches(0.3)
-    x1 = by['lab logo'].left - Inches(0.3)
-    for n in TITLE:
-        by[n].left, by[n].width = x0, x1 - x0
+    print(f'header x{hs:.3f}')
 
     # ---- body: narrow each section about its column's top left. Bar rows (heading bars, their gold rules)
     # keep their height; the vertical space between them scales by g like the pictures.

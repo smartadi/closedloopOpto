@@ -4,8 +4,8 @@
 
 Aditya (2026-11-11): "add an acknowledgement section putting nsf(instead of up top) in there and thank TDPA for
 conference funding support funding", "please thank lilly(i put thier logo in downloads)", "add rain lab logo
-too i guess". Layout approved 2026-11-11 ("Approve"). Run after heading_fit.py, on the 54 x 36 in poster (he
-kept 54 x 36: at 48 in the columns could not be balanced without dropping the panel type below the poster floor).
+too i guess". Layout approved 2026-11-11 ("Approve"). Run after heading_fit.py, on the 54 x 36 in poster, or
+after poster_resize.py for the 48 x 36 in version (Aditya 2026-11-11: "make a 48 by 36 version of v9").
 - Header: the NSF logo leaves the header for the new section. In its place goes the RAIN Lab logo, the white
   horizontal version from Aditya's RAIN-Lab-logos.zip (2026-11-11; panels/rain-lab-logo-white.svg, vector,
   with its 2000 x 365 px PNG as the fallback picture, as PowerPoint stores SVGs), RAIN_H high, centred on the
@@ -19,7 +19,9 @@ kept 54 x 36: at 48 in the columns could not be balanced without dropping the pa
   boxes 3-5 (kept at full size), h_ack the new section's height (bar, pad, then the taller of the measured
   text and the NSF logo) and P the height below the bars in boxes 3-5. Column 2's pictures, and the space
   between them, scale by K about the column's centre line; the four sections stack with gaps GAP. The script
-  stops if K < 0.90 (panel ticks would fall below the poster's 17.8 pt floor).
+  stops if K < 0.90 (at 54 in, panel ticks would fall below the poster's 17.8 pt floor). K is relative to the
+  input: at 48 in the input is already x0.897, so K = 0.990 prints column 2 at x0.888 of 54 in v8 (ticks about
+  17.5 pt). If K > 1 (room to spare), K = 1 and the gaps take the rest (approved 2026-11-11).
 """
 import copy
 import os
@@ -42,7 +44,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LILLY = os.path.join(HERE, 'panels', 'lilly_logo.jpg')
 RAIN_PNG = os.path.join(HERE, 'panels', 'rain-lab-logo-white.png')
 RAIN_SVG = os.path.join(HERE, 'panels', 'rain-lab-logo-white.svg')
-RAIN_H = 1.15                     # in: its capitals about as tall as STEINMETZ LAB's
+RAIN_H = 1.15 / 2.75              # x the UW signature's height (1.15 in at 54 in: capitals about as tall as
+                                  # STEINMETZ LAB's); scales with the header at other widths (approved 2026-11-11)
 SVGNS = 'http://schemas.microsoft.com/office/drawing/2016/SVG/main'
 E = 914400
 BODY_TOP, BODY_BOT = 4.82, 35.32  # in
@@ -88,6 +91,7 @@ def add_svg(pic, path):
 
 def copy_shape(sl, sh, name):
     el = copy.deepcopy(sh._element)
+    el.nvSpPr.cNvPr.id = sl.shapes._next_shape_id          # a fresh id: copies kept the original's (found 2026-11-11)
     sl.shapes._spTree.append(el)
     new = sl.shapes[-1]
     new.name = name
@@ -105,7 +109,7 @@ def main(src, dst):
     # ---- header: RAIN Lab logo where the NSF logo was
     band, uw, nsf = by['header'], by['UW logo'], by['NSF logo']
     w0, h0 = Image.open(RAIN_PNG).size
-    rh = Inches(RAIN_H)
+    rh = int(uw.height * RAIN_H)
     rain = sl.shapes.add_picture(RAIN_PNG, uw.left + uw.width + Inches(0.45), int(band.top + (band.height - rh) / 2),
                                  int(rh * w0 / h0), rh)
     rain.name = 'RAIN lab'
@@ -167,6 +171,10 @@ def main(src, dst):
     F = sum(i[4] for i in info)
     P = sum(i[2] - i[4] for i in info)
     K = (A - F - h_ack - 3 * Inches(GAP)) / P
+    gap = Inches(GAP)
+    if K > 1:                                             # room to spare (48 in): panels keep their size, gaps grow
+        K = 1.0
+        gap = (A - F - h_ack - P) / 3
     assert 0.9 <= K <= 1.0, f'column 2 would shrink to {K:.3f}'
     cx = cL + cW / 2
     y = Inches(BODY_TOP)
@@ -179,13 +187,13 @@ def main(src, dst):
             if not fixed(sh):
                 sh.left = Emu(int(cx + (sh.left - cx) * K))
                 sh.width, sh.height = Emu(int(sh.width * K)), Emu(int(sh.height * K))
-        y += int(keep + (h - keep) * K) + Inches(GAP)
+        y += int(keep + (h - keep) * K) + int(gap)
     bar.top = Emu(int(y))
     rule.top = Emu(int(y + off))
     c0 = y + bar.height + Inches(PAD)
     for sh in (text, nsf, lilly):
         sh.top = Emu(int(c0 + (body - sh.height) / 2))
-    print(f'column 2: pictures x{K:.3f}, gaps {GAP} in, Acknowledgements {h_ack / E:.2f} in high, '
+    print(f'column 2: pictures x{K:.3f}, gaps {gap / E:.2f} in, Acknowledgements {h_ack / E:.2f} in high, '
           f'ends {(y + h_ack) / E:.2f} in')
     print(f'RAIN lab logo {rain.width / E:.2f} x {rain.height / E:.2f} in at x {rain.left / E:.2f} in; '
           f'Lilly logo {lilly.width / E:.2f} x {lilly.height / E:.2f} in')

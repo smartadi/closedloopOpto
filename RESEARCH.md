@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v9 at 48 × 36 in, built in scratch (not in OneDrive)
+**Changed/Found:** OneDrive v9 → no edits to carry (entry below), so scratch v9 (before `poster_ack.py`) → `poster_resize.py … 48` → `poster_ack.py` → `poster_pdf.py` gives `v9_48.pptx` (8063709 bytes, md5 30e3f9a1…) and `SfN2026_poster_v9_48x36.pdf` (16910554 bytes, md5 5624c4be…, 48.0 × 36.0 in). Header ×0.886 (title 67.3 pt, authors 36.3 pt, QR 2.65 in square, RAIN Lab logo 5.58 × 1.02 in at x 6.37 in). Columns ×0.897 (gutters 1.2 in); column 2 then ×0.990 for the Acknowledgements (2.98 in high, gaps 0.90 in, ends at 35.32 in). Gaps: column 1 1.71 in, column 3 0.84 in. PowerPoint: no text box overflows; shape ids unique. Panel tick labels (7 pt × 2.97 × 0.95 × scale): columns 1 and 3 about 17.7 pt, column 2 about 17.5 pt, all under the 17.8 pt poster floor by 0.1–0.3 pt (54 in: 19.75 pt in columns 1 and 3, 17.9 pt in column 2). The 54 × 36 v9 stays the main version.
+**Why:** Aditya: "make a 48 by 36 version of v9".
+**Next:** Save to OneDrive (pptx + PDF, as `SfN2026_poster_v9_48x36.*`) only on his OK. Column 1's 1.71 in gap is the largest; filling it would mean enlarging column 1's panels, his call.
+
+### 2026-11-11 — `poster_ack.py`: RAIN logo sized from the UW signature, fresh shape ids, K capped at 1
+**Changed/Found:** `poster/sfn2026/poster_ack.py`: (1) the RAIN Lab logo's height is RAIN_H = 1.15/2.75 × the UW signature's height (1.15 in at 54 in, unchanged there; 1.02 in at 48 in), placed 0.45 in right of the signature, so it follows the header's scale. (2) `copy_shape` gives the copied Acknowledgements bar and rule a new cNvPr id (`_next_shape_id`); before, they kept the Conclusions bar's ids (the duplicate ids PowerPoint Online renumbered in v9). (3) If K > 1 (room to spare) K = 1 and the three gaps take the rest. Docstring says K is relative to its input (at 48 in the input is already ×0.897). Layout approved by Aditya 2026-11-11: "Approve".
+**Why:** The 48 × 36 version: at 48 in the header shrinks, and column 2 has a different amount of room.
+**Next:** none.
+
+### 2026-11-11 — `poster_resize.py`: the header scales with the width
+**Changed/Found:** `poster/sfn2026/poster_resize.py`: the purple band and its gold rule end at the new right margin, and every shape on the band (UW signature, QR code, Steinmetz Lab logo, title, authors, affiliation) scales by hs = new band width / old band width about the band's left edge and vertical centre, type included (`scale_text` from `poster_clean.py`). At 48 in hs = 0.886 (band 52.65 → 46.65 in, title 76 → 67.3 pt). Before, the lab logo and QR code moved left at full size and the title was centred between the NSF logo and the lab logo; with the RAIN Lab logo beside the UW signature, the full-size title no longer fitted. Approved by Aditya 2026-11-11: "Approve".
+**Why:** At 48 in the RAIN Lab logo and the full-size title would not both fit in the band.
+**Next:** none.
+
 ### 2026-11-11 — v9 online re-save: no edits; duplicate shape ids from `poster_ack.py`
 **Changed/Found:** OneDrive v9.pptx changed at 12:01 (8063688 → 8550832 bytes, md5 f91a09b0…) after Aditya opened it. Against v9 as saved: same shapes, same paragraph text and positions; only PowerPoint Online housekeeping (spell-check `err` runs merged in the Introduction and box 8 bullets) and two renumbered ids: `copy_shape` in `poster_ack.py` copies the Conclusions bar and rule with their cNvPr ids (74, 75), so the slide held duplicate ids, which PowerPoint Online renumbered (4, 9). Harmless here, but the copy should take a new id.
 **Why:** Aditya asked for "a 48 by 36 version of v9"; his online copy has to be checked for edits first.
