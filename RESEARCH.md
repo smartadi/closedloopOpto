@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — Poster at 48 × 36 in tried, kept at 54 × 36 in
+**Changed/Found:** SfN 2026 poster boards are 6 ft wide × 4 ft high (sfn.org, Neuroscience 2026 › Poster Sessions; Neuroscience 2026 FAQ "Poster boards are 6 feet (1.8m) wide and 4 feet (1.2m) high."), so 54 × 36 and 48 × 36 in both fit; no maximum print size is stated. New `poster/sfn2026/poster_resize.py <in> <out> <width_in>` narrows each column by g (panels and positions scale by g, type stays, text rewraps, text heights measured in PowerPoint) and restacks each column with equal gaps. At 48 in (g = 0.897, gutters 1.2 in): gaps 1.71 / 2.74 / 0.84 in for columns 1 / 2 / 3; text heights rose (Introduction 4.84 → 5.84 in, boxes 6–8 bullets +0.50 in each, Conclusions 3.84 → 4.34 in); panel ticks would print at about 17.7 pt (7 pt × 2.97 × 0.95 × 0.897), at the 17.8 pt poster floor. Equal gaps would need column 3 below g = 0.9, so the type floor rules it out. The PDF export of this pass was stopped by Aditya before it finished.
+**Why:** Aditya: "make 48 by 36 versions. first check with sfn poster guidlines", then "lets keep 54 by 36 if it gives bette fits".
+**Next:** none; `poster_resize.py` stays for any other width.
+
 ### 2026-11-11 — SfN poster v8 in OneDrive, with its full-resolution PDF
 **Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v8.pptx` (8099941 bytes, md5 b89f9188…) and `SfN2026_poster_v8.pdf` (17024028 bytes, md5 d2d8c375…), both OneDrive state 2 at 10:45. Before saving, the OneDrive v7 was unchanged since the build (md5 c86b3104…). v3–v7 untouched (md5 checked). Box 7's third bullet is his wording; suggested wordings A/B were not used.
 **Why:** Aditya: "Yes, save v8".
