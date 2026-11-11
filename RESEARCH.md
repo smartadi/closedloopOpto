@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v11 at 48 × 36 in built in scratch (not in OneDrive)
+**Changed/Found:** Same chain as v10 (`build_48.sh` → `poster_box2_48.py build` → `poster_pdf.py`) with the new box 8 panel below. Scratch `f48k.pptx` (8609600 bytes, md5 ab28eb22…) and `SfN2026_poster_v11_48x36.pdf` (16936502 bytes, md5 5f7f9e2b…, 23 pictures). Diff against OneDrive v10: only `panel d_kernel` changed (now 3.09 × 2.80 in at x 31.58 in; v10's diagram was 4.00 × 2.82 in at x 31.13 in). Column 1 gaps 0.89 in, as in v10. PowerPoint: no text box overflows. OneDrive v10 pptx md5 still 38db92f6…, so no online edits to carry.
+**Why:** Aditya's box 8 request (entry below).
+**Next:** Save to OneDrive as v11 (pptx + PDF) only on his OK; never over v10.
+
+### 2026-11-11 — Box 8: original ridge weights back as small dots, new title (`poster_restyle.m` fix_d_kernel_dots)
+**Changed/Found:** `poster_restyle.m`: `T.d_kernel` now uses `fix_d_kernel_dots`, which replaces `fix_d_kernel_diagram` (v10). It keeps the paper map from `figure4/f4_kernel_map.fig` (all 408 ridge weights, same colour scale ±0.16, same values) and only shrinks each dot to 0.75 of the grid step, the rule box 5 uses: step 13 px = 1.46 pt, dot 1.10 pt across. The axes title is replaced by "Contra-to-ipsi prediction model" (8 pt, regular, left-aligned, drawn on an overlay axes in cm because the axes title moved after placement). The colour bar is shortened from the top so it clears the title; the map axes position is restored afterwards (asserted). No weights dropped or thresholded: display only.
+**Why:** Aditya: "on the kernel map prediction brain map make the title(ipsi to control prediction model), bring back the original kernel make but make it more sparse"; he picked "C: all, small dots" and the title "Contra-to-ipsi prediction model". Gaps between dots make the map read as sparse without changing what it shows.
+**Next:** none, unless he wants the lasso (truly sparse) fit, which would need a refit in `ctrl_ols_spont.m` and would differ from the ridge model in the next panel.
+
 ### 2026-11-11 — SfN poster v10 (48 × 36 in) saved to OneDrive
 **Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v10_48x36.pptx` (8454497 bytes, md5 38db92f6…) and `SfN2026_poster_v10_48x36.pdf` (16615259 bytes, md5 1d8f31f5…), the scratch build in the entry below, unchanged. Before saving, OneDrive v9 (md5 f91a09b0…) and v9_48x36 (md5 30e3f9a1…) were unchanged since they were saved, so there were no online edits to carry; v3–v9 untouched.
 **Why:** Aditya: "Yes, save v10".
