@@ -19,6 +19,11 @@ Then (Aditya 2026-11-10: "Move the exogenous inputs and parameters to the right,
 next to the camera or in the same block to keep widefield architerure true"): exogenous inputs and parameters
 enter the cortex from the right; the LEDs sit beside the camera under the image, their 470/405 nm light going
 up into the cortex along the camera's path. The image moves 6 mm left (IX 98 -> 92) to make room on the right.
+Then (Aditya 2026-11-10: "the camera green with an arrow from brain towards camera, the leds blue and violet
+from camera to brain arrow direction, but they dont all go to the primary spot they go from cmaera/led block to
+the boundary of brain image showing that this is captureing entire brain"): the green, blue and violet beams run
+between the image's lower edge and the camera/LED unit (now centred under the image), with arrowheads: green
+down into the camera, blue and violet up into the cortex. The readout square and stimulation dot stay on the image.
 """
 import json
 import sys
@@ -31,7 +36,7 @@ from build_panels import ARIAL
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'panels' / 'poster'
 FRAME = HERE / 'panels' / 'frame.pdf'
-W, H = 137.5, 66.5                   # H: the LEDs' label + 1 mm (v7; was 57)
+W, H = 137.5, 70.0                   # H: the LEDs' label + 1 mm (v7; was 57)
 FS = 7.5 * 25.4 / 72                 # 7.5 pt in mm
 SUB = 0.75 * FS
 LINE, BOX = 0.7, 0.5                 # stroke widths (mm); JN Fig 1E used 0.35 and 0.25
@@ -89,10 +94,21 @@ def circle(x, y, r=3.0):
     els.append(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#fff" stroke="{C}" stroke-width="{BOX}"/>')
 
 
-def beam(pts, color, w=1.3):
+def beam(pts, color, w=1.3, arrow=False):
+    """A light path; arrow=True ends it in an arrowhead of its own colour (the line stops at the head's base)."""
+    if arrow:
+        (x1, y1), (x2, y2) = pts[-2], pts[-1]
+        L = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
+        ux, uy = (x2 - x1) / L, (y2 - y1) / L
+        a, b = 2.4, max(1.15, 1.1 * w)
+        bx, by = x2 - a * ux, y2 - a * uy
+        els.append(f'<path d="M{x2:.2f},{y2:.2f} L{bx - b * uy:.2f},{by + b * ux:.2f} L{bx + b * uy:.2f},{by - b * ux:.2f} Z"'
+                   f' fill="{color}" fill-opacity="0.9"/>')
+        pts = pts[:-1] + [(bx + 0.3 * ux, by + 0.3 * uy)]
     p = ' '.join(f'{x:.2f},{y:.2f}' for x, y in pts)
+    cap = 'butt' if arrow else 'round'
     els.append(f'<polyline points="{p}" fill="none" stroke="{color}" stroke-width="{w}" stroke-linejoin="round"'
-               f' stroke-linecap="round" stroke-opacity="0.9"/>')
+               f' stroke-linecap="{cap}" stroke-opacity="0.9"/>')
 
 
 def image_geometry():
@@ -185,19 +201,20 @@ def build():
             text(W - 0.6, y - 1.2 - i * 1.15 * FS, nm, anchor='end')
         assert W - 0.6 - width(max(names, key=width)) > IX + S + 0.5, f'{names} reaches the image'
 
-    # camera under the image, lens up, reading the readout site; the LEDs beside it light the cortex
-    # along the same path (widefield epi-illumination), their label under them
-    cw, ch, lw = 11.0, 7.0, 12.0
-    cx0, cy0 = sx - cw / 2, IY + S + 3.6
+    # camera and LEDs as one unit centred under the image (widefield epi-illumination): the LEDs' blue and
+    # violet light goes up to the image's edge, the green emission comes down from it into the camera. The
+    # beams stop at the edge, not at the readout square: the camera images the whole cortex.
+    cw, ch, lw, gap = 11.0, 7.0, 12.0, 0.6
+    cx0, cy0 = IX + (S - cw - gap - lw) / 2, IY + S + 7.0
     dark_block(cx0, cy0, cw, ch, 'camera', nub='top')
-    beam([(sx, sy + 1.0), (sx, cy0 - 1.7)], GREEN)
-    lx0 = cx0 + cw + 0.6
+    xc, edge = cx0 + cw / 2, IY + S
+    beam([(xc, edge), (xc, cy0 - 1.6)], GREEN, arrow=True)
+    lx0 = cx0 + cw + gap
     dark_block(lx0, cy0, lw, ch, 'LEDs')
     text(lx0 + lw / 2, cy0 + ch + 1.15 * FS, '470/405 nm', anchor='middle')
     for j, col in enumerate((BLUE, VIOLET)):
-        xl = lx0 + 1.4 + 1.2 * j
-        assert xl < IX + S - 0.4, 'LED light misses the image'
-        beam([(xl, cy0), (xl, IY + S - 5.0)], col, w=0.9)
+        xl = lx0 + lw / 2 - 1.3 + 2.6 * j
+        beam([(xl, cy0), (xl, edge)], col, w=0.9, arrow=True)
     assert cy0 + ch + 1.15 * FS + 1.0 <= H, f'LED label ends at {cy0 + ch + 1.15 * FS:.1f} mm'
 
     # dF/F back to the controller: left from the camera, up at xv, along the feedback row

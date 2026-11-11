@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-10 — Poster box 1: light paths to the image edge, with arrows
+**Changed/Found:** `poster/sfn2026/box1_diagram.py`: the camera and LEDs form one unit centred under the image, 7 mm below it. The green beam now runs from the image's lower edge down into the camera with an arrowhead; blue and violet run from the LEDs up to the image's lower edge with arrowheads. None of them goes to the readout square any more, so the drawing shows the camera imaging the whole cortex; the square and the stimulation dot stay on the image. `beam()` gained arrowheads in the beam's colour. Drawing 137.5 × 70 mm. Rebuilt v7 and its PDF; column gaps 0.98 / 1.17 / 0.98 in.
+**Why:** Aditya: "the camera green with an arrow from brain towards camera, the leds blue and violet from camera to brain arrow direction, but they dont all go to the primary spot they go from cmaera/led block to the boundary of brain image showing that this is captureing entire brain".
+**Next:** He picks the Introduction/Conclusions highlight style and says whether v7 goes to OneDrive.
+
 ### 2026-11-10 — Poster box 1: inputs from the right, LEDs beside the camera
 **Changed/Found:** `poster/sfn2026/box1_diagram.py`: "Exogenous inputs" and "Parameters" now enter the cortex image from the right, each name right-aligned above its arrow (they were on the left). The LEDs moved from the left of the image to beside the camera under it, their blue and violet light going up into the cortex along the camera's path, "470/405 nm" under them. The image moved 6 mm left (IX 98 → 92) and the laser block 3 mm left so the galvo mirror clears it (asserted). Drawing 137.5 × 66.5 mm. Rebuilt v7 (box 1 frame 9.46 in before the ×0.95; column gaps 1.18 / 1.17 / 0.98 in) and its full-resolution PDF.
 **Why:** Aditya: "Move the exogenous inputs and parameters to the right, move the leds to the bottom next to the camera or in the same block to keep widefield architerure true".
