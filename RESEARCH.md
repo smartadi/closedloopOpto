@@ -16,6 +16,11 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### 2026-11-11 — SfN poster v9 in OneDrive, with its full-resolution PDF
+**Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v9.pptx` (8063688 bytes, md5 3f9e566a…) and `SfN2026_poster_v9.pdf` (16910492 bytes, md5 e3c154a4…), both OneDrive state 2 at 11:58. Before saving, OneDrive v8 was unchanged since it was saved (md5 b89f9188…); v3–v8 untouched (md5 checked). v9 = v8 + Acknowledgements (NSF, SfN TPDA / Eli Lilly and Company Foundation, NSF and Lilly logos), RAIN Lab logo in the header, box 5 with only the change-in-correlation plot.
+**Why:** Aditya: "Yes, save v9".
+**Next:** If he edits v9 online, diff it against v9 as saved and carry the edits into the next version. Open: NSF award number, a sharper Lilly logo, box 6's R² (0.562), poster number, printing.
+
 ### 2026-11-11 — Poster header: RAIN Lab logo from Aditya's zip
 **Changed/Found:** `poster/sfn2026/poster_ack.py`: the gold text stand-in becomes the RAIN Lab logo, the white horizontal version from `Downloads/RAIN-Lab-logos.zip` (extracted to scratch; the SVGs hold only path shapes). `panels/rain-lab-logo-white.svg` is embedded as the picture's vector original with `rain-lab-logo-white.png` (2000 × 365 px) as the fallback, as PowerPoint stores SVGs (new `add_svg`). 6.30 × 1.15 in at x 7.04 in, centred on the title band. In the v9 PDF the logo is vector (133 path items, no image). Rebuilt v9 and its PDF.
 **Why:** Aditya: "rain lab logos in zip file i just downloaded".
