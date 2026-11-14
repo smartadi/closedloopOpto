@@ -13,7 +13,7 @@ function [POOL, meta] = f4_row2_pool(mouse, fields, motstat, statewin, withG)
 % States (RAW per trial), on the OL (nc) and CL (wc) buffers, both conditions:
 %   initdev = |dFk(onset) - ref|
 %   motion  = MEAN z-motion over the -2..+3 s window (PLAIN mean; see motstat)  [user 2026-10-02]
-%   delta   = cl_reldelta rel 2-4 Hz over -2 s -> stim end
+%   delta   = cl_reldelta rel 1-4 Hz over -2 s -> stim end
 %   absdelta = log10 abs 1-4 Hz power, same window
 % withG (default false; 2026-10-10): ALSO build Gdelta / Gabsdelta = the same two band-power
 %   states computed on the stim-blind contra-predicted Global G (f4_gstate_build.m caches,

@@ -18,7 +18,7 @@
 
 assert(exist('mouse','var') && exist('fields','var'), '[DRSTATE] run load_sessions.m first.');
 SESS = 1:numel(fields);  ref = -5;  c0=36; c1=71; c2=141;  dur = 3;   % all loaded sessions incl. new-rig (2026-09-07)
-% delta STATE = canonical relative 2-4 Hz power (cl_reldelta), PRIMARY across CL analyses (user 2026-09-08)
+% delta STATE = canonical relative 1-4 Hz power (cl_reldelta), PRIMARY across CL analyses (user 2026-09-08)
 if ~exist('DOPT','var') || isempty(DOPT); DOPT = struct('pre',2,'post',3); end
 colOL=[0.85 0.16 0.14]; colCL=[0.13 0.34 0.79];
 here_s = fileparts(mfilename('fullpath')); if isempty(here_s); here_s=fullfile(pwd,'controller-analysis'); end
@@ -45,7 +45,7 @@ for k = SESS
     % delta (pre-onset bins x 1-4 Hz bands). Prefer absolute ncFreqPow; these caches only carry the
     % NORMALIZED ncFreqSpec (power ratio), so fall back to it like trial_state_mse.m -- a delta-ratio
     % state index (rebuild caches with r_ctrl=0 for absolute power if a paper panel needs it).
-    % PRIMARY delta state: canonical relative 2-4 Hz from the buffered trace (cl_reldelta).
+    % PRIMARY delta state: canonical relative 1-4 Hz from the buffered trace (cl_reldelta).
     if isfield(d,'pncDfk_l') && ~isempty(d.pncDfk_l) && isfield(d,'pwcDfk_l') && ~isempty(d.pwcDfk_l)
         S.delta = {cl_reldelta(d.pncDfk_l,106,35,DOPT), cl_reldelta(d.pwcDfk_l,106,35,DOPT)};
     elseif isfield(d,'wcFreqSpec') && any(d.wcFreqSpec(:)) && isfield(d,'freqBandCtrs')

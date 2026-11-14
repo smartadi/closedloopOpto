@@ -1,5 +1,5 @@
 function [rel, comp] = cl_reldelta(P_l, onsetCol, Fs, opts)
-% CL_RELDELTA  Canonical closed-loop spectral STATE = relative 2-4 Hz power.
+% CL_RELDELTA  Canonical closed-loop spectral STATE = relative 1-4 Hz power.
 %
 % This is the PRIMARY closed-loop delta definition across all CL analyses
 % (user decision 2026-09-08). It is the exact predictor `Xrel` from
@@ -12,7 +12,7 @@ function [rel, comp] = cl_reldelta(P_l, onsetCol, Fs, opts)
 % where seg_t is the buffered readout trace of trial t over the window
 % [-pre, +post] s around onset, and bandpow = linear-detrend -> Hann window
 % -> one-sided periodogram -> sum of |FFT|^2 in [lo,hi). Numerator band is the
-% "hard-to-control" 2-4 Hz sub-band; denominator is total 0.4-10 Hz power, so
+% "hard-to-control" 1-4 Hz sub-band; denominator is total 0.4-10 Hz power, so
 % the ratio is power-INDEPENDENT (survives the 2026-07-01 signal-power control).
 %
 % INPUTS
@@ -25,13 +25,13 @@ function [rel, comp] = cl_reldelta(P_l, onsetCol, Fs, opts)
 %     .post  window end after onset,   s        (default 3 = stim end; dur=3)
 %            --> set .post = 0 for a PRE-STIM-ONLY window (avoids the state
 %                overlapping the outcome window in state-dependence analyses).
-%     .hi    numerator band, Hz  (default [2 4])
+%     .hi    numerator band, Hz  (default [1 4]; was [2 4] until 2026-11-14)
 %     .tot   denominator band, Hz (default [0.4 10])
 %
 % OUTPUTS
-%   rel   nTrials x 1 relative 2-4 Hz power (NaN for all-NaN/short segments).
+%   rel   nTrials x 1 relative 1-4 Hz power (NaN for all-NaN/short segments).
 %   comp  struct with the absolute sub-band powers used, per trial:
-%           .hipow (2-4 Hz), .totpow (0.4-10 Hz), .delta (1-4 Hz abs),
+%           .hipow (1-4 Hz), .totpow (0.4-10 Hz), .delta (1-4 Hz abs),
 %           .slow (0.4-1 Hz abs) -- the "other definitions", kept as secondary.
 %
 % See also cl_rmse_factor_windows, ctrl_distrej_quartiles, ctrl_distrej_statedep.
@@ -39,7 +39,7 @@ function [rel, comp] = cl_reldelta(P_l, onsetCol, Fs, opts)
 if nargin < 4 || isempty(opts), opts = struct; end
 if ~isfield(opts,'pre'),  opts.pre  = 2;        end
 if ~isfield(opts,'post'), opts.post = 3;        end
-if ~isfield(opts,'hi'),   opts.hi   = [2 4];    end
+if ~isfield(opts,'hi'),   opts.hi   = [1 4];    end   % was [2 4]; Aditya 2026-11-14 "do 1-4hz everywhere", L-2026-11-14-a
 if ~isfield(opts,'tot'),  opts.tot  = [0.4 10]; end
 % estimator: 'bins' (default, legacy) | 'continuous' (Fig 4) -- see utils/f4_bandpow.m
 if ~isfield(opts,'bandpow') || isempty(opts.bandpow), opts.bandpow = 'bins'; end

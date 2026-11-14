@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-14-a · Fig 4 MATLAB: relative power over 1-4 Hz, panels re-run on corrected onsets
+commit: 0c03f33+this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:** Relative power is bandpower(1-4 Hz) / bandpower(0.4-10 Hz) in the MATLAB Fig 4 code too: `hi_bnd = [1 4]` in `f4_state_exemplars.m`, `f4_state_exemplars_supp.m`, `f4_error_decomp.m` and `cl_rmse_factor_windows.m`, and the default of `utils/cl_reldelta.m`, so `f4_row2_quartiles.m`, `f4_row2_pool.m`, `f4_devmodel_supp.m`, `ctrl_distrej_*.m` and `trial_state_mse.m` follow. Labels and comments say 1-4 Hz. Math approved by Aditya 2026-11-13: "Yes keep this" (L-2026-11-13-c), and 2026-11-14: "replace with -2,0 window and do 1-4hz everywhere". Re-ran after `load_sessions` (corrected onsets applied by `ctrl_onset_fix`): `f4_error_decomp`, `f4_row2_quartiles`, `f4_state_exemplars`, `f4_state_exemplars_supp`, `f4_contra_model`.
+- Session slopes (`f4_row2_quartiles`), relative 1-4 Hz: OL +0.002 (p = 0.97), CL +0.134 (p = 0.025), CL/OL +7.4% [3.7, 11.2] per SD, p = 0.00065, Holm 0.0026, 12/15. Same as `stats_v2` `tests.csv` (L-2026-11-13-c).
+- Other states, CL/OL per SD: initial deviation -0.4% (p = 0.91), motion -12.9% [-19.3, -6.0] (p = 0.0023, Holm 0.0069, 11/11), absolute 1-4 Hz +6.7% (p = 0.094).
+- Quartile means (z RMSE, mean over sessions), Q1 to Q4: motion OL 0.16 / 0.38 / 0.39 / 0.74, CL -0.30 / -0.42 / -0.44 / -0.50; absolute 1-4 Hz OL 0.11 / 0.27 / 0.59 / 0.67, CL -0.70 / -0.65 / -0.36 / -0.05.
+- Unique R^2, 0-1 s, session mean [SEM], each power state in its own init + motion + state model: initial deviation 0.569 [0.055] (signed-rank p = 0.00049, 11/11 sessions > 0), relative 1-4 Hz 0.054 [0.025] (p = 0.051), absolute 1-4 Hz 0.099 [0.049] (p = 0.042). Over 1-3 s: absolute 1-4 Hz 0.129 [0.061] (p = 0.021), initial deviation 0.030 (p = 0.71). In the init + motion + absolute model, initial deviation is 0.425 [0.045]. The 2-4 Hz values of these were not logged.
+- `f4_state_exemplars`: 613 CL trials, full R^2 0.440. `f4_contra_model`: A = G + L, test R^2 0.75.
+**State:** panels in `paper/images/figure4/` and `paper/images/supplementary/` (gitignored), not yet assembled into JN Figure 4. Still at 2-4 Hz: the old exploratory scripts `cl_factor_*.m`, `f4_delta_candidates.m`, `f4_lowfreq_examples.m`, `internal_model_principle.m`, `imp_state_across_sessions.m`; `f4_partB_panels.m` now computes 1-4 Hz through `cl_reldelta` but its labels still say 2-4 Hz. Not pushed.
+**Resume:** `load_sessions; f4_error_decomp; f4_row2_quartiles; f4_state_exemplars; f4_state_exemplars_supp; f4_contra_model`.
+
 ### L-2026-11-13-b · Fig 2G state window knobs: [-2,0) and [-3,0) s, 1-4 Hz, previous-pulse exclusion
 commit: 7deeddf+this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:** Math approved by Aditya 2026-11-13: "-3 to 0" (the [-3,0) s block), "Try shorter window for figure 2" ([-2,0) s), and for the 1-4 Hz band of both power measures "Yes keep this". Trial exclusion approved the same day (Hub control brief): drop a trial with a laser onset of either spot in [state start - control length - 0.77 s, onset).

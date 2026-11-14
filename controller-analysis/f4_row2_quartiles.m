@@ -13,7 +13,7 @@
 %   initdev = |dFk(onset) - ref|
 %   motion  = MEAN z-motion over -2 s -> stim end (f4_motion_stat; set F4_MOT_STAT='sq'
 %             before running for the mean-square secondary)
-%   delta   = cl_reldelta rel 2-4 Hz over -2 s -> stim end
+%   delta   = cl_reldelta rel 1-4 Hz over -2 s -> stim end
 % Outcome = disturbance-rejection RMSE to ref over [+1,+3] s (settled window),
 % z-scored within session across the combined OL+CL trials (removes session
 % baseline, keeps the OL-vs-CL level difference).
@@ -68,7 +68,7 @@ fprintf('[F4R2] state window: %s\n', W_state.label);
 relopts = struct('pre',2,'post',3,'rel_idx',W_state.spec,'bandpow',W_state.bandpow);   % window from f4_state_window
 colOL = PS.col_ol; colCL = PS.col_cl;
 preds = {'initdev','motion','delta','absdelta'};
-titR2 = {'Initial deviation','Motion','Rel 2-4 Hz','Abs 1-4 Hz'};
+titR2 = {'Initial deviation','Motion','Rel 1-4 Hz','Abs 1-4 Hz'};
 titCol = [0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];  % init,motion,rel,abs -> match state exemplars/decomp
 fnout = {'f4_2A_initdev.pdf','f4_2B_motion.pdf','f4_2C_delta.pdf','f4_2D_absdelta.pdf'};
 

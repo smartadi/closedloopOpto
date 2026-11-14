@@ -11,7 +11,7 @@
 %   outcome  = RMSE of residual over early (0-1 s) / late (1-3 s)
 %   X1 = |residual(onset)|      (init dev FROM THE MEAN, not from ref)
 %   X2 = mean rectified motion  (unchanged -- a separate behavioural channel)
-%   X3 = rel 2-4 Hz             (unchanged -- a ratio, ~invariant to mean subtraction)
+%   X3 = rel 1-4 Hz             (unchanged -- a ratio, ~invariant to mean subtraction)
 %
 % PRIMARY (RMSE-to-ref, f4_partB_panels.m) is UNTOUCHED; this is a supplement.
 % Output: paper/images/figure4/f4_1S_devmodel.pdf  + console compare to primary.
@@ -28,7 +28,7 @@ outdir = fullfile(paper_root,'images','figure4');
 Fs=35; c0=36; c0_mot=71; c0_l=106; mot_pre=2; relopts=struct('pre',2,'post',3);
 eE = c0:c0+round(1*Fs); lL = c0+round(1*Fs)+1:c0+round(3*Fs);
 col = [0.20 0.40 0.75; 0.75 0.40 0.10; 0.55 0.25 0.60];
-pred_names = {'Initial dev','Motion','Rel 2-4 Hz'}; staten={'init dev','motion','2-4 Hz'};
+pred_names = {'Initial dev','Motion','Rel 1-4 Hz'}; staten={'init dev','motion','1-4 Hz'};
 fitR2 = @(Xp,yp) 1 - sum((yp-[ones(size(Xp,1),1),Xp]*([ones(size(Xp,1),1),Xp]\yp)).^2)/max(sum((yp-mean(yp)).^2),eps);
 
 %% ── Pool CL trials; residualize against the session trial-average ────────────

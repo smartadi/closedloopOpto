@@ -1,5 +1,5 @@
 % controller-analysis/f4_state_exemplars_supp.m
-% SUPPLEMENTARY: the four state exemplars (high init-dev / motion / rel 2-4 Hz / abs delta)
+% SUPPLEMENTARY: the four state exemplars (high init-dev / motion / rel 1-4 Hz / abs delta)
 % shown for EVERY motion session, so the reader can see the exemplar pattern is not specific to
 % the one representative session used in main Fig 4A. Grid: rows = sessions, cols = 4 states.
 % Best exemplar per state PER SESSION (max specificity, z within that session). Same colours as
@@ -16,10 +16,10 @@ if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; en
 if ~exist('F4_STATE_WIN','var') || isempty(F4_STATE_WIN), F4_STATE_WIN = 'peri'; end
 W_state = f4_state_window(F4_STATE_WIN);
 fprintf('[f4_state_exemplars_supp] state window: %s\n', W_state.label);
-delta_bnd=[1 4]; hi_bnd=[2 4]; tot_bnd=[0.4 10];
+delta_bnd=[1 4]; hi_bnd=[1 4]; tot_bnd=[0.4 10];   % rel numerator 1-4 Hz since 2026-11-14 (Aditya: "do 1-4hz everywhere"; was [2 4]), L-2026-11-14-a
 bp=@(seg,lo,hi) f4_bandpow(seg,Fs,lo,hi,W_state.bandpow);   % shared estimator
 col=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];
-lbl={'high initial deviation','high motion','high rel 2-4 Hz','high abs 1-4 Hz'};
+lbl={'high initial deviation','high motion','high rel 1-4 Hz','high abs 1-4 Hz'};
 
 % ---- collect per-session exemplar picks ----
 sessMn={}; picks={}; segs={}; mcount=containers.Map('KeyType','char','ValueType','double');

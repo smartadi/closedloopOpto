@@ -45,7 +45,7 @@ if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; en
 c0_l    = 106;   % onset col, pwcDfk_l
 mot_pre = 2;
 spec_pre_s = 2; spec_post_s = 3;        % delta window: -2 -> stim end (dur=3)
-slow_bnd = [0.4 1]; delta_bnd = [1 4]; hi_bnd = [2 4]; tot_bnd = [0.4 10];
+slow_bnd = [0.4 1]; delta_bnd = [1 4]; hi_bnd = [1 4]; tot_bnd = [0.4 10];   % rel numerator 1-4 Hz since 2026-11-14 (Aditya: "do 1-4hz everywhere"; was [2 4]), L-2026-11-14-a
 
 % RMSE sub-windows (cols in wcDfk, non-overlapping)
 eE = c0 : c0+round(1*Fs);               % 0 -> 1 s
@@ -101,7 +101,7 @@ for k = 1:numel(fields)
         pt = bandpow(seg, tot_bnd(1),   tot_bnd(2));
         xdel(t)  = pd;
         xslow(t) = ps;
-        xrel(t)  = bandpow(seg,hi_bnd(1),hi_bnd(2)) / max(pt, eps);  % relative 2-4 Hz (hard-to-control sub-band)
+        xrel(t)  = bandpow(seg,hi_bnd(1),hi_bnd(2)) / max(pt, eps);  % relative 1-4 Hz (hard-to-control sub-band)
         % ^ CANONICAL CL delta state. utils/cl_reldelta.m is the extracted, verified-identical
         %   version other CL scripts call -- keep the two in sync if this line changes.
         xpre(t)  = bandpow(pseg, delta_bnd(1), delta_bnd(2));  % delta, pre-stim only
@@ -129,8 +129,8 @@ fprintf('\n[cl_rmse_factor_windows] %d valid CL trials.\n', n);
 
 % Predictor matrices (X1 raw, X2 raw energy [matches cl_mse_factors], X3 = log10 delta)
 Ld = log10(Xdel);                            % kept for the robustness panel
-Zabs = zscore([X1, X2, Xrel]);               % primary model -- RELATIVE 2-4 Hz (power-independent)
-pred_names = {'Initial dev','Motion','Rel 2-4 Hz'};
+Zabs = zscore([X1, X2, Xrel]);               % primary model -- RELATIVE 1-4 Hz (power-independent)
+pred_names = {'Initial dev','Motion','Rel 1-4 Hz'};
 
 %% ── Collinearity ─────────────────────────────────────────────────────────────
 R = corr([X1 X2 Ld]);
@@ -278,7 +278,7 @@ hold(ax,'off');
 % Session count was hardcoded '9' until 2026-08-13 -- it had been true when written and silently
 % went stale as sessions were added/removed. Compute it, so the title cannot lie again.
 title(tl, sprintf(['CL error factors by window  (n=%d trials, %d sessions)   ' ...
-    'delta = RELATIVE power 2-4 Hz / 0.4-10 Hz, -2 s to stim end'], n, numel(unique(SESS))), ...
+    'delta = RELATIVE power 1-4 Hz / 0.4-10 Hz, -2 s to stim end'], n, numel(unique(SESS))), ...
     'FontSize',7,'FontWeight','bold');
 
 paperExport(fig, fullfile(paper_root,'images','figure4','cl_rmse_factor_windows.png'));

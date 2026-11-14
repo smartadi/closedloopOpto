@@ -1,6 +1,6 @@
 % controller-analysis/f4_state_exemplars.m
 % Fig-4 ROW 1 composite -- pre-stimulus state -> CL tracking error.
-%   tiles 1-4  exemplar CL trials, one per pre-stim state (high init-dev / motion / rel 2-4 Hz /
+%   tiles 1-4  exemplar CL trials, one per pre-stim state (high init-dev / motion / rel 1-4 Hz /
 %              abs delta), each SPECIFIC to that state (high in it, low in the others). Scale-bar
 %              (shortCornerAxes_plot) axes; the state COLOUR is shared with the R^2 bar (tile 6).
 %   tile 5     the representative error model equation (RMSE ~ the four states), terms colour-coded.
@@ -21,7 +21,7 @@ if ~exist('F4_MOT_STAT','var') || isempty(F4_MOT_STAT), F4_MOT_STAT = 'mean'; en
 if ~exist('F4_STATE_WIN','var') || isempty(F4_STATE_WIN), F4_STATE_WIN = 'peri'; end
 W_state = f4_state_window(F4_STATE_WIN);
 fprintf('[f4_state_exemplars] state window: %s\n', W_state.label);
-delta_bnd=[1 4]; hi_bnd=[2 4]; tot_bnd=[0.4 10];
+delta_bnd=[1 4]; hi_bnd=[1 4]; tot_bnd=[0.4 10];   % rel numerator 1-4 Hz since 2026-11-14 (Aditya: "do 1-4hz everywhere"; was [2 4]), L-2026-11-14-a
 bp=@(seg,lo,hi) f4_bandpow(seg,Fs,lo,hi,W_state.bandpow);   % shared estimator
 
 % ---- pool CL trials: 4 states + outcome (rejection RMSE), aligned per trial ----
@@ -49,7 +49,7 @@ for k=1:numel(fields)
     for t=1:nT
         seg=double(pbuf(t,sc));
         xdel(t)=bp(seg,delta_bnd(1),delta_bnd(2));            % abs 1-4 Hz power
-        xrel(t)=bp(seg,hi_bnd(1),hi_bnd(2))/max(bp(seg,tot_bnd(1),tot_bnd(2)),eps);  % rel 2-4 Hz
+        xrel(t)=bp(seg,hi_bnd(1),hi_bnd(2))/max(bp(seg,tot_bnd(1),tot_bnd(2)),eps);  % rel 1-4 Hz
     end
     X1=[X1;x1];X2=[X2;x2];Xrel=[Xrel;xrel];Xdel=[Xdel;xdel];Y=[Y;y]; %#ok<*AGROW>
     SESS=[SESS;repmat(k,nT,1)];TRI=[TRI;(1:nT)'];
@@ -57,8 +57,8 @@ end
 ok=all(isfinite([X1 X2 Xrel Xdel Y]),2)&Xdel>0; f=@(v)v(ok);
 [X1,X2,Xrel,Xdel,Y,SESS,TRI]=deal(f(X1),f(X2),f(Xrel),f(Xdel),f(Y),f(SESS),f(TRI));
 Z=zscore([X1 X2 Xrel log10(Xdel)]); yz=zscore(Y);            % z of the 4 states + outcome
-lbl={'high init-dev','high motion','high rel 2-4 Hz','high abs 1-4 Hz'};   % short titles: fit tile width, match panel-C labels
-eqlbl={'init-dev','motion','rel 2-4 Hz','abs 1-4 Hz'};
+lbl={'high init-dev','high motion','high rel 1-4 Hz','high abs 1-4 Hz'};   % short titles: fit tile width, match panel-C labels
+eqlbl={'init-dev','motion','rel 1-4 Hz','abs 1-4 Hz'};
 col=[0.20 0.40 0.75; 0.75 0.40 0.10; 0.35 0.55 0.30; 0.55 0.25 0.60];   % SHARED state colours
 
 % ---- error model: standardized betas + per-state R^2 (paper 'sep' framing) ----

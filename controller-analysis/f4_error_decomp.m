@@ -8,7 +8,7 @@
 % FOUR FACTORS (user 2026-09-15):
 %   F1 init-dev   = |dF/F(onset) - ref|
 %   F2 motion     = mean z-motion, -2 s -> stim end (f4_motion_stat; was ^2 until 2026-10-02)
-%   F3 rel 2-4Hz  = bandpow(2-4)/bandpow(0.4-10), -2 s -> stim end   (power-independent)
+%   F3 rel 1-4Hz  = bandpow(1-4)/bandpow(0.4-10), -2 s -> stim end   (power-independent)
 %   F4 abs delta  = log10 bandpow(1-4 Hz), -2 s -> stim end          (magnitude; confounded)
 %
 % TWO PANELS:
@@ -51,7 +51,7 @@ assert(any(strcmp(F4_DECOMP_LEVEL, {'session','pooled'})), 'f4_error_decomp: F4_
 bySess = strcmp(F4_DECOMP_LEVEL, 'session');
 errMode = 'sd'; if bySess, errMode = 'sem'; end
 fprintf('[f4_error_decomp] decomposition level: %s (error bar = %s across sessions)\n', F4_DECOMP_LEVEL, upper(errMode));
-delta_bnd=[1 4]; hi_bnd=[2 4]; tot_bnd=[0.4 10];
+delta_bnd=[1 4]; hi_bnd=[1 4]; tot_bnd=[0.4 10];   % rel numerator 1-4 Hz since 2026-11-14 (Aditya: "do 1-4hz everywhere"; was [2 4]), L-2026-11-14-a
 eE = c0 : c0+round(1*Fs);                 % 0 -> 1 s
 lL = c0+round(1*Fs)+1 : c0+round(3*Fs);   % 1 -> 3 s
 bandpow = @(seg, lo, hi) f4_bandpow(seg, Fs, lo, hi, W_state.bandpow);   % shared estimator
@@ -103,14 +103,14 @@ end
 ok=all(isfinite([X1 X2 Xrel Xdel YE YL]),2)&Xdel>0; f=@(v)v(ok);
 [X1,X2,Xrel,Xdel,YE,YL,SESS]=deal(f(X1),f(X2),f(Xrel),f(Xdel),f(YE),f(YL),f(SESS));
 Xall=[X1 X2 Xrel log10(Xdel)];                         % F1..F4 (abs delta as log10)
-fac_lbl={'init-dev','motion','rel 2-4Hz','abs 1-4Hz'};
+fac_lbl={'init-dev','motion','rel 1-4Hz','abs 1-4Hz'};
 usess=unique(SESS); nS=numel(usess); n=numel(YE);
 assert_pooled(n,  'f4_error_decomp CL trials');
 assert_pooled(nS, 'f4_error_decomp motion sessions');
 fprintf('[f4_error_decomp] %d CL trials, %d motion sessions.\n', n, nS);
 
 %% ── R^2 machinery, run for THREE delta options ──────────────────────────────
-% Columns of Xall: 1=init-dev 2=motion 3=rel-2-4Hz 4=abs-delta.
+% Columns of Xall: 1=init-dev 2=motion 3=rel-1-4Hz 4=abs-delta.
 % Modes give the user options: keep only ONE delta, or BOTH.
 Wout={YE,YL}; win_lbl={'0-1 s','1-3 s'};
 col_e=[0.35 0.55 0.85]; col_l=[0.15 0.25 0.55];
@@ -127,7 +127,7 @@ modeGrpL = {{'init+motion','rel+abs power','all four'}, ...
 
 % STATE COLOURS, shared with the exemplar strips (user, 2026-10-05: "for error comp
 % plots re draw with the corrsponding state exemlar colors"). Same four RGBs as
-% f4_state_exemplars_supp.m: init-dev, motion, rel 2-4 Hz, abs delta. Each bar then
+% f4_state_exemplars_supp.m: init-dev, motion, rel 1-4 Hz, abs delta. Each bar then
 % names its factor by colour as well as by tick label, so a reader can carry the
 % identity straight across from the exemplar rows above it in the assembled figure.
 % Moved ABOVE the mode loop (it used to be defined just before the 'sep' panel).
@@ -197,7 +197,7 @@ end
 % SAME init+motion base but in its own 3-factor model, so both are shown "separately" without
 % competing: u_init/u_motion from the rel model; u_rel from {init,motion,rel}; u_abs from
 % {init,motion,abs}. This is the Panel-B main-text decomposition.
-%   Xall cols: 1=init 2=motion 3=rel-2-4 4=abs-delta(log10)
+%   Xall cols: 1=init 2=motion 3=rel-1-4 4=abs-delta(log10)
 sepU = @(Z,y,F) [ F(Z(:,[1 2 3]),y)-F(Z(:,[2 3]),y); ...   % init  (rel model)
                   F(Z(:,[1 2 3]),y)-F(Z(:,[1 3]),y); ...   % motion(rel model)
                   F(Z(:,[1 2 3]),y)-F(Z(:,[1 2]),y); ...   % rel   (unique over init+motion)

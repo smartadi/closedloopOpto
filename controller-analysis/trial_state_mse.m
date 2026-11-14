@@ -105,7 +105,7 @@ for k = 1:nSess
 
     nc_spec_k_avg = reshape(mean(nc_spec_k(1:n_nc, sortWinF, :), 2), n_nc, []);
     wc_spec_k_avg = reshape(mean(wc_spec_k(1:n_wc, sortWinF, :), 2), n_wc, []);
-    % PRIMARY delta state = canonical relative 2-4 Hz (cl_reldelta on the buffered trace);
+    % PRIMARY delta state = canonical relative 1-4 Hz (cl_reldelta on the buffered trace);
     % this is the CL delta definition used across all analyses (user 2026-09-08).
     nc_delt_k = cl_reldelta(data_k.pncDfk_l(1:n_nc,:), 106, Fs, struct('pre',2,'post',dur_k));
     wc_delt_k = cl_reldelta(data_k.pwcDfk_l(1:n_wc,:), 106, Fs, struct('pre',2,'post',dur_k));
