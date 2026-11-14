@@ -27,9 +27,9 @@ mkOrder = {'MOT','DPr','DPa'};                       % motion | rel-delta | abs-
 % "delta" invited "why not alpha?". The caption defines relative = fraction of 0.4-10 Hz power.
 % The cached R.name strings still say \delta; they are not used for the panel.
 en = char(8211);
-% "Relative 2-4 Hz power" on one line ran into its neighbour at 6 pt, so the qualifier goes below.
-xName = containers.Map(mkOrder, {{'Motion'}, {['2' en '4 Hz power'], '(relative)'}, ...
-                                 {['2' en '4 Hz power'], '(absolute)'}});
+% "Relative 1-4 Hz power" on one line ran into its neighbour at 6 pt, so the qualifier goes below.
+xName = containers.Map(mkOrder, {{'Motion'}, {['1' en '4 Hz power'], '(relative)'}, ...
+                                 {['1' en '4 Hz power'], '(absolute)'}});
 idx = arrayfun(@(t) find(strcmpi({R.tag}, t{1}), 1), mkOrder, 'UniformOutput', false);
 idx = [idx{:}];
 if numel(idx) < 2, error('[2G] fewer than two of %s in R', strjoin(mkOrder,'/')); end
@@ -60,8 +60,8 @@ for m = 1:numel(idx)
     hC = plot(ax, xb, yc, '--o', 'Color', C_ctl, 'MarkerFaceColor', 'w', 'MarkerEdgeColor', C_ctl, ...
               'LineWidth', PS.lw_mean*0.7, 'MarkerSize', 2.2);
     hS = plot(ax, xb, yv, '-o', 'Color', C_mean, 'MarkerFaceColor', C_mean, 'LineWidth', PS.lw_mean, 'MarkerSize', 2.5);
-    if m == 2   % legend in the rel-delta tile: its lower half is empty
-        lg = legend(ax, [hS hC], {'Stim','No stim'}, 'Location','south', 'Box','off', ...
+    if m == 2   % legend in the rel tile, top left: the steeper 1-4 Hz curves sit on 'south' (2026-11-14)
+        lg = legend(ax, [hS hC], {'Stim','No stim'}, 'Location','northwest', 'Box','off', ...
                     'FontSize', PS.fs, 'FontWeight', PS.fw);
         lg.ItemTokenSize = [6 6];
     end

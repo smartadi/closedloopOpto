@@ -23,7 +23,7 @@
 % STATES    MOT  mean |z| motion                                    power-independent  ADMISSIBLE
 %           PVv  var(dF/F)                                          POWER CONFOUND
 %           DPa  absolute 1-4 Hz power                              POWER CONFOUND
-%           DPr  RELATIVE delta = abs(2-4 Hz) / (0.4-10 Hz)        power-independent  ADMISSIBLE
+%           DPr  RELATIVE delta = abs(STV_BAND, 1-4 Hz) / (0.4-10 Hz)        power-independent  ADMISSIBLE
 %                (canonical CL bands, matches cl_reldelta.m / imp_statedep_trials.m; was 1-4/0.5-30)
 %
 % ⚠ H2 AND H3 ARE PARTLY UNFALSIFIABLE AS STATED. Pre-trial variance and ABSOLUTE delta ARE signal
@@ -103,7 +103,9 @@ if ~exist('STV_PWR_WIN','var')   || isempty(STV_PWR_WIN),   STV_PWR_WIN = 'paper
 % LONGER STATE WINDOW + 1-4 Hz BAND (#92, Aditya 2026-11-13: "-3 to 0", "Try shorter window for
 % figure 2", and for the band "Yes keep this"). At [-1,0) the FFT bins are 1 Hz apart and the Hann
 % window smears each by about +/-2 Hz, so 1-4 Hz is barely resolved. These knobs run the same
-% estimator over a longer window. The defaults reproduce the paper exactly ([-1,0), 2-4 Hz, linear).
+% estimator over a longer window. Defaults since 2026-11-14: [-2,0) s, 1-4 Hz, log10 absolute (Aditya:
+% "replace with -2,0 window and do 1-4hz everywhere", L-2026-11-14-b). STV_STATE_LEN = 1;
+% STV_BAND = [2 4]; STV_ABS_LOG = false reproduce the earlier paper version ([-1,0), 2-4 Hz) exactly.
 %  STV_STATE_LEN  state window [-STV_STATE_LEN, 0) s, used by motion AND the power markers. The
 %                 stim-free control keeps its length and sits just before it, as now.
 %  STV_BAND       numerator band (Hz, edges inclusive) of both power markers; denominator of the
@@ -115,9 +117,9 @@ if ~exist('STV_PWR_WIN','var')   || isempty(STV_PWR_WIN),   STV_PWR_WIN = 'paper
 %                 where the previous pulse's rebound ends (ALT_WINDOW_DECISION.md).
 % A window plus control longer than the loaders' 3 s pre-onset trace is cut from the session
 % traces at the stored onset frames (local_longtrials); the shared -3..+3 s part is asserted equal.
-if ~exist('STV_STATE_LEN','var') || isempty(STV_STATE_LEN), STV_STATE_LEN = 1.0;   end
-if ~exist('STV_BAND','var')      || isempty(STV_BAND),      STV_BAND = [2 4];      end
-if ~exist('STV_ABS_LOG','var')   || isempty(STV_ABS_LOG),   STV_ABS_LOG = false;   end
+if ~exist('STV_STATE_LEN','var') || isempty(STV_STATE_LEN), STV_STATE_LEN = 2.0;   end
+if ~exist('STV_BAND','var')      || isempty(STV_BAND),      STV_BAND = [1 4];      end
+if ~exist('STV_ABS_LOG','var')   || isempty(STV_ABS_LOG),   STV_ABS_LOG = true;    end
 if ~exist('STV_EXCL_PREV','var') || isempty(STV_EXCL_PREV), STV_EXCL_PREV = false; end
 if ~exist('STV_REBOUND_S','var') || isempty(STV_REBOUND_S), STV_REBOUND_S = 0.77;  end
 assert(~strcmpi(STV_PWR_WIN,'legacy') || STV_STATE_LEN == 1, ...

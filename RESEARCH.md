@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-14-b · Fig 2G state window [-2,0) s and 1-4 Hz in the paper version
+commit: cad1674+this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:** `imp_state_trialvar.m` defaults are now STV_STATE_LEN = 2 (state window [-2,0) s for motion and both power states), STV_BAND = [1 4], STV_ABS_LOG = true (log10 absolute power; the rank-based statistics do not change with it). STV_STATE_LEN = 1, STV_BAND = [2 4], STV_ABS_LOG = false reproduce the earlier paper version. Labels say 1-4 Hz in `imp_state_var_combined.m`, `fig2_jn_panels.m` and `imp_state_quartile_supp.m`; the producer's legend moved to the top left of the relative tile (the JN layout pins its own legend in the motion tile, unchanged). Math approved by Aditya 2026-11-14: "replace with -2,0 window and do 1-4hz everywhere", choosing among the windows of L-2026-11-13-b. Ran `imp_state_trialvar` with the new defaults: 1516 trials from 4 sessions, none excluded, stimulus-free control at -2.51 to -2.03 s. Saved `data/fig2g_state_stats.mat` (previous file kept as `data/fig2g_state_stats_pre20261114_m1to0_2to4Hz.mat`). The numbers equal the [-2,0) run of L-2026-11-13-b. Q4/Q1 per-session geometric mean, stimulus-free control, session slope p:
+- motion 0.57, control 0.65, p = 0.017 (paper version [-1,0) s: 0.58, 0.60, p = 0.030)
+- relative 1-4 Hz 1.58, control 1.52, p = 0.0085 (relative 2-4 Hz at [-1,0) s: 1.03, 1.08, p = 0.17)
+- absolute 1-4 Hz 2.63, control 2.86, p = 0.00023 (absolute 2-4 Hz at [-1,0) s: 2.35, 2.70, p = 0.00074)
+Re-rendered 2G: `imp_state_var_combined` (the G step of `fig2_jn_capture`), then `fig2_jn_panels`.
+**State:** `paper/figures_final/jn/fig2/G.pdf` and `src/G.fig` updated (gitignored; old ones kept as `G_pre20261114.png` and `src/G_pre20261114.fig.bak`). JN `Figure2.ai`/`.pdf` not rebuilt (`fig2_jn_build.jsx`, Illustrator). Fig 2 supplementary producers that compute states themselves still use [-1,0) s: `imp_state_trial_examples.m`, `imp_relabs_exemplars.m`, `imp_state_raster_supp.m`, `imp_state_examples_supp.m`. The manuscript still says [-1,0) s and 2-4 Hz. Not pushed.
+**Resume:** `load_experiments; imp_state_trialvar; STV_R = R; save('data/fig2g_state_stats.mat','STV_R')`, then the G step of `fig2_jn_capture` and `fig2_jn_panels`.
+
 ### L-2026-11-14-a · Fig 4 MATLAB: relative power over 1-4 Hz, panels re-run on corrected onsets
 commit: 0c03f33+this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:** Relative power is bandpower(1-4 Hz) / bandpower(0.4-10 Hz) in the MATLAB Fig 4 code too: `hi_bnd = [1 4]` in `f4_state_exemplars.m`, `f4_state_exemplars_supp.m`, `f4_error_decomp.m` and `cl_rmse_factor_windows.m`, and the default of `utils/cl_reldelta.m`, so `f4_row2_quartiles.m`, `f4_row2_pool.m`, `f4_devmodel_supp.m`, `ctrl_distrej_*.m` and `trial_state_mse.m` follow. Labels and comments say 1-4 Hz. Math approved by Aditya 2026-11-13: "Yes keep this" (L-2026-11-13-c), and 2026-11-14: "replace with -2,0 window and do 1-4hz everywhere". Re-ran after `load_sessions` (corrected onsets applied by `ctrl_onset_fix`): `f4_error_decomp`, `f4_row2_quartiles`, `f4_state_exemplars`, `f4_state_exemplars_supp`, `f4_contra_model`.

@@ -178,7 +178,7 @@ save_panel(f, out, 'F');
 f = open_panel(src,'G',8.4,H);
 tl = findall(f,'Type','tiledlayout');
 ax = flipud(findall(f,'Type','axes'));         % motion, relative, absolute
-names = {'Motion', ['Relative 2' en '4 Hz'], ['Absolute 2' en '4 Hz']};
+names = {'Motion', ['Relative 1' en '4 Hz'], ['Absolute 1' en '4 Hz']};
 order = zeros(1,3);
 for k = 1:3
     xl = strjoin(string(ax(k).XLabel.String),' ');
