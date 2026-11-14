@@ -219,12 +219,16 @@ for sI = sIlist
     [imp.Peak_imp, imp.Peak_imp_dev, imp.mot, imp.freqSpec, imp.dfImp, imp.motTrace, ...
      imp.p_var, imp.startTimes, imp.resp_map, imp.base_map] = deal(cell(nAb,1));
     imp.Peak_imp_mean = nan(nAb,1);  imp.mot_mean = nan(nAb,1);
+    % onset frame per kept trial, same contract as load_experiments (2026-11-13, #92): dfImp
+    % column winS+1 is dF(onCol), motTrace column winS+1 is mv_z(onBlue). Here both are fA.
+    [imp.onCol, imp.onBlue] = deal(cell(nAb,1));
     DF_imp_b = nan(nAb, numel(relW));
     for a = 1:nAb
         selA = selSide & onAmp==uA(a);
         fA = onF_all(selA);
         fA = fA(fA > winS & fA + winS <= numel(dF_b));
         imp.startTimes{a} = t_b(fA);
+        imp.onCol{a} = fA(:);  imp.onBlue{a} = fA(:);
         trM = cell2mat(arrayfun(@(f) dF_b(f+relW), fA', 'uni',0)');
         % ONSET-FRAME reference, exactly as load_experiments df_imp = dF - dF(onset) (user,
         % 2026-10-12). Until then this subtracted the mean of the 18 pre-onset frames (-0.51 to
@@ -271,6 +275,10 @@ for sI = sIlist
     allExperiments(e).DF_imp = DF_imp_b;
     allExperiments(e).dF = dF_b(:);
     allExperiments(e).timeBlue = t_b;
+    % Every laser onset of the session, BOTH galvo spots and all amplitudes (s, Timeline clock).
+    % Added 2026-11-13 (#92) for the Fig 2G previous-pulse exclusion (imp_state_trialvar
+    % STV_EXCL_PREV): a left-spot pulse before a right-spot trial counts too.
+    allExperiments(e).laserOnT = onT(:);
     if ~isempty(mvz_b)
         % Sanity: the 1:2:end downsample assumes face = 2x blue. If the blue-cadence motion is
         % much shorter than the blue timeline, that assumption is wrong for this rig and the

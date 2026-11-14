@@ -264,6 +264,12 @@ imp.p_var         = cell(nAmp,1);
 imp.startTimes    = cell(nAmp,1);
 imp.resp_map      = cell(nAmp,1);   % brain-pixel dF/F response (peak âˆ’ baseline)
 imp.base_map      = cell(nAmp,1);   % brain-pixel dF/F during baseline window
+% Onset frame of each kept trial (2026-11-13, #92). dfImp column winSamp+1 is dF(onCol) and
+% motTrace column winSamp+1 is mv_z(onBlue). Stored so a caller can cut a longer window from
+% allExperiments(e).dF / mv_z without repeating the blue-frame mapping below
+% (imp_state_trialvar STV_STATE_LEN). Nothing in this file reads them.
+imp.onCol         = cell(nAmp,1);
+imp.onBlue        = cell(nAmp,1);
 
 DF_imp   = nan(nAmp, 2*winSamp+1);
 t_win    = -3:1/35:3;
@@ -420,6 +426,8 @@ for i = 1:length(uAmp)
 
     imp.p_var{i}      = p_imp - mu_p;
     imp.startTimes{i} = valid_start;
+    imp.onCol{i}      = bAll(:);      % V column of the onset frame, per kept trial
+    imp.onBlue{i}     = bBlue(:);     % blue frame of the onset, per kept trial
 
 
     if ~isempty(df_imp)
@@ -450,6 +458,10 @@ allExperiments(expIdx).freqBandCtrs  = freqBandCtrs;
 allExperiments(expIdx).brainMask     = brainMask_e;
 allExperiments(expIdx).mimg          = mimg;
 allExperiments(expIdx).mI1           = mI(1);
+% Every DETECTED laser onset (s, Timeline clock), i.e. the real pulses only: the amplitude-0
+% gap-fill events inserted above are not in it. Added 2026-11-13 (#92) for the Fig 2G
+% previous-pulse exclusion (imp_state_trialvar STV_EXCL_PREV).
+allExperiments(expIdx).laserOnT      = detS;
 
 end  % End of experiment loop
 

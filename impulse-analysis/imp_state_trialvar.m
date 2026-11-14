@@ -57,6 +57,8 @@
 %
 % RUN:  load_experiments;  imp_state_trialvar
 %       STV_NBIN = 5; imp_state_trialvar        % change the number of state bins
+%       STV_STATE_LEN = 3; STV_BAND = [1 4]; STV_ABS_LOG = true; STV_EXCL_PREV = true; imp_state_trialvar
+%                                               % [-3,0) s state window, 1-4 Hz, log10 abs (#92)
 % -------------------------------------------------------------------------------------------------
 
 here = fileparts(mfilename('fullpath'));
@@ -98,6 +100,28 @@ if ~exist('STV_MOT_WIN','var')   || isempty(STV_MOT_WIN),   STV_MOT_WIN = 'paper
 %      -1.029 s; since 2026-10-12 cols 63:70, 8 samples, self-referenced -- see STV_SHAM). The
 %      disjointness assert below is unchanged and still passes.
 if ~exist('STV_PWR_WIN','var')   || isempty(STV_PWR_WIN),   STV_PWR_WIN = 'paper'; end
+% LONGER STATE WINDOW + 1-4 Hz BAND (#92, Aditya 2026-11-13: "-3 to 0", "Try shorter window for
+% figure 2", and for the band "Yes keep this"). At [-1,0) the FFT bins are 1 Hz apart and the Hann
+% window smears each by about +/-2 Hz, so 1-4 Hz is barely resolved. These knobs run the same
+% estimator over a longer window. The defaults reproduce the paper exactly ([-1,0), 2-4 Hz, linear).
+%  STV_STATE_LEN  state window [-STV_STATE_LEN, 0) s, used by motion AND the power markers. The
+%                 stim-free control keeps its length and sits just before it, as now.
+%  STV_BAND       numerator band (Hz, edges inclusive) of both power markers; denominator of the
+%                 relative marker stays 0.4-10 Hz.
+%  STV_ABS_LOG    true: the absolute marker is log10 of the band power (a monotone transform, so
+%                 every rank-based statistic below is unchanged by it).
+%  STV_EXCL_PREV  true: drop a trial if any laser onset (either galvo spot for AL_0048) falls in
+%                 [state start - control length - STV_REBOUND_S, onset). STV_REBOUND_S = 0.77 s is
+%                 where the previous pulse's rebound ends (ALT_WINDOW_DECISION.md).
+% A window plus control longer than the loaders' 3 s pre-onset trace is cut from the session
+% traces at the stored onset frames (local_longtrials); the shared -3..+3 s part is asserted equal.
+if ~exist('STV_STATE_LEN','var') || isempty(STV_STATE_LEN), STV_STATE_LEN = 1.0;   end
+if ~exist('STV_BAND','var')      || isempty(STV_BAND),      STV_BAND = [2 4];      end
+if ~exist('STV_ABS_LOG','var')   || isempty(STV_ABS_LOG),   STV_ABS_LOG = false;   end
+if ~exist('STV_EXCL_PREV','var') || isempty(STV_EXCL_PREV), STV_EXCL_PREV = false; end
+if ~exist('STV_REBOUND_S','var') || isempty(STV_REBOUND_S), STV_REBOUND_S = 0.77;  end
+assert(~strcmpi(STV_PWR_WIN,'legacy') || STV_STATE_LEN == 1, ...
+       '[STV] STV_PWR_WIN=''legacy'' has its own fixed geometry; leave STV_STATE_LEN at 1.');
 % STATE SCALING (user, 2026-08-12). Default RAW: the markers keep their physical units, so an axis
 % reads "motion z-score 2.5" or "pre-trial variance 20 (dF/F)^2" instead of a within-amp z that
 % cannot be related to anything. Cost of raw pooling: between-session and between-amplitude offsets
@@ -214,6 +238,22 @@ switch lower(STV_SHAM)
     otherwise,     error('[STV] STV_SHAM must be ''self8'' or ''onset7''.');
 end
 if strcmp(STV_DVMODE_G,'l2'), Lresp = numel(iL2); end            % control as long as the response
+% ---- TRACE LENGTH (2026-11-13, #92) -----------------------------------------------------------
+% The loaders cut -3..+3 s per trial (winS = 105 samples before onset). The state window plus the
+% control before it needs nState + Lresp pre-onset samples: 35+18 at [-1,0), 70+18 at [-2,0),
+% 105+18 at [-3,0). Only when that exceeds winS is the pre-onset part lengthened, so the paper
+% default runs on imp.dfImp / imp.motTrace exactly as before.
+nStateS = round(STV_STATE_LEN*fs);
+winS    = round(3*fs);
+STV_NPRE = winS;
+if ~strcmpi(STV_PWR_WIN,'legacy') && nStateS + Lresp > winS
+    STV_NPRE = nStateS + Lresp;
+    tAxis = (-STV_NPRE : winS) / fs;
+    iOn   = STV_NPRE + 1;
+    iL2   = iOn : iOn + floor(STV_L2_WIN*fs - 1e-9);
+    fprintf('[STV] trace extended to %.3f s before onset (%d samples) for the state + control windows\n', ...
+            STV_NPRE/fs, STV_NPRE);
+end
 fprintf('[STV] DV = %s', upper(STV_DVMODE_G));
 if strcmp(STV_DVMODE_G,'l2'), fprintf(' over %.3f..%.3f s (%d samples)', 0, (iL2(end)-iOn)/fs, numel(iL2)); end
 fprintf('\n');
@@ -227,7 +267,7 @@ else
     % arithmetic, so no boundary sample is lost to a 1e-16 float comparison.
     iEnd  = iOn - 1;                                    % strictly pre-onset
     if strcmpi(STV_STATE_WIN,'peri'), iEnd = iOn + round(0.5*fs); end   % A4 comparison window
-    iPow  = (iOn - round(1.0*fs)) : iEnd;               % cols 71:105 (35 samples) when 'pre'
+    iPow  = (iOn - nStateS) : iEnd;                     % cols 71:105 (35 samples) at the 'pre' default
     iSham = (iPow(1) - Lresp) : (iPow(1) - 1);          % 'self8': cols 63:70, -1.229 to -1.029 s
     assert(iSham(1) >= 1, '[STV] sham window runs off the start of the trace');
     iState = false(size(tAxis));  iState(iPow) = true;
@@ -247,14 +287,15 @@ assert(tAxis(iSham(end)) < -0.5, '[STV] sham window has moved later than -0.5 s'
 %
 % Integer column arithmetic, NOT `tAxis >= a & tAxis <= b`: the floating-point form silently drops
 % boundary samples (it costs iState 2 of its intended 28 -- tAxis(78) misses stWin(1) by 1e-16).
-iMot = (iOn - round(1.0*fs)) : (iOn - 1);        % [-1 s, -1/fs], 35 samples, strictly pre-onset
+iMot = (iOn - nStateS) : (iOn - 1);              % [-STV_STATE_LEN, -1/fs]; 35 samples at the default
 if strcmpi(STV_MOT_WIN,'legacy'), iMot = find(iState); end   % reproduce the pre-2026-10-02 numbers
 assert(iMot(1) >= 1 && iMot(end) < iOn, '[STV] motion window outside the trace or not pre-onset');
 
 MK = { 'MOT','Motion',            true,  local_tern(strcmpi(STV_MOT_STAT,'sq'),'mean z^2 (motion)','motion z-score')
        'PVv','Pre-trial variance',false, '(\DeltaF/F)^2'
        'DPa','Abs \delta power',  false, '(\DeltaF/F)^2'
-       'DPr','Rel \delta',        true,  '2-4 / 0.4-10 Hz' };
+       'DPr','Rel \delta',        true,  sprintf('%g-%g / 0.4-10 Hz', STV_BAND) };
+if STV_ABS_LOG, MK{3,4} = 'log_{10} (\DeltaF/F)^2'; end
 % The unit strings above describe the RAW marker. Under 'norm'/'z' the analysis axis is no longer
 % in those units, and an axis labelled with units it is not in is worse than one with none.
 switch STV_STATESCALE
@@ -277,11 +318,21 @@ fprintf('\n[STV] state window %s = [%.2f %.2f] s | %d bins | %d bootstrap\n', ..
         upper(STV_STATE_WIN), stWin(1), stWin(2), STV_NBIN, STV_NBOOT);
 fprintf('[STV] motion window %s = [%.2f %.2f] s (%d smp), stat = %s\n', upper(STV_MOT_WIN), ...
         tAxis(iMot(1)), tAxis(iMot(end)), numel(iMot), upper(STV_MOT_STAT));
-fprintf(['[STV] power  window %+0.3f .. %+0.3f s (%d samples, df = %.3f Hz, %d bins in 2-4 Hz)\n' ...
+fprintf(['[STV] power  window %+0.3f .. %+0.3f s (%d samples, df = %.3f Hz, %d bins in %g-%g Hz, abs %s)\n' ...
          '[STV] sham   window %+0.3f .. %+0.3f s (%d samples, cols %d:%d, %s)\n'], ...
         stWin(1), stWin(2), nnz(iState), fs/nnz(iState), ...
-        nnz((0:nnz(iState)-1)*(fs/nnz(iState)) >= 2 & (0:nnz(iState)-1)*(fs/nnz(iState)) <= 4), ...
+        nnz((0:nnz(iState)-1)*(fs/nnz(iState)) >= STV_BAND(1) & (0:nnz(iState)-1)*(fs/nnz(iState)) <= STV_BAND(2)), ...
+        STV_BAND, local_tern(STV_ABS_LOG,'log10','linear'), ...
         tAxis(iSham(1)), tAxis(iSham(end)), numel(iSham), iSham(1), iSham(end), upper(STV_SHAM));
+% previous-pulse exclusion: any laser onset in [onset - excl_s, onset) drops the trial
+excl_s = STV_STATE_LEN + Lresp/fs + STV_REBOUND_S;
+if STV_EXCL_PREV
+    fprintf('[STV] previous-pulse exclusion ON: drop a trial with a laser onset in [-%.3f, 0) s (state %.2f + control %.3f + rebound %.2f)\n', ...
+            excl_s, STV_STATE_LEN, Lresp/fs, STV_REBOUND_S);
+end
+% per session: trials offered, dropped because the longer window leaves the recording, dropped by
+% the previous-pulse rule, kept (amp-0 and cells with < 8 trials are not offered, as before)
+TC = zeros(numel(allExperiments), 4);
 
 for e = 1:nExp_s
     imp = allExperiments(e).imp;
@@ -293,7 +344,22 @@ for e = 1:nExp_s
         n = min([size(df,1), numel(pk), size(imp.motTrace{a},1)]);
         if n < 8, continue; end                       % need enough trials for a spread estimate
         if STV_SKIP_AMP0 && imp.uAmp{a} == 0, continue; end      % no light in the response window
-        df = df(1:n,:);  pk = pk(1:n);
+        df = df(1:n,:);  pk = pk(1:n);  mt = imp.motTrace{a}(1:n,:);
+        % --- longer pre-onset trace and previous-pulse exclusion (2026-11-13, #92) -------------
+        % A dropped trial leaves the cell before anything is computed from it, amplitude mean
+        % included. Both steps are no-ops at the paper default.
+        keepT = true(n,1);  nOff = 0;  nPrev = 0;
+        if STV_NPRE > winS
+            [df, mt, okL] = local_longtrials(allExperiments(e), a, n, STV_NPRE, winS);
+            nOff  = nnz(~okL);  keepT = keepT & okL;
+        end
+        if STV_EXCL_PREV
+            okP   = local_prevpulse(allExperiments(e), imp.startTimes{a}(1:n), excl_s, fs);
+            nPrev = nnz(keepT & ~okP);  keepT = keepT & okP;
+        end
+        TC(e,:) = TC(e,:) + [n, nOff, nPrev, nnz(keepT)];
+        df = df(keepT,:);  pk = pk(keepT);  mt = mt(keepT,:);  n = nnz(keepT);
+        if n < 8, continue; end
         if STV_REREF_ONSET && ~all(df(:,iOn) == 0 | isnan(df(:,iOn)))
             % AL_0048: re-reference to the onset frame like the other sessions, so the response
             % no longer borrows its reference from inside the [-1,0) state window.
@@ -338,13 +404,13 @@ for e = 1:nExp_s
 
         % --- state markers, all from the SAME pre-onset window -----------------------------------
         seg  = df(:, iState);
-        motSeg = imp.motTrace{a}(1:n, iMot);
+        motSeg = mt(:, iMot);
         switch lower(STV_MOT_STAT)
             case 'sq', mot = mean(motSeg.^2, 2, 'omitnan');   % SECONDARY comparison
             otherwise, mot = mean(motSeg,    2, 'omitnan');   % PRIMARY (monotone in trial energy)
         end
         pvv  = var(seg, 0, 2, 'omitnan');
-        [dpa, dpr] = local_delta(seg, fs);
+        [dpa, dpr] = local_delta(seg, fs, STV_BAND, STV_ABS_LOG);
 
         T.sess   = [T.sess;   repmat(e,n,1)];
         T.amp    = [T.amp;    repmat(a,n,1)];
@@ -359,6 +425,12 @@ for e = 1:nExp_s
     end
 end
 fprintf('[STV] %d trials from %d sessions\n', numel(T.dev), numel(unique(T.sess)));
+if STV_NPRE > winS || STV_EXCL_PREV
+    fprintf('[STV] trial counts   %-26s %8s %10s %10s %6s\n', 'session', 'offered', 'off-trace', 'prev-pulse', 'kept');
+    for e = 1:nExp_s
+        fprintf('[STV]                %-26s %8d %10d %10d %6d\n', labels{e}, TC(e,:));
+    end
+end
 
 % ---- optional MOTION EXCLUSION (STV_MOTEXCL, added 2026-08-19) ---------------------------------
 % Drops high-motion trials from the POOL entirely, so a surviving state effect cannot be movement
@@ -898,7 +970,8 @@ if STV_PLOT
 end
 
 STV = struct('T',T,'R',R,'labels',{labels},'PS_rho',PS_rho,'stWin',stWin,'nbin',STV_NBIN, ...
-             'motSplit',MTS,'scale',STV_STATESCALE,'scaleDesc',STATESCALE_DESC);
+             'motSplit',MTS,'scale',STV_STATESCALE,'scaleDesc',STATESCALE_DESC, ...
+             'trialCounts',TC,'band',STV_BAND,'stateLen',STV_STATE_LEN,'exclPrev',STV_EXCL_PREV);
 fprintf('\n[STV] figures -> %s\n[STV] struct: STV\n', STV_FIGDIR);
 
 %% ================================= local functions ==============================================
@@ -976,11 +1049,13 @@ catch
 end
 end
 
-function [dpa, dpr] = local_delta(seg, fs)
-%LOCAL_DELTA  absolute 2-4 Hz power and its RELATIVE share of 0.4-10 Hz, per trial (rows of seg).
+function [dpa, dpr] = local_delta(seg, fs, bandHz, useLog)
+%LOCAL_DELTA  absolute band power and its RELATIVE share of 0.4-10 Hz, per trial (rows of seg).
 % CANONICAL rel-delta bands (2026-09-11): numerator 2-4 Hz, denominator 0.4-10 Hz -- identical to
 % utils/cl_reldelta.m (controller) and utils/imp_statedep_trials.m (residual pipeline), so Fig-2 and
 % Fig-4 measure the SAME state. (Was 1-4 / 0.5-30 Hz before this date.)
+% bandHz (STV_BAND, 2026-11-13, #92) sets the numerator, edges inclusive; [2 4] is the paper.
+% useLog (STV_ABS_LOG) returns log10 of the absolute power; the relative share is taken first.
 % Mean-removed + Hann so the DC term and edge leakage do not land in the delta band.
 n = size(seg,2);
 w = hannwin(n).';
@@ -990,10 +1065,61 @@ X = abs(fft(x .* w, [], 2)).^2;
 f = (0:n-1) * (fs/n);
 half = 1:floor(n/2);
 f = f(half);  X = X(:,half);
-bD = f >= 2   & f <= 4;      % numerator: 2-4 Hz absolute power (DPa)
+bD = f >= bandHz(1) & f <= bandHz(2);   % numerator: band power (DPa); 2-4 Hz at the paper default
 bT = f >= 0.4 & f <= 10;     % denominator: 0.4-10 Hz total power
 dpa = sum(X(:,bD), 2);
 dpr = dpa ./ max(sum(X(:,bT), 2), eps);
+if useLog, dpa = log10(dpa); end
+end
+
+function [dfL, mtL, ok] = local_longtrials(E, a, n, nPre, winS)
+%LOCAL_LONGTRIALS  Per-trial dF/F and motion from -nPre to +winS samples (2026-11-13, #92).
+% Cut from the session traces E.dF / E.mv_z at the onset frames the loaders stored
+% (imp.onCol / imp.onBlue), referenced exactly as dfImp is (onset frame = 0). A trial whose longer
+% window leaves the recording, or (load_experiments sessions) crosses a dropped frame, comes back
+% with ok = false and NaN rows. The -winS..+winS part is asserted EQUAL to imp.dfImp / imp.motTrace,
+% so this cannot drift from the loaders.
+imp = E.imp;
+assert(isfield(imp,'onCol') && numel(imp.onCol) >= a && numel(imp.onCol{a}) >= n, ...
+       '[STV] %s: imp.onCol missing -- rerun load_experiments (2026-11-13 or later).', E.mn);
+c = double(imp.onCol{a}(1:n));  b = double(imp.onBlue{a}(1:n));
+c = c(:);  b = b(:);
+rel = -nPre : winS;
+dF = E.dF(:).';  mv = E.mv_z(:).';                    % native class, as the loaders used them
+ok = c + rel(1) >= 1 & c + rel(end) <= numel(dF) & b + rel(1) >= 1 & b + rel(end) <= numel(mv);
+if isfield(E,'blueOfCol') && ~isempty(E.blueOfCol)
+    bo = E.blueOfCol(:).';
+    k  = find(ok);
+    gapFree = all(reshape(bo(c(k) + rel), numel(k), []) == b(k) + rel, 2);
+    ok(k(~gapFree)) = false;
+end
+dfL = nan(n, numel(rel), 'like', dF);  mtL = nan(n, numel(rel), 'like', mv);
+k = find(ok);
+dfL(k,:) = reshape(dF(c(k) + rel), numel(k), []) - reshape(dF(c(k)), [], 1);
+mtL(k,:) = reshape(mv(b(k) + rel), numel(k), []);
+iC = (nPre - winS + 1) : numel(rel);                  % the loaders' -winS..+winS columns
+assert(isequaln(dfL(k,iC), imp.dfImp{a}(k,:)), '[STV] %s amp %d: long trace does not match dfImp', E.mn, a);
+assert(isequaln(mtL(k,iC), imp.motTrace{a}(k,:)), '[STV] %s amp %d: long motion does not match motTrace', E.mn, a);
+end
+
+function ok = local_prevpulse(E, st, excl_s, fs)
+%LOCAL_PREVPULSE  false for a trial with any laser onset in [own onset - excl_s, own onset).
+% E.laserOnT holds every real laser onset of the session (both galvo spots for AL_0048; no
+% amplitude-0 gap-fill events). A trial's own onset is the latest laser onset at or before its
+% start time; for AL_0048 the start time is the first frame after the pulse, hence the one-frame
+% tolerance, asserted.
+assert(isfield(E,'laserOnT') && ~isempty(E.laserOnT), ...
+       '[STV] %s: laserOnT missing -- rerun load_experiments (2026-11-13 or later).', E.mn);
+L = sort(double(E.laserOnT(:)));
+st = double(st(:));
+ok = true(numel(st),1);
+for j = 1:numel(st)
+    iOwn = find(L <= st(j) + 1e-9, 1, 'last');
+    assert(~isempty(iOwn) && st(j) - L(iOwn) < 1.5/fs, ...
+           '[STV] %s: no laser onset within one frame of trial start %.3f s', E.mn, st(j));
+    prev = L(1:iOwn-1);
+    ok(j) = ~any(prev >= L(iOwn) - excl_s);
+end
 end
 
 function z = local_zby(x, g)
