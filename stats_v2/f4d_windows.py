@@ -42,7 +42,7 @@ OUT = loader.ROOT / "data" / "stats_v2" / "corrected"
 FIG = loader.ROOT / "paper" / "images" / "figure4" / "supp"
 WINS = {"peri": (-70, 104), "pre5": (-175, -1), "pre2": (-70, -1), "stim": (0, 104)}
 STATES = ["rel_delta", "abs_delta", "motion"]
-LABEL = {"rel_delta": "Relative 2–4 Hz", "abs_delta": "Absolute 1–4 Hz", "motion": "Motion"}
+LABEL = {"rel_delta": "Relative 1–4 Hz", "abs_delta": "Absolute 1–4 Hz", "motion": "Motion"}
 WIN_COL = {"peri": "k", "pre5": "#2ca02c", "pre2": "#98df8a", "stim": "#6a3d9a"}
 WIN_LAB = {"peri": "[−2,+3) locked", "pre5": "[−5,0) laser off", "pre2": "[−2,0) laser off",
            "stim": "[0,+3) controller on"}
@@ -57,8 +57,8 @@ def state_value(s, st, o, rng):
     seg = M.segment(s["dFk"], o, rng)
     if not np.all(np.isfinite(seg)):
         return np.nan
-    if st == "rel_delta":
-        return M.bandpower(seg, 2, 4) / M.bandpower(seg, 0.4, 10)
+    if st == "rel_delta":  # 1-4 Hz since 2026-11-13 (Aditya: "Yes keep this"), as metrics.py
+        return M.bandpower(seg, 1, 4) / M.bandpower(seg, 0.4, 10)
     return float(np.log10(M.bandpower(seg, 1, 4)))
 
 

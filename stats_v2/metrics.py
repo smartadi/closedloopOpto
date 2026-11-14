@@ -74,7 +74,9 @@ def trial_states(dfk, motion, o, ref, has_motion):
         "motion": np.nan,
     }
     if np.all(np.isfinite(seg)):
-        out["rel_delta"] = bandpower(seg, 2, 4) / bandpower(seg, 0.4, 10)
+        # Relative power over 1-4 Hz since 2026-11-13 (Aditya: "Yes keep this"; was 2-4 Hz),
+        # the same band as the absolute measure. Hub #92, RESEARCH L-2026-11-13-c.
+        out["rel_delta"] = bandpower(seg, 1, 4) / bandpower(seg, 0.4, 10)
         out["abs_delta"] = float(np.log10(bandpower(seg, 1, 4)))
     if has_motion:
         mseg = segment(motion, o, PERI)

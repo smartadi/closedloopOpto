@@ -286,7 +286,14 @@ def main():
     if corrected:
         oc = pd.read_csv(OUT / "onsets_corrected.csv")
         onsets = {k: g["onset_frame"].to_numpy() - 1 for k, g in oc.groupby("session")}
-        m14_main, m14_alt = M14_SHIFT, 0
+        # The m14 cache was later padded by utils/ctrl_onset_fix.m (len dFk = len timeBlue), which
+        # already places dFk on the timeBlue grid; shifting it again moves m14 by 0.31 s
+        # (RESEARCH 2026-11-02 BUG entry). Shift only an unpadded cache.
+        s14_raw = loader.load_session("m14")
+        padded = s14_raw["len_dFk"] == s14_raw["len_timeBlue"]
+        del s14_raw
+        m14_main, m14_alt = (0 if padded else M14_SHIFT), 0
+        print(f"m14 cache padded: {padded} -> dFk offset {m14_main}")
         OUT = OUT / "corrected"
     OUT.mkdir(parents=True, exist_ok=True)
     trials, f3s, f4s, preps, chks, scs = [], [], [], [], {}, {}

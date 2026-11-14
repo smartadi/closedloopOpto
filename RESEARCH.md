@@ -16,6 +16,19 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-13-c · Relative power over 1-4 Hz in stats_v2; m14 shift guard in run_all.py
+commit: b4eb299+this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:** Relative power is now bandpower(1-4 Hz) / bandpower(0.4-10 Hz) (was 2-4 Hz) in `metrics.py` (Fig 4 state, [-2,+3) s) and `f4d_windows.py`. Math approved by Aditya 2026-11-13: "Yes keep this" (one band, 1-4 Hz, for relative and absolute power). Re-ran `run_all.py --corrected` and `f4d_windows.py`. Against the previous `tests.csv`, only the relative-power rows changed, plus the Holm p of the motion CL/OL slope (0.0092 to 0.0069), which is in the same Holm family. Initial deviation, motion and absolute 1-4 Hz rows are identical. Relative power, CL/OL slope (A), old 2-4 Hz then new 1-4 Hz:
+- locked [-2,+3) s: +5.2% [0.6, 10.0], p = 0.029 (13/15) then +7.4% [3.7, 11.2], p = 0.00065, Holm 0.0026 (12/15)
+- laser off [-5,0) s: +1.8%, p = 0.57 then +4.0% [-3.4, 12.0], p = 0.27
+- laser off [-2,0) s: +4.4%, p = 0.15 then +4.9%, p = 0.10; controller on [0,+3) s: +7.7%, p = 0.032 then +9.1%, p = 0.011
+- OL slope p = 0.98 then 0.97; CL slope 0.099 (p = 0.035) then 0.134 %dF/F per SD (p = 0.025)
+- CL minus OL state shift (SD): locked 0.02 (p = 0.65), [-5,0) -0.05 (p = 0.17), [0,+3) 0.20 (p = 0.017)
+So with 1-4 Hz, the locked relative-power effect is clearer, and the laser-off check still does not reach significance.
+m14 guard: `run_all.py --corrected` shifted m14's dFk by M14_SHIFT although the cache is now padded by `utils/ctrl_onset_fix.m` (2026-11-02 BUG entry), so a re-run would have moved m14 by 0.31 s. It now shifts only an unpadded cache and prints which. This run: m14 padded, offset 0. The non-relative rows reproduce the committed `tests.csv` exactly.
+**State:** `data/stats_v2/corrected/tests.csv`, `trials.csv`, `f4d_windows_*.csv` regenerated (data/ is gitignored). `paper/images/figure4/supp/f4d_state_windows.png` redrawn. MATLAB Fig 4 code still uses `hi_bnd = [2 4]` (`f4_state_exemplars.m`, `f4_error_decomp.m`, `f4_state_exemplars_supp.m`, `cl_rmse_factor_windows.m`, `utils/cl_reldelta.m`); to switch with the Fig 4 re-run.
+**Resume:** `stats_v2/.venv/Scripts/python.exe -I stats_v2/run_all.py --corrected`, then `stats_v2/f4d_windows.py`.
+
 ### L-2026-11-13-a · Session-level tests of the high/low state spectra (Fig 4E)
 commit: 9984c69+this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:** New `stats_v2/state_spectra_tests.py`. Math approved by Aditya 2026-11-13: "Do state spectra tests" (method block in the Hub control chat: y = ln of band-mean P_Q4 over band-mean P_Q1 of the 0-3 s residual, bands 0.5-1, 1-3, 3-6 Hz; one-sample t across sessions per condition, paired CL vs OL; 18 tests per state window, Holm; locked [-2,+3) s and laser-off [-5,0) s). Quartiles and spectra as `state_spectra.py`. Relative 1-4 Hz power (band approved 2026-11-13, "Yes keep this") gets curves only. Check: identical Q1 and Q4 spectra give y = 0 (asserted). Results, ratio [95% CI], p, Holm:
