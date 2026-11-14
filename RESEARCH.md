@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-13-a · Session-level tests of the high/low state spectra (Fig 4E)
+commit: 9984c69+this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:** New `stats_v2/state_spectra_tests.py`. Math approved by Aditya 2026-11-13: "Do state spectra tests" (method block in the Hub control chat: y = ln of band-mean P_Q4 over band-mean P_Q1 of the 0-3 s residual, bands 0.5-1, 1-3, 3-6 Hz; one-sample t across sessions per condition, paired CL vs OL; 18 tests per state window, Holm; locked [-2,+3) s and laser-off [-5,0) s). Quartiles and spectra as `state_spectra.py`. Relative 1-4 Hz power (band approved 2026-11-13, "Yes keep this") gets curves only. Check: identical Q1 and Q4 spectra give y = 0 (asserted). Results, ratio [95% CI], p, Holm:
+- Absolute 1-4 Hz, locked: Q4/Q1 OL 3.18 / 5.03 / 3.79 and CL 2.75 / 4.41 / 4.72 (0.5-1 / 1-3 / 3-6 Hz), every Holm p <= 0.0054; CL vs OL 0.90, 0.92, 1.31, p >= 0.22.
+- Absolute 1-4 Hz, laser off: OL 2.00 (Holm 0.042), 2.36 (0.0091), 2.16 (0.0005); CL 1.82 (0.32), 2.22 (0.081), 1.96 (0.040); CL vs OL p >= 0.50.
+- Motion, locked: 0.5-1 Hz OL 1.69 [0.80, 3.56] p = 0.15, CL 0.98 p = 0.90, CL vs OL 0.58 [0.35, 0.96] p = 0.036 (Holm 0.32); 1-3 Hz OL 0.61 p = 0.096, CL 0.51 p = 0.014 (Holm 0.14); 3-6 Hz OL 0.48 [0.32, 0.71] p = 0.0018 (Holm 0.020), CL 0.48 [0.34, 0.68] p = 0.0007 (Holm 0.0084).
+- Motion, laser off: nothing after Holm (smallest 1-3 Hz OL 0.55, p = 0.027, Holm 0.33); 0.5-1 Hz OL 1.00.
+So high 1-4 Hz trials carry 2-5x the power at every band, laser off too, and feedback does not change the ratio. High-motion trials carry half the power at 3-6 Hz; their slow open-loop excess is not significant, so "motion adds error below 1 Hz" rests on elimination, not on a direct test.
+**State:** outputs `data/stats_v2/corrected/state_spectra_tests.csv` and `state_spectra_curves.csv` (data/ is gitignored; re-run to regenerate). Fewest trials in Q1 or Q4 of any included session: 3.
+**Resume:** `stats_v2/.venv/Scripts/python.exe -I stats_v2/state_spectra_tests.py`; next, the Fig 4E paper panel from `state_spectra_curves.csv`.
+
 ### 2026-11-11 — SfN poster v11 (48 × 36 in) saved to OneDrive
 **Changed/Found:** Saved `OneDrive/Talks/SfN2026/SfN2026_poster_v11_48x36.pptx` (8543486 bytes, md5 38c81d84…) and `SfN2026_poster_v11_48x36.pdf` (16780035 bytes, md5 393954cf…), the scratch build in the entry below, unchanged (copied with no-overwrite). Before saving, OneDrive v10 pptx (md5 38db92f6…) and PDF (md5 1d8f31f5…) were unchanged since they were saved, so there were no online edits to carry; v3–v10 untouched. `od_state.ps1` right after the copy: pptx state 2 (uploaded), PDF state 4 (still uploading).
 **Why:** Aditya: "Yes, save v11".
