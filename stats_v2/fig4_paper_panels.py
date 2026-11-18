@@ -9,6 +9,8 @@ recomputed with the same rules as f4_row2_quartiles.m, sensitivity.py and sens_t
 Method approved by Aditya 2026-11-16: "approve" (the plotting rules posted in Hub control on
 2026-11-14 and again on 2026-11-16). Equations and rules: brain_paper RESEARCH.md, L-2026-11-16-a.
 
+Figure 4B  unique R^2 of initial deviation, motion and absolute 1-4 Hz, one model (f4_error_decomp.m
+           'abs' mode, read from its .mat; approved by Aditya 2026-11-18, RESEARCH L-2026-11-18-a).
 Figure 4C  quartile tiles for initial deviation, motion and absolute 1-4 Hz (session-level display of
            f4_row2_quartiles.m; stars from tests.csv).
 Figure 4D  CL/OL residual power (sensitivity_curve.csv), as sensitivity_cert.panel.
@@ -193,12 +195,75 @@ def ratio_tile(a, curves, tests, window, key, title, tcol, ylabel=True, ylim=(0.
 
 
 # ------------------------------------------------------------------------------ main panels
+def main_B():
+    """Figure 4B: unique R^2 of initial deviation, motion and absolute 1-4 Hz in ONE per-session model
+    (f4_error_decomp.m 'abs' mode: y = b0 + b1 z_init + b2 z_motion + b3 z_log10abs + e, y = the trial's
+    RMSE to target over 0-1 s or 1-3 s, states z-scored within session; U_j = adjusted R^2 of the full
+    model minus that of the model without j). Bar = mean over sessions, error bar = SEM (SD ddof 1 /
+    sqrt n). Read from controller-analysis/data/f4_error_decomp.mat (DEC.abs, run 2026-11-14,
+    L-2026-11-14-a); nothing is refit. Math approved by Aditya 2026-11-18: "approve" (Hub control,
+    option 1: the init + motion + absolute model replaces the 'sep' bars once relative power left the
+    main figure). Drawn as the SfN poster panel (poster/sfn2026/unique_panel.m): broken y axis,
+    two-line names, at paper type sizes."""
+    import scipy.io as sio
+    dec = sio.loadmat(loader.ROOT / "controller-analysis" / "data" / "f4_error_decomp.mat",
+                      squeeze_me=True, struct_as_record=False)["DEC"].abs
+    assert [str(s) for s in dec.fac] == ["init-dev", "motion", "abs 1-4Hz"], dec.fac
+    U = dec.Us[:, :, np.asarray(dec.okS, bool)]              # state x window x session
+    n = U.shape[2]
+    P = U.mean(axis=2)
+    E = U.std(axis=2, ddof=1) / np.sqrt(n)
+    assert np.allclose(P, dec.Up, atol=1e-12), "session mean differs from the saved DEC.abs.Up"
+    fc = np.array([matplotlib.colors.to_rgb(STATE_COL[s]) for s in ("init_dev", "motion", "abs_delta")])
+    light, dark = 1 - 0.55 * (1 - fc), 0.70 * fc             # 0-1 s light, 1-3 s dark (unique_panel.m)
+    lo, hi = (-0.01, 0.2), (0.35, 0.5)
+    top_lo = np.delete((P + E).ravel(), 0)                    # every bar but init-dev 0-1 s fits below
+    assert top_lo.max() < lo[1] and hi[0] < P[0, 0] - E[0, 0] and P[0, 0] + E[0, 0] < hi[1], (P, E)
+
+    fig = plt.figure(figsize=(5.0 * CM, 4.4 * CM))
+    x0, w = 1.05, 3.75
+    a2 = axes_cm(fig, x0, 0.55, w, 0.6)                       # upper segment
+    a1 = axes_cm(fig, x0, 1.27, w, 2.33)                      # lower segment; bottom level with 4D
+    xb = np.arange(1, 4)
+    for a in (a1, a2):
+        for k, (col, dx) in enumerate(((light, -0.2), (dark, 0.2))):
+            a.bar(xb + dx, P[:, k], width=0.38, color=col, lw=0)
+            a.errorbar(xb + dx, P[:, k], yerr=E[:, k], ls="none", color="0.25", elinewidth=0.5, capsize=1.5,
+                       capthick=0.5)
+        a.set_xlim(0.5, 3.5)
+    a1.axhline(0, color="0.6", lw=0.5, zorder=0)
+    a1.set_ylim(*lo)
+    a1.set_yticks([0, 0.1, 0.2])
+    a1.set_yticklabels(["0", "0.1", "0.2"])
+    a1.set_xticks(xb)
+    a1.set_xticklabels(["init-dev", "motion", "abs\n1–4 Hz"])
+    a2.set_ylim(*hi)
+    a2.set_yticks([0.4])
+    a2.set_yticklabels(["0.4"])
+    a2.set_xticks([])
+    a2.spines["bottom"].set_visible(False)
+    for yb in (1.27, 1.15):                                   # break marks on the y axis, cm from top
+        fig.add_artist(Line2D([(x0 - 0.07) * CM / fig.get_size_inches()[0], (x0 + 0.07) * CM / fig.get_size_inches()[0]],
+                              [1 - (yb + 0.04) / 4.4, 1 - (yb - 0.04) / 4.4], color="k", lw=0.5))
+    for k, (lab, g) in enumerate((("0–1 s", "0.72"), ("1–3 s", "0.35"))):
+        a2.add_patch(plt.Rectangle((2.45, 0.465 - k * 0.05), 0.15, 0.03, color=g, lw=0, clip_on=False))
+        a2.text(2.68, 0.48 - k * 0.05, lab, va="center", ha="left")
+    fig.text((x0 + w / 2) / 5.0, 1 - 0.42 / 4.4, f"Unique R² ({n} sessions)", ha="center", va="bottom",
+             fontsize=7, fontweight="bold")
+    fig.text(0.2 / 5.0, 1 - (0.55 + 3.05 / 2) / 4.4, "Unique R²", rotation=90, ha="center", va="center",
+             fontsize=7, fontweight="bold")
+    save(fig, "f4B_unique")
+    for j, s in enumerate(("init-dev", "motion", "abs 1-4 Hz")):
+        print(f"  B {s:10s} 0-1 s {P[j, 0]:.3f} [{E[j, 0]:.3f}]   1-3 s {P[j, 1]:.3f} [{E[j, 1]:.3f}]   ({n} sessions)")
+
+
 def main_C(tr, tests):
     """Figure 4C: quartile tiles for initial deviation, motion and absolute 1-4 Hz, one y scale."""
-    fig = plt.figure(figsize=(12.6 * CM, 5.3 * CM))
+    # 11.2 cm wide (was 12.6) so C and E (6.0 cm) fit one 17.6 cm JN row (2026-11-18, layout only)
+    fig = plt.figure(figsize=(11.2 * CM, 4.6 * CM))
     out, axs = {}, []
     for j, st in enumerate(("init_dev", "motion", "abs_delta")):
-        a = axes_cm(fig, 1.2 + j * 3.95, 0.55, 3.45, 3.9)
+        a = axes_cm(fig, 1.2 + j * 3.4, 0.55, 3.05, 3.2)
         out[st] = quartile_tile(a, tr, tests, st, ylabel=(j == 0), legend=(j == 0))
         axs.append(a)
     lo = min(a.get_ylim()[0] for a in axs)
@@ -215,8 +280,9 @@ def main_D():
     from sensitivity_cert import THETA, stretches_on
     c = pd.read_csv(DATA / "sensitivity_curve.csv")
     f = c["f_hz"].to_numpy()
-    fig = plt.figure(figsize=(6.0 * CM, 4.4 * CM))
-    a = axes_cm(fig, 1.15, 0.55, 4.7, 3.05)
+    # 5.6 cm wide (was 6.0) so A, B and D fit one 17.6 cm JN row (2026-11-18, layout only)
+    fig = plt.figure(figsize=(5.6 * CM, 4.4 * CM))
+    a = axes_cm(fig, 1.15, 0.55, 4.3, 3.05)
     kp = (f >= 0.5) & (f <= 17.5)
     a.axhline(1, color="0.5", lw=0.75, ls="--", zorder=1)
     a.plot(f[kp], c["S_pre"][kp], color="0.6", lw=1.0, zorder=2, label="Before stimulus")
@@ -567,6 +633,7 @@ def main():
     tests = pd.read_csv(DATA / "tests.csv")
     curves = pd.read_csv(DATA / "state_spectra_curves.csv")
     sst = pd.read_csv(DATA / "state_spectra_tests.csv")
+    main_B()
     qc = main_C(tr, tests)
     main_D()
     main_E(curves, sst)
