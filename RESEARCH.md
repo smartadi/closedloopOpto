@@ -16,6 +16,19 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-18-c · Fig 4E replaced: the 4C error split by frequency
+commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya: no Q4/Q1 frequency plot (4E was confusing); his and Nick's hypothesis is that 4C comes from the frequency content of motion and 1-4 Hz power; a simple plot, no tests. Math approved by Aditya 2026-11-18: "Approve" (Hub control method block "replace 4E with the 4C error power split into three frequency bands, stacked per quartile, for motion and absolute 1-4 Hz, OL and CL").
+- Equations (docstring of the new `stats_v2/error_bands.py`): e_i(t) = x_i(t) - r over the 4C window (1-3 s, N = 71, 35 Hz); MSE_i = (1/N^2) sum_k |E_i(k)|^2 (Parseval, no taper) split into bins 0 and 0.49 Hz (< 1 Hz, bin 0 = mean offset), 0.99-3.94 Hz (1-4 Hz) and 4.44-17.25 Hz (> 4 Hz); each part / the session's mean MSE; quartiles exactly as 4C; bar = mean over sessions of the session quartile mean.
+- Checks passed: parts sum to each trial's MSE (relative error < 1e-9); MSE = rmse_late^2 of trials.csv for all 1670 trials (max relative difference 2.2e-16); a constant falls in < 1 Hz only, a sine on the 1.97 Hz bin in 1-4 Hz only, a 2.00 Hz sine puts 0.998 of its power in 1-4 Hz; the quartile z means equal `fig4_paper_panels.quartile_means` (4C) and the session counts match.
+- Locked [-2,+3) s state (4E). Motion, 11 sessions: OL < 1 Hz 0.805, 0.953, 1.060, 1.581 (Q1-Q4), 1-4 Hz 0.267 to 0.192, > 4 Hz about 0.05; CL < 1 Hz 0.304, 0.258, 0.282, 0.334, 1-4 Hz 0.302 to 0.177. Absolute 1-4 Hz, 15 sessions: OL < 1 Hz 0.902, 0.993, 1.262, 1.211, 1-4 Hz 0.132, 0.189, 0.273, 0.400, > 4 Hz 0.038 to 0.075; CL < 1 Hz 0.249, 0.240, 0.306, 0.390, 1-4 Hz 0.135, 0.159, 0.253, 0.405, > 4 Hz 0.045 to 0.097.
+- Laser-off [-5,0) s state (supplement check, `f4S_error_bands_laseroff`): absolute 1-4 Hz, 1-4 Hz part OL 0.161 to 0.348, CL 0.162 to 0.346 (Q1 to Q4); motion OL < 1 Hz 0.951, 0.961, 1.109, 1.261, CL 0.306 to 0.275.
+- Reading (descriptive, no tests): the OL rise with motion is in < 1 Hz, and CL holds < 1 Hz at about 0.3 in every quartile; the rise with absolute power is in 1-4 Hz in both OL and CL, by about the same amount, and it remains when the state is measured laser-off.
+- `stats_v2/fig4_paper_panels.py`: new `main_E` (2 x 2 stacked bars, greys light to dark by frequency) writes `f4E_error_bands` and `f4S_error_bands_laseroff`; the cluster drawing from L-2026-11-18-b is removed (`state_spectra_cluster.py` stays, not drawn). `paper-writing/fig4_jn_build.py` places `f4E_error_bands` as E. JN Figure 4 rebuilt; audit has only the known 4G flag.
+**State:** outputs `data/stats_v2/corrected/error_bands_trials.csv` and `error_bands_quartiles.csv` (gitignored). The laser-off supplement figure has no window label yet and is not placed in a supplement. Not copied into Closedloop_edit.
+**Resume:** `stats_v2/.venv/Scripts/python.exe -I stats_v2/error_bands.py`, then `stats_v2/.venv/Scripts/python.exe -I stats_v2/fig4_paper_panels.py --no-sens` and `python -X utf8 -I paper-writing/fig4_jn_build.py`.
+
 ### L-2026-11-18-b · Fig 4E: CL vs OL cluster permutation test across frequency
 commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:**

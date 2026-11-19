@@ -3,7 +3,7 @@
 panel letters 8 pt bold; axes 0.5 pt, means 1.0 pt, reference 0.75 pt, error bars 0.5 pt;
 OL red, CL blue). Hub #92. Display only: every statistic is read from the stats_v2 outputs (run
 run_all.py --corrected, f4d_windows.py, f4d_bands.py, sensitivity.py, sens_trials.py,
-state_spectra_tests.py and state_spectra_cluster.py first); the quartile tile means, residual spectra
+state_spectra_tests.py and error_bands.py first); the quartile tile means, residual spectra
 and example trials are recomputed with the same rules as f4_row2_quartiles.m, sensitivity.py and
 sens_trials.py.
 
@@ -15,9 +15,10 @@ Figure 4B  unique R^2 of initial deviation, motion and absolute 1-4 Hz, one mode
 Figure 4C  quartile tiles for initial deviation, motion and absolute 1-4 Hz (session-level display of
            f4_row2_quartiles.m; stars from tests.csv).
 Figure 4D  CL/OL residual power (sensitivity_curve.csv), as sensitivity_cert.panel.
-Figure 4E  Q4/Q1 power by state, locked window, with the CL vs OL cluster test across frequency
-           (state_spectra_clusters.csv; approved by Aditya 2026-11-18, RESEARCH L-2026-11-18-b): a bar
-           over each cluster's frequency range with its Holm p as stars, in place of the band stars.
+Figure 4E  the 4C error split by frequency (< 1, 1-4, > 4 Hz) and stacked per state quartile, OL and
+           CL (error_bands_quartiles.csv from error_bands.py; approved by Aditya 2026-11-18, RESEARCH
+           L-2026-11-18-c). No tests. The same plot sorted by the laser-off state is
+           f4S_error_bands_laseroff (for absolute power the locked state contains the 1-3 s window).
 Supp states       A relative 1-4 Hz quartile tile, B state-window check, C band grid,
                   D Q4/Q1 spectra (laser off; relative power).
 Supp sensitivity  A residual spectra, B 1 Hz bands with the pre-stimulus null, C band ratios per
@@ -162,11 +163,9 @@ def quartile_tile(a, tr, tests, state, ylabel=True, legend=True):
 
 
 # ------------------------------------------------------------------------------ Q4/Q1 spectra
-def ratio_tile(a, curves, tests, window, key, title, tcol, ylabel=True, ylim=(0.2, 12), fmax=8.0, above=False,
-               clusters=None):
+def ratio_tile(a, curves, tests, window, key, title, tcol, ylabel=True, ylim=(0.2, 12), fmax=8.0, above=False):
     """above=True puts the band bars and stars above the axes (layout only), for tiles whose curves
-    reach the top. clusters (state_spectra_clusters.csv rows): one black bar per CL vs OL cluster over
-    its frequency range, with stars of its Holm p, in place of the band stars."""
+    reach the top."""
     cv = curves[(curves["window"] == window) & (curves["state"] == key)]
     a.axhline(1, color="0.5", lw=0.75, ls="--", zorder=0)
     n = {}
@@ -196,14 +195,6 @@ def ratio_tile(a, curves, tests, window, key, title, tcol, ylabel=True, ylim=(0.
                 p = t[(t["band"] == bname) & (t["test"] == f"Q4/Q1 {cond}")]["p_holm"].iloc[0]
                 a.text(np.sqrt(f0 * f1), yy, stars(p), color=col, transform=tr, ha="center", va=va,
                        fontsize=6)
-    if clusters is not None:
-        tr = a.get_xaxis_transform()
-        c = clusters[(clusters["window"] == window) & (clusters["state"] == key) & (clusters["cluster"] > 0)]
-        for _, r in c.iterrows():
-            a.plot([r["f_lo"], r["f_hi"]], [ybar, ybar], color="k", lw=0.75, transform=tr, clip_on=False,
-                   solid_capstyle="butt")
-            a.text(np.sqrt(r["f_lo"] * r["f_hi"]), ybar + (0.03 if above else -0.03), stars(r["p_holm"]),
-                   color="k", transform=tr, ha="center", va=va, fontsize=6)
     return n
 
 
@@ -325,25 +316,53 @@ def main_D():
           f"{above[0]:.2f}-{above[1]:.2f} Hz")
 
 
-def main_E(curves, clus):
+BAND_COL = {"slow": "#d0d0d0", "1-4 Hz": "#8c8c8c", "fast": "#3a3a3a"}
+BAND_LAB = {"slow": "< 1 Hz", "1-4 Hz": "1–4 Hz", "fast": "> 4 Hz"}
+
+
+def main_E(qt, window=LOCKED, name="f4E_error_bands"):
+    """Figure 4E: the 4C error (MSE over 1-3 s, session mean = 1) split by Parseval into < 1 Hz, 1-4 Hz
+    and > 4 Hz, stacked per state quartile; rows motion and absolute 1-4 Hz, columns OL and CL. Read
+    from error_bands_quartiles.csv (stats_v2/error_bands.py). Approved by Aditya 2026-11-18:
+    "Approve" (RESEARCH L-2026-11-18-c). No tests. window=LASEROFF draws the supplement check."""
     fig = plt.figure(figsize=(6.0 * CM, 4.4 * CM))
-    a1 = axes_cm(fig, 1.05, 1.25, 2.3, 2.35)
-    a2 = axes_cm(fig, 3.6, 1.25, 2.3, 2.35)
-    n1 = ratio_tile(a1, curves, None, LOCKED, "abs14", STATE_LAB["abs_delta"], STATE_COL["abs_delta"], above=True,
-                    clusters=clus)
-    n2 = ratio_tile(a2, curves, None, LOCKED, "motion", STATE_LAB["motion"], STATE_COL["motion"], ylabel=False,
-                    above=True, clusters=clus)
-    for _, r in clus[(clus["window"] == LOCKED) & (clus["cluster"] > 0)].iterrows():
-        print(f"  E {r['state']:6s} cluster {r['f_lo']:.2f}-{r['f_hi']:.2f} Hz {r['sign']} CL/OL {r['cl_ol']:.2f} "
-              f"p {r['p']:.3f} Holm {r['p_holm']:.3f} -> {stars(r['p_holm'])}")
-    a2.set_yticklabels([])
-    fig.text(0.56, 0.02, "Frequency (Hz)", ha="center", va="bottom", fontsize=7, fontweight="bold")
-    a1.set_xlabel("")
-    a2.set_xlabel("")
-    a1.text(0.04, 0.04, "OL", color=OL, transform=a1.transAxes, fontweight="bold")
-    a1.text(0.2, 0.04, "CL", color=CL, transform=a1.transAxes, fontweight="bold")
-    save(fig, "f4E_state_spectra")
-    print(f"  sessions: abs {n1}, motion {n2}")
+    q = qt[qt["window"] == window]
+    tot = q[q["band"] == "total"]["mean"].max()
+    ymax = np.ceil(tot * 1.05 / 0.5) * 0.5
+    xq = np.arange(1, 5)
+    for i, st in enumerate(("motion", "abs_delta")):
+        for j, (cond, ccol) in enumerate((("OL", OL), ("CL", CL))):
+            a = axes_cm(fig, 1.15 + j * 2.45, 0.75 + i * 1.6, 2.2, 1.3)
+            d = q[(q["state"] == st) & (q["cond"] == cond)]
+            bottom = np.zeros(4)
+            for b in BAND_COL:
+                v = d[d["band"] == b].sort_values("quartile")["mean"].to_numpy()
+                a.bar(xq, v, 0.7, bottom=bottom, color=BAND_COL[b], lw=0)
+                bottom += v
+            ns = int(d["n_sessions"].min())
+            print(f"  E {window[:9]} {st:9s} {cond}: totals {np.round(bottom, 3)} ({ns} sessions)")
+            a.set_xlim(0.4, 4.6)
+            a.set_ylim(0, ymax)
+            a.set_yticks(np.arange(0, ymax + 0.01, 0.5 if ymax <= 1.5 else 1.0))
+            a.set_xticks(xq)
+            a.set_xticklabels([f"Q{k}" for k in xq] if i == 1 else [])
+            if j:
+                a.set_yticklabels([])
+            else:
+                a.set_ylabel(STATE_LAB[st], color=STATE_COL[st])
+            if i == 0:
+                a.set_title(cond, color=ccol)
+    fig.text(0.1 / 6.0, 1 - 2.2 / 4.4, "Error power (session mean = 1)", rotation=90, ha="left", va="center",
+             fontsize=7, fontweight="bold")
+    fig.text((1.15 + 2.325) / 6.0, 0.02, "State quartile", ha="center", va="bottom", fontsize=7,
+             fontweight="bold")
+    x = 1.15
+    for b in BAND_COL:
+        fig.patches.append(matplotlib.patches.Rectangle((x / 6.0, 1 - 0.32 / 4.4), 0.22 / 6.0, 0.18 / 4.4,
+                                                        transform=fig.transFigure, color=BAND_COL[b], lw=0))
+        fig.text((x + 0.3) / 6.0, 1 - 0.23 / 4.4, BAND_LAB[b], ha="left", va="center", fontsize=6)
+        x += 1.5
+    save(fig, name)
 
 
 # ------------------------------------------------------------------------------ supp: states
@@ -650,11 +669,12 @@ def main():
     tests = pd.read_csv(DATA / "tests.csv")
     curves = pd.read_csv(DATA / "state_spectra_curves.csv")
     sst = pd.read_csv(DATA / "state_spectra_tests.csv")
-    clus = pd.read_csv(DATA / "state_spectra_clusters.csv")
+    qt = pd.read_csv(DATA / "error_bands_quartiles.csv")
     main_B()
     qc = main_C(tr, tests)
     main_D()
-    main_E(curves, clus)
+    main_E(qt)
+    main_E(qt, LASEROFF, "f4S_error_bands_laseroff")
     supp_states(tr, tests, curves, sst)
     # check: the Python quartile means against the MATLAB f4_row2_quartiles.m run
     for st, (m, n) in qc.items():
