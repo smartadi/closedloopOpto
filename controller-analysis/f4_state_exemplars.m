@@ -81,17 +81,40 @@ for j=1:4
     [~,pick(j)]=max(spec);
 end
 
-% ================= FIGURE: 1 x 6 row =================
-fig=jnFig(7.5,3.3); tl=tiledlayout(fig,1,4,'TileSpacing','compact','Padding','tight');  % jn* row-1 LEFT (exemplars 7.5 + eqn 3.0 + unique-R^2 5.5); tight-crop export = no clip
-tv=(-spec_pre_s:1/Fs:spec_post_s).'; yl=[-16 10];
+% ================= FIGURE: 1 x 3 row (JN Fig 4A) =================
+% 2026-11-19 (Aditya: "A,B must tell same story"), display only, same picks: JN row 1 is A + B,
+% so A is about 12.2 cm wide (export, 11.75 cm canvas) with the exemplars of the three states in 4B (the relative 1-4 Hz tile is
+% left out; relative power is in the supplement). The stimulation window is split into the two
+% 4B error windows, 0-1 s (light) and 1-3 s (dark), named as in the 4B legend; titles use the
+% 4B/4C state names at 7 pt; the shared y range holds every picked trial (the old [-16 10]
+% clipped the initial-deviation trial). Writes f4A_exemplars_jn.pdf; the 4-tile
+% f4_state_exemplars.pdf of 2026-11-14 is no longer written.
+keep=[1 2 4];
+lbl={'High initial deviation','High motion',['High rel 1' char(8211) '4 Hz'],['High abs 1' char(8211) '4 Hz']};
+segs=cell(1,4);
+for j=keep
+    i=pick(j); [eb, ec] = pre_spec_buffer(mouse.(fields{SESS(i)}).data, 'wc');
+    segs{j}=double(eb(TRI(i), ec-spec_pre_s*Fs : ec+spec_post_s*Fs));   % caches mix single and double
+end
+fig=jnFig(11.75,4.1); tl=tiledlayout(fig,1,numel(keep),'TileSpacing','compact','Padding','tight');
+tv=(-spec_pre_s:1/Fs:spec_post_s).'; yl=[-16 max(10, ceil(max(cellfun(@max,segs(keep))))+1)];
+shade={[0 1],[.95 .95 .95]; [1 3],[.88 .88 .88]};          % 0-1 s and 1-3 s, as the 4B legend
 
-% ----- tiles 1-4: exemplars -----
-for j=1:4
-    ax=nexttile(tl); i=pick(j); dk=mouse.(fields{SESS(i)}).data; ref=mouse.(fields{SESS(i)}).d.ref;
-    [eb, ec] = pre_spec_buffer(dk, 'wc');
-    seg=eb(TRI(i), ec-spec_pre_s*Fs : ec+spec_post_s*Fs);
+% ----- exemplar tiles -----
+for jj=1:numel(keep)
+    j=keep(jj); ax=nexttile(tl); i=pick(j); dk=mouse.(fields{SESS(i)}).data; ref=mouse.(fields{SESS(i)}).d.ref;
+    seg=segs{j};
     hold(ax,'on');
-    patch(ax,[0 3 3 0],[yl(1) yl(1) yl(2) yl(2)],[.9 .9 .9],'EdgeColor','none','FaceAlpha',.5,'HandleVisibility','off');
+    for w=1:size(shade,1)
+        x=shade{w,1};
+        patch(ax,x([1 2 2 1]),[yl(1) yl(1) yl(2) yl(2)],shade{w,2},'EdgeColor','none','HandleVisibility','off');
+    end
+    if jj==1    % window names once, at the foot of the first tile (leftmost-legend rule)
+        text(ax,0.5,yl(1)+0.5,['0' char(8211) '1 s'],'HorizontalAlignment','center','VerticalAlignment','bottom', ...
+            'FontSize',PS.fs,'Color',[.3 .3 .3]);
+        text(ax,2,yl(1)+0.5,['1' char(8211) '3 s'],'HorizontalAlignment','center','VerticalAlignment','bottom', ...
+            'FontSize',PS.fs,'Color',[.3 .3 .3]);
+    end
     plot(ax,tv([1 end]),[ref ref],'--','Color',[.3 .3 .3],'LineWidth',PS.lw_ref,'HandleVisibility','off');
     xline(ax,0,':','Color',[.6 .6 .6],'HandleVisibility','off');
     if j==2 && isfield(dk,'wcmotion')                        % z-motion overlay for the motion exemplar
@@ -99,12 +122,14 @@ for j=1:4
         tvm=(-mot_pre:1/Fs:spec_post_s).'; tvm=tvm(1:numel(wm));
         wmz=(wm-mean(wm))/max(std(wm),eps); wmz=wmz*2 - 11;
         plot(ax,tvm,wmz,'-','Color',[.55 .55 .55],'LineWidth',0.8);
-        text(ax,-1.9,-8,'z-motion','Color',[.5 .5 .5],'FontSize',PS.fs-1,'FontWeight',PS.fw);
+        text(ax,2.95,-14,'z-motion','Color',[.45 .45 .45],'FontSize',PS.fs,'FontWeight',PS.fw, ...
+            'HorizontalAlignment','right','VerticalAlignment','middle');
     end
     plot(ax,tv,seg,'-','Color',col(j,:),'LineWidth',PS.lw_mean);
-    xlim(ax,[-spec_pre_s spec_post_s]); ylim(ax,yl);
-    title(ax,lbl{j},'FontSize',PS.fs,'FontWeight',PS.fw,'Color',col(j,:));
-    if j==1     % scale bars only on the first tile (shared axes across the row)
+    % scale bars 0.1 s left of the trace: on the axes edge the vector export dropped the 5% bar (2026-11-19)
+    xlim(ax,[-spec_pre_s-0.1 spec_post_s]); ylim(ax,yl);
+    title(ax,lbl{j},'FontSize',PS.fs+1,'FontWeight',PS.fw,'Color',col(j,:));
+    if jj==1    % scale bars only on the first tile (shared axes across the row)
         shortCornerAxes_plot(ax,'Corner','bl','XLength',1,'YLength',5,'XLabel','1 s','YLabel','5%', ...
             'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap,'FontSize',PS.fs,'FontWeight',PS.fw);
     else
@@ -112,14 +137,12 @@ for j=1:4
             'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap,'FontSize',PS.fs,'FontWeight',PS.fw);
     end
 end
+fprintf('[f4_state_exemplars] picks (field, trial, state z): %s\n', strjoin(arrayfun(@(j) sprintf('%s tr%d z=%.1f', ...
+    fields{SESS(pick(j))}, TRI(pick(j)), Z(pick(j),j)), keep, 'UniformOutput', false), ' | '));
 
-% tiles 5 (error-model equation) and 6 (R^2 explained bar) REMOVED 2026-09-28 (user):
-% row-1 is now [state exemplars | decomp unique-R^2 (f4_error_decomp)] -- the R^2 bars live in
-% the separate decomp panel (recoloured by factor), so exemplars = 4 bigger trials only.
-
-paperExport(fig,fullfile(outfig,'f4_state_exemplars.pdf'));   % exact-page vector (Option 2)
-paperExport(fig,fullfile(outview,'f4_state_exemplars.png'));
-fprintf('[f4_state_exemplars] wrote row-1 composite -> %s\n',outfig);
+paperExport(fig,fullfile(outfig,'f4A_exemplars_jn.pdf'));   % exact-page vector (Option 2)
+paperExport(fig,fullfile(outview,'f4A_exemplars_jn.png'));
+fprintf('[f4_state_exemplars] wrote JN 4A -> %s\n',outfig);
 
 function p=local_bandpow(seg,Fs,lo,hi)
     seg=detrend(double(seg(:)).','linear'); N=numel(seg); w=hannwin(N).';

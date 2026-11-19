@@ -25,20 +25,24 @@ O =load(fullfile(dd,sprintf('ctrl_ols_ol_stimblind%s_%s.mat',sfx,tag)));
 t=O.rel(:).'/O.Fs; A=O.Aa(:).'; G=O.Gg(:).'; R2=O.R2_te;
 
 % ===== A = G + L (standalone) ======================================================
-f=jnFig(5.0,3.3); axD=axes(f); hold(axD,'on');   % jn* v2
-xl=[t(1) t(end)]; yl=[min(A)*1.15 max(2,max(G))];
-patch(axD,[0 3 3 0],[yl(1) yl(1) yl(2) yl(2)],[.93 .90 .82],'EdgeColor','none','FaceAlpha',.6,'HandleVisibility','off');
+% 2026-11-19 (JN Fig 4 row 3 F, G, H; display only): 6.6 x 3.6 cm to fill the row; y top 3 so the
+% legend sits above the traces; stimulation window light grey as in 4A; x label in sentence case;
+% R^2 written in Arial 6 pt (the TeX R^2_te subscript printed at 4.5 pt, under the 5 pt minimum).
+f=jnFig(6.6,3.6); axD=axes(f); hold(axD,'on');   % jn* v2
+xl=[t(1) t(end)]; yl=[min(A)*1.15 max(3,max(G))];
+patch(axD,[0 3 3 0],[yl(1) yl(1) yl(2) yl(2)],[.93 .93 .93],'EdgeColor','none','FaceAlpha',.6,'HandleVisibility','off');
 patch(axD,[t fliplr(t)],[A fliplr(G)],colL,'EdgeColor','none','FaceAlpha',0.20,'HandleVisibility','off');
 plot(axD,xl,[0 0],'--','Color',[.6 .6 .6],'LineWidth',PS.lw_ref,'HandleVisibility','off');
 xline(axD,0,':','Color',[.55 .55 .55],'HandleVisibility','off');
 hG=plot(axD,t,G,'-','Color',colG,'LineWidth',PS.lw_mean);
 hA=plot(axD,t,A,'-','Color',colA,'LineWidth',PS.lw_mean);
 xlim(axD,xl); ylim(axD,yl); set(axD,'Box','off','TickDir','out','FontSize',PS.fs,'FontWeight',PS.fw);
-xlabel(axD,'time from stim (s)','FontSize',PS.fs,'FontWeight',PS.fw); ylabel(axD,'\DeltaF/F (%)','FontSize',PS.fs,'FontWeight',PS.fw);
+xlabel(axD,'Time from stimulus (s)','FontSize',PS.fs,'FontWeight',PS.fw); ylabel(axD,[char(916) 'F/F (%)'],'Interpreter','none','FontSize',PS.fs,'FontWeight',PS.fw);
 lg=legend(axD,[hA hG],{'Actual','Global (contra pred.)'},'Box','off','Location','northeast','FontSize',PS.fs); lg.ItemTokenSize=[8 8];
 [~,im]=min(A); text(axD,t(im)+0.2,(A(im)+G(im))/2,{'Local','= A - G'},'Color',colL,'FontSize',PS.fs,'FontWeight','bold','VerticalAlignment','middle');
-text(axD,xl(1)+0.1,yl(1)*0.92,sprintf('R^2_{te} = %.2f',R2),'Color',colG,'FontSize',PS.fs,'FontWeight','bold');
-title(axD,'Actual = Global + Local','FontSize',PS.fs,'FontWeight','bold');
+text(axD,xl(1)+0.05,yl(1)+0.25,sprintf('R%s = %.2f',char(178),R2),'Color',colG,'FontSize',PS.fs,'FontWeight','bold', ...
+    'Interpreter','none','VerticalAlignment','bottom');
+title(axD,'Actual = Global + Local','FontSize',PS.fs+1,'FontWeight','bold');
 
 jnAxes(axD);
 paperExport(f,fullfile(outfig,'f4_agl.pdf'));

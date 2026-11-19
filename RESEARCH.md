@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-19-b · JN Fig 4 re-laid out one story per row: A+B, D+C+E, F+G+H
+commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya: "lets make this figure qualirty better / A,B must tell same story, / DCE is same story and FGH is same story". Display only, no number or test changes.
+- Row 1, A + B. `f4_state_exemplars.m` now draws the JN 4A itself (`f4A_exemplars_jn.pdf`, 12.2 x 4.4 cm): the three states of 4B, in 4B's order; titles "High initial deviation", "High motion", "High abs 1–4 Hz" at 7 pt (4B/4C names); the stimulation window shaded in two greys for the 4B windows, 0–1 s (light) and 1–3 s (dark), named in the first tile; y range raised to hold every picked trial (the old [-16 10] clipped the initial-deviation trial); z-motion label at 6 pt (was 5) clear of its trace; scale bars 0.1 s left of the trace because on the axes edge the vector export dropped the 5% bar. Same pick rule and data as L-2026-11-14-a (613 CL trials, full R^2 0.440): picks m2 trial 79, m4 trial 54, m2 trial 66; the traces match the 11-14 panel by eye (its picks were not logged). 4B tick labels use the same names and state colours.
+- Row 2, D | C | E (Aditya's order; letters kept). `fig4_paper_panels.py`: D 4.5, C 7.7, E 4.6 cm wide, one height (4.45 cm) and one axes box, one x label per panel at the same height; C has a single "State quartile" label; E shows motion then absolute 1–4 Hz, as C, with OL/CL top right; D names its curves on the plot (no legend) and the delay-limit note sits right of the line.
+- Row 3, F | G | H. `f4_kernel_map.m` at 5.6 x 3.8 cm, title 7 pt, "stimulation site" on two lines clear of the dots. `f4_contra_model.m` at 6.6 x 3.6 cm: legend above the traces, x label "Time from stimulus (s)", stimulation window light grey as in A (was beige), y label in Arial, and "R² = 0.75" in Arial 6 pt (the TeX R^2_te subscript printed at 4.5 pt, under the 5 pt minimum; audit flag gone). H unchanged: `f4_cl_reject_panel.m` (new size 6.4 x 3.6 cm, "Rejection ratio (RR)") stops at its assert because `controller-analysis/data/f4_cl_reject_lmm.mat` (2026-10-10) has no session test; the figure keeps the figures_final panel of 2026-10-20.
+- `paper-writing/fig4_jn_build.py` places the rows as above (A no longer clipped from the 4-tile panel). JN Figure 4 17.6 x 13.09 cm; audit 0 required issues, font sizes 6, 7 and 10 pt (letters). Previous build in `paper/figures_final/jn/_before_2026-11-19b/`.
+**State:** caption not updated: A's two greys, G's grey window and plain R², and the letter order D, C, E. H not re-run (needs `load_sessions; f4_cl_reject_lmm`, which may move its numbers). Not copied into Closedloop_edit.
+**Resume:** MATLAB `load_sessions; f4_state_exemplars; f4_kernel_map; f4_contra_model`, then `stats_v2/.venv/Scripts/python.exe -I stats_v2/fig4_paper_panels.py --no-sens` and `python -X utf8 -I paper-writing/fig4_jn_build.py`.
+
 ### L-2026-11-19-a · Fig 4E cluster bars dropped; curves only
 commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:**

@@ -1,20 +1,18 @@
-"""Assemble JN Figure 4 in the layout Aditya chose (2026-11-14), from the current panels.
+"""Assemble JN Figure 4 from the current panels, one story per row (Aditya 2026-11-19: "A,B must tell
+same story, DCE is same story and FGH is same story").
 
     python -X utf8 -I paper-writing/fig4_jn_build.py [--out DIR]
 
-Layout, 17.6 cm wide, letters as Aditya set them (row 1 reads A, B, D):
-  row 1  A state exemplar trials  |  B unique R^2 (error decomposition)  |  D CL/OL residual power
-  row 2  C state quartile tiles                                         |  E Q4/Q1 state spectra
-  row 3  F predictor kernel map   |  G A = G + L                         |  H rejection ratio
-The error-model equation panel is gone, and relative 1-4 Hz power is in the supplement (f4S_states).
+Layout, 17.6 cm wide, letters as Aditya set them (row 2 reads D, C, E):
+  row 1  A state exemplar trials (0-1 s and 1-3 s shaded)  |  B unique R^2 in those two windows
+  row 2  D CL/OL residual power  |  C state quartile tiles  |  E Q4/Q1 state spectra
+  row 3  F predictor kernel map  |  G A = G + L  |  H rejection ratio
 
-Panel A is the 2026-11-14 MATLAB exemplar row (f4_state_exemplars.m, corrected onsets, L-2026-11-14-a)
-without its relative-power tile: tiles 1, 2 and 4 are copied as vector clips and tile 4 moves left by
-one tile pitch. Display only; each tile's trial was picked on its own state, so no trial changes.
-B, C, D, E come from stats_v2/fig4_paper_panels.py (L-2026-11-16-a; B, the init + motion + absolute
-model, L-2026-11-18-a; E, Q4/Q1 spectra with the cluster test, L-2026-11-18-b, restored in
-L-2026-11-18-d). F and H are the figures_final panels
-used since 2026-11-04 (f4_kernel_map.m, f4_cl_reject_panel.m); G is the 2026-11-14 f4_contra_model.m run.
+A is f4_state_exemplars.m (JN version, 3 tiles, same picks as 2026-11-14, L-2026-11-19-b). B, C, D, E
+come from stats_v2/fig4_paper_panels.py (L-2026-11-16-a; B L-2026-11-18-a; E L-2026-11-18-b/-d and
+L-2026-11-19-a; row-2 sizes L-2026-11-19-b). F and G are f4_kernel_map.m and f4_contra_model.m re-run
+2026-11-19 at the row-3 sizes; H is the figures_final panel used since 2026-11-04 (f4_cl_reject_panel.m
+needs a fresh f4_cl_reject_lmm.m run, not done).
 
 Panels are copied to paper/figures_final/jn/fig4/, placed (linked) in Illustrator with their tops on
 the row line and equal gaps across each row, and saved as Figure4.ai / Figure4.pdf, with a 300 dpi
@@ -36,43 +34,24 @@ CM = 72 / 2.54
 W, ROW_GAP = 17.6, 0.3
 
 SRC = {
+    'A': IMG / 'f4A_exemplars_jn.pdf',
     'B': IMG / 'paper_py' / 'f4B_unique.pdf',
     'C': IMG / 'paper_py' / 'f4C_quartiles.pdf',
     'D': IMG / 'paper_py' / 'f4D_sensitivity.pdf',
     'E': IMG / 'paper_py' / 'f4E_state_spectra.pdf',
-    'F': PAN / 'f4_kernel_map.pdf',
+    'F': IMG / 'f4_kernel_map.pdf',
     'G': IMG / 'f4_agl.pdf',
     'H': PAN / 'f4_cl_reject_RR.pdf',
 }
-ROWS = [['A', 'B', 'D'], ['C', 'E'], ['F', 'G', 'H']]
+ROWS = [['A', 'B'], ['D', 'C', 'E'], ['F', 'G', 'H']]
 INSET = {'F': 0.4}          # F's title starts at its left edge, so the row starts right of the letter
 
-# f4_state_exemplars.pdf: four 54.5 pt tiles on a 222 x 102 pt page; grey stimulus bands end at
-# 56.0 / 110.5 / 165.0 / 219.5 pt and each next tile's '1 s' bar starts about 5 pt later.
-A_SRC = IMG / 'f4_state_exemplars.pdf'
-A_KEEP = (0.0, 111.0)        # tiles 1 and 2
-A_TILE4 = (165.3, 222.0)     # tile 4, moved left by one pitch
-A_PITCH = 54.5
 
-
-def make_A(out):
-    src = fitz.open(A_SRC)
-    r = src[0].rect
-    assert (round(r.width), round(r.height)) == (222, 102), f'unexpected exemplar page {r}'
-    titles = [s['text'] for b in src[0].get_text('dict')['blocks'] for ln in b.get('lines', []) for s in ln['spans']
-              if s['text'].startswith('high')]
-    assert titles == ['high init-dev', 'high motion', 'high rel 1-4 Hz', 'high abs 1-4 Hz'], titles
-    w = A_KEEP[1] + (A_TILE4[1] - A_TILE4[0])
-    doc = fitz.open()
-    pg = doc.new_page(width=w, height=r.height)
-    pg.show_pdf_page(fitz.Rect(A_KEEP[0], 0, A_KEEP[1], r.height), src, 0, clip=fitz.Rect(A_KEEP[0], 0, A_KEEP[1], r.height))
-    x0 = A_TILE4[0] - A_PITCH
-    pg.show_pdf_page(fitz.Rect(x0, 0, x0 + A_TILE4[1] - A_TILE4[0], r.height), src, 0,
-                     clip=fitz.Rect(A_TILE4[0], 0, A_TILE4[1], r.height))
-    doc.save(out, garbage=3, deflate=True)
-    kept = [s['text'] for b in fitz.open(out)[0].get_text('dict')['blocks'] for ln in b.get('lines', [])
-            for s in ln['spans'] if s['text'].startswith('high')]
-    assert kept == ['high init-dev', 'high motion', 'high abs 1-4 Hz'], kept
+def check_A(path):
+    """The JN 4A has the three state tiles of 4B, in 4B's order and names."""
+    titles = [s['text'] for b in fitz.open(path)[0].get_text('dict')['blocks'] for ln in b.get('lines', [])
+              for s in ln['spans'] if s['text'].startswith('High')]
+    assert titles == ['High initial deviation', 'High motion', 'High abs 1–4 Hz'], titles
 
 
 JS = r"""
@@ -136,7 +115,7 @@ def main():
     a = ap.parse_args()
     out = Path(a.out).resolve()
     (out / 'fig4').mkdir(parents=True, exist_ok=True)
-    make_A(out / 'fig4' / 'A.pdf')
+    check_A(SRC['A'])
     for n, s in SRC.items():
         shutil.copy2(s, out / 'fig4' / f'{n}.pdf')
     sizes = {}

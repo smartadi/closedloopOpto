@@ -33,7 +33,7 @@ end
 lab = string(strrep(paper_session_label(u), ' ', ''));
 [gm,ord]=sort(gm); lo=lo(ord); hi=hi(ord); nt=nt(ord); lab=lab(ord);
 
-fig = jnFig(jnPanelWidth('double',3), S.rowH);  ax=axes(fig); hold(ax,'on');   % 5.53 x 3.3 cm
+fig = jnFig(6.4, 3.6);  ax=axes(fig); hold(ax,'on');   % 2026-11-19: fills JN Fig 4 row 3 (was 5.53 x 3.3 cm)
 % LMM CI band + geomean
 patch(ax,[0.3 nS+0.7 nS+0.7 0.3],[ciLMM(1) ciLMM(1) ciLMM(2) ciLMM(2)],[0.85 0.90 0.98],'EdgeColor','none');
 plot(ax,[0.3 nS+0.7],gmLMM*[1 1],'-','Color',PS.col_cl,'LineWidth',1.0);
@@ -49,7 +49,7 @@ set(ax,'YScale','log','XTick',1:nS,'XTickLabel',cellstr(lab),'XTickLabelRotation
     'TickLabelInterpreter','none','FontSize',PS.fs,'FontWeight',PS.fw,'LineWidth',0.75,'TickDir','out','Box','off', ...
     'YTick',[0.25 0.5 1 2]);
 xlim(ax,[0.3 nS+0.7]); ylim(ax,[0.22 2.9]);
-ylabel(ax,'rejection ratio (RR)','FontSize',PS.fs,'FontWeight',PS.fw);   % self-explanatory words; RR=||A-r||^2/||D||^2 defined in caption
+ylabel(ax,'Rejection ratio (RR)','FontSize',PS.fs,'FontWeight',PS.fw);   % self-explanatory words; RR=||A-r||^2/||D||^2 defined in caption
 % title states the claim; a single significance star marks the two-sided session t-test (2026-10-27).
 star = repmat('*',1,(pStar<0.05)+(pStar<0.01)+(pStar<0.001)); if isempty(star), star='n.s.'; end
 title(ax,sprintf('CL rejects disturbances %s',star));

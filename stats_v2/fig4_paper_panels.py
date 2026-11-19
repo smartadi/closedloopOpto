@@ -20,6 +20,9 @@ Figure 4E  Q4/Q1 power by state, locked window, curves only. Back as 4E at Adity
            across frequency (state_spectra_clusters.csv; approved 2026-11-18, L-2026-11-18-b; no
            cluster significant) is printed, not drawn: bars dropped 2026-11-19 ("Drop the bars",
            L-2026-11-19-a).
+Layout 2026-11-19 (L-2026-11-19-b, display only): JN rows are A+B, D+C+E, F+G+H, so D, C and E are
+           4.5, 7.7 and 4.6 cm wide with one height and axes box (ROW2_*); B uses the A/C state names;
+           E shows motion before absolute 1-4 Hz, as C; D names its curves on the plot.
 Supp error bands  the 4C error split by frequency (< 1, 1-4, > 4 Hz), stacked per state quartile, OL and
                   CL (error_bands.py, approved 2026-11-18, L-2026-11-18-c; 4E for a while that day), with
                   the state over [-2,+3) s (f4S_error_bands) and laser off (f4S_error_bands_laseroff).
@@ -60,6 +63,17 @@ STATE_COL = {"init_dev": "#3366bf", "motion": "#bf661a", "rel_delta": "#598c4d",
 STATE_LAB = {"init_dev": "Initial deviation", "motion": "Motion", "rel_delta": "Rel 1–4 Hz",
              "abs_delta": "Abs 1–4 Hz"}
 CURVE_KEY = {"motion": "motion", "abs_delta": "abs14", "rel_delta": "rel14"}
+STATE_LAB_2 = {"init_dev": "Initial\ndeviation", "motion": "Motion", "abs_delta": "Abs\n1–4 Hz"}  # 4B, two lines
+# Row 2 of the JN figure (D, C, E side by side, 2026-11-19): one figure height and one axes box for all
+# three, so their axes and x labels line up when the panels are placed with their tops on one line.
+ROW2_H, ROW2_Y, ROW2_AH = 4.45, 0.55, 3.2   # cm: figure height, axes top, axes height
+
+
+def xlabel_cm(fig, x_cm, s):
+    """The x label of a row-2 panel, at the same height in D, C and E."""
+    W, H = fig.get_size_inches() / CM
+    fig.text(x_cm / W, 1 - (ROW2_Y + ROW2_AH + 0.4) / H, s, ha="center", va="top", fontsize=7,
+             fontweight="bold")
 LOCKED, LASEROFF = "locked [-2,+3) s", "laser off [-5,0) s"
 BANDS = {"0.5-1 Hz": (0.5, 1.0), "1-3 Hz": (1.0, 3.0), "3-6 Hz": (3.0, 6.0)}
 
@@ -254,7 +268,9 @@ def main_B():
     a1.set_yticks([0, 0.1, 0.2])
     a1.set_yticklabels(["0", "0.1", "0.2"])
     a1.set_xticks(xb)
-    a1.set_xticklabels(["init-dev", "motion", "abs\n1–4 Hz"])
+    a1.set_xticklabels([STATE_LAB_2[k] for k in ("init_dev", "motion", "abs_delta")])
+    for t, k in zip(a1.get_xticklabels(), ("init_dev", "motion", "abs_delta")):
+        t.set_color(STATE_COL[k])                             # names and colours as 4A and 4C (2026-11-19)
     a2.set_ylim(*hi)
     a2.set_yticks([0.4])
     a2.set_yticklabels(["0.4"])
@@ -277,13 +293,16 @@ def main_B():
 
 def main_C(tr, tests):
     """Figure 4C: quartile tiles for initial deviation, motion and absolute 1-4 Hz, one y scale."""
-    # 11.2 cm wide (was 12.6) so C and E (6.0 cm) fit one 17.6 cm JN row (2026-11-18, layout only)
-    fig = plt.figure(figsize=(11.2 * CM, 4.6 * CM))
+    # 7.7 cm wide (was 11.2) so D, C and E fit one 17.6 cm JN row (2026-11-19, layout only)
+    fig = plt.figure(figsize=(7.7 * CM, ROW2_H * CM))
     out, axs = {}, []
+    x0, w, step = 1.05, 2.05, 2.25
     for j, st in enumerate(("init_dev", "motion", "abs_delta")):
-        a = axes_cm(fig, 1.2 + j * 3.4, 0.55, 3.05, 3.2)
+        a = axes_cm(fig, x0 + j * step, ROW2_Y, w, ROW2_AH)
         out[st] = quartile_tile(a, tr, tests, st, ylabel=(j == 0), legend=(j == 0))
+        a.set_xlabel("")
         axs.append(a)
+    xlabel_cm(fig, x0 + (2 * step + w) / 2, "State quartile")
     lo = min(a.get_ylim()[0] for a in axs)
     hi = max(a.get_ylim()[1] for a in axs)
     for j, a in enumerate(axs):
@@ -298,9 +317,9 @@ def main_D():
     from sensitivity_cert import THETA, stretches_on
     c = pd.read_csv(DATA / "sensitivity_curve.csv")
     f = c["f_hz"].to_numpy()
-    # 5.6 cm wide (was 6.0) so A, B and D fit one 17.6 cm JN row (2026-11-18, layout only)
-    fig = plt.figure(figsize=(5.6 * CM, 4.4 * CM))
-    a = axes_cm(fig, 1.15, 0.55, 4.3, 3.05)
+    # 4.5 cm wide (was 5.6) so D, C and E fit one 17.6 cm JN row (2026-11-19, layout only)
+    fig = plt.figure(figsize=(4.5 * CM, ROW2_H * CM))
+    a = axes_cm(fig, 1.05, ROW2_Y, 3.35, ROW2_AH)
     kp = (f >= 0.5) & (f <= 17.5)
     a.axhline(1, color="0.5", lw=0.75, ls="--", zorder=1)
     a.plot(f[kp], c["S_pre"][kp], color="0.6", lw=1.0, zorder=2, label="Before stimulus")
@@ -308,7 +327,7 @@ def main_D():
     a.plot(f[kp], c["S_full"][kp], color="k", lw=1.0, zorder=4, label="During stimulus")
     lim = 1 / (2 * np.pi * THETA)
     a.axvline(lim, color="0.3", lw=0.75, ls=":", zorder=2)
-    a.text(lim / 1.07, 0.3, f"Delay limit\n{lim:.1f} Hz", color="0.3", ha="right", va="center")
+    a.text(lim * 1.07, 0.24, f"Delay limit\n{lim:.1f} Hz", color="0.3", ha="left", va="center")
     tr = a.get_xaxis_transform()
     lo, hi = c["S_full_lo"].to_numpy(), c["S_full_hi"].to_numpy()
     below = [s for s in stretches_on(f, hi < 1) if s[1] > 0.5][0]
@@ -317,14 +336,16 @@ def main_D():
         a.plot([x0, x1], [1.0, 1.0], color="k", lw=1.0, transform=tr, solid_capstyle="butt", clip_on=False)
         a.text(np.sqrt(x0 * x1), 1.03, lab, transform=tr, ha="center", va="bottom")
     a.set_yscale("log")
-    a.set_ylim(0.2, 3.4)
+    a.set_ylim(0.15, 3.4)
     a.set_yticks([0.25, 0.5, 1, 2])
     a.set_yticklabels(["0.25", "0.5", "1", "2"])
     a.yaxis.set_minor_locator(matplotlib.ticker.NullLocator())
     log_freq_axis(a, 0.5, 17.5, (0.5, 1, 2, 4, 8, 16))
-    a.set_xlabel("Frequency (Hz)")
+    xlabel_cm(fig, 1.05 + 3.35 / 2, "Frequency (Hz)")
     a.set_ylabel("CL / OL residual power")
-    a.legend(loc="lower right", handlelength=1.0, handletextpad=0.4, borderaxespad=0.1, labelspacing=0.2)
+    # curves named on the plot, not in a legend: a legend no longer fits left of the delay line at 4.5 cm
+    a.text(0.52, 1.9, "Before stimulus", color="0.5", ha="left", va="bottom")
+    a.text(0.52, 0.27, "During stimulus", color="k", ha="left", va="top")
     save(fig, "f4D_sensitivity")
     print(f"  delay limit {lim:.2f} Hz; reduced {below[0]:.2f}-{below[1]:.2f} Hz; amplified "
           f"{above[0]:.2f}-{above[1]:.2f} Hz")
@@ -333,22 +354,25 @@ def main_D():
 def main_E(curves, clus):
     """Curves only: the cluster bars were dropped at Aditya's request 2026-11-19 ("Drop the bars",
     L-2026-11-19-a). The cluster test is still run and printed here for the record."""
-    fig = plt.figure(figsize=(6.0 * CM, 4.4 * CM))
-    a1 = axes_cm(fig, 1.05, 1.25, 2.3, 2.35)
-    a2 = axes_cm(fig, 3.6, 1.25, 2.3, 2.35)
-    n1 = ratio_tile(a1, curves, None, LOCKED, "abs14", STATE_LAB["abs_delta"], STATE_COL["abs_delta"])
-    n2 = ratio_tile(a2, curves, None, LOCKED, "motion", STATE_LAB["motion"], STATE_COL["motion"], ylabel=False)
+    # 4.6 cm wide, motion before absolute 1-4 Hz as in 4C (2026-11-19, layout only)
+    fig = plt.figure(figsize=(4.6 * CM, ROW2_H * CM))
+    x0, w, step = 1.0, 1.6, 1.9
+    a1 = axes_cm(fig, x0, ROW2_Y, w, ROW2_AH)
+    a2 = axes_cm(fig, x0 + step, ROW2_Y, w, ROW2_AH)
+    n1 = ratio_tile(a1, curves, None, LOCKED, "motion", STATE_LAB["motion"], STATE_COL["motion"])
+    n2 = ratio_tile(a2, curves, None, LOCKED, "abs14", STATE_LAB["abs_delta"], STATE_COL["abs_delta"],
+                    ylabel=False)
     for _, r in clus[(clus["window"] == LOCKED) & (clus["cluster"] > 0)].iterrows():
         print(f"  E (not drawn) {r['state']:6s} cluster {r['f_lo']:.2f}-{r['f_hi']:.2f} Hz {r['sign']} "
               f"CL/OL {r['cl_ol']:.2f} p {r['p']:.3f} Holm {r['p_holm']:.3f}")
     a2.set_yticklabels([])
-    fig.text(0.56, 0.02, "Frequency (Hz)", ha="center", va="bottom", fontsize=7, fontweight="bold")
     a1.set_xlabel("")
     a2.set_xlabel("")
-    a1.text(0.04, 0.04, "OL", color=OL, transform=a1.transAxes, fontweight="bold")
-    a1.text(0.2, 0.04, "CL", color=CL, transform=a1.transAxes, fontweight="bold")
+    xlabel_cm(fig, x0 + (step + w) / 2, "Frequency (Hz)")
+    a1.text(0.96, 0.97, "OL", color=OL, transform=a1.transAxes, fontweight="bold", ha="right", va="top")
+    a1.text(0.96, 0.86, "CL", color=CL, transform=a1.transAxes, fontweight="bold", ha="right", va="top")
     save(fig, "f4E_state_spectra")
-    print(f"  sessions: abs {n1}, motion {n2}")
+    print(f"  sessions: motion {n1}, abs {n2}")
 
 
 BAND_COL = {"slow": "#d0d0d0", "1-4 Hz": "#8c8c8c", "fast": "#3a3a3a"}

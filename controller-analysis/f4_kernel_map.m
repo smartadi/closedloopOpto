@@ -48,7 +48,7 @@ mk3=repmat(~brainMask,1,1,3);                         % outside-ROI -> white
 RGBbrain(mk3)=1;
 
 % ---- per-pixel DOT weight map (each contra grid pixel = one dot, colored by weight) ----
-f=jnFig(4.5,3.3); ax=axes(f); hold(ax,'on');   % jn* row-3 LEFT (kernel 4.5 + agl 5.0 + reject 5.53)
+f=jnFig(5.6,3.8); ax=axes(f); hold(ax,'on');   % JN Fig 4 row 3 left (2026-11-19: 5.6 x 3.8 to fill the row; was 4.5 x 3.3)
 image(ax, RGBbrain);                             % masked gray brain (ignores colormap)
 bmax=prctile(abs(b),99);                          % robust symmetric colour range
 scatter(ax, grC, grR, 22, b, 'filled', 'MarkerEdgeColor','none', 'MarkerFaceAlpha',0.95);
@@ -68,12 +68,12 @@ axis(ax,'image'); set(ax,'YDir','reverse'); axis(ax,'off');
 [ry,rx]=find(brainMask); pad=12;
 xlim(ax,[max(1,min(rx)-pad) min(nX,max(rx)+pad)]);
 ylim(ax,[max(1,min(ry)-pad) min(nY,max(ry)+pad)]);
-title(ax,'Predictor kernel weights','FontSize',PS_fs(),'FontWeight','bold');
+title(ax,'Predictor kernel weights','FontSize',PS_fs()+1,'FontWeight','bold');   % 7 pt like every panel title (2026-11-19)
 cb=colorbar(ax); cb.FontSize=6;                    % no label; only extreme ticks
 cb.Ticks=[-bmax bmax]; cb.TickLabels={sprintf('%+.2f',-bmax),sprintf('%+.2f',bmax)};
 cb.TickLength=0;
 % label below the green dot
-text(ax, double(sx), double(sy)+16, 'stimulation site', 'Color','k','FontSize',6,'FontWeight','bold', ...
+text(ax, double(sx), double(sy)+16, {'stimulation','site'}, 'Color','k','FontSize',6,'FontWeight','bold', ...   % 2 lines: clear of the dots (2026-11-19)
     'HorizontalAlignment','center','VerticalAlignment','top');
 
 paperExport(f, fullfile(outfig,'f4_kernel_map.pdf'));
