@@ -16,6 +16,14 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-19-a · Fig 4E cluster bars dropped; curves only
+commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya, asked whether to keep the n.s. cluster bars on 4E: "Drop the bars". Display only, no math change: `main_E` no longer passes the clusters to `ratio_tile` and uses the default title spacing; 4E shows the Q4/Q1 curves with no bars or stars. The cluster test (L-2026-11-18-b) still runs and `main_E` prints its clusters, marked "not drawn": motion 0.51-0.72 Hz CL<OL Holm 0.471; absolute 1-4 Hz 0.89-0.92 Hz Holm 1.000, 4.14-4.41 Hz CL>OL Holm 0.740, 7.14-7.55 Hz CL>OL Holm 0.391.
+- JN Figure 4 rebuilt (`paper-writing/fig4_jn_build.py`); audit has only the known 4G flag. Previous build backed up in `paper/figures_final/jn/_before_2026-11-19a/`.
+**State:** not copied into Closedloop_edit. The two error-band supplement figures are still unplaced and have no window label.
+**Resume:** `stats_v2/.venv/Scripts/python.exe -I stats_v2/fig4_paper_panels.py --no-sens`, then `python -X utf8 -I paper-writing/fig4_jn_build.py`.
+
 ### L-2026-11-18-d · Fig 4E back to the Q4/Q1 spectra; error split moves to a supplement figure
 commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:**

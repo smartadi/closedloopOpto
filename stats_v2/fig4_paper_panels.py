@@ -15,10 +15,11 @@ Figure 4B  unique R^2 of initial deviation, motion and absolute 1-4 Hz, one mode
 Figure 4C  quartile tiles for initial deviation, motion and absolute 1-4 Hz (session-level display of
            f4_row2_quartiles.m; stars from tests.csv).
 Figure 4D  CL/OL residual power (sensitivity_curve.csv), as sensitivity_cert.panel.
-Figure 4E  Q4/Q1 power by state, locked window, with the CL vs OL cluster test across frequency
-           (state_spectra_clusters.csv; approved by Aditya 2026-11-18, RESEARCH L-2026-11-18-b): a bar
-           over each cluster's frequency range with its Holm p as stars, in place of the band stars.
-           Back as 4E at Aditya's request 2026-11-18 ("bring back q4/q1 it made sense", L-2026-11-18-d).
+Figure 4E  Q4/Q1 power by state, locked window, curves only. Back as 4E at Aditya's request
+           2026-11-18 ("bring back q4/q1 it made sense", L-2026-11-18-d). The CL vs OL cluster test
+           across frequency (state_spectra_clusters.csv; approved 2026-11-18, L-2026-11-18-b; no
+           cluster significant) is printed, not drawn: bars dropped 2026-11-19 ("Drop the bars",
+           L-2026-11-19-a).
 Supp error bands  the 4C error split by frequency (< 1, 1-4, > 4 Hz), stacked per state quartile, OL and
                   CL (error_bands.py, approved 2026-11-18, L-2026-11-18-c; 4E for a while that day), with
                   the state over [-2,+3) s (f4S_error_bands) and laser off (f4S_error_bands_laseroff).
@@ -330,16 +331,16 @@ def main_D():
 
 
 def main_E(curves, clus):
+    """Curves only: the cluster bars were dropped at Aditya's request 2026-11-19 ("Drop the bars",
+    L-2026-11-19-a). The cluster test is still run and printed here for the record."""
     fig = plt.figure(figsize=(6.0 * CM, 4.4 * CM))
     a1 = axes_cm(fig, 1.05, 1.25, 2.3, 2.35)
     a2 = axes_cm(fig, 3.6, 1.25, 2.3, 2.35)
-    n1 = ratio_tile(a1, curves, None, LOCKED, "abs14", STATE_LAB["abs_delta"], STATE_COL["abs_delta"], above=True,
-                    clusters=clus)
-    n2 = ratio_tile(a2, curves, None, LOCKED, "motion", STATE_LAB["motion"], STATE_COL["motion"], ylabel=False,
-                    above=True, clusters=clus)
+    n1 = ratio_tile(a1, curves, None, LOCKED, "abs14", STATE_LAB["abs_delta"], STATE_COL["abs_delta"])
+    n2 = ratio_tile(a2, curves, None, LOCKED, "motion", STATE_LAB["motion"], STATE_COL["motion"], ylabel=False)
     for _, r in clus[(clus["window"] == LOCKED) & (clus["cluster"] > 0)].iterrows():
-        print(f"  E {r['state']:6s} cluster {r['f_lo']:.2f}-{r['f_hi']:.2f} Hz {r['sign']} CL/OL {r['cl_ol']:.2f} "
-              f"p {r['p']:.3f} Holm {r['p_holm']:.3f} -> {stars(r['p_holm'])}")
+        print(f"  E (not drawn) {r['state']:6s} cluster {r['f_lo']:.2f}-{r['f_hi']:.2f} Hz {r['sign']} "
+              f"CL/OL {r['cl_ol']:.2f} p {r['p']:.3f} Holm {r['p_holm']:.3f}")
     a2.set_yticklabels([])
     fig.text(0.56, 0.02, "Frequency (Hz)", ha="center", va="bottom", fontsize=7, fontweight="bold")
     a1.set_xlabel("")
