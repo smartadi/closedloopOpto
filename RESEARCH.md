@@ -16,6 +16,20 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-18-b · Fig 4E: CL vs OL cluster permutation test across frequency
+commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:**
+- Math approved by Aditya 2026-11-18: "Approve" (Hub control method block: test both Fig 4E observations with a cluster permutation test across frequency on the per-session CL-OL difference, locked window, laser-off run as the check). His observations: motion CL lower than OL at about 0-1.5 Hz then similar; absolute 1-4 Hz similar to about 4 Hz then CL higher around 4 Hz.
+- Equations (docstring of the new `stats_v2/state_spectra_cluster.py`): R_sc(f) = P_Q4(f)/P_Q1(f) as in state_spectra_tests.py; d_s(f) = ln R_s,CL(f) - ln R_s,OL(f) for sessions with both conditions, f in [0.5, 8] Hz (220 points); t(f) across sessions; clusters = runs with |t| > t_0.975,n-1, mass = sum of t; exact sign flips of whole session curves (2^n patterns), max |mass| per pattern; Holm over the 2 states per window. Maris and Oostenveld 2007 (doi 10.1016/j.jneumeth.2007.03.024); edges not tested (Sassenhagen and Draschkow 2019, doi 10.1111/psyp.13335).
+- Checks passed: zero curves give no cluster; a planted cluster is found at its columns at p = 2/2^11; the flip t equals scipy's t; the per-condition session means reproduce `state_spectra_curves.csv` (max |difference| < 1e-9 in ln, all 8 window x state x condition cells).
+- Locked [-2,+3) s (the figure). Motion, 11 sessions: one cluster 0.51-0.72 Hz, CL<OL, CL/OL 0.52, p 0.471 (Holm 0.471), 8/11 sessions. Absolute 1-4 Hz, 14 sessions: 0.89-0.92 Hz CL<OL 0.74, p 0.653 (Holm 1.0); 4.14-4.41 Hz CL>OL 1.77, p 0.370 (Holm 0.740), 11/14; 7.14-7.55 Hz CL>OL 1.66, p 0.196 (Holm 0.391). No cluster is significant.
+- Laser off [-5,0) s (the check). Motion: 5.30-5.47 Hz CL>OL 1.66, p 0.515 (Holm 0.596). Absolute, 15 sessions: 3.18-3.49 Hz CL<OL 0.65, p 0.298 (Holm 0.596). No cluster near 4 Hz.
+- Per-frequency t (locked): motion -2.78 at 0.51 Hz, -0.94 at 0.99 Hz, -1.41 at 1.74 Hz, 0.35 at 2.02 Hz; absolute 1.80 at 4.00 Hz, 2.41 at 4.24 Hz, 0.52 at 4.99 Hz.
+- 4D's CL/OL residual power peaks at 1.90 [1.34, 2.68] at 4.0 Hz (sensitivity_curve.csv). The locked state window includes the stimulation period, so CL trials with the most amplified 4 Hz power may sort into Q4; the 4 Hz cluster is absent laser-off. Consistent with a sorting effect, not tested further.
+- `stats_v2/fig4_paper_panels.py`: 4E draws a black bar over each locked-window cluster with stars of its Holm p (all n.s.) in place of the OL and CL band stars. The supplement's laser-off tiles keep the band stars. JN Figure 4 rebuilt (`paper-writing/fig4_jn_build.py`); audit has the one known 4G flag (stacked R^2/te label, also in the source f4_agl.pdf). The 11-18 morning build is kept in `paper/figures_final/jn/_before_2026-11-18b/`.
+**State:** outputs `data/stats_v2/corrected/state_spectra_clusters.csv` and `state_spectra_cluster_t.csv` (gitignored). Not copied into Closedloop_edit; JN text not updated.
+**Resume:** `stats_v2/.venv/Scripts/python.exe -I stats_v2/state_spectra_cluster.py`, then `stats_v2/.venv/Scripts/python.exe -I stats_v2/fig4_paper_panels.py --no-sens` and `python -X utf8 -I paper-writing/fig4_jn_build.py`.
+
 ### L-2026-11-18-a · JN Figures 2 and 4 rebuilt; Fig 4B from the init + motion + absolute model
 commit: 8e1619f+this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:**
