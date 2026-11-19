@@ -8,10 +8,11 @@ Layout, 17.6 cm wide, letters as Aditya set them (row 2 reads D, C, E):
   row 2  D CL/OL residual power  |  C state quartile tiles  |  E Q4/Q1 state spectra
   row 3  F predictor kernel map  |  G A = G + L  |  H rejection ratio
 
-A is f4_state_exemplars.m (JN version, 3 tiles, same picks as 2026-11-14, L-2026-11-19-b). B, C, D, E
+A is f4_state_exemplars.m (JN version, 3 tiles, same picks as 2026-11-14, L-2026-11-19-b; 0 and target
+lines and 8.4 x 3.2 cm, L-2026-11-19-e). B, C, D, E
 come from stats_v2/fig4_paper_panels.py (L-2026-11-16-a; B L-2026-11-18-a; E L-2026-11-18-b/-d and
 L-2026-11-19-a; row-2 sizes L-2026-11-19-b). F and G are f4_kernel_map.m and f4_contra_model.m re-run
-2026-11-19 at the row-3 sizes; H is the figures_final panel used since 2026-11-04 (f4_cl_reject_panel.m
+2026-11-19 at the row-3 sizes (F drawn as squares, L-2026-11-19-e); H is the figures_final panel used since 2026-11-04 (f4_cl_reject_panel.m
 needs a fresh f4_cl_reject_lmm.m run, not done).
 
 Panels are copied to paper/figures_final/jn/fig4/, placed (linked) in Illustrator with their tops on
@@ -49,9 +50,10 @@ INSET = {'F': 0.4}          # F's title starts at its left edge, so the row star
 
 def check_A(path):
     """The JN 4A has the three state tiles of 4B, in 4B's order and names."""
+    want = ['Initial deviation', 'Motion', 'Abs 1–4 Hz']
     titles = [s['text'] for b in fitz.open(path)[0].get_text('dict')['blocks'] for ln in b.get('lines', [])
-              for s in ln['spans'] if s['text'].startswith('High')]
-    assert titles == ['High initial deviation', 'High motion', 'High abs 1–4 Hz'], titles
+              for s in ln['spans'] if s['text'] in want]
+    assert titles == want, titles
 
 
 JS = r"""

@@ -16,6 +16,15 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-19-e · JN Fig 4A with 0 and target lines, smaller; 4F as squares
+commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:** Aditya: "A should have the 0 and target lines like in figure 3, also A still looks too big" and "F kernel representation looks too crowded". Display only, no numbers changed.
+- 4A (`f4_state_exemplars.m`): solid 0 line over the whole trace and a dashed target line over 0 to 3 s, with the Fig 3A widths (`PS.lw_zero`, `PS.lw_ref`), named "Target" at its right end. The gray dashed line at the target over the whole trace and the dotted line at 0 s are gone. Canvas 8.4 x 3.2 cm (was 10.2 x 3.7); export 8.64 x 3.10 cm. Window shading lighter (0.96 and 0.90, was 0.95 and 0.88). Scale bars on tile 1 only. Titles now the 4B/4C names (Initial deviation, Motion, Abs 1–4 Hz). Same picks: m2 trial 79, m4 trial 54, m2 trial 66; nCL 613, full R² 0.440, as L-2026-11-14-a. All three targets are −5%.
+- 4F (`f4_kernel_map.m`): the 408 weights drawn as one square per grid pixel, edge to edge (13 px grid, checked by an assert), in place of overlapping dots; same weights and colour range (±0.16, 99th percentile of |b|; b runs −0.172 to 0.231). Anatomy lighter (0.40 + 0.55 g, was 0.12 + 0.85 g). Colour bar half as wide and 70% as tall. Export 4.45 x 3.39 cm.
+- Build: `check_A` asserts the new titles. JN Figure 4 17.6 x 13.08 cm; audit 0 required issues, font sizes 6, 7, 10 pt. Row 1 now has a 3.96 cm gap between A and B (B stays right-aligned with E and H).
+**State:** as L-2026-11-19-b (caption not updated, H not re-run, not in Closedloop_edit). Caption must now say the solid line is 0 and the dashed line is the target.
+**Resume:** as L-2026-11-19-b.
+
 ### L-2026-11-19-d · JN Fig 4B back to 5.0 x 4.4 cm
 commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:** Aditya: "No do not widen". Display only. `main_B` back to 5.0 x 4.4 cm with the axes geometry of before L-2026-11-19-c (upper segment 0.55 + 0.6 cm, lower 1.27 + 2.33 cm). A stays 10.6 x 4.0 cm; the build's equal-gap rule puts B on the right edge, level with E and H, so row 1 has a 2.0 cm gap between A and B. JN Figure 4 17.6 x 13.08 cm; audit 0 required issues, font sizes 6, 7, 10 pt.

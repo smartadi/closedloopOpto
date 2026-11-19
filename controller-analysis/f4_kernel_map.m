@@ -42,7 +42,7 @@ haveROI = ~isempty(mid);
 % ---- background: the actual mean brain image, contrast-stretched over in-ROI pixels ----
 lo=prctile(brain(brainMask),1); hi=prctile(brain(brainMask),99);   % anatomy contrast
 g=min(max((brain-lo)/max(hi-lo,eps),0),1);           % real grayscale brain (full range)
-g=0.12+0.85*g;                                        % keep near-black off pure black
+g=0.40+0.55*g;                                        % lighter anatomy so the weights read first (2026-11-19; was 0.12+0.85*g)
 RGBbrain=cat(3,g,g,g);
 mk3=repmat(~brainMask,1,1,3);                         % outside-ROI -> white
 RGBbrain(mk3)=1;
@@ -51,7 +51,13 @@ RGBbrain(mk3)=1;
 f=jnFig(5.6,3.8); ax=axes(f); hold(ax,'on');   % JN Fig 4 row 3 left (2026-11-19: 5.6 x 3.8 to fill the row; was 4.5 x 3.3)
 image(ax, RGBbrain);                             % masked gray brain (ignores colormap)
 bmax=prctile(abs(b),99);                          % robust symmetric colour range
-scatter(ax, grC, grR, 22, b, 'filled', 'MarkerEdgeColor','none', 'MarkerFaceAlpha',0.95);
+% one square per grid pixel, edge to edge (Aditya 2026-11-19: "F kernel representation looks too
+% crowded"; the 408 dots overlapped by about 2x). Display only: the same weights b, no smoothing.
+ur=unique(grR); uc=unique(grC);
+assert(all(diff(ur)==13) && all(diff(uc)==13), 'f4_kernel_map:grid', 'grid step is not 13 px');
+Wm=nan(numel(ur),numel(uc)); [~,ir]=ismember(grR,ur); [~,ic]=ismember(grC,uc);
+Wm(sub2ind(size(Wm),ir,ic))=b;
+hW=imagesc(ax, uc([1 end]), ur([1 end]), Wm); set(hW,'AlphaData',~isnan(Wm));
 % diverging blue-white-red colormap
 cmap=interp1([0 .5 1],[0.16 0.34 0.66; 1 1 1; 0.78 0.16 0.12], linspace(0,1,256));
 colormap(ax,cmap); clim(ax,[-bmax bmax]);
@@ -72,6 +78,9 @@ title(ax,'Predictor kernel weights','FontSize',PS_fs()+1,'FontWeight','bold');  
 cb=colorbar(ax); cb.FontSize=6;                    % no label; only extreme ticks
 cb.Ticks=[-bmax bmax]; cb.TickLabels={sprintf('%+.2f',-bmax),sprintf('%+.2f',bmax)};
 cb.TickLength=0;
+drawnow; ap=ax.Position; p=cb.Position;
+cb.Position=[p(1) p(2)+0.15*p(4) 0.5*p(3) 0.7*p(4)];   % slimmer, shorter bar (2026-11-19)
+ax.Position=ap;                                         % keep the map clear of the bar
 % label below the green dot
 text(ax, double(sx), double(sy)+16, {'stimulation','site'}, 'Color','k','FontSize',6,'FontWeight','bold', ...   % 2 lines: clear of the dots (2026-11-19)
     'HorizontalAlignment','center','VerticalAlignment','top');

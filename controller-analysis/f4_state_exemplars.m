@@ -90,16 +90,22 @@ end
 % 4B/4C state names at 7 pt; the shared y range holds every picked trial (the old [-16 10]
 % clipped the initial-deviation trial). Writes f4A_exemplars_jn.pdf; the 4-tile
 % f4_state_exemplars.pdf of 2026-11-14 is no longer written.
+% Later 2026-11-19 (Aditya: "A should have the 0 and target lines like in figure 3, also A still looks
+% too big"), display only, same picks: a solid 0 line over the whole trace and a dashed target line
+% over the stimulation (Fig 3A's lines and widths, utils/analysisPlots_combined.m); canvas 8.4 x 3.2 cm;
+% lighter window shading; scale bars on the first tile only (the tiles share axes); titles are the 4B/4C
+% state names so they fit the narrower tiles.
 keep=[1 2 4];
-lbl={'High initial deviation','High motion',['High rel 1' char(8211) '4 Hz'],['High abs 1' char(8211) '4 Hz']};
+lbl={'Initial deviation','Motion',['Rel 1' char(8211) '4 Hz'],['Abs 1' char(8211) '4 Hz']};
 segs=cell(1,4);
 for j=keep
     i=pick(j); [eb, ec] = pre_spec_buffer(mouse.(fields{SESS(i)}).data, 'wc');
     segs{j}=double(eb(TRI(i), ec-spec_pre_s*Fs : ec+spec_post_s*Fs));   % caches mix single and double
 end
-fig=jnFig(10.2,3.7); tl=tiledlayout(fig,1,numel(keep),'TileSpacing','compact','Padding','tight');
+fig=jnFig(8.4,3.2); tl=tiledlayout(fig,1,numel(keep),'TileSpacing','compact','Padding','tight');
+tl.OuterPosition=[0 0 0.91 1];                             % room on the right for the 'Target' label
 tv=(-spec_pre_s:1/Fs:spec_post_s).'; yl=[-16 max(10, ceil(max(cellfun(@max,segs(keep))))+1)];
-shade={[0 1],[.95 .95 .95]; [1 3],[.88 .88 .88]};          % 0-1 s and 1-3 s, as the 4B legend
+shade={[0 1],[.96 .96 .96]; [1 3],[.90 .90 .90]};          % 0-1 s and 1-3 s, as the 4B legend
 
 % ----- exemplar tiles -----
 for jj=1:numel(keep)
@@ -116,8 +122,12 @@ for jj=1:numel(keep)
         text(ax,2,yl(1)+0.5,['1' char(8211) '3 s'],'HorizontalAlignment','center','VerticalAlignment','bottom', ...
             'FontSize',PS.fs,'Color',[.3 .3 .3]);
     end
-    plot(ax,tv([1 end]),[ref ref],'--','Color',[.3 .3 .3],'LineWidth',PS.lw_ref,'HandleVisibility','off');
-    xline(ax,0,':','Color',[.6 .6 .6],'HandleVisibility','off');
+    plot(ax,tv([1 end]),[0 0],'k','LineWidth',PS.lw_zero,'HandleVisibility','off');          % 0, as Fig 3A
+    plot(ax,[0 spec_post_s],[ref ref],'--k','LineWidth',PS.lw_ref,'HandleVisibility','off');  % target during stimulation
+    if jj==numel(keep)   % named at the line's right end, in the space kept free by tl.OuterPosition
+        text(ax,spec_post_s+0.08,ref,'Target','HorizontalAlignment','left','VerticalAlignment','middle', ...
+            'FontSize',PS.fs,'FontWeight',PS.fw,'Color','k','Clipping','off');
+    end
     if j==2 && isfield(dk,'wcmotion')                        % z-motion overlay for the motion exemplar
         wm=dk.wcmotion(TRI(i), c0_mot-mot_pre*Fs : min(size(dk.wcmotion,2),c0_mot+spec_post_s*Fs));
         tvm=(-mot_pre:1/Fs:spec_post_s).'; tvm=tvm(1:numel(wm));
@@ -134,8 +144,7 @@ for jj=1:numel(keep)
         shortCornerAxes_plot(ax,'Corner','bl','XLength',1,'YLength',5,'XLabel','1 s','YLabel','5%', ...
             'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap,'FontSize',PS.fs,'FontWeight',PS.fw);
     else
-        shortCornerAxes_plot(ax,'Corner','bl','XLength',1,'YLength',0,'XLabel','1 s', ...
-            'LineWidth',PS.sca_lw,'LabelGap',PS.sca_gap,'FontSize',PS.fs,'FontWeight',PS.fw);
+        set(ax,'Box','off','XColor','none','YColor','none');
     end
 end
 fprintf('[f4_state_exemplars] picks (field, trial, state z): %s\n', strjoin(arrayfun(@(j) sprintf('%s tr%d z=%.1f', ...
