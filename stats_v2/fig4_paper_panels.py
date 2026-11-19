@@ -252,10 +252,13 @@ def main_B():
     top_lo = np.delete((P + E).ravel(), 0)                    # every bar but init-dev 0-1 s fits below
     assert top_lo.max() < lo[1] and hi[0] < P[0, 0] - E[0, 0] and P[0, 0] + E[0, 0] < hi[1], (P, E)
 
-    fig = plt.figure(figsize=(5.0 * CM, 4.4 * CM))
-    x0, w = 1.05, 3.75
-    a2 = axes_cm(fig, x0, 0.55, w, 0.6)                       # upper segment
-    a1 = axes_cm(fig, x0, 1.27, w, 2.33)                      # lower segment; bottom level with 4D
+    # 6.6 x 4.0 cm (was 5.0 x 4.4): 4A was made smaller, B takes the rest of row 1 (2026-11-19, layout only)
+    WB, HB = 6.6, 4.0
+    fig = plt.figure(figsize=(WB * CM, HB * CM))
+    x0, w = 1.05, WB - 1.25
+    yt, ht, yl_, hl = 0.55, 0.55, 1.22, HB - 0.8 - 1.22       # upper / lower segment top and height, cm
+    a2 = axes_cm(fig, x0, yt, w, ht)                          # upper segment
+    a1 = axes_cm(fig, x0, yl_, w, hl)                         # lower segment
     xb = np.arange(1, 4)
     for a in (a1, a2):
         for k, (col, dx) in enumerate(((light, -0.2), (dark, 0.2))):
@@ -276,15 +279,15 @@ def main_B():
     a2.set_yticklabels(["0.4"])
     a2.set_xticks([])
     a2.spines["bottom"].set_visible(False)
-    for yb in (1.27, 1.15):                                   # break marks on the y axis, cm from top
-        fig.add_artist(Line2D([(x0 - 0.07) * CM / fig.get_size_inches()[0], (x0 + 0.07) * CM / fig.get_size_inches()[0]],
-                              [1 - (yb + 0.04) / 4.4, 1 - (yb - 0.04) / 4.4], color="k", lw=0.5))
+    for yb in (yl_, yt + ht):                                 # break marks on the y axis, cm from top
+        fig.add_artist(Line2D([(x0 - 0.07) / WB, (x0 + 0.07) / WB],
+                              [1 - (yb + 0.04) / HB, 1 - (yb - 0.04) / HB], color="k", lw=0.5))
     for k, (lab, g) in enumerate((("0–1 s", "0.72"), ("1–3 s", "0.35"))):
         a2.add_patch(plt.Rectangle((2.45, 0.465 - k * 0.05), 0.15, 0.03, color=g, lw=0, clip_on=False))
         a2.text(2.68, 0.48 - k * 0.05, lab, va="center", ha="left")
-    fig.text((x0 + w / 2) / 5.0, 1 - 0.42 / 4.4, f"Unique R² ({n} sessions)", ha="center", va="bottom",
+    fig.text((x0 + w / 2) / WB, 1 - 0.42 / HB, f"Unique R² ({n} sessions)", ha="center", va="bottom",
              fontsize=7, fontweight="bold")
-    fig.text(0.2 / 5.0, 1 - (0.55 + 3.05 / 2) / 4.4, "Unique R²", rotation=90, ha="center", va="center",
+    fig.text(0.2 / WB, 1 - (yt + (yl_ + hl - yt) / 2) / HB, "Unique R²", rotation=90, ha="center", va="center",
              fontsize=7, fontweight="bold")
     save(fig, "f4B_unique")
     for j, s in enumerate(("init-dev", "motion", "abs 1-4 Hz")):

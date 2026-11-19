@@ -16,6 +16,12 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-19-c · JN Fig 4A smaller, 4B wider
+commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:** Aditya: "A is too big". Display only. `f4_state_exemplars.m` canvas 10.2 x 3.7 cm (was 11.75 x 4.1), export 10.6 x 4.0 cm (was 12.2 x 4.4); same picks (m2 trial 79, m4 trial 54, m2 trial 66; 613 CL trials, full R^2 0.440). 4B (`main_B`) is 6.6 x 4.0 cm (was 5.0 x 4.4) to fill row 1, axes geometry in cm variables. JN Figure 4 17.6 x 12.68 cm; audit 0 required issues, font sizes 6, 7, 10 pt. Previous build in `paper/figures_final/jn/_before_2026-11-19c/`.
+**State:** as L-2026-11-19-b (caption not updated, H not re-run, not in Closedloop_edit).
+**Resume:** as L-2026-11-19-b.
+
 ### L-2026-11-19-b · JN Fig 4 re-laid out one story per row: A+B, D+C+E, F+G+H
 commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:**

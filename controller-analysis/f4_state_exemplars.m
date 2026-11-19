@@ -83,7 +83,8 @@ end
 
 % ================= FIGURE: 1 x 3 row (JN Fig 4A) =================
 % 2026-11-19 (Aditya: "A,B must tell same story"), display only, same picks: JN row 1 is A + B,
-% so A is about 12.2 cm wide (export, 11.75 cm canvas) with the exemplars of the three states in 4B (the relative 1-4 Hz tile is
+% so A is about 10.6 x 4.0 cm (a 10.2 x 3.7 canvas; 12.2 x 4.4 was "too big", Aditya 2026-11-19)
+% with the exemplars of the three states in 4B (the relative 1-4 Hz tile is
 % left out; relative power is in the supplement). The stimulation window is split into the two
 % 4B error windows, 0-1 s (light) and 1-3 s (dark), named as in the 4B legend; titles use the
 % 4B/4C state names at 7 pt; the shared y range holds every picked trial (the old [-16 10]
@@ -96,7 +97,7 @@ for j=keep
     i=pick(j); [eb, ec] = pre_spec_buffer(mouse.(fields{SESS(i)}).data, 'wc');
     segs{j}=double(eb(TRI(i), ec-spec_pre_s*Fs : ec+spec_post_s*Fs));   % caches mix single and double
 end
-fig=jnFig(11.75,4.1); tl=tiledlayout(fig,1,numel(keep),'TileSpacing','compact','Padding','tight');
+fig=jnFig(10.2,3.7); tl=tiledlayout(fig,1,numel(keep),'TileSpacing','compact','Padding','tight');
 tv=(-spec_pre_s:1/Fs:spec_post_s).'; yl=[-16 max(10, ceil(max(cellfun(@max,segs(keep))))+1)];
 shade={[0 1],[.95 .95 .95]; [1 3],[.88 .88 .88]};          % 0-1 s and 1-3 s, as the 4B legend
 
