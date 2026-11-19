@@ -16,6 +16,14 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-18-d · Fig 4E back to the Q4/Q1 spectra; error split moves to a supplement figure
+commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya, after seeing the stacked bars: "bring back q4/q1 it made sense". Display only, no math change: `main_E` and the cluster bars in `ratio_tile` are restored exactly as in 0255e80 (L-2026-11-18-b); 4E again shows the Q4/Q1 spectra, locked window, with the cluster bars (all n.s.: motion 0.51-0.72 Hz Holm 0.471; absolute 1-4 Hz 4.14-4.41 Hz Holm 0.740, 7.14-7.55 Hz 0.391, 0.89-0.92 Hz 1.0).
+- The error split from L-2026-11-18-c is kept as `supp_error_bands` (`f4S_error_bands`, state over [-2,+3) s, and `f4S_error_bands_laseroff`); same numbers as L-2026-11-18-c. `paper-writing/fig4_jn_build.py` places `f4E_state_spectra` as E again. JN Figure 4 rebuilt; audit has only the known 4G flag.
+**State:** the two error-band figures are not placed in a supplement and have no window label. Not copied into Closedloop_edit.
+**Resume:** `stats_v2/.venv/Scripts/python.exe -I stats_v2/fig4_paper_panels.py --no-sens`, then `python -X utf8 -I paper-writing/fig4_jn_build.py`.
+
 ### L-2026-11-18-c · Fig 4E replaced: the 4C error split by frequency
 commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:**

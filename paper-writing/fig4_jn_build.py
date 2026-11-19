@@ -4,7 +4,7 @@
 
 Layout, 17.6 cm wide, letters as Aditya set them (row 1 reads A, B, D):
   row 1  A state exemplar trials  |  B unique R^2 (error decomposition)  |  D CL/OL residual power
-  row 2  C state quartile tiles                                         |  E 4C error split by frequency
+  row 2  C state quartile tiles                                         |  E Q4/Q1 state spectra
   row 3  F predictor kernel map   |  G A = G + L                         |  H rejection ratio
 The error-model equation panel is gone, and relative 1-4 Hz power is in the supplement (f4S_states).
 
@@ -12,7 +12,8 @@ Panel A is the 2026-11-14 MATLAB exemplar row (f4_state_exemplars.m, corrected o
 without its relative-power tile: tiles 1, 2 and 4 are copied as vector clips and tile 4 moves left by
 one tile pitch. Display only; each tile's trial was picked on its own state, so no trial changes.
 B, C, D, E come from stats_v2/fig4_paper_panels.py (L-2026-11-16-a; B, the init + motion + absolute
-model, L-2026-11-18-a; E, the 4C error split into < 1, 1-4 and > 4 Hz, L-2026-11-18-c). F and H are the figures_final panels
+model, L-2026-11-18-a; E, Q4/Q1 spectra with the cluster test, L-2026-11-18-b, restored in
+L-2026-11-18-d). F and H are the figures_final panels
 used since 2026-11-04 (f4_kernel_map.m, f4_cl_reject_panel.m); G is the 2026-11-14 f4_contra_model.m run.
 
 Panels are copied to paper/figures_final/jn/fig4/, placed (linked) in Illustrator with their tops on
@@ -38,7 +39,7 @@ SRC = {
     'B': IMG / 'paper_py' / 'f4B_unique.pdf',
     'C': IMG / 'paper_py' / 'f4C_quartiles.pdf',
     'D': IMG / 'paper_py' / 'f4D_sensitivity.pdf',
-    'E': IMG / 'paper_py' / 'f4E_error_bands.pdf',
+    'E': IMG / 'paper_py' / 'f4E_state_spectra.pdf',
     'F': PAN / 'f4_kernel_map.pdf',
     'G': IMG / 'f4_agl.pdf',
     'H': PAN / 'f4_cl_reject_RR.pdf',
