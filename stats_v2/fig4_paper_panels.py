@@ -252,11 +252,11 @@ def main_B():
     top_lo = np.delete((P + E).ravel(), 0)                    # every bar but init-dev 0-1 s fits below
     assert top_lo.max() < lo[1] and hi[0] < P[0, 0] - E[0, 0] and P[0, 0] + E[0, 0] < hi[1], (P, E)
 
-    # 6.6 x 4.0 cm (was 5.0 x 4.4): 4A was made smaller, B takes the rest of row 1 (2026-11-19, layout only)
-    WB, HB = 6.6, 4.0
+    # 5.0 x 4.4 cm. Widened to 6.6 x 4.0 and back the same day (Aditya 2026-11-19: "No do not widen").
+    WB, HB = 5.0, 4.4
     fig = plt.figure(figsize=(WB * CM, HB * CM))
     x0, w = 1.05, WB - 1.25
-    yt, ht, yl_, hl = 0.55, 0.55, 1.22, HB - 0.8 - 1.22       # upper / lower segment top and height, cm
+    yt, ht, yl_, hl = 0.55, 0.6, 1.27, HB - 0.8 - 1.27        # upper / lower segment top and height, cm
     a2 = axes_cm(fig, x0, yt, w, ht)                          # upper segment
     a1 = axes_cm(fig, x0, yl_, w, hl)                         # lower segment
     xb = np.arange(1, 4)
