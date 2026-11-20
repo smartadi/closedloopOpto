@@ -16,6 +16,47 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-19-g · Sparse kernel: fresh ridge refit for the 8 non-reproducible sessions; all 13 done
+commit: this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya chose "Fresh ridge refit" for the 8 sessions whose ridge cache cannot be rebuilt (L-2026-11-19-f). No new math: this re-runs the approved ridge (`ctrl_ridge_path.m` lambda rule) on today's data, and the lasso part is as approved in L-2026-11-19-f.
+**Did/Found:** `ctrl_sparse_kernel.m` now refits ridge on today's data for those 8 sessions. It uses today's `ctrl_ols_ol_stimblind.m` settings: V from its uncorrected list, canonical dFk, fit-target detrend on. The Stage-1 frames are clamped to today's V by the pipeline's own small-shortfall rule, and the OL onsets and Actual are rebuilt as the pipeline builds them. The lasso is then fitted on the same data.
+- Check 3 on the 5 cached sessions: the refit code reproduces their cached weights, and on the cached onsets their cached Actual.
+- Today's onsets differ by 1 to 2 frames from the cached ones in 3 of those 5 sessions: 8 of 14 trials (0305), 21 of 46 (0320) and 25 of 38 (0415).
+- Why the 8 failed: the corrected V on the server is now 1 to 2 frames shorter than Stage 1 recorded (for example 0212: Stage-1 nF_m 149458, V today 149456).
+- Fresh ridge test R² against the old cache:
+
+  | session | fresh | old cache |
+  |---|---|---|
+  | 0212 | 0.784 | 0.977 |
+  | 0224 | 0.876 | 0.915 |
+  | 0226 | 0.775 | 0.835 |
+  | 0304 | 0.754 | 0.755 |
+  | AL_0039_0419 | 0.853 | 0.685 |
+  | AL_0039_0420 | 0.864 | 0.759 |
+  | AL_0048 | 0.307 | 0.441 |
+  | AL_0051 | 0.723 | 0.694 |
+
+  So the paper's Stage-2 numbers for these sessions do not match today's data.
+- Check 2 (planted pixels) failed on AL_0033_0212: the second planted pixel lost to a neighbour (RCOND about 1e-8). Its lasso result is not reliable.
+- All 13 sessions at the lambda rule:
+  - Test R² of the lasso minus ridge: median −0.010 (−0.049 to −0.002).
+  - D/D_grid: ridge median 0.98 (0.79 to 1.03); lasso median 0.93 (0.46 to 1.03); lasso below 1 in 11 of 13.
+  - **Four sessions keep 9 to 18 pixels nearer the homolog:**
+
+    | session | px kept | D/D_grid | \|b\| share within 3 steps |
+    |---|---|---|---|
+    | AL_0033_0305 | 13 | 0.58 | 44% |
+    | AL_0039_0419 | 9 | 0.57 | 0% |
+    | AL_0039_0420 | 17 | 0.47 | 29% |
+    | AL_0039_0430 | 18 | 0.46 | 75% |
+
+    The area within 3 steps is about 6% in each session.
+  - The other 9 keep 10 to 245 pixels, with D/D_grid 0.86 to 1.03.
+- Along the path, D/D_grid at about 10 pixels: median 0.67 (0.30 to 1.16). At about 20 pixels: median 0.81 (0.47 to 0.91).
+- The lasso's Global leak was lower than ridge in 0224, 0226, 0304 and AL_0039_0419: 23.9, 21.0, 15.6 and 22.0% against 31.8, 38.0, 29.6 and 30.8%.
+**State:** descriptive, 13 sessions (5 against the cache, 8 against a fresh refit), no test. Not in any figure. Ridge stays the model.
+**Resume:** Aditya decides how to answer the reviewers (maps in a supplement or response only). Separately, the Stage-2 ridge caches do not match today's V and onsets, which bears on every Fig 4 number built on them.
+
 ### L-2026-11-19-f · Sparse (lasso) contra kernel next to ridge: 5 of 13 sessions reproducible
 commit: this · branch: hub/100-sparse-kernel (stacked on hub/92-fig4-frequency) · issues: research-hub #100 · pc: Pinnacle
 Math approved by Aditya 2026-11-19: "Approve" (method block on research-hub #100, after "Approve lasso" and the one-session trial he asked for: "try both on one session then i approve"). Equations in the header of `controller-analysis/ctrl_sparse_kernel.m`.
