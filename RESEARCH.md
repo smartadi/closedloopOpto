@@ -16,6 +16,26 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-19-f · Sparse (lasso) contra kernel next to ridge: 5 of 13 sessions reproducible
+commit: this · branch: hub/100-sparse-kernel (stacked on hub/92-fig4-frequency) · issues: research-hub #100 · pc: Pinnacle
+Math approved by Aditya 2026-11-19: "Approve" (method block on research-hub #100, after "Approve lasso" and the one-session trial he asked for: "try both on one session then i approve"). Equations in the header of `controller-analysis/ctrl_sparse_kernel.m`.
+**Did/Found:** Reviewers asked why the 4F kernel is not sparse. New `ctrl_sparse_kernel.m` fits a lasso on the same spontaneous frames, split, z-scoring and target as each ridge Stage-2 cache. Lambda follows the ridge rule (largest with test R² within 0.02 of the path best). Per session it reports D/D_grid (|b|-weighted distance from the stim site's mirror across the midline over the grid mean), the |b| share within 3 grid steps, stable pixels (at least 4 of 5 train-block refits), the Global leak and the path curves. Before this, a scratch trial on AL_0033_0415_e2 (not committed) ran lasso and elastic net (alpha 0.5); the elastic net gave the same answer with more pixels.
+- Check 1: the rebuilt data reproduce the cached ridge (weights, test R², leak) in 5 of 13 sessions, all with corrected V and raw target: AL_0033 0305, 0320, 0415, 0419 and AL_0039 0430. Check 2 (planted 2-pixel target) passed in all 5.
+- Not reproduced, so skipped as approved (8):
+  - AL_0033 0212, 0224, 0226, 0304 and AL_0039 0419, 0420: the current Stage-1 frame lists (2026-09-07) run 1 to 2 frames past the corrected V, and the uncorrected V gives other weights.
+  - AL_0048_0729: no corrected V on the server; R² 0.26 against the cached 0.44.
+  - AL_0051_0729: the closest variant gives R² 0.709 against the cached 0.694.
+  - So these 8 ridge caches cannot be rebuilt from today's Stage-1 caches. They include 2 of the 3 sessions that pass the R² gate.
+- At the lambda rule (5 sessions), test R² of the lasso minus ridge was −0.015 to −0.005.
+  - AL_0033_0305: 13 px kept; D/D_grid 0.58 (ridge 0.88); 44% of |b| within 3 steps (area 6%); 0 stable px.
+  - AL_0039_0430: 18 px kept; D/D_grid 0.46 (ridge 0.86); 75% of |b| within 3 steps (ridge 15%, area 6%); 6 stable px with D/D_grid 0.30.
+  - AL_0033 0320, 0415 and 0419: 107, 136 and 152 px kept, with D/D_grid 0.99, 1.03 and 0.93 (ridge 1.01, 1.03, 0.98).
+  - Leak changed by at most 0.7 points.
+- Along the path, D/D_grid at about 10 px was 0.30 to 0.76 (median 0.46), and at about 20 px it was 0.47 to 0.85 (median 0.76). In all 5 sessions the first pixels the lasso picks are nearer the homolog than the grid average.
+- Outputs (not tracked): `data/ctrl_sparse_kernel_<tag>.mat`, `data/ctrl_sparse_kernel_summary.csv`, `_preview/ctrl_sparse_kernel_summary.png`, `_preview/ctrl_sparse_kernel_maps.png`.
+**State:** descriptive, 5 sessions, no test. Not in any figure. Ridge stays the model in `ctrl_pred_tag.m`.
+**Resume:** Aditya decides about the 8 non-reproducible sessions: re-run the Stage-2 ridge batch (moves paper numbers; the 2026-09-05 note already asks for a clean batch), or compare the lasso with a fresh ridge fit on today's data. Then whether the maps go into a supplement or the reviewer response.
+
 ### L-2026-11-19-e · JN Fig 4A with 0 and target lines, smaller; 4F as squares
 commit: this · branch: hub/92-fig4-frequency · issues: #92 · pc: Pinnacle
 **Did/Found:** Aditya: "A should have the 0 and target lines like in figure 3, also A still looks too big" and "F kernel representation looks too crowded". Display only, no numbers changed.
