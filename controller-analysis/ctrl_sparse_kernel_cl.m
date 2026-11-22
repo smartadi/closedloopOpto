@@ -14,7 +14,8 @@
 %            muY = mean train target, b0 = lasso intercept (0 for ridge). In target units: no yb add-back.
 %   yb       1400-frame (horizon) moving median of y = data.dFk when the target was detrended, else 0.
 %   trials   as imp_build_session.m: onsets d_s.stimStarts(data.nc) (OL) and (data.wc) (CL), nearest SVD
-%            frame, -1 s to the end of stimulation; A = data.dFk.
+%            frame, -1 s to the end of stimulation; A = data.dFk, paired with V by time since 2026-11-22
+%            (utils/ctrl_pair_on_v.m: A at V column k is the dFk sample of that column's blue frame).
 %   R2_pre   internal_model_principle.m lines 145-147: over the 35 frames of [-1,0) s, all trials of one
 %            condition pooled, R2 = 1 - sum (A' - G')^2 / sum (A' - mean A')^2.
 %            (c) A' = A - yb, G' = G   (approved: scored in the target the model was fitted on)
@@ -89,14 +90,9 @@ horizon = S1.horizon;  gridIdx = S1.gridIdx;
 % ---- the data each model was fitted on, as ctrl_sparse_kernel.m rebuilds it ----
 [U, V, t_svd, mimg] = cp_loadUVt(expPath(M.mn, M.td, M.en), CFG.nSV_load, d_s.timeBlue, uc);
 V = double(V);  Uflat = reshape(U, size(mimg,1)*size(mimg,2), size(U,3));  clear U
-frames = S1.frames;  itr = S1.itr;  ite = S1.ite;  ytrace = data.dFk(:);
-nF_m = min(size(V,2), numel(t_svd));
-if strcmp(R.ridge_source, 'fresh refit'), nF_m = min(nF_m, numel(ytrace)); end
-if numel(ytrace) < nF_m, assert(nF_m - numel(ytrace) <= 10); nF_m = numel(ytrace); end
-keepF = frames <= nF_m;
-if ~all(keepF)
-    map = cumsum(keepF);  itr = map(itr(keepF(itr)));  ite = map(ite(keepF(ite)));  frames = frames(keepF);
-end
+% Actual paired with V by time, Stage-1 frames moved to V columns (utils/ctrl_pair_on_v.m, L-2026-11-22-b)
+P = ctrl_pair_on_v(data.dFk, d_s.timeBlue, t_svd, min(size(V,2), numel(t_svd)), S1.frames, S1.itr, S1.ite);
+frames = P.frames;  itr = P.itr;  ite = P.ite;  ytrace = P.y;
 Xg = double(Uflat(gridIdx,:)) * V;  nFv = size(V, 2);  clear Uflat V
 if detr, yb = movmedian(ytrace, horizon, 'omitnan'); else, yb = zeros(size(ytrace)); end
 FG = ctrl_gram_build(Xg, frames, itr, ite, ytrace - yb);
@@ -129,9 +125,9 @@ nm = {'ridge', 'lasso'};
 Aol = cut(ytrace, onOL);  Acl = cut(ytrace, onCL);  YBol = cut(yb, onOL);  YBcl = cut(yb, onCL);
 mA = mean(Acl - mean(Acl(:,bwin), 2), 1);  mG = zeros(2, numel(rel));  mD = mG;  sD = mG;  dDyb = 0;
 Dk = zeros([size(Acl) 2]);  rrk = zeros(size(Acl, 1), 2);       % per-trial D and RR, ridge (1) and lasso (2)
-Gk = zeros([size(Aol) 2]);                                       % per-trial OL Global, for f4_rr_diag.m
+Gk = zeros([size(Aol) 2]);  Gck = zeros([size(Acl) 2]);         % per-trial OL and CL Global (f4_rr_diag.m, f4_lasso_report.m)
 for m = 1:2
-    Gol = cut(Gb(:,m), onOL);  Gcl = cut(Gb(:,m), onCL);  Gk(:,:,m) = Gol;
+    Gol = cut(Gb(:,m), onOL);  Gcl = cut(Gb(:,m), onCL);  Gk(:,:,m) = Gol;  Gck(:,:,m) = Gcl;
     C.(['R2preOL_' nm{m}])   = r2pre(Aol - YBol, Gol);           % (c)
     C.(['R2preCL_' nm{m}])   = r2pre(Acl - YBcl, Gcl);
     C.(['R2preOL_a_' nm{m}]) = r2pre(Aol, Gol + YBol);           % (a)
@@ -147,7 +143,7 @@ for m = 1:2
     Dk(:,:,m) = D;  rrk(:,m) = rr;
 end
 C.trial = struct('Acl', Acl, 'D', Dk, 'rr', rrk, 'ref', ref, 'wr', wr, 'pre', pre, ...   % for f4_reject_examples.m
-    'Aol', Aol, 'Gol', Gk);                                                              % OL arrays, for f4_rr_diag.m
+    'Aol', Aol, 'Gol', Gk, 'Gcl', Gck);                                                  % OL arrays (f4_rr_diag.m), CL Global
 Aset = mean(mean(Acl(:,wr), 2));  msErr = mean(mean((Acl(:,wr) - ref).^2, 2));
 C.biasFrac = (Aset - ref)^2 / msErr;  C.in4H = C.biasFrac <= CFG.bias_max;  C.dD_yb = dDyb;
 C.tt = rel/Fs;  C.mA = mA;  C.mG = mG;  C.mD = mD;  C.sD = sD;  C.dur = S1.trial_dur;

@@ -10,7 +10,8 @@
 % For each session with a ridge Stage-2 cache (13), on the SAME spontaneous frames, temporal split,
 % train z-scoring and target as that cache (reproduced exactly first, CHECK 1):
 %   z_t     the p contra grid pixels at frame t, z-scored with the train mean and SD
-%   e_t     y_t - mean(y_train), y = data.dFk (detrended or not, as that cache was fitted)
+%   e_t     y_t - mean(y_train), y = data.dFk (detrended or not, as that cache was fitted); since
+%           2026-11-22 y_t is the dFk sample of the blue frame of V column t (utils/ctrl_pair_on_v.m)
 %   lasso   b(lambda) = argmin_b (1/2n) sum_train (e_t - b0 - z_t'b)^2 + lambda*||b||_1,  n = train frames
 %           (Tibshirani 1996, doi 10.1111/j.2517-6161.1996.tb02080.x; coordinate descent as in Friedman,
 %           Hastie and Tibshirani 2010, doi 10.18637/jss.v033.i01; MATLAB lasso, Standardize off since
@@ -124,15 +125,10 @@ found = false;
 for uc = [uncorrDefault, ~uncorrDefault]
     [U, V, t_svd, mimg] = cp_loadUVt(expPath(mouse.(fld).mn, mouse.(fld).td, mouse.(fld).en), 500, d_s.timeBlue, uc);
     V = double(V);  Uflat = reshape(U, size(mimg,1)*size(mimg,2), size(U,3));  clear U
-    frames = S1.frames;  itr = S1.itr;  ite = S1.ite;
-    nF_m = min(size(V,2), numel(t_svd));  ytrace = data.dFk(:);
-    if numel(ytrace) < nF_m                                  % as ctrl_ols_ol_stimblind.m
-        assert(nF_m - numel(ytrace) <= 10);  nF_m = numel(ytrace);
-        keepF = frames <= nF_m;
-        if ~all(keepF)
-            map = cumsum(keepF);  itr = map(itr(keepF(itr)));  ite = map(ite(keepF(ite)));  frames = frames(keepF);
-        end
-    end
+    % Actual paired with V by time, Stage-1 frames moved to V columns (utils/ctrl_pair_on_v.m, L-2026-11-22-b)
+    P = ctrl_pair_on_v(data.dFk, d_s.timeBlue, t_svd, min(size(V,2), numel(t_svd)), S1.frames, S1.itr, S1.ite);
+    ytrace = P.y;  frames = P.frames;  itr = P.itr;  ite = P.ite;  nF_m = P.nV;
+    fprintf('[pair] V column 1 = blue frame %d; %d Stage-1 frame(s) have no V column\n', P.blueOfCol(1), numel(S1.frames) - numel(frames));
     Xg = double(Uflat(gridIdx,:)) * V;  clear Uflat V
     if max(frames) > size(Xg, 2)       % this Stage-1 frame list cannot belong to this V
         fprintf('[check 1] V %s: Stage-1 frames reach %d but V has %d frames; variant skipped\n', ...
@@ -175,14 +171,11 @@ else
     uc = uncorrDefault;  detr = true;
     [U, V, t_svd, mimg] = cp_loadUVt(expPath(mouse.(fld).mn, mouse.(fld).td, mouse.(fld).en), 500, d_s.timeBlue, uc);
     V = double(V);  Uflat = reshape(U, size(mimg,1)*size(mimg,2), size(U,3));  clear U
-    frames = S1.frames;  itr = S1.itr;  ite = S1.ite;
-    nF_m = min(size(V,2), numel(t_svd));  ytrace = data.dFk(:);  nF_m = min(nF_m, numel(ytrace));
-    assert(S1.nF_m - nF_m <= 10, '%s: today''s data are %d frames short of Stage 1', tag, S1.nF_m - nF_m);
-    keepF = frames <= nF_m;
-    if ~all(keepF)
-        map = cumsum(keepF);  itr = map(itr(keepF(itr)));  ite = map(ite(keepF(ite)));  frames = frames(keepF);
-        fprintf('[fresh] dropped %d Stage-1 frame(s) beyond today''s %d frames\n', nnz(~keepF), nF_m);
-    end
+    % Actual paired with V by time, Stage-1 frames moved to V columns (utils/ctrl_pair_on_v.m, L-2026-11-22-b)
+    P = ctrl_pair_on_v(data.dFk, d_s.timeBlue, t_svd, min(size(V,2), numel(t_svd)), S1.frames, S1.itr, S1.ite);
+    ytrace = P.y;  frames = P.frames;  itr = P.itr;  ite = P.ite;  nF_m = P.nV;
+    assert(S1.nF_m - nF_m <= 12, '%s: today''s data are %d frames short of Stage 1', tag, S1.nF_m - nF_m);
+    fprintf('[fresh] V column 1 = blue frame %d; %d Stage-1 frame(s) have no V column\n', P.blueOfCol(1), numel(S1.frames) - numel(frames));
     Xg = double(Uflat(gridIdx,:)) * V;  clear Uflat V
     yb = movmedian(ytrace, horizon, 'omitnan');  yfit = ytrace - yb;
     FG = ctrl_gram_build(Xg, frames, itr, ite, yfit);
