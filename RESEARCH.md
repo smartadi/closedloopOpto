@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-22-c · Fig 4H lasso report: summary figure, trial reconstructions, write-up (no tests)
+commit: d734c8b+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya: "i need correct trial reconstructions and correct disturbance rejection, lasso is fine ... we can skip the significance tests here and just do reporting style figure and writeup". Display only; every number from `ctrl_sparse_kernel_cl.m` and `f4_rr_diag.m` after L-2026-11-22-b.
+**Did/Found:**
+- New `controller-analysis/f4_lasso_report.m`: `data/f4_lasso_report.csv` (per session: trials, test R², R² on the spot OL and CL, CL RR, OL placebo RR, β), `_preview/f4_lasso_report_summary.png` (R², RR with the OL placebo, β per session) and `_preview/f4_lasso_report_trials.png` (one OL and one CL trial per session, Actual and lasso Global each minus its own [-1,0) s mean; shown trial = the one whose [-1,0) s squared error is nearest the session median).
+- Write-up `controller-analysis/reports/f4h_lasso_rebuild_2026-11-22.md` (marked as AI-drafted).
+- 11 gated sessions, lasso: test R² median 0.80 (0.61 to 0.91); R² on the spot OL 0.84 (0.70 to 0.91), CL 0.83 (0.70 to 0.92); CL RR median 0.64 (0.43 to 1.08), below 1 in 10 of 11 (not Mouse 1k, 1.08); OL placebo median 1.12 (0.87 to 1.62); CL below OL placebo in 11 of 11; geometric mean of session RR 0.62 (CL) and 1.11 (OL placebo).
+- By eye (trials figure): before onset the lasso Global follows the Actual in every session; after onset the Actual drops below the Global on OL and CL trials in all sessions except Mouse 1c, where the two stay together on the OL trial shown.
+**State:** report done, nothing tested, no paper panel changed. Open for Aditya: the one-frame offsets left after time pairing, fixing `imp_build_session.m` (changes paper numbers), Mouse 2a's lasso D (β 1.22).
+**Resume:** after the L-2026-11-22-b chain, `run controller-analysis/f4_lasso_report.m`.
+
 ### L-2026-11-22-b · Pair the Actual with V by time in the #100 kernel scripts; refit and rescore all 13 sessions
 commit: 25c94e4+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya: "Fix and rebuild" (after the plan "pair the Actual and V by time, not by frame number ... refit the lasso (and ridge for reference) wherever the offset is not 0"). Fixing code to match approved math (A and G at the same instant), not a math change; the mapping is the one `impulse-analysis/load_experiments.m` has used since 2026-10-11.
