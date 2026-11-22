@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-21-b · Fig 4H with the lasso predictor, step 1: example CL trials of the disturbance and the CL error
+commit: f0e8927+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya: "we dont need the comparisions for the paper, lets fix lasso and now gimme the 4H procedure, lets first take all admissible sessions and plot disturbances vs CL response, we want to compute the disturbances rejection metric on setteled window lets do a plot of few example trials first". Math approved by Aditya 2026-11-21: "Approve" (method block in the brain_paper session chat). The lasso of L-2026-11-19-f/g becomes the contra->ipsi predictor for Fig 4F-4H; the ridge vs lasso comparisons stay out of the paper.
+**Did/Found:**
+- `ctrl_sparse_kernel_cl.m` now keeps the per-trial CL Actual, D and RR in each session file (`C.trial`). Rerun of all 13 sessions: the table equals the L-2026-11-21-a table exactly (largest difference 0 over 23 numeric columns).
+- New `f4_reject_examples.m`: the 11 sessions inside the Fig 4H offset gate (AL_0033_0212 and AL_0051 out), in each the CL trial whose RR is nearest the session median of per-trial RR (lasso D), with D and the CL error e = A - r drawn from -1 to 3 s and the settled window 1-3 s shaded.
+- Picked trials (trial of n, its RR, session median RR, session geometric-mean RR): Mouse 1d 20/99 0.72, 0.72, 0.61; 1e 26/108 0.80, 0.80, 0.73; 1f 18/24 0.50, 0.54, 0.70; 1h 10/16 0.43, 0.40, 0.43; 1j 6/54 0.79, 0.78, 0.67; 1k 6/22 0.99, 1.00, 1.08; 1l 58/65 0.72, 0.72, 0.69; 2a 48/52 0.50, 0.51, 0.46; 2b 13/50 0.83, 0.82, 0.73; 2d 9/50 0.67, 0.67, 0.56; 3e 13/55 2.66, 2.66, 2.55.
+- By eye: in Mouse 1d, 1j, 1k and 2d the CL error follows D closely over 1-3 s, its fast oscillations included (trial RR 0.67 to 0.99). In Mouse 3e the error is larger than D over 1-3 s (RR 2.66).
+**State:** display only, nothing tested. The 4F map, 4G and the 4H statistic are not yet re-run with the lasso. Outputs (not tracked): `controller-analysis/_preview/f4_reject_examples.png`, the per-session `ctrl_sparse_kernel_cl_<tag>.mat`.
+**Resume:** MATLAB `load_sessions`, `run controller-analysis/ctrl_sparse_kernel_cl.m`, then `run controller-analysis/f4_reject_examples.m`. Next: the 4H statistic on the settled window from the lasso D over the 11 admissible sessions, with the ridge numbers next to it.
+
 ### L-2026-11-21-a · Sparse kernel: R² on the spot and the CL Global and disturbance, ridge vs lasso, 13 sessions
 commit: 372bbf6+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya asked (relayed by Hub control, 2026-11-21): "show me R2 on spot in each case and to make the decision possible i also wanna see the global reconstruction on CL to make sure disturbance is properly captured". Math approved by Aditya 2026-11-21: "Approve (c)" and "approve" (method block on research-hub #100 and in the brain_paper session chat). No new formula; definitions in the header of `controller-analysis/ctrl_sparse_kernel_cl.m`.

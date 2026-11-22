@@ -5,6 +5,8 @@
 % Math approved by Aditya 2026-11-21: "Approve (c)" and "approve" (method block on research-hub #100 and
 % in the brain_paper session chat; option (c) for the slow baseline yb; RESEARCH L-2026-11-21-a).
 % No new formula: R2_pre, D and RR are reused as defined.
+% 2026-11-21, Aditya "Approve" (lasso becomes the 4F-4H predictor; RESEARCH L-2026-11-21-b): each session's
+% file also keeps the per-trial CL Actual, D and RR (C.trial) for f4_reject_examples.m.
 %
 % Per session, for ridge and lasso (weights, lambda and data variant from ctrl_sparse_kernel_<tag>.mat;
 % each model rebuilt on its own V, Stage-1 frames, train z-scoring and target, R.variant):
@@ -56,7 +58,7 @@ for it = 1:numel(allTags)
     if exist(f, 'file'), S = load(f); CC{end+1} = S.C; end %#ok<SAGROW>
 end
 CC = [CC{:}];
-T = struct2table(rmfield(CC, {'tt', 'mA', 'mG', 'mD', 'sD', 'dur'}));
+T = struct2table(rmfield(CC, {'tt', 'mA', 'mG', 'mD', 'sD', 'dur', 'trial'}));
 writetable(T, fullfile(dd, 'ctrl_sparse_kernel_cl_summary.csv'));
 disp(T(:, {'session', 'ridge_source', 'nOL', 'nCL', 'R2te_ridge', 'R2te_lasso', 'R2preOL_ridge', 'R2preOL_lasso', ...
     'R2preCL_ridge', 'R2preCL_lasso', 'RR_ridge', 'RR_lasso', 'in4H', 'plant_ok'}));
@@ -126,6 +128,7 @@ C = struct('session', tag, 'variant', R.variant, 'ridge_source', R.ridge_source,
 nm = {'ridge', 'lasso'};
 Aol = cut(ytrace, onOL);  Acl = cut(ytrace, onCL);  YBol = cut(yb, onOL);  YBcl = cut(yb, onCL);
 mA = mean(Acl - mean(Acl(:,bwin), 2), 1);  mG = zeros(2, numel(rel));  mD = mG;  sD = mG;  dDyb = 0;
+Dk = zeros([size(Acl) 2]);  rrk = zeros(size(Acl, 1), 2);       % per-trial D and RR, ridge (1) and lasso (2)
 for m = 1:2
     Gol = cut(Gb(:,m), onOL);  Gcl = cut(Gb(:,m), onCL);
     C.(['R2preOL_' nm{m}])   = r2pre(Aol - YBol, Gol);           % (c)
@@ -140,7 +143,9 @@ for m = 1:2
     Dy = skcl_disturbance(Gol + YBol, Gcl + YBcl, Acl, bwin, wr, ref);
     dDyb = max(dDyb, max(abs(mean(Dy(:,wr), 1) - mean(D(:,wr), 1))));
     mG(m,:) = mean(Gcl - mean(Gcl(:,bwin), 2), 1);  mD(m,:) = mean(D, 1);  sD(m,:) = std(D, 0, 1);
+    Dk(:,:,m) = D;  rrk(:,m) = rr;
 end
+C.trial = struct('Acl', Acl, 'D', Dk, 'rr', rrk, 'ref', ref, 'wr', wr, 'pre', pre);   % for f4_reject_examples.m
 Aset = mean(mean(Acl(:,wr), 2));  msErr = mean(mean((Acl(:,wr) - ref).^2, 2));
 C.biasFrac = (Aset - ref)^2 / msErr;  C.in4H = C.biasFrac <= CFG.bias_max;  C.dD_yb = dDyb;
 C.tt = rel/Fs;  C.mA = mA;  C.mG = mG;  C.mD = mD;  C.sD = sD;  C.dur = S1.trial_dur;
