@@ -20,9 +20,23 @@ tag='AL_0033_0415_e2';
 colG=[0.20 0.40 0.75]; colA=[0.10 0.10 0.10]; colL=[0.78 0.16 0.12];
 
 % ---- data (stim-blind deploy: Actual A, Global G, test R^2) ----
-[sfx,pmode]=ctrl_pred_tag(); assert(strcmp(pmode,'ridge'),'need ridge predictor');
-O =load(fullfile(dd,sprintf('ctrl_ols_ol_stimblind%s_%s.mat',sfx,tag)));
-t=O.rel(:).'/O.Fs; A=O.Aa(:).'; G=O.Gg(:).'; R2=O.R2_te;
+% 2026-11-22 (research-hub #100, L-2026-11-22-e): the LASSO Global (predictor approved 2026-11-21,
+% L-2026-11-21-b; this switch approved 2026-11-22, "Approve"). OL trials from ctrl_sparse_kernel_cl.m:
+% today's onsets, Actual paired with V by time. A and G = OL trial means, each shifted to zero mean over
+% [-1, 0) s as the ridge cache's Aa and Gg are; R^2 = the lasso held-out R^2 on spontaneous frames.
+% pred = 'ridge' reads the Stage-2 ridge cache as before (its onsets predate the 10-27 onset port).
+pred='lasso';
+if strcmp(pred,'lasso')
+    K=load(fullfile(dd,sprintf('ctrl_sparse_kernel_cl_%s.mat',tag))); K=K.C;
+    t=K.tt(:).'; pre=t<0;
+    A=mean(K.trial.Aol,1);  G=mean(K.trial.Gol(:,:,2),1);       % Gol(:,:,2) = lasso, (:,:,1) = ridge refit
+    assert(all(isfinite(A)) && all(isfinite(G)), 'f4_contra_model: non-finite OL trial mean');
+    A=A-mean(A(pre));  G=G-mean(G(pre));  R2=K.R2te_lasso;
+else
+    [sfx,pmode]=ctrl_pred_tag(); assert(strcmp(pmode,'ridge'),'need ridge predictor');
+    O =load(fullfile(dd,sprintf('ctrl_ols_ol_stimblind%s_%s.mat',sfx,tag)));
+    t=O.rel(:).'/O.Fs; A=O.Aa(:).'; G=O.Gg(:).'; R2=O.R2_te;
+end
 
 % ===== A = G + L (standalone) ======================================================
 % 2026-11-19 (JN Fig 4 row 3 F, G, H; display only): 6.6 x 3.6 cm to fill the row; y top 3 so the

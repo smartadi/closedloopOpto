@@ -10,7 +10,13 @@ dataDir = fullfile(here,'data');  figDir = fullfile(here,'..','paper','images','
 if ~exist(figDir,'dir'); mkdir(figDir); end
 addpath(fullfile(here,'..','utils'));
 PS = paperStyle(); S = jnStyle();
-L = load(fullfile(dataDir,'f4_cl_reject_lmm.mat'));   % T (logRR,sess,mouse), est, se, p1
+% 2026-11-22 (research-hub #100, L-2026-11-22-e): RR from the LASSO disturbance (predictor approved
+% 2026-11-21, L-2026-11-21-b; this switch approved 2026-11-22, "Approve"). Run f4_reject_lasso.m first;
+% it writes f4_cl_reject_lmm_lasso.mat with the f4_cl_reject_lmm.mat names (T, ST, sessM).
+% pred = 'ridge' reads the ridge paper run f4_cl_reject_lmm.mat as before.
+pred = 'lasso';
+if strcmp(pred,'lasso'), fmat = 'f4_cl_reject_lmm_lasso.mat'; else, fmat = 'f4_cl_reject_lmm.mat'; end
+L = load(fullfile(dataDir,fmat));   % T (logRR,sess,mouse), ST, sessM
 % Band + star = SESSION-clustered model logRR ~ 1+(1|sess), t-based CI on nSess-1 df
 % (2026-10-07). The nested mouse model has ~2.5 df with 4 mice and is reported in the
 % caption as the mouse-level caveat, not drawn. Was: nested model, normal 1.96*SE band.
@@ -48,7 +54,8 @@ scatter(ax,1:nS,gm,20,PS.col_cl,'filled','MarkerEdgeColor','none');
 set(ax,'YScale','log','XTick',1:nS,'XTickLabel',cellstr(lab),'XTickLabelRotation',45, ...
     'TickLabelInterpreter','none','FontSize',PS.fs,'FontWeight',PS.fw,'LineWidth',0.75,'TickDir','out','Box','off', ...
     'YTick',[0.25 0.5 1 2]);
-xlim(ax,[0.3 nS+0.7]); ylim(ax,[0.22 2.9]);
+xlim(ax,[0.3 nS+0.7]); ylim(ax,[0.15 2.9]);   % 2026-11-22: floor 0.15 (was 0.22) so no -1 SD bar is cut at the axis (lasso lowest 0.18)
+assert(min(lo) >= 0.15 && max(hi) <= 2.9, 'f4_cl_reject_panel: a +/-1 SD bar runs past the y range');
 ylabel(ax,'Rejection ratio (RR)','FontSize',PS.fs,'FontWeight',PS.fw);   % self-explanatory words; RR=||A-r||^2/||D||^2 defined in caption
 % title states the claim; a single significance star marks the two-sided session t-test (2026-10-27).
 star = repmat('*',1,(pStar<0.05)+(pStar<0.01)+(pStar<0.001)); if isempty(star), star='n.s.'; end

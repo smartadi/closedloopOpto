@@ -17,20 +17,30 @@ outview=fullfile(root,'controller-analysis','_preview');
 if ~exist(outview,'dir'); mkdir(outview); end
 tag='AL_0033_0415_e2';
 
+% 2026-11-22 (research-hub #100, L-2026-11-22-e): the panel shows the LASSO weights. Aditya approved the
+% lasso as the contra->ipsi predictor for Fig 4F-4H on 2026-11-21 (L-2026-11-21-b) and this switch on
+% 2026-11-22 ("Approve"). The weights come from ctrl_sparse_kernel.m (R.b_lasso, same 408 grid pixels and
+% predictors as the ridge b). pred = 'ridge' draws the Stage-2 ridge weights as before.
+pred='lasso';
 S1=load(fullfile(dd,sprintf('ctrl_ols_spont_%s.mat',tag)));
-[sfx,pmode]=ctrl_pred_tag(); assert(strcmp(pmode,'ridge'),'need ridge predictor');
-S2=load(fullfile(dd,sprintf('ctrl_ols_ol_stimblind%s_%s.mat',sfx,tag)));
 C =load(fullfile(dd,sprintf('cp_stim_site_ctrl_%s.mat',tag)));   % site rowcol (C.brain is BINARY)
-
-b   = S2.b(:);                 % per grid-pixel weight (Su = 1..nGrid)
+if strcmp(pred,'lasso')
+    K=load(fullfile(dd,sprintf('ctrl_sparse_kernel_%s.mat',tag))); K=K.R;
+    assert(isequal(K.grR(:),S1.grR(:)) && isequal(K.grC(:),S1.grC(:)), 'f4_kernel_map:grid', 'lasso grid differs from Stage 1');
+    b = K.b_lasso(:);          % per grid-pixel weight (Su = 1..nGrid); zero where the lasso drops the pixel
+else
+    [sfx,pmode]=ctrl_pred_tag(); assert(strcmp(pmode,'ridge'),'need ridge predictor');
+    S2=load(fullfile(dd,sprintf('ctrl_ols_ol_stimblind%s_%s.mat',sfx,tag)));
+    b = S2.b(:);               % per grid-pixel weight (Su = 1..nGrid)
+end
 grR = S1.grR(:); grC = S1.grC(:);
 brain = ctrl_mean_img(tag);    % ACTUAL mean SVD image (560x560, native frame)
 [nY,nX]=size(brain);
 % ipsi target site (col=px, row=py); cross-check with cp_stim_site rowcol
 sx = S1.px_prim; sy = S1.py_prim;
 if isfield(C,'rowcol') && numel(C.rowcol)>=2, sy=C.rowcol(1); sx=C.rowcol(2); end
-fprintf('[f4_kernel_map] %d grid px | b range [%.3f %.3f] | ipsi site (col %d,row %d)\n', ...
-    numel(b), min(b),max(b), round(sx),round(sy));
+fprintf('[f4_kernel_map] %s: %d grid px, %d nonzero | b range [%.3f %.3f] | ipsi site (col %d,row %d)\n', ...
+    pred, numel(b), nnz(b), min(b),max(b), round(sx),round(sy));
 
 % ---- USER-DEFINED brain mask (the ROI drawn during contra-model setup) ----
 % Clip to the user's defined brain mask via ctrl_brain_mask (one source of truth

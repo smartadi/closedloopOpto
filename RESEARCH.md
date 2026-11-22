@@ -16,6 +16,19 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-22-e · Fig 4F, 4G and 4H panels rebuilt with the lasso predictor
+commit: 1110fb8+this · branch: hub/100-sparse-kernel · issues: research-hub #100, #92 · pc: Pinnacle
+Aditya: "Yes, rebuild 4F-4H". Math approved by Aditya 2026-11-22: "Approve" (method block in the brain_paper session chat: the three panels read the lasso outputs, no new math). The lasso as the Fig 4F-4H predictor was approved 2026-11-21 (L-2026-11-21-b).
+**Did/Found:**
+- `f4_kernel_map.m` (4F): `pred = 'lasso'` draws `R.b_lasso` from `data/ctrl_sparse_kernel_AL_0033_0415_e2.mat` and asserts its grid equals Stage 1. Mouse 1k: 136 of 408 pixels nonzero, b from -0.392 to 0.351, colour range ±0.28 (99th percentile of |b|, rule unchanged). The weights are spread over the contralateral hemisphere: 4.5% of Σ|b| lies within 3 grid steps of the mirror site, an area that holds 6.9% of the grid (ridge 5.6%).
+- `f4_contra_model.m` (4G): `pred = 'lasso'` takes A and the lasso G from `data/ctrl_sparse_kernel_cl_AL_0033_0415_e2.mat` (38 OL trials, today's onsets, A paired with V by time). Each OL trial mean is shifted to zero mean over [-1, 0) s, as the ridge cache's were. R² = lasso held-out 0.74 (ridge 0.75). The ridge cache the panel read used the onsets from before the 10-27 onset port (25 of 38 differ from today's by 1 to 3 frames; RESEARCH 2026-11-05), so 4G is now also on the corrected onsets.
+- `f4_reject_lasso.m` rerun on the time-paired `ctrl_sparse_kernel_cl_*.mat` (L-2026-11-22-b). Lasso 4H, 11 gated sessions, 595 trials: GM RR 0.62 [0.53, 0.74], t(10) = -6.37, two-sided p = 8.11e-5, Wilcoxon p = 0.00195, 10/11 < 1, LOMO worst p = 0.0135 (drop AL_0033), mice 3/3. All 13 sessions: 0.71 [0.56, 0.90], p = 0.0089, 10/13 < 1. Session mixed model (reference): 0.62 [0.58, 0.67], one-sided p = 2.7e-8. Same run, for comparison: saved ridge paper run 0.57 [0.46, 0.72], p = 2.56e-4; ridge refit today 0.59 [0.47, 0.73], p = 3.22e-4.
+- `f4_cl_reject_panel.m` (4H): `pred = 'lasso'` reads `data/f4_cl_reject_lmm_lasso.mat`. Y floor 0.22 to 0.15 (display only): the -1 SD bars of Mouse 1d (0.211), 1f (0.216) and 2a (0.182) ran past the old floor, as the ridge panel's did (lowest 0.110). An assert now checks that every bar fits.
+- Rebuilt with `PAPER_FINAL` (all three are in MANIFEST): `paper/figures_final/panels/figure4/f4_kernel_map.pdf` 4.45 x 3.39 cm, `f4_agl.pdf` 6.03 x 3.63 cm, `f4_cl_reject_RR.pdf` 5.89 x 3.56 cm, working copies in `paper/images/figure4/`. `sls_audit_pdf`: 0 required issues on each. The previous ridge panels are in `paper/_ridge_backup_2026-11-22/`.
+- JN Figure 4 assembled with `paper-writing/fig4_jn_build.py --out paper/figures_final/jn/_lasso_preview_2026-11-22` (17.60 x 13.08 cm, audit 0 required). The JN `Figure4.ai`/`.pdf` in `paper/figures_final/jn/` and Closedloop_edit are not touched.
+**State:** panels and the 4H statistic are lasso. The JN caption and text still describe ridge (caption "Ridge weights"; text "R² = 0.75", "median 0.76, range 0.44--0.98, 13 sessions", "geometric-mean RR 0.58, one-sided p = 1.3e-4"). Lasso values for #92: held-out R² median 0.805, range 0.611 to 0.912 over 13 sessions (`data/f4_lasso_report.csv`); 4H as above. The one-frame offsets (L-2026-11-22-c, open point 1) are not corrected.
+**Resume:** MATLAB `run controller-analysis/f4_reject_lasso.m`, then `global PAPER_FINAL; PAPER_FINAL = true;` and `f4_kernel_map`, `f4_contra_model`, `f4_cl_reject_panel`; then `python -X utf8 -I paper-writing/fig4_jn_build.py [--out DIR]`.
+
 ### L-2026-11-22-d · imp_build_session pairs the Actual with V by time; paper 4H unchanged; correction to L-2026-11-22-a
 commit: 6635a17+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya: "Yes, fix it" (apply the time pairing to the paper's trial builder). Fixing code to match approved math, not a math change.

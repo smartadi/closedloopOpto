@@ -111,9 +111,9 @@ Figure total width = 17 cm. Font = 6 pt bold. Line widths: 1.5 pt mean, 1.2 pt f
 | 4C | Fig4 | paper/figures_final/panels/figure4/f4_decomp_unique_sep.pdf | 6.5 × 4.6 | vector | — | unique R² per factor, by window ('sep' mode); SESSION-LEVEL since 2026-10-11 (adj R², mean ± SEM, 11 sessions) |
 | 4D | Fig4 | paper/figures_final/panels/figure4/f4_row2_quartiles.pdf | 18 × 4.6 | vector | — | OL/CL vs quartile, 1×4 tiled row; P/R/A annotations (A = attenuation, added 2026-10-18; motion headline). **Supersedes the four standalone `f4_2A`–`f4_2D` panels** |
 | 4d (NC) | Fig4 (NC only) | paper/figures_final/panels/figure4/f4_row2_quartiles_nc.pdf | 18 × 4.6 | vector | — | same data and stars as 4D; labels OL slope / CL slope / CL/OL, arrows = sign of each slope (2026-10-30; NC dropped P/R/A) |
-| 4E | Fig4 | paper/figures_final/panels/figure4/f4_kernel_map.pdf | 5.0 × 4.6 | vector | — | contra→ipsi ridge kernel |
-| 4F | Fig4 | paper/figures_final/panels/figure4/f4_agl.pdf | 5.0 × 4.6 | vector | — | A = G + L decomposition |
-| 4G | Fig4 | paper/figures_final/panels/figure4/f4_cl_reject_RR.pdf | 7.0 × 4.6 | vector | — | closed-loop disturbance rejection |
+| 4E | Fig4 | paper/figures_final/panels/figure4/f4_kernel_map.pdf | 5.0 × 4.6 | vector | — | contra→ipsi lasso kernel (JN 4F; ridge until 2026-11-22, L-2026-11-22-e) |
+| 4F | Fig4 | paper/figures_final/panels/figure4/f4_agl.pdf | 5.0 × 4.6 | vector | — | A = G + L decomposition, lasso G (JN 4G; L-2026-11-22-e) |
+| 4G | Fig4 | paper/figures_final/panels/figure4/f4_cl_reject_RR.pdf | 7.0 × 4.6 | vector | — | closed-loop disturbance rejection, lasso D (JN 4H; reads f4_cl_reject_lmm_lasso.mat, L-2026-11-22-e) |
 
 | 5A | Fig5 | *(feedforward control system — illustrator)* | 6 × 4 | — | — | external; physical row 1 |
 | 5B | Fig5 | paper/figures_final/panels/figure5/sine_5B_single_trial_AL_0048_2026-07-14_1.pdf | 11.4 × 3.5 | vector | — | one representative trial per mode |
