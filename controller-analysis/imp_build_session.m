@@ -61,15 +61,15 @@ Fs=cfg.Fs; pre=round(cfg.pre_s*Fs); post=round(dur*Fs); rel=-pre:post;
 if isfield(cfg,'post_extra_s') && cfg.post_extra_s>0
     post = post + round(cfg.post_extra_s*Fs); rel = -pre:post;
 end
-dfk = data.dFk(:);
-% data.dFk can trail the SVD by a frame or two (different readers of the same acquisition);
-% clamp for a rounding-scale shortfall, skip only for a real mismatch.
-if numel(dfk) < nF
-    if nF - numel(dfk) > 10
-        S.msg = sprintf('data.dFk %d frames shorter than SVD (%d)', nF-numel(dfk), nF); return;
-    end
-    nF = numel(dfk);
+% Actual paired with V by TIME (utils/ctrl_pair_on_v.m, RESEARCH L-2026-11-22-d): dfk(k) is the
+% data.dFk sample of the blue frame that V column k was taken from. Until 2026-11-22 this paired by
+% index, which put AL_0048 11 frames (0.31 s) and the corrected V recomputed on 2026-10-11 one frame
+% away from the cortex that predicts it. A V column with no dFk sample ends the usable range.
+P = ctrl_pair_on_v(data.dFk, d_s.timeBlue, t_full, nF);
+if nF - P.nV > 10
+    S.msg = sprintf('data.dFk covers only %d of %d V columns', P.nV, nF); return;
 end
+dfk = P.y;  nF = P.nV;  S.blueOfCol1 = P.blueOfCol(1);
 grab = @(ons) deal_trials(ons, t_full, dfk, Gall, rel, pre, post, nF);
 [Aol,Gol,nOL] = grab(sort(d_s.stimStarts(data.nc(:))));
 [Acl,Gcl,nCL] = grab(sort(d_s.stimStarts(data.wc(:))));

@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-22-d · imp_build_session pairs the Actual with V by time; paper 4H unchanged; correction to L-2026-11-22-a
+commit: 6635a17+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya: "Yes, fix it" (apply the time pairing to the paper's trial builder). Fixing code to match approved math, not a math change.
+**Did/Found:**
+- `imp_build_session.m` now takes the Actual from `utils/ctrl_pair_on_v.m` (dFk sample of the blue frame of each V column) instead of `data.dFk(k)` for V column k; it returns `S.blueOfCol1`. Callers in the paper chain: `f4_cl_reject_lmm.m` (4H statistic and panel `f4_cl_reject_RR.pdf`) and, unaffected, `f4_agl` on AL_0033_0415 (V column 1 = blue frame 1). `utils/imp_trial_states.m` already places its windows by onset time on `d.timeBlue`, so it needs no change.
+- Effect, run inline with the cached Stage-2 ridge (nothing saved; `data/f4_cl_reject_lmm.mat` untouched). R² on the spot OL / CL, before -> after: AL_0048 -0.145 -> 0.844 / -0.236 -> 0.835; AL_0033_0212 0.749 -> 0.924 / 0.784 -> 0.932; 0224 0.793 -> 0.899 / 0.843 -> 0.914; 0226 0.735 -> 0.868 / 0.802 -> 0.921; 0304 0.660 -> 0.764 / 0.607 -> 0.671; AL_0039_0420 0.716 -> 0.767 / 0.621 -> 0.679; AL_0039_0419 0.821 -> 0.847 / 0.725 -> 0.756; the 6 sessions with V column 1 = blue frame 1 unchanged.
+- Session GM RR changes by at most 0.006 (AL_0048 0.6627 -> 0.6577, 0304 0.5101 -> 0.5050); the offset gate keeps the same 11 sessions. Session test (cached ridge, fixed builder): GM RR 0.57 [0.46, 0.71], t(10) = -5.71, two-sided p = 1.95e-4, 10/11 < 1; LOMO p 0.036 / 0.0017 / 4.6e-4 (drop AL_0033 / AL_0039 / AL_0048). Before the fix today: 0.57 [0.46, 0.71], p = 1.97e-4; saved paper run 0.57 [0.46, 0.72], p = 2.56e-4. The paper's Fig 4H result does not change.
+- RR hardly moves because the 0.31 s shift moves only A within the settled window, where A is close to stationary, and leaves D (from G) unchanged. R² on the spot compares A and G sample by sample, so it moves a lot.
+- **Correction to L-2026-11-22-a:** it said every AL_0048 kernel, the paper's included, was fitted 0.31 s off. The paper's cached AL_0048 kernel reconstructs the time-paired Actual at R² 0.84 (OL and CL), so it was not. What was off was the pairing in the trial builder (R² on the spot, little effect on RR) and the #100 refits, whose fit target was `data.dFk` paired by index (lasso RR 2.55, corrected in L-2026-11-22-b to 0.64).
+**State:** builder fixed; paper 4H numbers unchanged by it; `f4_cl_reject_lmm.mat` not regenerated. The write-up `controller-analysis/reports/f4h_lasso_rebuild_2026-11-22.md` is corrected to match.
+**Resume:** `f4_cl_reject_lmm` after `load_sessions` regenerates the paper file with the fixed builder.
+
 ### L-2026-11-22-c · Fig 4H lasso report: summary figure, trial reconstructions, write-up (no tests)
 commit: d734c8b+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya: "i need correct trial reconstructions and correct disturbance rejection, lasso is fine ... we can skip the significance tests here and just do reporting style figure and writeup". Display only; every number from `ctrl_sparse_kernel_cl.m` and `f4_rr_diag.m` after L-2026-11-22-b.
