@@ -16,6 +16,20 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-21-c · Fig 4H with the lasso predictor, step 2: the 4H statistic, lasso vs ridge today vs the paper run
+commit: fe6b1f6+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya: "Yes, compute 4H". Math approved by Aditya 2026-11-21: "approve" (method block in the brain_paper session chat: the f4_cl_reject_lmm.m statistic unchanged, only the predictor of Global changes). No new formula.
+**Did/Found:**
+- New `controller-analysis/f4_reject_lasso.m`: builds the trial table of log RR from `C.trial.rr` of `ctrl_sparse_kernel_cl.m` (column 1 ridge refit today, column 2 lasso), applies the offset gate (11 of 13 sessions), and runs the session test (`utils/sess_test`, two-sided), the session mixed model (reference) and the all-13 test, each copied from `f4_cl_reject_lmm.m`. The saved paper trial table (`data/f4_cl_reject_lmm.mat`, 2026-10-10) gets the same session test.
+- The paper run reproduces its saved mixed model: GM RR 0.58 [0.46, 0.72], t(9.3) = -5.69, one-sided p = 1.31e-4.
+- Session test, gated 11 sessions (GM RR [95% CI], t(10), two-sided p, sessions < 1): paper 0.57 [0.46, 0.72], -5.52, 2.56e-4, 10/11; ridge today 0.69 [0.47, 1.01], -2.16, 0.056, 9/11; lasso 0.73 [0.53, 1.01], -2.15, 0.057, 9/11.
+- Session mixed model, one-sided p: paper 1.31e-4, ridge today 0.029, lasso 0.030. All 13 sessions, two-sided: ridge today 0.79 [0.55, 1.14], p = 0.18; lasso 0.82 [0.60, 1.13], p = 0.21.
+- The change comes from Mouse 3e (AL_0048_0729): GM RR 0.72 in the paper run, 2.76 with ridge today, 2.55 with lasso. In the other 10 sessions the lasso GM RR is higher than the paper's by 0.002 to 0.21 (largest Mouse 1f 0.50 -> 0.70 and Mouse 2a 0.28 -> 0.46).
+- Leave-one-mouse-out p (from `sess_test`), dropping AL_0033 / AL_0039 / AL_0048: paper 0.048 / 0.0019 / 4.8e-4; ridge today 0.59 / 0.27 / 0.0013; lasso 0.67 / 0.28 / 4.8e-4.
+- The ridge refit on today's data and the lasso give nearly the same 4H, so the predictor type is not what moved it. The difference is in the AL_0048 Global: the paper's Stage-2 ridge cache (test R² 0.44) vs today's refit (no corrected V on the server, test R² 0.31; L-2026-11-19-g).
+**State:** computed, not in the paper. 4H with the lasso is not significant two-sided at the session level (p = 0.057) unless the AL_0048 Global is the paper's one. Outputs (not tracked): `controller-analysis/data/f4_cl_reject_lmm_lasso.mat` (same variable names as `f4_cl_reject_lmm.mat`, for `f4_cl_reject_panel.m`), `data/f4_reject_lasso_sessions.csv`.
+**Resume:** MATLAB `run controller-analysis/f4_reject_lasso.m` (needs the `ctrl_sparse_kernel_cl_<tag>.mat` files with `C.trial`). Open for Aditya: how to get the AL_0048 Global for the lasso (find the corrected V the paper's cache was built from, or refit the paper's ridge cache inputs with lasso), before 4F-4H are re-run.
+
 ### L-2026-11-21-b · Fig 4H with the lasso predictor, step 1: example CL trials of the disturbance and the CL error
 commit: f0e8927+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya: "we dont need the comparisions for the paper, lets fix lasso and now gimme the 4H procedure, lets first take all admissible sessions and plot disturbances vs CL response, we want to compute the disturbances rejection metric on setteled window lets do a plot of few example trials first". Math approved by Aditya 2026-11-21: "Approve" (method block in the brain_paper session chat). The lasso of L-2026-11-19-f/g becomes the contra->ipsi predictor for Fig 4F-4H; the ridge vs lasso comparisons stay out of the paper.
