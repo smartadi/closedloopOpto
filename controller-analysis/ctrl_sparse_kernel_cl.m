@@ -129,8 +129,9 @@ nm = {'ridge', 'lasso'};
 Aol = cut(ytrace, onOL);  Acl = cut(ytrace, onCL);  YBol = cut(yb, onOL);  YBcl = cut(yb, onCL);
 mA = mean(Acl - mean(Acl(:,bwin), 2), 1);  mG = zeros(2, numel(rel));  mD = mG;  sD = mG;  dDyb = 0;
 Dk = zeros([size(Acl) 2]);  rrk = zeros(size(Acl, 1), 2);       % per-trial D and RR, ridge (1) and lasso (2)
+Gk = zeros([size(Aol) 2]);                                       % per-trial OL Global, for f4_rr_diag.m
 for m = 1:2
-    Gol = cut(Gb(:,m), onOL);  Gcl = cut(Gb(:,m), onCL);
+    Gol = cut(Gb(:,m), onOL);  Gcl = cut(Gb(:,m), onCL);  Gk(:,:,m) = Gol;
     C.(['R2preOL_' nm{m}])   = r2pre(Aol - YBol, Gol);           % (c)
     C.(['R2preCL_' nm{m}])   = r2pre(Acl - YBcl, Gcl);
     C.(['R2preOL_a_' nm{m}]) = r2pre(Aol, Gol + YBol);           % (a)
@@ -145,7 +146,8 @@ for m = 1:2
     mG(m,:) = mean(Gcl - mean(Gcl(:,bwin), 2), 1);  mD(m,:) = mean(D, 1);  sD(m,:) = std(D, 0, 1);
     Dk(:,:,m) = D;  rrk(:,m) = rr;
 end
-C.trial = struct('Acl', Acl, 'D', Dk, 'rr', rrk, 'ref', ref, 'wr', wr, 'pre', pre);   % for f4_reject_examples.m
+C.trial = struct('Acl', Acl, 'D', Dk, 'rr', rrk, 'ref', ref, 'wr', wr, 'pre', pre, ...   % for f4_reject_examples.m
+    'Aol', Aol, 'Gol', Gk);                                                              % OL arrays, for f4_rr_diag.m
 Aset = mean(mean(Acl(:,wr), 2));  msErr = mean(mean((Acl(:,wr) - ref).^2, 2));
 C.biasFrac = (Aset - ref)^2 / msErr;  C.in4H = C.biasFrac <= CFG.bias_max;  C.dD_yb = dDyb;
 C.tt = rel/Fs;  C.mA = mA;  C.mG = mG;  C.mD = mD;  C.sD = sD;  C.dur = S1.trial_dur;

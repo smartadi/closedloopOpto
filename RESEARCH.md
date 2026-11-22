@@ -16,6 +16,21 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-21-g · Fig 4H diagnostic: OL placebo RR and calibration slope of D, three kernels
+commit: 7125f3e+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya: "how do i confirm if we are measureing the correct thing can we make a diagnostic". Math approved by Aditya 2026-11-21: "approve" (method block in the brain_paper session chat; equations in the header of `controller-analysis/f4_rr_diag.m`). Diagnostic only; the Fig 4H statistic is unchanged.
+**Did/Found:**
+- `ctrl_sparse_kernel_cl.m` now also saves the OL Actual and the OL Global per trial (`C.trial.Aol`, `C.trial.Gol`). Rerun of all 13 sessions: the summary table is unchanged (23 numeric columns, largest difference 0).
+- New `f4_rr_diag.m`: per session and kernel (cached Stage-2 ridge via `imp_build_session.m`, ridge refit, lasso), on OL trials over (1,3] s: the OL placebo RR (Σa²/ΣD², a = baselined OL Actual minus its trial mean, D built as the CL D) and the calibration slope β = Σa·D/ΣD². Planted check a = D: β = 1 and RR_OL = 1 to 1e-12.
+- OL Actual is identical between the two trial builders in 11 of 13 sessions; AL_0039_0419 and _0420 differ by up to 7.0 and 6.3 %ΔF/F, as for CL (L-2026-11-21-f).
+- 11 gated sessions, cached ridge: β 0.68 to 0.98 (median 0.92, none above 1); RR_OL 0.94 to 1.28 (median 1.02); CL RR below RR_OL in 11 of 11.
+- Ridge refit: β 0.83 to 1.28 (median 0.96; above 1 in 2b 1.09 and 3e 1.28); RR_OL 0.94 to 2.79 (median 1.06); CL below OL in 11 of 11.
+- Lasso: β 0.81 to 1.22 (median 0.96; above 1 in 2a 1.22, 2b 1.09, 3e 1.20); RR_OL 1.01 to 2.47 (median 1.13); CL below OL in 10 of 11 (not 3e).
+- Mouse 3e (AL_0048), CL RR / RR_OL / β: cached 0.66 / 0.99 / 0.68; refit 2.76 / 2.79 / 1.28; lasso 2.55 / 2.47 / 1.20. With today's kernels the OL placebo is as high as the CL RR, so in this session RR is about 2.5 to 2.8 without any control and cannot show rejection. With the cached kernel the CL RR is below the OL placebo, but β 0.68 says the cached D is larger than the part of the site's fluctuation it tracks. `imp_build_session.m` prints "corrected file not found; loading uncorrected temporal components" for AL_0048, so today the cached kernel is applied to the uncorrected V.
+- Reading (interpretation): with the cached kernels the no-control level of RR is close to 1 in every gated session, and the CL RR is below it in all 11. β below 1 means the cached D is larger than the part of the OL fluctuation it tracks, which would make RR too low; this applies most to 1f (β 0.72) and 3e (β 0.68).
+**State:** diagnostic run, nothing in the paper changed. Outputs (not tracked): `controller-analysis/data/f4_rr_diag.csv`, `_preview/f4_rr_diag.png`, the per-session `ctrl_sparse_kernel_cl_<tag>.mat`.
+**Resume:** MATLAB `load_sessions`, `run controller-analysis/ctrl_sparse_kernel_cl.m`, then `run controller-analysis/f4_rr_diag.m`. Open for Aditya: which data the lasso is fitted on in the refit sessions, and whether the OL placebo belongs next to 4H.
+
 ### L-2026-11-21-f · Fig 4H: same RR window, trials and Actual in the paper code and today; only the disturbance energy changes
 commit: 165aeb0+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya: "are the RR windows differnet too on paper figures and today's rerun?". Inline MATLAB check, nothing saved, no method change: `imp_build_session.m` (the paper's trial builder, with the Stage-2 ridge caches) against `ctrl_sparse_kernel_cl.m` (`C.trial`), all 13 sessions.
