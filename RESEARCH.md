@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-22-f · Lasso Fig 4 adopted as the JN Figure 4
+commit: dc0edcc+this · branch: hub/100-sparse-kernel · issues: research-hub #100, #92 · pc: Pinnacle
+Aditya: "Yes, adopt it" (make the lasso preview of L-2026-11-22-e the JN Figure 4). Display only, no number or method change.
+**Did/Found:**
+- The 11-19 JN build (`paper/figures_final/jn/Figure4.ai`, `.pdf`, `.png` and `fig4/`, all from 2026-11-19 14:59, no later hand edits) is backed up in `paper/figures_final/jn/_before_2026-11-22/`.
+- `paper-writing/fig4_jn_build.py` rerun in place: `paper/figures_final/jn/Figure4.*`, 17.60 x 13.08 cm, audit 0 required issues. Its F, G and H are byte-identical to the preview in `_lasso_preview_2026-11-22/`. The script's docstring now says F, G and H are the lasso panels.
+- Closedloop_edit: `images/Figure4.pdf` replaced, local commit 939069a on `main`, not pushed. `latexmk` builds 44 pages; the only warnings are 2 "`h' float specifier changed to `ht'". Its `images/Figure4.pdf` was the 11-18 build (cc56802), so this commit also brings in the 11-19 layout of rows 1 and 2.
+**State:** the JN figure is lasso; its caption and text still describe ridge (#92). Closedloop_edit is 3 commits ahead of origin (4e5f0da, cc56802, 939069a), none pushed; a push carries figures only while Nick's comments are open (paper-writing/CLAUDE.md).
+**Resume:** to undo, copy `paper/figures_final/jn/_before_2026-11-22/*` back and revert 939069a in Closedloop_edit.
+
 ### L-2026-11-22-e · Fig 4F, 4G and 4H panels rebuilt with the lasso predictor
 commit: 1110fb8+this · branch: hub/100-sparse-kernel · issues: research-hub #100, #92 · pc: Pinnacle
 Aditya: "Yes, rebuild 4F-4H". Math approved by Aditya 2026-11-22: "Approve" (method block in the brain_paper session chat: the three panels read the lasso outputs, no new math). The lasso as the Fig 4F-4H predictor was approved 2026-11-21 (L-2026-11-21-b).

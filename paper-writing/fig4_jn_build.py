@@ -11,9 +11,11 @@ Layout, 17.6 cm wide, letters as Aditya set them (row 2 reads D, C, E):
 A is f4_state_exemplars.m (JN version, 3 tiles, same picks as 2026-11-14, L-2026-11-19-b; 0 and target
 lines and 8.4 x 3.2 cm, L-2026-11-19-e). B, C, D, E
 come from stats_v2/fig4_paper_panels.py (L-2026-11-16-a; B L-2026-11-18-a; E L-2026-11-18-b/-d and
-L-2026-11-19-a; row-2 sizes L-2026-11-19-b). F and G are f4_kernel_map.m and f4_contra_model.m re-run
-2026-11-19 at the row-3 sizes (F drawn as squares, L-2026-11-19-e); H is the figures_final panel used since 2026-11-04 (f4_cl_reject_panel.m
-needs a fresh f4_cl_reject_lmm.m run, not done).
+L-2026-11-19-a; row-2 sizes L-2026-11-19-b). F, G and H use the lasso predictor since 2026-11-22
+(research-hub #100, L-2026-11-22-e): F f4_kernel_map.m and G f4_contra_model.m (working copies in
+paper/images/figure4), H f4_cl_reject_panel.m on f4_reject_lasso.m's output (figures_final panel).
+Adopted as the JN Figure 4 at Aditya's "Yes, adopt it" (L-2026-11-22-f); the ridge build is in
+paper/figures_final/jn/_before_2026-11-22/.
 
 Panels are copied to paper/figures_final/jn/fig4/, placed (linked) in Illustrator with their tops on
 the row line and equal gaps across each row, and saved as Figure4.ai / Figure4.pdf, with a 300 dpi
