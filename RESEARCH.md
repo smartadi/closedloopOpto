@@ -16,6 +16,38 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-21-a · Sparse kernel: R² on the spot and the CL Global and disturbance, ridge vs lasso, 13 sessions
+commit: 372bbf6+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya asked (relayed by Hub control, 2026-11-21): "show me R2 on spot in each case and to make the decision possible i also wanna see the global reconstruction on CL to make sure disturbance is properly captured". Math approved by Aditya 2026-11-21: "Approve (c)" and "approve" (method block on research-hub #100 and in the brain_paper session chat). No new formula; definitions in the header of `controller-analysis/ctrl_sparse_kernel_cl.m`.
+**Did/Found:** New `ctrl_sparse_kernel_cl.m` rebuilds each session's ridge and lasso Global (weights, V, Stage-1 frames, train z-scoring and target from `ctrl_sparse_kernel_<tag>.mat`) and cuts OL and CL trials as `imp_build_session.m` does. It reports R2_pre as `internal_model_principle.m` defines it (35 frames of [-1,0) s, trials pooled) on OL and CL trials, and the Fig 4H disturbance D and session geometric-mean RR as `f4_cl_reject_lmm.m` defines them.
+- Option (c), as approved: R2_pre compares A - yb with G, where yb is the 1400-frame moving median of A for the 8 detrended fits (fresh ridge refits) and 0 for the 5 raw fits. Options (a) A vs G + yb and (b) A vs G are saved as extra columns. D and RR use G without yb, as the Fig 4H code does.
+- Checks: in all 13 sessions the saved ridge and lasso weights reproduce their saved test R² (to 1e-8; lasso intercept at most 1.4e-7). On AL_0033_0415_e2 (cached ridge), the paper's `imp_build_session.m` gives the same OL R2_pre(b), 0.765710, an identical CL Actual, and an OL Global equal to 2.7e-15. Adding yb back to G changes mean D over 1-3 s by at most 0.139 %ΔF/F (AL_0033_0224).
+- Lasso minus ridge, 13 sessions: test R² median -0.010 (-0.049 to -0.002); R² on the spot OL median -0.015 (-0.070 to +0.018), CL median -0.013 (-0.073 to +0.005). R² on the spot CL: ridge median 0.798 (0.268 to 0.904), lasso 0.792 (0.271 to 0.876).
+- RR lasso/ridge: median 1.02 (0.92 to 1.58); in the 11 sessions inside the Fig 4H offset gate, median 1.03 (0.92 to 1.58), and RR < 1 in 9 of 11 for both models. Only AL_0039_0419 differs by more than 10%: ridge 0.29, lasso 0.46 (lasso keeps 9 px; R² on the spot CL 0.904 against 0.831).
+- In the CL figure the lasso Global dips less after onset than ridge in AL_0033 0224, 0226, 0304 and AL_0039_0419 (the four sessions where L-2026-11-19-g found a lower lasso leak); in the other sessions the two trial-mean Globals lie on top of each other.
+- Per session (test R², R² on the spot OL and CL, RR; ridge / lasso):
+
+  | session | ridge | test R² | spot OL | spot CL | RR |
+  |---|---|---|---|---|---|
+  | AL_0033_0212 (outside 4H, lasso unreliable) | refit | 0.784 / 0.777 | 0.776 / 0.771 | 0.798 / 0.792 | 1.77 / 1.77 |
+  | AL_0033_0224 | refit | 0.876 / 0.856 | 0.867 / 0.843 | 0.887 / 0.865 | 0.61 / 0.61 |
+  | AL_0033_0226 | refit | 0.775 / 0.725 | 0.833 / 0.800 | 0.859 / 0.823 | 0.68 / 0.73 |
+  | AL_0033_0304 | refit | 0.754 / 0.709 | 0.719 / 0.692 | 0.802 / 0.758 | 0.66 / 0.70 |
+  | AL_0033_0305 | cache | 0.623 / 0.611 | 0.703 / 0.705 | 0.693 / 0.698 | 0.41 / 0.43 |
+  | AL_0033_0320 | cache | 0.807 / 0.802 | 0.770 / 0.788 | 0.857 / 0.858 | 0.67 / 0.67 |
+  | AL_0033_0415 (4F) | cache | 0.748 / 0.738 | 0.766 / 0.741 | 0.768 / 0.768 | 1.06 / 1.08 |
+  | AL_0033_0419 | cache | 0.815 / 0.805 | 0.802 / 0.795 | 0.766 / 0.740 | 0.67 / 0.69 |
+  | AL_0039_0419 | refit | 0.853 / 0.837 | 0.913 / 0.844 | 0.904 / 0.831 | 0.29 / 0.46 |
+  | AL_0039_0420 | refit | 0.864 / 0.859 | 0.850 / 0.850 | 0.795 / 0.798 | 0.75 / 0.73 |
+  | AL_0039_0430 | cache | 0.905 / 0.890 | 0.921 / 0.902 | 0.902 / 0.876 | 0.53 / 0.56 |
+  | AL_0048_0729 | refit | 0.307 / 0.305 | 0.393 / 0.398 | 0.268 / 0.271 | 2.76 / 2.55 |
+  | AL_0051_0729 (outside 4H) | refit | 0.723 / 0.715 | 0.732 / 0.718 | 0.714 / 0.701 | 1.48 / 1.41 |
+
+- Options (a) and (b) for the 8 detrended sessions, both models and conditions: (a) minus (c) runs from -0.002 to +0.102 (largest: AL_0051 lasso OL); (b) minus (c) from -0.363 to +0.032 (largest: AL_0033_0304 ridge CL, (c) 0.802, (a) 0.826, (b) 0.439).
+- For the 8 fresh-refit sessions the ridge RR here is not the Fig 4H value, which uses the old Stage-2 caches.
+**State:** descriptive, no test. Outputs (not tracked): `controller-analysis/data/ctrl_sparse_kernel_cl_<tag>.mat`, `controller-analysis/data/ctrl_sparse_kernel_cl_summary.csv`, `controller-analysis/_preview/ctrl_sparse_kernel_cl.png`. Ridge stays the model.
+**Resume:** MATLAB `load_sessions` then `run controller-analysis/ctrl_sparse_kernel_cl.m` (about 26 s per session; `SKCL_TAGS = 'none'` redraws the table and figure only). Aditya decides whether the lasso goes to the reviewer response or a supplement.
+
 ### L-2026-11-19-g · Sparse kernel: fresh ridge refit for the 8 non-reproducible sessions; all 13 done
 commit: this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya chose "Fresh ridge refit" for the 8 sessions whose ridge cache cannot be rebuilt (L-2026-11-19-f). No new math: this re-runs the approved ridge (`ctrl_ridge_path.m` lambda rule) on today's data, and the lasso part is as approved in L-2026-11-19-f.
