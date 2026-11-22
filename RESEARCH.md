@@ -16,6 +16,13 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-21-e · Fig 4H RR preview: paper run, ridge refit today, lasso today
+commit: f5d5484+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya: "show me todays RR". Display only, drawn inline in MATLAB from the tables of `f4_reject_lasso.m` (no script added).
+**Did/Found:** `controller-analysis/_preview/f4_rr_today.png` (gitignored): three panels in the 4H layout (per-trial RR as dots, session GM ± 1 SD of log RR, session test GM and 95% CI as the band, RR = 1 dashed), the 11 gated sessions in the same order in all panels (sorted by the paper's GM). Mouse 3e is the only session whose GM RR moves above 1 today. Its trials with RR > 1: paper 20 of 55 (range 0.14 to 3.4), ridge refit 50 of 55 (0.11 to 15.3), lasso 48 of 55 (0.10 to 13.5). The other 10 sessions keep their GM below 1 in the paper and lasso panels apart from 1k (1.03 paper, 1.08 lasso).
+**State:** display only, nothing tested.
+**Resume:** run `f4_reject_lasso.m`, then redraw from its R tables (P.T, R(1).T, R(2).T).
+
 ### L-2026-11-21-d · Fig 4H: where the paper run and the lasso come apart (check, no new code)
 commit: 66f3feb+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya: "how do today's lasso and paper run differ". Inline MATLAB check: the body of `f4_cl_reject_lmm.m` (`imp_build_session.m`, then D, RR, the offset gate and `sess_test`) re-run on today's data for all 13 sessions, nothing saved (the saved `data/f4_cl_reject_lmm.mat` is untouched). No method change.
