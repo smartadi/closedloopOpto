@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-21-d · Fig 4H: where the paper run and the lasso come apart (check, no new code)
+commit: 66f3feb+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya: "how do today's lasso and paper run differ". Inline MATLAB check: the body of `f4_cl_reject_lmm.m` (`imp_build_session.m`, then D, RR, the offset gate and `sess_test`) re-run on today's data for all 13 sessions, nothing saved (the saved `data/f4_cl_reject_lmm.mat` is untouched). No method change.
+**Did/Found:**
+- The paper's code run today, with the Stage-2 ridge caches, gives the paper result: the same 11 sessions pass the gate, GM RR 0.57 [0.46, 0.71], t(10) = -5.70, two-sided p = 1.97e-4, 10/11 < 1. Saved paper run: 0.57 [0.46, 0.72], p = 2.56e-4. LOMO, dropping AL_0033 / AL_0039 / AL_0048: p = 0.036 / 0.0017 / 4.6e-4.
+- Per session GM RR, paper saved / paper code today (cached ridge) / ridge refit today / lasso: 1d 0.57 / 0.58 / 0.61 / 0.61; 1e 0.63 / 0.60 / 0.68 / 0.73; 1f 0.50 / 0.51 / 0.66 / 0.70; 2a 0.28 / 0.29 / 0.29 / 0.46; 2b 0.63 / 0.63 / 0.75 / 0.73; 3e 0.72 / 0.66 / 2.76 / 2.55 (these 6 are fresh refits, L-2026-11-19-g); 1h 0.41 / 0.41 / 0.41 / 0.43; 1j 0.67 / 0.67 / 0.67 / 0.67; 1k 1.03 / 1.06 / 1.06 / 1.08; 1l 0.67 / 0.67 / 0.67 / 0.69; 2d 0.53 / 0.53 / 0.53 / 0.56 (these 5 use the cached ridge).
+- In the 5 cached sessions, today's paper code equals ridge today trial by trial (largest difference 8.9e-16). Against the saved paper table it is exact in AL_0033_0419 and AL_0039_0430 and differs by up to 0.14 to 0.21 in log RR in 0305, 0320 and 0415, the three sessions whose OL onsets moved by 1 to 2 frames (L-2026-11-19-g). Their session GM RR changes by +0.002, +0.006 and +0.024.
+- So the 4H change from the paper to the lasso comes from the refitted weights in the 6 refit sessions of the gate, mostly AL_0048 (0.66 with its cached ridge, 2.76 refitted, 2.55 lasso). It does not come from ridge vs lasso, the trials or the statistic. The refits use today's pipeline: detrended fit target, frames clamped to today's V, uncorrected V for AL_0039 0419 and 0420, and no corrected V on the server for AL_0048 (test R² 0.307 against the cached 0.441).
+**State:** check only. The lasso for the 6 refit sessions inside the gate was fitted on today's data, not on the data the paper's caches were fitted on.
+**Resume:** to repeat, run the session loop of `f4_cl_reject_lmm.m` without its save after `load_sessions`. Open for Aditya: which data the lasso is fitted on for the sessions whose cache cannot be rebuilt.
+
 ### L-2026-11-21-c · Fig 4H with the lasso predictor, step 2: the 4H statistic, lasso vs ridge today vs the paper run
 commit: fe6b1f6+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya: "Yes, compute 4H". Math approved by Aditya 2026-11-21: "approve" (method block in the brain_paper session chat: the f4_cl_reject_lmm.m statistic unchanged, only the predictor of Global changes). No new formula.
