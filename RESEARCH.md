@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-21-f · Fig 4H: same RR window, trials and Actual in the paper code and today; only the disturbance energy changes
+commit: 165aeb0+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
+Aditya: "are the RR windows differnet too on paper figures and today's rerun?". Inline MATLAB check, nothing saved, no method change: `imp_build_session.m` (the paper's trial builder, with the Stage-2 ridge caches) against `ctrl_sparse_kernel_cl.m` (`C.trial`), all 13 sessions.
+**Did/Found:**
+- The window is the same. Baseline [-1, 0) s = samples 1-35; settled window (1, 3] s = samples 71-140 (70 samples at 35 Hz); r = -5. These lines of `f4_cl_reject_lmm.m` have not changed since 9de6bec (2026-10-07), before the saved paper run (`data/f4_cl_reject_lmm.mat`, 2026-10-10 18:05). The paper panel `f4_cl_reject_RR.pdf` (2026-10-20) is drawn from that file. `ctrl_sparse_kernel_cl.m` uses the same window and pre-onset length in all 13 sessions.
+- CL trials and Actual are identical (largest difference 0) in 11 of 13 sessions. AL_0039_0419 and AL_0039_0420 differ by up to 5.5 and 7.3 %ΔF/F at single samples; median numerator 116.4 vs 114.1 and 165.9 vs 168.8. These are the two sessions refitted on the uncorrected V (L-2026-11-19-g); the cause is not traced.
+- The RR numerator Σ(A - r)² is therefore unchanged; the denominator ΣD² is what moves. Median ΣD² per session, cached ridge / ridge refit (lasso): AL_0048 3.88 (3.49); AL_0033_0212 1.70 (1.54); 0224 1.25 (1.22); 0304 1.26 (1.19); AL_0039_0420 1.25 (1.16); AL_0039_0419 0.95 (1.65); the 5 cached sessions 1.00 (0.99 to 1.14); 0226 1.04 (1.09); AL_0051 0.88 (0.79).
+- In AL_0048 the refitted kernels predict, on the same CL trials and the same Actual, a disturbance with about a quarter of the energy of the cached kernel's (median ΣD² 707.5 cached, 182.2 refit, 203.0 lasso). Its GM RR is 0.66 with the cached kernel and 2.76 refitted.
+**State:** check only. RR depends on the size of the predicted disturbance, which depends on the kernel; a diagnostic for whether D has the right size is proposed to Aditya (not yet approved).
+**Resume:** the inline loop is `imp_build_session` per session, then D and the RR terms as in `f4_cl_reject_lmm.m` lines 42-45, compared with `C.trial` from `ctrl_sparse_kernel_cl_<tag>.mat`.
+
 ### L-2026-11-21-e · Fig 4H RR preview: paper run, ridge refit today, lasso today
 commit: f5d5484+this · branch: hub/100-sparse-kernel · issues: research-hub #100 · pc: Pinnacle
 Aditya: "show me todays RR". Display only, drawn inline in MATLAB from the tables of `f4_reject_lasso.m` (no script added).
