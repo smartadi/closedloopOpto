@@ -7,14 +7,15 @@ function T = paper_stats_table()
 %   variance_mse.m (Fr + G2r)   -> data/fig3_ratio_stats.mat     (Fig 3H/3I session-level CL/OL ratios)
 %   ctrl_best_fixed_ol.m        -> controller-analysis/data/ctrl_best_fixed_ol.mat (best fixed input)
 %   f4_row2_quartiles.m         -> data/f4_row2_sess.mat (Fig 4D session-level P/R/A)
-%   f4_cl_reject_lmm            -> controller-analysis/data/f4_cl_reject_lmm.mat (Fig 4G)
+%   f4_reject_lasso.m           -> controller-analysis/data/f4_cl_reject_lmm_lasso.mat (Fig 4H)
+%   f4_rr_olcl_lasso.m          -> controller-analysis/data/f4_rr_olcl_lasso.mat (Fig 4H, OL vs CL)
 %   imp_state_trialvar.m        -> data/fig2g_state_stats.mat (save STV_R=R after the run)
 % SESSION RULE (2026-10-27, STATS_AUDIT §7) for Figs 3 and 4D: one value per session, one-sample t
 % across sessions (two-sided, df = n-1, t CI), via utils/sess_test.m; the extra columns carry the
 % exact Wilcoxon p, sessions/mice agreeing in sign, the leave-one-mouse-out worst p, the Holm p
-% (Fig 4D) and a role (main / secondary / control / descriptive). Fig 4G rows are still the
-% mixed-model convention (REML, Satterthwaite df capped at nSessions-1, utils/lmm_cluster_df.m)
-% until f4_cl_reject_lmm is re-run on the fixed onsets; 'sided' says 1 or 2.
+% (Fig 4D) and a role (main / secondary / control / descriptive). Fig 4H (the old 4G) follows the
+% same rule since 2026-11-23 (lasso disturbance, research-hub #100); its OL-vs-CL rows are one-sided
+% Wilcoxon tests read from their producer. 'sided' says 1 or 2.
 root = fileparts(fileparts(mfilename('fullpath')));
 dd   = fullfile(root,'data');
 rows = cell(0,22);
@@ -157,29 +158,29 @@ for st = fieldnames(lab4)'
     addS(['4D_' st{1} '_gaptrend'],'4D-disc',['gap trend (OL minus CL slope; not interpreted), ' lab4.(st{1})],E.gap_change,u,'descriptive','f4_row2_quartiles');
 end
 
-% ---------------- Figure 4G : disturbance rejection ----------------------------------------------
-S = load(fullfile(root,'controller-analysis','data','f4_cl_reject_lmm.mat'));
-nS = numel(unique(S.T.sess)); nM = numel(unique(S.T.mouse)); sm = S.sessM;
-add('4G_sess','4G',sprintf('geometric-mean RR, session-clustered (%d trials, %d mice)',height(S.T),nM),exp(sm.est),'RR',exp(sm.ci), ...
-    'LMM logRR~1+(1|sess)','t',sm.t,sm.df,sm.p1,'1',nS,'sessions','f4_cl_reject_lmm');
-add('4G_nested','4G','geometric-mean RR, mouse-nested',exp(S.est),'RR',exp(S.ci), ...
-    'LMM logRR~1+(1|mouse)+(1|mouse:sess)','t',S.tv,S.df,S.p1,'1',nM,'mice','f4_cl_reject_lmm');
-ks = S.keptsess([S.keptsess.keep]); med = [ks.medRR];
-add('4G_sessmed','4G',sprintf('session median RR < 1 in %d/%d sessions',sum(med<1),numel(med)),median(med),'median RR',[NaN NaN], ...
-    'Wilcoxon signed-rank on log median RR','V',S.srV,NaN,S.srSess1,'1',numel(med),'sessions','f4_cl_reject_lmm');
+% ---------------- Figure 4H : disturbance rejection (lasso disturbance; research-hub #100) --------
+% Session rule: per session the mean log RR, two-sided one-sample t across sessions (utils/sess_test),
+% as computed and saved by f4_reject_lasso.m (math approved 2026-11-21, RESEARCH L-2026-11-21-c).
+% This is the file the 4H panel reads. Until 2026-11-23 these rows were the ridge mixed models of
+% f4_cl_reject_lmm.mat (session-clustered, mouse-nested, session-median Wilcoxon). Table change
+% approved by Aditya 2026-11-23: "Approve" (RESEARCH L-2026-11-23-a).
+S = load(fullfile(root,'controller-analysis','data','f4_cl_reject_lmm_lasso.mat'));
+nM = numel(unique(S.T.mouse));
+addS('4H_sess','4H',sprintf('geometric-mean RR over sessions (%d trials, %d mice)',height(S.T),nM), ...
+    S.ST,'RR','main','f4_reject_lasso');
 
-% ---------------- Figure 4G : open- vs closed-loop rejection (Results L193; added 2026-10-13) ----
-S = load(fullfile(root,'controller-analysis','data','f4_rr_denominator_check.mat')); D = S.RRD([S.RRD.keep]);
-nK = numel(D);
-pairs = {'RR',        [D.RR_ol],      [D.RR_cl],      'energy ratio RR (OL vs CL)';
-         'offshare',  [D.offShare_ol],[D.offShare_cl],'standing-offset share of residual (OL vs CL)';
-         'RRfluct',   [D.RRfluct_ol], [D.RRfluct_cl], 'fluctuation energy / disturbance (OL vs CL)'};
-for i = 1:size(pairs,1)
-    o = pairs{i,2}; c = pairs{i,3};
-    [p1,~,st] = signrank(o, c, 'tail','right');          % one-sided: feedback lowers it
-    add(['4G_olcl_' pairs{i,1}],'4G',sprintf('%s; CL lower in %d/%d sessions',pairs{i,4},sum(c<o),nK), ...
-        median(o),sprintf('median OL (CL %.3g)',median(c)),[NaN NaN],'Wilcoxon signed-rank, one-sided OL>CL', ...
-        'V',st.signedrank,NaN,p1,'1',nK,'sessions','f4_rr_denominator_check');
+% ---------------- Figure 4H : open- vs closed-loop rejection (lasso disturbance) -----------------
+% Read from f4_rr_olcl_lasso.m (math approved 2026-11-22, L-2026-11-22-i), not recomputed here, so the
+% table quotes its producer. That script tests log RR_fluct, as f4_rr_denominator_check.m did; this
+% table used to rerun the test on the raw ratio (same V and p in both the ridge and lasso runs).
+S = load(fullfile(root,'controller-analysis','data','f4_rr_olcl_lasso.mat'));
+desc = struct('RR','energy ratio RR (OL vs CL)', 'offShare','standing-offset share of residual (OL vs CL)', ...
+              'RR_fluct','fluctuation energy / disturbance (OL vs CL)');
+idn  = struct('RR','RR', 'offShare','offshare', 'RR_fluct','RRfluct');
+for oc = S.OC
+    add(['4H_olcl_' idn.(oc.name)],'4H',sprintf('%s; CL lower in %d/%d sessions',desc.(oc.name),oc.k,oc.n), ...
+        oc.med_ol,sprintf('median OL (CL %.3g)',oc.med_cl),[NaN NaN],'Wilcoxon signed-rank, one-sided OL>CL', ...
+        'V',oc.V,NaN,oc.p1,'1',oc.n,'sessions','f4_rr_olcl_lasso');
 end
 
 % ---------------- Figure 6 (MPC replay, promoted from supplement 2026-10-16) -------------------
