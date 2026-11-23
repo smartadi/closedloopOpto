@@ -37,7 +37,7 @@ rows = cell(0,22);
 
 % ---------------- Figure 2G : impulse-response deviation vs pre-stimulus state ----------------
 S = load(fullfile(dd,'fig2g_state_stats.mat')); R = S.STV_R;
-lab = struct('MOT','motion','DPr','relative 2-4 Hz','DPa','absolute 2-4 Hz');
+lab = struct('MOT','motion','DPr','relative 1-4 Hz','DPa','absolute 1-4 Hz');   % 1-4 Hz since L-2026-11-14-b
 % DV label follows the producer's mode (2026-10-12: L2 time-course error is the paper DV).
 if isfield(R,'dvMode') && strcmp(R(1).dvMode,'l2')
     dvS = sprintf('L2 error (0-%.1f s)', R(1).l2Win);  spS = 'RMS';
@@ -85,10 +85,12 @@ end
 sqf = fullfile(root,'paper','images','supplementary','state_quartile','sq_stats.csv');
 if exist(sqf,'file')
     SQ = readtable(sqf, 'TextType','string');
-    sqTag = struct('MOT',"Motion",'DPr',"Relative δ power",'DPa',"Absolute δ power");
+    % names as imp_state_quartile_supp.m STATE_LAB writes them (1-4 Hz since L-2026-11-14-b). A missing
+    % name is an error: a silent skip dropped these rows after the 2026-10-29 relabel (L-2026-11-23-b).
+    sqTag = struct('MOT',"Motion",'DPr',"Relative 1–4 Hz power",'DPa',"Absolute 1–4 Hz power");
     for t = {'MOT','DPr','DPa'}
         q = SQ(SQ.state == sqTag.(t{1}), :);
-        if isempty(q), continue; end
+        assert(height(q) == 1, '[stats] sq_stats.csv has no state "%s" (rerun imp_state_quartile_supp.m?)', sqTag.(t{1}));
         add(['2G_' t{1} '_q4'],'S-SQ',['Q4 / mean(Q1-3) RMS, per-session curves, ' lab.(t{1})], ...
             q.rmsQ4,'ratio',[NaN NaN],'one-sample t on per-session log ratios','','',3,q.p_rmsQ4,'2', ...
             4,'sessions','imp_state_quartile_supp');
@@ -147,7 +149,7 @@ add('3H_best_cmd_rho','3H',sprintf('mean CL / OL command (1-3 s), median %.2f, v
 % gap and gap trend (P - R) are descriptive ('not interpreted'). The LMM (f4_row2_lme.mat) and the
 % motion-only Wilcoxon slopes (f4_motion_slopes.mat) are retired from the table.
 S = load(fullfile(dd,'f4_row2_sess.mat')); SS = S.SESS;
-lab4 = struct('initdev','initial deviation','motion','motion','delta','relative 2-4 Hz','absdelta','absolute 1-4 Hz');
+lab4 = struct('initdev','initial deviation','motion','motion','delta','relative 1-4 Hz','absdelta','absolute 1-4 Hz');   % L-2026-11-14-a
 u = '%dF/F RMSE per SD of state';
 for st = fieldnames(lab4)'
     E = SS.(st{1});

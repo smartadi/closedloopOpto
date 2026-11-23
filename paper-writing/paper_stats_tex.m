@@ -63,7 +63,7 @@ add('\begin{table}[!ht]', '\centering', '\small', ...
         ' & \multicolumn{4}{c}{Stimulus response} & & \multicolumn{2}{c}{Stimulus-free} \\', ...
         '\cmidrule(lr){2-5} \cmidrule(lr){7-8}', ...
         'State & Ratio (range) & $t(3)$ & $p$ & Agreeing & $\rho$ & Ratio (range) & $\rho$ \\', '\midrule');
-st2 = {'MOT','Motion'; 'DPr','Relative 2--4\,Hz'; 'DPa','Absolute 2--4\,Hz'};
+st2 = {'MOT','Motion'; 'DPr','Relative 1--4\,Hz'; 'DPa','Absolute 1--4\,Hz'};   % 1-4 Hz since L-2026-11-14-b
 for i = 1:size(st2,1)
     ra = R("2G_"+st2{i,1}+"_ratio"); sl = R("2G_"+st2{i,1}+"_slope");
     rh = R("2G_"+st2{i,1}+"_rho");   cr = R("2G_"+st2{i,1}+"_ctrlratio"); ch = R("2G_"+st2{i,1}+"_ctrl");
@@ -136,7 +136,7 @@ add('\begin{table}[!ht]', '\centering', '\small', ...
         '\setlength{\tabcolsep}{4pt}', ...
         '\begin{tabular}{lccccccc}', '\toprule', ...
         'Quantity & Estimate [95\% CI] & $t$ & $p$ & Holm $p$ & Wilcoxon $p$ & Sessions & LOMO $p$ \\', '\midrule');
-st4 = {'initdev','Initial deviation'; 'motion','Motion'; 'delta','Relative 2--4\,Hz'; 'absdelta','Absolute 1--4\,Hz'};
+st4 = {'initdev','Initial deviation'; 'motion','Motion'; 'delta','Relative 1--4\,Hz'; 'absdelta','Absolute 1--4\,Hz'};   % L-2026-11-14-a
 qs  = {'gap','Gap'; 'pred','Predictability'; 'reg','Regularizability'; 'att','Attenuation (\% per SD)'; 'gaptrend','Gap trend'};
 for i = 1:size(st4,1)
     g1 = R("4D_"+st4{i,1}+"_pred");
@@ -222,7 +222,7 @@ function s = estci(e, lo, hi, signed)
     if nargin < 4, signed = false; end
     if signed, f = '%+.2f'; else, f = '%.2f'; end
     s = sprintf(['$' f '$ $[%.2f, %.2f]$'], e, lo, hi);
-    s = regexprep(s, '^\$-0\.00\$', '\$0.00\$');     % no signed zero
+    s = regexprep(s, '^\$[+-]0\.00\$', '\$0.00\$');  % no signed zero (+0.00 too, 2026-11-23)
     s = strrep(s, '[-0.00,', '[0.00,');  s = strrep(s, ', -0.00]', ', 0.00]');
 end
 function s = estrng(e, lo, hi)
