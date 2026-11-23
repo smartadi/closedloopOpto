@@ -16,6 +16,32 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-23-f · One JN paste list for the current figures; 4D and 4E text drafted (nothing applied)
+commit: 9b648b8+this · branch: hub/100-sparse-kernel · issues: research-hub #92, #100 · pc: Pinnacle
+**Did/Found:**
+- Aditya: "next i want the updated text and captions cause we changes the figures". Pulled JN to c6c28cb (his Overleaf push: "modelled" to "modeled" in results.tex 189 only), so the line numbers of the 11-21, 11-22 and 11-23 notes still hold.
+- Wrote `paper/_jn_ai_preview/jn_text_current_figures_2026-11-23.md` (gitignored): every text and caption change for JN Figures 2 and 4, the state supplement, S3 and stats Tables 3, 5 and 6, in file and line order. It merges the three earlier notes and adds what none covered:
+  - Results text for 4D and 4E after results.tex 222.
+  - A Methods paragraph for 4D and 4E after methods.tex 659.
+  - Methods 499: the Fig 2G spectral estimation, 70 samples and 0.5 Hz bins.
+  - Results 192-193: ρ and "both power measures".
+  - Discussion 46, 48 and 52 against 4D.
+  - 4D caption: "half-sample hold" replaces the 11-21 draft's "one held frame". 14 ms is half of the 28.6 ms frame.
+- New numbers:
+  - 4D bands (`sensitivity_bands.csv`, window full): 0-1 Hz 0.32 [0.24, 0.43], p = 7.9e-7, 15/15; 1-2 Hz 0.92 [0.77, 1.11], p = 0.37; 2-4 Hz 1.39 [1.17, 1.64], p = 8.8e-4; 4-10 Hz 1.50 [1.28, 1.75], p = 6.4e-5. Pre-stimulus 0.96-1.10, all p > 0.3.
+  - 4D per-frequency interval (`sensitivity_curve.csv`, `stretches_on`, the panel's rule): below one up to 1.03 Hz, above one 2.77-6.63 Hz. Delay limit 3.70 Hz (θ = 0.029 + 0.014 s).
+  - 4E (`state_spectra_tests.csv`, run 11-13): absolute 1-4 Hz, 1-3 Hz Q4/Q1 OL 5.03 (p = 3.5e-6), CL 4.41 (p = 1.1e-5), CL vs OL p ≥ 0.22 in all bands; motion 3-6 Hz OL 0.48 (p = 0.0018), CL 0.48 (p = 7.0e-4), CL vs OL p = 0.98. Laser off: absolute OL 2.36, CL 2.22; motion OL 0.69 (p = 0.0496, Holm 0.55).
+- Results 192, the relative vs absolute power ρ for Fig 4, moved with the 1-4 Hz relative band. Within-session Spearman of `rel_delta` and `abs_delta` in `data/stats_v2/corrected/trials.csv` (relative at 1-4 Hz, `metrics.py:79`) is now median 0.610, range 0.380-0.803, 15 sessions, 1670 trials. It was 0.42 (0.07-0.77) with relative at 2-4 Hz (the entry at RESEARCH line 1255). Same computation, newer file.
+- Checked: Mouse 1k lasso row of `ctrl_sparse_kernel_summary.csv` (AL_0033_0415_e2: p 408, k 136, R² 0.738), as the 4F caption says.
+- Applied the new caption, Results, Methods and Discussion blocks to a scratch copy of JN at c6c28cb. `latexmk`: 45 pages, no errors, no undefined references, no overfull boxes.
+- Found:
+  - JN `images/supplementary/S3.pdf` is the 11-03 build (relative 2-4 Hz). Its 1-4 Hz panels (L-2026-11-14-a) were never assembled.
+  - Figure 4 row 2 reads D, C, E (11-19 layout).
+  - The 4D/4E tests are in no stats table, although stat_tables.tex line 7 says every Results test is listed there.
+  - Discussion 49's "about half that on average" (about 24 ms) differs from the 29 ms mean in the 4D delay limit.
+**State:** nothing applied to JN; Aditya pastes on Overleaf. Decisions listed at the end of the md.
+**Resume:** the md is the paste list; the three older notes keep the reasons and sources for the lines they cover.
+
 ### L-2026-11-23-e · Rebuilt state supplement pushed to JN, figure only
 commit: 47f4efa+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
 **Did/Found:**
