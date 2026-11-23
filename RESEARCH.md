@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-23-c · Draft JN text for the 11-14 Fig 2G windows (nothing applied)
+commit: 873f42f+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
+Aditya: "Yes, draft them" (the JN text changes for the 11-14 windows, [-2,0) s and 1-4 Hz, L-2026-11-14-b). No method change.
+**Did/Found:**
+- New `paper-writing/fig2g_text_numbers.m`: prints the per-session quartile values of `STV_R.sdRawNs` (rows Mouse 5a, 5b, 1b, 3c) and the 2G ratios in `STATS_TABLE.csv`. Nothing fitted. On the pre-11-14 file it gives the old text's 0.57-0.71 and 0.88-1.30, so it is the source of those numbers.
+- Draft in `paper/_jn_ai_preview/fig2g_window_text_2026-11-23.md` (gitignored): Results 89, 92-93, 99, 100, 102, 103; Figure 2 caption G; Methods 479, 480, 489, 491, 493, 562, 570; supplementary 70 and 75. Figure 4 lines are in the 11-21 note.
+- **Found, changes to claims:** motion top quartile lowest in 3 of 4 sessions, not every session (Mouse 3c: 1.34, 1.11, 0.66, 0.73); absolute 1-4 Hz highest in the top quartile in 4/4 but quartile to quartile in 3/4 (Mouse 3c 0.85 then 0.84); relative 1-4 Hz now highest in the top quartile in 4/4 (Q4/Q1 1.58, 1.38-2.04; lower three quartiles 0.68-0.97), where the text said "no consistent pattern" (1.03 at 2-4 Hz). Its stimulus-free ratio is 1.52, so the effect is in ongoing activity as for absolute power. Response/control Q4/Q1 0.88, 1.04, 0.92 (text 0.98, 0.95, 0.87); control/response spread 0.97-1.21 (text 0.92-1.06).
+- **Not sourced yet:** `imp_relabs_exemplars.m` (supplement A-C; rho 0.97, 0.24, 0.47, z values, group sizes) hard-codes [-1,0) s and 2-4 Hz with an assert; moving it needs a method block. `imp_state_raster_peramp.m` (G-I) takes state from `imp_state_trialvar`'s workspace, so a rerun moves it; only its header comment says [-1,0). The JN supplement figure is then rebuilt. The root CLAUDE.md "State windows" entry still lists Fig 2 as [-1,0) s and 2-4 Hz.
+**State:** draft only; JN unchanged. Results 92-93 and supplementary 71-74 have PENDING numbers.
+**Resume:** MATLAB `run paper-writing/fig2g_text_numbers.m`. Next: method block for `imp_relabs_exemplars.m` on the 11-14 window, rerun it and `imp_state_raster_peramp`, rebuild the supplement (`supp_impulse_state_nc_build.py jn`), fill the PENDING rho values.
+
 ### L-2026-11-23-b · Stats table: Fig 2G and 4D rows on the 11-14 windows; supplement lookup fixed
 commit: c4073d4+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
 Aditya: "Yes, do it here" (regenerate stats Tables 3 and 5, stale since the 11-14 windows). Not a math change: the table now quotes the runs whose math Aditya approved on 2026-11-14 ("replace with -2,0 window and do 1-4hz everywhere"; L-2026-11-14-a, -b). Fixes and labels only.
