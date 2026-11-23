@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-22-h · Draft JN text for the lasso Fig 4F to 4H (nothing applied)
+commit: 8da755a+this · branch: hub/100-sparse-kernel · issues: research-hub #100, #92 · pc: Pinnacle
+Aditya: "Yes, draft them" (caption and text snippets for the lasso 4F to 4H, in chat).
+**Did/Found:**
+- Draft in `paper/_jn_ai_preview/fig4_lasso_text_2026-11-22.md` (not tracked; `paper/` is ignored): caption F to H, Results 228 to 238, Methods 582 to 586, 600, 622, 661 to 666, two refs.bib entries checked on Crossref. Every number is read from `ctrl_sparse_kernel_summary.csv`, `ctrl_sparse_kernel_cl_summary.csv` or `f4_cl_reject_lmm_lasso.mat`; the file lists each.
+- Lasso numbers for the text: held-out R² median 0.80 (0.61 to 0.91, 13 sessions), Mouse 1k 0.74; 408 to 473 pixels, 7 to 250 kept (median 96); laser share of G median 22% (6 to 37%); excluded sessions 39% and 59% offset; 4H GM RR 0.62 [0.53, 0.74], two-sided p = 8.1e-5, session median below one in 10 of 11.
+- Not redrafted: Results 239 to 242 and Discussion 40 (the open-loop comparison) use `f4_rr_denominator_check` on the ridge D, and no lasso run of it exists. The lasso report's OL placebo is a different quantity and cannot replace them.
+- Found: the JN caption and Methods describe the 4H test as a one-sided mixed model, but the panel has drawn the two-sided session t-test since 2026-10-27. The lasso penalty is chosen on the same test third that gives the reported R², so that R² is slightly optimistic; flagged for Aditya.
+**State:** draft only; JN untouched. `stat_tables.tex` (tab:stat_fig4g) still has the ridge numbers.
+**Resume:** Aditya pastes on Overleaf. Open: run the open-loop comparison on the lasso D (or cut it), then point `paper_stats_table.m` at `f4_cl_reject_lmm_lasso.mat` and regenerate the table.
+
 ### L-2026-11-22-g · JN figures pushed to GitHub and pulled on Overleaf
 commit: 5d49c47+this · branch: hub/100-sparse-kernel · issues: research-hub #100, #92 · pc: Pinnacle
 Aditya: "I pushed Overleaf", then "Yes, no changes" (Overleaf had nothing new to push), then "i pulled so it should be fine".
