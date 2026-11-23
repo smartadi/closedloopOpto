@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-22-i · Fig 4H open-loop comparison with the lasso disturbance
+commit: 02ada05+this · branch: hub/100-sparse-kernel · issues: research-hub #100, #92 · pc: Pinnacle
+Aditya: "Run it" (the open-loop comparison on the lasso D, instead of cutting Results 239 to 242). Math approved by Aditya 2026-11-22: "Approve" (method block in the brain_paper session chat). No new formula: the equations of `f4_rr_denominator_check.m`, unchanged, written out in the header of the new script.
+**Did/Found:**
+- New `controller-analysis/f4_rr_olcl_lasso.m`: OL and CL RR, offset share and fluctuation ratio per session from the lasso Global in `ctrl_sparse_kernel_cl_<tag>.mat` (`C.trial`, column 2); one-sided Wilcoxon OL > CL over the gated sessions, two-sided printed too. Checks passed in all 13 sessions: recomputed CL D and per-trial RR equal `C.trial.D` and `C.trial.rr` (to 1e-9), biasFrac and gate equal `C.biasFrac` and `C.in4H`.
+- 11 gated sessions (Mouse 1c, 4 out): median RR OL 1.25 vs CL 0.70, CL lower in 10 of 11, V = 64, one-sided p = 0.0015 (two-sided 0.0029). Offset share 36% vs 8%, 10 of 11, V = 65, p = 9.8e-4. Fluctuation/disturbance 0.72 vs 0.57, 9 of 11, V = 59, p = 0.0093 (two-sided 0.019).
+- Against the ridge text (OL 1.25 vs 0.72, 11 of 11, p = 4.9e-4; offset 35% vs 7%; fluctuation 0.66 vs 0.54, 10 of 11, p = 0.0024): Mouse 3e is now the one session where CL is above OL (OL 0.67, CL 0.78), and its fluctuation ratio is also higher in CL (0.52 vs 0.56), as is Mouse 1l's (0.53 vs 0.62).
+- Text draft updated: Results 239 to 241, Discussion 40 and Methods 664 in `paper/_jn_ai_preview/fig4_lasso_text_2026-11-22.md`.
+**State:** outputs `data/f4_rr_olcl_lasso.mat` and `data/f4_rr_olcl_lasso_sessions.csv` (not tracked). `STATS_TABLE.csv` and `stat_tables.tex` (tab:stat_fig4g) still hold the ridge numbers.
+**Resume:** MATLAB `run controller-analysis/f4_rr_olcl_lasso.m` (needs only the `ctrl_sparse_kernel_cl_*.mat` files). Next: point `paper_stats_table.m` at `f4_cl_reject_lmm_lasso.mat` and `f4_rr_olcl_lasso.mat` and regenerate the table.
+
 ### L-2026-11-22-h · Draft JN text for the lasso Fig 4F to 4H (nothing applied)
 commit: 8da755a+this · branch: hub/100-sparse-kernel · issues: research-hub #100, #92 · pc: Pinnacle
 Aditya: "Yes, draft them" (caption and text snippets for the lasso 4F to 4H, in chat).
