@@ -16,6 +16,19 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-23-g · Short versions of the two JN Figure 4 Results sections (nothing applied)
+commit: 8709c19+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya: "give edits here, moreover the [state section] and [disturbance section] are too long". Drafted replacements for results.tex 188-222 and 227-242, all in `\ai{}`.
+  - State section: 1003 words to 566, including the new 4D/4E text.
+  - Disturbance section: 468 words to 233.
+  - Every number is one already sourced in L-2026-11-23-f or the 11-21/11-22 notes. No new analysis.
+  - Dropped: his opener's third sentence (190), his unlabelled 206, the slope definitions (in Methods 651-656), the example-session R² (in the caption) and the commented 231-232.
+- Added them to `paper/_jn_ai_preview/jn_text_current_figures_2026-11-23.md`. In the same file, the 22% line is now numbered 233: the 11-22 note said 232, which is a comment line.
+- Scratch copy of JN at c6c28cb with both sections swapped in: `latexmk` 44 pages, no errors, no undefined references, no overfull boxes.
+**State:** given in chat; nothing applied to JN.
+**Resume:** the short blocks are under "Short versions of the two Figure 4 sections" in the md.
+
 ### L-2026-11-23-f · One JN paste list for the current figures; 4D and 4E text drafted (nothing applied)
 commit: 9b648b8+this · branch: hub/100-sparse-kernel · issues: research-hub #92, #100 · pc: Pinnacle
 **Did/Found:**
