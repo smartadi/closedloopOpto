@@ -2,7 +2,8 @@
 %
 % (user 2026-10-16: "create per amp plots of this and show representative ones here" -- Fig S2's
 % pooled raster mixes amplitudes, so the Activity column is a speckle of shallow and deep dips.)
-% One figure per session; rows = states (motion | rel delta | abs delta, pre-stim [-1,0) s), columns
+% One figure per session; rows = states (motion | rel delta | abs delta, over imp_state_trialvar's state
+% window: [-2,0) s and 1-4 Hz since 2026-11-14, [-1,0) s and 2-4 Hz before; rerun 2026-11-23), columns
 % = amplitudes; each cell = Activity (-RS_PRE .. +0.486 s) | Deviation from that amplitude's mean
 % (0 .. +0.486 s). Trials in a cell are sorted by the state (low at the bottom); quartile edges marked.
 % RAW % dF/F, no normalization: within one session x amplitude nothing needs pooling.

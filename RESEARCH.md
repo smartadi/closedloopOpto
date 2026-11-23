@@ -16,6 +16,19 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-23-d · State supplement A-C on the Fig 2G window and band; supplement rebuilt
+commit: e178f95+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
+Math approved by Aditya 2026-11-23: "Approve" (method block in the brain_paper session chat: `imp_relabs_exemplars.m` uses the Fig 2G window and band of his 2026-11-14 decision, "replace with -2,0 window and do 1-4hz everywhere", L-2026-11-14-b). Same estimator: mean removed, Hann, P(f) = |FFT|^2; absolute = sum of P over STV_BAND (edges inclusive), relative = absolute / sum of P over 0.4-10 Hz.
+**Did/Found:**
+- `impulse-analysis/imp_relabs_exemplars.m`: window [-STV_STATE_LEN, 0) s and band STV_BAND, defaults 2 s and [1 4] as in `imp_state_trialvar.m` (was hard-coded [-1,0) s, 2-4 Hz with an assert); panel B shading and time axis, C's band patch and labels follow; C plots 0.4-10 Hz (the denominator's bins). New printout: Spearman of absolute and of relative power with total 0.4-10 Hz power, pooled and per session (the 10-29 values were computed outside the script). With `STV_STATE_LEN = 1; STV_BAND = [2 4]` it reproduces the 10-29 numbers: rho(abs, rel) 0.47, rho(abs, total) 0.97 (0.95-0.97), rho(rel, total) 0.24 (0.13-0.29), exemplars +0.9/-1.5 and +1.1/+2.2, groups 72, 20, 104.
+- New window: rho(abs, rel) 0.48 (0.42-0.50); rho(abs, total) 0.97 (0.95-0.98); rho(rel, total) 0.28 (0.17-0.32). Mouse 1b exemplars z_abs/z_rel +0.1/+0.0, +1.2/-1.4, +1.4/+1.9 (other trials than before); groups 79, 31, 109.
+- Reran on Pinnacle: `load_experiments` (425 s, 4 sessions), `imp_state_trialvar` (defaults; equals `data/fig2g_state_stats.mat` in all 48 fields; prints 70 samples, 0.5 Hz bins, 7 bins in 1-4 Hz, sham -2.514 to -2.029 s, 18 samples, 1516 trials), `imp_state_raster_peramp` (G-I strips, from that run's trial states), `imp_relabs_exemplars`. `imp_state_raster_peramp.m` header comment now names its window source. Old panels kept in `relabs/_pre20261123_m1to0_2to4Hz/` and `state_quartile/_pre20261123_m1to0_2to4Hz/`.
+- Rebuilt `paper/figures_final/jn/S_state_quartile.pdf` (`supp_impulse_state_nc_build.py jn`; old one in `jn/_before_2026-11-23/`): 17.6 x 12.0 cm, smallest type 5.0 pt, `sls_audit_pdf.py` 0 required. F's stim/control tile has tight limits, so Mouse 5a Q1 (0.813) and Mouse 3c Q1 (1.347) sit on the axis ends; nothing is clipped (auto limits checked).
+- Draft `paper/_jn_ai_preview/fig2g_window_text_2026-11-23.md` now has every number: Results 92-93 rho 0.97 and 0.28; supplementary 71-75 with the new rho, z values and group sizes.
+- Seen in passing: `utils/Rigbox/tests/fixtures/util/system.m` shadows MATLAB's `system` on the path ("Mock called without INTEST flag" warnings during jnExport); it falls through to the builtin. Not changed (vendored, do not modify).
+**State:** supplement rebuilt here, not in JN `images/`. Text drafted, not applied.
+**Resume:** `load_experiments; imp_state_trialvar; imp_state_raster_peramp; imp_relabs_exemplars` (MATLAB, with `global PAPER_FINAL; PAPER_FINAL = false;`), then `imp_state_quartile_supp`, then `python -X utf8 -I paper-writing/supp_impulse_state_nc_build.py jn`.
+
 ### L-2026-11-23-c · Draft JN text for the 11-14 Fig 2G windows (nothing applied)
 commit: 873f42f+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
 Aditya: "Yes, draft them" (the JN text changes for the 11-14 windows, [-2,0) s and 1-4 Hz, L-2026-11-14-b). No method change.

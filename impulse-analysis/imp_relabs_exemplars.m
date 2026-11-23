@@ -1,13 +1,18 @@
-%% imp_relabs_exemplars.m -- what RELATIVE and ABSOLUTE 2-4 Hz power pick out, on impulse trials.
+%% imp_relabs_exemplars.m -- what RELATIVE and ABSOLUTE 1-4 Hz power pick out, on impulse trials.
 % Supplementary candidate (Aditya 2026-10-29: "show example activity of both classes relative and
 % absolute to show how they differ ... we already did this for controller trials lets do it for
 % these as well"). The controller version is controller-analysis/f4_delta_candidates.m (selection
 % aid) and f4_state_exemplars_supp.m (paper supplement); this is the Fig 2g counterpart.
 %
 % Same trials, window and estimator as Fig 2g (imp_state_trialvar.m):
-%   window   [-1, 0) s before onset, 35 samples (cols 71:105 of the -3..3 s dfImp timebase)
-%   spectrum mean removed, Hann, FFT, 1 Hz bins; absolute = sum of 2, 3, 4 Hz bins (DPa),
-%            relative = DPa / sum of the 0.4-10 Hz bins (DPr), i.e. 1..10 Hz at 1 Hz resolution
+%   window   [-STV_STATE_LEN, 0) s before onset; default [-2, 0) s, 70 samples
+%   spectrum mean removed, Hann, FFT; absolute = sum of the bins in STV_BAND, edges inclusive (DPa;
+%            default 1-4 Hz, the 7 bins 1, 1.5, ..., 4 Hz at 0.5 Hz resolution),
+%            relative = DPa / sum of the 0.4-10 Hz bins (DPr), in practice 0.5-10 Hz
+%   The window and band follow imp_state_trialvar.m (same knobs, same defaults) since 2026-11-23.
+%   Math approved by Aditya 2026-11-23: "Approve" (RESEARCH L-2026-11-23-d), applying his 2026-11-14
+%   Fig 2G decision ("replace with -2,0 window and do 1-4hz everywhere", L-2026-11-14-b).
+%   STV_STATE_LEN = 1; STV_BAND = [2 4] reproduce the 2026-10-29 panels ([-1, 0) s, 2-4 Hz).
 %   trials   amplitude 0 skipped, cells with < 8 trials skipped, n trimmed as in STV (1516 trials)
 %
 % Panels (exported separately, paper/images/supplementary/relabs/):
@@ -15,7 +20,7 @@
 %   b  three trials from one session on one y-axis: typical, high absolute / low relative,
 %      high relative / low absolute; each over its own amplitude mean (gray)
 %   c  mean pre-stimulus spectra of those trial groups in the same session: absolute power, and
-%      power as a fraction of the 0.4-10 Hz total (the quantity relative power sums over 2-4 Hz)
+%      power as a fraction of the 0.4-10 Hz total (the quantity relative power sums over the band)
 %
 % Requires: load_experiments (allExperiments, t_win in the base workspace).
 % Knobs: REX_SESS (experiment index for b and c; default 3 = AL_0033 2025-01-29 = Mouse 1b, the
@@ -23,16 +28,20 @@
 
 if ~exist('REX_SESS','var') || isempty(REX_SESS), REX_SESS = 3; end
 PS = paperStyle();  setPaperDefaults();
+if ~exist('STV_STATE_LEN','var') || isempty(STV_STATE_LEN), STV_STATE_LEN = 2.0;  end   % as imp_state_trialvar.m
+if ~exist('STV_BAND','var')      || isempty(STV_BAND),      STV_BAND = [1 4];     end
 fs = 35;  tAxis = -3 : 1/fs : 3;  iOn = find(tAxis >= 0, 1);
-iPow = (iOn - round(1.0*fs)) : (iOn - 1);
-assert(numel(iPow) == 35 && abs(tAxis(iPow(1)) + 1) < 1e-9, '[REX] state window is not [-1, 0) s');
+nW = round(STV_STATE_LEN*fs);  iPow = (iOn - nW) : (iOn - 1);
+assert(iPow(1) >= 1 && abs(tAxis(iPow(1)) + STV_STATE_LEN) < 1e-9, '[REX] state window is not [-%g, 0) s', STV_STATE_LEN);
+bandTxt = sprintf('%g%s%g Hz', STV_BAND(1), char(8211), STV_BAND(2));
+fprintf('[REX] state window [%.3f, 0) s, %d samples, %.2f Hz bins; band %s\n', tAxis(iPow(1)), nW, fs/nW, bandTxt);
 C_abs = [0.55 0.25 0.60];  C_rel = [0.35 0.55 0.30];  C_typ = [0.35 0.35 0.35];   % Fig 4a colours
 outDir = fullfile(paperRoot, 'images', 'supplementary', 'relabs');
 if ~exist(outDir, 'dir'), mkdir(outDir); end
 mlab = imp_mouse_label(allExperiments);
 
 %% per-trial table, all sessions (mirrors imp_state_trialvar.m section 1)
-T = struct('sess',[], 'amp',[], 'row',[], 'dpa',[], 'dpr',[]);
+T = struct('sess',[], 'amp',[], 'row',[], 'dpa',[], 'dpr',[], 'tot',[]);
 S = cell(numel(allExperiments), 1);                    % per-session spectra, trials x bins
 for e = 1:numel(allExperiments)
     imp = allExperiments(e).imp;
@@ -42,10 +51,11 @@ for e = 1:numel(allExperiments)
         n = min([size(df,1), numel(pk), size(imp.motTrace{a},1)]);
         if n < 8 || imp.uAmp{a} == 0, continue; end
         [P, f] = local_spec(df(1:n, iPow), fs);
-        dpa = sum(P(:, f >= 2 & f <= 4), 2);
-        dpr = dpa ./ max(sum(P(:, f >= 0.4 & f <= 10), 2), eps);
+        dpa = sum(P(:, f >= STV_BAND(1) & f <= STV_BAND(2)), 2);
+        tot = sum(P(:, f >= 0.4 & f <= 10), 2);                 % total 0.4-10 Hz power (the denominator)
+        dpr = dpa ./ max(tot, eps);
         T.sess = [T.sess; repmat(e,n,1)];  T.amp = [T.amp; repmat(a,n,1)];  T.row = [T.row; (1:n)'];
-        T.dpa  = [T.dpa; dpa];             T.dpr = [T.dpr; dpr];
+        T.dpa  = [T.dpa; dpa];             T.dpr = [T.dpr; dpr];          T.tot = [T.tot; tot];
         S{e} = [S{e}; P];
     end
 end
@@ -54,6 +64,13 @@ rhoAll = corr(T.dpa, T.dpr, 'type', 'Spearman');
 rhoSess = arrayfun(@(e) corr(T.dpa(T.sess==e), T.dpr(T.sess==e), 'type','Spearman'), unique(T.sess)');
 fprintf('[REX] %d trials, %d sessions | Spearman(abs, rel): pooled %.2f, per session %s\n', ...
         numel(za), numel(unique(T.sess)), rhoAll, mat2str(rhoSess, 2));
+% Each marker against total 0.4-10 Hz power (Results: absolute follows total, relative does not).
+% Printed since 2026-11-23 (L-2026-11-23-d); the 10-29 values (0.97, 0.24) were computed outside the script.
+for c = {'dpa', 'absolute'; 'dpr', 'relative'}'
+    rP = corr(T.(c{1}), T.tot, 'type', 'Spearman');
+    rS = arrayfun(@(e) corr(T.(c{1})(T.sess==e), T.tot(T.sess==e), 'type','Spearman'), unique(T.sess)');
+    fprintf('[REX] Spearman(%s, total 0.4-10 Hz): pooled %.2f, per session %s\n', c{2}, rP, mat2str(rS, 2));
+end
 
 %% exemplars and groups in the chosen session, by rule
 m = T.sess == REX_SESS;  idx = find(m);
@@ -83,8 +100,8 @@ for q = [iT iA iR]
     c = C_typ;  if q == iA, c = C_abs; elseif q == iR, c = C_rel; end
     plot(axA, za(q), zr(q), 'o', 'MarkerSize', 4, 'MarkerEdgeColor', c, 'LineWidth', 1.2);
 end
-xlabel(axA, ['Absolute 2' char(8211) '4 Hz power (z)']);
-ylabel(axA, ['Relative 2' char(8211) '4 Hz power (z)']);
+xlabel(axA, ['Absolute ' bandTxt ' power (z)']);
+ylabel(axA, ['Relative ' bandTxt ' power (z)']);
 title(axA, sprintf('\\rho = %.2f, %d trials', rhoAll, numel(za)), 'FontWeight', PS.fw);
 set(axA, 'Box', 'off', 'TickDir', 'out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
 axis(axA, 'square');
@@ -95,7 +112,7 @@ paperExport(figA, fullfile(outDir, 'relabs_scatter.pdf'));
 % Raw trial traces only. A light 2-4 Hz band-pass overlay was tried 2026-10-29 and removed (Aditya:
 % "we dont need that"). The amplitude-mean line was dropped too: this panel is about the state
 % before onset.
-twin = [-1.5 1.0];  iT_ = tAxis >= twin(1) & tAxis <= twin(2);  tv = tAxis(iT_);
+twin = [-(STV_STATE_LEN + 0.5) 1.0];  iT_ = tAxis >= twin(1) & tAxis <= twin(2);  tv = tAxis(iT_);   % 0.5 s before the state window
 ex = [iT iA iR];  cx = {C_typ, C_abs, C_rel};
 nm = {'Typical', 'High absolute', 'High relative'};
 Y = cell(1,3);
@@ -108,11 +125,11 @@ figB = paperFig(7.6, 3.3);
 tl = tiledlayout(figB, 1, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
 for j = 1:3
     ax = nexttile(tl);  hold(ax, 'on');
-    patch(ax, [-1 0 0 -1], yl([1 1 2 2]), [0.90 0.90 0.90], 'EdgeColor', 'none');
+    patch(ax, [-STV_STATE_LEN 0 0 -STV_STATE_LEN], yl([1 1 2 2]), [0.90 0.90 0.90], 'EdgeColor', 'none');
     lz = yl(1) + 0.90*diff(yl);  lh = 0.06*diff(yl);
     plot(ax, [twin(1) 0 0 0.025 0.025 twin(2)], lz + [0 0 lh lh 0 0], 'r', 'LineWidth', 0.6);
     plot(ax, tv, Y{j},  '-', 'Color', cx{j}, 'LineWidth', 1.0);
-    xlim(ax, twin);  ylim(ax, yl);  xticks(ax, -1:1);
+    xlim(ax, twin);  ylim(ax, yl);  xticks(ax, ceil(twin(1)):1);
     title(ax, nm{j}, 'FontWeight', PS.fw, 'Color', cx{j});   % z values: panel a circles + caption
     set(ax, 'Box', 'off', 'TickDir', 'out', 'FontSize', PS.fs, 'FontWeight', PS.fw);
     if j > 1, set(ax, 'YTickLabel', []); end
@@ -123,7 +140,7 @@ jnAxesAll(figB);
 paperExport(figB, fullfile(outDir, sprintf('relabs_traces_%s.pdf', strrep(mlab{REX_SESS}, ' ', ''))));
 
 %% (c) mean pre-stimulus spectra of the groups
-Ps = S{REX_SESS};  ms = find(m);  fb = f >= 1 & f <= 10;
+Ps = S{REX_SESS};  ms = find(m);  fb = f >= 0.4 & f <= 10;   % the denominator's bins (was 1-10 Hz at 1 Hz bins)
 grp = {gT(ms), gA(ms), gR(ms)};
 figC = paperFig(7.0, 3.3);   % 'normal' spacing: the relative tile's 2-line y label needs the room
 tl = tiledlayout(figC, 1, 2, 'TileSpacing', 'normal', 'Padding', 'compact');
@@ -142,8 +159,8 @@ ylabel(axs(2), {'Fraction of', ['0.4' char(8211) '10 Hz power']});
 title(axs(1), 'Absolute', 'FontWeight', PS.fw);  title(axs(2), 'Relative', 'FontWeight', PS.fw);
 for ax = axs
     yy = ylim(ax);
-    hb = patch(ax, [2 4 4 2], yy([1 1 2 2]), [0.90 0.90 0.90], 'EdgeColor', 'none');
-    uistack(hb, 'bottom');  ylim(ax, yy);  xlim(ax, [0.5 10.5]);  xticks(ax, 2:2:10);  xtickangle(ax, 0);
+    hb = patch(ax, STV_BAND([1 2 2 1]), yy([1 1 2 2]), [0.90 0.90 0.90], 'EdgeColor', 'none');
+    uistack(hb, 'bottom');  ylim(ax, yy);  xlim(ax, [0 10.5]);  xticks(ax, 2:2:10);  xtickangle(ax, 0);
     set(ax, 'Box', 'off', 'TickDir', 'out', 'FontSize', PS.fs, 'FontWeight', PS.fw, 'Layer', 'top');
 end
 yy = ylim(axs(1));  tk = 10.^(-3:2);  tk = tk(tk >= yy(1) & tk <= yy(2));
