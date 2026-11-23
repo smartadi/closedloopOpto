@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-23-e · Rebuilt state supplement pushed to JN, figure only
+commit: 47f4efa+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya: "Yes, push it". JN `main` equalled `origin/main` (939069a) before and after a fetch, so nothing from Overleaf was waiting.
+- Copied `paper/figures_final/jn/S_state_quartile.pdf` (L-2026-11-23-d) to Closedloop_edit `images/supplementary/S_state_quartile.pdf`. Committed 1998f42; staged and pushed diff = that one file, no `.tex`. Pushed `smartadi/Closedloop` main 939069a..1998f42.
+- The JN copy it replaced was the 11-02 build at 18.0 x 12.8 cm; the 11-05 width fix (17.6 cm, 2836c06) had not reached JN until now. `supplementary.tex:68` includes it at `\linewidth`, so only the scale changes.
+- `latexmk` on Closedloop_edit: 44 pages; the only warnings are the 2 "`h' float specifier changed to `ht'" seen before.
+**State:** JN has the rebuilt supplement. Its caption (supplementary.tex 70-75) and the Fig 2G text still carry the [-1,0) s, 2-4 Hz numbers; the draft is `paper/_jn_ai_preview/fig2g_window_text_2026-11-23.md`, for Aditya to paste on Overleaf. Aditya pulls GitHub into Overleaf.
+**Resume:** to undo, a revert commit of 1998f42 on Closedloop_edit main (no force push), pushed with his OK.
+
 ### L-2026-11-23-d · State supplement A-C on the Fig 2G window and band; supplement rebuilt
 commit: e178f95+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
 Math approved by Aditya 2026-11-23: "Approve" (method block in the brain_paper session chat: `imp_relabs_exemplars.m` uses the Fig 2G window and band of his 2026-11-14 decision, "replace with -2,0 window and do 1-4hz everywhere", L-2026-11-14-b). Same estimator: mean removed, Hann, P(f) = |FFT|^2; absolute = sum of P over STV_BAND (edges inclusive), relative = absolute / sum of P over 0.4-10 Hz.
