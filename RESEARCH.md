@@ -16,6 +16,18 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-22-g · JN figures pushed to GitHub and pulled on Overleaf
+commit: 5d49c47+this · branch: hub/100-sparse-kernel · issues: research-hub #100, #92 · pc: Pinnacle
+Aditya: "I pushed Overleaf", then "Yes, no changes" (Overleaf had nothing new to push), then "i pulled so it should be fine".
+**Did/Found:**
+- Before the push, `origin/main` of Closedloop_edit was db3d976 ("Updates from Overleaf"), and the 3 local commits sat directly on it.
+- Pushed `smartadi/Closedloop` main db3d976..939069a: 4e5f0da (4G session labels), cc56802 (Figures 2 and 4, #92), 939069a (lasso 4F to 4H, #100).
+- `git diff --stat db3d976 origin/main` lists only `images/Figure2.pdf` and `images/Figure4.pdf`, no `.tex`. The pushed `images/Figure4.pdf` is byte-identical to `paper/figures_final/jn/Figure4.pdf`.
+- Aditya's "pull first compare then push" arrived after the push had gone through; the comparison above was run after the push and matched the one run before it.
+- Aditya then pulled on Overleaf. A fetch after his pull shows `main` = `origin/main` = 939069a.
+**State:** the JN Overleaf has the lasso Figure 4 and the rebuilt Figure 2. The JN caption and text still describe ridge (#92). Whether Nick's comments survived the pull is Aditya's check (his comment export before and after); he reported it as fine.
+**Resume:** to undo, a revert commit of 939069a, cc56802 and 4e5f0da on Closedloop_edit main (no force push), pushed with his OK.
+
 ### L-2026-11-22-f · Lasso Fig 4 adopted as the JN Figure 4
 commit: dc0edcc+this · branch: hub/100-sparse-kernel · issues: research-hub #100, #92 · pc: Pinnacle
 Aditya: "Yes, adopt it" (make the lasso preview of L-2026-11-22-e the JN Figure 4). Display only, no number or method change.
