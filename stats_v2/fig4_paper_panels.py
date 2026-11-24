@@ -63,7 +63,8 @@ STATE_COL = {"init_dev": "#3366bf", "motion": "#bf661a", "rel_delta": "#598c4d",
 STATE_LAB = {"init_dev": "Initial deviation", "motion": "Motion", "rel_delta": "Rel 1–4 Hz",
              "abs_delta": "Abs 1–4 Hz"}
 CURVE_KEY = {"motion": "motion", "abs_delta": "abs14", "rel_delta": "rel14"}
-STATE_LAB_2 = {"init_dev": "Initial\ndeviation", "motion": "Motion", "abs_delta": "Abs\n1–4 Hz"}  # 4B, two lines
+STATE_LAB_2 = {"init_dev": "Initial\ndeviation", "motion": "Motion", "rel_delta": "Rel\n1–4 Hz",
+               "abs_delta": "Abs\n1–4 Hz"}  # 4B, two lines
 # Row 2 of the JN figure (D, C, E side by side, 2026-11-19): one figure height and one axes box for all
 # three, so their axes and x labels line up when the panels are placed with their tops on one line.
 ROW2_H, ROW2_Y, ROW2_AH = 4.45, 0.55, 3.2   # cm: figure height, axes top, axes height
@@ -235,27 +236,29 @@ def ratio_tile(a, curves, tests, window, key, title, tcol, ylabel=True, ylim=(0.
 
 # ------------------------------------------------------------------------------ main panels
 def main_B():
-    """Figure 4B: unique R^2 of initial deviation, motion and absolute 1-4 Hz in ONE per-session model
-    (f4_error_decomp.m 'abs' mode: y = b0 + b1 z_init + b2 z_motion + b3 z_log10abs + e, y = the trial's
-    RMSE to target over 0-1 s or 1-3 s, states z-scored within session; U_j = adjusted R^2 of the full
-    model minus that of the model without j). Bar = mean over sessions, error bar = SEM (SD ddof 1 /
-    sqrt n). Read from controller-analysis/data/f4_error_decomp.mat (DEC.abs, run 2026-11-14,
-    L-2026-11-14-a); nothing is refit. Math approved by Aditya 2026-11-18: "approve" (Hub control,
-    option 1: the init + motion + absolute model replaces the 'sep' bars once relative power left the
-    main figure). Drawn as the SfN poster panel (poster/sfn2026/unique_panel.m): broken y axis,
-    two-line names, at paper type sizes."""
+    """Figure 4B: unique R^2 of initial deviation, motion, relative and absolute 1-4 Hz in ONE per-session
+    model (f4_error_decomp.m 'both' mode: y = b0 + b1 z_init + b2 z_motion + b3 z_rel + b4 z_log10abs + e,
+    y = the trial's RMSE to target over 0-1 s or 1-3 s, states z-scored within session; U_j = adjusted
+    R^2 of the full model minus that of the model without j). Bar = mean over sessions, error bar = SEM
+    (SD ddof 1 / sqrt n). Read from controller-analysis/data/f4_error_decomp.mat (DEC.both, run
+    2026-11-14, L-2026-11-14-a); nothing is refit. Math approved by Aditya 2026-11-24: "for the model i
+    want all combined" (option 2 of the method block: one model with all four states, replacing the
+    init + motion + absolute model of 2026-11-18 now that relative power is back in the figure).
+    Drawn as the SfN poster panel (poster/sfn2026/unique_panel.m): broken y axis, two-line names, at
+    paper type sizes."""
     import scipy.io as sio
     dec = sio.loadmat(loader.ROOT / "controller-analysis" / "data" / "f4_error_decomp.mat",
-                      squeeze_me=True, struct_as_record=False)["DEC"].abs
-    assert [str(s) for s in dec.fac] == ["init-dev", "motion", "abs 1-4Hz"], dec.fac
+                      squeeze_me=True, struct_as_record=False)["DEC"].both
+    st4 = ("init_dev", "motion", "rel_delta", "abs_delta")
+    assert [str(s) for s in dec.fac] == ["init-dev", "motion", "rel 1-4Hz", "abs 1-4Hz"], dec.fac
     U = dec.Us[:, :, np.asarray(dec.okS, bool)]              # state x window x session
     n = U.shape[2]
     P = U.mean(axis=2)
     E = U.std(axis=2, ddof=1) / np.sqrt(n)
-    assert np.allclose(P, dec.Up, atol=1e-12), "session mean differs from the saved DEC.abs.Up"
-    fc = np.array([matplotlib.colors.to_rgb(STATE_COL[s]) for s in ("init_dev", "motion", "abs_delta")])
+    assert np.allclose(P, dec.Up, atol=1e-12), "session mean differs from the saved DEC.both.Up"
+    fc = np.array([matplotlib.colors.to_rgb(STATE_COL[s]) for s in st4])
     light, dark = 1 - 0.55 * (1 - fc), 0.70 * fc             # 0-1 s light, 1-3 s dark (unique_panel.m)
-    lo, hi = (-0.01, 0.2), (0.35, 0.5)
+    lo, hi = (-0.01, 0.2), (0.25, 0.4)                        # upper segment was 0.35-0.5 for the 0.425 bar
     top_lo = np.delete((P + E).ravel(), 0)                    # every bar but init-dev 0-1 s fits below
     assert top_lo.max() < lo[1] and hi[0] < P[0, 0] - E[0, 0] and P[0, 0] + E[0, 0] < hi[1], (P, E)
 
@@ -266,38 +269,38 @@ def main_B():
     yt, ht, yl_, hl = 0.55, 0.6, 1.27, HB - 0.8 - 1.27        # upper / lower segment top and height, cm
     a2 = axes_cm(fig, x0, yt, w, ht)                          # upper segment
     a1 = axes_cm(fig, x0, yl_, w, hl)                         # lower segment
-    xb = np.arange(1, 4)
+    xb = np.arange(1, 5)
     for a in (a1, a2):
         for k, (col, dx) in enumerate(((light, -0.2), (dark, 0.2))):
             a.bar(xb + dx, P[:, k], width=0.38, color=col, lw=0)
             a.errorbar(xb + dx, P[:, k], yerr=E[:, k], ls="none", color="0.25", elinewidth=0.5, capsize=1.5,
                        capthick=0.5)
-        a.set_xlim(0.5, 3.5)
+        a.set_xlim(0.5, 4.5)
     a1.axhline(0, color="0.6", lw=0.5, zorder=0)
     a1.set_ylim(*lo)
     a1.set_yticks([0, 0.1, 0.2])
     a1.set_yticklabels(["0", "0.1", "0.2"])
     a1.set_xticks(xb)
-    a1.set_xticklabels([STATE_LAB_2[k] for k in ("init_dev", "motion", "abs_delta")])
-    for t, k in zip(a1.get_xticklabels(), ("init_dev", "motion", "abs_delta")):
+    a1.set_xticklabels([STATE_LAB_2[k] for k in st4])
+    for t, k in zip(a1.get_xticklabels(), st4):
         t.set_color(STATE_COL[k])                             # names and colours as 4A and 4C (2026-11-19)
     a2.set_ylim(*hi)
-    a2.set_yticks([0.4])
-    a2.set_yticklabels(["0.4"])
+    a2.set_yticks([0.3])
+    a2.set_yticklabels(["0.3"])
     a2.set_xticks([])
     a2.spines["bottom"].set_visible(False)
     for yb in (yl_, yt + ht):                                 # break marks on the y axis, cm from top
         fig.add_artist(Line2D([(x0 - 0.07) / WB, (x0 + 0.07) / WB],
                               [1 - (yb + 0.04) / HB, 1 - (yb - 0.04) / HB], color="k", lw=0.5))
     for k, (lab, g) in enumerate((("0–1 s", "0.72"), ("1–3 s", "0.35"))):
-        a2.add_patch(plt.Rectangle((2.45, 0.465 - k * 0.05), 0.15, 0.03, color=g, lw=0, clip_on=False))
-        a2.text(2.68, 0.48 - k * 0.05, lab, va="center", ha="left")
+        a2.add_patch(plt.Rectangle((2.9, hi[0] + 0.115 - k * 0.05), 0.2, 0.03, color=g, lw=0, clip_on=False))
+        a2.text(3.2, hi[0] + 0.13 - k * 0.05, lab, va="center", ha="left")
     fig.text((x0 + w / 2) / WB, 1 - 0.42 / HB, f"Unique R² ({n} sessions)", ha="center", va="bottom",
              fontsize=7, fontweight="bold")
     fig.text(0.2 / WB, 1 - (yt + (yl_ + hl - yt) / 2) / HB, "Unique R²", rotation=90, ha="center", va="center",
              fontsize=7, fontweight="bold")
     save(fig, "f4B_unique")
-    for j, s in enumerate(("init-dev", "motion", "abs 1-4 Hz")):
+    for j, s in enumerate(("init-dev", "motion", "rel 1-4 Hz", "abs 1-4 Hz")):
         print(f"  B {s:10s} 0-1 s {P[j, 0]:.3f} [{E[j, 0]:.3f}]   1-3 s {P[j, 1]:.3f} [{E[j, 1]:.3f}]   ({n} sessions)")
 
 

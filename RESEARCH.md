@@ -16,6 +16,16 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-24-b · JN Figure 4: oscillating relative exemplar in 4A; 4B from the four-state model
+commit: a603d90+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya: "first of all the rel 1-4 exemplar figure i want to see the one with high oscilations, and for the model i want all combined".
+- 4A, display only: the specific pick for relative power (m10 trial 8; z_rel +1.8, z_abs 0.0) is low in absolute power, so no rhythm shows. `f4_state_exemplars.m` now picks the relative tile as the trial with the highest z_rel + z_abs among trials with z_rel > 1 and z_init, z_motion < 0.5 (82 trials; pooled z over 613 CL trials). Pick: m2 trial 76 (z_init +0.1, z_motion -0.3, z_rel +2.8, z_abs +2.3). The other three tiles are unchanged. The top 8 candidates are in `controller-analysis/_preview/f4A_rel_candidates.png`.
+- 4B: `main_B` reads `DEC.both`, the per-session model with all four states (y = b0 + b1 z_init + b2 z_motion + b3 z_rel + b4 z_log10abs + e; U_j = adjusted R^2 of the full model minus that without j; mean and SEM over 11 sessions). Math approved by Aditya 2026-11-24: "for the model i want all combined" (option 2 of the method block in chat; option 1 was a relative bar from its own init + motion + relative model). Nothing refit: values from `controller-analysis/data/f4_error_decomp.mat` (run 2026-11-14, L-2026-11-14-a), asserted equal to the saved Up. 0-1 s / 1-3 s: init-dev 0.318 [0.039] / 0.015 [0.016]; motion 0.001 [0.008] / -0.001 [0.006]; relative 0.012 [0.008] / 0.025 [0.025]; absolute 0.056 [0.032] / 0.120 [0.045]. Before (init + motion + absolute model): init-dev 0.425 / 0.008, absolute 0.099 / 0.129. Upper axis segment 0.25-0.4 (was 0.35-0.5), same 5.0 x 4.4 cm.
+- JN Figure 4 rebuilt, 17.6 x 13.08 cm, `sls_audit_pdf.py` 0 required. The 11-24 morning build is in `paper/figures_final/jn/_before_2026-11-24b/`.
+**State:** figure in `paper/figures_final/jn/` (gitignored); not in Closedloop_edit. The JN text and caption cite the old 4B numbers (init-dev 0.42 at 0-1 s) and put relative unique R^2 in S3; updated sentences given in chat. Methods/caption must say the 4B model has all four states.
+**Resume:** as L-2026-11-24-a.
+
 ### L-2026-11-24-a · JN Figure 4: relative 1-4 Hz power back in 4A and 4C
 commit: baf0ec9+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
 **Did/Found:**

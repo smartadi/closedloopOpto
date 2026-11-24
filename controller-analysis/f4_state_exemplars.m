@@ -80,6 +80,12 @@ for j=1:4
     others=setdiff(1:4,j); spec=Z(:,j)-max(Z(:,others),[],2); spec(Z(:,j)<1)=-inf;
     [~,pick(j)]=max(spec);
 end
+% Relative 1-4 Hz exemplar with visible oscillations (Aditya 2026-11-24: "the rel 1-4 exemplar figure i
+% want to see the one with high oscilations"). The specific pick above is low in absolute power, so its
+% rhythm is too small to see. Display only: among trials with z_rel > 1 and z_init, z_motion < 0.5, take
+% the highest z_rel + z_abs. Candidates: controller-analysis/_preview/f4A_rel_candidates.png.
+cand=find(Z(:,3)>1 & Z(:,1)<0.5 & Z(:,2)<0.5);
+[~,k]=max(Z(cand,3)+Z(cand,4)); pick(3)=cand(k);
 
 % ================= FIGURE: 1 x 3 row (JN Fig 4A) =================
 % 2026-11-19 (Aditya: "A,B must tell same story"), display only, same picks: JN row 1 is A + B,
@@ -97,7 +103,7 @@ end
 % state names so they fit the narrower tiles.
 % 2026-11-24 (Aditya: "we should add the relative back into figures"), display only, same picks: the
 % relative 1-4 Hz tile is back (all four states, as 4B and 4C), canvas 10.6 x 3.2 cm so the tiles keep
-% about the width they had at three.
+% about the width they had at three. The relative tile shows the oscillating trial picked above.
 keep=[1 2 3 4];
 lbl={'Initial deviation','Motion',['Rel 1' char(8211) '4 Hz'],['Abs 1' char(8211) '4 Hz']};
 segs=cell(1,4);
