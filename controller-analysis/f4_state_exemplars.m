@@ -95,14 +95,17 @@ end
 % over the stimulation (Fig 3A's lines and widths, utils/analysisPlots_combined.m); canvas 8.4 x 3.2 cm;
 % lighter window shading; scale bars on the first tile only (the tiles share axes); titles are the 4B/4C
 % state names so they fit the narrower tiles.
-keep=[1 2 4];
+% 2026-11-24 (Aditya: "we should add the relative back into figures"), display only, same picks: the
+% relative 1-4 Hz tile is back (all four states, as 4B and 4C), canvas 10.6 x 3.2 cm so the tiles keep
+% about the width they had at three.
+keep=[1 2 3 4];
 lbl={'Initial deviation','Motion',['Rel 1' char(8211) '4 Hz'],['Abs 1' char(8211) '4 Hz']};
 segs=cell(1,4);
 for j=keep
     i=pick(j); [eb, ec] = pre_spec_buffer(mouse.(fields{SESS(i)}).data, 'wc');
     segs{j}=double(eb(TRI(i), ec-spec_pre_s*Fs : ec+spec_post_s*Fs));   % caches mix single and double
 end
-fig=jnFig(8.4,3.2); tl=tiledlayout(fig,1,numel(keep),'TileSpacing','compact','Padding','tight');
+fig=jnFig(10.6,3.2); tl=tiledlayout(fig,1,numel(keep),'TileSpacing','compact','Padding','tight');
 tl.OuterPosition=[0 0 0.91 1];                             % room on the right for the 'Target' label
 tv=(-spec_pre_s:1/Fs:spec_post_s).'; yl=[-16 max(10, ceil(max(cellfun(@max,segs(keep))))+1)];
 shade={[0 1],[.96 .96 .96]; [1 3],[.90 .90 .90]};          % 0-1 s and 1-3 s, as the 4B legend

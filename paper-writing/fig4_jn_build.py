@@ -8,8 +8,9 @@ Layout, 17.6 cm wide, letters as Aditya set them (row 2 reads D, C, E):
   row 2  D CL/OL residual power  |  C state quartile tiles  |  E Q4/Q1 state spectra
   row 3  F predictor kernel map  |  G A = G + L  |  H rejection ratio
 
-A is f4_state_exemplars.m (JN version, 3 tiles, same picks as 2026-11-14, L-2026-11-19-b; 0 and target
-lines and 8.4 x 3.2 cm, L-2026-11-19-e). B, C, D, E
+A is f4_state_exemplars.m (JN version, same picks as 2026-11-14, L-2026-11-19-b; 0 and target
+lines, L-2026-11-19-e; 4 tiles and 10.6 x 3.2 cm since the relative tile came back, L-2026-11-24-a).
+C has four quartile tiles since 2026-11-24 (relative back). B, C, D, E
 come from stats_v2/fig4_paper_panels.py (L-2026-11-16-a; B L-2026-11-18-a; E L-2026-11-18-b/-d and
 L-2026-11-19-a; row-2 sizes L-2026-11-19-b). F, G and H use the lasso predictor since 2026-11-22
 (research-hub #100, L-2026-11-22-e): F f4_kernel_map.m and G f4_contra_model.m (working copies in
@@ -51,8 +52,8 @@ INSET = {'F': 0.4}          # F's title starts at its left edge, so the row star
 
 
 def check_A(path):
-    """The JN 4A has the three state tiles of 4B, in 4B's order and names."""
-    want = ['Initial deviation', 'Motion', 'Abs 1–4 Hz']
+    """The JN 4A has the four state tiles of 4C, in 4C's order and names (relative back 2026-11-24)."""
+    want = ['Initial deviation', 'Motion', 'Rel 1–4 Hz', 'Abs 1–4 Hz']
     titles = [s['text'] for b in fitz.open(path)[0].get_text('dict')['blocks'] for ln in b.get('lines', [])
               for s in ln['spans'] if s['text'] in want]
     assert titles == want, titles

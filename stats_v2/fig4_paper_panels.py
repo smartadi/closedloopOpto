@@ -154,7 +154,9 @@ def quartile_means(tr, state):
     return np.nanmean(A, axis=0), np.nanstd(A, axis=0, ddof=1) / np.sqrt(n), A.shape[0]
 
 
-def quartile_tile(a, tr, tests, state, ylabel=True, legend=True):
+def quartile_tile(a, tr, tests, state, ylabel=True, legend=True, colored=False):
+    """colored=True writes the OL and CL slope lines in the condition colours, in place of the OL/CL
+    legend (4C with four narrow tiles, 2026-11-24, layout only)."""
     m, se, n = quartile_means(tr, state)
     xq = np.arange(1, 5)
     a.axhline(0, color="0.75", lw=0.75, zorder=0)
@@ -171,8 +173,13 @@ def quartile_tile(a, tr, tests, state, ylabel=True, legend=True):
     for q, name in (("P", "OL slope"), ("R", "CL slope"), ("A", "CL/OL")):
         p, eff = t.loc[q, "p"], t.loc[q, "effect"]
         lines.append(f"{name} n.s." if p >= 0.05 else f"{name} {'↑' if eff > 0 else '↓'}{stars(p)}")
-    a.text(0.97, 0.98, "\n".join(lines), transform=a.transAxes, ha="right", va="top", fontsize=6,
-           linespacing=1.15)
+    if colored:
+        dy = 1.15 * 6 / (a.get_position().height * a.figure.get_figheight() * 72)   # one 6 pt line, axes units
+        for k, (ln, c) in enumerate(zip(lines, (OL, CL, "k"))):
+            a.text(0.97, 0.98 - k * dy, ln, transform=a.transAxes, ha="right", va="top", fontsize=6, color=c)
+    else:
+        a.text(0.97, 0.98, "\n".join(lines), transform=a.transAxes, ha="right", va="top", fontsize=6,
+               linespacing=1.15)
     if legend:
         a.text(0.03, 0.98, "OL", color=OL, transform=a.transAxes, ha="left", va="top", fontweight="bold")
         a.text(0.03, 0.88, "CL", color=CL, transform=a.transAxes, ha="left", va="top", fontweight="bold")
@@ -295,17 +302,20 @@ def main_B():
 
 
 def main_C(tr, tests):
-    """Figure 4C: quartile tiles for initial deviation, motion and absolute 1-4 Hz, one y scale."""
-    # 7.7 cm wide (was 11.2) so D, C and E fit one 17.6 cm JN row (2026-11-19, layout only)
+    """Figure 4C: quartile tiles for initial deviation, motion, relative and absolute 1-4 Hz, one y scale.
+    The relative tile is back (Aditya 2026-11-24: "we should add the relative back into figures"); it is
+    the tile the f4S_states supplement drew, same test rows (fig4d in the tests table)."""
+    # 7.7 cm wide (was 11.2) so D, C and E fit one 17.6 cm JN row (2026-11-19, layout only);
+    # four tiles in the same width since 2026-11-24 (layout only)
     fig = plt.figure(figsize=(7.7 * CM, ROW2_H * CM))
     out, axs = {}, []
-    x0, w, step = 1.05, 2.05, 2.25
-    for j, st in enumerate(("init_dev", "motion", "abs_delta")):
+    x0, w, step = 1.05, 1.5, 1.68
+    for j, st in enumerate(("init_dev", "motion", "rel_delta", "abs_delta")):
         a = axes_cm(fig, x0 + j * step, ROW2_Y, w, ROW2_AH)
-        out[st] = quartile_tile(a, tr, tests, st, ylabel=(j == 0), legend=(j == 0))
+        out[st] = quartile_tile(a, tr, tests, st, ylabel=(j == 0), legend=False, colored=True)
         a.set_xlabel("")
         axs.append(a)
-    xlabel_cm(fig, x0 + (2 * step + w) / 2, "State quartile")
+    xlabel_cm(fig, x0 + (3 * step + w) / 2, "State quartile")
     lo = min(a.get_ylim()[0] for a in axs)
     hi = max(a.get_ylim()[1] for a in axs)
     for j, a in enumerate(axs):

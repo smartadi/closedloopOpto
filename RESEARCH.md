@@ -16,6 +16,17 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-24-a · JN Figure 4: relative 1-4 Hz power back in 4A and 4C
+commit: baf0ec9+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya: "but we aint using relative in the figure, so we should add the relative back into figures". The Results text reports relative-power results, but relative power left 4A, 4B and 4C on 11-18 (L-2026-11-18-a). Display only in this entry; no state, window, band, model or test changed.
+- 4A: `f4_state_exemplars.m` JN block draws all four tiles again (`keep=[1 2 3 4]`, canvas 10.6 x 3.2 cm, was 8.4 x 3.2). Picks unchanged: m2 trial 79, m4 trial 54, m10 trial 8 (relative), m2 trial 66; 613 CL trials, full R^2 0.440.
+- 4C: `main_C` in `stats_v2/fig4_paper_panels.py` has four quartile tiles (initial deviation, motion, relative, absolute), same 7.7 cm width, tiles 1.5 cm wide. The relative tile is the one `supp_states` already drew, with the same fig4d test rows. In four narrow tiles the OL/CL legend overlapped the slope labels, so the OL and CL slope lines are now written in the condition colours and the legend is gone (`quartile_tile(..., colored=True)`; the supplement keeps the old style). Quartile means: relative OL [0.35 0.50 0.39 0.34], CL [-0.58 -0.39 -0.41 -0.26], 15 sessions; the other three unchanged, motion and absolute still match MATLAB (max difference 0.00).
+- `paper-writing/fig4_jn_build.py`: the 4A check expects four titles. JN Figure 4 rebuilt, 17.6 x 13.08 cm; `sls_audit_pdf.py` 0 required issues. Previous build in `paper/figures_final/jn/_before_2026-11-24/`.
+- 4B still shows the init + motion + absolute model (no relative bar). Adding relative there is a model choice, so it went to Aditya as a method block (options: a relative bar from the init + motion + relative model next to the current three bars, the four-state model, or no relative bar). 4E is unchanged (motion and absolute); the text cites no relative spectrum.
+**State:** figure in `paper/figures_final/jn/` (gitignored); not copied into Closedloop_edit. 4B waits on Aditya's choice. The JN text pointers for relative power (S3 B-D in the short state section) should move to 4A, 4C (and 4B if a bar is added).
+**Resume:** in MATLAB with `mouse`/`fields` loaded, `run controller-analysis/f4_state_exemplars.m`; then `stats_v2/.venv/Scripts/python.exe -I stats_v2/fig4_paper_panels.py --no-sens` and `python -X utf8 -I paper-writing/fig4_jn_build.py`.
+
 ### L-2026-11-23-g · Short versions of the two JN Figure 4 Results sections (nothing applied)
 commit: 8709c19+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
 **Did/Found:**
