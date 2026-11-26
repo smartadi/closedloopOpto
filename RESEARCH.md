@@ -16,6 +16,30 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-25-b · JN language plan drawn from Aditya's own Overleaf edits
+commit: 1f02c23+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya: "Look at my prev language edits andake a strat to change the rest of the text, ill edit them manually".
+- Read the word diffs of his 8 Overleaf pushes since the labels (7907bd2, 54fae66, 02089bb, 38a8267, 1e50586, 81b3ccc, db3d976, feedbaa). Most evidence is 81b3ccc (11-13). 7907bd2 also carries Nick's tracked edits (abstract, results L12-41), so the rules lean on the `\aditya` text.
+- Ten rules, each with before/after quotes from his diffs: purpose stated in the sentence; method described by what it gives; control vocabulary; plain verbs; past tense; detail moved to Methods; merge and cut; a design-implication close in the first person; captions in full sentences; comment out rather than delete.
+- Also flagged, for his decision:
+  - edits I would not repeat: a dropped hedge (L136), "significantly" with no test (L157), "hertz" changed to "frequency bins" (L91);
+  - Fig 4 caption A says 2-4 Hz but should be 1-4 Hz;
+  - a typo table of 17 lines.
+- Label counts at JN 439ed4d:
+  - `results.tex`: 70 `\aditya`, 101 `\ai`.
+  - `methods.tex`: 27 `\ai`.
+  - `supplementary.tex`: 9 `\ai`.
+  - `discussion.tex`: no labels, 69 lines; "reference" on 6 lines, "target level" on none.
+- Section order with line-level targets: leftovers, Fig 4 state, disturbance, preview, Fig 5 caption, MPC, Fig 6 caption, Discussion, supplement, Methods.
+- Content still stale, from the paste file:
+  - Fig 4 relative is 1-4 Hz, but results L191 and L215 say 2-4 Hz.
+  - Methods L535 and L659 still say "Fig. 4C" and a three-factor model.
+  - Discussion L49 still has the old delay numbers.
+- File: `paper/_jn_ai_preview/jn_language_plan_2026-11-25.md` (gitignored). No `.tex` touched.
+**State:** plan with Aditya; he edits on Overleaf by hand.
+**Resume:** re-cut each section from his next Overleaf push; per-sentence hint tables (no rewritten text) on request.
+
 ### L-2026-11-25-a · JN Figure 4 with relative power pushed to the JN repo, figure only
 commit: 4d97421+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
 **Did/Found:**
