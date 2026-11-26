@@ -16,6 +16,14 @@ Two mice: AL_0033 (9 sessions), AL_0039 (4 sessions) = 13 controller sessions, J
 
 ## Change Log
 
+### L-2026-11-25-a · JN Figure 4 with relative power pushed to the JN repo, figure only
+commit: 4d97421+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
+**Did/Found:**
+- Aditya: "Ok now", answering whether to push the new Figure 4 to JN as a figure-only commit.
+- Copied `paper/figures_final/jn/Figure4.pdf` (L-2026-11-24-b build) to Closedloop_edit `images/Figure4.pdf`. Closedloop_edit commit 439ed4d sits directly on c6c28cb (Overleaf's last push, 2026-11-23 14:45 PST); `git diff --name-only origin/main HEAD` before the push listed only `images/Figure4.pdf`, no `.tex`. Pushed `main` c6c28cb..439ed4d. `sls_audit_pdf.py` on the copied PDF: 17.60 x 13.08 cm, 0 required. No `latexmk` run (figure swap at the same size).
+**State:** on GitHub; Overleaf has not pulled. The JN caption, Results and Methods still describe the three-state 4B and put relative power in S3; the replacement Results sentences are in chat (2026-11-24).
+**Resume:** Aditya pulls GitHub into Overleaf and compares his comment export before and after. Then the Fig 4 caption A/B snippet.
+
 ### L-2026-11-24-b · JN Figure 4: oscillating relative exemplar in 4A; 4B from the four-state model
 commit: a603d90+this · branch: hub/100-sparse-kernel · issues: research-hub #92 · pc: Pinnacle
 **Did/Found:**
